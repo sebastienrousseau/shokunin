@@ -33,12 +33,14 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 ## Features ✨
 
-- Fast and efficient generation of static websites
-- Easy-to-use command-line interface
-- Flexible templating system
-- Support for multiple content types (Markdown, HTML, etc.)
-- Customizable metadata for pages and posts
-- Built-in server for previewing sites locally
+- Fast and flexible
+- Easy to use
+- Written in Rust
+- Supports templates and themes
+- Generates optimized HTML, CSS, and JavaScript
+- Built-in development server
+- Live reloading
+- Markdown support
 
 ## Getting Started 🚀
 
