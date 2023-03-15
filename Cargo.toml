@@ -21,16 +21,20 @@ include = [
     "/benches/**",
     "/build.rs",
     "/Cargo.toml",
+    "/content/**",
     "/examples/**",
     "/README.md",
     "/src/**",
     "/tests/**",
 ]
 
-[[bench]]
-name = "benchmark"
-harness = false
-path = "benches/criterion.rs"
+[workspace]
+members = ["xtask"]
+
+# [[bench]]
+# name = "benchmark"
+# harness = false
+# path = "benches/criterion.rs"
 
 [profile.bench]
 debug = true
@@ -41,7 +45,7 @@ comrak = "0.16.0"
 serde = { version = "1.0.156", features = ["derive"] }
 
 [dev-dependencies]
-criterion = "0.4.0"
+# criterion = "0.4.0"
 
 [lib]
 crate-type = ["lib"]
