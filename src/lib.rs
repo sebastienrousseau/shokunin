@@ -6,7 +6,7 @@
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
 //! [![Crates.io](https://img.shields.io/crates/v/shokunin.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/shokunin)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.1-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/shokunin)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.2-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/shokunin)
 //! [![License](https://img.shields.io/crates/l/shokunin.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](MIT OR Apache-2.0)
 //!
 //! ## Features
@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.1"
+//! shokunin = "0.0.2"
 //! serde = { version = "1.0", features = ["derive"] }
 //! serde_json = "1.0"
 //! ```
@@ -33,19 +33,28 @@
 #![doc(
     html_favicon_url = "",
     html_logo_url = "",
-    html_root_url = "https://docs.rs/shokunin"
+    html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
 use std::error::Error;
 use std::fs;
-// use std::io;
 use std::path::Path;
 
+/// The `args` module contains functions for processing command-line
+/// arguments.
+pub mod args;
+/// The `cli` module contains functions for processing command-line
+/// input.
+pub mod cli;
+/// File module handles file reading and writing.
 mod file;
+/// Frontmatter module extracts metadata from files.
 mod frontmatter;
+/// HTML module generates HTML content.
 mod html;
+/// Template module renders pages with metadata.
 mod template;
 
 use file::{add_files, File};
@@ -54,11 +63,58 @@ use html::{generate_html, generate_meta_tags};
 use template::render_page;
 
 #[allow(non_camel_case_types)]
-/// This is the main entry point for the my_library library.
+
+/// run() is the main function of the program. It reads files from
 pub fn run() -> Result<(), Box<dyn Error>> {
+    let title = "Shokunin (職人) 🦀 (v0.0.2)";
+    let description = "A Fast and Flexible Static Site Generator written in Rust";
+    let width = title.len().max(description.len()) + 4;
+    let horizontal_line = "─".repeat(width - 2);
+
+    println!("┌{}┐", horizontal_line);
+    println!("│{: ^width$}│", title, width = width - 5);
+    println!("├{}┤", horizontal_line);
+    println!("│{: ^width$}│", description, width = width - 2);
+    println!("└{}┘", horizontal_line);
+
+    let result = match cli::build_cli() {
+        Ok(matches) => {
+            args::process_arguments(&matches)?;
+            Ok(())
+        }
+        Err(e) => Err(format!("❌ Error: {}", e)),
+    };
+
+    match result {
+        Ok(_) => println!("✅ Done"),
+        Err(e) => println!("{}", e),
+    }
+
+    // Some(
+    // ) => args::process_arguments(&matches)?,
+    //     None => {
+    //         return Err("❌ Error: Argument \"content\" is required but missing.".to_owned());
+    //     }
+
+    // Print the welcome message if no arguments were passed
+    if std::env::args().len() == 1 {
+        eprintln!(
+            "\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n"
+        );
+    }
+
+    Ok(())
+}
+
+/// create_new_project() is the main function of the program. It
+/// reads files from the
+/// source directory, compiles them, and writes them to the output
+/// directory.
+///
+pub fn create_new_project(src_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     // Constants
-    let src_dir = Path::new("content");
-    let out_dir = Path::new("public");
+    let src_dir = Path::new(src_dir);
+    let out_dir = Path::new(out_dir);
 
     // Delete the output directory
     println!("Deleting old files...");

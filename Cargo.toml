@@ -7,13 +7,13 @@ documentation = "https://lib.rs/crates/shokunin"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
-keywords = ["['ssg','static','site','generator','cli']"]
+keywords = ['ssg', 'static', 'site', 'generator', 'cli']
 license = "MIT OR Apache-2.0"
 name = "ssg"
-readme = "{readme}"
+readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.0"
-version = "0.0.1"
+version = "0.0.2"
 include = [
     "../../CONTRIBUTING.md",
     "../../LICENSE-APACHE",
@@ -36,6 +36,7 @@ path = "benches/criterion.rs"
 debug = true
 
 [dependencies]
+clap = "4.1.8"
 comrak = "0.16.0"
 serde = { version = "1.0.156", features = ["derive"] }
 
