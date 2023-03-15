@@ -23,7 +23,7 @@ pub fn build_cli() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.1")
+        .version("0.0.2")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -31,10 +31,26 @@ pub fn build_cli() -> Result<ArgMatches, Error> {
                 .short('n')
                 .value_name("NEW"),
         )
+        .arg(
+            Arg::new("content")
+                .help("Location of the content directory.")
+                .long("content")
+                .short('c')
+                .value_name("CONTENT"),
+        )
+        .arg(
+            Arg::new("output")
+                .help("Location of the output directory.")
+                .long("output")
+                .short('o')
+                .value_name("OUTPUT"),
+        )
         .after_help(
             "\x1b[1;4mDocumentation:\x1b[0m\n\n  https://shokunin.one\n\n\x1b[1;4mLicense:\x1b[0m\n  The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).",
         )
         .get_matches();
+
+    println!("Matches: {:?}", matches);
 
     Ok(matches)
 }

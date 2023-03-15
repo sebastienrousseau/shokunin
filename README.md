@@ -112,7 +112,7 @@ To use the `shokunin` library in your project, add the following to your
 
 ```toml
 [dependencies]
-shokunin = "0.0.1"
+shokunin = "0.0.2"
 ```
 
 Add the following to your `main.rs` file:
@@ -188,6 +188,6 @@ providing a lot of useful suggestions on how to improve this project.
 [banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "shokunin banner"
 [crates-badge]: https://img.shields.io/crates/v/shokunin.svg?style=for-the-badge 'Crates.io badge'
 [docs-badge]: https://img.shields.io/docsrs/shokunin.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.1-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.2-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/shokunin.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

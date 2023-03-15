@@ -6,7 +6,7 @@
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
 //! [![Crates.io](https://img.shields.io/crates/v/shokunin.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/shokunin)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.1-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/shokunin)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.2-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/shokunin)
 //! [![License](https://img.shields.io/crates/l/shokunin.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](MIT OR Apache-2.0)
 //!
 //! ## Features
@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.1"
+//! shokunin = "0.0.2"
 //! serde = { version = "1.0", features = ["derive"] }
 //! serde_json = "1.0"
 //! ```
@@ -66,7 +66,7 @@ use template::render_page;
 
 /// run() is the main function of the program. It reads files from
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.1)";
+    let title = "Shokunin (職人) 🦀 (v0.0.2)";
     let description = "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
     let horizontal_line = "─".repeat(width - 2);
@@ -77,8 +77,24 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     println!("│{: ^width$}│", description, width = width - 2);
     println!("└{}┘", horizontal_line);
 
-    let matches = cli::build_cli()?;
-    args::process_arguments(&matches);
+    let result = match cli::build_cli() {
+        Ok(matches) => {
+            args::process_arguments(&matches)?;
+            Ok(())
+        }
+        Err(e) => Err(format!("❌ Error: {}", e)),
+    };
+
+    match result {
+        Ok(_) => println!("✅ Done"),
+        Err(e) => println!("{}", e),
+    }
+
+    // Some(
+    // ) => args::process_arguments(&matches)?,
+    //     None => {
+    //         return Err("❌ Error: Argument \"content\" is required but missing.".to_owned());
+    //     }
 
     // Print the welcome message if no arguments were passed
     if std::env::args().len() == 1 {
@@ -95,10 +111,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 /// source directory, compiles them, and writes them to the output
 /// directory.
 ///
-pub fn create_new_project() -> Result<(), Box<dyn Error>> {
+pub fn create_new_project(src_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     // Constants
-    let src_dir = Path::new("content");
-    let out_dir = Path::new("public");
+    let src_dir = Path::new(src_dir);
+    let out_dir = Path::new(out_dir);
 
     // Delete the output directory
     println!("Deleting old files...");
