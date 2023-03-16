@@ -112,7 +112,7 @@ To use the `shokunin` library in your project, add the following to your
 
 ```toml
 [dependencies]
-shokunin = "0.0.3"
+shokunin = "0.0.4"
 ```
 
 Add the following to your `main.rs` file:
@@ -177,17 +177,17 @@ providing a lot of useful suggestions on how to improve this project.
 [4]: https://github.com/sebastienrousseau/shokunin/shokunin/blob/main/CONTRIBUTING.md
 [5]: https://github.com/sebastienrousseau/shokunin/shokunin/graphs/contributors
 [6]: http://semver.org/
-[7]: https://crates.io/crates/shokunin
-[8]: https://docs.rs/shokunin
-[9]: https://lib.rs/crates/shokunin
+[7]: https://crates.io/crates/ssg
+[8]: https://docs.rs/crate/ssg/
+[9]: https://lib.rs/crates/ssg
 [10]: https://github.com/sebastienrousseau/shokunin/shokunin/actions
 [11]: https://www.rust-lang.org/policies/code-of-conduct
 [12]: https://www.reddit.com/r/rust/
 [13]: https://www.rust-lang.org/learn/get-started
 
 [banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "shokunin banner"
-[crates-badge]: https://img.shields.io/crates/v/shokunin.svg?style=for-the-badge 'Crates.io badge'
-[docs-badge]: https://img.shields.io/docsrs/shokunin.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.3-orange.svg?style=for-the-badge 'Lib.rs badge'
-[license-badge]: https://img.shields.io/crates/l/shokunin.svg?style=for-the-badge 'License badge'
+[crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
+[docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.4-orange.svg?style=for-the-badge 'Lib.rs badge'
+[license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'
