@@ -1,0 +1,27 @@
+#[cfg(test)]
+mod tests {
+    use ssg::file::add_files;
+    use std::{fs::File, io::Write};
+    use tempfile;
+
+    #[test]
+    fn test_add_files() {
+        // Create temporary directory with some files
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file1_path = temp_dir.path().join("file1.txt");
+        let mut file1 = File::create(&file1_path).unwrap();
+        writeln!(file1, "This is file1.").unwrap();
+
+        // Test the function
+        let files = add_files(temp_dir.path()).unwrap();
+
+        // Verify the result
+        assert_eq!(
+            files,
+            vec![ssg::file::File {
+                name: "file1.txt".to_string(),
+                content: "This is file1.\n".to_string(),
+            }]
+        );
+    }
+}
