@@ -3,17 +3,35 @@ use std::path::Path;
 
 use clap::ArgMatches;
 
-use crate::create_new_project;
+use super::compile;
 
-/// Function to ensure a directory exists or create it.
-/// - If the directory does not exist, it will be created.
-/// - If the directory exists, it will be checked to ensure it is a
-/// directory and not a file.
+/// Processes the command-line arguments passed to the static site
+/// generator command-line tool.
+///
+/// This function retrieves the "content" and "output" directory
+/// arguments from the `matches` object, validates them, and then
+/// creates a new project using the `compile` function.
+///
+/// The function first ensures that the "content" and "output"
+/// directories exist, or creates them if they do not exist. If either
+/// directory cannot be found or created, an error message is returned.
+///
+/// The function then calls the `compile` function to create a new
+/// project from the files in the "content" directory, and returns an
+/// error message if the compilation process fails.
+///
+/// If all operations are successful, `Ok(())` is returned.
 ///
 /// # Arguments
 ///
-/// * `matches` - A reference to an ArgMatches object containing command
-///               line arguments.
+/// * `matches` - A reference to an ArgMatches object containing the
+///               command-line arguments passed to the tool.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+/// - Ok() if the project was created successfully.
+/// - Err() if the project could not be created.
 ///
 pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
     // Retrieve the content and output directory arguments
@@ -36,15 +54,15 @@ pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
     let out_dir = Path::new(&arg_out);
 
     // Ensure source and output directories exist or create them
-    if let Err(e) = ensure_directory_exists(&src_dir, "content") {
+    if let Err(e) = ensure_directory_exists(src_dir, "content") {
         return Err(format!("❌ Error: {}", e));
     }
-    if let Err(e) = ensure_directory_exists(&out_dir, "output") {
+    if let Err(e) = ensure_directory_exists(out_dir, "output") {
         return Err(format!("❌ Error: {}", e));
     }
 
     // Create the new project
-    let new_project = create_new_project(src_dir, out_dir);
+    let new_project = compile(src_dir, out_dir);
     match new_project {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),

@@ -1,23 +1,28 @@
 [package]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 build = "build.rs"
-categories = ['Web programming', 'Template engine', 'Command line utilities']
+categories = [
+    "command-line-utilities",
+    "parsing",
+    "template-engine",
+    "web-programming",
+]
 description = "A Fast and Flexible Static Site Generator written in Rust."
-documentation = "https://lib.rs/crates/shokunin"
+documentation = "https://lib.rs/crates/ssg"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
-keywords = ['ssg', 'static', 'site', 'generator', 'cli']
+keywords = ["cli", "generator", "site", "ssg", "static"]
 license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.0"
-version = "0.0.4"
+version = "0.0.5"
 include = [
-    "../../CONTRIBUTING.md",
-    "../../LICENSE-APACHE",
-    "../../LICENSE-MIT",
+    "/CONTRIBUTING.md",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
     "/benches/**",
     "/build.rs",
     "/Cargo.toml",
@@ -25,7 +30,9 @@ include = [
     "/examples/**",
     "/README.md",
     "/src/**",
+    "/template/**",
     "/tests/**",
+    "/xtask/**",
 ]
 
 [workspace]
@@ -36,15 +43,18 @@ members = ["xtask"]
 # harness = false
 # path = "benches/criterion.rs"
 
-[profile.bench]
-debug = true
+# [profile.bench]
+# debug = true
 
 [dependencies]
+cargo-tarpaulin = "0.25.1"
 clap = "4.1.8"
 comrak = "0.16.0"
 
 [dev-dependencies]
+assert_cmd = "2.0.8"
 # criterion = "0.4.0"
+tempfile = "3.4.0"
 
 [lib]
 crate-type = ["lib"]
@@ -65,7 +75,7 @@ incremental = true
 lto = false
 opt-level = 0
 overflow-checks = true
-panic = 'unwind'
+panic = "unwind"
 rpath = false
 strip = false
 

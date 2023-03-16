@@ -1,7 +1,19 @@
 use clap::{Arg, ArgMatches, Command, Error};
 
-/// Builds and returns a set of command-line arguments using the Clap
-/// library.
+/// Builds a command-line interface (CLI) using the `clap` crate and
+/// returns the command-line arguments passed to the CLI as an
+/// `ArgMatches` object.
+///
+/// This function creates a CLI, and adds the following arguments to it:
+///
+/// - `--new` or `-n`: Creates a new project.
+/// - `--content` or `-c`: Specifies the location of the content directory.
+/// - `--output` or `-o`: Specifies the location of the output directory.
+///
+/// If the CLI is successfully built and the command-line arguments are
+/// parsed correctly, the function returns an `Ok` result containing the
+/// `ArgMatches` object. If an error occurs while building or parsing
+/// the CLI, an `Err` result containing the error message is returned.
 ///
 /// # Arguments
 ///
@@ -18,12 +30,13 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// ```
 /// use ssg::cli;
 /// let matches = cli::build_cli().unwrap();
+///
 /// ```
 pub fn build_cli() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.4")
+        .version("0.0.5")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")

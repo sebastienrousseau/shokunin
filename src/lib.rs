@@ -1,13 +1,21 @@
 // Copyright © 2023 shokunin. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//! # A Fast and Flexible Static Site Generator written in Rust 🦀
+//!<!-- markdownlint-disable MD033 MD041 -->
 //!
-//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one)
+//!<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="shokunin logo" width="240" align="right" />
+//!
+//!<!-- markdownlint-enable MD033 MD041 -->
+//!
+//! # Shokunin (職人) 🦀
+//!
+//! A Fast and Flexible Static Site Generator written in Rust 🦀
+//!
+//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg)](https://shokunin.one)
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.4-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.5-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/)
 //!
 //! ## Overview 📖
@@ -70,17 +78,17 @@ use std::path::Path;
 /// The `args` module contains functions for processing command-line
 /// arguments.
 pub mod args;
-/// The `cli` module contains functions for processing command-line
-/// input.
+/// The `cli` module contains functions for the command-line interface.
 pub mod cli;
-/// File module handles file reading and writing.
-mod file;
-/// Frontmatter module extracts metadata from files.
-mod frontmatter;
-/// HTML module generates HTML content.
-mod html;
-/// Template module renders pages with metadata.
-mod template;
+/// The `file` module handles file reading and writing operations.
+pub mod file;
+/// The `frontmatter` module extracts the front matter from files.
+pub mod frontmatter;
+/// The `html` module generates the HTML content.
+pub mod html;
+/// The `template` module renders the HTML content using the pre-defined
+/// template.
+pub mod template;
 
 use file::{add_files, File};
 use frontmatter::extract_front_matter;
@@ -89,9 +97,22 @@ use template::render_page;
 
 #[allow(non_camel_case_types)]
 
-/// run() is the main function of the program. It reads files from
+/// Runs the static site generator command-line tool. This function
+/// prints a banner containing the title and description of the tool,
+/// and then processes any command-line arguments passed to it. If no
+/// arguments are passed, it prints a welcome message and instructions
+/// on how to use the tool.
+///
+/// The function uses the `build_cli` function from the `cli` module to
+/// create the command-line interface for the tool. It then processes
+/// any arguments passed to it using the `process_arguments` function
+/// from the `args` module.
+///
+/// If any errors occur during the process (e.g. an invalid argument is
+/// passed), an error message is printed and returned. Otherwise,
+/// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.4)";
+    let title = "Shokunin (職人) 🦀 (v0.0.5)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
@@ -126,12 +147,28 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// create_new_project() is the main function of the program. It
-/// reads files from the
-/// source directory, compiles them, and writes them to the output
-/// directory.
+/// Compiles files in a source directory, generates HTML pages from
+/// them, and writes the resulting pages to an output directory. Also
+/// generates an index page containing links to the generated pages.
+/// This function takes in the paths to the source and output
+/// directories as arguments.
 ///
-pub fn create_new_project(
+/// The function reads in all Markdown files in the source directory and
+/// extracts metadata from them.
+/// The metadata is used to generate appropriate meta tags for the
+/// resulting HTML pages. The Markdown content of the files is then
+/// converted to HTML using the `generate_html` function and rendered
+/// into complete HTML pages using the `render_page` function. The
+/// resulting pages are written to the output directory as HTML files
+/// with the same names as the original Markdown files.
+///
+/// Finally, the function generates an index HTML page containing links
+/// to all the generated pages. The resulting index page is written to
+/// the output directory as "index.html".
+///
+/// If any errors occur during the process (e.g. a file cannot be read
+/// or written), an error is returned. Otherwise, `Ok(())` is returned.
+pub fn compile(
     src_dir: &Path,
     out_dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
@@ -141,17 +178,17 @@ pub fn create_new_project(
 
     // Delete the output directory
     println!("\n❯ Deleting old files...");
-    fs::remove_dir_all(&out_dir)?;
+    fs::remove_dir_all(out_dir)?;
     println!("  Done.\n");
 
     // Create the output directory
     println!("❯ Creating output directory...");
-    fs::create_dir(&out_dir)?;
+    fs::create_dir(out_dir)?;
     println!("  Done.\n");
 
     // Read the files in the source directory
     println!("❯ Reading files...");
-    let files = add_files(&src_dir)?;
+    let files = add_files(src_dir)?;
     println!("  Found {} files.\n", files.len());
 
     // Compile the files
@@ -209,7 +246,7 @@ pub fn create_new_project(
             .join("\n")
     );
     let index_file = out_dir.join("index.html");
-    fs::write(&index_file, index)?;
+    fs::write(index_file, index)?;
 
     // Done
     Ok(())
