@@ -13,7 +13,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.0"
-version = "0.0.2"
+version = "0.0.3"
 include = [
     "../../CONTRIBUTING.md",
     "../../LICENSE-APACHE",
@@ -42,7 +42,6 @@ debug = true
 [dependencies]
 clap = "4.1.8"
 comrak = "0.16.0"
-serde = { version = "1.0.156", features = ["derive"] }
 
 [dev-dependencies]
 # criterion = "0.4.0"

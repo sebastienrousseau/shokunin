@@ -23,7 +23,7 @@ pub fn build_cli() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.2")
+        .version("0.0.3")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -50,7 +50,7 @@ pub fn build_cli() -> Result<ArgMatches, Error> {
         )
         .get_matches();
 
-    println!("Matches: {:?}", matches);
+    // println!("Matches: {:?}", matches);
 
     Ok(matches)
 }

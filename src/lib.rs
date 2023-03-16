@@ -1,29 +1,59 @@
 // Copyright © 2023 shokunin. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
+//!<!-- markdownlint-disable MD033 MD041 -->
+//!
+//!<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="shokunin logo" width="240" align="right" />
+//!
+//!<!-- markdownlint-enable MD033 MD041 -->
+//!
 //! # A Fast and Flexible Static Site Generator written in Rust 🦀
-//! [![shokunin](https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=shokunin)](https://shokunin.one)
+//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg)](https://shokunin.one)
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
-//! [![Crates.io](https://img.shields.io/crates/v/shokunin.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/shokunin)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.2-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/shokunin)
-//! [![License](https://img.shields.io/crates/l/shokunin.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](MIT OR Apache-2.0)
+//! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.3-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
+//! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/)
 //!
-//! ## Features
+//! ## Overview 📖
 //!
-//! - Serialization and deserialization of data structures to JSON format
-//! - ...
-//! - ...
+//! `Shokunin (職人)` is a fast and flexible static site generator (ssg) written in Rust. It aims to provide an easy-to-use and powerful tool for building static websites.
 //!
-//! ## Usage
+//! ## Features ✨
 //!
-//! Add the following to your `Cargo.toml` file:
+//! - Fast and flexible
+//! - Easy to use
+//! - Written in Rust
+//! - Supports templates and themes
+//! - Generates optimized HTML, CSS, and JavaScript
+//! - Built-in development server
+//! - Live reloading
+//! - Markdown support
 //!
-//! ```toml
-//! [dependencies]
-//! shokunin = "0.0.2"
-//! serde = { version = "1.0", features = ["derive"] }
-//! serde_json = "1.0"
+//! ## Getting Started 🚀
+//!
+//! It takes just a few minutes to get up and running with `shokunin`.
+//!
+//! ### Installation
+//!
+//! To install `shokunin`, you need to have the Rust toolchain installed on
+//! your machine. You can install the Rust toolchain by following the
+//! instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
+//!
+//! Once you have the Rust toolchain installed, you can install `shokunin`
+//! using the following command:
+//!
+//! ```shell
+//! cargo install ssg
+//! ```
+//!
+//! For simplicity, we have given `shokunin` a simple alias `ssg` which can
+//! stand for `Shokunin Site Generator` or `Static Site Generator`.
+//!
+//! You can then run the help command to see the available options:
+//!
+//! ```shell
+//! ssg --help
 //! ```
 //!
 #![forbid(unsafe_code)]
@@ -31,8 +61,8 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![doc(
-    html_favicon_url = "",
-    html_logo_url = "",
+    html_favicon_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg",
+    html_logo_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]
@@ -66,8 +96,9 @@ use template::render_page;
 
 /// run() is the main function of the program. It reads files from
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.2)";
-    let description = "A Fast and Flexible Static Site Generator written in Rust";
+    let title = "Shokunin (職人) 🦀 (v0.0.3)";
+    let description =
+        "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
     let horizontal_line = "─".repeat(width - 2);
 
@@ -86,15 +117,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     };
 
     match result {
-        Ok(_) => println!("✅ Done"),
+        Ok(_) => println!("\n✅ All Done"),
         Err(e) => println!("{}", e),
     }
-
-    // Some(
-    // ) => args::process_arguments(&matches)?,
-    //     None => {
-    //         return Err("❌ Error: Argument \"content\" is required but missing.".to_owned());
-    //     }
 
     // Print the welcome message if no arguments were passed
     if std::env::args().len() == 1 {
@@ -111,28 +136,31 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 /// source directory, compiles them, and writes them to the output
 /// directory.
 ///
-pub fn create_new_project(src_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn Error>> {
+pub fn create_new_project(
+    src_dir: &Path,
+    out_dir: &Path,
+) -> Result<(), Box<dyn Error>> {
     // Constants
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
 
     // Delete the output directory
-    println!("Deleting old files...");
+    println!("\n❯ Deleting old files...");
     fs::remove_dir_all(&out_dir)?;
-    println!("Done.");
+    println!("  Done.\n");
 
     // Create the output directory
-    println!("Creating output directory...");
+    println!("❯ Creating output directory...");
     fs::create_dir(&out_dir)?;
-    println!("Done.");
+    println!("  Done.\n");
 
     // Read the files in the source directory
-    println!("Reading files...");
+    println!("❯ Reading files...");
     let files = add_files(&src_dir)?;
-    println!("Found {} files.", files.len());
+    println!("  Found {} files.\n", files.len());
 
     // Compile the files
-    println!("Compiling files...");
+    println!("❯ Compiling files...");
     let files_compiled: Vec<File> = files
         .into_iter()
         .map(|file| {
@@ -158,19 +186,19 @@ pub fn create_new_project(src_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn 
         })
         .collect();
 
-    println!("Done.");
+    println!("  Done.\n");
 
     // Write the compiled files to the output directory
-    println!("Writing files...");
+    println!("❯ Writing files...");
     for file in &files_compiled {
         let out_file = out_dir.join(file.name.replace(".md", ".html"));
         fs::write(&out_file, &file.content)?;
-        println!("Wrote file: {}", out_file.display());
+        println!("  Wrote file: {}", out_file.display());
     }
-    println!("Done.");
+    println!("  Done.\n");
 
     // Write the index file
-    println!("Writing index...");
+    println!("❯ Writing index...");
     let index = format!(
         "<ul>\n{}\n</ul>",
         files_compiled
@@ -187,9 +215,7 @@ pub fn create_new_project(src_dir: &Path, out_dir: &Path) -> Result<(), Box<dyn 
     );
     let index_file = out_dir.join("index.html");
     fs::write(&index_file, index)?;
-    println!("Done.");
 
     // Done
-    println!("All done!");
     Ok(())
 }

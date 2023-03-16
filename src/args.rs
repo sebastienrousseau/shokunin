@@ -15,7 +15,6 @@ use crate::create_new_project;
 /// * `matches` - A reference to an ArgMatches object containing command
 ///               line arguments.
 ///
-///
 pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
     // Retrieve the content and output directory arguments
     let arg_src = match matches.get_one::<String>("content") {
@@ -47,10 +46,7 @@ pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
     // Create the new project
     let new_project = create_new_project(src_dir, out_dir);
     match new_project {
-        Ok(_) => {
-            println!("✅ Done.");
-            Ok(())
-        }
+        Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),
     }
 }
@@ -69,14 +65,22 @@ pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
 ///  - Ok() if the directory exists or was created successfully.
 ///  - Err() if the directory does not exist and could not be created.
 ///
-///
-fn ensure_directory_exists(dir: &Path, name: &str) -> Result<(), String> {
+fn ensure_directory_exists(
+    dir: &Path,
+    name: &str,
+) -> Result<(), String> {
     if dir.exists() {
         if !dir.is_dir() {
-            return Err(format!("❌ Error: {} is not a directory.", name));
+            return Err(format!(
+                "❌ Error: {} is not a directory.",
+                name
+            ));
         }
     } else if let Err(e) = fs::create_dir_all(dir) {
-        return Err(format!("❌ Error: Cannot create {} directory: {}", name, e));
+        return Err(format!(
+            "❌ Error: Cannot create {} directory: {}",
+            name, e
+        ));
     }
 
     Ok(())
