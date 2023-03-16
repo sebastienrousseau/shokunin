@@ -353,7 +353,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ matrix.target }}.tar.gz
-          path: ${{ env[format('{0}.tar.gz', matrix.target)] }}
+          path: target/package/${{ matrix.target }}.tar.gz
 
   # Release the binary to GitHub Releases
   release:
@@ -483,4 +483,4 @@ jobs:
         with:
           use-cross: true
           command: publish
-          args: --dry-run --verbose --token "${CARGO_API_TOKEN}"
+          args: --verbose --token "${CARGO_API_TOKEN}"
