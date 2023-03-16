@@ -396,7 +396,7 @@ jobs:
             name="${target}.tar.gz"
             echo "Artifact name: $name"
             mkdir -p target/package
-            curl -sSL -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -L "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts/$shokunin" -o "target/package/$shokunin"
+            curl -sSL -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -L "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts/${target}.tar.gz" -o "target/package/${target}.tar.gz"
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
