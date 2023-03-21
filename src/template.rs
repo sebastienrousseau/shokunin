@@ -71,18 +71,20 @@ pub fn render_page(
     description: &str,
     keywords: &str,
     meta: &str,
-    css: &str,
+    lang: &str,
     content: &str,
     copyright: &str,
+    navigation: &str,
 ) -> Result<String, String> {
     let mut context = HashMap::new();
     context.insert("title", title);
     context.insert("description", description);
     context.insert("keywords", keywords);
     context.insert("meta", meta);
-    context.insert("css", css);
+    context.insert("lang", lang);
     context.insert("content", content);
     context.insert("copyright", copyright);
+    context.insert("navigation", navigation);
 
     let template = fs::read_to_string("./template/template.html")
         .map_err(|e| format!("{}", e))?;

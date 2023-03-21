@@ -34,6 +34,17 @@ use super::compile;
 /// - Err() if the project could not be created.
 ///
 pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
+    // Retrieve the name of the project
+    let project_src = match matches.get_one::<String>("new") {
+        Some(name) => name.to_owned(),
+        None => {
+            return Err(
+                "❌ Error: Argument \"name\" is required but missing."
+                    .to_owned(),
+            );
+        }
+    };
+
     // Retrieve the content and output directory arguments
     let arg_src = match matches.get_one::<String>("content") {
         Some(src) => src.to_owned(),
@@ -50,19 +61,23 @@ pub fn process_arguments(matches: &ArgMatches) -> Result<(), String> {
     };
 
     // Create Path objects for the content and output directories
+    let project_dir = Path::new(&project_src);
     let src_dir = Path::new(&arg_src);
     let out_dir = Path::new(&arg_out);
 
     // Ensure source and output directories exist or create them
+    if let Err(e) = ensure_directory_exists(project_dir, "new") {
+        return Err(format!("❌ Error: {}", e));
+    }
     if let Err(e) = ensure_directory_exists(src_dir, "content") {
         return Err(format!("❌ Error: {}", e));
     }
-    if let Err(e) = ensure_directory_exists(out_dir, "output") {
+    if let Err(e) = ensure_directory_exists(&out_dir, "output") {
         return Err(format!("❌ Error: {}", e));
     }
 
     // Create the new project
-    let new_project = compile(src_dir, out_dir);
+    let new_project = compile(src_dir, &out_dir);
     match new_project {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),

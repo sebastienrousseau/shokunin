@@ -21,6 +21,7 @@ mod tests {
             vec![ssg::file::File {
                 name: "file1.txt".to_string(),
                 content: "This is file1.\n".to_string(),
+                json: "\"This is file1.\\n\"".to_string(),
             }]
         );
     }

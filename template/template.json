@@ -1,0 +1,34 @@
+{
+    "background_color": "{{background_color}}",
+    "description": "{{description}}",
+    "display": "{{display}}",
+    "lang": "{{lang}}",
+    "name": "{{name}}",
+    "scope": "{{scope}}",
+    "start_url": "{{start_url}}",
+    "short_name": "{{short_name}}",
+    "theme_color": "{{theme_color}}",
+    "icons": [
+        {
+            "purpose": "any maskable",
+            "sizes": "196x196",
+            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/196x196.png",
+            "type": "image/png"
+        },
+        {
+            "sizes": "256x256",
+            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/256x256.png",
+            "type": "image/png"
+        },
+        {
+            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

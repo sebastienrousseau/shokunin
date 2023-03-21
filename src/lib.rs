@@ -1,21 +1,15 @@
 // Copyright © 2023 shokunin. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//!<!-- markdownlint-disable MD033 MD041 -->
-//!
-//!<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="shokunin logo" width="240" align="right" />
-//!
-//!<!-- markdownlint-enable MD033 MD041 -->
-//!
 //! # Shokunin (職人) 🦀
 //!
 //! A Fast and Flexible Static Site Generator written in Rust 🦀
 //!
-//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg)](https://shokunin.one)
+//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one)
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.5-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.6-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/)
 //!
 //! ## Overview 📖
@@ -71,9 +65,13 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use std::error::Error;
-use std::fs;
-use std::path::Path;
+use file::{add_files, File};
+use frontmatter::extract_front_matter;
+use html::{generate_html, generate_meta_tags};
+use json::generate_json;
+use std::env;
+use std::{error::Error, fs, path::Path};
+use template::render_page;
 
 /// The `args` module contains functions for processing command-line
 /// arguments.
@@ -86,14 +84,11 @@ pub mod file;
 pub mod frontmatter;
 /// The `html` module generates the HTML content.
 pub mod html;
+/// The `json` module generates the JSON content.
+pub mod json;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
-
-use file::{add_files, File};
-use frontmatter::extract_front_matter;
-use html::{generate_html, generate_meta_tags};
-use template::render_page;
 
 #[allow(non_camel_case_types)]
 
@@ -112,13 +107,13 @@ use template::render_page;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.5)";
+    let title = "Shokunin (職人) 🦀 (v0.0.6)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
     let horizontal_line = "─".repeat(width - 2);
 
-    println!("┌{}┐", horizontal_line);
+    println!("\n┌{}┐", horizontal_line);
     println!("│{: ^width$}│", title, width = width - 5);
     println!("├{}┤", horizontal_line);
     println!("│{: ^width$}│", description, width = width - 2);
@@ -145,6 +140,50 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+/// Generates a navigation menu as an unordered list of links to the
+/// compiled HTML files.
+///
+/// # Arguments
+///
+/// * `files` - A slice of `File` structs containing the compiled HTML
+///             files.
+///
+/// # Returns
+///
+/// A string containing the HTML code for the navigation menu. The
+/// string is wrapped in a `<ul>` element with the class `nav`.
+/// Each file is wrapped in a `<li>` element, and each link is wrapped
+/// in an `<a>` element.
+/// The `href` attribute of the `<a>` element is set to the name of the
+/// file with the `.md` extension replaced with `.html`. The text of
+/// the link is set to the name of the file with the `.md` extension
+/// removed.
+/// The files are sorted alphabetically by their names.
+/// The function returns an empty string if the slice is empty.
+/// The function returns an error if the file name does not contain
+/// the `.md` extension.
+///
+///
+pub fn generate_navigation(files: &[File]) -> String {
+    let mut files_sorted = files.to_vec();
+    files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
+
+    format!(
+        "<ul class=\"nav\">\n{}\n</ul>",
+        files_sorted
+            .iter()
+            .map(|file| {
+                format!(
+                    "<li><a href=\"{}\" role=\"navitem\">{}</a></li>",
+                    file.name.replace(".md", ".html"),
+                    file.name.replace(".md", "")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    )
 }
 
 /// Compiles files in a source directory, generates HTML pages from
@@ -176,9 +215,21 @@ pub fn compile(
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
 
+    // Get the value of the "new" argument
+    let mut site_name = match env::args().nth(1) {
+        Some(value) => value,
+        None => "Shokunin".to_owned(),
+    };
+    if site_name.starts_with("--new=") {
+        site_name = site_name[6..].to_owned();
+        site_name = site_name.replace(" ", "_");
+    }
+    println!("❯ Generating a new site: \"{}\"", site_name);
+
     // Delete the output directory
-    println!("\n❯ Deleting old files...");
+    println!("\n❯ Deleting any previous directory...");
     fs::remove_dir_all(out_dir)?;
+    fs::remove_dir(site_name.clone())?;
     println!("  Done.\n");
 
     // Create the output directory
@@ -193,30 +244,59 @@ pub fn compile(
 
     // Compile the files
     println!("❯ Compiling files...");
+
+    // Generate the HTML code for the navigation menu
+    let navigation = generate_navigation(&files);
+
     let files_compiled: Vec<File> = files
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
-            let (title, description, keywords, permalink) = extract_front_matter(&file.content);
-            let meta = generate_meta_tags(&[("url".to_owned(), permalink)]);
+            let (title, description, keywords, permalink) =
+                extract_front_matter(&file.content);
+            let meta =
+                generate_meta_tags(&[("url".to_owned(), permalink)]);
 
+            // Generate HTML
             let content = render_page(
                 &title,
                 &description,
                 &keywords,
                 &meta,
-                "style.css",
+                "en-GB",
                 &generate_html(&file.content, &title, &description),
-                "Copyright © 2022-2023 My Company. All rights reserved.",
+                format!(
+                    "Copyright © {} 2023. All rights reserved.",
+                    site_name
+                )
+                .as_str(),
+                &navigation,
             )
             .unwrap();
+
+            // Generate JSON
+            let json_data = generate_json(
+                "#000",
+                &description,
+                "fullscreen",
+                "en-GB",
+                &title,
+                "/",
+                "/",
+                &description,
+                "#fff",
+            );
 
             File {
                 name: file.name,
                 content,
+                json: json_data,
             }
         })
         .collect();
+
+    // Generate the HTML code for the navigation menu
+    generate_navigation(&files_compiled);
 
     println!("  Done.\n");
 
@@ -224,15 +304,19 @@ pub fn compile(
     println!("❯ Writing files...");
     for file in &files_compiled {
         let out_file = out_dir.join(file.name.replace(".md", ".html"));
+        let out_json_file =
+            out_dir.join(file.name.replace(".md", ".webmanifest"));
         fs::write(&out_file, &file.content)?;
-        println!("  Wrote file: {}", out_file.display());
+        fs::write(&out_json_file, &file.json)?;
+        println!("  - {}", out_file.display());
+        println!("  - {}", out_json_file.display());
     }
     println!("  Done.\n");
 
     // Write the index file
     println!("❯ Writing index...");
     let index = format!(
-        "<ul>\n{}\n</ul>",
+        "<ul class=\"nav\">\n{}\n</ul>",
         files_compiled
             .iter()
             .map(|file| {
@@ -247,6 +331,23 @@ pub fn compile(
     );
     let index_file = out_dir.join("index.html");
     fs::write(index_file, index)?;
+
+    // Move the output directory to the public directory
+    println!("❯ Moving output directory...");
+    let public_dir = Path::new("public");
+    fs::remove_dir_all(public_dir)?;
+    let site_name = site_name.replace(" ", "_");
+    let new_project_dir = public_dir.join(site_name);
+    fs::create_dir_all(&new_project_dir)?;
+    fs::rename(out_dir, &new_project_dir)?;
+    println!("  Done.\n");
+
+    // // Move the output directory to the public directory
+    // println!("❯ Moving output directory...");
+    // let public_dir = Path::new("public");
+    // fs::remove_dir_all(public_dir)?;
+    // fs::rename(out_dir, public_dir)?;
+    // println!("  Done.\n");
 
     // Done
     Ok(())

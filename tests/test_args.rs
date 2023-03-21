@@ -48,7 +48,8 @@ mod tests {
         // Assert that the function returns an error message.
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"content\" is required but missing.".to_owned())
+            Err("❌ Error: Argument \"name\" is required but missing."
+                .to_owned())
         );
 
         // Assert that the directories have been created.

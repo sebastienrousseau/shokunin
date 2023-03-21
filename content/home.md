@@ -1,8 +1,10 @@
 ---
 title: Homepage
-description: This is the homepage
+description: A description of the homepage content for SEO
 keywords: homepage, home, index
-permalink: /
+permalink: home.html
 ---
 
-This is the the `homepage` page content!
+![homepage logo](https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=Homepage)
+
+This is the homepage page content!

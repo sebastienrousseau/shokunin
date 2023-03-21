@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{lang}}">
+<html lang="en-GB">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>{{title}}</title>
+    <title>Homepage</title>
     <meta name="generator" content="Shokunin Static Site Generator 0.0.6" />
     <link
       rel="stylesheet"
@@ -29,17 +29,32 @@
       href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/32x32.png"
       sizes="32x32"
     />
-    <link rel="manifest" href="{{title}}.webmanifest" />
-    {{meta}}
-    <meta name="description" content="{{description}}" />
-    <meta name="keywords" content="{{keywords}}" />
-    <meta name="twitter:card" content="{{title}} - {{description}}." />
-    <meta name="twitter:description" content="{{description}}" />
-    <meta name="twitter:title" content="{{title}}" />
-    <meta name="og:title" content="{{title}}" />
-    <meta name="og:description" content="{{description}}" />
-    <meta name="og:image:alt" content="{{title}} - {{description}}." />
-    <meta name="og:locale" content="{{lang}}" />
+    <link rel="manifest" href="Homepage.webmanifest" />
+    <meta name="url" content="home.html" />
+    <meta
+      name="description"
+      content="A description of the homepage content for SEO"
+    />
+    <meta name="keywords" content="homepage, home, index" />
+    <meta
+      name="twitter:card"
+      content="Homepage - A description of the homepage content for SEO."
+    />
+    <meta
+      name="twitter:description"
+      content="A description of the homepage content for SEO"
+    />
+    <meta name="twitter:title" content="Homepage" />
+    <meta name="og:title" content="Homepage" />
+    <meta
+      name="og:description"
+      content="A description of the homepage content for SEO"
+    />
+    <meta
+      name="og:image:alt"
+      content="Homepage - A description of the homepage content for SEO."
+    />
+    <meta name="og:locale" content="en-GB" />
     <meta
       http-equiv="Cache-Control"
       content="no-cache, no-store, must-revalidate"
@@ -52,8 +67,8 @@
     <meta itemprop="accessibilityHazard" content="noFlashingHazard" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta name="apple-mobile-web-app-title" content="{{title}}" />
-    <meta name="application-name" content="{{title}}" />
+    <meta name="apple-mobile-web-app-title" content="Homepage" />
+    <meta name="application-name" content="Homepage" />
     <meta name="author" content="" />
     <meta name="charset" content="utf-8" />
     <meta
@@ -78,7 +93,7 @@
       content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
     />
     <meta name="og:robots" content="all" />
-    <meta name="og:site_name" content="{{title}}" />
+    <meta name="og:site_name" content="Homepage" />
     <meta name="og:type" content="website" />
     <meta name="og:url" content="" />
     <meta name="robots" content="all" />
@@ -111,13 +126,28 @@
         <span class="spinner horizontal"></span>
         <span class="spinner diagonal part-2"></span>
       </label>
-      <nav id="sidebar">{{navigation}}</nav>
+      <nav id="sidebar">
+        <ul class="nav">
+          <li><a href="about.html" role="navitem">about</a></li>
+          <li><a href="home.html" role="navitem">home</a></li>
+        </ul>
+      </nav>
     </section>
     <main id="main" class="container center text-center" aria-label="main">
-      <article id="article" class="article">{{content}}</article>
+      <article id="article" class="article">
+        <h1>Homepage</h1>
+        <h2>A description of the homepage content for SEO</h2>
+        <p>
+          <img
+            src="https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=Homepage"
+            alt="homepage logo"
+          />
+        </p>
+        <p>This is the homepage page content!</p>
+      </article>
     </main>
     <footer id="footer" class="center text-center" aria-label="footer">
-      <p>{{copyright}}</p>
+      <p>Copyright © new_project 2023. All rights reserved.</p>
     </footer>
   </body>
 </html>

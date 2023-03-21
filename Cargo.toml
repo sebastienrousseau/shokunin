@@ -18,7 +18,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.0"
-version = "0.0.5"
+version = "0.0.6"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -50,6 +50,7 @@ members = ["xtask"]
 cargo-tarpaulin = "0.25.1"
 clap = "4.1.8"
 comrak = "0.16.0"
+serde_json = "1.0.94"
 
 [dev-dependencies]
 assert_cmd = "2.0.8"
