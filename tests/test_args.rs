@@ -1,16 +1,16 @@
-// This is a unit test module for the `process_arguments` function in
+// This is a unit test module for the `parser` function in
 // the `args` module. It uses the `clap` crate to create a mock set of
 // command-line arguments, and then calls the function being tested.
 #[cfg(test)]
 mod tests {
     // Import necessary modules and dependencies.
     use clap::{Arg, Command};
-    use ssg::args::process_arguments;
+    use ssg::parser::args;
     use std::fs;
     use std::path::Path;
 
     #[test]
-    fn test_process_arguments_valid_directories() {
+    fn test_parser_valid_directories() {
         // Set up the directories for the test.
         let content = "tests/test_content";
         let output = "tests/test_output";
@@ -43,12 +43,13 @@ mod tests {
             .get_matches();
 
         // Call the function being tested.
-        let result = process_arguments(&matches);
+        let result = args(&matches);
 
         // Assert that the function returns an error message.
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"content\" is required but missing.".to_owned())
+            Err("❌ Error: Argument \"name\" is required but missing."
+                .to_owned())
         );
 
         // Assert that the directories have been created.

@@ -1,3 +1,5 @@
+/// ## Function: extract - Extracts metadata from the front matter of a Markdown file
+///
 /// Extracts metadata from the front matter of a Markdown file and
 /// returns it as a tuple. The front matter is defined as any YAML block
 /// that appears at the beginning of the file, enclosed by "---" lines.
@@ -22,9 +24,40 @@
 /// If no front matter is present in the input string, or if an error
 /// occurs during parsing, an empty string is returned for all fields
 /// in the tuple.
-pub fn extract_front_matter(
-    content: &str,
-) -> (String, String, String, String) {
+///
+/// # Arguments
+///
+/// * `content` - A reference to a string containing the entire content
+///              of the Markdown file.
+/// # Returns
+/// * A tuple containing the title, description, keywords, and permalink
+///  of the page, if they are present in the front matter. If any of
+/// these fields are not present, an empty string is returned for that
+/// field in the tuple.
+///
+/// # Example
+///
+/// ```
+///use ssg::frontmatter::extract;
+///
+///    let content = "---\n\
+///        title: My Page\n\
+///        description: A page about something\n\
+///        keywords: something, cool, interesting\n\
+///        permalink: /my-page/\n\
+///        ---\n\
+///        # My Page\n\
+///        This is my page about something. It's really cool and interesting!";
+///
+///    let (title, description, keywords, permalink) = extract(&content);
+///    assert_eq!(title, "My Page");
+///    assert_eq!(description, "A page about something");
+///    assert_eq!(keywords, "something, cool, interesting");
+///    assert_eq!(permalink, "/my-page/");
+///
+/// ```
+///
+pub fn extract(content: &str) -> (String, String, String, String) {
     let mut title = String::new();
     let mut description = String::new();
     let mut keywords = String::new();

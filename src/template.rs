@@ -1,7 +1,42 @@
 use std::collections::HashMap;
 use std::fs;
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+/// ## Struct: `PageOptions` - Options for rendering a page template
+///
+/// This struct contains the options for rendering a page template.
+/// These options are used to construct a context `HashMap` that is
+/// passed to the `render_template` function.
+///
+/// # Arguments
+/// * `title`       - A string representing the title of the page.
+/// * `description` - A string representing the description of the page.
+/// * `keywords`    - A string representing the keywords of the page.
+/// * `content`     - A string representing the content of the page.
+/// * `css`         - A string representing the css of the page.
+/// * `js`          - A string representing the js of the page.
+/// * `navigation`  - A string representing the navigation of the page.
+pub struct PageOptions<'a> {
+    /// A string representing the content of the page.
+    pub content: &'a str,
+    /// A string representing the copyright notice of the page.
+    pub copyright: &'a str,
+    /// A string representing the CSS file of the page.
+    pub css: &'a str,
+    /// A string representing the description of the page.
+    pub description: &'a str,
+    /// A string representing the keywords of the page.
+    pub keywords: &'a str,
+    /// A string representing the language of the page.
+    pub lang: &'a str,
+    /// A string representing the meta tags of the page.
+    pub meta: &'a str,
+    /// A string representing the navigation of the page.
+    pub navigation: &'a str,
+    /// A string representing the title of the page.
+    pub title: &'a str,
+}
 
-/// Render a template with the given context.
+/// ## Function: `render_template` - Render a template with the given context
 ///
 /// This function takes in a template string and a context hash map as
 /// arguments. The template string is a string containing placeholders
@@ -30,7 +65,7 @@ pub fn render_template(
     for (key, value) in context {
         output = output.replace(&format!("{{{{{}}}}}", key), value);
     }
-    // println!("output: {}", output);
+    // Check if all keys have been replaced
     if output.contains("{{") {
         Err(format!(
             "Failed to render template, unresolved template tags: {}",
@@ -40,6 +75,9 @@ pub fn render_template(
         Ok(output)
     }
 }
+
+/// ## Function: `render_page` - Render an HTML page
+///
 /// Renders an HTML page with the given title, description, keywords,
 /// meta tags, CSS file, content, and copyright notice.
 ///
@@ -66,26 +104,20 @@ pub fn render_template(
 /// error, it returns `Err(error)`, where `error` is a string describing
 /// the error that occurred.
 ///
-pub fn render_page(
-    title: &str,
-    description: &str,
-    keywords: &str,
-    meta: &str,
-    css: &str,
-    content: &str,
-    copyright: &str,
-) -> Result<String, String> {
+pub fn render_page(options: &PageOptions) -> Result<String, String> {
     let mut context = HashMap::new();
-    context.insert("title", title);
-    context.insert("description", description);
-    context.insert("keywords", keywords);
-    context.insert("meta", meta);
-    context.insert("css", css);
-    context.insert("content", content);
-    context.insert("copyright", copyright);
+    context.insert("content", options.content);
+    context.insert("copyright", options.copyright);
+    context.insert("css", options.css);
+    context.insert("description", options.description);
+    context.insert("keywords", options.keywords);
+    context.insert("lang", options.lang);
+    context.insert("meta", options.meta);
+    context.insert("navigation", options.navigation);
+    context.insert("title", options.title);
 
-    let template = fs::read_to_string("./template/template.html")
-        .map_err(|e| format!("{}", e))?;
-
-    render_template(&template, &context)
+    render_template(
+        &fs::read_to_string("./template/template.html").unwrap(),
+        &context,
+    )
 }
