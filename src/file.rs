@@ -12,6 +12,8 @@ pub struct File {
     /// The content of the file, escaped for JSON.
     pub json: String,
 }
+/// ## Function: add - returns a Result containing a vector of File structs
+///
 /// Reads all files in a directory specified by the given path and adds
 /// them to a vector. Each file is represented as a `File` struct
 /// containing the name and content of the file.
@@ -32,7 +34,8 @@ pub struct File {
 /// A `Result<Vec<File>, io::Error>` containing a vector of `File`
 /// structs representing all files in the directory, or an `io::Error`
 /// if the directory cannot be read.
-pub fn add_files(path: &Path) -> io::Result<Vec<File>> {
+///
+pub fn add(path: &Path) -> io::Result<Vec<File>> {
     let mut files = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;

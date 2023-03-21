@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use ssg::cli::build_cli;
+    use ssg::cli::build;
 
     #[test]
     // Test that the arguments for the build CLI are correctly set
-    fn test_build_cli_args() {
+    fn test_build_args() {
         // Define the expected argument values
         let arg_specs = [
             ("content", None),
@@ -13,8 +13,8 @@ mod tests {
             ("version", None),
         ];
 
-        // Call the build_cli function to get the command-line arguments
-        let args = build_cli().unwrap();
+        // Call the build function to get the command-line arguments
+        let args = build().unwrap();
 
         // Iterate through the expected argument values
         for (arg_name, expected_value) in arg_specs.iter() {

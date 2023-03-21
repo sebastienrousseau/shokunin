@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use ssg::file::add_files;
+    use ssg::file::add;
     use std::{fs::File, io::Write};
     use tempfile;
 
     #[test]
-    fn test_add_files() {
+    fn test_add() {
         // Create temporary directory with some files
         let temp_dir = tempfile::tempdir().unwrap();
         let file1_path = temp_dir.path().join("file1.txt");
@@ -13,7 +13,7 @@ mod tests {
         writeln!(file1, "This is file1.").unwrap();
 
         // Test the function
-        let files = add_files(temp_dir.path()).unwrap();
+        let files = add(temp_dir.path()).unwrap();
 
         // Verify the result
         assert_eq!(

@@ -1,3 +1,5 @@
+/// ## Function: `main` - The main function of the program
+///
 /// The main function of the program. Calls the `run()` function from
 /// the `ssg` module to run the static site generator.
 ///

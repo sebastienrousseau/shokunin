@@ -9,7 +9,7 @@
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.6-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.5-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/)
 //!
 //! ## Overview 📖
@@ -65,17 +65,18 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use file::{add_files, File};
-use frontmatter::extract_front_matter;
-use html::{generate_html, generate_meta_tags};
-use json::generate_json;
+use file::{add, File};
+use frontmatter::extract;
+use html::generate_html;
+use json::manifest;
+use metatags::generate_metatags;
 use std::env;
 use std::{error::Error, fs, path::Path};
 use template::render_page;
 
-/// The `args` module contains functions for processing command-line
-/// arguments.
-pub mod args;
+use crate::json::ManifestOptions;
+use crate::template::PageOptions;
+
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
 /// The `file` module handles file reading and writing operations.
@@ -86,9 +87,17 @@ pub mod frontmatter;
 pub mod html;
 /// The `json` module generates the JSON content.
 pub mod json;
+/// The `metatags` module generates the meta tags.
+pub mod metatags;
+/// The `parser` module contains functions for parsing command-line
+/// arguments and options.
+pub mod parser;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
+/// The `directory` function ensures that a directory
+/// exists.
+pub mod utilities;
 
 #[allow(non_camel_case_types)]
 
@@ -98,16 +107,16 @@ pub mod template;
 /// arguments are passed, it prints a welcome message and instructions
 /// on how to use the tool.
 ///
-/// The function uses the `build_cli` function from the `cli` module to
+/// The function uses the `build` function from the `cli` module to
 /// create the command-line interface for the tool. It then processes
-/// any arguments passed to it using the `process_arguments` function
+/// any arguments passed to it using the `parser` function
 /// from the `args` module.
 ///
 /// If any errors occur during the process (e.g. an invalid argument is
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.6)";
+    let title = "Shokunin (職人) 🦀 (v0.0.5)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
@@ -119,9 +128,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     println!("│{: ^width$}│", description, width = width - 2);
     println!("└{}┘", horizontal_line);
 
-    let result = match cli::build_cli() {
+    let result = match cli::build() {
         Ok(matches) => {
-            args::process_arguments(&matches)?;
+            parser::args(&matches)?;
             Ok(())
         }
         Err(e) => Err(format!("❌ Error: {}", e)),
@@ -222,7 +231,9 @@ pub fn compile(
     };
     if site_name.starts_with("--new=") {
         site_name = site_name[6..].to_owned();
-        site_name = site_name.replace(" ", "_");
+        site_name = site_name.replace(' ', "_");
+    } else {
+        site_name = "Shokunin".to_owned();
     }
     println!("❯ Generating a new site: \"{}\"", site_name);
 
@@ -239,7 +250,7 @@ pub fn compile(
 
     // Read the files in the source directory
     println!("❯ Reading files...");
-    let files = add_files(src_dir)?;
+    let files = add(src_dir)?;
     println!("  Found {} files.\n", files.len());
 
     // Compile the files
@@ -253,39 +264,46 @@ pub fn compile(
         .map(|file| {
             // Extract metadata from front matter
             let (title, description, keywords, permalink) =
-                extract_front_matter(&file.content);
+                extract(&file.content);
             let meta =
-                generate_meta_tags(&[("url".to_owned(), permalink)]);
+                generate_metatags(&[("url".to_owned(), permalink)]);
 
             // Generate HTML
-            let content = render_page(
-                &title,
-                &description,
-                &keywords,
-                &meta,
-                "en-GB",
-                &generate_html(&file.content, &title, &description),
-                format!(
+            let content = render_page(&PageOptions {
+                title: &title,
+                description: &description,
+                keywords: &keywords,
+                meta: &meta,
+                lang: "en-GB",
+                content: &generate_html(&file.content, &title, &description),
+                copyright: format!(
                     "Copyright © {} 2023. All rights reserved.",
                     site_name
                 )
                 .as_str(),
-                &navigation,
-            )
+                css: "style.css",
+                navigation: &navigation,
+            })
             .unwrap();
 
             // Generate JSON
-            let json_data = generate_json(
-                "#000",
-                &description,
-                "fullscreen",
-                "en-GB",
-                &title,
-                "/",
-                "/",
-                &description,
-                "#fff",
-            );
+            let options = ManifestOptions {
+                background_color: "#000".to_string(),
+                description,
+                dir: "/".to_string(),
+                display: "fullscreen".to_string(),
+                icons: "{ \"src\": \"icon/lowres.webp\", \"sizes\": \"64x64\", \"type\": \"image/webp\" }, { \"src\": \"icon/lowres.png\", \"sizes\": \"64x64\" }".to_string(),
+                identity: "/".to_string(),
+                lang: "en-GB".to_string(),
+                name: title,
+                orientation: "any".to_string(),
+                scope: "/".to_string(),
+                short_name: "/".to_string(),
+                start_url: "/".to_string(),
+                theme_color: "#fff".to_string(),
+            };
+            let json_data = manifest(&options);
+
 
             File {
                 name: file.name,
@@ -336,19 +354,11 @@ pub fn compile(
     println!("❯ Moving output directory...");
     let public_dir = Path::new("public");
     fs::remove_dir_all(public_dir)?;
-    let site_name = site_name.replace(" ", "_");
+    let site_name = site_name.replace(' ', "_");
     let new_project_dir = public_dir.join(site_name);
     fs::create_dir_all(&new_project_dir)?;
     fs::rename(out_dir, &new_project_dir)?;
     println!("  Done.\n");
 
-    // // Move the output directory to the public directory
-    // println!("❯ Moving output directory...");
-    // let public_dir = Path::new("public");
-    // fs::remove_dir_all(public_dir)?;
-    // fs::rename(out_dir, public_dir)?;
-    // println!("  Done.\n");
-
-    // Done
     Ok(())
 }

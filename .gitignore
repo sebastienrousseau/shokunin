@@ -2,7 +2,6 @@
 *.profraw
 /.vscode/
 /output/
-/public/
 /target/
 build
 Cargo.lock

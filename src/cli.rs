@@ -1,5 +1,7 @@
 use clap::{Arg, ArgMatches, Command, Error};
 
+/// ## Function: build - returns a Result containing the parsed input options
+///
 /// Builds a command-line interface (CLI) using the `clap` crate and
 /// returns the command-line arguments passed to the CLI as an
 /// `ArgMatches` object.
@@ -29,10 +31,10 @@ use clap::{Arg, ArgMatches, Command, Error};
 ///
 /// ```
 /// use ssg::cli;
-/// let matches = cli::build_cli().unwrap();
+/// let matches = cli::build().unwrap();
 ///
 /// ```
-pub fn build_cli() -> Result<ArgMatches, Error> {
+pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
