@@ -29,7 +29,9 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 ## Overview 📖
 
-`Shokunin (職人)` is a fast and flexible static site generator (ssg) written in Rust. It aims to provide an easy-to-use and powerful tool for building static websites.
+`Shokunin (職人)` is a fast and flexible static site generator (ssg)
+written in Rust. It aims to provide an easy-to-use and powerful tool for
+building static websites.
 
 ## Features ✨
 
@@ -106,6 +108,24 @@ You can find our documentation on [docs.rs][8], [lib.rs][9] and
 [crates.io][7].
 
 ## Usage 📖
+
+### Command Line Interface (CLI)
+
+The `shokunin` library runs in a Terminal window and can be used to
+generate a static website.
+
+Here’s the first command you can enter in your Terminal window to run
+`shokunin`:
+
+```shell
+ssg  --new=my-site --content=content --output=output
+```
+
+This command will create a new `my-site` project in a directory called
+`public/my-site` and generate a static website in the `my-site`
+directory.
+
+### In your project
 
 To use the `shokunin` library in your project, add the following to your
 `Cargo.toml` file:
