@@ -175,7 +175,7 @@ providing a lot of useful suggestions on how to improve this project.
 [2]: http://opensource.org/licenses/MIT
 [3]: https://github.com/sebastienrousseau/shokunin/issues
 [4]: https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md
-[5]: https://github.com/sebastienrousseau/shokunin/shokunin/graphs/contributors
+[5]: https://github.com/sebastienrousseau/shokunin/graphs/contributors
 [6]: http://semver.org/
 [7]: https://crates.io/crates/ssg
 [8]: https://docs.rs/crate/ssg/
