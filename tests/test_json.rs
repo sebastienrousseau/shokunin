@@ -29,7 +29,13 @@ mod tests {
 
     #[test]
     fn test_manifest_with_non_empty_options() {
-        let mut options = ManifestOptions::default();
+        let mut options = ssg::json::ManifestOptions {
+            name: "My App".to_string(),
+            short_name: "My App".to_string(),
+            start_url: "/".to_string(),
+            theme_color: "#ffffff".to_string(),
+            ..Default::default()
+        };
         options.name = "My App".to_string();
         options.short_name = "My App".to_string();
         options.start_url = "/".to_string();

@@ -2,14 +2,13 @@
 mod tests {
     use ssg::file::add;
     use std::{fs::File, io::Write};
-    use tempfile;
 
     #[test]
     fn test_add() {
         // Create temporary directory with some files
         let temp_dir = tempfile::tempdir().unwrap();
         let file1_path = temp_dir.path().join("file1.txt");
-        let mut file1 = File::create(&file1_path).unwrap();
+        let mut file1 = File::create(file1_path).unwrap();
         writeln!(file1, "This is file1.").unwrap();
 
         // Test the function
