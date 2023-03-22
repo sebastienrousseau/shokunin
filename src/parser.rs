@@ -62,18 +62,12 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
         }
     };
 
-    let arg_template = match matches.get_one::<String>("template") {
-        Some(out) => out.to_owned(),
-        None => {
-            return Err("❌ Error: Argument \"template\" is required but missing.".to_owned());
-        }
-    };
+    let arg_template = matches.get_one::<String>("template");
 
     // Create Path objects for the content and output directories
     let project_dir = Path::new(&project_src);
     let src_dir = Path::new(&arg_src);
     let out_dir = Path::new(&arg_out);
-    let template_dir = Path::new(&arg_template);
 
     // Ensure source and output directories exist or create them
     if let Err(e) = directory(project_dir, "new") {
@@ -85,13 +79,10 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
     if let Err(e) = directory(out_dir, "output") {
         return Err(format!("❌ Error: {}", e));
     }
-    if let Err(e) = directory(template_dir, "template") {
-        return Err(format!("❌ Error: {}", e));
-    }
 
     // Create the new project
     let new_project =
-        compile(src_dir, out_dir, template_dir, project_src);
+        compile(src_dir, out_dir, arg_template, project_src);
     match new_project {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),
