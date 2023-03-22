@@ -47,9 +47,9 @@ members = ["xtask"]
 # debug = true
 
 [dependencies]
-cargo-tarpaulin = "0.25.1"
 clap = "4.1.11"
 comrak = "0.16.0"
+reqwest = { version = "0.11.15", features = ["blocking", "json"] }
 serde_json = "1.0.94"
 
 [dev-dependencies]
