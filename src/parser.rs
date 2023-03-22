@@ -62,6 +62,8 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
         }
     };
 
+    let arg_template = matches.get_one::<String>("template");
+
     // Create Path objects for the content and output directories
     let project_dir = Path::new(&project_src);
     let src_dir = Path::new(&arg_src);
@@ -79,7 +81,8 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
     }
 
     // Create the new project
-    let new_project = compile(src_dir, out_dir, project_src);
+    let new_project =
+        compile(src_dir, out_dir, arg_template, project_src);
     match new_project {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),

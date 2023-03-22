@@ -109,7 +109,10 @@ pub fn render_template(
 /// error, it returns `Err(error)`, where `error` is a string describing
 /// the error that occurred.
 ///
-pub fn render_page(options: &PageOptions) -> Result<String, String> {
+pub fn render_page(
+    options: &PageOptions,
+    template_path: &String,
+) -> Result<String, String> {
     let mut context = HashMap::new();
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
@@ -122,7 +125,10 @@ pub fn render_page(options: &PageOptions) -> Result<String, String> {
     context.insert("title", options.title);
 
     render_template(
-        &fs::read_to_string("./template/template.html").unwrap(),
+        &fs::read_to_string(
+            Path::new(template_path).join("template.html"),
+        )
+        .unwrap(),
         &context,
     )
 }
@@ -162,26 +168,93 @@ pub fn create_directory(path: &Path) -> io::Result<()> {
     })
 }
 
-/// Creates the template directory and downloads the template files.
-pub fn create_template_folder() -> Result<(), TemplateError> {
+/**
+ * Creates a template folder based on the provided template path or uses the default template folder
+ *
+ * If a URL is provided as the template path, the function downloads the template files to a temporary directory.
+ * If a local path is provided, the function uses it as the template directory path.
+ * If no path is provided, the function downloads the default template files to a temporary directory.
+ *
+ * # Arguments
+ *
+ * * `template_path` - An optional `&str` containing the path to the template folder
+ *
+ * # Returns
+ *
+ * Returns a `Result` that contains `()` if successful, or a `TemplateError` if an error occurs.
+ */
+pub fn create_template_folder(
+    template_path: Option<&String>,
+) -> Result<String, TemplateError> {
+    // Get the current working directory
     let current_dir = std::env::current_dir()?;
     println!("Current directory: {:?}", current_dir);
 
-    let template_dir_path = current_dir.join("template");
-    create_directory(&template_dir_path)?;
-    println!("Creating template directory: {:?}", template_dir_path);
+    // Determine the template directory path based on the provided argument or use the default path
+    let template_dir_path = match template_path {
+        Some(path) => {
+            if path.starts_with("http://")
+                || path.starts_with("https://")
+            {
+                // If a URL is provided, download the template files to a temporary directory
+                let tempdir = tempfile::tempdir()?;
+                let template_dir_path = tempdir.into_path().to_owned();
+                println!(
+                    "Creating temporary directory for template: {:?}",
+                    template_dir_path
+                );
 
-    let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
-    let files = ["template.html", "template.json"];
+                let url = path;
+                let files = ["template.html", "template.json"];
 
-    for file in files.iter() {
-        let file_url = format!("{}{}", url, file);
-        let file_path = template_dir_path.join(file);
-        let mut download = reqwest::blocking::get(&file_url)?;
-        let mut file = File::create(&file_path)?;
-        download.copy_to(&mut file)?;
-        println!("Downloading template file: {}", file_url);
-    }
-    println!("Template directory created: {:?}", template_dir_path);
-    Ok(())
+                for file in files.iter() {
+                    let file_url = format!("{}/{}", url, file);
+                    let file_path = template_dir_path.join(file);
+                    let mut download =
+                        reqwest::blocking::get(&file_url)?;
+                    let mut file = File::create(&file_path)?;
+                    download.copy_to(&mut file)?;
+                    println!(
+                        "Downloaded template file to: {:?}",
+                        file_path
+                    );
+                }
+
+                template_dir_path
+            } else {
+                // If a local path is provided, use it as the template directory path
+                println!("Using local template directory: {}", path);
+                current_dir.join(path)
+            }
+        }
+        None => {
+            // If no path is provided, download the default template files to a temporary directory
+            let tempdir = tempfile::tempdir()?;
+            let template_dir_path = tempdir.into_path().to_owned();
+            println!(
+                "Creating temporary directory for default template: {:?}",
+                template_dir_path
+            );
+
+            let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
+            let files = ["template.html", "template.json"];
+
+            for file in files.iter() {
+                let file_url = format!("{}/{}", url, file);
+                let file_path = template_dir_path.join(file);
+                let mut download = reqwest::blocking::get(&file_url)?;
+                let mut file = File::create(&file_path)?;
+                download.copy_to(&mut file)?;
+                println!(
+                    "Downloaded default template file to: {:?}",
+                    file_path
+                );
+            }
+
+            template_dir_path
+        }
+    };
+    println!("Template directory path: {:?}", template_dir_path);
+
+    Ok(String::from(template_dir_path.to_str().unwrap()))
 }

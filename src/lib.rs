@@ -218,6 +218,7 @@ pub fn generate_navigation(files: &[File]) -> String {
 pub fn compile(
     src_dir: &Path,
     out_dir: &Path,
+    template_path: Option<&String>,
     site_name: String,
 ) -> Result<(), Box<dyn Error>> {
     // Constants
@@ -234,7 +235,7 @@ pub fn compile(
 
     // Creating the template directory
     println!("\n❯ Creating template directory...");
-    create_template_folder()
+    let template_path = create_template_folder(template_path)
         .expect("❌ Error: Could not create template directory");
     println!("  Done.\n");
 
@@ -278,7 +279,7 @@ pub fn compile(
                 .as_str(),
                 css: "style.css",
                 navigation: &navigation,
-            })
+            }, &template_path)
             .unwrap();
 
             // Generate JSON
