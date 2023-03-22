@@ -62,6 +62,10 @@ path = "benches/bench_json.rs"
 name = "metatags"
 path = "benches/bench_metatags.rs"
 
+[[bench]]
+name = "parser"
+path = "benches/bench_parser.rs"
+
 [dependencies]
 clap = "4.1.11"
 comrak = "0.16.0"
