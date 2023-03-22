@@ -1,14 +1,20 @@
 name: ❯ Shokunin (職人) release
 
+# Controls when the action will run. Triggers the workflow on push or
+# pull request events but only for the main branch and every Tuesday
+# at 3:45 UTC
 on:
-  pull_request:
-    branches:
-      - main
-      - 'feat/*'
   push:
-    branches:
-      - main
-      - 'feat/*'
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: 45 3 * * 2 # every Tuesday at 3:45 UTC
+
+# If a new push on the PR is done, cancel the build
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
   # This job checks a local package and all of its dependencies for
