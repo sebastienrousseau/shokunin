@@ -38,13 +38,18 @@ include = [
 [workspace]
 members = ["xtask"]
 
-# [[bench]]
-# name = "benchmark"
-# harness = false
-# path = "benches/criterion.rs"
+[[bench]]
+name = "cli"
+harness = false
+path = "benches/bench_cli.rs"
 
-# [profile.bench]
-# debug = true
+[[bench]]
+name = "file"
+harness = false
+path = "benches/bench_file.rs"
+
+[profile.bench]
+debug = true
 
 [dependencies]
 clap = "4.1.11"

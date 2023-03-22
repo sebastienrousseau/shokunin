@@ -3,7 +3,7 @@ extern crate criterion;
 use clap::{ArgMatches, Error};
 use criterion::{criterion_group, criterion_main, Criterion};
 use ssg::cli::build;
-
+#[cfg(test)]
 fn build_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("build");
 
