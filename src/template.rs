@@ -1,5 +1,10 @@
+use reqwest;
 use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
+use std::io;
+use std::path::Path;
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `PageOptions` - Options for rendering a page template
 ///
@@ -120,4 +125,63 @@ pub fn render_page(options: &PageOptions) -> Result<String, String> {
         &fs::read_to_string("./template/template.html").unwrap(),
         &context,
     )
+}
+
+/// Custom error type to handle both reqwest and io errors
+#[derive(Debug)]
+pub enum TemplateError {
+    /// Error from reqwest
+    Reqwest(reqwest::Error),
+    /// Error from io
+    Io(std::io::Error),
+}
+
+impl From<reqwest::Error> for TemplateError {
+    fn from(err: reqwest::Error) -> TemplateError {
+        TemplateError::Reqwest(err)
+    }
+}
+
+impl From<std::io::Error> for TemplateError {
+    fn from(err: std::io::Error) -> TemplateError {
+        TemplateError::Io(err)
+    }
+}
+
+/// Creates a directory if it does not exist. If the directory already
+/// exists, the function will return `Ok(())`.
+///
+/// # Arguments
+///
+/// - `path` - The path to the directory.
+///
+pub fn create_directory(path: &Path) -> io::Result<()> {
+    fs::create_dir(path).or_else(|e| match e.kind() {
+        io::ErrorKind::AlreadyExists => Ok(()),
+        _ => Err(e),
+    })
+}
+
+/// Creates the template directory and downloads the template files.
+pub fn create_template_folder() -> Result<(), TemplateError> {
+    let current_dir = std::env::current_dir()?;
+    println!("Current directory: {:?}", current_dir);
+
+    let template_dir_path = current_dir.join("template");
+    create_directory(&template_dir_path)?;
+    println!("Creating template directory: {:?}", template_dir_path);
+
+    let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
+    let files = ["template.html", "template.json"];
+
+    for file in files.iter() {
+        let file_url = format!("{}{}", url, file);
+        let file_path = template_dir_path.join(file);
+        let mut download = reqwest::blocking::get(&file_url)?;
+        let mut file = File::create(&file_path)?;
+        download.copy_to(&mut file)?;
+        println!("Downloading template file: {}", file_url);
+    }
+    println!("Template directory created: {:?}", template_dir_path);
+    Ok(())
 }

@@ -75,7 +75,7 @@ use std::{error::Error, fs, path::Path};
 use template::render_page;
 
 use crate::json::ManifestOptions;
-use crate::template::PageOptions;
+use crate::template::{create_template_folder, PageOptions};
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
@@ -241,6 +241,12 @@ pub fn compile(
     println!("\n❯ Deleting any previous directory...");
     fs::remove_dir_all(out_dir)?;
     fs::remove_dir(site_name.clone())?;
+    println!("  Done.\n");
+
+    // Creating the template directory
+    println!("\n❯ Creating template directory...");
+    create_template_folder()
+        .expect("❌ Error: Could not create template directory");
     println!("  Done.\n");
 
     // Create the output directory

@@ -18,7 +18,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.0"
-version = "0.0.6"
+version = "0.0.7"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -38,23 +38,47 @@ include = [
 [workspace]
 members = ["xtask"]
 
-# [[bench]]
-# name = "benchmark"
-# harness = false
-# path = "benches/criterion.rs"
+[[bench]]
+name = "cli"
+path = "benches/bench_cli.rs"
 
-# [profile.bench]
-# debug = true
+[[bench]]
+name = "file"
+path = "benches/bench_file.rs"
+
+[[bench]]
+name = "frontmatter"
+path = "benches/bench_frontmatter.rs"
+
+[[bench]]
+name = "html"
+path = "benches/bench_html.rs"
+
+[[bench]]
+name = "json"
+path = "benches/bench_json.rs"
+
+[[bench]]
+name = "metatags"
+path = "benches/bench_metatags.rs"
+
+[[bench]]
+name = "parser"
+path = "benches/bench_parser.rs"
+
+[[bench]]
+name = "utilities"
+path = "benches/bench_utilities.rs"
 
 [dependencies]
-cargo-tarpaulin = "0.25.1"
 clap = "4.1.11"
 comrak = "0.16.0"
+reqwest = { version = "0.11.15", features = ["blocking", "json"] }
 serde_json = "1.0.94"
 
 [dev-dependencies]
 assert_cmd = "2.0.10"
-# criterion = "0.4.0"
+criterion = "0.4.0"
 tempfile = "3.4.0"
 
 [lib]
