@@ -40,16 +40,19 @@ members = ["xtask"]
 
 [[bench]]
 name = "cli"
-harness = false
 path = "benches/bench_cli.rs"
 
 [[bench]]
 name = "file"
-harness = false
 path = "benches/bench_file.rs"
 
-[profile.bench]
-debug = true
+[[bench]]
+name = "frontmatter"
+path = "benches/bench_frontmatter.rs"
+
+[[bench]]
+name = "html"
+path = "benches/bench_html.rs"
 
 [dependencies]
 clap = "4.1.11"
