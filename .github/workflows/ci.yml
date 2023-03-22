@@ -11,11 +11,6 @@ on:
   schedule:
     - cron: 45 3 * * 2 # every Tuesday at 3:45 UTC
 
-# If a new push on the PR is done, cancel the build
-concurrency:
-  group: ${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
   # This job checks a local package and all of its dependencies for
   # errors.
