@@ -109,7 +109,10 @@ pub fn render_template(
 /// error, it returns `Err(error)`, where `error` is a string describing
 /// the error that occurred.
 ///
-pub fn render_page(options: &PageOptions) -> Result<String, String> {
+pub fn render_page(
+    options: &PageOptions,
+    template_dir: &Path,
+) -> Result<String, String> {
     let mut context = HashMap::new();
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
@@ -122,7 +125,8 @@ pub fn render_page(options: &PageOptions) -> Result<String, String> {
     context.insert("title", options.title);
 
     render_template(
-        &fs::read_to_string("./template/template.html").unwrap(),
+        &fs::read_to_string(template_dir.join("template.html"))
+            .unwrap(),
         &context,
     )
 }

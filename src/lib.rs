@@ -218,6 +218,7 @@ pub fn generate_navigation(files: &[File]) -> String {
 pub fn compile(
     src_dir: &Path,
     out_dir: &Path,
+    template_dir: &Path,
     site_name: String,
 ) -> Result<(), Box<dyn Error>> {
     // Constants
@@ -232,11 +233,11 @@ pub fn compile(
     fs::remove_dir(Path::new(&site_name))?;
     println!("  Done.\n");
 
-    // Creating the template directory
-    println!("\n❯ Creating template directory...");
-    create_template_folder()
-        .expect("❌ Error: Could not create template directory");
-    println!("  Done.\n");
+    // // Creating the template directory
+    // println!("\n❯ Creating template directory...");
+    // create_template_folder()
+    //     .expect("❌ Error: Could not create template directory");
+    // println!("  Done.\n");
 
     // Create the output directory
     println!("❯ Creating output directory...");
@@ -278,7 +279,7 @@ pub fn compile(
                 .as_str(),
                 css: "style.css",
                 navigation: &navigation,
-            })
+            }, &template_dir)
             .unwrap();
 
             // Generate JSON
@@ -348,9 +349,9 @@ pub fn compile(
     // Move the output directory to the public directory
     println!("❯ Moving output directory...");
     let public_dir = Path::new("public");
-    fs::remove_dir_all(public_dir)?;
     let site_name = site_name.replace(' ', "_");
     let new_project_dir = public_dir.join(site_name);
+    fs::remove_dir_all(&new_project_dir)?;
     fs::create_dir_all(&new_project_dir)?;
     fs::rename(out_dir, &new_project_dir)?;
     println!("  Done.\n");
