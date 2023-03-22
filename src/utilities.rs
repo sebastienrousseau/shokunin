@@ -22,11 +22,13 @@ use std::{fs, path::Path};
 ///
 /// ```
 /// use std::path::Path;
+/// use std::fs;
 /// use ssg::utilities::directory;
 ///
 /// // Create a "logs" directory if it doesn't exist
 /// let dir = Path::new("logs");
 /// directory(dir, "logs").expect("Could not create logs directory");
+/// fs::remove_dir_all(dir).expect("Could not remove logs directory");
 /// ```
 ///
 /// Note that the error message returned by this function is formatted
