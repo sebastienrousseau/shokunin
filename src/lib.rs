@@ -245,7 +245,8 @@ pub fn compile(
 
     // Creating the template directory
     println!("\n❯ Creating template directory...");
-    create_template_folder();
+    create_template_folder()
+        .expect("❌ Error: Could not create template directory");
     println!("  Done.\n");
 
     // Create the output directory
