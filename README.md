@@ -10,7 +10,7 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 ![shokunin banner][banner]
 
-[![Made With Rust][made-with-rust-badge]][5] [![Crates.io][crates-badge]][7] [![Lib.rs][libs-badge]][9] [![Docs.rs][docs-badge]][8] [![License][license-badge]][2]
+[![Made With Rust][made-with-rust-badge]][5] [![Crates.io][crates-badge]][7] [![Lib.rs][libs-badge]][9] [![Docs.rs][docs-badge]][8] [![License][license-badge]][2] [![Codecov][codecov-badge]][14]
 
 <!-- markdownlint-disable MD033 -->
 <center>
@@ -118,7 +118,7 @@ Here’s the first command you can enter in your Terminal window to run
 `shokunin`:
 
 ```shell
-ssg  --new=my-site --content=content --output=output
+ssg  --new=my-site --content=content --output=output --template=template
 ```
 
 This command will create a new `my-site` project in a directory called
@@ -204,8 +204,11 @@ providing a lot of useful suggestions on how to improve this project.
 [11]: https://www.rust-lang.org/policies/code-of-conduct
 [12]: https://www.reddit.com/r/rust/
 [13]: https://www.rust-lang.org/learn/get-started
+[14]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "shokunin banner"
+[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin banner"
+[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
+
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
 [libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.7-orange.svg?style=for-the-badge 'Lib.rs badge'
