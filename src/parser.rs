@@ -79,7 +79,7 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
     }
 
     // Create the new project
-    let new_project = compile(src_dir, out_dir);
+    let new_project = compile(src_dir, out_dir, project_src);
     match new_project {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),

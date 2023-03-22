@@ -70,7 +70,6 @@ use frontmatter::extract;
 use html::generate_html;
 use json::manifest;
 use metatags::generate_metatags;
-use std::env;
 use std::{error::Error, fs, path::Path};
 use template::render_page;
 
@@ -219,28 +218,18 @@ pub fn generate_navigation(files: &[File]) -> String {
 pub fn compile(
     src_dir: &Path,
     out_dir: &Path,
+    site_name: String,
 ) -> Result<(), Box<dyn Error>> {
     // Constants
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
 
-    // Get the value of the "new" argument
-    let mut site_name = match env::args().nth(1) {
-        Some(value) => value,
-        None => "Shokunin".to_owned(),
-    };
-    if site_name.starts_with("--new=") {
-        site_name = site_name[6..].to_owned();
-        site_name = site_name.replace(' ', "_");
-    } else {
-        site_name = "Shokunin".to_owned();
-    }
     println!("❯ Generating a new site: \"{}\"", site_name);
 
     // Delete the output directory
     println!("\n❯ Deleting any previous directory...");
     fs::remove_dir_all(out_dir)?;
-    fs::remove_dir(site_name.clone())?;
+    fs::remove_dir(Path::new(&site_name))?;
     println!("  Done.\n");
 
     // Creating the template directory
