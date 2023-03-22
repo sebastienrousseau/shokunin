@@ -1,9 +1,10 @@
 use reqwest;
-use std::collections::HashMap;
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::path::Path;
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io,
+    path::Path,
+};
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `PageOptions` - Options for rendering a page template
@@ -13,13 +14,15 @@ use std::path::Path;
 /// passed to the `render_template` function.
 ///
 /// # Arguments
-/// * `title`       - A string representing the title of the page.
-/// * `description` - A string representing the description of the page.
-/// * `keywords`    - A string representing the keywords of the page.
-/// * `content`     - A string representing the content of the page.
-/// * `css`         - A string representing the css of the page.
-/// * `js`          - A string representing the js of the page.
-/// * `navigation`  - A string representing the navigation of the page.
+/// * `content`     - A string representing the content.
+/// * `copyright`   - A string representing the copyright notice.
+/// * `css`         - A string representing the css.
+/// * `description` - A string representing the description.
+/// * `keywords`    - A string representing the keywords.
+/// * `lang`        - A string representing the language.
+/// * `meta`        - A string representing the meta tags.
+/// * `navigation`  - A string representing the navigation.
+/// * `title`       - A string representing the title.
 pub struct PageOptions<'a> {
     /// A string representing the content of the page.
     pub content: &'a str,
@@ -94,13 +97,15 @@ pub fn render_template(
 ///
 /// # Arguments
 ///
-/// * `title` - The title of the HTML page.
-/// * `description` - The description of the HTML page.
-/// * `keywords` - The keywords associated with the HTML page.
-/// * `meta` - The meta tags for the HTML page.
-/// * `css` - The path to the CSS file used by the HTML page.
 /// * `content` - The content of the HTML page.
 /// * `copyright` - The copyright notice for the HTML page.
+/// * `css` - The path to the CSS file used by the HTML page.
+/// * `description` - The description of the HTML page.
+/// * `keywords` - The keywords associated with the HTML page.
+/// * `lang` - The language of the HTML page.
+/// * `meta` - The meta tags for the HTML page.
+/// * `navigation` - The navigation for the HTML page.
+/// * `title` - The title of the HTML page.
 ///
 /// # Returns
 ///
@@ -169,19 +174,26 @@ pub fn create_directory(path: &Path) -> io::Result<()> {
 }
 
 /**
- * Creates a template folder based on the provided template path or uses the default template folder
+ * Creates a template folder based on the provided template path or uses
+ * the default template folder
  *
- * If a URL is provided as the template path, the function downloads the template files to a temporary directory.
- * If a local path is provided, the function uses it as the template directory path.
- * If no path is provided, the function downloads the default template files to a temporary directory.
+ * - If a URL is provided as the template path, the function downloads
+ *   the template files to a temporary directory.
+ * - If a local path is provided, the function uses it as the template
+ *   directory path.
+ * - If no path is provided, the function downloads the default template
+ *   files to a temporary directory.
  *
  * # Arguments
  *
- * * `template_path` - An optional `&str` containing the path to the template folder
+ * * `template_path` - An optional `&str` containing the path to the
+ *   template folder
  *
  * # Returns
  *
- * Returns a `Result` that contains `()` if successful, or a `TemplateError` if an error occurs.
+ * Returns a `Result` that contains `()` if successful, or a
+ * `TemplateError` if an error occurs.
+ *
  */
 pub fn create_template_folder(
     template_path: Option<&String>,
@@ -198,7 +210,7 @@ pub fn create_template_folder(
             {
                 // If a URL is provided, download the template files to a temporary directory
                 let tempdir = tempfile::tempdir()?;
-                let template_dir_path = tempdir.into_path().to_owned();
+                let template_dir_path = tempdir.into_path();
                 println!(
                     "Creating temporary directory for template: {:?}",
                     template_dir_path
@@ -222,7 +234,8 @@ pub fn create_template_folder(
 
                 template_dir_path
             } else {
-                // If a local path is provided, use it as the template directory path
+                // If a local path is provided, use it as the template
+                // directory path
                 println!("Using local template directory: {}", path);
                 current_dir.join(path)
             }
@@ -230,7 +243,7 @@ pub fn create_template_folder(
         None => {
             // If no path is provided, download the default template files to a temporary directory
             let tempdir = tempfile::tempdir()?;
-            let template_dir_path = tempdir.into_path().to_owned();
+            let template_dir_path = tempdir.into_path();
             println!(
                 "Creating temporary directory for default template: {:?}",
                 template_dir_path
