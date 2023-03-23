@@ -152,7 +152,8 @@ pub fn print_welcome_message(
 }
 /// Prints a welcome message if no arguments are passed to the tool.
 /// The message contains instructions on how to use the tool.
-pub fn print_welcome_message_on_no_args() -> Result<(), Box<dyn Error>> {
+pub fn print_welcome_message_on_no_args() -> Result<(), Box<dyn Error>>
+{
     if std::env::args().len() == 1 {
         eprintln!(
             "\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n"
@@ -215,8 +216,8 @@ pub fn delete_previous_directory(
     println!("  Done.\n");
     Ok(())
 }
-
-fn create_template_directory(
+/// Creates template directory.
+pub fn create_template_directory(
     template_path: Option<&String>,
 ) -> Result<String, Box<dyn Error>> {
     println!("\n❯ Creating template directory...");
@@ -225,8 +226,8 @@ fn create_template_directory(
     println!("  Done.\n");
     Ok(template_path)
 }
-
-fn create_output_directory(
+/// Creates output directory.
+pub fn create_output_directory(
     out_dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
     println!("❯ Creating output directory...");
