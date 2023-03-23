@@ -12,6 +12,17 @@ pub struct File {
     /// The content of the file, escaped for JSON.
     pub json: String,
 }
+/// File struct to hold the name and content of a file.
+impl File {
+    /// Create a new `File` struct.
+    pub fn new(name: &str, content: String, json: String) -> Self {
+        File {
+            name: name.to_string(),
+            content,
+            json,
+        }
+    }
+}
 /// ## Function: add - returns a Result containing a vector of File structs
 ///
 /// Reads all files in a directory specified by the given path and adds

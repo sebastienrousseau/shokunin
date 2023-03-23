@@ -242,8 +242,8 @@ pub fn read_files(src_dir: &Path) -> Result<Vec<File>, Box<dyn Error>> {
     println!("  Found {} files.\n", files.len());
     Ok(files)
 }
-
-fn compile_files(
+/// Compiles files.
+pub fn compile_files(
     files: Vec<File>,
     template_path: &str,
     site_name: &str,
@@ -364,8 +364,8 @@ fn move_output_directory(
     println!(" Done.\n");
     Ok(())
 }
-
-fn generate_navigation(files_compiled: &[File]) -> String {
+/// Generates navigation.
+pub fn generate_navigation(files_compiled: &[File]) -> String {
     files_compiled
         .iter()
         .map(|file| {
