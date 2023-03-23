@@ -324,8 +324,8 @@ fn write_files(
     println!("  Done.\n");
     Ok(())
 }
-
-fn write_index(
+/// Writes index file.
+pub fn write_index(
     files_compiled: &[File],
     out_dir: &Path,
 ) -> Result<(), Box<dyn Error>> {
