@@ -235,8 +235,8 @@ pub fn create_output_directory(
     println!("  Done.\n");
     Ok(())
 }
-
-fn read_files(src_dir: &Path) -> Result<Vec<File>, Box<dyn Error>> {
+/// Reads all files in a directory and returns a vector of `files`.
+pub fn read_files(src_dir: &Path) -> Result<Vec<File>, Box<dyn Error>> {
     println!("❯ Reading files...");
     let files = add(src_dir)?;
     println!("  Found {} files.\n", files.len());
