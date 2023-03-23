@@ -45,7 +45,7 @@ mod tests {
         // Create a temporary directory and copy the template file into it
         let tempdir = tempfile::tempdir().unwrap();
         let template_file_path = tempdir.path().join("template.html");
-        std::fs::copy("template/template.html", &template_file_path)
+        std::fs::copy("template/template.html", template_file_path)
             .unwrap();
 
         // Call the render_page function

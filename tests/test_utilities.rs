@@ -2,7 +2,6 @@
 mod tests {
     use ssg::utilities::directory;
     use std::fs;
-    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]

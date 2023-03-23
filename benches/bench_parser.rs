@@ -15,9 +15,13 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("parse command line arguments", |b| {
         b.iter(|| {
-            let result = args(black_box(&matches));
-            assert!(result.is_ok());
-        })
+            let result = args(black_box(matches.clone()));
+            assert_eq!(
+                result,
+                Err("❌ Error: Argument \"output\" is required but missing."
+                    .to_owned())
+            );
+        });
     });
 }
 

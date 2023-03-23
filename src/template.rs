@@ -200,7 +200,7 @@ pub fn create_template_folder(
 ) -> Result<String, TemplateError> {
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
-    println!("Current directory: {:?}", current_dir);
+    // println!("Current directory: {:?}", current_dir);
 
     // Determine the template directory path based on the provided argument or use the default path
     let template_dir_path = match template_path {
@@ -236,7 +236,7 @@ pub fn create_template_folder(
             } else {
                 // If a local path is provided, use it as the template
                 // directory path
-                println!("Using local template directory: {}", path);
+                // println!("Using local template directory: {}", path);
                 current_dir.join(path)
             }
         }
@@ -267,7 +267,7 @@ pub fn create_template_folder(
             template_dir_path
         }
     };
-    println!("Template directory path: {:?}", template_dir_path);
+    // println!("Template directory path: {:?}", template_dir_path);
 
     Ok(String::from(template_dir_path.to_str().unwrap()))
 }

@@ -35,7 +35,7 @@ use super::compile;
 /// - Err() if the project could not be created or the output files
 /// could not be written to the output directory.
 ///
-pub fn args(matches: &ArgMatches) -> Result<(), String> {
+pub fn args(matches: ArgMatches) -> Result<(), String> {
     // Retrieve the name of the project
     let project_src = match matches.get_one::<String>("new") {
         Some(name) => name.to_owned(),
