@@ -349,8 +349,8 @@ fn write_index(
     println!(" Done.\n");
     Ok(())
 }
-
-fn move_output_directory(
+/// Moves output directory to public folder.
+pub fn move_output_directory(
     out_dir: &Path,
     site_name: &str,
 ) -> Result<(), Box<dyn Error>> {
