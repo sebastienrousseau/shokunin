@@ -133,8 +133,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
-fn print_welcome_message(
+/// Prints a welcome message containing the title and description of the
+/// tool. The message is printed in a box with a horizontal line at the
+/// top and bottom.
+pub fn print_welcome_message(
     title: &str,
     description: &str,
 ) -> Result<(), Box<dyn Error>> {
@@ -148,8 +150,9 @@ fn print_welcome_message(
     println!("└{}┘", horizontal_line);
     Ok(())
 }
-
-fn print_welcome_message_on_no_args() -> Result<(), Box<dyn Error>> {
+/// Prints a welcome message if no arguments are passed to the tool.
+/// The message contains instructions on how to use the tool.
+pub fn print_welcome_message_on_no_args() -> Result<(), Box<dyn Error>> {
     if std::env::args().len() == 1 {
         eprintln!(
             "\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n"
@@ -201,8 +204,8 @@ pub fn compile(
 
     Ok(())
 }
-
-fn delete_previous_directory(
+/// Deletes any previous directory with the same name as the site.
+pub fn delete_previous_directory(
     out_dir: &Path,
     site_name: &str,
 ) -> Result<(), Box<dyn Error>> {
