@@ -205,7 +205,10 @@ pub fn generate_navigation(files: &[File]) -> String {
     let mut files_sorted = files.to_vec();
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let nav_links = files_sorted.iter().map(|file| {
+    let nav_links = files_sorted.iter().filter(|file| {
+        let file_name = file.name.replace(".md", "");
+        file_name != "index"
+    }).map(|file| {
         let mut dir_name = file.name.replace(".md", "");
 
         // Handle special case for files in the same base directory
@@ -216,7 +219,7 @@ pub fn generate_navigation(files: &[File]) -> String {
         }
 
         format!(
-            "<li><a href=\"../{}/index.html\" role=\"navitem\">{}</a></li>",
+            "<li><a href=\"/{}/index.html\" role=\"navitem\">{}</a></li>",
             dir_name,
             file.name.replace(".md", "")
         )
@@ -350,41 +353,82 @@ pub fn compile(
     println!("❯ Writing files...");
     for file in &files_compiled {
         let file_name = file.name.replace(".md", "");
-        let dir_name = out_dir.join(file_name.clone());
-        fs::create_dir_all(&dir_name)?;
 
-        let out_file = dir_name.join("index.html");
-        let out_json_file = dir_name.join("manifest.json");
+        // Check if the filename is "index.md" and write it to the root directory
+        if file_name == "index" {
+            let out_file = out_dir.join("index.html");
+            let out_json_file = out_dir.join("manifest.json");
 
-        fs::write(&out_file, &file.content)?;
-        fs::write(&out_json_file, &file.json)?;
+            fs::write(&out_file, &file.content)?;
+            fs::write(&out_json_file, &file.json)?;
 
-        println!("  - {}", out_file.display());
-        println!("  - {}", out_json_file.display());
+            println!("  - {}", out_file.display());
+            println!("  - {}", out_json_file.display());
+        } else {
+            let dir_name = out_dir.join(file_name.clone());
+            fs::create_dir_all(&dir_name)?;
+
+            let out_file = dir_name.join("index.html");
+            let out_json_file = dir_name.join("manifest.json");
+
+            fs::write(&out_file, &file.content)?;
+            fs::write(&out_json_file, &file.json)?;
+
+            println!("  - {}", out_file.display());
+            println!("  - {}", out_json_file.display());
+        }
     }
     println!("  Done.\n");
 
-    // Write the index file
-    println!("❯ Writing index...");
-    let index = format!(
-    "<html><head></head><body><ul class=\"nav\">\n{}\n</ul></body></html>",
-    files_compiled
-        .iter()
-        .map(|file| {
-            format!(
-                "<li><a href=\"{}/index.html\">{}</a></li>",
-                file.name.replace(".md", ""),
-                file.name.replace(".md", "")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
-);
+    // // Load the template file
+    // let template_path = "template/index.html";
+    // let template = fs::read_to_string(template_path)?;
 
-    let out_index_file = out_dir.join("index.html");
-    fs::write(&out_index_file, index)?;
-    println!("  - {}", out_index_file.display());
-    println!("  Done.\n");
+    // // Generate the navigation links
+    // let nav_links = files_compiled
+    //     .iter()
+    //     .filter(|file| file.name != "index.md")
+    //     .map(|file| {
+    //         format!(
+    //             "<li><a href=\"{}/index.html\">{}</a></li>",
+    //             file.name.replace(".md", ""),
+    //             file.name.replace(".md", "")
+    //         )
+    //     })
+    //     .collect::<Vec<_>>()
+    //     .join("\n");
+
+    // // Replace the placeholder in the template with the navigation links
+    // let index = template.replace("{{nav}}", &nav_links);
+
+    // // Write the index file
+    // println!("❯ Writing index...");
+    // let out_index_file = out_dir.join("index.html");
+    // fs::write(&out_index_file, index)?;
+    // println!("  - {}", out_index_file.display());
+    // println!("  Done.\n");
+
+    // Write the index file
+    // println!("❯ Writing index...");
+    // let index = format!(
+    //     "<html><head></head><body><ul class=\"nav\">\n{}\n</ul></body></html>",
+    //     files_compiled
+    //         .iter()
+    //         .map(|file| {
+    //             format!(
+    //                 "<li><a href=\"{}/index.html\">{}</a></li>",
+    //                 file.name.replace(".md", ""),
+    //                 file.name.replace(".md", "")
+    //             )
+    //         })
+    //         .collect::<Vec<_>>()
+    //         .join("\n")
+    // );
+
+    // let out_index_file = out_dir.join("index.html");
+    // fs::write(&out_index_file, index)?;
+    // println!("  - {}", out_index_file.display());
+    // println!("  Done.\n");
 
     // Move the output directory to the public directory
     println!("❯ Moving output directory...");

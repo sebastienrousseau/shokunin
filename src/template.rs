@@ -14,6 +14,7 @@ use std::{
 /// passed to the `render_template` function.
 ///
 /// # Arguments
+///
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
 /// * `css`         - A string representing the css.
@@ -24,6 +25,7 @@ use std::{
 /// * `meta`        - A string representing the meta tags.
 /// * `navigation`  - A string representing the navigation.
 /// * `title`       - A string representing the title.
+///
 pub struct PageOptions<'a> {
     /// A string representing the content of the page.
     pub content: &'a str,
@@ -222,7 +224,8 @@ pub fn create_template_folder(
                 );
 
                 let url = path;
-                let files = ["template.html", "template.json"];
+                let files =
+                    ["index.html", "template.html", "template.json"];
 
                 for file in files.iter() {
                     let file_url = format!("{}/{}", url, file);
@@ -255,7 +258,8 @@ pub fn create_template_folder(
             );
 
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
-            let files = ["template.html", "template.json"];
+            let files =
+                ["index.html", "template.html", "template.json"];
 
             for file in files.iter() {
                 let file_url = format!("{}/{}", url, file);
