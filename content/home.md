@@ -1,5 +1,6 @@
 ---
 title: Homepage
+date: 2023-03-23
 description: A description of the homepage content for SEO
 keywords: homepage, home, index
 permalink: home.html

@@ -57,8 +57,11 @@
 ///
 /// ```
 ///
-pub fn extract(content: &str) -> (String, String, String, String) {
+pub fn extract(
+    content: &str,
+) -> (String, String, String, String, String) {
     let mut title = String::new();
+    let mut date = String::new();
     let mut description = String::new();
     let mut keywords = String::new();
     let mut permalink = String::new();
@@ -72,6 +75,7 @@ pub fn extract(content: &str) -> (String, String, String, String) {
                     let value = line[pos + 1..].trim();
                     match key {
                         "title" => title = value.to_owned(),
+                        "date" => date = value.to_owned(),
                         "description" => description = value.to_owned(),
                         "keywords" => keywords = value.to_owned(),
                         "permalink" => permalink = value.to_owned(),
@@ -81,5 +85,5 @@ pub fn extract(content: &str) -> (String, String, String, String) {
             }
         }
     }
-    (title, description, keywords, permalink)
+    (title, date, description, keywords, permalink)
 }

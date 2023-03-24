@@ -259,7 +259,7 @@ pub fn compile(
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
-            let (title, description, keywords, permalink) =
+            let (title, date, description, keywords, permalink) =
                 extract(&file.content);
             let meta =
                 generate_metatags(&[("url".to_owned(), permalink)]);
@@ -267,6 +267,7 @@ pub fn compile(
             // Generate HTML
             let content = render_page(&PageOptions {
                 title: &title,
+                date: &date,
                 description: &description,
                 keywords: &keywords,
                 meta: &meta,

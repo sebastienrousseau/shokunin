@@ -17,6 +17,7 @@ use std::{
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
 /// * `css`         - A string representing the css.
+/// * `date`        - A string representing the date.
 /// * `description` - A string representing the description.
 /// * `keywords`    - A string representing the keywords.
 /// * `lang`        - A string representing the language.
@@ -30,6 +31,8 @@ pub struct PageOptions<'a> {
     pub copyright: &'a str,
     /// A string representing the CSS file of the page.
     pub css: &'a str,
+    /// A string representing the date of the page.
+    pub date: &'a str,
     /// A string representing the description of the page.
     pub description: &'a str,
     /// A string representing the keywords of the page.
@@ -86,8 +89,8 @@ pub fn render_template(
 
 /// ## Function: `render_page` - Render an HTML page
 ///
-/// Renders an HTML page with the given title, description, keywords,
-/// meta tags, CSS file, content, and copyright notice.
+/// Renders an HTML page with the given title, date, description,
+/// keywords, meta tags, CSS file, content, and copyright notice.
 ///
 /// This function takes in several arguments that correspond to various
 /// parts of an HTML page. These arguments are used to construct a
@@ -100,6 +103,7 @@ pub fn render_template(
 /// * `content` - The content of the HTML page.
 /// * `copyright` - The copyright notice for the HTML page.
 /// * `css` - The path to the CSS file used by the HTML page.
+/// * `date` - The date of the HTML page.
 /// * `description` - The description of the HTML page.
 /// * `keywords` - The keywords associated with the HTML page.
 /// * `lang` - The language of the HTML page.
@@ -122,6 +126,7 @@ pub fn render_page(
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
     context.insert("css", options.css);
+    context.insert("date", options.date);
     context.insert("description", options.description);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
