@@ -7,6 +7,7 @@ use ssg::frontmatter::extract;
 pub fn criterion_benchmark(c: &mut Criterion) {
     let content = "---\n\
                    title: My Title\n\
+                   date: 2000-01-01\n\
                    description: My Description\n\
                    keywords: foo, bar, baz\n\
                    permalink: /my-permalink\n\
@@ -19,6 +20,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 result,
                 (
                     "My Title".to_owned(),
+                    "2000-01-01".to_owned(),
                     "My Description".to_owned(),
                     "foo, bar, baz".to_owned(),
                     "/my-permalink".to_owned()
