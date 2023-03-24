@@ -164,34 +164,49 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 /// string is wrapped in a `<ul>` element with the class `nav`.
 /// Each file is wrapped in a `<li>` element, and each link is wrapped
 /// in an `<a>` element.
-/// The `href` attribute of the `<a>` element is set to the name of the
-/// file with the `.md` extension replaced with `.html`. The text of
-/// the link is set to the name of the file with the `.md` extension
-/// removed.
+///
+/// The `href` attribute of the `<a>` element is set to `../` to move
+/// up one level in the directory hierarchy, followed by the name of
+/// the directory for the file (generated based on the file name), and
+/// finally `index.html`. The text of the link is set to the name of
+/// the file with the `.md` extension removed.
+///
 /// The files are sorted alphabetically by their names.
 /// The function returns an empty string if the slice is empty.
 /// The function returns an error if the file name does not contain
 /// the `.md` extension.
 ///
+/// If multiple files have the same base directory name, the function
+/// generates unique directory names by appending a suffix to the
+/// directory name for each file.
+///
+/// If a file's name already contains a directory path
+/// (e.g., `path/to/file.md`), the function generates a directory name
+/// that preserves the structure of the path, without duplicating the
+/// directory names (e.g., `path_to/file.md` becomes `path_to_file`).
 ///
 pub fn generate_navigation(files: &[File]) -> String {
     let mut files_sorted = files.to_vec();
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
-    format!(
-        "<ul class=\"nav\">\n{}\n</ul>",
-        files_sorted
-            .iter()
-            .map(|file| {
-                format!(
-                    "<li><a href=\"{}\" role=\"navitem\">{}</a></li>",
-                    file.name.replace(".md", ".html"),
-                    file.name.replace(".md", "")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    )
+    let nav_links = files_sorted.iter().map(|file| {
+        let mut dir_name = file.name.replace(".md", "");
+
+        // Handle special case for files in the same base directory
+        if let Some((index, _)) = dir_name.match_indices('/').next() {
+            let base_dir = &dir_name[..index];
+            let file_name = &dir_name[index + 1..];
+            dir_name = format!("{}{}", base_dir, file_name.replace(&base_dir, ""));
+        }
+
+        format!(
+            "<li><a href=\"../{}/index.html\" role=\"navitem\">{}</a></li>",
+            dir_name,
+            file.name.replace(".md", "")
+        )
+    }).collect::<Vec<_>>().join("\n");
+
+    format!("<ul class=\"nav\">\n{}\n</ul>", nav_links)
 }
 
 /// Compiles files in a source directory, generates HTML pages from
@@ -318,11 +333,16 @@ pub fn compile(
     // Write the compiled files to the output directory
     println!("❯ Writing files...");
     for file in &files_compiled {
-        let out_file = out_dir.join(file.name.replace(".md", ".html"));
-        let out_json_file =
-            out_dir.join(file.name.replace(".md", ".webmanifest"));
+        let file_name = file.name.replace(".md", "");
+        let dir_name = out_dir.join(file_name.clone());
+        fs::create_dir_all(&dir_name)?;
+
+        let out_file = dir_name.join("index.html");
+        let out_json_file = dir_name.join(format!("manifest.json"));
+
         fs::write(&out_file, &file.content)?;
         fs::write(&out_json_file, &file.json)?;
+
         println!("  - {}", out_file.display());
         println!("  - {}", out_json_file.display());
     }
@@ -331,21 +351,24 @@ pub fn compile(
     // Write the index file
     println!("❯ Writing index...");
     let index = format!(
-        "<ul class=\"nav\">\n{}\n</ul>",
-        files_compiled
-            .iter()
-            .map(|file| {
-                format!(
-                    "<li><a href=\"{}\">{}</a></li>",
-                    file.name.replace(".md", ".html"),
-                    file.name.replace(".md", "")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-    let index_file = out_dir.join("index.html");
-    fs::write(index_file, index)?;
+    "<html><head></head><body><ul class=\"nav\">\n{}\n</ul></body></html>",
+    files_compiled
+        .iter()
+        .map(|file| {
+            format!(
+                "<li><a href=\"{}/index.html\">{}</a></li>",
+                file.name.replace(".md", ""),
+                file.name.replace(".md", "")
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+);
+
+    let out_index_file = out_dir.join("index.html");
+    fs::write(&out_index_file, &index)?;
+    println!("  - {}", out_index_file.display());
+    println!("  Done.\n");
 
     // Move the output directory to the public directory
     println!("❯ Moving output directory...");
