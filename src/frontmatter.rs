@@ -30,10 +30,11 @@
 /// * `content` - A reference to a string containing the entire content
 ///              of the Markdown file.
 /// # Returns
-/// * A tuple containing the title, description, keywords, and permalink
-///  of the page, if they are present in the front matter. If any of
-/// these fields are not present, an empty string is returned for that
-/// field in the tuple.
+///
+/// * A tuple containing the title, description, keywords, permalink and
+///   layout of the page, if they are present in the front matter.
+///   If any of these fields are not present, an empty string is
+///   returned for that field in the tuple.
 ///
 /// # Example
 ///
@@ -46,27 +47,30 @@
 ///        description: A page about something\n\
 ///        keywords: something, cool, interesting\n\
 ///        permalink: /my-page/\n\
+///        layout: page\n\
 ///        ---\n\
 ///        # My Page\n\
 ///        This is my page about something. It's really cool and interesting!";
 ///
-///    let (title, date, description, keywords, permalink) = extract(&content);
+///    let (title, date, description, keywords, permalink, layout) = extract(&content);
 ///    assert_eq!(title, "My Page");
 ///    assert_eq!(date, "2000-01-01");
 ///    assert_eq!(description, "A page about something");
 ///    assert_eq!(keywords, "something, cool, interesting");
 ///    assert_eq!(permalink, "/my-page/");
+///    assert_eq!(layout, "page");
 ///
 /// ```
 ///
 pub fn extract(
     content: &str,
-) -> (String, String, String, String, String) {
+) -> (String, String, String, String, String, String) {
     let mut title = String::new();
     let mut date = String::new();
     let mut description = String::new();
     let mut keywords = String::new();
     let mut permalink = String::new();
+    let mut layout = String::new();
 
     if content.starts_with("---\n") {
         if let Some(end_pos) = content.find("\n---\n") {
@@ -81,11 +85,12 @@ pub fn extract(
                         "description" => description = value.to_owned(),
                         "keywords" => keywords = value.to_owned(),
                         "permalink" => permalink = value.to_owned(),
+                        "layout" => layout = value.to_owned(),
                         _ => (),
                     }
                 }
             }
         }
     }
-    (title, date, description, keywords, permalink)
+    (title, date, description, keywords, permalink, layout)
 }

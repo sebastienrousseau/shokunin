@@ -11,6 +11,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                    description: My Description\n\
                    keywords: foo, bar, baz\n\
                    permalink: /my-permalink\n\
+                   layout: page\n\
                    ---\n\
                    My content";
     c.bench_function("extract front matter", |b| {
@@ -23,7 +24,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     "2000-01-01".to_owned(),
                     "My Description".to_owned(),
                     "foo, bar, baz".to_owned(),
-                    "/my-permalink".to_owned()
+                    "/my-permalink".to_owned(),
+                    "page".to_owned(),
                 )
             );
         })

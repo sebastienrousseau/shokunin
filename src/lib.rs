@@ -293,7 +293,7 @@ pub fn compile(
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
-            let (title, date, description, keywords, permalink) =
+            let (title, date, description, keywords, permalink, layout) =
                 extract(&file.content);
             let meta =
                 generate_metatags(&[("url".to_owned(), permalink)]);
@@ -306,6 +306,7 @@ pub fn compile(
                 keywords: &keywords,
                 meta: &meta,
                 lang: "en-GB",
+                layout: &layout,
                 content: &generate_html(&file.content, &title, &description),
                 copyright: format!(
                     "Copyright © {} 2023. All rights reserved.",
@@ -314,7 +315,7 @@ pub fn compile(
                 .as_str(),
                 css: "style.css",
                 navigation: &navigation,
-            }, &template_path)
+            }, &template_path, &layout)
             .unwrap();
 
             // Generate JSON

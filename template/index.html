@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{title}}</title>
+    <meta name="generator" content="{{title}} Static Site Generator 0.0.8" />
+    <link
+      rel="stylesheet"
+      crossorigin="anonymous"
+      href="https://unpkg.com/skeletonic-stylus@1.0.5/css/skeletonic.min.css"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
+      sizes="192x192"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/16x16.png"
+      sizes="16x16"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/32x32.png"
+      sizes="32x32"
+    />
+    <link rel="manifest" href="manifest.json" />
+    {{meta}}
+    <meta name="description" content="{{description}}" />
+    <meta name="keywords" content="{{keywords}}" />
+    <meta name="twitter:card" content="{{title}} - {{description}}." />
+    <meta name="twitter:description" content="{{description}}" />
+    <meta name="twitter:title" content="{{title}}" />
+    <meta name="og:title" content="{{title}}" />
+    <meta name="og:description" content="{{description}}" />
+    <meta name="og:image:alt" content="{{title}} - {{description}}." />
+    <meta name="og:locale" content="{{lang}}" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta itemprop="accessibilityAPI" content="ARIA" />
+    <meta itemprop="accessibilityControl" content="fullKeyboardControl" />
+    <meta itemprop="accessibilityHazard" content="noFlashingHazard" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="{{title}}" />
+    <meta name="application-name" content="{{title}}" />
+    <meta name="author" content="" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src * 'unsafe-inline';
+      style-src 'self' https://unpkg.com/ 'unsafe-inline'; media-src *"
+    />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msvalidate1" content="" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    <meta
+      name="msapplication-TileImage"
+      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/144x144.png"
+    />
+    <meta name="og:image:height" content="192" />
+    <meta name="og:image:type" content="image/png" />
+    <meta name="og:image:width" content="192" />
+    <meta
+      name="og:image"
+      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
+    />
+    <meta name="og:robots" content="all" />
+    <meta name="og:site_name" content="{{title}}" />
+    <meta name="og:type" content="website" />
+    <meta name="og:url" content="" />
+    <meta name="robots" content="all" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="twitter:creator" content="" />
+    <meta
+      name="twitter:image"
+      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
+    />
+    <meta name="twitter:site" content="" />
+    <meta name="twitter:url" content="" />
+  </head>
+  <body itemscope itemtype="http://schema.org/WebPage">
+    <section id="navigation" aria-label="navigation">
+      <input
+        type="checkbox"
+        class="hamburger"
+        id="hamburger"
+        name="hamburger"
+      />
+      <label
+        title="Open the menu"
+        for="hamburger"
+        class="hamburger-toggle cl-white"
+        aria-hidden="true"
+      >
+        <span class="hidden" aria-hidden="true">Main menu</span>
+        <span class="spinner diagonal part-1"></span>
+        <span class="spinner horizontal"></span>
+        <span class="spinner diagonal part-2"></span>
+      </label>
+      <nav id="sidebar">{{navigation}}</nav>
+    </section>
+    <main id="main" class="container center text-center" aria-label="main">
+      <section id="feature" class="feature">
+        <div class="feature-content">
+          <h1 class="text-center">{{title}}</h1>
+          <p class="text-center">{{description}}</p>
+          <div class="card flex-12">
+            <img
+              src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/marion-michele-457471.jpg"
+              alt="{{title}}"
+              class="logo"
+            />
+          </div>
+        </div>
+      </section>
+      <section class="grid-flex">
+        <div class="card flex-4">
+          <picture>
+            <img
+              src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/patrick-tomasso-472279.jpg"
+              alt="Photo by Patrick Tomasso on Unsplash"
+              class="rdt"
+            />
+          </picture>
+          <div class="card-content text-left">
+            <h2>{{title}}</h2>
+            <p>{{description}}</p>
+            <p>
+              <button class="primary center size-full-width">Button 1</button>
+            </p>
+          </div>
+        </div>
+        <div class="card flex-4">
+          <picture>
+            <img
+              src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/fernando-reyes-241702.jpg"
+              alt="Photo by Patrick Tomasso on Unsplash"
+              class="rdt"
+            />
+          </picture>
+          <div class="card-content text-left">
+            <h2>{{title}}</h2>
+            <p>{{description}}</p>
+            <p>
+              <button class="primary center size-full-width">Button 1</button>
+            </p>
+          </div>
+        </div>
+        <div class="card flex-4">
+          <picture>
+            <img
+              src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/isak-dalsfelt-264501.jpg"
+              alt="Photo by Patrick Tomasso on Unsplash"
+              class="rdt"
+            />
+          </picture>
+          <div class="card-content text-left">
+            <h2>{{title}}</h2>
+            <p>{{description}}</p>
+            <p>
+              <button class="primary center size-full-width">Button 1</button>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer id="footer" class="center text-center" aria-label="footer">
+      <p>{{copyright}}</p>
+    </footer>
+  </body>
+</html>

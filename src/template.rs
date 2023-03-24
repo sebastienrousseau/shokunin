@@ -41,6 +41,8 @@ pub struct PageOptions<'a> {
     pub keywords: &'a str,
     /// A string representing the language of the page.
     pub lang: &'a str,
+    /// A string representing the layout of the page.
+    pub layout: &'a str,
     /// A string representing the meta tags of the page.
     pub meta: &'a str,
     /// A string representing the navigation of the page.
@@ -123,6 +125,7 @@ pub fn render_template(
 pub fn render_page(
     options: &PageOptions,
     template_path: &String,
+    layout: &String,
 ) -> Result<String, String> {
     let mut context = HashMap::new();
     context.insert("content", options.content);
@@ -136,13 +139,23 @@ pub fn render_page(
     context.insert("navigation", options.navigation);
     context.insert("title", options.title);
 
-    render_template(
-        &fs::read_to_string(
-            Path::new(template_path).join("template.html"),
+    if layout == "index" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("index.html"),
+            )
+            .unwrap(),
+            &context,
         )
-        .unwrap(),
-        &context,
-    )
+    } else {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("template.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    }
 }
 
 /// Custom error type to handle both reqwest and io errors

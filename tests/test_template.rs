@@ -37,11 +37,13 @@ mod tests {
             description: "A simple test page",
             keywords: "test, page",
             lang: "en",
+            layout: "page",
             meta: "",
             navigation: "<nav>Home</nav>",
             title: "Test Page",
         };
         let template_path = String::from("./template");
+        let layout = String::from("page");
 
         // Create a temporary directory and copy the template file into it
         let tempdir = tempfile::tempdir().map_err(|err| {
@@ -54,7 +56,7 @@ mod tests {
             })?;
 
         // Call the render_page function
-        let result = render_page(&options, &template_path);
+        let result = render_page(&options, &template_path, &layout);
 
         // Assert that the result is correct
         assert!(result.is_ok());
