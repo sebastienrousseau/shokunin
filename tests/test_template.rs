@@ -33,6 +33,7 @@ mod tests {
             content: "Hello, world!",
             copyright: "Copyright 2023",
             css: "styles.css",
+            date: "2021-01-01",
             description: "A simple test page",
             keywords: "test, page",
             lang: "en",
