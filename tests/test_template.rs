@@ -27,7 +27,7 @@ mod tests {
     }
 
     #[test]
-    fn test_render_page() {
+    fn test_render_page() -> Result<(), String> {
         // Prepare the test data
         let options = PageOptions {
             content: "Hello, world!",
@@ -44,15 +44,21 @@ mod tests {
         let template_path = String::from("./template");
 
         // Create a temporary directory and copy the template file into it
-        let tempdir = tempfile::tempdir().unwrap();
+        let tempdir = tempfile::tempdir().map_err(|err| {
+            format!("Could not create temporary directory: {}", err)
+        })?;
         let template_file_path = tempdir.path().join("template.html");
-        std::fs::copy("template/template.html", &template_file_path)
-            .unwrap();
+        std::fs::copy("template/template.html", template_file_path)
+            .map_err(|err| {
+                format!("Could not copy template file: {}", err)
+            })?;
 
         // Call the render_page function
         let result = render_page(&options, &template_path);
 
         // Assert that the result is correct
         assert!(result.is_ok());
+
+        Ok(())
     }
 }

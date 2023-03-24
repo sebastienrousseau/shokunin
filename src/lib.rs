@@ -3,14 +3,14 @@
 //!
 //! # Shokunin (職人) 🦀
 //!
+//! [![Shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
+//!
 //! A Fast and Flexible Static Site Generator written in Rust 🦀
 //!
-//! [![shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one)
-//!
-//! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
-//! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.5-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg)
-//! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/)
+//! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
+//! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.5-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //!
 //! ## Overview 📖
 //!
@@ -53,6 +53,22 @@
 //! ssg --help
 //! ```
 //!
+//! ## Examples and Usage 📚
+//!
+//! Check out the examples folder for helpful snippets of code that
+//! demonstrate how to use the `shokunin` library. You can also check
+//! out the [documentation](https://docs.rs/ssg) for more information
+//! on how to use the library.
+//!
+//! ## License 📜
+//!
+//! The project is licensed under the terms of both the MIT license and
+//! the Apache License (Version 2.0).
+//!
+//! - [Apache License, Version 2.0](https://opensource.org/license/apache-2-0/ "Apache License, Version 2.0")
+//! - [MIT license](http://opensource.org/licenses/MIT "MIT license")
+//!
+
 #![forbid(unsafe_code)]
 #![warn(unreachable_pub)]
 #![deny(missing_debug_implementations)]
@@ -108,14 +124,14 @@ pub mod utilities;
 ///
 /// The function uses the `build` function from the `cli` module to
 /// create the command-line interface for the tool. It then processes
-/// any arguments passed to it using the `parser` function
-/// from the `args` module.
+/// any arguments passed to it using the `parser` function from the
+/// `args` module.
 ///
 /// If any errors occur during the process (e.g. an invalid argument is
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (v0.0.5)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.8)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
@@ -196,7 +212,7 @@ pub fn generate_navigation(files: &[File]) -> String {
         if let Some((index, _)) = dir_name.match_indices('/').next() {
             let base_dir = &dir_name[..index];
             let file_name = &dir_name[index + 1..];
-            dir_name = format!("{}{}", base_dir, file_name.replace(&base_dir, ""));
+            dir_name = format!("{}{}", base_dir, file_name.replace(base_dir, ""));
         }
 
         format!(
@@ -338,7 +354,7 @@ pub fn compile(
         fs::create_dir_all(&dir_name)?;
 
         let out_file = dir_name.join("index.html");
-        let out_json_file = dir_name.join(format!("manifest.json"));
+        let out_json_file = dir_name.join("manifest.json");
 
         fs::write(&out_file, &file.content)?;
         fs::write(&out_json_file, &file.json)?;
@@ -366,7 +382,7 @@ pub fn compile(
 );
 
     let out_index_file = out_dir.join("index.html");
-    fs::write(&out_index_file, &index)?;
+    fs::write(&out_index_file, index)?;
     println!("  - {}", out_index_file.display());
     println!("  Done.\n");
 
