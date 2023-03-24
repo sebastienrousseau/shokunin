@@ -381,56 +381,6 @@ pub fn compile(
     }
     println!("  Done.\n");
 
-    // // Load the template file
-    // let template_path = "template/index.html";
-    // let template = fs::read_to_string(template_path)?;
-
-    // // Generate the navigation links
-    // let nav_links = files_compiled
-    //     .iter()
-    //     .filter(|file| file.name != "index.md")
-    //     .map(|file| {
-    //         format!(
-    //             "<li><a href=\"{}/index.html\">{}</a></li>",
-    //             file.name.replace(".md", ""),
-    //             file.name.replace(".md", "")
-    //         )
-    //     })
-    //     .collect::<Vec<_>>()
-    //     .join("\n");
-
-    // // Replace the placeholder in the template with the navigation links
-    // let index = template.replace("{{nav}}", &nav_links);
-
-    // // Write the index file
-    // println!("❯ Writing index...");
-    // let out_index_file = out_dir.join("index.html");
-    // fs::write(&out_index_file, index)?;
-    // println!("  - {}", out_index_file.display());
-    // println!("  Done.\n");
-
-    // Write the index file
-    // println!("❯ Writing index...");
-    // let index = format!(
-    //     "<html><head></head><body><ul class=\"nav\">\n{}\n</ul></body></html>",
-    //     files_compiled
-    //         .iter()
-    //         .map(|file| {
-    //             format!(
-    //                 "<li><a href=\"{}/index.html\">{}</a></li>",
-    //                 file.name.replace(".md", ""),
-    //                 file.name.replace(".md", "")
-    //             )
-    //         })
-    //         .collect::<Vec<_>>()
-    //         .join("\n")
-    // );
-
-    // let out_index_file = out_dir.join("index.html");
-    // fs::write(&out_index_file, index)?;
-    // println!("  - {}", out_index_file.display());
-    // println!("  Done.\n");
-
     // Move the output directory to the public directory
     println!("❯ Moving output directory...");
     let public_dir = Path::new("public");
