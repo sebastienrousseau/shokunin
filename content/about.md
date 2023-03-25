@@ -1,12 +1,17 @@
 ---
-title: About
+title: About Us
 date: 2023-03-23
 description: Description of the about page
 keywords: about, page, description
-permalink: about.html
+permalink: /about/
 layout: page
 ---
 
-![about logo](https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=About)
+This is the About Us page of your website. You can edit this page by
+going to content/about.md.
 
-This is the about page content!
+You can also create a new page by adding a new file in the content
+folder. If the file name is about.md, the page will be accessible at
+/about/.
+
+[![our people](https://via.placeholder.com/250x250.png/F5F5F5/000000?text=Our+People "Our People")](/people/) [![Contact Us](https://via.placeholder.com/250x250.png/F5F5F5/000000?text=Contact+Us "Contact Us")](/contact/) [![Contact Us](https://via.placeholder.com/250x250.png/F5F5F5/000000?text=Contact+Us "Contact Us")](/contact/) [![Contact Us](https://via.placeholder.com/250x250.png/F5F5F5/000000?text=Contact+Us "Contact Us")](/contact/)
