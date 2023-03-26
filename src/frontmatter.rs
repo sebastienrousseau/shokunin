@@ -52,13 +52,13 @@
 ///        # My Page\n\
 ///        This is my page about something. It's really cool and interesting!";
 ///
-///    let (title, date, description, keywords, permalink, layout) = extract(&content);
-///    assert_eq!(title, "My Page");
-///    assert_eq!(date, "2000-01-01");
-///    assert_eq!(description, "A page about something");
-///    assert_eq!(keywords, "something, cool, interesting");
-///    assert_eq!(permalink, "/my-page/");
-///    assert_eq!(layout, "page");
+///    let result = extract(&content);
+///    assert_eq!(result["title"], "My Page");
+///    assert_eq!(result["date"], "2000-01-01");
+///    assert_eq!(result["description"], "A page about something");
+///    assert_eq!(result["keywords"], "something, cool, interesting");
+///    assert_eq!(result["permalink"], "/my-page/");
+///    assert_eq!(result["layout"], "page");
 ///
 /// ```
 ///

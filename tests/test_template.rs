@@ -30,6 +30,9 @@ mod tests {
     fn test_render_page() -> Result<(), String> {
         // Prepare the test data
         let options = PageOptions {
+            banner: "./images/banner.png",
+            image: "./images/test.png",
+            name: "My Site",
             content: "Hello, world!",
             copyright: "Copyright 2023",
             css: "styles.css",
