@@ -45,17 +45,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 result.contains_key("---"),
                 "--- not found in front matter"
             );
-            // assert_eq!(
-            //     result,
-            //     (
-            //         "My Title".to_owned(),
-            //         "2000-01-01".to_owned(),
-            //         "My Description".to_owned(),
-            //         "foo, bar, baz".to_owned(),
-            //         "/my-permalink".to_owned(),
-            //         "page".to_owned(),
-            //     )
-            // );
         })
     });
 }

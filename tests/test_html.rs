@@ -7,7 +7,7 @@ mod tests {
         let content = "---\ntitle: Hello, world!\ndescription: A simple greeting\n---\n# Hello, world!";
         let title = "Welcome";
         let description = "Say hi to the world!";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected = "<h1>Welcome</h1><h2>Say hi to the world!</h2><h1>Hello, world!</h1>\n";
         assert_eq!(result, expected);
     }
@@ -17,7 +17,7 @@ mod tests {
         let content = "# Hello, world!";
         let title = "Welcome";
         let description = "Say hi to the world!";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected = "<h1>Welcome</h1><h2>Say hi to the world!</h2><h1>Hello, world!</h1>\n";
         assert_eq!(result, expected);
     }
@@ -28,7 +28,7 @@ mod tests {
             "---\ndescription: A simple greeting\n---\n# Hello, world!";
         let title = "";
         let description = "Say hi to the world!";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected =
             "<h2>Say hi to the world!</h2><h1>Hello, world!</h1>\n";
         assert_eq!(result, expected);
@@ -39,7 +39,7 @@ mod tests {
         let content = "---\ntitle: Hello, world!\n---\n# Hello, world!";
         let title = "Welcome";
         let description = "";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected = "<h1>Welcome</h1><h1>Hello, world!</h1>\n";
         assert_eq!(result, expected);
     }
@@ -49,7 +49,7 @@ mod tests {
         let content = "---\ntitle:\ndescription:\n---\n# Hello, world!";
         let title = "Welcome";
         let description = "Say hi to the world!";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected = "<h1>Welcome</h1><h2>Say hi to the world!</h2><h1>Hello, world!</h1>\n";
         assert_eq!(result, expected);
     }
@@ -59,7 +59,7 @@ mod tests {
         let content = "";
         let title = "Welcome";
         let description = "Say hi to the world!";
-        let result = generate_html(&content, &title, &description);
+        let result = generate_html(content, title, description);
         let expected = "<h1>Welcome</h1><h2>Say hi to the world!</h2>";
         assert_eq!(result, expected);
     }
