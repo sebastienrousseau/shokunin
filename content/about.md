@@ -5,6 +5,7 @@ description: Description of the about page
 keywords: about, page, description
 permalink: /about/
 layout: page
+image: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg
 ---
 
 This is the About Us page of your website. You can edit this page by

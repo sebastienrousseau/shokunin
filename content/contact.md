@@ -5,6 +5,7 @@ description: A description of the contact page
 keywords: contact, page, description
 permalink: /contact/
 layout: page
+image: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg
 ---
 
 ![Contact Us](https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=Contact+Us)

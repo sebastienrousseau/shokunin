@@ -219,7 +219,7 @@ pub fn generate_navigation(files: &[File]) -> String {
         }
 
         format!(
-            "<li><a href=\"/{}/index.html\" role=\"navitem\">{}</a></li>",
+            "<li><a href=\"/{}/index.html\" role=\"navigation\">{}</a></li>",
             dir_name,
             file.name.replace(".md", "")
         )
@@ -290,60 +290,56 @@ pub fn compile(
     let navigation = generate_navigation(&files);
 
     let files_compiled: Vec<File> = files
-        .into_iter()
-        .map(|file| {
-            // Extract metadata from front matter
-            let (title, date, description, keywords, permalink, layout) =
-                extract(&file.content);
-            let meta =
-                generate_metatags(&[("url".to_owned(), permalink)]);
+    .into_iter()
+    .map(|file| {
+        // Extract metadata from front matter
+        let metadata = extract(&file.content);
+        let meta = generate_metatags(&[("url".to_owned(), metadata.get("permalink").unwrap_or(&"".to_string()).to_string())]);
 
-            // Generate HTML
-            let content = render_page(&PageOptions {
-                title: &title,
-                date: &date,
-                description: &description,
-                keywords: &keywords,
-                meta: &meta,
-                lang: "en-GB",
-                layout: &layout,
-                content: &generate_html(&file.content, &title, &description),
-                copyright: format!(
-                    "Copyright © {} 2023. All rights reserved.",
-                    site_name
-                )
-                .as_str(),
-                css: "style.css",
-                navigation: &navigation,
-            }, &template_path, &layout)
-            .unwrap();
+        // Generate HTML
+        let content = render_page(&PageOptions {
+            banner: metadata.get("banner").unwrap_or(&"".to_string()),
+            content: &generate_html(&file.content, metadata.get("title").unwrap_or(&"".to_string()), metadata.get("description").unwrap_or(&"".to_string())),
+            copyright: format!("Copyright © {} 2023. All rights reserved.", site_name).as_str(),
+            css: "style.css",
+            date: metadata.get("date").unwrap_or(&"".to_string()),
+            description: metadata.get("description").unwrap_or(&"".to_string()),
+            image: metadata.get("image").unwrap_or(&"".to_string()),
+            keywords: metadata.get("keywords").unwrap_or(&"".to_string()),
+            lang: "en-GB",
+            layout: metadata.get("layout").unwrap_or(&"".to_string()),
+            meta: &meta,
+            name: metadata.get("name").unwrap_or(&"".to_string()),
+            navigation: &navigation,
+            title: metadata.get("title").unwrap_or(&"".to_string()),
+        }, &template_path, metadata.get("layout").unwrap_or(&"".to_string()))
+        .unwrap();
 
-            // Generate JSON
-            let options = ManifestOptions {
-                background_color: "#000".to_string(),
-                description,
-                dir: "/".to_string(),
-                display: "fullscreen".to_string(),
-                icons: "{ \"src\": \"icon/lowres.webp\", \"sizes\": \"64x64\", \"type\": \"image/webp\" }, { \"src\": \"icon/lowres.png\", \"sizes\": \"64x64\" }".to_string(),
-                identity: "/".to_string(),
-                lang: "en-GB".to_string(),
-                name: title,
-                orientation: "any".to_string(),
-                scope: "/".to_string(),
-                short_name: "/".to_string(),
-                start_url: "/".to_string(),
-                theme_color: "#fff".to_string(),
-            };
-            let json_data = manifest(&options);
+        // Generate JSON
+        let options = ManifestOptions {
+            background_color: "#000".to_string(),
+            description: metadata.get("description").unwrap_or(&"".to_string()).to_string(),
+            dir: "/".to_string(),
+            display: "fullscreen".to_string(),
+            icons: "{ \"src\": \"icon/lowres.webp\", \"sizes\": \"64x64\", \"type\": \"image/webp\" }, { \"src\": \"icon/lowres.png\", \"sizes\": \"64x64\" }".to_string(),
+            identity: "/".to_string(),
+            lang: "en-GB".to_string(),
+            name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
+            orientation: "any".to_string(),
+            scope: "/".to_string(),
+            short_name: "/".to_string(),
+            start_url: "/".to_string(),
+            theme_color: "#fff".to_string(),
+        };
+        let json_data = manifest(&options);
 
-
-            File {
-                name: file.name,
-                content,
-                json: json_data,
-            }
-        })
-        .collect();
+        File {
+            name: file.name,
+            content,
+            json: json_data,
+        }
+    })
+    .collect();
 
     // Generate the HTML code for the navigation menu
     generate_navigation(&files_compiled);

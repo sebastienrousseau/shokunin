@@ -23,10 +23,13 @@ use std::{
 /// * `keywords`    - A string representing the keywords.
 /// * `lang`        - A string representing the language.
 /// * `meta`        - A string representing the meta tags.
+/// * `name`        - A string representing the site name.
 /// * `navigation`  - A string representing the navigation.
 /// * `title`       - A string representing the title.
 ///
 pub struct PageOptions<'a> {
+    /// A string representing the banner of the page.
+    pub banner: &'a str,
     /// A string representing the content of the page.
     pub content: &'a str,
     /// A string representing the copyright notice of the page.
@@ -37,6 +40,8 @@ pub struct PageOptions<'a> {
     pub date: &'a str,
     /// A string representing the description of the page.
     pub description: &'a str,
+    /// A string representing the image of the page.
+    pub image: &'a str,
     /// A string representing the keywords of the page.
     pub keywords: &'a str,
     /// A string representing the language of the page.
@@ -47,6 +52,8 @@ pub struct PageOptions<'a> {
     pub meta: &'a str,
     /// A string representing the navigation of the page.
     pub navigation: &'a str,
+    /// A string representing the site name of the page.
+    pub name: &'a str,
     /// A string representing the title of the page.
     pub title: &'a str,
 }
@@ -112,6 +119,7 @@ pub fn render_template(
 /// * `keywords` - The keywords associated with the HTML page.
 /// * `lang` - The language of the HTML page.
 /// * `meta` - The meta tags for the HTML page.
+/// * `name` - The name of the site.
 /// * `navigation` - The navigation for the HTML page.
 /// * `title` - The title of the HTML page.
 ///
@@ -128,14 +136,17 @@ pub fn render_page(
     layout: &String,
 ) -> Result<String, String> {
     let mut context = HashMap::new();
+    context.insert("banner", options.banner);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
     context.insert("css", options.css);
     context.insert("date", options.date);
     context.insert("description", options.description);
+    context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
     context.insert("meta", options.meta);
+    context.insert("name", options.name);
     context.insert("navigation", options.navigation);
     context.insert("title", options.title);
 

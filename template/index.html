@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{{title}}</title>
-    <meta name="generator" content="{{title}} Static Site Generator 0.0.8" />
+    <meta
+      name="generator"
+      content="Shokunin (職人) Static Site Generator 0.0.8"
+    />
     <link
       rel="stylesheet"
       crossorigin="anonymous"
@@ -33,9 +36,9 @@
     {{meta}}
     <meta name="description" content="{{description}}" />
     <meta name="keywords" content="{{keywords}}" />
-    <meta name="twitter:card" content="{{title}} - {{description}}." />
+    <meta name="twitter:card" content="{{name}} - {{title}}" />
     <meta name="twitter:description" content="{{description}}" />
-    <meta name="twitter:title" content="{{title}}" />
+    <meta name="twitter:title" content="{{name}} - {{title}}" />
     <meta name="og:title" content="{{title}}" />
     <meta name="og:description" content="{{description}}" />
     <meta name="og:image:alt" content="{{title}} - {{description}}." />
@@ -53,7 +56,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="{{title}}" />
-    <meta name="application-name" content="{{title}}" />
+    <meta name="application-name" content="{{name}}" />
     <meta name="author" content="" />
     <meta
       http-equiv="Content-Security-Policy"
@@ -77,7 +80,7 @@
       content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
     />
     <meta name="og:robots" content="all" />
-    <meta name="og:site_name" content="{{title}}" />
+    <meta name="og:site_name" content="{{name}}" />
     <meta name="og:type" content="website" />
     <meta name="og:url" content="" />
     <meta name="robots" content="all" />
@@ -87,7 +90,7 @@
       name="twitter:image"
       content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
     />
-    <meta name="twitter:site" content="" />
+    <meta name="twitter:site" content="{{name}}" />
     <meta name="twitter:url" content="" />
   </head>
   <body itemscope itemtype="http://schema.org/WebPage">
@@ -112,7 +115,36 @@
       <nav id="sidebar">{{navigation}}</nav>
     </section>
     <main id="main" class="container center text-center" aria-label="main">
-      <section id="feature" class="feature">{{content}}</section>
+      <section id="logo" class="logo" aria-label="logo">
+        <figure>
+          <a href="/" tabindex="0">
+            <img
+              alt="Logo of {{name}}"
+              id="{{name}}"
+              itemprop="image"
+              itemtype="http://schema.org/ImageObject"
+              src="{{image}}"
+              style="height: 58px"
+              title="Logo of {{name}}"
+            />
+          </a>
+          <figcaption>{{name}}</figcaption>
+        </figure>
+      </section>
+      <section id="banner" class="banner" aria-label="banner">
+        <figure>
+          <img
+            alt="Banner of {{title}}"
+            id="{{title}}"
+            itemprop="image"
+            itemtype="http://schema.org/ImageObject"
+            src="{{banner}}"
+            title="Banner of {{title}}"
+          />
+        </figure>
+      </section>
+      <section id="content" class="content">{{content}}</section>
+      <hr class="hr-text" data-content="{{title}}" />
     </main>
     <footer id="footer" class="center text-center" aria-label="footer">
       <p>{{copyright}}</p>

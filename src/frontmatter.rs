@@ -62,35 +62,28 @@
 ///
 /// ```
 ///
-pub fn extract(
-    content: &str,
-) -> (String, String, String, String, String, String) {
-    let mut title = String::new();
-    let mut date = String::new();
-    let mut description = String::new();
-    let mut keywords = String::new();
-    let mut permalink = String::new();
-    let mut layout = String::new();
+use std::collections::HashMap;
+
+/// Extracts metadata from the front matter of a Markdown file and
+/// returns it as a tuple. The front matter is defined as any YAML block
+/// that appears at the beginning of the file, enclosed by "---" lines.
+///
+pub fn extract(content: &str) -> HashMap<String, String> {
+    let mut front_matter = HashMap::new();
 
     if content.starts_with("---\n") {
         if let Some(end_pos) = content.find("\n---\n") {
-            let front_matter = &content[..end_pos];
-            for line in front_matter.lines() {
+            let front_matter_str = &content[4..end_pos]; // Skip the opening `---\n`
+            for line in front_matter_str.lines() {
                 if let Some(pos) = line.find(':') {
                     let key = line[..pos].trim();
                     let value = line[pos + 1..].trim();
-                    match key {
-                        "title" => title = value.to_owned(),
-                        "date" => date = value.to_owned(),
-                        "description" => description = value.to_owned(),
-                        "keywords" => keywords = value.to_owned(),
-                        "permalink" => permalink = value.to_owned(),
-                        "layout" => layout = value.to_owned(),
-                        _ => (),
-                    }
+                    front_matter
+                        .insert(key.to_string(), value.to_string());
                 }
             }
         }
     }
-    (title, date, description, keywords, permalink, layout)
+
+    front_matter
 }
