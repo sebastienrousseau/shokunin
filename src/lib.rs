@@ -206,10 +206,20 @@ pub fn generate_navigation(files: &[File]) -> String {
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
     let nav_links = files_sorted.iter().filter(|file| {
-        let file_name = file.name.replace(".md", "");
+        let file_name = match Path::new(&file.name).extension() {
+            Some(ext) if ext == "md" => file.name.replace(".md", ""),
+            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
+            Some(ext) if ext == "json" => file.name.replace(".json", ""),
+            _ => file.name.to_string(),
+        };
         file_name != "index"
     }).map(|file| {
-        let mut dir_name = file.name.replace(".md", "");
+        let mut dir_name = match Path::new(&file.name).extension() {
+            Some(ext) if ext == "md" => file.name.replace(".md", ""),
+            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
+            Some(ext) if ext == "json" => file.name.replace(".json", ""),
+            _ => file.name.to_string(),
+        };
 
         // Handle special case for files in the same base directory
         if let Some((index, _)) = dir_name.match_indices('/').next() {
@@ -221,7 +231,12 @@ pub fn generate_navigation(files: &[File]) -> String {
         format!(
             "<li><a href=\"/{}/index.html\" role=\"navigation\">{}</a></li>",
             dir_name,
-            file.name.replace(".md", "")
+            match Path::new(&file.name).extension() {
+                Some(ext) if ext == "md" => file.name.replace(".md", ""),
+                Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
+                Some(ext) if ext == "json" => file.name.replace(".json", ""),
+                _ => file.name.to_string(),
+            }
         )
     }).collect::<Vec<_>>().join("\n");
 
@@ -294,12 +309,18 @@ pub fn compile(
     .map(|file| {
         // Extract metadata from front matter
         let metadata = extract(&file.content);
+        // println!(" Metadata: {:?}", metadata);
         let meta = generate_metatags(&[("url".to_owned(), metadata.get("permalink").unwrap_or(&"".to_string()).to_string())]);
 
         // Generate HTML
         let content = render_page(&PageOptions {
             banner: metadata.get("banner").unwrap_or(&"".to_string()),
-            content: &generate_html(&file.content, metadata.get("title").unwrap_or(&"".to_string()), metadata.get("description").unwrap_or(&"".to_string())),
+            content: &generate_html(
+                &file.content,
+                metadata.get("title").unwrap_or(&"".to_string()),
+                metadata.get("description").unwrap_or(&"".to_string()),
+                Some(metadata.get("content").unwrap_or(&"".to_string())),
+             ),
             copyright: format!("Copyright © {} 2023. All rights reserved.", site_name).as_str(),
             css: "style.css",
             date: metadata.get("date").unwrap_or(&"".to_string()),
@@ -349,7 +370,16 @@ pub fn compile(
     // Write the compiled files to the output directory
     println!("❯ Writing files...");
     for file in &files_compiled {
-        let file_name = file.name.replace(".md", "");
+        let file_name = match Path::new(&file.name).extension() {
+            Some(ext) if ext == "md" => file.name.replace(".md", ""),
+            Some(ext) if ext == "toml" => {
+                file.name.replace(".toml", "")
+            }
+            Some(ext) if ext == "json" => {
+                file.name.replace(".json", "")
+            }
+            _ => file.name.to_string(),
+        };
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
@@ -367,7 +397,7 @@ pub fn compile(
 
             let out_file = dir_name.join("index.html");
             let out_json_file = dir_name.join("manifest.json");
-
+            println!("  - {}", out_file.display());
             fs::write(&out_file, &file.content)?;
             fs::write(&out_json_file, &file.json)?;
 

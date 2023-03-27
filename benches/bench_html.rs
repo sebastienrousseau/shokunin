@@ -18,6 +18,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 black_box(content),
                 black_box("My Title"),
                 black_box("My Description"),
+                black_box(None),
             );
             assert!(result.contains("<h1>My Title</h1>"));
             assert!(result.contains("<h2>My Description</h2>"));

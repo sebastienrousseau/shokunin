@@ -36,11 +36,24 @@ pub fn generate_html(
     content: &str,
     title: &str,
     description: &str,
+    json_content: Option<&str>,
 ) -> String {
     let options = comrak::ComrakOptions::default();
     let markdown_content = if content.starts_with("---\n") {
         if let Some(end_pos) = content.find("\n---\n") {
             &content[end_pos + 5..] // Skip the "---\n\n" that follows the front matter
+        } else {
+            ""
+        }
+    } else if content.starts_with("+++\n") {
+        if let Some(end_pos) = content.find("\n+++\n") {
+            &content[end_pos + 5..] // Skip the "+++\n\n" that follows the front matter
+        } else {
+            ""
+        }
+    } else if content.starts_with("{\n") {
+        if let Some(end_pos) = content.find("\n}\n") {
+            &content[end_pos + 2..]
         } else {
             ""
         }
@@ -59,5 +72,10 @@ pub fn generate_html(
     };
     let markdown_html =
         comrak::markdown_to_html(markdown_content, &options);
-    format!("{}{}{}", header, subheader, markdown_html)
+    let json_html = if let Some(json_str) = json_content {
+        format!("<p>{}</p>", json_str)
+    } else {
+        "".to_string()
+    };
+    format!("{}{}{}{}", header, subheader, json_html, markdown_html)
 }
