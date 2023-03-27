@@ -21,26 +21,19 @@ fn handle_connection(
     document_root: &str,
 ) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
-    stream.read(&mut buffer)?;
-
-    let request = String::from_utf8_lossy(&buffer[..]);
+    let bytes_read = stream.read(&mut buffer)?;
+    let request = String::from_utf8_lossy(&buffer[..bytes_read]);
     let request_line = request.lines().next().unwrap_or("");
     let mut request_parts = request_line.split_whitespace();
     let (_method, path, _version) = (
-        request_parts.next(),
-        request_parts.next(),
-        request_parts.next(),
+        request_parts.next().unwrap_or(""),
+        request_parts.next().unwrap_or(""),
+        request_parts.next().unwrap_or(""),
     );
 
     let requested_file = match path {
-        Some(p) => {
-            if p == "/" {
-                "index.html"
-            } else {
-                &p[1..] // Remove the leading "/"
-            }
-        }
-        None => "index.html",
+        "/" => "index.html",
+        _ => &path[1..], // Remove the leading "/"
     };
 
     let file_path = Path::new(document_root).join(requested_file);
@@ -56,12 +49,14 @@ fn handle_connection(
             std::fs::read_to_string(
                 Path::new(document_root).join("404.html"),
             )
-            .unwrap_or_default(),
+            .unwrap_or_else(|_| String::from("File not found")),
         )
     };
 
     stream.write_all(status_line.as_bytes())?;
     stream.write_all(contents.as_bytes())?;
     stream.flush()?;
+
     Ok(())
 }
+
