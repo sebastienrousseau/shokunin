@@ -25,7 +25,7 @@
 /// let content = "## Hello, world!\n\nThis is a test.";
 /// let title = "My Page";
 /// let description = "This is a test page";
-/// let html = generate_html(content, title, description);
+/// let html = generate_html(content, title, description, None);
 /// assert_eq!(
 ///     html,
 ///     "<h1>My Page</h1><h2>This is a test page</h2><h2>Hello, world!</h2>\n<p>This is a test.</p>\n"
