@@ -21,8 +21,8 @@
 //! - Fast and flexible
 //! - Easy to use
 //! - Written in Rust
-//! - Supports templates and themes
-//! - Generates optimized HTML, CSS, and JavaScript
+//! - Supports templates (YAML, JSON, TOML) and HTML themes
+//! - Generates optimized HTML
 //! - Built-in development server
 //! - Live reloading
 //! - Markdown support

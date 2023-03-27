@@ -3,32 +3,30 @@ use std::collections::HashMap;
 use toml::Value as TomlValue;
 use yaml_rust::YamlLoader;
 
-/// ## Function: extract - Extracts metadata from the front matter of a Markdown file
+/// ## Function: extract - Extracts metadata from the front matter and returns it as a tuple.
 ///
-/// Extracts metadata from the front matter of a Markdown file and
-/// returns it as a tuple. The front matter is defined as any YAML block
-/// that appears at the beginning of the file, enclosed by "---" lines.
-/// The function expects the entire content of the file as a single
-/// string.
+/// Extracts metadata from the front matter of a JSON, TOML, YAML or
+/// Markdown file and returns it as a tuple.
 ///
-/// The metadata extracted by the function includes the title,
-/// description, keywords, and permalink of the page, if they are
-/// present in the front matter. If any of these fields are not present,
-/// an empty string is returned for that field in the tuple.
+/// ## Front Matter Formats Supported:
 ///
-/// The function uses a simple parsing approach to extract the metadata
-/// from the front matter.
+/// The front matter supports three formats for front matter. The format
+/// is determined by the first line of the file.
 ///
-/// It splits the front matter into lines, then looks for lines
-/// containing a colon (":"). If a line containing a colon is found, the
-/// text before the colon is treated as the key and the text after the
-/// colon is treated as the value. The key-value pairs are then stored
-/// in local variables according to the type of metadata being
-/// extracted.
+/// 1. **Markdown/YAML** - The front matter must be enclosed by `---`
+/// lines.
+/// 1. **TOML** - The front matter must be enclosed by `+++` lines.
+/// 1. **JSON** - The front matter must be enclosed by `{` and `}` lines
+/// and must be a JSON object with a `frontmatter` key.
+///     - The `content` key in the JSON object is also extracted and
+///       returned as part of the matter if present in the JSON object.
+///     - The `content` key is only used by the JSON format and will
+///       render the `content` that needs to be displayed on the page.
 ///
-/// If no front matter is present in the input string, or if an error
-/// occurs during parsing, an empty string is returned for all fields
-/// in the tuple.
+/// The function extracts any metadata that is present in the front
+/// matter. If some front matter fields are not present, an empty string
+/// is returned for that field in the tuple.
+///
 ///
 /// # Arguments
 ///
@@ -71,8 +69,6 @@ use yaml_rust::YamlLoader;
 /// Extracts metadata from the front matter of a Markdown file and
 /// returns it as a tuple. The front matter is defined as any YAML block
 /// that appears at the beginning of the file, enclosed by "---" lines.
-///
-
 pub fn extract(content: &str) -> HashMap<String, String> {
     let mut front_matter = HashMap::new();
 
