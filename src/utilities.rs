@@ -57,3 +57,56 @@ pub fn directory(dir: &Path, name: &str) -> Result<(), String> {
 
     Ok(())
 }
+
+/// ## Function: `move_output_directory` - Move the output directory to the public directory.
+///
+/// This function takes a reference to a Path object for the output
+/// directory and a string for the site name, and moves the output
+/// directory to the public directory.
+///
+/// # Arguments
+///
+/// * `site_name` - A string for the site name.
+/// * `out_dir`   - A reference to a Path object for the output directory.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+/// - Ok() if the output directory was moved successfully.
+/// - Err() if the output directory could not be moved.
+///
+pub fn move_output_directory(
+    // The name of the site.
+    site_name: &str,
+    // The path to the output directory.
+    out_dir: &Path,
+) -> std::io::Result<()> {
+    // Move the output directory to the public directory
+    println!("❯ Moving output directory...");
+
+    // Create a Path object for the public directory
+    let public_dir = Path::new("public");
+
+    // Remove the public directory if it exists
+    if public_dir.exists() {
+        fs::remove_dir_all(public_dir)?;
+    }
+
+    // Create the public directory
+    fs::create_dir(public_dir)?;
+
+    // Replace spaces with underscores in the site_name
+    let site_name = site_name.replace(' ', "_");
+
+    // Create a new directory under public with the site_name
+    let new_project_dir = public_dir.join(site_name);
+    fs::create_dir_all(new_project_dir.clone())?;
+
+    // Move the output directory to the new_project_dir
+    fs::rename(out_dir, &new_project_dir)?;
+
+    // Print a success message
+    println!("  Done.\n");
+
+    Ok(())
+}

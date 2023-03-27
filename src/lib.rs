@@ -91,6 +91,7 @@ use template::render_page;
 
 use crate::json::ManifestOptions;
 use crate::template::{create_template_folder, PageOptions};
+use crate::utilities::move_output_directory;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
@@ -421,14 +422,7 @@ pub fn compile(
     println!("  Done.\n");
 
     // Move the output directory to the public directory
-    println!("❯ Moving output directory...");
-    let public_dir = Path::new("public");
-    fs::remove_dir_all(public_dir)?;
-    let site_name = site_name.replace(' ', "_");
-    let new_project_dir = public_dir.join(site_name);
-    fs::create_dir_all(&new_project_dir)?;
-    fs::rename(out_dir, &new_project_dir)?;
-    println!("  Done.\n");
+    move_output_directory(&site_name, out_dir)?;
 
     Ok(())
 }
