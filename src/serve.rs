@@ -15,8 +15,8 @@ pub fn start(
     }
     Ok(())
 }
-
-fn handle_connection(
+/// Handle a single connection.
+pub fn handle_connection(
     mut stream: TcpStream,
     document_root: &str,
 ) -> std::io::Result<()> {
@@ -59,4 +59,3 @@ fn handle_connection(
 
     Ok(())
 }
-
