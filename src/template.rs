@@ -14,32 +14,46 @@ use std::{
 /// passed to the `render_template` function.
 ///
 /// # Arguments
+///
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
 /// * `css`         - A string representing the css.
+/// * `date`        - A string representing the date.
 /// * `description` - A string representing the description.
 /// * `keywords`    - A string representing the keywords.
 /// * `lang`        - A string representing the language.
 /// * `meta`        - A string representing the meta tags.
+/// * `name`        - A string representing the site name.
 /// * `navigation`  - A string representing the navigation.
 /// * `title`       - A string representing the title.
+///
 pub struct PageOptions<'a> {
+    /// A string representing the banner of the page.
+    pub banner: &'a str,
     /// A string representing the content of the page.
     pub content: &'a str,
     /// A string representing the copyright notice of the page.
     pub copyright: &'a str,
     /// A string representing the CSS file of the page.
     pub css: &'a str,
+    /// A string representing the date of the page.
+    pub date: &'a str,
     /// A string representing the description of the page.
     pub description: &'a str,
+    /// A string representing the image of the page.
+    pub image: &'a str,
     /// A string representing the keywords of the page.
     pub keywords: &'a str,
     /// A string representing the language of the page.
     pub lang: &'a str,
+    /// A string representing the layout of the page.
+    pub layout: &'a str,
     /// A string representing the meta tags of the page.
     pub meta: &'a str,
     /// A string representing the navigation of the page.
     pub navigation: &'a str,
+    /// A string representing the site name of the page.
+    pub name: &'a str,
     /// A string representing the title of the page.
     pub title: &'a str,
 }
@@ -86,8 +100,8 @@ pub fn render_template(
 
 /// ## Function: `render_page` - Render an HTML page
 ///
-/// Renders an HTML page with the given title, description, keywords,
-/// meta tags, CSS file, content, and copyright notice.
+/// Renders an HTML page with the given title, date, description,
+/// keywords, meta tags, CSS file, content, and copyright notice.
 ///
 /// This function takes in several arguments that correspond to various
 /// parts of an HTML page. These arguments are used to construct a
@@ -100,10 +114,12 @@ pub fn render_template(
 /// * `content` - The content of the HTML page.
 /// * `copyright` - The copyright notice for the HTML page.
 /// * `css` - The path to the CSS file used by the HTML page.
+/// * `date` - The date of the HTML page.
 /// * `description` - The description of the HTML page.
 /// * `keywords` - The keywords associated with the HTML page.
 /// * `lang` - The language of the HTML page.
 /// * `meta` - The meta tags for the HTML page.
+/// * `name` - The name of the site.
 /// * `navigation` - The navigation for the HTML page.
 /// * `title` - The title of the HTML page.
 ///
@@ -117,25 +133,40 @@ pub fn render_template(
 pub fn render_page(
     options: &PageOptions,
     template_path: &String,
+    layout: &String,
 ) -> Result<String, String> {
     let mut context = HashMap::new();
+    context.insert("banner", options.banner);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
     context.insert("css", options.css);
+    context.insert("date", options.date);
     context.insert("description", options.description);
+    context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
     context.insert("meta", options.meta);
+    context.insert("name", options.name);
     context.insert("navigation", options.navigation);
     context.insert("title", options.title);
 
-    render_template(
-        &fs::read_to_string(
-            Path::new(template_path).join("template.html"),
+    if layout == "index" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("index.html"),
+            )
+            .unwrap(),
+            &context,
         )
-        .unwrap(),
-        &context,
-    )
+    } else {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("template.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    }
 }
 
 /// Custom error type to handle both reqwest and io errors
@@ -200,7 +231,6 @@ pub fn create_template_folder(
 ) -> Result<String, TemplateError> {
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
-    println!("Current directory: {:?}", current_dir);
 
     // Determine the template directory path based on the provided argument or use the default path
     let template_dir_path = match template_path {
@@ -217,7 +247,8 @@ pub fn create_template_folder(
                 );
 
                 let url = path;
-                let files = ["template.html", "template.json"];
+                let files =
+                    ["index.html", "template.html", "template.json"];
 
                 for file in files.iter() {
                     let file_url = format!("{}/{}", url, file);
@@ -236,7 +267,7 @@ pub fn create_template_folder(
             } else {
                 // If a local path is provided, use it as the template
                 // directory path
-                println!("Using local template directory: {}", path);
+                // println!("Using local template directory: {}", path);
                 current_dir.join(path)
             }
         }
@@ -250,7 +281,8 @@ pub fn create_template_folder(
             );
 
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
-            let files = ["template.html", "template.json"];
+            let files =
+                ["index.html", "template.html", "template.json"];
 
             for file in files.iter() {
                 let file_url = format!("{}/{}", url, file);
@@ -267,7 +299,5 @@ pub fn create_template_folder(
             template_dir_path
         }
     };
-    println!("Template directory path: {:?}", template_dir_path);
-
     Ok(String::from(template_dir_path.to_str().unwrap()))
 }

@@ -38,8 +38,8 @@ building static websites.
 - Fast and flexible
 - Easy to use
 - Written in Rust
-- Supports templates and themes
-- Generates optimized HTML, CSS, and JavaScript
+- Supports templates (YAML, JSON, TOML) and HTML themes
+- Generates optimized HTML
 - Built-in development server
 - Live reloading
 - Markdown support
@@ -118,12 +118,18 @@ Here’s the first command you can enter in your Terminal window to run
 `shokunin`:
 
 ```shell
-ssg  --new=my-site --content=content --output=output --template=template
+ssg  --new=mysite --content=content --output=output --template=template
 ```
 
-This command will create a new `my-site` project in a directory called
-`public/my-site` and generate a static website in the `my-site`
+This command will create a new `mysite` project in a directory called
+`public/mysite` and generate a static website in the `mysite`
 directory.
+
+To run with the development server, you can use the following command:
+
+```shell
+ssg  --new=mysite --content=content --output=output --template=template --serve=mysite
+```
 
 ### In your project
 
@@ -132,7 +138,7 @@ To use the `shokunin` library in your project, add the following to your
 
 ```toml
 [dependencies]
-shokunin = "0.0.7"
+shokunin = "0.0.8"
 ```
 
 Add the following to your `main.rs` file:
@@ -211,6 +217,6 @@ providing a lot of useful suggestions on how to improve this project.
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.7-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.8-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

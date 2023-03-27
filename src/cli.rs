@@ -11,6 +11,8 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// - `--new` or `-n`: Creates a new project.
 /// - `--content` or `-c`: Specifies the location of the content directory.
 /// - `--output` or `-o`: Specifies the location of the output directory.
+/// - `--template` or `-t`: Specifies the location of the template directory.
+/// - `--serve` or `-s`: Serves the public directory on a local web server.
 ///
 /// If the CLI is successfully built and the command-line arguments are
 /// parsed correctly, the function returns an `Ok` result containing the
@@ -38,7 +40,7 @@ pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.7")
+        .version("0.0.8")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -67,13 +69,18 @@ pub fn build() -> Result<ArgMatches, Error> {
                 .short('t')
                 .value_name("TEMPLATE"),
         )
- 
+        .arg(
+            Arg::new("serve")
+                .help("Serve the public directory on a local web server.")
+                .long("serve")
+                .short('s')
+                .value_name("SERVE")
+        )
+
         .after_help(
             "\x1b[1;4mDocumentation:\x1b[0m\n\n  https://shokunin.one\n\n\x1b[1;4mLicense:\x1b[0m\n  The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).",
         )
         .get_matches();
-
-    // println!("Matches: {:?}", matches);
 
     Ok(matches)
 }

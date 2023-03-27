@@ -1,0 +1,12 @@
+{
+  "frontmatter": {
+    "date": "2023-03-23",
+    "description": "Description of the about page",
+    "keywords": "about, page, description",
+    "layout": "page",
+    "permalink": "/about/",
+    "title": "About",
+    "image": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg"
+  },
+  "content": "Content of the about page"
+}
