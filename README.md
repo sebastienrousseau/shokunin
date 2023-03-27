@@ -38,8 +38,8 @@ building static websites.
 - Fast and flexible
 - Easy to use
 - Written in Rust
-- Supports templates and themes
-- Generates optimized HTML, CSS, and JavaScript
+- Supports templates (YAML, JSON, TOML) and HTML themes
+- Generates optimized HTML
 - Built-in development server
 - Live reloading
 - Markdown support
@@ -118,12 +118,18 @@ Here’s the first command you can enter in your Terminal window to run
 `shokunin`:
 
 ```shell
-ssg  --new=my-site --content=content --output=output --template=template
+ssg  --new=mysite --content=content --output=output --template=template
 ```
 
-This command will create a new `my-site` project in a directory called
-`public/my-site` and generate a static website in the `my-site`
+This command will create a new `mysite` project in a directory called
+`public/mysite` and generate a static website in the `mysite`
 directory.
+
+To run with the development server, you can use the following command:
+
+```shell
+ssg  --new=mysite --content=content --output=output --template=template --serve=mysite
+```
 
 ### In your project
 

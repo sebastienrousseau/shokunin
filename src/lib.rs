@@ -107,11 +107,12 @@ pub mod metatags;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod parser;
+/// The `serve` module contains functions for the development server.
+pub mod serve;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
-/// The `directory` function ensures that a directory
-/// exists.
+/// The `directory` function ensures that a directory exists.
 pub mod utilities;
 
 #[allow(non_camel_case_types)]
@@ -146,6 +147,18 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let result = match cli::build() {
         Ok(matches) => {
             parser::args(&matches)?;
+            if matches.get_one::<String>("serve").is_some() {
+                let server_address = "127.0.0.1:8000";
+                let output_dir =
+                    matches.get_one::<String>("serve").unwrap();
+                let document_root = format!("public/{}", output_dir);
+                serve::start(server_address, &document_root)?;
+                println!(
+                    "\n✅ Server started at http://{}",
+                    server_address
+                );
+                return Ok(());
+            }
             Ok(())
         }
         Err(e) => Err(format!("❌ Error: {}", e)),
@@ -274,7 +287,7 @@ pub fn compile(
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
 
-    println!("❯ Generating a new site: \"{}\"", site_name);
+    println!("\n❯ Generating a new site: \"{}\"", site_name);
 
     // Delete the output directory
     println!("\n❯ Deleting any previous directory...");
