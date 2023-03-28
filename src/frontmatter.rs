@@ -1,4 +1,4 @@
-use serde_json::Value as JsonValue;
+use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
 use toml::Value as TomlValue;
 use yaml_rust::YamlLoader;
@@ -183,7 +183,7 @@ pub fn parse_toml_table(
 /// A `&str` representing the JSON object. If no JSON object is found,
 /// `None` is returned.
 ///
-fn extract_json_object_str(content: &str) -> Option<&str> {
+pub fn extract_json_object_str(content: &str) -> Option<&str> {
     if content.starts_with('{') {
         let end_pos = content.rfind('}')?;
         Some(&content[..=end_pos])
@@ -207,12 +207,32 @@ fn extract_json_object_str(content: &str) -> Option<&str> {
 /// object is not a string, an empty string is returned.
 ///
 pub fn parse_json_object(
-    json_object: &serde_json::Map<String, JsonValue>,
+    json_object: &Map<String, JsonValue>,
 ) -> HashMap<String, String> {
-    json_object
+    let mut result = json_object
         .iter()
         .map(|(k, v)| {
-            (k.to_string(), v.as_str().unwrap_or("").to_string())
+            (
+                k.to_string(),
+                match v {
+                    JsonValue::String(s) => s.to_string(),
+                    JsonValue::Number(n) => match n.as_f64() {
+                        Some(f) => f.to_string(),
+                        None => match n.as_i64() {
+                            Some(i) => i.to_string(),
+                            None => "".to_string(),
+                        },
+                    },
+                    JsonValue::Bool(b) => b.to_string(),
+                    JsonValue::Object(o) => serde_json::to_string(o)
+                        .unwrap_or_else(|_| "".to_string()),
+                    JsonValue::Array(a) => serde_json::to_string(a)
+                        .unwrap_or_else(|_| "".to_string()),
+                    _ => "".to_string(),
+                },
+            )
         })
-        .collect()
+        .collect::<Vec<_>>();
+    result.sort_by_key(|(k, _)| k.to_string());
+    result.into_iter().collect()
 }

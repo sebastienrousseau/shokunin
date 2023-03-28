@@ -3,8 +3,9 @@ mod tests {
     use std::collections::HashMap;
 
     use ssg::frontmatter::{
-        extract, extract_front_matter_str, parse_toml_table,
-        parse_yaml_document, parse_yaml_hash,
+        extract, extract_front_matter_str, extract_json_object_str,
+        parse_json_object, parse_toml_table, parse_yaml_document,
+        parse_yaml_hash,
     };
     use yaml_rust::YamlLoader;
 
@@ -173,6 +174,47 @@ mod tests {
         ]
         .into_iter()
         .collect();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_extract_json_object_str() {
+        let content1 = r#"{"name": "John Doe", "age": 42}"#;
+        assert_eq!(
+            extract_json_object_str(content1),
+            Some(r#"{"name": "John Doe", "age": 42}"#)
+        );
+    }
+
+    #[test]
+    fn test_parse_json_object() {
+        let json_str = r#"{
+        "name": "John Doe",
+        "age": 42,
+        "email": "john.doe@example.com",
+        "address": {
+            "street": "123 Main St",
+            "city": "Anytown",
+            "state": "CA",
+            "zip": "12345"
+        }
+    }"#;
+        let json_value: serde_json::Value =
+            serde_json::from_str(json_str).unwrap();
+        let json_object = json_value.as_object().unwrap();
+
+        let result = parse_json_object(json_object);
+        let expected: HashMap<String, String> = vec![
+        ("name".to_owned(), "John Doe".to_owned()),
+        ("age".to_owned(), "42".to_owned()),
+        ("email".to_owned(), "john.doe@example.com".to_owned()),
+        (
+            "address".to_owned(),
+            r#"{"city":"Anytown","state":"CA","street":"123 Main St","zip":"12345"}"#.to_owned(),
+        ),
+    ]
+    .into_iter()
+    .collect();
         assert_eq!(result, expected);
     }
 }
