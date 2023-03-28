@@ -421,12 +421,12 @@ pub fn compile(
     }
     println!("  Done.\n");
 
-    // Minify HTML files in the public directory
+    // Minify HTML files in the out_dir directory
     println!("❯ Minifying HTML files...");
     minify_html_files(out_dir)?;
     println!("  Done.\n");
 
-    // Move the output directory to the public directory
+    // Move the output directory to the out_dir directory
     move_output_directory(&site_name, out_dir)?;
 
     Ok(())

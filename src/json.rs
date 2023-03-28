@@ -84,7 +84,15 @@ pub struct ManifestOptions {
 /// The manifest is used by web browsers to provide a native application
 /// -like experience for web applications.
 ///
-
+/// # Arguments
+///
+/// * `options` - A `ManifestOptions` struct containing the options for
+///              the manifest.
+///
+/// # Returns
+///
+/// A string containing the JSON Web Application Manifest file.
+///
 pub fn manifest(options: &ManifestOptions) -> String {
     let mut json_map = Map::new();
     json_map.insert(
