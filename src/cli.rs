@@ -40,7 +40,7 @@ pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.8")
+        .version("0.0.9")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")

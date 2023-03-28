@@ -22,14 +22,29 @@ pub fn handle_connection(
 ) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
+
+    if bytes_read == 0 {
+        eprintln!("Empty request received");
+        return Ok(());
+    }
+
     let request = String::from_utf8_lossy(&buffer[..bytes_read]);
     let request_line = request.lines().next().unwrap_or("");
     let mut request_parts = request_line.split_whitespace();
-    let (_method, path, _version) = (
-        request_parts.next().unwrap_or(""),
-        request_parts.next().unwrap_or(""),
-        request_parts.next().unwrap_or(""),
-    );
+
+    let (_method, path, _version) = match (
+        request_parts.next(),
+        request_parts.next(),
+        request_parts.next(),
+    ) {
+        (Some(method), Some(path), Some(version)) => {
+            (method, path, version)
+        }
+        _ => {
+            eprintln!("Malformed request line: {}", request_line);
+            return Ok(());
+        }
+    };
 
     let requested_file = match path {
         "/" => "index.html",

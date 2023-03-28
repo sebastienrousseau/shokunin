@@ -91,7 +91,7 @@ use template::render_page;
 
 use crate::json::ManifestOptions;
 use crate::template::{create_template_folder, PageOptions};
-use crate::utilities::move_output_directory;
+use crate::utilities::*;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
@@ -133,7 +133,7 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (version 0.0.8)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.9)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
@@ -419,6 +419,11 @@ pub fn compile(
             println!("  - {}", out_json_file.display());
         }
     }
+    println!("  Done.\n");
+
+    // Minify HTML files in the public directory
+    println!("❯ Minifying HTML files...");
+    minify_html_files(out_dir)?;
     println!("  Done.\n");
 
     // Move the output directory to the public directory

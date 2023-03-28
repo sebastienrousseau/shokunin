@@ -1,4 +1,9 @@
-use std::{fs, path::Path};
+use minify_html::{Cfg, minify};
+use std::{
+    fs::{self, File},
+    io::{self, Write},
+    path::{Path, PathBuf},
+};
 
 /// ## Function: `directory` - Ensure a directory exists, creating it if necessary.
 ///
@@ -108,5 +113,75 @@ pub fn move_output_directory(
     // Print a success message
     println!("  Done.\n");
 
+    Ok(())
+}
+
+/// ## Function: `minify_html_files` - Minify HTML files in the output directory.
+pub fn minify_html_files(
+    // The path to the output directory.
+    out_dir: &Path,
+) -> io::Result<()> {
+    let html_files = find_html_files(out_dir)?;
+
+    for file in html_files {
+        let minified_html = minify_html(&file)?;
+        let backup_path = backup_file(&file)?;
+        write_minified_html(&file, &minified_html)?;
+        println!(
+            "Minified HTML file '{}' to '{}'",
+            file.display(),
+            backup_path.display()
+        );
+    }
+
+    Ok(())
+}
+
+fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
+    let mut html_files = Vec::new();
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+
+        if entry.path().is_dir() {
+            let sub_html_files = find_html_files(&entry.path())?;
+            html_files.extend(sub_html_files);
+        } else if let Some("html") =
+            entry.path().extension().and_then(|ext| ext.to_str())
+        {
+            html_files.push(entry.path());
+        }
+    }
+
+    Ok(html_files)
+}
+
+fn minify_html(file_path: &Path) -> io::Result<String> {
+    let mut cfg = Cfg::new();
+    cfg.do_not_minify_doctype = true;
+    cfg.keep_closing_tags = true;
+    cfg.keep_comments = false;
+    cfg.minify_css = true;
+    cfg.minify_js = true;
+    cfg.remove_processing_instructions = true;
+    cfg.remove_bangs = true;
+    let file_content = fs::read(file_path)?;
+    let minified_content = minify(&file_content,  &cfg);
+
+    Ok(String::from_utf8(minified_content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?)
+}
+
+fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
+    let backup_path = file_path.with_extension("src.html");
+    fs::copy(file_path, &backup_path)?;
+    Ok(backup_path)
+}
+
+fn write_minified_html(
+    file_path: &Path,
+    minified_html: &str,
+) -> io::Result<()> {
+    let mut file = File::create(file_path)?;
+    file.write_all(minified_html.as_bytes())?;
     Ok(())
 }
