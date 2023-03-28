@@ -217,8 +217,9 @@ fn minify_html(file_path: &Path) -> io::Result<String> {
     let file_content = fs::read(file_path)?;
     let minified_content = minify(&file_content, &cfg);
 
-    Ok(String::from_utf8(minified_content)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?)
+    String::from_utf8(minified_content)
+    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+
 }
 
 /// ## Function: `backup_file` - Backup a file.

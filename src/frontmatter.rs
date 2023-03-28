@@ -134,16 +134,18 @@ pub fn parse_yaml_document(
 pub fn parse_yaml_hash(
     yaml_hash: &yaml_rust::yaml::Hash,
 ) -> HashMap<String, String> {
-    yaml_hash
+    let mut entries: Vec<_> = yaml_hash
         .iter()
-        .map(|(k, v)| {
-            (
-                k.as_str().unwrap().to_string(),
-                v.as_str().unwrap().to_string(),
-            )
+        .filter_map(|(k, v)| {
+            v.as_str().map(|value| {
+                (k.as_str().unwrap().to_string(), value.to_string())
+            })
         })
-        .collect()
+        .collect();
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+    entries.into_iter().collect()
 }
+
 /// ## Function: `parse_toml_table` - Parses a TOML table into a `HashMap` of key-value pairs
 ///
 /// This function parses a TOML table into a `HashMap` of key-value pairs.
@@ -179,7 +181,7 @@ pub fn parse_toml_table(
 /// A `&str` representing the JSON object. If no JSON object is found,
 /// `None` is returned.
 ///
-fn extract_json_object_str<'a>(content: &'a str) -> Option<&'a str> {
+fn extract_json_object_str(content: &str) -> Option<&str> {
     if content.starts_with('{') {
         let end_pos = content.rfind('}')?;
         Some(&content[..=end_pos])
