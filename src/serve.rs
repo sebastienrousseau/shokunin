@@ -1,7 +1,23 @@
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
-/// Start a web server to serve the public directory.
+/// ## Function: `start` - Start a web server to serve the public directory.
+///
+/// This function takes a string for the server address and a string for
+/// the document root, and starts a web server to serve the public
+/// directory.
+///
+/// # Arguments
+///
+/// * `server_address` - A string for the server address.
+/// * `document_root`  - A string for the document root.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+/// - Ok() if the web server started successfully.
+/// - Err() if the web server could not be started.
+///
 pub fn start(
     server_address: &str,
     document_root: &str,
@@ -15,7 +31,22 @@ pub fn start(
     }
     Ok(())
 }
-/// Handle a single connection.
+/// ## Function: `handle_connection` - Handle a single connection.
+///
+/// This function takes a TcpStream object and a string for the document
+/// root, and handles a single connection.
+///
+/// # Arguments
+///
+/// * `stream`        - A TcpStream object.
+/// * `document_root` - A string for the document root.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+/// - Ok() if the connection was handled successfully.
+/// - Err() if the connection could not be handled.
+///
 pub fn handle_connection(
     mut stream: TcpStream,
     document_root: &str,
