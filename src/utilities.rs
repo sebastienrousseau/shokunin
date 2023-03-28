@@ -1,4 +1,4 @@
-use minify_html::{Cfg, minify};
+use minify_html::{minify, Cfg};
 use std::{
     fs::{self, File},
     io::{self, Write},
@@ -117,6 +117,21 @@ pub fn move_output_directory(
 }
 
 /// ## Function: `minify_html_files` - Minify HTML files in the output directory.
+///
+/// This function takes a reference to a Path object for the output
+/// directory and minifies all HTML files in the output directory.
+///
+/// # Arguments
+///
+/// * `out_dir` - A reference to a Path object for the output directory.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+///
+/// - Ok() if all HTML files were minified successfully.
+/// - Err() if any HTML files could not be minified.
+///
 pub fn minify_html_files(
     // The path to the output directory.
     out_dir: &Path,
@@ -137,6 +152,25 @@ pub fn minify_html_files(
     Ok(())
 }
 
+/// ## Function: `find_html_files` - Find all HTML files in a directory.
+///
+/// This function takes a reference to a Path object for a directory
+/// and returns a vector of PathBuf objects for all HTML files in the
+/// directory.
+///
+/// # Arguments
+///
+/// * `dir` - A reference to a Path object for the directory.
+///
+/// # Returns
+///
+/// * A Result containing a vector of PathBuf objects for all HTML files
+///  in the directory.
+///
+/// - Ok() if the directory exists and contains HTML files.
+/// - Err() if the directory does not exist or does not contain HTML
+/// files.
+///
 fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut html_files = Vec::new();
 
@@ -156,6 +190,21 @@ fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(html_files)
 }
 
+/// ## Function: `minify_html` - Minify a single HTML file.
+///
+/// This function takes a reference to a Path object for an HTML file
+/// and returns a string containing the minified HTML.
+///
+/// # Arguments
+///
+/// * `file_path` - A reference to a Path object for the HTML file.
+///
+/// # Returns
+///
+/// * A Result containing a string containing the minified HTML.
+/// - Ok() if the HTML file was minified successfully.
+/// - Err() if the HTML file could not be minified.
+///
 fn minify_html(file_path: &Path) -> io::Result<String> {
     let mut cfg = Cfg::new();
     cfg.do_not_minify_doctype = true;
@@ -163,20 +212,53 @@ fn minify_html(file_path: &Path) -> io::Result<String> {
     cfg.keep_comments = false;
     cfg.minify_css = true;
     cfg.minify_js = true;
-    cfg.remove_processing_instructions = true;
     cfg.remove_bangs = true;
+    cfg.remove_processing_instructions = true;
     let file_content = fs::read(file_path)?;
-    let minified_content = minify(&file_content,  &cfg);
+    let minified_content = minify(&file_content, &cfg);
 
-    Ok(String::from_utf8(minified_content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?)
+    Ok(String::from_utf8(minified_content)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?)
 }
 
+/// ## Function: `backup_file` - Backup a file.
+///
+/// This function takes a reference to a Path object for a file and
+/// creates a backup of the file with the extension ".src.html".
+///
+/// # Arguments
+///
+/// * `file_path` - A reference to a Path object for the file.
+///
+/// # Returns
+///
+/// * A Result containing a PathBuf object for the backup file.
+/// - Ok() if the backup file was created successfully.
+/// - Err() if the backup file could not be created.
+///
 fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
     let backup_path = file_path.with_extension("src.html");
     fs::copy(file_path, &backup_path)?;
     Ok(backup_path)
 }
 
+/// ## Function: `write_minified_html` - Write a minified HTML file.
+///
+/// This function takes a reference to a Path object for the file to
+/// write and a string containing the minified HTML and writes the
+/// minified HTML to the file.
+///
+/// # Arguments
+///
+/// * `file_path` - A reference to a Path object for the file to write.
+/// * `minified_html` - A string containing the minified HTML.
+///
+/// # Returns
+///
+/// * A Result indicating success or failure.
+/// - Ok() if the minified HTML was written successfully.
+/// - Err() if the minified HTML could not be written.
+///
 fn write_minified_html(
     file_path: &Path,
     minified_html: &str,
