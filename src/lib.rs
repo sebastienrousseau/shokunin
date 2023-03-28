@@ -1,4 +1,4 @@
-// Copyright © 2023 shokunin. All rights reserved.
+// Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
 //! # Shokunin (職人) 🦀
@@ -14,37 +14,44 @@
 //!
 //! ## Overview 📖
 //!
-//! `Shokunin (職人)` is a fast and flexible static site generator (ssg) written in Rust. It aims to provide an easy-to-use and powerful tool for building static websites.
+//! `Shokunin (職人)` is a highly-optimized, Rust-based static site
+//! generator (ssg) that aims to provide an easy-to-use and powerful
+//! tool for building professional static websites and blogs.
+//!
+//! The library extracts metadata and content to generate static HTML
+//! files from Markdown, YAML, JSON, and TOML. It also supports HTML
+//! themes and custom templates to help you create high quality
+//! websites with ease.
 //!
 //! ## Features ✨
 //!
-//! - Fast and flexible
+//! - Blazing fast and flexible
 //! - Easy to use
-//! - Written in Rust
-//! - Supports templates (YAML, JSON, TOML) and HTML themes
-//! - Generates optimized HTML
-//! - Built-in development server
-//! - Live reloading
-//! - Markdown support
+//! - Written in Rust 🦀
+//! - Supports multiple content formats (Markdown, YAML, JSON, TOML)
+//! - Compatible with various HTML themes and Premium templates to
+//!   create accessible websites quickly and efficiently
+//! - Generates minified HTML and JSON versions for optimal performance
+//! - Built-in Rust development server with live reloading
 //!
 //! ## Getting Started 🚀
 //!
-//! It takes just a few minutes to get up and running with `shokunin`.
+//! It takes just a few minutes to get up and running with `Shokunin (職人)`.
 //!
 //! ### Installation
 //!
-//! To install `shokunin`, you need to have the Rust toolchain installed on
+//! To install `Shokunin (職人)`, you need to have the Rust toolchain installed on
 //! your machine. You can install the Rust toolchain by following the
 //! instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
 //!
-//! Once you have the Rust toolchain installed, you can install `shokunin`
+//! Once you have the Rust toolchain installed, you can install `Shokunin (職人)`
 //! using the following command:
 //!
 //! ```shell
 //! cargo install ssg
 //! ```
 //!
-//! For simplicity, we have given `shokunin` a simple alias `ssg` which can
+//! For simplicity, we have given `Shokunin (職人)` a simple alias `ssg` which can
 //! stand for `Shokunin Site Generator` or `Static Site Generator`.
 //!
 //! You can then run the help command to see the available options:
@@ -56,7 +63,7 @@
 //! ## Examples and Usage 📚
 //!
 //! Check out the examples folder for helpful snippets of code that
-//! demonstrate how to use the `shokunin` library. You can also check
+//! demonstrate how to use the `Shokunin (職人)` library. You can also check
 //! out the [documentation](https://docs.rs/ssg) for more information
 //! on how to use the library.
 //!
@@ -91,6 +98,7 @@ use template::render_page;
 
 use crate::json::ManifestOptions;
 use crate::template::{create_template_folder, PageOptions};
+use crate::utilities::*;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
@@ -132,7 +140,7 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (version 0.0.8)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.9)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
@@ -277,6 +285,20 @@ pub fn generate_navigation(files: &[File]) -> String {
 ///
 /// If any errors occur during the process (e.g. a file cannot be read
 /// or written), an error is returned. Otherwise, `Ok(())` is returned.
+///
+/// # Arguments
+///
+/// * `src_dir` - The path to the source directory.
+/// * `out_dir` - The path to the output directory.
+/// * `template_path` - The path to the template directory.
+/// * `site_name` - The name of the site.
+///
+/// # Returns
+///
+/// `Ok(())` if the compilation is successful.
+/// `Err` if an error occurs during the compilation. The error is
+/// wrapped in a `Box<dyn Error>` to allow for different error types.
+///
 pub fn compile(
     src_dir: &Path,
     out_dir: &Path,
@@ -420,15 +442,13 @@ pub fn compile(
     }
     println!("  Done.\n");
 
-    // Move the output directory to the public directory
-    println!("❯ Moving output directory...");
-    let public_dir = Path::new("public");
-    fs::remove_dir_all(public_dir)?;
-    let site_name = site_name.replace(' ', "_");
-    let new_project_dir = public_dir.join(site_name);
-    fs::create_dir_all(&new_project_dir)?;
-    fs::rename(out_dir, &new_project_dir)?;
+    // Minify HTML files in the out_dir directory
+    println!("❯ Minifying HTML files...");
+    minify_html_files(out_dir)?;
     println!("  Done.\n");
+
+    // Move the output directory to the out_dir directory
+    move_output_directory(&site_name, out_dir)?;
 
     Ok(())
 }

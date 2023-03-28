@@ -1,4 +1,8 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde_json::{json, Map};
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `ManifestOptions` - Options for the `manifest` function
 ///
@@ -84,7 +88,15 @@ pub struct ManifestOptions {
 /// The manifest is used by web browsers to provide a native application
 /// -like experience for web applications.
 ///
-
+/// # Arguments
+///
+/// * `options` - A `ManifestOptions` struct containing the options for
+///              the manifest.
+///
+/// # Returns
+///
+/// A string containing the JSON Web Application Manifest file.
+///
 pub fn manifest(options: &ManifestOptions) -> String {
     let mut json_map = Map::new();
     json_map.insert(

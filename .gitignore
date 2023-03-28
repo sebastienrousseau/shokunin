@@ -4,6 +4,6 @@
 /output/
 /target/
 build
-Cargo.lock
 Icon?
 src/.DS_Store
+tarpaulin-report.html

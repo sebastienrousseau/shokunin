@@ -1,3 +1,6 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use clap::{Arg, ArgMatches, Command, Error};
 
 /// ## Function: build - returns a Result containing the parsed input options
@@ -40,7 +43,7 @@ pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.8")
+        .version("0.0.9")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")

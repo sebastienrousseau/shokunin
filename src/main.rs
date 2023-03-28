@@ -1,3 +1,6 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 /// ## Function: `main` - The main function of the program
 ///
 /// The main function of the program. Calls the `run()` function from

@@ -1,3 +1,6 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::fs;
 use std::io;
 use std::path::Path;
