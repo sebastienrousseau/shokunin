@@ -1,4 +1,8 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde_json::{json, Map};
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `ManifestOptions` - Options for the `manifest` function
 ///

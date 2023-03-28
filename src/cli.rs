@@ -1,3 +1,6 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use clap::{Arg, ArgMatches, Command, Error};
 
 /// ## Function: build - returns a Result containing the parsed input options

@@ -1,3 +1,6 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use minify_html::{minify, Cfg};
 use std::{
     fs::{self, File},
@@ -218,8 +221,7 @@ fn minify_html(file_path: &Path) -> io::Result<String> {
     let minified_content = minify(&file_content, &cfg);
 
     String::from_utf8(minified_content)
-    .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 /// ## Function: `backup_file` - Backup a file.

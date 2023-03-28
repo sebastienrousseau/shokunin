@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="shokunin logo" width="240" align="right" />
+<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="Shokunin (職人) logo" width="240" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
@@ -8,7 +8,7 @@
 
 A Fast and Flexible Static Site Generator written in Rust.
 
-![shokunin banner][banner]
+![Shokunin (職人) banner][banner]
 
 [![Made With Rust][made-with-rust-badge]][5] [![Crates.io][crates-badge]][7] [![Lib.rs][libs-badge]][9] [![Docs.rs][docs-badge]][8] [![License][license-badge]][2] [![Codecov][codecov-badge]][14]
 
@@ -29,42 +29,48 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 ## Overview 📖
 
-`Shokunin (職人)` is a fast and flexible static site generator (ssg)
-written in Rust. It aims to provide an easy-to-use and powerful tool for
-building static websites.
+`Shokunin (職人)` is a highly-optimized, Rust-based static site generator
+(ssg) that aims to provide an easy-to-use and powerful tool for building
+professional static websites and blogs.
+
+The library extracts metadata and content to generate static HTML files
+from Markdown, YAML, JSON, and TOML. It also supports HTML themes and
+custom templates to help you create high quality websites with ease.
 
 ## Features ✨
 
-- Fast and flexible
+- Blazing fast and flexible
 - Easy to use
-- Written in Rust
-- Supports templates (YAML, JSON, TOML) and HTML themes
-- Generates optimized HTML
-- Built-in development server
-- Live reloading
-- Markdown support
+- Written in Rust 🦀
+- Supports multiple content formats (Markdown, YAML, JSON, TOML)
+- Compatible with various HTML themes and Premium templates to create
+  accessible websites quickly and efficiently
+- Generates minified HTML and JSON versions for optimal performance
+- Built-in Rust development server with live reloading
 
 ## Getting Started 🚀
 
-It takes just a few minutes to get up and running with `shokunin`.
+It takes just a few minutes to get up and running with `Shokunin (職人)`.
 
 ### Installation
 
-To install `shokunin`, you need to have the Rust toolchain installed on
-your machine. You can install the Rust toolchain by following the
-instructions on the [Rust website][13].
+To install `Shokunin (職人)`, you need to have the Rust toolchain
+installed on your machine. You can install the Rust toolchain by
+following the instructions on the [Rust website][13].
 
-Once you have the Rust toolchain installed, you can install `shokunin`
-using the following command:
+Once you have the Rust toolchain installed, you can install
+`Shokunin (職人)` using the following command:
 
 ```shell
 cargo install ssg
 ```
 
-For simplicity, we have given `shokunin` a simple alias `ssg` which can
-stand for `Shokunin Site Generator` or `Static Site Generator`.
+For simplicity, we have given `Shokunin (職人)` a simple alias `ssg`
+which can stand for `Shokunin (職人) Site Generator` or
+`Static Site Generator`.
 
-You can then run the help command to see the available options:
+You can then run the help command to see the available options and
+commands:
 
 ```shell
 ssg --help
@@ -73,11 +79,13 @@ ssg --help
 ### Requirements
 
 The minimum supported Rust toolchain version is currently Rust
-**1.68.0** or later (stable).
+**1.68.0** or later (stable). It is recommended that you install the
+latest stable version of Rust.
 
 ### Platform support
 
-`shokunin` is supported and tested on the following platforms:
+`Shokunin (職人)` is supported and tested today on the following
+platforms:
 
 #### Linux targets 🐧
 
@@ -98,8 +106,8 @@ The minimum supported Rust toolchain version is currently Rust
 | --- | --- | --- |
 | x86_64-apple-darwin | 64-bit macOS (10.7 Lion or later) | ✅ |
 
-The [GitHub Actions][10] shows the platforms in which the `shokunin`
-library tests are run.
+The [GitHub Actions][10] shows the platforms in which the
+`Shokunin (職人)` library tests are run.
 
 ### Documentation
 
@@ -111,11 +119,11 @@ You can find our documentation on [docs.rs][8], [lib.rs][9] and
 
 ### Command Line Interface (CLI)
 
-The `shokunin` library runs in a Terminal window and can be used to
-generate a static website.
+The `Shokunin (職人)` library runs in a Terminal window and can be used
+to generate a static website.
 
 Here’s the first command you can enter in your Terminal window to run
-`shokunin`:
+`Shokunin (職人)`:
 
 ```shell
 ssg  --new=mysite --content=content --output=output --template=template
@@ -125,7 +133,8 @@ This command will create a new `mysite` project in a directory called
 `public/mysite` and generate a static website in the `mysite`
 directory.
 
-To run with the development server, you can use the following command:
+To run with the built-in Rust development server, you can use the
+following command:
 
 ```shell
 ssg  --new=mysite --content=content --output=output --template=template --serve=mysite
@@ -133,8 +142,8 @@ ssg  --new=mysite --content=content --output=output --template=template --serve=
 
 ### In your project
 
-To use the `shokunin` library in your project, add the following to your
-`Cargo.toml` file:
+To use the `Shokunin (職人)` library in your project, add the following
+to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -148,15 +157,16 @@ extern crate ssg;
 use ssg::*;
 ```
 
-then you can use the functions in your application code.
+then you can use the `Shokunin (職人)` functions in your application
+code.
 
 ### Examples
 
-To get started with `shokunin`, you can use the examples provided in the
-`examples` directory of the project.
+To get started with `Shokunin (職人)`, you can use the examples
+provided in the `examples` directory of the project.
 
-To run the examples, clone the repository and run the following command
-in your terminal from the project root directory.
+To run the examples, clone the repository and run the following
+command in your terminal from the project root directory.
 
 ```shell
 cargo run --example example
@@ -165,7 +175,8 @@ cargo run --example example
 ## Semantic Versioning Policy 🚥
 
 For transparency into our release cycle and in striving to maintain
-backward compatibility, `shokunin` follows [semantic versioning][6].
+backward compatibility, `Shokunin (職人)` follows
+[semantic versioning][6].
 
 ## License 📝
 
@@ -190,8 +201,8 @@ additional terms or conditions.
 
 ## Acknowledgements 💙
 
-A big thank you to all the awesome contributors of [shokunin][5] for their
-help and support.
+A big thank you to all the awesome contributors of [Shokunin (職人)][5]
+for their help and support.
 
 A special thank you goes to the [Rust Reddit][12] community for
 providing a lot of useful suggestions on how to improve this project.
@@ -212,7 +223,7 @@ providing a lot of useful suggestions on how to improve this project.
 [13]: https://www.rust-lang.org/learn/get-started
 [14]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin banner"
+[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin (職人) banner"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
