@@ -165,7 +165,9 @@ pub fn parse_toml_table(
 ) -> HashMap<String, String> {
     toml_table
         .iter()
-        .map(|(k, v)| (k.to_string(), v.as_str().unwrap().to_string()))
+        .filter_map(|(k, v)| {
+            v.as_str().map(|s| (k.to_string(), s.to_string()))
+        })
         .collect()
 }
 /// ## Function: `extract_json_object_str` - Extracts a JSON object from a string of content

@@ -3,8 +3,8 @@ mod tests {
     use std::collections::HashMap;
 
     use ssg::frontmatter::{
-        extract, extract_front_matter_str, parse_yaml_document,
-        parse_yaml_hash,
+        extract, extract_front_matter_str, parse_toml_table,
+        parse_yaml_document, parse_yaml_hash,
     };
     use yaml_rust::YamlLoader;
 
@@ -151,6 +151,28 @@ mod tests {
             [("name".to_owned(), "John Doe".to_owned())]
                 .into_iter()
                 .collect();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_toml_table() {
+        let toml_str = r#"
+        [author]
+        name = "John Doe"
+        email = "john.doe@example.com"
+        age = "42"
+    "#;
+        let toml: toml::Value = toml::from_str(toml_str).unwrap();
+        let result = parse_toml_table(
+            toml.get("author").unwrap().as_table().unwrap(),
+        );
+        let expected: HashMap<String, String> = vec![
+            ("name".to_owned(), "John Doe".to_owned()),
+            ("email".to_owned(), "john.doe@example.com".to_owned()),
+            ("age".to_owned(), "42".to_owned()),
+        ]
+        .into_iter()
+        .collect();
         assert_eq!(result, expected);
     }
 }
