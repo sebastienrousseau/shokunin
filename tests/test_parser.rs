@@ -14,7 +14,7 @@ mod tests {
         let result = args(&matches);
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"name\" is required but missing."
+            Err("❌ Error: Argument \"new\" is required but missing."
                 .to_owned())
         );
     }
