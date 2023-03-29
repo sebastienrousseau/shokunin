@@ -1,15 +1,15 @@
 name: ❯ Shokunin (職人) release
 
-# Controls when the action will run. Triggers the workflow on push or
-# pull request events but only for the main branch and every Tuesday
-# at 3:45 UTC
+# Run this workflow every time a new commit pushed to the repository
+# or when a pull request is opened.
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
-  schedule:
-    - cron: 45 3 * * 2 # every Tuesday at 3:45 UTC
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - 'feat/*'
 
 jobs:
   # This job checks a local package and all of its dependencies for
@@ -135,7 +135,6 @@ jobs:
           mkdir -p "${HOME}/.local/bin"
           curl -sL https://github.com/mozilla/grcov/releases/download/v0.8.13/grcov-x86_64-unknown-linux-gnu.tar.bz2 | tar jxf - -C "${HOME}/.local/bin"
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-
       # Use grcov to generate a coverage report
       - name: Generate coverage report
         id: coverage
@@ -198,7 +197,6 @@ jobs:
         if: github.ref == !github.event.check_run.conclusion
         run: |
           cargo check --all --all-features --workspace --verbose
-
       # Run cargo clippy to check for linting errors
       - name: Run Clippy
         id: run-check-clippy
@@ -351,10 +349,10 @@ jobs:
       # Upload the binary for each target
       - name: Upload the binary
         id: upload-binary
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.target }}.tar.gz
-          path: target/package/${{ matrix.target }}.tar.gz
+          path: ${{ env[format('{0}.tar.gz', matrix.target)] }}
 
   # Release the binary to GitHub Releases
   release:
@@ -397,7 +395,7 @@ jobs:
             name="${target}.tar.gz"
             echo "Artifact name: $name"
             mkdir -p target/package
-            curl -sSL -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -L "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts/${target}.tar.gz" -o "target/package/${target}.tar.gz"
+            curl -sSL -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -L "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts/${name}" -o "target/package/${name}"
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -414,17 +412,15 @@ jobs:
           echo "$(git log --pretty=format:'%s' --reverse $(git describe --tags --abbrev=0)..HEAD)" >> ${{ github.workspace }}/CHANGELOG.md
           # Append empty line to CHANGELOG.md
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
-
       # Append the artifact links to the changelog
-      # - name: Append Artifact Links
-      #   run: |
-      #     echo "" >> ${{ github.workspace }}/CHANGELOG.md
-      #     echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-      #     for filename in target/package/*.tar.gz; do
-      #       link="$(basename $filename)"
-      #       echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
-      #     done
-
+      - name: Append Artifact Links
+        run: |
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
+          for filename in target/package/*.tar.gz; do
+            link="$(basename $filename)"
+            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
+          done
       # Create the release on GitHub Releases
       - name: Create Release
         id: create-release
@@ -433,7 +429,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Shokunin (職人) 🦀 v${{ env.VERSION }}
+          release_name: Shokunin (職人) Static Site Generator 🦀 v${{ env.VERSION }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
           draft: true
           prerelease: false
@@ -461,7 +457,7 @@ jobs:
       # Cache dependencies to speed up subsequent builds
       - name: Cache dependencies
         id: cache-dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /home/runner/.cargo/registry/index/
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
