@@ -147,7 +147,7 @@ to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-shokunin = "0.0.9"
+shokunin = "0.0.10"
 ```
 
 Add the following to your `main.rs` file:
@@ -228,6 +228,6 @@ providing a lot of useful suggestions on how to improve this project.
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.9-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.10-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

@@ -161,6 +161,70 @@ pub fn render_page(
             .unwrap(),
             &context,
         )
+    } else if layout == "post" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("post.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "page" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("page.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "tag" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("tag.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "category" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("category.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "archive" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("archive.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "rss" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("rss.xml"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "sitemap" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("sitemap.xml"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "atom" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("atom.xml"),
+            )
+            .unwrap(),
+            &context,
+        )
     } else {
         render_template(
             &fs::read_to_string(

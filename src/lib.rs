@@ -140,7 +140,7 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let title = "Shokunin (職人) 🦀 (version 0.0.9)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.10)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
     let width = title.len().max(description.len()) + 4;
