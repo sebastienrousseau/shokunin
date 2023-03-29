@@ -4,11 +4,16 @@
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
+
 /// ## Function: `start` - Start a web server to serve the public directory.
 ///
 /// This function takes a string for the server address and a string for
-/// the document root, and starts a web server to serve the public
-/// directory.
+/// the document root, and then creates a TCP listener that listens at
+/// the server address.
+///
+/// It then iterates over the incoming connections on the listener, and
+/// handles each connection by passing it to the handle_connection
+/// function.
 ///
 /// # Arguments
 ///
@@ -21,6 +26,17 @@ use std::path::Path;
 /// - Ok() if the web server started successfully.
 /// - Err() if the web server could not be started.
 ///
+/// # Errors
+///
+/// * If the server fails to bind to the address, it will return an
+/// error.
+/// * If the server fails to accept a connection, it will return an
+/// error.
+/// * If the server fails to read data from a connection, it will
+/// return an error.
+/// * If the server fails to write data to a connection, it will
+/// return an error.
+///
 pub fn start(
     server_address: &str,
     document_root: &str,
@@ -29,11 +45,16 @@ pub fn start(
     println!("Server running at http://{}", server_address);
 
     for stream in listener.incoming() {
-        let stream = stream?;
-        handle_connection(stream, document_root)?;
+        match stream {
+            Ok(stream) => handle_connection(stream, document_root)?,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+            }
+        }
     }
     Ok(())
 }
+
 /// ## Function: `handle_connection` - Handle a single connection.
 ///
 /// This function takes a TcpStream object and a string for the document
@@ -49,6 +70,11 @@ pub fn start(
 /// * A Result indicating success or failure.
 /// - Ok() if the connection was handled successfully.
 /// - Err() if the connection could not be handled.
+///
+/// # Errors
+///
+/// * If the server fails to read data from a connection, it will
+/// return an error.
 ///
 pub fn handle_connection(
     mut stream: TcpStream,
@@ -89,12 +115,16 @@ pub fn handle_connection(
 
     let (status_line, contents) = if file_path.exists() {
         (
-            "HTTP/1.1 200 OK\r\n\r\n",
+            "HTTP/1.1 200 OK\r\n\r
+
+",
             std::fs::read_to_string(&file_path).unwrap_or_default(),
         )
     } else {
         (
-            "HTTP/1.1 404 NOT FOUND\r\n\r\n",
+            "HTTP/1.1 404 NOT FOUND\r\n\r
+
+",
             std::fs::read_to_string(
                 Path::new(document_root).join("404.html"),
             )
