@@ -44,7 +44,7 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
         Some(name) => name.to_owned(),
         None => {
             return Err(
-                "❌ Error: Argument \"name\" is required but missing."
+                "❌ Error: Argument \"new\" is required but missing."
                     .to_owned(),
             );
         }
