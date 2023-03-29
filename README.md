@@ -4,7 +4,7 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin (職人) 🦀
+# Shokunin (職人) Static Site Generator 🦀
 
 A Fast and Flexible Static Site Generator written in Rust.
 
