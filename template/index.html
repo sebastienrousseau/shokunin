@@ -36,9 +36,9 @@
     {{meta}}
     <meta name="description" content="{{description}}" />
     <meta name="keywords" content="{{keywords}}" />
-    <meta name="twitter:card" content="{{name}} - {{title}}" />
+    <meta name="twitter:card" content="{{name}}" />
     <meta name="twitter:description" content="{{description}}" />
-    <meta name="twitter:title" content="{{name}} - {{title}}" />
+    <meta name="twitter:title" content="{{name}}" />
     <meta name="og:title" content="{{title}}" />
     <meta name="og:description" content="{{description}}" />
     <meta name="og:image:alt" content="{{title}} - {{description}}." />
@@ -146,7 +146,9 @@
           />
         </figure>
       </section>
-      <section id="content" class="content">{{content}}</section>
+      <section id="content" class="content text-left center">
+        {{content}}
+      </section>
       <hr class="hr-text" data-content="{{title}}" />
     </main>
     <footer id="footer" class="center text-center" aria-label="footer">
