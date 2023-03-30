@@ -1,6 +1,8 @@
 // Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use quick_xml::escape::escape;
+use std::borrow::Cow;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -12,6 +14,8 @@ pub struct File {
     pub name: String,
     /// The content of the file.
     pub content: String,
+    /// The content of the file, escaped for RSS.
+    pub rss: String,
     /// The content of the file, escaped for JSON.
     pub json: String,
 }
@@ -61,6 +65,10 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                     continue;
                 }
             };
+            let rss = match escape(&content) {
+                Cow::Borrowed(rss) => rss.to_string(),
+                Cow::Owned(rss) => rss,
+            };
             let json = match serde_json::to_string(&content) {
                 Ok(json) => json,
                 Err(err) => {
@@ -71,6 +79,7 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
             files.push(File {
                 name,
                 content,
+                rss,
                 json,
             });
         }

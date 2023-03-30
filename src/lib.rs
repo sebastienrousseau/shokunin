@@ -93,10 +93,12 @@ use frontmatter::extract;
 use html::generate_html;
 use json::manifest;
 use metatags::generate_metatags;
+use rss::generate_rss;
 use std::{error::Error, fs, path::Path};
 use template::render_page;
 
 use crate::json::ManifestOptions;
+use crate::rss::RssOptions;
 use crate::template::{create_template_folder, PageOptions};
 use crate::utilities::*;
 
@@ -115,6 +117,8 @@ pub mod metatags;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod parser;
+/// The `rss` module generates the RSS content.
+pub mod rss;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
 /// The `template` module renders the HTML content using the pre-defined
@@ -349,27 +353,64 @@ pub fn compile(
 
         // Generate HTML
         let content = render_page(&PageOptions {
+            author: metadata.get("author").unwrap_or(&"".to_string()),
             banner: metadata.get("banner").unwrap_or(&"".to_string()),
-            content: &generate_html(
-                &file.content,
-                metadata.get("title").unwrap_or(&"".to_string()),
-                metadata.get("description").unwrap_or(&"".to_string()),
-                Some(metadata.get("content").unwrap_or(&"".to_string())),
-             ),
+            charset: metadata.get("charset").unwrap_or(&"".to_string()),
+            content: &generate_html(&file.content,metadata.get("title").unwrap_or(&"".to_string()),metadata.get("description").unwrap_or(&"".to_string()),Some(metadata.get("content").unwrap_or(&"".to_string())),),
             copyright: format!("Copyright © {} 2023. All rights reserved.", site_name).as_str(),
             css: "style.css",
             date: metadata.get("date").unwrap_or(&"".to_string()),
             description: metadata.get("description").unwrap_or(&"".to_string()),
+            generator: metadata.get("generator").unwrap_or(&"".to_string()),
+            google_site_verification: metadata.get("google_site_verification").unwrap_or(&"".to_string()),
             image: metadata.get("image").unwrap_or(&"".to_string()),
             keywords: metadata.get("keywords").unwrap_or(&"".to_string()),
-            lang: "en-GB",
+            lang: metadata.get("language").unwrap_or(&"".to_string()),
             layout: metadata.get("layout").unwrap_or(&"".to_string()),
             meta: &meta,
+            bing_site_verification: metadata.get("bing_site_verification").unwrap_or(&"".to_string()),
             name: metadata.get("name").unwrap_or(&"".to_string()),
             navigation: &navigation,
+            og_description: metadata.get("og_description").unwrap_or(&"".to_string()),
+            og_image_alt: metadata.get("og_image_alt").unwrap_or(&"".to_string()),
+            og_image: metadata.get("og_image").unwrap_or(&"".to_string()),
+            og_locale: metadata.get("og_locale").unwrap_or(&"".to_string()),
+            og_site_name: metadata.get("og_site_name").unwrap_or(&"".to_string()),
+            og_title: metadata.get("og_title").unwrap_or(&"".to_string()),
+            og_type: metadata.get("og_type").unwrap_or(&"".to_string()),
+            og_url: metadata.get("og_url").unwrap_or(&"".to_string()),
+            subtitle: metadata.get("subtitle").unwrap_or(&"".to_string()),
+            twitter_card: metadata.get("twitter_card").unwrap_or(&"".to_string()),
+            twitter_creator: metadata.get("twitter_creator").unwrap_or(&"".to_string()),
+            twitter_description: metadata.get("twitter_description").unwrap_or(&"".to_string()),
+            twitter_image_alt: metadata.get("twitter_image_alt").unwrap_or(&"".to_string()),
+            twitter_image: metadata.get("twitter_image").unwrap_or(&"".to_string()),
+            twitter_site: metadata.get("twitter_site").unwrap_or(&"".to_string()),
+            twitter_title: metadata.get("twitter_title").unwrap_or(&"".to_string()),
+            twitter_url: metadata.get("twitter_url").unwrap_or(&"".to_string()),
             title: metadata.get("title").unwrap_or(&"".to_string()),
         }, &template_path, metadata.get("layout").unwrap_or(&"".to_string()))
         .unwrap();
+
+
+        // Generate RSS
+        let rss = generate_rss(&RssOptions {
+            title: metadata.get("title").unwrap_or(&"".to_string()).to_string(),
+            link: metadata.get("link").unwrap_or(&"".to_string()).to_string(),
+            description: metadata.get("description").unwrap_or(&"".to_string()).to_string(),
+            atom_link: metadata.get("atom_link").unwrap_or(&"".to_string()).to_string(),
+            last_build_date: metadata.get("last_build_date").unwrap_or(&"".to_string()).to_string(),
+            pub_date: metadata.get("pub_date").unwrap_or(&"".to_string()).to_string(),
+            generator: metadata.get("generator").unwrap_or(&"".to_string()).to_string(),
+            item_title: metadata.get("item_title").unwrap_or(&"".to_string()).to_string(),
+            item_link: metadata.get("item_link").unwrap_or(&"".to_string()).to_string(),
+            item_guid: metadata.get("item_guid").unwrap_or(&"".to_string()).to_string(),
+            item_description: metadata.get("item_description").unwrap_or(&"".to_string()).to_string(),
+            item_pub_date: metadata.get("item_pub_date").unwrap_or(&"".to_string()).to_string(),
+        });
+        let rss_data = rss.unwrap();
+
+
 
         // Generate JSON
         let options = ManifestOptions {
@@ -392,6 +433,7 @@ pub fn compile(
         File {
             name: file.name,
             content,
+            rss: rss_data,
             json: json_data,
         }
     })
@@ -413,30 +455,37 @@ pub fn compile(
             Some(ext) if ext == "json" => {
                 file.name.replace(".json", "")
             }
+            Some(ext) if ext == ".xml" => file.name.replace(".xml", ""),
             _ => file.name.to_string(),
         };
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
             let out_file = out_dir.join("index.html");
+            let rss_file = out_dir.join("rss.xml");
             let out_json_file = out_dir.join("manifest.json");
 
             fs::write(&out_file, &file.content)?;
+            fs::write(&rss_file, &file.rss)?;
             fs::write(&out_json_file, &file.json)?;
 
             println!("  - {}", out_file.display());
+            println!("  - {}", rss_file.display());
             println!("  - {}", out_json_file.display());
         } else {
             let dir_name = out_dir.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
 
             let out_file = dir_name.join("index.html");
+            let rss_file = dir_name.join("rss.xml");
             let out_json_file = dir_name.join("manifest.json");
             println!("  - {}", out_file.display());
             fs::write(&out_file, &file.content)?;
+            fs::write(&rss_file, &file.rss)?;
             fs::write(&out_json_file, &file.json)?;
 
             println!("  - {}", out_file.display());
+            println!("  - {}", rss_file.display());
             println!("  - {}", out_json_file.display());
         }
     }

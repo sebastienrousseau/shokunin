@@ -96,11 +96,11 @@ pub fn generate_html(
                         .unwrap_or("");
                     if before.contains("img src") {
                         image_class = Some(after.to_string());
-                        println!(
-                            "Extracted class attribute: {}",
-                            image_class.clone().unwrap()
-                        ); // print the extracted class attribute
-                           // remove the class attribute from the remaining string
+                        // println!(
+                        //     "Extracted class attribute: {}",
+                        //     image_class.clone().unwrap()
+                        // ); // print the extracted class attribute
+                        // remove the class attribute from the remaining string
                         format!(
                             "{}{}",
                             before,
@@ -123,7 +123,7 @@ pub fn generate_html(
                 "img src",
                 &format!("img class=\"{}\" src", class),
             );
-            println!("Extracted class attribute: {}", class); // print the extracted class attribute
+            // println!("Extracted class attribute: {}", class); // print the extracted class attribute
         }
     }
 
@@ -133,7 +133,7 @@ pub fn generate_html(
         .collect::<Vec<String>>()
         .join("\n");
 
-    println!("html_string={:?}", html_string);
+    // println!("html_string={:?}", html_string);
 
     let json_html = if let Some(json_str) = json_content {
         format!("<p>{}</p>", json_str)

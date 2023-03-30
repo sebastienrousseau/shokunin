@@ -211,7 +211,10 @@ fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
 fn minify_html(file_path: &Path) -> io::Result<String> {
     let mut cfg = Cfg::new();
     cfg.do_not_minify_doctype = true;
+    cfg.ensure_spec_compliant_unquoted_attribute_values = true;
     cfg.keep_closing_tags = true;
+    cfg.keep_html_and_head_opening_tags = true;
+    cfg.keep_spaces_between_attributes = true;
     cfg.keep_comments = false;
     cfg.minify_css = true;
     cfg.minify_js = true;

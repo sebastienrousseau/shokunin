@@ -79,7 +79,7 @@ ssg --help
 ### Requirements
 
 The minimum supported Rust toolchain version is currently Rust
-**1.68.0** or later (stable). It is recommended that you install the
+**1.68.2** or later (stable). It is recommended that you install the
 latest stable version of Rust.
 
 ### Platform support
