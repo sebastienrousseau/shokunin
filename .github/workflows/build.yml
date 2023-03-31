@@ -17,14 +17,14 @@ jobs:
         sudo apt-get -qq update
         sudo apt-get install -y libxkbcommon-dev
     - name: Build ssg binary
-      run: cargo build --verbose --profile release-opt --package ssg
+      run: cargo build --verbose --package ssg
     - name: Archive ssg binary
       uses: actions/upload-artifact@v1
       with:
         name: ssg-x86_64-unknown-linux-gnu
         path: target/release-opt/ssg
     - name: Pack ssg .deb package
-      run: cargo deb --no-build --profile release-opt --package ssg
+      run: cargo deb --no-build --package ssg
     - name: Rename ssg .deb package
       run: mv target/debian/*.deb target/debian/ssg-x86_64-debian-linux-gnu.deb
     - name: Archive ssg .deb package
