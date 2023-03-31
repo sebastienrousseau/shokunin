@@ -222,7 +222,7 @@ pub fn compile(
             let out_file = dir_name.join("index.html");
             let rss_file = dir_name.join("rss.xml");
             let out_json_file = dir_name.join("manifest.json");
-            println!("  - {}", out_file.display());
+
             fs::write(&out_file, &file.content)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&out_json_file, &file.json)?;

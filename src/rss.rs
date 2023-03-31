@@ -104,9 +104,9 @@ pub fn generate_rss(
         ("generator", &options.generator),
     ];
 
-    println!("{:?}", channel_elements);
-
+    // Write each channel element that has a non-empty value
     for &(element, value) in channel_elements.iter() {
+        // Write the element only if the value is not empty
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
@@ -139,7 +139,9 @@ pub fn generate_rss(
         ("item_pub_date", &options.item_pub_date),
     ];
 
+    // Write each item element that has a non-empty value
     for &(element, value) in item_elements.iter() {
+        // Write the element only if the value is not empty
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
@@ -167,6 +169,7 @@ pub fn generate_rss(
     // Write the <rss> closing tag
     writer.write_event(Event::End(BytesEnd::new("rss")))?;
 
+    // Convert the XML into a UTF-8 string
     let xml = writer.into_inner().into_inner();
     let rss_str = String::from_utf8(xml)?;
 
