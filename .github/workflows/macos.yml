@@ -1,0 +1,17 @@
+name: macOS build
+on: [push, pull_request]
+jobs:
+  all:
+    runs-on: macos-10.15
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+      - name: Build
+        run: cargo build

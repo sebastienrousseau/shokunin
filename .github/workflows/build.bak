@@ -91,6 +91,7 @@ jobs:
       - uses: actions/checkout@master
       # Install the targets for the cross compilation toolchain
       - name: Install dependencies
+        if : matrix.cross 
         run: |
           export DEBIAN_FRONTED=noninteractive
           sudo apt-get -qq update
