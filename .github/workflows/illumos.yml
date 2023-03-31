@@ -1,14 +1,5 @@
-name: FreeBSD build
-# Run this workflow every time a new commit pushed to the repository
-# or when a pull request is opened.
-on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
-      - 'feat/*'
+name: Illumos build
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,11 +7,11 @@ jobs:
         fail-fast: false
         matrix:
           target:
-            # FreeBSD targets 🐬
-            - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64 ✅ Tested
+            # Illumos targets 🌞
+                - x86_64-unknown-illumos # 64-bit Illumos on x86-64     ✅ Tested
           include:
             # FreeBSD targets 🐬
-            - target: x86_64-unknown-freebsd
+            - target: x86_64-unknown-illumos
               os: ubuntu-latest
               cross: true
 

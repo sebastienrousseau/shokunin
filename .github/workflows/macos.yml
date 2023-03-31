@@ -1,5 +1,14 @@
 name: macOS build
-on: [push, pull_request]
+# Run this workflow every time a new commit pushed to the repository
+# or when a pull request is opened.
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - 'feat/*'
 jobs:
   all:
     name: macos-latest build
