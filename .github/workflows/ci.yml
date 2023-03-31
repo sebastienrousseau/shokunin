@@ -273,12 +273,43 @@ jobs:
         # Install the x86 dependencies
         - name: Install x86 Build Dependencies
           if: ${{ startsWith(matrix.target, 'i686-') }}
-          run: sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install libssl-dev:i386 clang
+          run: |
+            sudo dpkg --add-architecture i386
+            sudo apt-get update
+            sudo apt-get install libssl-dev:i386 clang
+            echo "OPENSSL_DIR=/usr/lib/i386-linux-gnu/" >> $GITHUB_ENV
 
         # Install the x86_64 dependencies
         - name: Install x86_64 Build Dependencies
-          if: ${{ startsWith(matrix.target, 'i686-') }}
-          run: sudo apt-get update && sudo apt-get install pkg-config libssl-dev clang
+          if: ${{ startsWith(matrix.target, 'x86_64-') }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install pkg-config libssl-dev clang
+            echo "OPENSSL_DIR=/usr/lib/x86_64-linux-gnu/" >> $GITHUB_ENV
+
+        # Install the aarch64 dependencies
+        - name: Install aarch64 Build Dependencies
+          if: ${{ startsWith(matrix.target, 'aarch64-') }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install gcc-aarch64-linux-gnu libssl-dev pkg-config
+            echo "OPENSSL_DIR=/usr/aarch64-linux-gnu/lib/" >> $GITHUB_ENV
+
+        # Install the arm dependencies
+        - name: Install arm Build Dependencies
+          if: ${{ startsWith(matrix.target, 'arm-') }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install gcc-arm-linux-gnueabi libssl-dev pkg-config
+            echo "OPENSSL_DIR=/usr/arm-linux-gnueabi/lib/" >> $GITHUB_ENV
+
+        # Install the armv7 dependencies
+        - name: Install armv7 Build Dependencies
+          if: ${{ startsWith(matrix.target, 'armv7-') }}
+          run: |
+            sudo apt-get update
+            sudo apt-get install gcc-arm-linux-gnueabihf libssl-dev pkg-config
+            echo "OPENSSL_DIR=/usr/arm-linux-gnueabihf/lib/" >> $GITHUB_ENV
 
         # Build the x86 project
         - name: Build x86
