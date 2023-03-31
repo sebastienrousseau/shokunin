@@ -1,7 +1,9 @@
-name: Linux build
+name: Ubuntu build
 on: [push, pull_request]
 jobs:
   all:
+    name: ubuntu-latest build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

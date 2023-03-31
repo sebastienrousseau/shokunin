@@ -1,0 +1,31 @@
+name: FreeBSD build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+        fail-fast: false
+        matrix:
+          target:
+            # FreeBSD targets 🐬
+            - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64 ✅ Tested
+          include:
+            # FreeBSD targets 🐬
+            - target: x86_64-unknown-freebsd
+              os: ubuntu-latest
+              cross: true
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          override: true
+
+      - name: Build
+        run: cargo build

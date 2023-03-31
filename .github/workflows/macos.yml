@@ -2,6 +2,8 @@ name: macOS build
 on: [push, pull_request]
 jobs:
   all:
+    name: macos-latest build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
