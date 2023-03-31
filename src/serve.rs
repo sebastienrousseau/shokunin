@@ -126,7 +126,7 @@ pub fn handle_connection(
 
 ",
             std::fs::read_to_string(
-                Path::new(document_root).join("404.html"),
+                Path::new(document_root).join("404/index.html"),
             )
             .unwrap_or_else(|_| String::from("File not found")),
         )

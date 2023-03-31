@@ -237,7 +237,7 @@ pub fn generate_navigation(files: &[File]) -> String {
             Some(ext) if ext == "json" => file.name.replace(".json", ""),
             _ => file.name.to_string(),
         };
-        file_name != "index"
+        file_name != "index" && file_name != "404"
     }).map(|file| {
         let mut dir_name = match Path::new(&file.name).extension() {
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
@@ -245,7 +245,6 @@ pub fn generate_navigation(files: &[File]) -> String {
             Some(ext) if ext == "json" => file.name.replace(".json", ""),
             _ => file.name.to_string(),
         };
-
         // Handle special case for files in the same base directory
         if let Some((index, _)) = dir_name.match_indices('/').next() {
             let base_dir = &dir_name[..index];
