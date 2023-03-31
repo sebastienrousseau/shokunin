@@ -1,8 +1,8 @@
-name: macOS build
+name: Linux build
 on: [push, pull_request]
 jobs:
   all:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:

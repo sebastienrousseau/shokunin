@@ -1,8 +1,8 @@
-name: macOS build
+name: Windows build
 on: [push, pull_request]
 jobs:
   all:
-    runs-on: macos-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
         with:
