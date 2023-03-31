@@ -250,6 +250,10 @@ jobs:
               target: ${{ matrix.target }}
               override: true
 
+        # Install Cross
+        - name: Install Cross
+          run: cargo install cross
+
         # Cache dependencies to speed up subsequent builds
         - name: Cache dependencies
           id: cache-dependencies
@@ -278,7 +282,7 @@ jobs:
               OPENSSL_LIB_DIR: /usr/lib/i386-linux-gnu/
               OPENSSL_INCLUDE_DIR: /usr/include/openssl/
           with:
-              command: build
+              command: cross build
               args: --release --target=${{ matrix.target }}
 
         # Build the x86_64 project
@@ -288,8 +292,8 @@ jobs:
           env:
             TARGET_CC: clang
           with:
-            command: build
-            args: --release --target=${{ matrix.target }}
+              command: cross build
+              args: --release --target=${{ matrix.target }}
 
         # Update the version number based on the Cargo.toml file
         - name: Update version number
