@@ -11,6 +11,8 @@ on:
       - 'feat/*'
 jobs:
   build:
+    name: ubuntu-latest build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
         fail-fast: false
