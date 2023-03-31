@@ -55,13 +55,13 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                 .ok_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::InvalidData,
-                        "Invalid filename",
+                        "  Invalid filename",
                     )
                 })?;
             let content = match fs::read_to_string(&path) {
                 Ok(content) => content,
                 Err(err) => {
-                    println!("Skipping file {}: {}", name, err);
+                    println!("  Skipping file\n    {}: {}", name, err);
                     continue;
                 }
             };
@@ -72,7 +72,7 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
             let json = match serde_json::to_string(&content) {
                 Ok(json) => json,
                 Err(err) => {
-                    println!("Skipping file {}: {}", name, err);
+                    println!("  Skipping file\n    {}: {}", name, err);
                     continue;
                 }
             };

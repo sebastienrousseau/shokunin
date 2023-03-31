@@ -87,3 +87,43 @@ pub fn build() -> Result<ArgMatches, Error> {
 
     Ok(matches)
 }
+
+/// # `print_banner` function
+///
+/// This function prints a banner containing the title and description of
+/// the `Shokunin` static site generator tool.
+///
+/// The banner is printed to the terminal in a box, with a horizontal line
+/// separating the title and description. The width of the box is determined
+/// by the length of the title and description.
+///
+/// # Arguments
+///
+/// This function takes no arguments.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cli::print_banner;
+///
+/// print_banner();
+/// ```
+pub fn print_banner() {
+    // Set the title and description for the CLI
+    let title = "Shokunin (職人) 🦀 (version 0.0.10)";
+    let description =
+        "A Fast and Flexible Static Site Generator written in Rust";
+
+    // Set the width of the box to fit the title and description
+    let width = title.len().max(description.len()) + 4;
+
+    // Create a horizontal line to separate the box
+    let horizontal_line = "─".repeat(width - 2);
+
+    // Print the title and description in a box
+    println!("\n┌{}┐", horizontal_line);
+    println!("│{: ^1$}│", title, width - 5);
+    println!("├{}┤", horizontal_line);
+    println!("│{: ^1$}│", description, width - 2);
+    println!("└{}┘", horizontal_line);
+}
