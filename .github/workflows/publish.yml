@@ -33,16 +33,15 @@ jobs:
           # Append empty line to CHANGELOG.md
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
 
-      # Append the artifact links to the CHANGELOG.md
-      - name: Append Artifact Link to Changelog
+      # Append the artifact links to the changelog
+      - name: Append Artifact Links
         run: |
-          for filename in $(ls ${{ github.workspace }}/ssg-*-${{ env.VERSION }}.tar.gz); do
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
+          for filename in target/release/*.tar.gz; do
             link="$(basename $filename)"
-            artifact_link="${{ github.server_url }}/${{ github.repository }}/actions/artifacts/$(basename $(dirname $filename))/zip"
-            echo "* [$link]($artifact_link)" >> ${{ github.workspace }}/CHANGELOG.md
+            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
-        shell: /bin/bash -e {0}
-
 
       # Create the release on GitHub Releases
       - name: Create Release
