@@ -53,9 +53,29 @@ jobs:
           path: target/release/ssg
           archive_format: tar.gz
 
+      - name: Verify upload (tar.gz)
+        if: ${{ steps.upload_tar.result == 'success' }}
+        run: echo "Tar.gz archive uploaded successfully."
+        shell: /bin/bash -e {0}
+
+      - name: Print error (tar.gz)
+        if: ${{ steps.upload_tar.result != 'success' }}
+        run: echo "Tar.gz archive upload failed with exit code ${{ steps.upload_tar.exit_code }}."
+        shell: /bin/bash -e {0}
+
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
         with:
           name: ssg-$TARGET-v${{ env.VERSION }}
           path: target/release/ssg
           archive_format: zip
+
+      - name: Verify upload (zip)
+        if: ${{ steps.upload_zip.result == 'success' }}
+        run: echo "Zip archive uploaded successfully."
+        shell: /bin/bash -e {0}
+
+      - name: Print error (zip)
+        if: ${{ steps.upload_zip.result != 'success' }}
+        run: echo "Zip archive upload failed with exit code ${{ steps.upload_zip.exit_code }}."
+        shell: /bin/bash -e {0}
