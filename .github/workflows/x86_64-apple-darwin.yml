@@ -1,25 +1,25 @@
-name: ❯ FreeBSD build 🐬 (x86_64-unknown-freebsd)
-# On push to the main branch, build the project on 64-bit FreeBSD on x86-64
+name: ❯ macOS build 🍎 (x86_64-apple-darwin)
+# On push to the main branch, build the project on 64-bit macOS (10.7+, Lion+)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on 64-bit FreeBSD on x86-64
+  # This job builds the project on 64-bit macOS (10.7+, Lion+)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            # 64-bit FreeBSD on x86-64 ✅ Tested
-            - x86_64-unknown-freebsd
+            # 64-bit macOS (10.7+, Lion+) ✅ Tested
+            - x86_64-apple-darwin
 
           include:
             # Linux targets 🐧
-            - target: x86_64-unknown-freebsd
+            - target: x86_64-apple-darwin
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
