@@ -1,43 +1,45 @@
-name: Illumos build
+name: ❯ Illumos build 🌞 (x86_64-unknown-illumos)
+# On push to the main branch, build the project on 64-bit Illumos on x86-64
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-      - 'feat/*'
+    branches: ["**"]
 jobs:
+  # This job builds the project on 64-bit Illumos on x86-64
   build:
-    name: illumos build
+    name: ❯ build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
-
+          rust-toolchain:
+            - stable
           target:
-            # Illumos targets 🌞
-                - x86_64-unknown-illumos # 64-bit Illumos on x86-64     ✅ Tested
+            # 64-bit Illumos on x86-64 ✅ Tested
+            - x86_64-unknown-illumos
 
           include:
-            # FreeBSD targets 🐬
+            # Linux targets 🐧
             - target: x86_64-unknown-illumos
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      # Check out the repository code
+      - name: Checkout sources
+        id: checkout
+        uses: actions/checkout@v3
         with:
           fetch-depth: 2
 
+      # Install the stable Rust toolchain
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          override: true
+        id: setup-rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          rustup default ${{ matrix.rust-toolchain }}
 
+      # Update the version number based on the Cargo.toml file
       - name: Update version number
         id: update-version
         run: |
@@ -45,29 +47,27 @@ jobs:
           echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
         shell: /bin/bash -e {0}
 
+      # Build the target
       - name: Build
         run: cargo build --release
 
+      # Upload the binary for the target
       - name: Upload binary to GitHub Packages
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: target/release/ssg
 
-      - name: Verify upload (binary)
-        run: echo "Binary uploaded successfully."
-        shell: /bin/bash -e {0}
-
-      - name: Print error (tar.gz)
-        run: echo "Binary upload failed with exit code ${{ steps.upload_binary.exit_code }}."
-        shell: /bin/bash -e {0}
-
+      # Tar the binary for the target
       - name: Tar files
         run: tar -czvf ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz target/release/ssg
 
+      # Upload the tarball for the target
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz
-          run: echo "Binary uploaded successfully."
+          run: |
+            echo "Binary uploaded successfully for ${{ matrix.target }}. URL: ${{ steps.upload-artifact.outputs.artifact_url }}"
+          shell: /bin/bash -e {0}

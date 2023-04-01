@@ -1,0 +1,110 @@
+name: ❯ Publish
+
+on:
+  workflow_run:
+    workflows:
+      - "aarch64-apple-darwin.yml"
+      - "aarch64-pc-windows-msvc.yml"
+      - "aarch64-unknown-linux-gnu.yml"
+      - "aarch64-unknown-linux-musl.yml"
+      - "arm-unknown-linux-gnueabi.yml"
+      - "arm-unknown-linux-gnueabihf.yml"
+      - "armv7-unknown-linux-gnueabihf.yml"
+      - "i686-pc-windows-gnu.yml"
+      - "i686-pc-windows-msvc.yml"
+      - "i686-unknown-linux-gnu.yml"
+      - "i686-unknown-linux-musl.yml"
+      - "mips-unknown-linux-gnu.yml"
+      - "mips64-unknown-linux-gnuabi64.yml"
+      - "mips64el-unknown-linux-gnuabi64.yml"
+      - "mipsel-unknown-linux-gnu.yml"
+      - "x86_64-apple-darwin.yml"
+      - "x86_64-pc-windows-gnu.yml"
+      - "x86_64-pc-windows-msvc.yml"
+      - "x86_64-unknown-freebsd.yml"
+      - "x86_64-unknown-illumos.yml"
+      - "x86_64-unknown-linux-gnu.yml"
+      - "x86_64-unknown-linux-musl.yml"
+    types:
+      - completed
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repository code
+      - name: Checkout sources
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      # Update the version number based on the Cargo.toml file
+      - name: Update version number
+        id: update-version
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        shell: /bin/bash -e {0}
+
+      # Generate the changelog based on git log and template file
+      - name: Generate Changelog
+        run: |
+          # Append version information to CHANGELOG.md
+          echo "## Release v${{ env.VERSION }} - $(date +'%Y-%m-%d')" >> ${{ github.workspace }}/CHANGELOG.md
+          # Copy content of template file to CHANGELOG.md
+          cat TEMPLATE.md >> ${{ github.workspace }}/CHANGELOG.md
+          # Append git log to CHANGELOG.md
+          echo "$(git log --pretty=format:'%s' --reverse $(git describe --tags --abbrev=0)..HEAD)" >> ${{ github.workspace }}/CHANGELOG.md
+          # Append empty line to CHANGELOG.md
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+
+      # Append the artifact links to the changelog
+      - name: Append Artifact Links
+        run: |
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
+          for filename in ssg-*.tar.gz; do
+            link="$(basename $filename)"
+            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
+          done
+
+            # Create the release on GitHub Releases
+      - name: Create Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Shokunin (職人) Static Site Generator 🦀 v${{ env.VERSION }}
+          body_path: ${{ github.workspace }}/CHANGELOG.md
+          draft: true
+          prerelease: false
+
+      # Wait for the release to be published
+      - name: Wait for Release
+        if: steps.create-release.outputs.id != ''
+        uses: ncipollo/release-wait-action@v2
+        with:
+          id: ${{ steps.create-release.outputs.id }}
+          timeout: '60m'
+
+      # Update the artifact names to include the release name and version
+      - name: Update Artifact Names
+        run: |
+          for filename in ssg-*.tar.gz; do
+            mv "$filename" "${{ env.RELEASE_NAME }}-${{ env.VERSION }}-$filename"
+          done
+        env:
+          RELEASE_NAME: ${{ steps.create-release.outputs.name }}
+
+      # Upload the artifact files to the release
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ssg-artifacts
+          path: |
+            ssg-*.tar.gz
+          url: ${{ steps.create-release.outputs.upload_url }}
+
