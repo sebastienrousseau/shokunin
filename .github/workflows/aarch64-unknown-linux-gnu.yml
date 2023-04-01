@@ -1,4 +1,4 @@
-name: FreeBSD build
+name: Linux build 🐧 (aarch64-unknown-linux-gnu)
 on:
   pull_request:
     branches:
@@ -9,19 +9,22 @@ on:
       - 'feat/*'
 jobs:
   build:
-    name: FreeBSD build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    name: aarch64-unknown-linux-gnu
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
+
           target:
-            # FreeBSD targets 🐬
-            - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64 ✅ Tested
+            # Linux targets 🐧
+                - aarch64-unknown-linux-gnu # ARM64 Linux (kernel 4.1, glibc 2.17+)      ✅ Tested
+
           include:
-            - target: x86_64-unknown-freebsd
+            # Linux targets 🐧
+            - target: aarch64-unknown-linux-gnu
               os: ubuntu-latest
               cross: true
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -43,7 +46,7 @@ jobs:
         shell: /bin/bash -e {0}
 
       - name: Build
-        run: cargo build --release --target=$TARGET
+        run: cargo build --release
 
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
@@ -53,6 +56,10 @@ jobs:
 
       - name: Verify upload (binary)
         run: echo "Binary uploaded successfully."
+        shell: /bin/bash -e {0}
+
+      - name: Print error (tar.gz)
+        run: echo "Binary upload failed with exit code ${{ steps.upload_binary.exit_code }}."
         shell: /bin/bash -e {0}
 
       - name: Tar files
