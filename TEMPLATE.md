@@ -4,26 +4,18 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin (職人) Static Site Generator 🦀
-
-A Fast and Flexible Static Site Generator written in Rust.
-
-![Shokunin (職人) banner][banner]
+![Shokunin 職人 banner][banner]
 
 <!-- markdownlint-disable MD033 -->
 <center>
 
-**[Website][0]
-• [Documentation][8]
-• [Report Bug][3]
-• [Request Feature][3]
-• [Contributing Guidelines][4]**
+**[Website][0] [Documentation][8] [Report Bug][3] [Request Feature][3] [Contributing Guidelines][4]**
 
 </center>
 
 <!-- markdownlint-enable MD033 -->
 
-## Welcome to Shokunin (職人) 👋
+## Welcome to Shokunin 職人 👋
 
 ## Overview 📖
 
@@ -51,4 +43,4 @@ The library extracts metadata and content to generate static HTML files from Mar
 [4]: https://github.com/sebastienrousseau/shokunin/shokunin/blob/main/CONTRIBUTING.md
 [8]: https://docs.rs/shokunin
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin (職人) banner"
+[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin 職人 banner"

@@ -1,14 +1,14 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="Shokunin (職人) logo" width="240" align="right" />
+<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="Shokunin 職人 logo" width="240" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin (職人) Static Site Generator 🦀
+# Shokunin 職人 Static Site Generator 🦀
 
 A Fast and Flexible Static Site Generator written in Rust.
 
-![Shokunin (職人) banner][banner]
+![Shokunin 職人 banner][banner]
 
 [![Made With Rust][made-with-rust-badge]][5] [![Crates.io][crates-badge]][7] [![Lib.rs][libs-badge]][9] [![Docs.rs][docs-badge]][8] [![License][license-badge]][2] [![Codecov][codecov-badge]][14]
 
@@ -25,7 +25,7 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 <!-- markdownlint-enable MD033 -->
 
-## Welcome to Shokunin (職人) 👋
+## Welcome to Shokunin 職人 👋
 
 ## Overview 📖
 
@@ -66,7 +66,7 @@ cargo install ssg
 ```
 
 For simplicity, we have given `Shokunin (職人)` a simple alias `ssg`
-which can stand for `Shokunin (職人) Site Generator` or
+which can stand for `Shokunin 職人 Site Generator` or
 `Static Site Generator`.
 
 You can then run the help command to see the available options and
@@ -231,7 +231,7 @@ providing a lot of useful suggestions on how to improve this project.
 [13]: https://www.rust-lang.org/learn/get-started
 [14]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin (職人) banner"
+[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin 職人 banner"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'

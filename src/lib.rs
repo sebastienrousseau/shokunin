@@ -1,7 +1,7 @@
 // Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//! # Shokunin (職人) 🦀
+//! # Shokunin 職人 🦀
 //!
 //! [![Shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
 //!
@@ -151,14 +151,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
             if matches.get_one::<String>("serve").is_some() {
                 // If serve flag is set, start the server and return
                 let server_address = "127.0.0.1:8000";
-                let output_dir =
-                    matches.get_one::<String>("serve").unwrap();
+                let output_dir = matches.get_one::<String>("serve").unwrap();
                 let document_root = format!("public/{}", output_dir);
                 serve::start(server_address, &document_root)?;
-                println!(
-                    "\n✅ Server started at http://{}",
-                    server_address
-                );
+                println!("\n✅ Server started at http://{}", server_address);
                 return Ok(());
             }
             Ok(())
@@ -177,7 +173,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Print the welcome message if no arguments were passed
     if std::env::args().len() == 1 {
-        eprintln!("\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n");
+        eprintln!("\n\nWelcome to Shokunin 職人 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n");
     }
 
     // Set the source and output directories, site name, and template path
