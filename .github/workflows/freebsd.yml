@@ -11,7 +11,7 @@ on:
       - 'feat/*'
 jobs:
   build:
-    name: ubuntu-latest build
+    name: freebsd build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:

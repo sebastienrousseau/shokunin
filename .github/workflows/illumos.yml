@@ -1,7 +1,16 @@
 name: Illumos build
-on: push
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - 'feat/*'
 jobs:
   build:
+    name: illumos build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
         fail-fast: false
@@ -27,5 +36,26 @@ jobs:
           default: true
           override: true
 
+      - name: Update version number
+        id: update-version
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        shell: /bin/bash -e {0}
+
       - name: Build
-        run: cargo build
+        run: cargo build --release --target=$TARGET
+
+      - name: Upload binary to GitHub Packages
+        uses: actions/upload-artifact@v2
+        with:
+          name: ssg-$TARGET-v${{ env.VERSION }}
+          path: target/release/ssg
+          archive_format: tar.gz
+
+      - name: Upload binary to GitHub Packages
+        uses: actions/upload-artifact@v2
+        with:
+          name: ssg-$TARGET-v${{ env.VERSION }}
+          path: target/release/ssg
+          archive_format: zip
