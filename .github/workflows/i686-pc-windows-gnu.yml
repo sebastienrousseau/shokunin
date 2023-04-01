@@ -1,25 +1,25 @@
-# On push to the main branch, build the project on Linux ARMv6 Linux (kernel 3.2, glibc 2.17)
-name: ❯ Linux build 🐧 (arm-unknown-linux-gnueabi)
+# On push to the main branch, build the project on Windows 32-bit MinGW (Windows 7+)
+name: ❯ Windows build 🪟 (i686-pc-windows-gnu)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on Linux ARMv6 Linux (kernel 3.2, glibc 2.17)
+  # This job builds the project on Windows 32-bit MinGW (Windows 7+)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            #  ARMv6 Linux (kernel 3.2, glibc 2.17) ✅ Tested
-            - arm-unknown-linux-gnueabi
+            #  32-bit MinGW (Windows 7+) ✅ Tested
+            - i686-pc-windows-gnu
 
           include:
             # Linux targets 🐧
-            - target: arm-unknown-linux-gnueabi
+            - target: i686-pc-windows-gnu
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
