@@ -1,25 +1,25 @@
-# On push to the main branch, build the project on 32-bit MSVC (Windows 7+)
-name: ❯ Windows build 🪟 (i686-pc-windows-msvc)
+name: ❯ Linux build 🐧 (mipsel-unknown-linux-gnu)
+# On push to the main branch, build the project on MIPS (LE) Linux (kernel 4.4, glibc 2.23)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on 32-bit MSVC (Windows 7+)
+  # This job builds the project on MIPS (LE) Linux (kernel 4.4, glibc 2.23)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            #  32-bit MSVC (Windows 7+)  ✅ Tested
-            - i686-pc-windows-msvc
+            # MIPS (LE) Linux (kernel 4.4, glibc 2.23) ✅ Tested
+            - mipsel-unknown-linux-gnu
 
           include:
-            # Windows target 🪟
-            - target: i686-pc-windows-msvc
+            # Linux targets 🐧
+            - target: mipsel-unknown-linux-gnu
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}

@@ -1,25 +1,25 @@
-# On push to the main branch, build the project on 32-bit MSVC (Windows 7+)
-name: ❯ Windows build 🪟 (i686-pc-windows-msvc)
+# On push to the main branch, build the project on ARM64 Windows MSVC
+name: ❯ Windows build 🪟 (aarch64-pc-windows-msvc)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on 32-bit MSVC (Windows 7+)
+  # This job builds the project on ARM64 Windows MSVC
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            #  32-bit MSVC (Windows 7+)  ✅ Tested
-            - i686-pc-windows-msvc
+            #  ARM64 Windows MSVC  ✅ Tested
+            - aarch64-pc-windows-msvc
 
           include:
             # Windows target 🪟
-            - target: i686-pc-windows-msvc
+            - target: aarch64-pc-windows-msvc
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
