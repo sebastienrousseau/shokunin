@@ -1,5 +1,5 @@
-name: Audit
-on: [push]
+name: ❯ Audit
+on: [push, pull_request]
 jobs:
   dependencies:
     name: Audit dependencies
