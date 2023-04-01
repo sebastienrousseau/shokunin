@@ -1,0 +1,12 @@
+/home/runner/work/shokunin/shokunin/./doc/debug/deps/tempfile-f4611c4b6057d0d3.rmeta: /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/dir.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/error.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/mod.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/mod.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/spooled.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/util.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/unix.rs
+
+/home/runner/work/shokunin/shokunin/./doc/debug/deps/tempfile-f4611c4b6057d0d3.d: /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/dir.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/error.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/mod.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/mod.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/spooled.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/util.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/unix.rs
+
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/lib.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/dir.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/error.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/mod.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/mod.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/spooled.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/util.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/tempfile-3.5.0/src/file/imp/unix.rs:

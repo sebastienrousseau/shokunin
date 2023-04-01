@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["directory","minify_html_files","move_output_directory"]};

@@ -1,0 +1,15 @@
+/home/runner/work/shokunin/shokunin/./doc/debug/deps/onig-87d94f31ca548b3f.rmeta: /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/buffers.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/find.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/flags.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/match_param.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/names.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/region.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/replace.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/syntax.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/tree.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/utils.rs
+
+/home/runner/work/shokunin/shokunin/./doc/debug/deps/onig-87d94f31ca548b3f.d: /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/buffers.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/find.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/flags.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/match_param.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/names.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/region.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/replace.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/syntax.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/tree.rs /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/utils.rs
+
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/lib.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/buffers.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/find.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/flags.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/match_param.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/names.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/region.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/replace.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/syntax.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/tree.rs:
+/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/onig-6.4.0/src/utils.rs:
