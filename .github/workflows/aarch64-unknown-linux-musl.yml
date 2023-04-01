@@ -2,22 +2,20 @@ name: ❯ Linux build 🐧 (aarch64-unknown-linux-musl)
 # On push to the main branch, build the project on Linux with MUSL (kernel 4.1, glibc 2.17+)
 on:
   push:
-    branches:
-      - feat/ssg
+    branches: ["**"]
 jobs:
   # This job builds the project on Linux with MUSL (kernel 4.1, glibc 2.17+)
   build:
     name: ❯ build
-    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
-            - nightly
           target:
-            # Linux targets 🐧
-            - aarch64-unknown-linux-musl # ARM64 Linux with MUSL (kernel 4.1, glibc 2.17+)      ✅ Tested
+            # ARM64 Linux with MUSL (kernel 4.1, glibc 2.17+) ✅ Tested
+            - aarch64-unknown-linux-musl
 
           include:
             # Linux targets 🐧
@@ -36,11 +34,10 @@ jobs:
 
       # Install the stable Rust toolchain
       - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          override: true
+      - name: Setup Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          rustup default ${{ matrix.rust-toolchain }}
 
       # Update the version number based on the Cargo.toml file
       - name: Update version number
