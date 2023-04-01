@@ -55,13 +55,16 @@ jobs:
           draft: true
           prerelease: false
 
-      # Upload the artifact files to the release
       - name: Upload Artifacts
-        uses: actions/upload-release-asset@v1
+        run: |
+          for filename in ssg-*-${{ env.VERSION }}.tar.gz; do
+            echo "Uploading $filename"
+            curl \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: $(file -b --mime-type $filename)" \
+              --data-binary @"$filename" \
+              "${{ steps.create-release.outputs.upload_url }}?name=$(basename $filename)"
+          done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ssg-*.tar.gz
-          asset_name: ssg-artifacts
-          asset_content_type: application/gzip
+
