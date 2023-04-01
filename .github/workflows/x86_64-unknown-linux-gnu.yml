@@ -1,25 +1,25 @@
-name: ❯ Linux build 🐧 (i686-unknown-linux-gnu)
-# On push to the main branch, build the project on 32-bit Linux (kernel 3.2+, glibc 2.17+)
+name: ❯ Linux build 🐧 (x86_64-unknown-linux-gnu)
+# On push to the main branch, build the project on 64-bit Linux (kernel 2.6.32+, glibc 2.11+)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on 32-bit Linux (kernel 3.2+, glibc 2.17+)
+  # This job builds the project on 64-bit Linux (kernel 2.6.32+, glibc 2.11+)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            # 32-bit Linux (kernel 3.2+, glibc 2.17+) ✅ Tested
-            - i686-unknown-linux-gnu
+            # 64-bit Linux (kernel 2.6.32+, glibc 2.11+) ✅ Tested
+            - x86_64-unknown-linux-gnu
 
           include:
             # Linux targets 🐧
-            - target: i686-unknown-linux-gnu
+            - target: x86_64-unknown-linux-gnu
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
