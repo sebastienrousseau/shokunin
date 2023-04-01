@@ -19,10 +19,11 @@ jobs:
             # Illumos targets 🌞
                 - x86_64-unknown-illumos # 64-bit Illumos on x86-64     ✅ Tested
           include:
-            # FreeBSD targets 🐬
             - target: x86_64-unknown-illumos
               os: ubuntu-latest
               cross: true
+              env:
+                TARGET: ${{ matrix.target }}
 
     steps:
       - uses: actions/checkout@v2
