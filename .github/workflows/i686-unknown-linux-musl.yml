@@ -7,7 +7,7 @@ jobs:
   # This job builds the project on 32-bit Linux (kernel 3.2+, musl libc)
   build:
     name: ❯ build
-    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
