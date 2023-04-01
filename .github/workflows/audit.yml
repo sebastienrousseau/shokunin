@@ -1,4 +1,4 @@
-name: ❯ Audit
+name: 🧪 Audit
 on: [push, pull_request]
 jobs:
   dependencies:
