@@ -46,7 +46,7 @@ jobs:
         shell: /bin/bash -e {0}
 
       - name: Build
-        run: cargo build
+        run: cargo build --release
 
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
