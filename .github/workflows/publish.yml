@@ -38,10 +38,11 @@ jobs:
         run: |
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
           echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in $(find ${{ github.workspace }} -type f -name "ssg-*.tar.gz" -not -path "*node_modules*"); do
+          for filename in $(ls ${{ github.workspace }}/*.tar.gz); do
             link="$(basename $filename)"
             echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
+
 
       # Create the release on GitHub Releases
       - name: Create Release
