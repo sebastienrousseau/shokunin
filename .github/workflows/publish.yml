@@ -33,6 +33,16 @@ jobs:
           # Append empty line to CHANGELOG.md
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
 
+      - name: Rename artifacts
+        run: |
+          for filename in ssg-*.tar.gz; do
+            mv "$filename" "0.0.10_$filename"
+          done
+        shell: /usr/bin/bash -e {0}
+        env:
+          VERSION: 0.0.10
+          RELEASE_NAME: Shokunin (職人) Static Site Generator 🦀
+
       # Append the artifact links to the changelog
       - name: Append Artifact Links
         run: |
@@ -42,6 +52,17 @@ jobs:
             link="$(basename $filename)"
             echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
+
+      # Append the artifact links to the changelog
+      - name: Append Artifact Links
+        run: |
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
+          for filename in ssg-*.tar.gz; do
+            mv "$filename" "0.0.10_$filename"
+          done
+        shell: /bin/bash -e {0}
+
 
 
       # Create the release on GitHub Releases
