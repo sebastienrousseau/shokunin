@@ -2,11 +2,11 @@ name: ❯ Publish
 
 on:
   push:
-    branches:
-      - 'feat/ssg'
+    branches: ["**"]
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       # Check out the repository code
@@ -86,7 +86,7 @@ jobs:
   # Publish the release to Crates.io automatically
   crate:
     name: ❯ Crate.io 🦀
-    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
