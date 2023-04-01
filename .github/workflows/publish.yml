@@ -83,5 +83,52 @@ jobs:
           draft: true
           prerelease: false
 
+  # Publish the release to Crates.io automatically
+  crate:
+    name: ❯ Crate.io 🦀
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Install the stable Rust toolchain
+      - name: Install stable toolchain
+        id: install-toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Cache dependencies to speed up subsequent builds
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/.cargo/registry/index/
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      # Update the version number based on the Cargo.toml file
+      - name: Update version number
+        id: update-version
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        shell: /bin/bash -e {0}
+
+      # Publish the Rust library to Crate.io
+      - name: Publish Library to Crate.io
+        id: publish-library
+        uses: actions-rs/cargo@v1
+        env:
+          CARGO_API_TOKEN: ${{ secrets.CARGO_API_TOKEN }}
+        with:
+          use-cross: true
+          command: publish
+          args: --dry-run --verbose --token "${CARGO_API_TOKEN}"
 
 
