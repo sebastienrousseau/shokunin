@@ -34,7 +34,6 @@ jobs:
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
-          target: ${{ matrix.target }}
           toolchain: stable
           default: true
           override: true
@@ -47,7 +46,7 @@ jobs:
         shell: /bin/bash -e {0}
 
       - name: Build
-        run: cargo build --release --target=${{ matrix.target }}
+        run: cargo build
 
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
