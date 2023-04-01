@@ -127,7 +127,6 @@ jobs:
         env:
           CARGO_API_TOKEN: ${{ secrets.CARGO_API_TOKEN }}
         with:
-          use-cross: true
           command: publish
           args: --dry-run --verbose --token "${CARGO_API_TOKEN}"
 
