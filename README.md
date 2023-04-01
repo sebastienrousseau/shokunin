@@ -84,8 +84,20 @@ latest stable version of Rust.
 
 ### Platform support
 
-`Shokunin (職人)` is supported and tested today on the following
-platforms:
+`Shokunin (職人)` is supported and tested on the following platforms:
+
+### Tier 1 platforms 🏆
+
+| | Operating System | Target | Description |
+| --- | --- | --- | --- |
+| ✅ | Linux   |  i686-unknown-linux-gnu | 32-bit Linux (kernel 3.2+, glibc 2.17+) |
+| ✅ | Linux   |  x86_64-unknown-linux-gnu | 64-bit Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | Linux   | aarch64-unknown-linux-gnu | 64-bit Linux systems on ARM architecture |
+| ✅ | macOS   | x86_64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
+| ✅ | Windows | i686-pc-windows-gnu | 32-bit Windows (7 or later) |
+| ✅ | Windows | i686-pc-windows-msvc | 32-bit Windows (7 or later) |
+| ✅ | Windows | x86_64-pc-windows-gnu | 64-bit Windows (7 or later) |
+| ✅ | Windows | x86_64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
 #### Linux targets 🐧
 
