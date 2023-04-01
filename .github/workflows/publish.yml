@@ -40,8 +40,10 @@ jobs:
           echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
           for filename in target/release/*.tar.gz; do
             link="$(basename $filename)"
-            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
+            artifact_link="${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link"
+            echo "* [$link]($artifact_link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
+        shell: /bin/bash -e {0}
 
       # Create the release on GitHub Releases
       - name: Create Release
