@@ -11,19 +11,20 @@ jobs:
   build:
     name: illumos build
     # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
     strategy:
         fail-fast: false
         matrix:
+
           target:
             # Illumos targets 🌞
                 - x86_64-unknown-illumos # 64-bit Illumos on x86-64     ✅ Tested
+
           include:
+            # FreeBSD targets 🐬
             - target: x86_64-unknown-illumos
               os: ubuntu-latest
               cross: true
-              env:
-                TARGET: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
@@ -33,6 +34,7 @@ jobs:
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
+          target: ${{ matrix.target }}
           toolchain: stable
           default: true
           override: true
@@ -45,12 +47,12 @@ jobs:
         shell: /bin/bash -e {0}
 
       - name: Build
-        run: cargo build --release --target=$TARGET
+        run: cargo build --release --target=${{ matrix.target }}
 
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
         with:
-          name: ssg-$TARGET-v${{ env.VERSION }}
+          name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: target/release/ssg
           archive_format: tar.gz
 
@@ -67,7 +69,7 @@ jobs:
       - name: Upload binary to GitHub Packages
         uses: actions/upload-artifact@v2
         with:
-          name: ssg-$TARGET-v${{ env.VERSION }}
+          name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: target/release/ssg
           archive_format: zip
 
