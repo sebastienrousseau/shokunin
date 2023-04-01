@@ -14,7 +14,7 @@
 //!
 //! ## Overview 📖
 //!
-//! `Shokunin (職人)` is a highly-optimized, Rust-based static site
+//! `Shokunin 職人` is a highly-optimized, Rust-based static site
 //! generator (ssg) that aims to provide an easy-to-use and powerful
 //! tool for building professional static websites and blogs.
 //!
@@ -36,22 +36,22 @@
 //!
 //! ## Getting Started 🚀
 //!
-//! It takes just a few minutes to get up and running with `Shokunin (職人)`.
+//! It takes just a few minutes to get up and running with `Shokunin 職人`.
 //!
 //! ### Installation
 //!
-//! To install `Shokunin (職人)`, you need to have the Rust toolchain installed on
+//! To install `Shokunin 職人`, you need to have the Rust toolchain installed on
 //! your machine. You can install the Rust toolchain by following the
 //! instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
 //!
-//! Once you have the Rust toolchain installed, you can install `Shokunin (職人)`
+//! Once you have the Rust toolchain installed, you can install `Shokunin 職人`
 //! using the following command:
 //!
 //! ```shell
 //! cargo install ssg
 //! ```
 //!
-//! For simplicity, we have given `Shokunin (職人)` a simple alias `ssg` which can
+//! For simplicity, we have given `Shokunin 職人` a simple alias `ssg` which can
 //! stand for `Shokunin Site Generator` or `Static Site Generator`.
 //!
 //! You can then run the help command to see the available options:
@@ -63,7 +63,7 @@
 //! ## Examples and Usage 📚
 //!
 //! Check out the examples folder for helpful snippets of code that
-//! demonstrate how to use the `Shokunin (職人)` library. You can also check
+//! demonstrate how to use the `Shokunin 職人` library. You can also check
 //! out the [documentation](https://docs.rs/ssg) for more information
 //! on how to use the library.
 //!
