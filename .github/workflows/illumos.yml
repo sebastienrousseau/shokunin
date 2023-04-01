@@ -53,16 +53,13 @@ jobs:
         with:
           name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: target/release/ssg
-          archive_format: tar.gz
 
-      - name: Verify upload (tar.gz)
-        if: ${{ steps.upload_tar.result == 'success' }}
-        run: echo "Tar.gz archive uploaded successfully."
+      - name: Verify upload (binary)
+        run: echo "Binary uploaded successfully."
         shell: /bin/bash -e {0}
 
       - name: Print error (tar.gz)
-        if: ${{ steps.upload_tar.result != 'success' }}
-        run: echo "Tar.gz archive upload failed with exit code ${{ steps.upload_tar.exit_code }}."
+        run: echo "Binary upload failed with exit code ${{ steps.upload_binary.exit_code }}."
         shell: /bin/bash -e {0}
 
       - name: Upload binary to GitHub Packages
@@ -70,14 +67,4 @@ jobs:
         with:
           name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
           path: target/release/ssg
-          archive_format: zip
-
-      - name: Verify upload (zip)
-        if: ${{ steps.upload_zip.result == 'success' }}
-        run: echo "Zip archive uploaded successfully."
-        shell: /bin/bash -e {0}
-
-      - name: Print error (zip)
-        if: ${{ steps.upload_zip.result != 'success' }}
-        run: echo "Zip archive upload failed with exit code ${{ steps.upload_zip.exit_code }}."
-        shell: /bin/bash -e {0}
+          run: echo "Binary uploaded successfully."
