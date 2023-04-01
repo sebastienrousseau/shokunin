@@ -33,6 +33,16 @@ jobs:
           # Append empty line to CHANGELOG.md
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
 
+      # Append the artifact links to the CHANGELOG.md
+      - name: Append Artifact Links
+        run: |
+          echo "" >> ${{ github.workspace }}/CHANGELOG.md
+          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
+          for filename in $(ls ${{ github.workspace }}/ssg-*-${{ env.VERSION }}.tar.gz); do
+            link="$(basename $filename)"
+            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
+          done
+
       # Create the release on GitHub Releases
       - name: Create Release
         id: create-release
@@ -46,14 +56,5 @@ jobs:
           draft: true
           prerelease: false
 
-      # Append the artifact links to the CHANGELOG.md
-      - name: Append Artifact Links
-        run: |
-          echo "" >> ${{ github.workspace }}/CHANGELOG.md
-          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in $(ls ${{ github.workspace }}/ssg-*-${{ env.VERSION }}.tar.gz); do
-            link="$(basename $filename)"
-            echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
-          done
 
 
