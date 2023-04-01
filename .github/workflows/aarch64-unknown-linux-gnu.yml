@@ -34,6 +34,7 @@ jobs:
 
       # Install the stable Rust toolchain
       - name: Setup Rust
+        id: setup-rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           rustup default ${{ matrix.rust-toolchain }}
