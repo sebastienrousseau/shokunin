@@ -7,7 +7,7 @@ jobs:
   # This job builds the project on Linux ARM64 Linux (kernel 4.1, glibc 2.17+) with GNU
   build:
     name: ❯ build
-    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
