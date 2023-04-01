@@ -38,11 +38,36 @@ jobs:
         run: |
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
           echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in target/release/*.tar.gz; do
-            link="$(basename $filename)"
+          targets=(
+            aarch64-apple-darwin
+            aarch64-pc-windows-msvc
+            aarch64-unknown-linux-gnu
+            aarch64-unknown-linux-musl
+            arm-unknown-linux-gnueabi
+            arm-unknown-linux-gnueabihf
+            armv7-unknown-linux-gnueabihf
+            i686-pc-windows-gnu
+            i686-pc-windows-msvc
+            i686-unknown-linux-gnu
+            i686-unknown-linux-musl
+            mips-unknown-linux-gnu
+            mips64-unknown-linux-gnuabi64
+            mips64el-unknown-linux-gnuabi64
+            mipsel-unknown-linux-gnu
+            x86_64-apple-darwin
+            x86_64-pc-windows-gnu
+            x86_64-pc-windows-msvc
+            x86_64-unknown-freebsd
+            x86_64-unknown-illumos
+            x86_64-unknown-linux-gnu
+            x86_64-unknown-linux-musl
+          )
+          for target in "${targets[@]}"; do
+            link="ssg-$target-v${{ env.VERSION }}.tar.gz"
             artifact_link="${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link"
             echo "* [$link]($artifact_link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
+
         shell: /bin/bash -e {0}
 
       # Create the release on GitHub Releases
