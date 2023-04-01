@@ -46,20 +46,6 @@ jobs:
           draft: true
           prerelease: false
 
-      # Upload the artifact files to the release
-      - name: Upload Artifacts
-        run: |
-          for filename in ssg-*-${{ env.VERSION }}.tar.gz; do
-            echo "Uploading $filename"
-            curl \
-              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: $(file -b --mime-type $filename)" \
-              --data-binary @"$filename" \
-              "${{ steps.create-release.outputs.upload_url }}?name=$(basename $filename)"
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       # Append the artifact links to the CHANGELOG.md
       - name: Append Artifact Links
         run: |
@@ -69,17 +55,5 @@ jobs:
             link="$(basename $filename)"
             echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
-
-      # Update the release description with the artifact links
-      - name: Update Release Description
-        run: |
-          curl \
-            -X PATCH \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"body": "'"$(cat ${{ github.workspace }}/CHANGELOG.md | sed 's/"/\\"/g')"'"}' \
-            "https://api.github.com/repos/${{ github.repository }}/releases/${{ steps.create-release.outputs.id }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
