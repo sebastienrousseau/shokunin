@@ -62,9 +62,12 @@ jobs:
         run: echo "Binary upload failed with exit code ${{ steps.upload_binary.exit_code }}."
         shell: /bin/bash -e {0}
 
-      - name: Upload binary to GitHub Packages
-        uses: actions/upload-artifact@v2
+      - name: Tar files
+        run: tar -czvf ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz target/release/ssg
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
         with:
           name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
-          path: target/release/ssg
+          path: ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz
           run: echo "Binary uploaded successfully."
