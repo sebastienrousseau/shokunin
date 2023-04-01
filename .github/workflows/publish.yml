@@ -33,37 +33,14 @@ jobs:
           # Append empty line to CHANGELOG.md
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
 
-      - name: Rename artifacts
-        run: |
-          for filename in ssg-*.tar.gz; do
-            mv "$filename" "0.0.10_$filename"
-          done
-        shell: /usr/bin/bash -e {0}
-        env:
-          VERSION: 0.0.10
-          RELEASE_NAME: Shokunin (職人) Static Site Generator 🦀
-
-      # Append the artifact links to the changelog
       - name: Append Artifact Links
         run: |
           echo "" >> ${{ github.workspace }}/CHANGELOG.md
           echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in $(ls ${{ github.workspace }}/*.tar.gz); do
+          for filename in $(ls ${{ github.workspace }}/ssg-*-${{ env.VERSION }}.tar.gz); do
             link="$(basename $filename)"
             echo "* [$link](${{ github.server_url }}/${{ github.repository }}/releases/download/v${{ env.VERSION }}/$link)" >> ${{ github.workspace }}/CHANGELOG.md
           done
-
-      # Append the artifact links to the changelog
-      - name: Append Artifact Links
-        run: |
-          echo "" >> ${{ github.workspace }}/CHANGELOG.md
-          echo "## Artifacts 🎁" >> ${{ github.workspace }}/CHANGELOG.md
-          for filename in ssg-*.tar.gz; do
-            mv "$filename" "0.0.10_$filename"
-          done
-        shell: /bin/bash -e {0}
-
-
 
       # Create the release on GitHub Releases
       - name: Create Release
@@ -78,21 +55,13 @@ jobs:
           draft: true
           prerelease: false
 
-      # Update the artifact names to include the release name and version
-      - name: Update Artifact Names
-        run: |
-          for filename in ssg-*.tar.gz; do
-            mv "$filename" "${{ env.RELEASE_NAME }}-${{ env.VERSION }}-$filename"
-          done
-        env:
-          RELEASE_NAME: ${{ steps.create-release.outputs.name }}
-
       # Upload the artifact files to the release
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ssg-artifacts
-          path: |
-            ssg-*.tar.gz
-          url: ${{ steps.create-release.outputs.upload_url }}
-
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ssg-*.tar.gz
+          asset_name: ssg-artifacts
+          asset_content_type: application/gzip
