@@ -1,34 +1,31 @@
 name: 🧪 Document
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 jobs:
   all:
     name: Document
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+        group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: nightly
 
-      - uses: actions/checkout@v2
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: nightly
 
-      - name: Update libssl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl1.1
+    - uses: actions/checkout@v2
 
-      - name: Generate documentation for all features and publish it
-        run: |
-          RUSTDOCFLAGS="--cfg docsrs" \
-            cargo doc --no-deps --all-features --workspace --release
+    - name: Update libssl
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl1.1
 
-      - name: Publish documentation
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc
-          publish_branch: gh-pages
-          force_orphan: true
+    - name: Generate documentation for all features and publish it
+      run: |
+        RUSTDOCFLAGS="--cfg docsrs" \
+          cargo doc --no-deps --all-features --workspace --target-dir ./doc
+
+    - name: Publish documentation
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./doc
