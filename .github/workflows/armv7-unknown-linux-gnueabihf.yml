@@ -1,25 +1,25 @@
-name: ❯ Linux build 🐧 (arm-unknown-linux-gnueabihf)
-# On push to the main branch, build the project on Linux ARMv6 Linux, hardfloat (kernel 3.2, glibc 2.17)
+name: ❯ Linux build 🐧 (armv7-unknown-linux-gnueabihf)
+# On push to the main branch, build the project on Linux ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on Linux ARMv6 Linux, hardfloat (kernel 3.2, glibc 2.17)
+  # This job builds the project on Linux ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            # ARMv6 Linux, hardfloat (kernel 3.2, glibc 2.17) ✅ Tested
-            - arm-unknown-linux-gnueabihf
+            # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) ✅ Tested
+            - armv7-unknown-linux-gnueabihf
 
           include:
             # Linux targets 🐧
-            - target: arm-unknown-linux-gnueabihf
+            - target: armv7-unknown-linux-gnueabihf
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
