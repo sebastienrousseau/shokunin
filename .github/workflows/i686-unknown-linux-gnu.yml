@@ -1,25 +1,25 @@
-name: ❯ macOS build 🍎 (aarch64-apple-darwin)
-# On push to the main branch, build the project on 64-bit macOS on Apple Silicon
+name: ❯ Linux build 🐧 (i686-unknown-linux-gnu)
+# On push to the main branch, build the project on 32-bit Linux (kernel 3.2+, glibc 2.17+)
 on:
   push:
     branches: ["**"]
 jobs:
-  # This job builds the project on 64-bit macOS on Apple Silicon
+  # This job builds the project on 32-bit Linux (kernel 3.2+, glibc 2.17+)
   build:
     name: ❯ build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
         fail-fast: false
         matrix:
           rust-toolchain:
             - stable
           target:
-            # 64-bit macOS on Apple Silicon ✅ Tested
-            - aarch64-apple-darwin
+            # 32-bit Linux (kernel 3.2+, glibc 2.17+) ✅ Tested
+            - i686-unknown-linux-gnu
 
           include:
             # Linux targets 🐧
-            - target: aarch64-apple-darwin
+            - target: i686-unknown-linux-gnu
               os: ubuntu-latest
               cross: true
     runs-on: ${{ matrix.os }}
