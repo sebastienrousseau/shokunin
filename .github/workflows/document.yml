@@ -44,6 +44,7 @@ jobs:
         publish_branch: gh-pages
         cname: true
         clean: true
+        jekyll: true
         commit_message: Deploy documentation at ${{ github.sha }}
         commit_user_name: github-actions
         commit_user_email: actions@users.noreply.github.com
