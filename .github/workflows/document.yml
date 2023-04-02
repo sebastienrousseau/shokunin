@@ -23,7 +23,7 @@ jobs:
       run: |
         RUSTDOCFLAGS="--cfg docsrs" \
           cargo doc --no-deps --all-features --workspace
-          echo 'baseurl: "/ssg"' >> ./target/doc/_config.yml
+          echo 'baseurl: "/ssg"' > ./target/doc/_config.yml
 
     - name: Deploy
       uses: actions/upload-artifact@v2
