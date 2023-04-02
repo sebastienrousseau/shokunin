@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Function: `render_page` - Render an HTML page"><title>render_page in ssg::template - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-fbd14db5c88ed452.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (0599b6b93 2023-04-01)" data-search-js="search-bc5a112813b5d712.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" data-theme-light-css="light-db279b6232be9c13.css" data-theme-dark-css="dark-cf923f49f397b216.css" data-theme-ayu-css="ayu-be46fdc453a55015.css" ></div><script src="../../static.files/storage-d4a1a279bad1a0c0.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-8e6affb8c73a5ff1.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="logo-container" href="../../ssg/index.html"><img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="logo"></a><h2></h2></nav><nav class="sidebar"><a class="logo-container" href="../../ssg/index.html"><img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="logo"></a><div class="sidebar-elems"><h2><a href="index.html">In ssg::template</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Function <a href="../index.html">ssg</a>::<wbr><a href="index.html">template</a>::<wbr><a class="fn" href="#">render_page</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="srclink" href="../../src/ssg/template.rs.html#229-357">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub fn render_page(
+    options: &amp;<a class="struct" href="struct.PageOptions.html" title="struct ssg::template::PageOptions">PageOptions</a>&lt;'_&gt;,
+    template_path: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>,
+    layout: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h3 id="function-render_page---render-an-html-page"><a href="#function-render_page---render-an-html-page">Function: <code>render_page</code> - Render an HTML page</a></h3>
+<p>Renders an HTML page with the given title, date, description,
+keywords, meta tags, CSS file, content, and copyright notice.</p>
+<p>This function takes in several arguments that correspond to various
+parts of an HTML page. These arguments are used to construct a
+context <code>HashMap</code> that is passed to the <code>render_template</code> function
+along with a template HTML file. The resulting string returned by
+<code>render_template</code> is the final HTML page that is generated.</p>
+<h2 id="arguments"><a href="#arguments">Arguments</a></h2>
+<ul>
+<li><code>author</code>              - A string representing the author.</li>
+<li><code>banner</code>              - A string representing the banner image.</li>
+<li><code>charset</code>             - A string representing the character set.</li>
+<li><code>content</code>             - A string representing the content.</li>
+<li><code>copyright</code>           - A string representing the copyright notice.</li>
+<li><code>css</code>                 - A string representing the css.</li>
+<li><code>date</code>                - A string representing the date.</li>
+<li><code>description</code>         - A string representing the description.</li>
+<li><code>generator</code>           - A string representing the generator.</li>
+<li><code>google_site_verification</code> - A string representing the Google site verification.</li>
+<li><code>image</code>               - A string representing the image.</li>
+<li><code>keywords</code>            - A string representing the keywords.</li>
+<li><code>lang</code>                - A string representing the language.</li>
+<li><code>layout</code>              - A string representing the layout.</li>
+<li><code>meta</code>                - A string representing the meta tags.</li>
+<li><code>bing_site_verification</code>       - A string representing the bing_site_verification.</li>
+<li><code>name</code>                - A string representing the site name.</li>
+<li><code>navigation</code>          - A string representing the navigation.</li>
+<li><code>og_description</code>      - A string representing the OpenGraph description.</li>
+<li><code>og_image_alt</code>        - A string representing the OpenGraph image alt text.</li>
+<li><code>og_image</code>            - A string representing the OpenGraph image.</li>
+<li><code>og_locale</code>           - A string representing the OpenGraph locale.</li>
+<li><code>og_site_name</code>        - A string representing the OpenGraph site name.</li>
+<li><code>og_title</code>            - A string representing the OpenGraph title.</li>
+<li><code>og_type</code>             - A string representing the OpenGraph type.</li>
+<li><code>og_url</code>              - A string representing the OpenGraph URL.</li>
+<li><code>subtitle</code>            - A string representing the subtitle.</li>
+<li><code>title</code>               - A string representing the title.</li>
+<li><code>twitter_card</code>        - A string representing the Twitter card type.</li>
+<li><code>twitter_creator</code>     - A string representing the Twitter creator.</li>
+<li><code>twitter_description</code> - A string representing the Twitter description.</li>
+<li><code>twitter_image_alt</code>   - A string representing the Twitter image alt text.</li>
+<li><code>twitter_image</code>       - A string representing the Twitter image.</li>
+<li><code>twitter_site</code>        - A string representing the Twitter site.</li>
+<li><code>twitter_title</code>       - A string representing the Twitter title.</li>
+<li><code>twitter_url</code>         - A string representing the Twitter URL.</li>
+</ul>
+<h2 id="returns"><a href="#returns">Returns</a></h2>
+<p>If the function succeeds, it returns <code>Ok(html)</code>, where <code>html</code> is the
+HTML page generated by the function. If the function encounters an
+error, it returns <code>Err(error)</code>, where <code>error</code> is a string describing
+the error that occurred.</p>
+</div></details></section></div></main></body></html>
