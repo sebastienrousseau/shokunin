@@ -1,0 +1,73 @@
+name: ❯ Linux build 🐧 (aarch64-unknown-linux-musl)
+# On push to the main branch, build the project on Linux with MUSL (kernel 4.1, glibc 2.17+)
+on:
+  push:
+    branches: ["**"]
+jobs:
+  # This job builds the project on Linux with MUSL (kernel 4.1, glibc 2.17+)
+  build:
+    name: ❯ build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+        fail-fast: false
+        matrix:
+          rust-toolchain:
+            - stable
+          target:
+            # ARM64 Linux with MUSL (kernel 4.1, glibc 2.17+) ✅ Tested
+            - aarch64-unknown-linux-musl
+
+          include:
+            # Linux targets 🐧
+            - target: aarch64-unknown-linux-musl
+              os: ubuntu-latest
+              cross: true
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Check out the repository code
+      - name: Checkout sources
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      # Install the stable Rust toolchain
+      - name: Setup Rust
+        id: setup-rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          rustup default ${{ matrix.rust-toolchain }}
+
+      # Update the version number based on the Cargo.toml file
+      - name: Update version number
+        id: update-version
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        shell: /bin/bash -e {0}
+
+      # Build the target
+      - name: Build
+        run: cargo build --release
+
+      # Upload the binary for the target
+      - name: Upload binary to GitHub Packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
+          path: target/release/ssg
+
+      # Tar the binary for the target
+      - name: Tar files
+        run: tar -czvf ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz target/release/ssg
+
+      # Upload the tarball for the target
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ssg-${{ matrix.target }}-v${{ env.VERSION }}
+          path: ssg-${{ matrix.target }}-v${{ env.VERSION }}.tar.gz
+          run: |
+            echo "Binary uploaded successfully for ${{ matrix.target }}. URL: ${{ steps.upload-artifact.outputs.artifact_url }}"
+          shell: /bin/bash -e {0}

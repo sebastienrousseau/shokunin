@@ -18,21 +18,49 @@ use std::{
 ///
 /// # Arguments
 ///
+/// * `author`      - A string representing the author.
+/// * `banner`      - A string representing the banner image.
+/// * `charset`     - A string representing the character set.
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
 /// * `css`         - A string representing the css.
 /// * `date`        - A string representing the date.
 /// * `description` - A string representing the description.
+/// * `generator`   - A string representing the generator.
+/// * `image`       - A string representing the image.
 /// * `keywords`    - A string representing the keywords.
 /// * `lang`        - A string representing the language.
+/// * `layout`      - A string representing the layout.
 /// * `meta`        - A string representing the meta tags.
+/// * `msvalidate_01` - A string representing the Bing site verification.
 /// * `name`        - A string representing the site name.
 /// * `navigation`  - A string representing the navigation.
-/// * `title`       - A string representing the title.
+/// * `og_description` - A string representing the OpenGraph description.
+/// * `og_image_alt`   - A string representing the OpenGraph image alt text.
+/// * `og_image`       - A string representing the OpenGraph image.
+/// * `og_locale`      - A string representing the OpenGraph locale.
+/// * `og_site_name`   - A string representing the OpenGraph site name.
+/// * `og_title`       - A string representing the OpenGraph title.
+/// * `og_type`        - A string representing the OpenGraph type.
+/// * `og_url`         - A string representing the OpenGraph URL.
+/// * `subtitle`      - A string representing the subtitle.
+/// * `title`        - A string representing the title.
+/// * `twitter_card` - A string representing the Twitter card type.
+/// * `twitter_creator` - A string representing the Twitter creator.
+/// * `twitter_description` - A string representing the Twitter description.
+/// * `twitter_image_alt` - A string representing the Twitter image alt text.
+/// * `twitter_image` - A string representing the Twitter image.
+/// * `twitter_site`  - A string representing the Twitter site.
+/// * `twitter_title` - A string representing the Twitter title.
+/// * `twitter_url` - A string representing the Twitter URL.
 ///
 pub struct PageOptions<'a> {
+    /// A string representing the author of the page.
+    pub author: &'a str,
     /// A string representing the banner of the page.
     pub banner: &'a str,
+    /// A string representing the charset of the page.
+    pub charset: &'a str,
     /// A string representing the content of the page.
     pub content: &'a str,
     /// A string representing the copyright notice of the page.
@@ -43,8 +71,12 @@ pub struct PageOptions<'a> {
     pub date: &'a str,
     /// A string representing the description of the page.
     pub description: &'a str,
+    /// A string representing the generator of the page.
+    pub generator: &'a str,
     /// A string representing the image of the page.
     pub image: &'a str,
+    /// A string representing the google site verification of the page.
+    pub google_site_verification: &'a str,
     /// A string representing the keywords of the page.
     pub keywords: &'a str,
     /// A string representing the language of the page.
@@ -53,12 +85,48 @@ pub struct PageOptions<'a> {
     pub layout: &'a str,
     /// A string representing the meta tags of the page.
     pub meta: &'a str,
+    /// A string representing the bing_site_verification of the page.
+    pub bing_site_verification: &'a str,
     /// A string representing the navigation of the page.
-    pub navigation: &'a str,
-    /// A string representing the site name of the page.
     pub name: &'a str,
+    /// A string representing the open graph description of the page.
+    pub navigation: &'a str,
+    /// A string representing the open graph image alt of the page.
+    pub og_description: &'a str,
+    /// A string representing the open graph image of the page.
+    pub og_image_alt: &'a str,
+    /// A string representing the open graph locale of the page.
+    pub og_image: &'a str,
+    /// A string representing the open graph site name of the page.
+    pub og_locale: &'a str,
+    /// A string representing the open graph title of the page.
+    pub og_site_name: &'a str,
+    /// A string representing the open graph type of the page.
+    pub og_title: &'a str,
+    /// A string representing the open graph url of the page.
+    pub og_type: &'a str,
+    /// A string representing the site name of the page.
+    pub og_url: &'a str,
+    /// A string representing the subtitle of the page.
+    pub subtitle: &'a str,
     /// A string representing the title of the page.
     pub title: &'a str,
+    /// A string representing the twitter card of the page.
+    pub twitter_card: &'a str,
+    /// A string representing the twitter creator of the page.
+    pub twitter_creator: &'a str,
+    /// A string representing the twitter description of the page.
+    pub twitter_description: &'a str,
+    /// A string representing the twitter image alt of the page.
+    pub twitter_image_alt: &'a str,
+    /// A string representing the twitter image of the page.
+    pub twitter_image: &'a str,
+    /// A string representing the twitter site of the page.
+    pub twitter_site: &'a str,
+    /// A string representing the twitter title of the page.
+    pub twitter_title: &'a str,
+    /// A string representing the twitter url of the page.
+    pub twitter_url: &'a str,
 }
 
 /// ## Function: `render_template` - Render a template with the given context
@@ -114,17 +182,42 @@ pub fn render_template(
 ///
 /// # Arguments
 ///
-/// * `content` - The content of the HTML page.
-/// * `copyright` - The copyright notice for the HTML page.
-/// * `css` - The path to the CSS file used by the HTML page.
-/// * `date` - The date of the HTML page.
-/// * `description` - The description of the HTML page.
-/// * `keywords` - The keywords associated with the HTML page.
-/// * `lang` - The language of the HTML page.
-/// * `meta` - The meta tags for the HTML page.
-/// * `name` - The name of the site.
-/// * `navigation` - The navigation for the HTML page.
-/// * `title` - The title of the HTML page.
+/// * `author`              - A string representing the author.
+/// * `banner`              - A string representing the banner image.
+/// * `charset`             - A string representing the character set.
+/// * `content`             - A string representing the content.
+/// * `copyright`           - A string representing the copyright notice.
+/// * `css`                 - A string representing the css.
+/// * `date`                - A string representing the date.
+/// * `description`         - A string representing the description.
+/// * `generator`           - A string representing the generator.
+/// * `google_site_verification` - A string representing the Google site verification.
+/// * `image`               - A string representing the image.
+/// * `keywords`            - A string representing the keywords.
+/// * `lang`                - A string representing the language.
+/// * `layout`              - A string representing the layout.
+/// * `meta`                - A string representing the meta tags.
+/// * `bing_site_verification`       - A string representing the bing_site_verification.
+/// * `name`                - A string representing the site name.
+/// * `navigation`          - A string representing the navigation.
+/// * `og_description`      - A string representing the OpenGraph description.
+/// * `og_image_alt`        - A string representing the OpenGraph image alt text.
+/// * `og_image`            - A string representing the OpenGraph image.
+/// * `og_locale`           - A string representing the OpenGraph locale.
+/// * `og_site_name`        - A string representing the OpenGraph site name.
+/// * `og_title`            - A string representing the OpenGraph title.
+/// * `og_type`             - A string representing the OpenGraph type.
+/// * `og_url`              - A string representing the OpenGraph URL.
+/// * `subtitle`            - A string representing the subtitle.
+/// * `title`               - A string representing the title.
+/// * `twitter_card`        - A string representing the Twitter card type.
+/// * `twitter_creator`     - A string representing the Twitter creator.
+/// * `twitter_description` - A string representing the Twitter description.
+/// * `twitter_image_alt`   - A string representing the Twitter image alt text.
+/// * `twitter_image`       - A string representing the Twitter image.
+/// * `twitter_site`        - A string representing the Twitter site.
+/// * `twitter_title`       - A string representing the Twitter title.
+/// * `twitter_url`         - A string representing the Twitter URL.
 ///
 /// # Returns
 ///
@@ -139,24 +232,115 @@ pub fn render_page(
     layout: &String,
 ) -> Result<String, String> {
     let mut context = HashMap::new();
+    context.insert("author", options.author);
     context.insert("banner", options.banner);
+    context.insert("charset", options.charset);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
     context.insert("css", options.css);
     context.insert("date", options.date);
     context.insert("description", options.description);
+    context.insert("generator", options.generator);
+    context.insert(
+        "google_site_verification",
+        options.google_site_verification,
+    );
     context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
     context.insert("meta", options.meta);
+    context.insert(
+        "bing_site_verification",
+        options.bing_site_verification,
+    );
     context.insert("name", options.name);
     context.insert("navigation", options.navigation);
+    context.insert("og_description", options.og_description);
+    context.insert("og_image_alt", options.og_image_alt);
+    context.insert("og_image", options.og_image);
+    context.insert("og_locale", options.og_locale);
+    context.insert("og_site_name", options.og_site_name);
+    context.insert("og_title", options.og_title);
+    context.insert("og_type", options.og_type);
+    context.insert("og_url", options.og_url);
+    context.insert("subtitle", options.subtitle);
     context.insert("title", options.title);
-
+    context.insert("twitter_card", options.twitter_card);
+    context.insert("twitter_creator", options.twitter_creator);
+    context.insert("twitter_description", options.twitter_description);
+    context.insert("twitter_image_alt", options.twitter_image_alt);
+    context.insert("twitter_image", options.twitter_image);
+    context.insert("twitter_site", options.twitter_site);
+    context.insert("twitter_title", options.twitter_title);
+    context.insert("twitter_url", options.twitter_url);
     if layout == "index" {
         render_template(
             &fs::read_to_string(
                 Path::new(template_path).join("index.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "post" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("post.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "page" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("page.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "tag" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("tag.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "category" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("category.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "archive" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("archive.html"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "rss" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("rss.xml"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "sitemap" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("sitemap.xml"),
+            )
+            .unwrap(),
+            &context,
+        )
+    } else if layout == "atom" {
+        render_template(
+            &fs::read_to_string(
+                Path::new(template_path).join("atom.xml"),
             )
             .unwrap(),
             &context,
@@ -250,8 +434,19 @@ pub fn create_template_folder(
                 );
 
                 let url = path;
-                let files =
-                    ["index.html", "template.html", "template.json"];
+                let files = [
+                    "index.html",
+                    "template.html",
+                    "template.json",
+                    "post.html",
+                    "page.html",
+                    "tag.html",
+                    "category.html",
+                    "archive.html",
+                    "rss.xml",
+                    "sitemap.xml",
+                    "atom.xml",
+                ];
 
                 for file in files.iter() {
                     let file_url = format!("{}/{}", url, file);
@@ -284,8 +479,19 @@ pub fn create_template_folder(
             );
 
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
-            let files =
-                ["index.html", "template.html", "template.json"];
+            let files = [
+                "index.html",
+                "template.html",
+                "template.json",
+                "post.html",
+                "page.html",
+                "tag.html",
+                "category.html",
+                "archive.html",
+                "rss.xml",
+                "sitemap.xml",
+                "atom.xml",
+            ];
 
             for file in files.iter() {
                 let file_url = format!("{}/{}", url, file);

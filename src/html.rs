@@ -1,6 +1,8 @@
 // Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+extern crate regex;
+use std::collections::HashMap;
 /// ## Function: `generate_html` - Generates an HTML page from Markdown
 ///
 /// Generates an HTML page from the given Markdown content, title, and
@@ -31,7 +33,7 @@
 /// let html = generate_html(content, title, description, None);
 /// assert_eq!(
 ///     html,
-///     "<h1>My Page</h1><h2>This is a test page</h2><h2>Hello, world!</h2>\n<p>This is a test.</p>\n"
+///     "<h1>My Page</h1><h2>This is a test page</h2><h2>Hello, world!</h2>\n<p>This is a test.</p>"
 /// );
 ///
 /// ```
@@ -73,12 +75,70 @@ pub fn generate_html(
     } else {
         "".to_string()
     };
+    // let markdown_html =
+    //     comrak::markdown_to_html(markdown_content, &options);
+
+    let mut html_map = HashMap::new();
     let markdown_html =
         comrak::markdown_to_html(markdown_content, &options);
+    html_map.insert(title.to_string(), markdown_html);
+
+    for (_, html_content) in html_map.iter_mut() {
+        let mut image_class = None;
+        *html_content = html_content
+            .lines()
+            .map(|line| {
+                if let Some(idx) = line.find(".class=&quot;") {
+                    let before = &line[..idx];
+                    let after = line[idx + ".class=&quot;".len()..]
+                        .split_once('&')
+                        .map(|(s, _)| s)
+                        .unwrap_or("");
+                    if before.contains("img src") {
+                        image_class = Some(after.to_string());
+                        // println!(
+                        //     "Extracted class attribute: {}",
+                        //     image_class.clone().unwrap()
+                        // ); // print the extracted class attribute
+                        // remove the class attribute from the remaining string
+                        format!(
+                            "{}{}",
+                            before,
+                            &line[idx
+                                + after.len()
+                                + ".class=&quot;&quot;".len()..]
+                        )
+                    } else {
+                        line.to_string()
+                    }
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+        if let Some(class) = image_class {
+            // set the class attribute for the image tag
+            *html_content = html_content.replace(
+                "img src",
+                &format!("img class=\"{}\" src", class),
+            );
+            // println!("Extracted class attribute: {}", class); // print the extracted class attribute
+        }
+    }
+
+    let html_string = html_map
+        .values()
+        .map(|content| content.to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    // println!("html_string={:?}", html_string);
+
     let json_html = if let Some(json_str) = json_content {
         format!("<p>{}</p>", json_str)
     } else {
         "".to_string()
     };
-    format!("{}{}{}{}", header, subheader, json_html, markdown_html)
+    format!("{}{}{}{}", header, subheader, json_html, html_string)
 }

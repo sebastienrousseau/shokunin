@@ -1,0 +1,13 @@
+name: 🧪 Test
+on: [push, pull_request]
+jobs:
+  all:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hecrj/setup-rust-action@v1
+    - uses: actions/checkout@master
+    - name: Run tests
+      run: cargo test --verbose --workspace
+    - name: Run tests with all features
+      run: cargo test --verbose --workspace --all-features

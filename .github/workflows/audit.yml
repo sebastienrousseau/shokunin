@@ -1,0 +1,13 @@
+name: 🧪 Audit
+on: [push, pull_request]
+jobs:
+  dependencies:
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hecrj/setup-rust-action@v1
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+    - uses: actions/checkout@master
+    - name: Audit dependencies
+      run: cargo audit

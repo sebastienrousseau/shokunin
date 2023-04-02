@@ -1,20 +1,27 @@
 <!DOCTYPE html>
 <html lang="{{lang}}">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta charset="{{charset}}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- # Start search engines -->
+    <meta name="msvalidate.01" content="{{bing_site_verification}}" />
+    <meta name="google-site-verification" content="{{google_site_verification}}" />
+    <!-- # End search engines -->
+
+    <!-- # Start Primary Meta Tags -->
     <title>{{title}}</title>
-    <meta
-      name="generator"
-      content="Shokunin (職人) Static Site Generator 0.0.9"
-    />
-    <link
-      rel="stylesheet"
-      crossorigin="anonymous"
-      href="https://unpkg.com/skeletonic-stylus@1.0.5/css/skeletonic.min.css"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
+    {{meta}}
+    <meta name="title" content="{{title}}" />
+    <meta name="description" content="{{description}}" />
+    <meta name="keywords" content="{{keywords}}" />
+    <meta name="generator" content="{{generator}}" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="robots" content="all" />
+    <meta name="theme-color" content="#000000" />
+    <!-- # End Primary Meta Tags -->
+
+    <link href="https://unpkg.com/skeletonic-stylus@1.0.5/css/skeletonic.min.css" rel="stylesheet" type="text/css">
     <link
       rel="apple-touch-icon"
       href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
@@ -33,65 +40,64 @@
       sizes="32x32"
     />
     <link rel="manifest" href="manifest.json" />
-    {{meta}}
-    <meta name="description" content="{{description}}" />
-    <meta name="keywords" content="{{keywords}}" />
-    <meta name="twitter:card" content="{{name}} - {{title}}" />
-    <meta name="twitter:description" content="{{description}}" />
-    <meta name="twitter:title" content="{{name}} - {{title}}" />
-    <meta name="og:title" content="{{title}}" />
-    <meta name="og:description" content="{{description}}" />
-    <meta name="og:image:alt" content="{{title}} - {{description}}." />
-    <meta name="og:locale" content="{{lang}}" />
-    <meta
-      http-equiv="Cache-Control"
-      content="no-cache, no-store, must-revalidate"
-    />
-    <meta http-equiv="Expires" content="0" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta itemprop="accessibilityAPI" content="ARIA" />
-    <meta itemprop="accessibilityControl" content="fullKeyboardControl" />
-    <meta itemprop="accessibilityHazard" content="noFlashingHazard" />
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+    <link rel="alternate" type="application/atom+xml" href="/atom.xml" />
+
+    <!-- # Start Open Graph / Facebook -->
+    <meta name="og:description" content="{{og_description}}" />
+    <meta name="og:image:alt" content="{{og_image_alt}}" />
+    <meta property="og:image" content="{{og_image}}" />
+    <meta property="og:locale" content="{{og_locale}}" />
+    <meta property="og:site_name" content="{{og_site_name}}" />
+    <meta property="og:title" content="{{og_title}}" />
+    <meta property="og:type" content="{{og_type}}" />
+    <meta property="og:url" content="{{og_url}}" />
+    <!-- # End Open Graph / Facebook -->
+
+    <!-- # Start Schema.org -->
+    <meta itemprop="name" content="{{name}}" />
+    <meta itemprop="description" content="{{description}}" />
+    <meta itemprop="image" content="{{image}}" />
+    <!-- # End Schema.org -->
+
+    <!-- # Start Accessibility -->
+    <meta name="accessibility" content="ARIA" />
+    <meta name="accessibility" content="fullKeyboardControl" />
+    <meta name="accessibility" content="noFlashingHazard" />
+    <!-- # End Accessibility -->
+
+    <!-- # Start Apple -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="{{title}}" />
     <meta name="application-name" content="{{name}}" />
-    <meta name="author" content="" />
+    <meta name="author" content="{{author}}" />
+    <!-- # End Apple -->
+
+    <!-- # Start Content Security Policy -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src * 'unsafe-inline';
       style-src 'self' https://unpkg.com/ 'unsafe-inline'; media-src *"
     />
-    <meta name="format-detection" content="telephone=no" />
+    <!-- # End Content Security Policy -->
+
     <meta name="msvalidate1" content="" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
     <meta name="msapplication-tap-highlight" content="no" />
     <meta name="msapplication-TileColor" content="#ffffff" />
-    <meta
-      name="msapplication-TileImage"
-      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/144x144.png"
-    />
-    <meta name="og:image:height" content="192" />
-    <meta name="og:image:type" content="image/png" />
-    <meta name="og:image:width" content="192" />
-    <meta
-      name="og:image"
-      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
-    />
-    <meta name="og:robots" content="all" />
-    <meta name="og:site_name" content="{{name}}" />
-    <meta name="og:type" content="website" />
-    <meta name="og:url" content="" />
-    <meta name="robots" content="all" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="twitter:creator" content="" />
-    <meta
-      name="twitter:image"
-      content="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/192x192.png"
-    />
-    <meta name="twitter:site" content="{{name}}" />
-    <meta name="twitter:url" content="" />
+    <meta name="msapplication-TileImage" content="" />
+
+    <!-- # Start Twitter -->
+    <meta name="twitter:card" content="{{twitter_card}}" />
+    <meta name="twitter:creator" content="@{{twitter_creator}}" />
+    <meta name="twitter:description" content="{{twitter_description}}" />
+    <meta name="twitter:image" content="{{twitter_image}}" />
+    <meta name="twitter:twitter_image_alt" content="{{twitter_image_alt}}" />
+    <meta name="twitter:site" content="@{{twitter_site}}" />
+    <meta name="twitter:title" content="{{twitter_title}}" />
+    <meta name="twitter:url" content="{{twitter_url}}" />
+    <!-- # End Twitter -->
   </head>
   <body itemscope itemtype="http://schema.org/WebPage">
     <section id="navigation" aria-label="navigation">
@@ -146,7 +152,9 @@
           />
         </figure>
       </section>
-      <section id="content" class="content">{{content}}</section>
+      <section id="content" class="content text-left center">
+        {{content}}
+      </section>
       <hr class="hr-text" data-content="{{title}}" />
     </main>
     <footer id="footer" class="center text-center" aria-label="footer">

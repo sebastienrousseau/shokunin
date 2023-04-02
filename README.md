@@ -1,14 +1,14 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="Shokunin (職人) logo" width="240" align="right" />
+<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="Shokunin 職人 logo" width="240" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin (職人) Static Site Generator 🦀
+# Shokunin 職人 Static Site Generator 🦀
 
 A Fast and Flexible Static Site Generator written in Rust.
 
-![Shokunin (職人) banner][banner]
+![Shokunin 職人 banner][banner]
 
 [![Made With Rust][made-with-rust-badge]][5] [![Crates.io][crates-badge]][7] [![Lib.rs][libs-badge]][9] [![Docs.rs][docs-badge]][8] [![License][license-badge]][2] [![Codecov][codecov-badge]][14]
 
@@ -25,11 +25,11 @@ A Fast and Flexible Static Site Generator written in Rust.
 
 <!-- markdownlint-enable MD033 -->
 
-## Welcome to Shokunin (職人) 👋
+## Welcome to Shokunin 職人 👋
 
 ## Overview 📖
 
-`Shokunin (職人)` is a highly-optimized, Rust-based static site generator
+`Shokunin 職人` is a highly-optimized, Rust-based static site generator
 (ssg) that aims to provide an easy-to-use and powerful tool for building
 professional static websites and blogs.
 
@@ -50,23 +50,23 @@ custom templates to help you create high quality websites with ease.
 
 ## Getting Started 🚀
 
-It takes just a few minutes to get up and running with `Shokunin (職人)`.
+It takes just a few minutes to get up and running with `Shokunin 職人`.
 
 ### Installation
 
-To install `Shokunin (職人)`, you need to have the Rust toolchain
+To install `Shokunin 職人`, you need to have the Rust toolchain
 installed on your machine. You can install the Rust toolchain by
 following the instructions on the [Rust website][13].
 
 Once you have the Rust toolchain installed, you can install
-`Shokunin (職人)` using the following command:
+`Shokunin 職人` using the following command:
 
 ```shell
 cargo install ssg
 ```
 
-For simplicity, we have given `Shokunin (職人)` a simple alias `ssg`
-which can stand for `Shokunin (職人) Site Generator` or
+For simplicity, we have given `Shokunin 職人` a simple alias `ssg`
+which can stand for `Shokunin 職人 Site Generator` or
 `Static Site Generator`.
 
 You can then run the help command to see the available options and
@@ -79,35 +79,43 @@ ssg --help
 ### Requirements
 
 The minimum supported Rust toolchain version is currently Rust
-**1.68.0** or later (stable). It is recommended that you install the
+**1.68.2** or later (stable). It is recommended that you install the
 latest stable version of Rust.
 
 ### Platform support
 
-`Shokunin (職人)` is supported and tested today on the following
-platforms:
+`Shokunin 職人` is supported and tested on the following platforms:
 
-#### Linux targets 🐧
+### Tier 1 platforms 🏆
 
-| Target | Description | Status |
-| --- | --- | --- |
-| aarch64-unknown-linux-gnu | 64-bit Linux systems on ARM architecture | ✅ |
-| aarch64-unknown-linux-musl | 64-bit Linux systems on ARM architecture | ✅ |
-| arm-unknown-linux-gnueabi | ARMv6 Linux (kernel 3.2, glibc 2.17) | ✅ |
-| armv7-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) | ✅ |
-| i686-unknown-linux-gnu | 32-bit Linux (kernel 3.2+, glibc 2.17+) | ✅ |
-| i686-unknown-linux-musl | 32-bit Linux (kernel 3.2+, musl libc) | ✅ |
-| x86_64-unknown-linux-gnu | 64-bit Linux (kernel 2.6.32+, glibc 2.11+) | ✅ |
-| x86_64-unknown-linux-musl | 64-bit Linux (kernel 2.6.32+, musl libc) | ✅ |
+| | Operating System | Target | Description |
+| --- | --- | --- | --- |
+| ✅ | Linux   | aarch64-unknown-linux-gnu | 64-bit Linux systems on ARM architecture |
+| ✅ | Linux   | i686-unknown-linux-gnu | 32-bit Linux (kernel 3.2+, glibc 2.17+) |
+| ✅ | Linux   | x86_64-unknown-linux-gnu | 64-bit Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | macOS   | x86_64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
+| ✅ | Windows | i686-pc-windows-gnu | 32-bit Windows (7 or later) |
+| ✅ | Windows | i686-pc-windows-msvc | 32-bit Windows (7 or later) |
+| ✅ | Windows | x86_64-pc-windows-gnu | 64-bit Windows (7 or later) |
+| ✅ | Windows | x86_64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
-#### macOS targets 🍎
+### Tier 2 platforms 🥈
 
-| Target | Description | Status |
-| --- | --- | --- |
-| x86_64-apple-darwin | 64-bit macOS (10.7 Lion or later) | ✅ |
+| | Operating System | Target | Description |
+| --- | --- | --- | --- |
+| ✅ | Linux   | aarch64-unknown-linux-musl | 64-bit Linux systems on ARM architecture |
+| ✅ | Linux   | arm-unknown-linux-gnueabi | ARMv6 Linux (kernel 3.2, glibc 2.17) |
+| ✅ | Linux   | arm-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
+| ✅ | Linux   | armv7-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
+| ✅ | Linux   | mips-unknown-linux-gnu | MIPS Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | Linux   | mips64-unknown-linux-gnuabi64 | MIPS64 Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | Linux   | mips64el-unknown-linux-gnuabi64 | MIPS64 Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | Linux   | mipsel-unknown-linux-gnu | MIPS Linux (kernel 2.6.32+, glibc 2.11+) |
+| ✅ | macOS   | aarch64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
+| ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
 The [GitHub Actions][10] shows the platforms in which the
-`Shokunin (職人)` library tests are run.
+`Shokunin 職人` library tests are run.
 
 ### Documentation
 
@@ -119,11 +127,11 @@ You can find our documentation on [docs.rs][8], [lib.rs][9] and
 
 ### Command Line Interface (CLI)
 
-The `Shokunin (職人)` library runs in a Terminal window and can be used
+The `Shokunin 職人` library runs in a Terminal window and can be used
 to generate a static website.
 
 Here’s the first command you can enter in your Terminal window to run
-`Shokunin (職人)`:
+`Shokunin 職人`:
 
 ```shell
 ssg  --new=mysite --content=content --output=output --template=template
@@ -142,12 +150,12 @@ ssg  --new=mysite --content=content --output=output --template=template --serve=
 
 ### In your project
 
-To use the `Shokunin (職人)` library in your project, add the following
+To use the `Shokunin 職人` library in your project, add the following
 to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-shokunin = "0.0.9"
+shokunin = "0.0.10"
 ```
 
 Add the following to your `main.rs` file:
@@ -157,12 +165,12 @@ extern crate ssg;
 use ssg::*;
 ```
 
-then you can use the `Shokunin (職人)` functions in your application
+then you can use the `Shokunin 職人` functions in your application
 code.
 
 ### Examples
 
-To get started with `Shokunin (職人)`, you can use the examples
+To get started with `Shokunin 職人`, you can use the examples
 provided in the `examples` directory of the project.
 
 To run the examples, clone the repository and run the following
@@ -175,7 +183,7 @@ cargo run --example example
 ## Semantic Versioning Policy 🚥
 
 For transparency into our release cycle and in striving to maintain
-backward compatibility, `Shokunin (職人)` follows
+backward compatibility, `Shokunin 職人` follows
 [semantic versioning][6].
 
 ## License 📝
@@ -223,11 +231,11 @@ providing a lot of useful suggestions on how to improve this project.
 [13]: https://www.rust-lang.org/learn/get-started
 [14]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin (職人) banner"
+[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin 職人 banner"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.9-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.10-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'
