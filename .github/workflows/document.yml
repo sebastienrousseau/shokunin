@@ -3,6 +3,7 @@ on: [push, pull_request]
 jobs:
   all:
     name: Document
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
         group: ${{ github.workflow }}-${{ github.ref }}
