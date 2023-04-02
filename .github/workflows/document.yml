@@ -10,7 +10,7 @@ jobs:
 
     - uses: hecrj/setup-rust-action@v1
       with:
-        rust-version: stable
+        rust-version: nightly
 
     - uses: actions/checkout@v3
 
