@@ -25,6 +25,9 @@ jobs:
           cargo doc --no-deps --all-features --workspace
 
     - name: Deploy
-      uses: actions/upload-pages-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
+        name: documentation
         path: target/doc/ssg
+        if-no-files-found: error
+        retention-days: 1
