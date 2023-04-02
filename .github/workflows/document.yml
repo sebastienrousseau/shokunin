@@ -23,6 +23,7 @@ jobs:
       run: |
         RUSTDOCFLAGS="--cfg docsrs" \
           cargo doc --no-deps --all-features --workspace
+          echo 'baseurl: "/ssg"' >> ./target/doc/_config.yml
 
     - name: Deploy
       uses: actions/upload-artifact@v2
@@ -39,7 +40,7 @@ jobs:
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc/ssg
+        publish_dir: ./target/doc
         publish_branch: gh-pages
         cname: true
         clean: true
