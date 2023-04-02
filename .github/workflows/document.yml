@@ -23,7 +23,8 @@ jobs:
       run: |
         RUSTDOCFLAGS="--cfg docsrs" \
           cargo doc --no-deps --all-features --workspace
-          echo 'baseurl: "/ssg"' > ./target/doc/_config.yml
+          # Write index.html with redirect
+          echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
 
     - name: Deploy
       uses: actions/upload-artifact@v2
@@ -44,7 +45,6 @@ jobs:
         publish_branch: gh-pages
         cname: true
         clean: true
-        enable_jekyll: true
         commit_message: Deploy documentation at ${{ github.sha }}
         commit_user_name: github-actions
         commit_user_email: actions@users.noreply.github.com
