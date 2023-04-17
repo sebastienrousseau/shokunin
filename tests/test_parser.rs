@@ -14,8 +14,7 @@ mod tests {
         let result = args(&matches);
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"new\" is required but missing."
-                .to_owned())
+            Err("❌ Error: Argument \"name\" is required but missing.".to_owned())
         );
     }
 
@@ -26,11 +25,7 @@ mod tests {
             .arg(Arg::new("new"))
             .arg(Arg::new("content"))
             .arg(Arg::new("output"))
-            .get_matches_from(vec![
-                "test_name",
-                "test_content",
-                "output",
-            ]);
+            .get_matches_from(vec!["test_name", "test_content", "output"]);
         let result = args(&matches);
         assert_eq!(
             result,
