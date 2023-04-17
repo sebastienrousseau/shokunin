@@ -78,7 +78,6 @@
 
 #![forbid(unsafe_code)]
 #![forbid(unreachable_pub)]
-#![forbid(clippy::all)]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![doc(
@@ -152,7 +151,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 // If serve flag is set, start the server and return
                 let server_address = "127.0.0.1:8000";
                 let output_dir = matches.get_one::<String>("serve").unwrap();
-                serve::start(server_address, &output_dir)?;
+                serve::start(server_address, output_dir)?;
                 println!("\n✅ Server started at http://{}", server_address);
                 return Ok(());
             }

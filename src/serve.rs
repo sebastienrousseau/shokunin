@@ -103,7 +103,7 @@ pub fn handle_connection(mut stream: TcpStream, _document_root: &str) -> std::io
         _ => &path[1..], // Remove the leading "/"
     };
 
-    let document_root = format!("public/");
+    let document_root = format!("public/".to_string());
     let file_path = Path::new(&document_root).join(requested_file);
 
     let (status_line, contents) = if file_path.exists() {

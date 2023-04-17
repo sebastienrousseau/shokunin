@@ -64,12 +64,12 @@ pub fn compile(
     println!("\n❯ Deleting any previous directory...");
     // Remove the out_dir directory and all its contents
     if out_dir.exists() {
-        fs::remove_dir_all(&out_dir)?;
+        fs::remove_dir_all(out_dir)?;
     }
 
     // Remove the public_dir directory and all its contents
     if public_dir.exists() {
-        fs::remove_dir_all(&public_dir)?;
+        fs::remove_dir_all(public_dir)?;
     }
 
     println!("  Done.\n");
@@ -82,12 +82,12 @@ pub fn compile(
 
     // Create the output directory
     println!("❯ Creating output directory...");
-    fs::create_dir(out_dir.clone())?;
+    fs::create_dir(<&Path>::clone(&out_dir))?;
     println!("  Done.\n");
 
     // Create the public directory
     println!("❯ Creating public directory...");
-    fs::create_dir(public_dir.clone())?;
+    fs::create_dir(<&Path>::clone(&public_dir))?;
     println!("  Done.\n");
 
     // Read the files in the source directory
@@ -253,7 +253,7 @@ pub fn compile(
 
     // Move the site directory to the public directory
     println!("❯ Moving site directory to public directory...");
-    fs::rename(&out_dir, public_dir)?;
+    fs::rename(out_dir, public_dir)?;
     println!("  Done.\n");
 
     Ok(())
