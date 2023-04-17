@@ -48,7 +48,7 @@
 //         // Assert that the function returns an error message.
 //         assert_eq!(
 //             result,
-//             Err("❌ Error: Argument \"name\" is required but missing."
+//             Err("❌ Error: Argument \"new\" is required but missing."
 //                 .to_owned())
 //         );
 
