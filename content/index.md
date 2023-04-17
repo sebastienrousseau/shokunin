@@ -25,6 +25,8 @@ layout: index
 image: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg
 ## banner - The banner of the site.
 banner: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/jj-ying-9Qwbfa_RM94-unsplash.jpg "Photo by JJ Ying on Unsplash"
+## theme_color - The theme color of the site.
+theme_color: "#d70015"
 
 # RSS - The RSS feed front matter (YAML).
 
@@ -35,7 +37,7 @@ last_build_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS pub date of the page.
 pub_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS generator of the page.
-generator: Shokunin 職人 🦀 (version 0.0.10)
+generator: Shokunin 職人 🦀 (version 0.0.11)
 ## rss - The RSS item title of the page.
 item_title: "RSS"
 ## rss - The RSS item link of the page.
@@ -46,6 +48,17 @@ item_guid: 4ef3bf81-5515-45f0-9254-6d70caf0d75f
 item_description: RSS feed for the site
 ## rss - The RSS item pub date of the page.
 item_pub_date: 2019-10-16T15:00:00+00:00
+
+# MS Application - The MS Application front matter (YAML).
+
+## msapplication - The MS Application config of the page.
+msapplication_config: /browserconfig.xml
+## msapplication_tap_highlight - The MS Application tap highlight of the page.
+msapplication_tap_highlight: no
+## msapplication - The MS Application tile color of the page.
+msapplication_tile_color: "#d70015"
+## msapplication_tile_image - The MS Application tile image of the page.
+msapplication_tile_image: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg
 
 # Open Graph - The Open Graph front matter (YAML).
 

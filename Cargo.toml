@@ -18,7 +18,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.68.2"
-version = "0.0.10"
+version = "0.0.11"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -72,7 +72,8 @@ path = "benches/bench_utilities.rs"
 
 [dependencies]
 clap = "4.2.1"
-comrak = "0.17.1"
+comrak = "0.18.0"
+mime_guess = "2.0.4"
 minify-html = "0.10.8"
 quick-xml = "0.28.1"
 regex = "1.7.3"

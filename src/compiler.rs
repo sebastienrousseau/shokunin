@@ -55,14 +55,23 @@ pub fn compile(
     // Constants
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
+    let public_dir = Path::new("public");
 
     println!("\n❯ Generating a new site: \"{}\"", site_name);
     println!("  Done.\n");
 
     // Delete the output directory
     println!("\n❯ Deleting any previous directory...");
-    fs::remove_dir_all(out_dir)?;
-    fs::remove_dir(Path::new(&site_name))?;
+    // Remove the out_dir directory and all its contents
+    if out_dir.exists() {
+        fs::remove_dir_all(&out_dir)?;
+    }
+
+    // Remove the public_dir directory and all its contents
+    if public_dir.exists() {
+        fs::remove_dir_all(&public_dir)?;
+    }
+
     println!("  Done.\n");
 
     // Creating the template directory
@@ -73,7 +82,12 @@ pub fn compile(
 
     // Create the output directory
     println!("❯ Creating output directory...");
-    fs::create_dir(out_dir)?;
+    fs::create_dir(out_dir.clone())?;
+    println!("  Done.\n");
+
+    // Create the public directory
+    println!("❯ Creating public directory...");
+    fs::create_dir(public_dir.clone())?;
     println!("  Done.\n");
 
     // Read the files in the source directory
@@ -100,6 +114,7 @@ pub fn compile(
         let content = render_page(&PageOptions {
             author: metadata.get("author").unwrap_or(&"".to_string()),
             banner: metadata.get("banner").unwrap_or(&"".to_string()),
+            bing_site_verification: metadata.get("bing_site_verification").unwrap_or(&"".to_string()),
             charset: metadata.get("charset").unwrap_or(&"".to_string()),
             content: &generate_html(&file.content,metadata.get("title").unwrap_or(&"".to_string()),metadata.get("description").unwrap_or(&"".to_string()),Some(metadata.get("content").unwrap_or(&"".to_string())),),
             copyright: format!("Copyright © {} 2023. All rights reserved.", site_name).as_str(),
@@ -113,7 +128,11 @@ pub fn compile(
             lang: metadata.get("language").unwrap_or(&"".to_string()),
             layout: metadata.get("layout").unwrap_or(&"".to_string()),
             meta: &meta,
-            bing_site_verification: metadata.get("bing_site_verification").unwrap_or(&"".to_string()),
+            msvalidate1: metadata.get("msvalidate1").unwrap_or(&"".to_string()),
+            msapplication_config: metadata.get("msapplication_config").unwrap_or(&"".to_string()),
+            msapplication_tap_highlight: metadata.get("msapplication_tap_highlight").unwrap_or(&"".to_string()),
+            msapplication_tile_color: metadata.get("msapplication_tile_color").unwrap_or(&"".to_string()),
+            msapplication_tile_image: metadata.get("msapplication_tile_image").unwrap_or(&"".to_string()),
             name: metadata.get("name").unwrap_or(&"".to_string()),
             navigation: &navigation,
             og_description: metadata.get("og_description").unwrap_or(&"".to_string()),
@@ -124,7 +143,10 @@ pub fn compile(
             og_title: metadata.get("og_title").unwrap_or(&"".to_string()),
             og_type: metadata.get("og_type").unwrap_or(&"".to_string()),
             og_url: metadata.get("og_url").unwrap_or(&"".to_string()),
+            robots: metadata.get("robots").unwrap_or(&"".to_string()),
             subtitle: metadata.get("subtitle").unwrap_or(&"".to_string()),
+            theme_color: metadata.get("theme_color").unwrap_or(&"".to_string()),
+            title: metadata.get("title").unwrap_or(&"".to_string()),
             twitter_card: metadata.get("twitter_card").unwrap_or(&"".to_string()),
             twitter_creator: metadata.get("twitter_creator").unwrap_or(&"".to_string()),
             twitter_description: metadata.get("twitter_description").unwrap_or(&"".to_string()),
@@ -133,7 +155,6 @@ pub fn compile(
             twitter_site: metadata.get("twitter_site").unwrap_or(&"".to_string()),
             twitter_title: metadata.get("twitter_title").unwrap_or(&"".to_string()),
             twitter_url: metadata.get("twitter_url").unwrap_or(&"".to_string()),
-            title: metadata.get("title").unwrap_or(&"".to_string()),
         }, &template_path, metadata.get("layout").unwrap_or(&"".to_string()))
         .unwrap();
 
@@ -192,12 +213,8 @@ pub fn compile(
     for file in &files_compiled {
         let file_name = match Path::new(&file.name).extension() {
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => {
-                file.name.replace(".toml", "")
-            }
-            Some(ext) if ext == "json" => {
-                file.name.replace(".json", "")
-            }
+            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
+            Some(ext) if ext == "json" => file.name.replace(".json", ""),
             Some(ext) if ext == ".xml" => file.name.replace(".xml", ""),
             _ => file.name.to_string(),
         };
@@ -233,5 +250,11 @@ pub fn compile(
         }
     }
     println!("  Done.\n");
+
+    // Move the site directory to the public directory
+    println!("❯ Moving site directory to public directory...");
+    fs::rename(&out_dir, public_dir)?;
+    println!("  Done.\n");
+
     Ok(())
 }
