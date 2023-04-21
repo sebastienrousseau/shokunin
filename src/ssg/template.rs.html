@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/template.rs`."><title>template.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (4087deacc 2023-04-12)" data-search-js="search-bc5a112813b5d712.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ssg/index.html"><img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/template.rs`."><title>template.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (8bdcc62cb 2023-04-20)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-1a524efa7bd4ab32.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://kura.pro/shokunin/images/logos/shokunin.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -510,6 +510,18 @@
 <a href="#510" id="510">510</a>
 <a href="#511" id="511">511</a>
 <a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
@@ -532,6 +544,9 @@
 ///
 /// * `author`      - A string representing the author.
 /// * `banner`      - A string representing the banner image.
+/// * `banner_width` - A string representing the banner image width.
+/// * `banner_height` - A string representing the banner image height.
+/// * `banner_alt` - A string representing the banner image alt text.
 /// * `charset`     - A string representing the character set.
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
@@ -571,6 +586,14 @@
     </span><span class="kw">pub </span>author: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the banner of the page.
     </span><span class="kw">pub </span>banner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the banner width of the page.
+    </span><span class="kw">pub </span>banner_width: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the banner height of the page.
+    </span><span class="kw">pub </span>banner_height: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the banner alt of the page.
+    </span><span class="kw">pub </span>banner_alt: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the bing_site_verification of the page.
+    </span><span class="kw">pub </span>bing_site_verification: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the charset of the page.
     </span><span class="kw">pub </span>charset: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the content of the page.
@@ -595,10 +618,26 @@
     </span><span class="kw">pub </span>lang: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the layout of the page.
     </span><span class="kw">pub </span>layout: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the logo of the page.
+    </span><span class="kw">pub </span>logo: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the logo width of the page.
+    </span><span class="kw">pub </span>logo_width: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the logo height of the page.
+    </span><span class="kw">pub </span>logo_height: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the logo alt of the page.
+    </span><span class="kw">pub </span>logo_alt: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the meta tags of the page.
     </span><span class="kw">pub </span>meta: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
-    <span class="doccomment">/// A string representing the bing_site_verification of the page.
-    </span><span class="kw">pub </span>bing_site_verification: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the msvalidate1 of the page.
+    </span><span class="kw">pub </span>msvalidate1: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the msapplication config of the page.
+    </span><span class="kw">pub </span>msapplication_config: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the msapplication tap highlight of the page.
+    </span><span class="kw">pub </span>msapplication_tap_highlight: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the msapplication tile color of the page.
+    </span><span class="kw">pub </span>msapplication_tile_color: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the msapplication tile image of the page.
+    </span><span class="kw">pub </span>msapplication_tile_image: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the navigation of the page.
     </span><span class="kw">pub </span>name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the open graph description of the page.
@@ -619,8 +658,12 @@
     </span><span class="kw">pub </span>og_type: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the site name of the page.
     </span><span class="kw">pub </span>og_url: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the robots of the page.
+    </span><span class="kw">pub </span>robots: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the subtitle of the page.
     </span><span class="kw">pub </span>subtitle: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
+    <span class="doccomment">/// A string representing the theme color of the page.
+    </span><span class="kw">pub </span>theme_color: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the title of the page.
     </span><span class="kw">pub </span>title: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>str,
     <span class="doccomment">/// A string representing the twitter card of the page.
@@ -662,10 +705,7 @@
 /// `Result::Ok`. If an error occurs, an error message is returned as a
 /// `String` wrapped in a `Result::Err`.
 ///
-</span><span class="kw">pub fn </span>render_template(
-    template: <span class="kw-2">&amp;</span>str,
-    context: <span class="kw-2">&amp;</span>HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
+</span><span class="kw">pub fn </span>render_template(template: <span class="kw-2">&amp;</span>str, context: <span class="kw-2">&amp;</span>HashMap&lt;<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>output = template.to_owned();
     <span class="kw">for </span>(key, value) <span class="kw">in </span>context {
         output = output.replace(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{{{{{}}}}}&quot;</span>, key), value);
@@ -696,6 +736,10 @@
 ///
 /// * `author`              - A string representing the author.
 /// * `banner`              - A string representing the banner image.
+/// * `banner_width`        - A string representing the banner width.
+/// * `banner_height`       - A string representing the banner height.
+/// * `banner_alt`          - A string representing the banner alt text.
+/// * `bing_site_verification`       - A string representing the bing_site_verification.
 /// * `charset`             - A string representing the character set.
 /// * `content`             - A string representing the content.
 /// * `copyright`           - A string representing the copyright notice.
@@ -708,8 +752,16 @@
 /// * `keywords`            - A string representing the keywords.
 /// * `lang`                - A string representing the language.
 /// * `layout`              - A string representing the layout.
+/// * `logo`                - A string representing the logo.
+/// * `logo_width`          - A string representing the logo width.
+/// * `logo_height`         - A string representing the logo height.
+/// * `logo_alt`            - A string representing the logo alt text.
 /// * `meta`                - A string representing the meta tags.
-/// * `bing_site_verification`       - A string representing the bing_site_verification.
+/// * `msvalidate1`         - A string representing the msvalidate1.
+/// * `msapplication_config` - A string representing the msapplication_config.
+/// * `msapplication_tap_highlight` - A string representing the msapplication_tap_highlight.
+/// * `msapplication_tile_color` - A string representing the msapplication_tile_color.
+/// * `msapplication_tile_image` - A string representing the msapplication_tile_image.
 /// * `name`                - A string representing the site name.
 /// * `navigation`          - A string representing the navigation.
 /// * `og_description`      - A string representing the OpenGraph description.
@@ -720,7 +772,9 @@
 /// * `og_title`            - A string representing the OpenGraph title.
 /// * `og_type`             - A string representing the OpenGraph type.
 /// * `og_url`              - A string representing the OpenGraph URL.
+/// * `robots`              - A string representing the robots.
 /// * `subtitle`            - A string representing the subtitle.
+/// * `theme_color`         - A string representing the theme color.
 /// * `title`               - A string representing the title.
 /// * `twitter_card`        - A string representing the Twitter card type.
 /// * `twitter_creator`     - A string representing the Twitter creator.
@@ -746,6 +800,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>context = HashMap::new();
     context.insert(<span class="string">&quot;author&quot;</span>, options.author);
     context.insert(<span class="string">&quot;banner&quot;</span>, options.banner);
+    context.insert(<span class="string">&quot;banner_width&quot;</span>, options.banner_width);
+    context.insert(<span class="string">&quot;banner_height&quot;</span>, options.banner_height);
+    context.insert(<span class="string">&quot;banner_alt&quot;</span>, options.banner_alt);
+    context.insert(<span class="string">&quot;bing_site_verification&quot;</span>, options.bing_site_verification);
     context.insert(<span class="string">&quot;charset&quot;</span>, options.charset);
     context.insert(<span class="string">&quot;content&quot;</span>, options.content);
     context.insert(<span class="string">&quot;copyright&quot;</span>, options.copyright);
@@ -753,18 +811,23 @@
     context.insert(<span class="string">&quot;date&quot;</span>, options.date);
     context.insert(<span class="string">&quot;description&quot;</span>, options.description);
     context.insert(<span class="string">&quot;generator&quot;</span>, options.generator);
-    context.insert(
-        <span class="string">&quot;google_site_verification&quot;</span>,
-        options.google_site_verification,
-    );
+    context.insert(<span class="string">&quot;google_site_verification&quot;</span>, options.google_site_verification);
     context.insert(<span class="string">&quot;image&quot;</span>, options.image);
     context.insert(<span class="string">&quot;keywords&quot;</span>, options.keywords);
     context.insert(<span class="string">&quot;lang&quot;</span>, options.lang);
+    context.insert(<span class="string">&quot;logo&quot;</span>, options.logo);
+    context.insert(<span class="string">&quot;logo_width&quot;</span>, options.logo_width);
+    context.insert(<span class="string">&quot;logo_height&quot;</span>, options.logo_height);
+    context.insert(<span class="string">&quot;logo_alt&quot;</span>, options.logo_alt);
     context.insert(<span class="string">&quot;meta&quot;</span>, options.meta);
+    context.insert(<span class="string">&quot;msvalidate1&quot;</span>, options.msvalidate1);
+    context.insert(<span class="string">&quot;msapplication_config&quot;</span>, options.msapplication_config);
     context.insert(
-        <span class="string">&quot;bing_site_verification&quot;</span>,
-        options.bing_site_verification,
+        <span class="string">&quot;msapplication_tap_highlight&quot;</span>,
+        options.msapplication_tap_highlight,
     );
+    context.insert(<span class="string">&quot;msapplication_tile_color&quot;</span>, options.msapplication_tile_color);
+    context.insert(<span class="string">&quot;msapplication_tile_image&quot;</span>, options.msapplication_tile_image);
     context.insert(<span class="string">&quot;name&quot;</span>, options.name);
     context.insert(<span class="string">&quot;navigation&quot;</span>, options.navigation);
     context.insert(<span class="string">&quot;og_description&quot;</span>, options.og_description);
@@ -775,7 +838,9 @@
     context.insert(<span class="string">&quot;og_title&quot;</span>, options.og_title);
     context.insert(<span class="string">&quot;og_type&quot;</span>, options.og_type);
     context.insert(<span class="string">&quot;og_url&quot;</span>, options.og_url);
+    context.insert(<span class="string">&quot;robots&quot;</span>, options.robots);
     context.insert(<span class="string">&quot;subtitle&quot;</span>, options.subtitle);
+    context.insert(<span class="string">&quot;theme_color&quot;</span>, options.theme_color);
     context.insert(<span class="string">&quot;title&quot;</span>, options.title);
     context.insert(<span class="string">&quot;twitter_card&quot;</span>, options.twitter_card);
     context.insert(<span class="string">&quot;twitter_creator&quot;</span>, options.twitter_creator);
@@ -787,82 +852,52 @@
     context.insert(<span class="string">&quot;twitter_url&quot;</span>, options.twitter_url);
     <span class="kw">if </span>layout == <span class="string">&quot;index&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;index.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;index.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;post&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;post.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;post.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;page&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;page.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;page.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;tag&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;tag.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;tag.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;category&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;category.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;category.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;archive&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;archive.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;archive.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;rss&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;rss.xml&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;rss.xml&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;sitemap&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;sitemap.xml&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;sitemap.xml&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else if </span>layout == <span class="string">&quot;atom&quot; </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;atom.xml&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;atom.xml&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     } <span class="kw">else </span>{
         render_template(
-            <span class="kw-2">&amp;</span>fs::read_to_string(
-                Path::new(template_path).join(<span class="string">&quot;template.html&quot;</span>),
-            )
-            .unwrap(),
+            <span class="kw-2">&amp;</span>fs::read_to_string(Path::new(template_path).join(<span class="string">&quot;template.html&quot;</span>)).unwrap(),
             <span class="kw-2">&amp;</span>context,
         )
     }
@@ -925,18 +960,14 @@
  * `TemplateError` if an error occurs.
  *
  */
-</span><span class="kw">pub fn </span>create_template_folder(
-    template_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;String, TemplateError&gt; {
+</span><span class="kw">pub fn </span>create_template_folder(template_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>String&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;String, TemplateError&gt; {
     <span class="comment">// Get the current working directory
     </span><span class="kw">let </span>current_dir = std::env::current_dir()<span class="question-mark">?</span>;
 
     <span class="comment">// Determine the template directory path based on the provided argument or use the default path
     </span><span class="kw">let </span>template_dir_path = <span class="kw">match </span>template_path {
         <span class="prelude-val">Some</span>(path) =&gt; {
-            <span class="kw">if </span>path.starts_with(<span class="string">&quot;http://&quot;</span>)
-                || path.starts_with(<span class="string">&quot;https://&quot;</span>)
-            {
+            <span class="kw">if </span>path.starts_with(<span class="string">&quot;http://&quot;</span>) || path.starts_with(<span class="string">&quot;https://&quot;</span>) {
                 <span class="comment">// If a URL is provided, download the template files to a temporary directory
                 </span><span class="kw">let </span>tempdir = tempfile::tempdir()<span class="question-mark">?</span>;
                 <span class="kw">let </span>template_dir_path = tempdir.into_path();
@@ -963,14 +994,10 @@
                 <span class="kw">for </span>file <span class="kw">in </span>files.iter() {
                     <span class="kw">let </span>file_url = <span class="macro">format!</span>(<span class="string">&quot;{}/{}&quot;</span>, url, file);
                     <span class="kw">let </span>file_path = template_dir_path.join(file);
-                    <span class="kw">let </span><span class="kw-2">mut </span>download =
-                        reqwest::blocking::get(<span class="kw-2">&amp;</span>file_url)<span class="question-mark">?</span>;
+                    <span class="kw">let </span><span class="kw-2">mut </span>download = reqwest::blocking::get(<span class="kw-2">&amp;</span>file_url)<span class="question-mark">?</span>;
                     <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(<span class="kw-2">&amp;</span>file_path)<span class="question-mark">?</span>;
                     download.copy_to(<span class="kw-2">&amp;mut </span>file)<span class="question-mark">?</span>;
-                    <span class="macro">println!</span>(
-                        <span class="string">&quot;Downloaded template file to: {:?}&quot;</span>,
-                        file_path
-                    );
+                    <span class="macro">println!</span>(<span class="string">&quot;Downloaded template file to: {:?}&quot;</span>, file_path);
                 }
 
                 template_dir_path
@@ -1011,10 +1038,7 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>download = reqwest::blocking::get(<span class="kw-2">&amp;</span>file_url)<span class="question-mark">?</span>;
                 <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(<span class="kw-2">&amp;</span>file_path)<span class="question-mark">?</span>;
                 download.copy_to(<span class="kw-2">&amp;mut </span>file)<span class="question-mark">?</span>;
-                <span class="macro">println!</span>(
-                    <span class="string">&quot;Downloaded default template file to: {:?}&quot;</span>,
-                    file_path
-                );
+                <span class="macro">println!</span>(<span class="string">&quot;Downloaded default template file to: {:?}&quot;</span>, file_path);
             }
 
             template_dir_path

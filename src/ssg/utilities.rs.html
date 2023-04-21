@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utilities.rs`."><title>utilities.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.70.0-nightly (4087deacc 2023-04-12)" data-search-js="search-bc5a112813b5d712.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-f61008743c98d196.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ssg/index.html"><img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utilities.rs`."><title>utilities.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-ba5701c5741a7b69.css" id="mainThemeStyle"><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.71.0-nightly (8bdcc62cb 2023-04-20)" data-search-js="search-e077946657036a58.js" data-settings-js="settings-298e1ea74db45b39.js" data-settings-css="settings-7bfb4c59cc6bc502.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ></div><script src="../../static.files/storage-62ce34ea385b278a.js"></script><script defer src="../../static.files/source-script-905937fbbdc8e9ea.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-1a524efa7bd4ab32.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="https://kura.pro/shokunin/images/logos/shokunin.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -259,20 +259,6 @@
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
@@ -321,20 +307,12 @@
 </span><span class="kw">pub fn </span>directory(dir: <span class="kw-2">&amp;</span>Path, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
     <span class="kw">if </span>dir.exists() {
         <span class="kw">if </span>!dir.is_dir() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                <span class="string">&quot;❌ Error: {} is not a directory.&quot;</span>,
-                name
-            ));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;❌ Error: {} is not a directory.&quot;</span>, name));
         }
     } <span class="kw">else </span>{
         <span class="kw">match </span>fs::create_dir_all(dir) {
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
-            <span class="prelude-val">Err</span>(e) =&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-                    <span class="string">&quot;❌ Error: Cannot create {} directory: {}&quot;</span>,
-                    name, e
-                ))
-            }
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;❌ Error: Cannot create {} directory: {}&quot;</span>, name, e)),
         }
     }
 
@@ -458,9 +436,7 @@
         <span class="kw">if </span>entry.path().is_dir() {
             <span class="kw">let </span>sub_html_files = find_html_files(<span class="kw-2">&amp;</span>entry.path())<span class="question-mark">?</span>;
             html_files.extend(sub_html_files);
-        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="string">&quot;html&quot;</span>) =
-            entry.path().extension().and_then(|ext| ext.to_str())
-        {
+        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="string">&quot;html&quot;</span>) = entry.path().extension().and_then(|ext| ext.to_str()) {
             html_files.push(entry.path());
         }
     }
@@ -483,7 +459,7 @@
 /// - Ok() if the HTML file was minified successfully.
 /// - Err() if the HTML file could not be minified.
 ///
-</span><span class="kw">fn </span>minify_html(file_path: <span class="kw-2">&amp;</span>Path) -&gt; io::Result&lt;String&gt; {
+</span><span class="kw">pub fn </span>minify_html(file_path: <span class="kw-2">&amp;</span>Path) -&gt; io::Result&lt;String&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>cfg = Cfg::new();
     cfg.do_not_minify_doctype = <span class="bool-val">true</span>;
     cfg.ensure_spec_compliant_unquoted_attribute_values = <span class="bool-val">true</span>;
@@ -498,8 +474,7 @@
     <span class="kw">let </span>file_content = fs::read(file_path)<span class="question-mark">?</span>;
     <span class="kw">let </span>minified_content = minify(<span class="kw-2">&amp;</span>file_content, <span class="kw-2">&amp;</span>cfg);
 
-    String::from_utf8(minified_content)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    String::from_utf8(minified_content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 <span class="doccomment">/// ## Function: `backup_file` - Backup a file.
@@ -517,7 +492,7 @@
 /// - Ok() if the backup file was created successfully.
 /// - Err() if the backup file could not be created.
 ///
-</span><span class="kw">fn </span>backup_file(file_path: <span class="kw-2">&amp;</span>Path) -&gt; io::Result&lt;PathBuf&gt; {
+</span><span class="kw">pub fn </span>backup_file(file_path: <span class="kw-2">&amp;</span>Path) -&gt; io::Result&lt;PathBuf&gt; {
     <span class="kw">let </span>backup_path = file_path.with_extension(<span class="string">&quot;src.html&quot;</span>);
     fs::copy(file_path, <span class="kw-2">&amp;</span>backup_path)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(backup_path)
@@ -540,10 +515,7 @@
 /// - Ok() if the minified HTML was written successfully.
 /// - Err() if the minified HTML could not be written.
 ///
-</span><span class="kw">fn </span>write_minified_html(
-    file_path: <span class="kw-2">&amp;</span>Path,
-    minified_html: <span class="kw-2">&amp;</span>str,
-) -&gt; io::Result&lt;()&gt; {
+</span><span class="kw">fn </span>write_minified_html(file_path: <span class="kw-2">&amp;</span>Path, minified_html: <span class="kw-2">&amp;</span>str) -&gt; io::Result&lt;()&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>file = File::create(file_path)<span class="question-mark">?</span>;
     file.write_all(minified_html.as_bytes())<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())

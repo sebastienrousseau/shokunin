@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["manifest"],"struct":["ManifestOptions"]};
+window.SIDEBAR_ITEMS = {"fn":["manifest"],"struct":["IconOptions","ManifestOptions"]};

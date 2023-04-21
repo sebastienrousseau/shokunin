@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["directory","minify_html_files","move_output_directory"]};
+window.SIDEBAR_ITEMS = {"fn":["backup_file","directory","minify_html","minify_html_files","move_output_directory"]};
