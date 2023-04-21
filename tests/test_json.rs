@@ -13,7 +13,7 @@ mod tests {
   "description": "",
   "dir": "",
   "display": "",
-  "icons": "",
+  "icons": [],
   "identity": "",
   "lang": "",
   "name": "",
@@ -42,27 +42,23 @@ mod tests {
         options.theme_color = "#ffffff".to_string();
 
         let mut expected_result = Map::new();
-        expected_result
-            .insert("background_color".to_string(), json!(""));
+        expected_result.insert("background_color".to_string(), json!(""));
         expected_result.insert("description".to_string(), json!(""));
         expected_result.insert("dir".to_string(), json!(""));
         expected_result.insert("display".to_string(), json!(""));
-        expected_result.insert("icons".to_string(), json!(""));
+        expected_result.insert("icons".to_string(), json!([]));
         expected_result.insert("identity".to_string(), json!(""));
         expected_result.insert("lang".to_string(), json!(""));
         expected_result.insert("name".to_string(), json!("My App"));
         expected_result.insert("orientation".to_string(), json!(""));
         expected_result.insert("scope".to_string(), json!(""));
-        expected_result
-            .insert("short_name".to_string(), json!("My App"));
+        expected_result.insert("short_name".to_string(), json!("My App"));
         expected_result.insert("start_url".to_string(), json!("/"));
-        expected_result
-            .insert("theme_color".to_string(), json!("#ffffff"));
+        expected_result.insert("theme_color".to_string(), json!("#ffffff"));
 
         let result = manifest(&options);
         assert_eq!(
-            serde_json::from_str::<Map<String, Value>>(&result)
-                .unwrap(),
+            serde_json::from_str::<Map<String, Value>>(&result).unwrap(),
             expected_result
         );
     }

@@ -110,7 +110,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Shokunin 職人 Static Site Generator 🦀
+          release_name: Shokunin (職人) Static Site Generator 🦀
           body_path: ${{ github.workspace }}/CHANGELOG.md
           draft: true
           prerelease: false

@@ -1,10 +1,10 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img src="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg" alt="shokunin logo" width="261" align="right" />
+<img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="Logo of the Shokunin (職人) Static Site Generator" width="240" height="240" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-![Shokunin 職人 banner][banner]
+![Shokunin (職人) banner][banner]
 
 <!-- markdownlint-disable MD033 -->
 <center>
@@ -15,11 +15,11 @@
 
 <!-- markdownlint-enable MD033 -->
 
-## Welcome to Shokunin 職人 👋
+## Welcome to Shokunin (職人) 👋
 
 ## Overview 📖
 
-`Shokunin 職人` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+`Shokunin (職人)` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
@@ -43,4 +43,4 @@ The library extracts metadata and content to generate static HTML files from Mar
 [4]: https://github.com/sebastienrousseau/shokunin/shokunin/blob/main/CONTRIBUTING.md
 [8]: https://docs.rs/shokunin
 
-[banner]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/title/title-shokunin.svg "Shokunin 職人 banner"
+[banner]: https://kura.pro/shokunin/images/titles/title-shokunin.svg "Banner of the Shokunin (職人) Static Site Generator"

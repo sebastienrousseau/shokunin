@@ -1,9 +1,9 @@
 // Copyright © 2023 Shokunin (職人). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//! # Shokunin 職人 🦀
+//! # Shokunin (職人) 🦀
 //!
-//! [![Shokunin](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/logo/logo-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
+//! [![Shokunin](https://kura.pro/shokunin/images/logos/shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
 //!
 //! A Fast and Flexible Static Site Generator written in Rust 🦀
 //!
@@ -14,7 +14,7 @@
 //!
 //! ## Overview 📖
 //!
-//! `Shokunin 職人` is a highly-optimized, Rust-based static site
+//! `Shokunin (職人)` is a highly-optimized, Rust-based static site
 //! generator (ssg) that aims to provide an easy-to-use and powerful
 //! tool for building professional static websites and blogs.
 //!
@@ -36,22 +36,22 @@
 //!
 //! ## Getting Started 🚀
 //!
-//! It takes just a few minutes to get up and running with `Shokunin 職人`.
+//! It takes just a few minutes to get up and running with `Shokunin (職人)`.
 //!
 //! ### Installation
 //!
-//! To install `Shokunin 職人`, you need to have the Rust toolchain installed on
+//! To install `Shokunin (職人)`, you need to have the Rust toolchain installed on
 //! your machine. You can install the Rust toolchain by following the
 //! instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
 //!
-//! Once you have the Rust toolchain installed, you can install `Shokunin 職人`
+//! Once you have the Rust toolchain installed, you can install `Shokunin (職人)`
 //! using the following command:
 //!
 //! ```shell
 //! cargo install ssg
 //! ```
 //!
-//! For simplicity, we have given `Shokunin 職人` a simple alias `ssg` which can
+//! For simplicity, we have given `Shokunin (職人)` a simple alias `ssg` which can
 //! stand for `Shokunin Site Generator` or `Static Site Generator`.
 //!
 //! You can then run the help command to see the available options:
@@ -63,7 +63,7 @@
 //! ## Examples and Usage 📚
 //!
 //! Check out the examples folder for helpful snippets of code that
-//! demonstrate how to use the `Shokunin 職人` library. You can also check
+//! demonstrate how to use the `Shokunin (職人)` library. You can also check
 //! out the [documentation](https://docs.rs/ssg) for more information
 //! on how to use the library.
 //!
@@ -78,12 +78,11 @@
 
 #![forbid(unsafe_code)]
 #![forbid(unreachable_pub)]
-#![forbid(clippy::all)]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![doc(
-    html_favicon_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg",
-    html_logo_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/shokunin/icon/ico-shokunin.svg",
+    html_favicon_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
+    html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]
@@ -152,8 +151,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
                 // If serve flag is set, start the server and return
                 let server_address = "127.0.0.1:8000";
                 let output_dir = matches.get_one::<String>("serve").unwrap();
-                let document_root = format!("public/{}", output_dir);
-                serve::start(server_address, &document_root)?;
+                serve::start(server_address, output_dir)?;
                 println!("\n✅ Server started at http://{}", server_address);
                 return Ok(());
             }
@@ -173,7 +171,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Print the welcome message if no arguments were passed
     if std::env::args().len() == 1 {
-        eprintln!("\n\nWelcome to Shokunin 職人 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n");
+        eprintln!("\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n");
     }
 
     // Set the source and output directories, site name, and template path

@@ -2,7 +2,7 @@
 *.profraw
 /.vscode/
 /output/
-/public/*/
+/public/
 /target/
 build
 Icon?

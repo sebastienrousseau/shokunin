@@ -3,61 +3,34 @@
     "background_color": "{{background_color}}",
     "description": "{{description}}",
     "display": "{{display}}",
+    "icons": [
+        {
+            "purpose": "any maskable",
+            "sizes": "196x196",
+            "src": "https://kura.pro/shokunin/images/icons/196x196.png",
+            "type": "image/png"
+        },
+        {
+            "sizes": "256x256",
+            "src": "https://kura.pro/shokunin/images/icons/256x256.png",
+            "type": "image/png"
+        },
+        {
+            "src": "https://kura.pro/shokunin/images/icons/384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "https://kura.pro/shokunin/images/icons/512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "id": "{{id}}",
     "lang": "{{lang}}",
     "name": "{{name}}",
     "scope": "{{scope}}",
     "start_url": ".",
     "short_name": "{{short_name}}",
-    "theme_color": "{{theme_color}}",
-    "icons": [
-        {
-            "sizes": "48x48",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/48x48.png",
-            "type": "image/png"
-        },
-        {
-            "sizes": "72x72",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/72x72.png",
-            "type": "image/png"
-        },
-        {
-            "sizes": "96x96",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/96x96.png",
-            "type": "image/png"
-        },
-        {
-            "sizes": "144x144",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/144x144.png",
-            "type": "image/png"
-        },
-        {
-            "sizes": "168x168",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/168x168.png",
-            "type": "image/png"
-        },
-        {
-            "purpose": "any",
-            "sizes": "196x196",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/196x196.png",
-            "type": "image/png"
-        },
-        {
-            "purpose": "any",
-            "sizes": "256x256",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/256x256.png",
-            "type": "image/png"
-        },
-        {
-            "purpose": "any",
-            "sizes": "384x384",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/384x384.png",
-            "type": "image/png"
-        },
-        {
-            "purpose": "any",
-            "sizes": "512x512",
-            "src": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/icons/512x512.png",
-            "type": "image/png"
-        }
-    ]
+    "theme_color": "{{theme_color}}"
 }

@@ -20,6 +20,9 @@ use std::{
 ///
 /// * `author`      - A string representing the author.
 /// * `banner`      - A string representing the banner image.
+/// * `banner_width` - A string representing the banner image width.
+/// * `banner_height` - A string representing the banner image height.
+/// * `banner_alt` - A string representing the banner image alt text.
 /// * `charset`     - A string representing the character set.
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
@@ -59,6 +62,14 @@ pub struct PageOptions<'a> {
     pub author: &'a str,
     /// A string representing the banner of the page.
     pub banner: &'a str,
+    /// A string representing the banner width of the page.
+    pub banner_width: &'a str,
+    /// A string representing the banner height of the page.
+    pub banner_height: &'a str,
+    /// A string representing the banner alt of the page.
+    pub banner_alt: &'a str,
+    /// A string representing the bing_site_verification of the page.
+    pub bing_site_verification: &'a str,
     /// A string representing the charset of the page.
     pub charset: &'a str,
     /// A string representing the content of the page.
@@ -83,10 +94,26 @@ pub struct PageOptions<'a> {
     pub lang: &'a str,
     /// A string representing the layout of the page.
     pub layout: &'a str,
+    /// A string representing the logo of the page.
+    pub logo: &'a str,
+    /// A string representing the logo width of the page.
+    pub logo_width: &'a str,
+    /// A string representing the logo height of the page.
+    pub logo_height: &'a str,
+    /// A string representing the logo alt of the page.
+    pub logo_alt: &'a str,
     /// A string representing the meta tags of the page.
     pub meta: &'a str,
-    /// A string representing the bing_site_verification of the page.
-    pub bing_site_verification: &'a str,
+    /// A string representing the msvalidate1 of the page.
+    pub msvalidate1: &'a str,
+    /// A string representing the msapplication config of the page.
+    pub msapplication_config: &'a str,
+    /// A string representing the msapplication tap highlight of the page.
+    pub msapplication_tap_highlight: &'a str,
+    /// A string representing the msapplication tile color of the page.
+    pub msapplication_tile_color: &'a str,
+    /// A string representing the msapplication tile image of the page.
+    pub msapplication_tile_image: &'a str,
     /// A string representing the navigation of the page.
     pub name: &'a str,
     /// A string representing the open graph description of the page.
@@ -107,8 +134,12 @@ pub struct PageOptions<'a> {
     pub og_type: &'a str,
     /// A string representing the site name of the page.
     pub og_url: &'a str,
+    /// A string representing the robots of the page.
+    pub robots: &'a str,
     /// A string representing the subtitle of the page.
     pub subtitle: &'a str,
+    /// A string representing the theme color of the page.
+    pub theme_color: &'a str,
     /// A string representing the title of the page.
     pub title: &'a str,
     /// A string representing the twitter card of the page.
@@ -150,10 +181,7 @@ pub struct PageOptions<'a> {
 /// `Result::Ok`. If an error occurs, an error message is returned as a
 /// `String` wrapped in a `Result::Err`.
 ///
-pub fn render_template(
-    template: &str,
-    context: &HashMap<&str, &str>,
-) -> Result<String, String> {
+pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<String, String> {
     let mut output = template.to_owned();
     for (key, value) in context {
         output = output.replace(&format!("{{{{{}}}}}", key), value);
@@ -184,6 +212,10 @@ pub fn render_template(
 ///
 /// * `author`              - A string representing the author.
 /// * `banner`              - A string representing the banner image.
+/// * `banner_width`        - A string representing the banner width.
+/// * `banner_height`       - A string representing the banner height.
+/// * `banner_alt`          - A string representing the banner alt text.
+/// * `bing_site_verification`       - A string representing the bing_site_verification.
 /// * `charset`             - A string representing the character set.
 /// * `content`             - A string representing the content.
 /// * `copyright`           - A string representing the copyright notice.
@@ -196,8 +228,16 @@ pub fn render_template(
 /// * `keywords`            - A string representing the keywords.
 /// * `lang`                - A string representing the language.
 /// * `layout`              - A string representing the layout.
+/// * `logo`                - A string representing the logo.
+/// * `logo_width`          - A string representing the logo width.
+/// * `logo_height`         - A string representing the logo height.
+/// * `logo_alt`            - A string representing the logo alt text.
 /// * `meta`                - A string representing the meta tags.
-/// * `bing_site_verification`       - A string representing the bing_site_verification.
+/// * `msvalidate1`         - A string representing the msvalidate1.
+/// * `msapplication_config` - A string representing the msapplication_config.
+/// * `msapplication_tap_highlight` - A string representing the msapplication_tap_highlight.
+/// * `msapplication_tile_color` - A string representing the msapplication_tile_color.
+/// * `msapplication_tile_image` - A string representing the msapplication_tile_image.
 /// * `name`                - A string representing the site name.
 /// * `navigation`          - A string representing the navigation.
 /// * `og_description`      - A string representing the OpenGraph description.
@@ -208,7 +248,9 @@ pub fn render_template(
 /// * `og_title`            - A string representing the OpenGraph title.
 /// * `og_type`             - A string representing the OpenGraph type.
 /// * `og_url`              - A string representing the OpenGraph URL.
+/// * `robots`              - A string representing the robots.
 /// * `subtitle`            - A string representing the subtitle.
+/// * `theme_color`         - A string representing the theme color.
 /// * `title`               - A string representing the title.
 /// * `twitter_card`        - A string representing the Twitter card type.
 /// * `twitter_creator`     - A string representing the Twitter creator.
@@ -234,6 +276,10 @@ pub fn render_page(
     let mut context = HashMap::new();
     context.insert("author", options.author);
     context.insert("banner", options.banner);
+    context.insert("banner_width", options.banner_width);
+    context.insert("banner_height", options.banner_height);
+    context.insert("banner_alt", options.banner_alt);
+    context.insert("bing_site_verification", options.bing_site_verification);
     context.insert("charset", options.charset);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
@@ -241,18 +287,23 @@ pub fn render_page(
     context.insert("date", options.date);
     context.insert("description", options.description);
     context.insert("generator", options.generator);
-    context.insert(
-        "google_site_verification",
-        options.google_site_verification,
-    );
+    context.insert("google_site_verification", options.google_site_verification);
     context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
+    context.insert("logo", options.logo);
+    context.insert("logo_width", options.logo_width);
+    context.insert("logo_height", options.logo_height);
+    context.insert("logo_alt", options.logo_alt);
     context.insert("meta", options.meta);
+    context.insert("msvalidate1", options.msvalidate1);
+    context.insert("msapplication_config", options.msapplication_config);
     context.insert(
-        "bing_site_verification",
-        options.bing_site_verification,
+        "msapplication_tap_highlight",
+        options.msapplication_tap_highlight,
     );
+    context.insert("msapplication_tile_color", options.msapplication_tile_color);
+    context.insert("msapplication_tile_image", options.msapplication_tile_image);
     context.insert("name", options.name);
     context.insert("navigation", options.navigation);
     context.insert("og_description", options.og_description);
@@ -263,7 +314,9 @@ pub fn render_page(
     context.insert("og_title", options.og_title);
     context.insert("og_type", options.og_type);
     context.insert("og_url", options.og_url);
+    context.insert("robots", options.robots);
     context.insert("subtitle", options.subtitle);
+    context.insert("theme_color", options.theme_color);
     context.insert("title", options.title);
     context.insert("twitter_card", options.twitter_card);
     context.insert("twitter_creator", options.twitter_creator);
@@ -275,82 +328,52 @@ pub fn render_page(
     context.insert("twitter_url", options.twitter_url);
     if layout == "index" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("index.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("index.html")).unwrap(),
             &context,
         )
     } else if layout == "post" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("post.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("post.html")).unwrap(),
             &context,
         )
     } else if layout == "page" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("page.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("page.html")).unwrap(),
             &context,
         )
     } else if layout == "tag" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("tag.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("tag.html")).unwrap(),
             &context,
         )
     } else if layout == "category" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("category.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("category.html")).unwrap(),
             &context,
         )
     } else if layout == "archive" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("archive.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("archive.html")).unwrap(),
             &context,
         )
     } else if layout == "rss" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("rss.xml"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("rss.xml")).unwrap(),
             &context,
         )
     } else if layout == "sitemap" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("sitemap.xml"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("sitemap.xml")).unwrap(),
             &context,
         )
     } else if layout == "atom" {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("atom.xml"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("atom.xml")).unwrap(),
             &context,
         )
     } else {
         render_template(
-            &fs::read_to_string(
-                Path::new(template_path).join("template.html"),
-            )
-            .unwrap(),
+            &fs::read_to_string(Path::new(template_path).join("template.html")).unwrap(),
             &context,
         )
     }
@@ -413,18 +436,14 @@ pub fn create_directory(path: &Path) -> io::Result<()> {
  * `TemplateError` if an error occurs.
  *
  */
-pub fn create_template_folder(
-    template_path: Option<&String>,
-) -> Result<String, TemplateError> {
+pub fn create_template_folder(template_path: Option<&String>) -> Result<String, TemplateError> {
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
 
     // Determine the template directory path based on the provided argument or use the default path
     let template_dir_path = match template_path {
         Some(path) => {
-            if path.starts_with("http://")
-                || path.starts_with("https://")
-            {
+            if path.starts_with("http://") || path.starts_with("https://") {
                 // If a URL is provided, download the template files to a temporary directory
                 let tempdir = tempfile::tempdir()?;
                 let template_dir_path = tempdir.into_path();
@@ -451,14 +470,10 @@ pub fn create_template_folder(
                 for file in files.iter() {
                     let file_url = format!("{}/{}", url, file);
                     let file_path = template_dir_path.join(file);
-                    let mut download =
-                        reqwest::blocking::get(&file_url)?;
+                    let mut download = reqwest::blocking::get(&file_url)?;
                     let mut file = File::create(&file_path)?;
                     download.copy_to(&mut file)?;
-                    println!(
-                        "Downloaded template file to: {:?}",
-                        file_path
-                    );
+                    println!("Downloaded template file to: {:?}", file_path);
                 }
 
                 template_dir_path
@@ -499,10 +514,7 @@ pub fn create_template_folder(
                 let mut download = reqwest::blocking::get(&file_url)?;
                 let mut file = File::create(&file_path)?;
                 download.copy_to(&mut file)?;
-                println!(
-                    "Downloaded default template file to: {:?}",
-                    file_path
-                );
+                println!("Downloaded default template file to: {:?}", file_path);
             }
 
             template_dir_path

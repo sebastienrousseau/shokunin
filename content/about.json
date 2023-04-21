@@ -6,7 +6,7 @@
     "layout": "page",
     "permalink": "/about/",
     "title": "About",
-    "image": "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg"
+    "image": "https://kura.pro/shokunin/images/logos/shokunin.svg"
   },
   "content": "Content of the about page"
 }
