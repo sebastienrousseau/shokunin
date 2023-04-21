@@ -5,10 +5,10 @@ description: A description of the contact page
 keywords: contact, page, description
 permalink: /contact/
 layout: page
-image: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/demo/images/logo.min.svg
+image: https://kura.pro/shokunin/images/logos/shokunin.svg
 ---
 
-![Contact Us](https://via.placeholder.com/1500x500.png/000000/FFFFFF?text=Contact+Us)
+![Contact Us](https://kura.pro/unsplash/images/banners/jj-ying-9Qwbfa_RM94-unsplash.jpg)
 
 Contact our customer experience team if you have any further questions
 

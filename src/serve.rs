@@ -39,7 +39,8 @@ use std::path::Path;
 ///
 pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
     let listener = TcpListener::bind(server_address)?;
-    println!("Server running at http://{}", server_address);
+    println!("❯ Server is now running at http://{}", server_address);
+    println!("  Done.\n");
 
     for stream in listener.incoming() {
         match stream {

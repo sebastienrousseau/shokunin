@@ -40,7 +40,7 @@ use clap::{Arg, ArgMatches, Command, Error};
 ///
 /// ```
 pub fn build() -> Result<ArgMatches, Error> {
-    let matches = Command::new("Shokunin 職人 🦀")
+    let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
         .version("0.0.10")
@@ -110,7 +110,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin 職人 🦀 (version 0.0.10)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.10)";
     let description = "A Fast and Flexible Static Site Generator written in Rust";
 
     // Set the width of the box to fit the title and description

@@ -46,20 +46,12 @@ use std::{
 pub fn directory(dir: &Path, name: &str) -> Result<(), String> {
     if dir.exists() {
         if !dir.is_dir() {
-            return Err(format!(
-                "❌ Error: {} is not a directory.",
-                name
-            ));
+            return Err(format!("❌ Error: {} is not a directory.", name));
         }
     } else {
         match fs::create_dir_all(dir) {
             Ok(_) => {}
-            Err(e) => {
-                return Err(format!(
-                    "❌ Error: Cannot create {} directory: {}",
-                    name, e
-                ))
-            }
+            Err(e) => return Err(format!("❌ Error: Cannot create {} directory: {}", name, e)),
         }
     }
 
@@ -183,9 +175,7 @@ fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
         if entry.path().is_dir() {
             let sub_html_files = find_html_files(&entry.path())?;
             html_files.extend(sub_html_files);
-        } else if let Some("html") =
-            entry.path().extension().and_then(|ext| ext.to_str())
-        {
+        } else if let Some("html") = entry.path().extension().and_then(|ext| ext.to_str()) {
             html_files.push(entry.path());
         }
     }
@@ -208,7 +198,7 @@ fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
 /// - Ok() if the HTML file was minified successfully.
 /// - Err() if the HTML file could not be minified.
 ///
-fn minify_html(file_path: &Path) -> io::Result<String> {
+pub fn minify_html(file_path: &Path) -> io::Result<String> {
     let mut cfg = Cfg::new();
     cfg.do_not_minify_doctype = true;
     cfg.ensure_spec_compliant_unquoted_attribute_values = true;
@@ -223,8 +213,7 @@ fn minify_html(file_path: &Path) -> io::Result<String> {
     let file_content = fs::read(file_path)?;
     let minified_content = minify(&file_content, &cfg);
 
-    String::from_utf8(minified_content)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    String::from_utf8(minified_content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 /// ## Function: `backup_file` - Backup a file.
@@ -242,7 +231,7 @@ fn minify_html(file_path: &Path) -> io::Result<String> {
 /// - Ok() if the backup file was created successfully.
 /// - Err() if the backup file could not be created.
 ///
-fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
+pub fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
     let backup_path = file_path.with_extension("src.html");
     fs::copy(file_path, &backup_path)?;
     Ok(backup_path)
@@ -265,10 +254,7 @@ fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
 /// - Ok() if the minified HTML was written successfully.
 /// - Err() if the minified HTML could not be written.
 ///
-fn write_minified_html(
-    file_path: &Path,
-    minified_html: &str,
-) -> io::Result<()> {
+fn write_minified_html(file_path: &Path, minified_html: &str) -> io::Result<()> {
     let mut file = File::create(file_path)?;
     file.write_all(minified_html.as_bytes())?;
     Ok(())

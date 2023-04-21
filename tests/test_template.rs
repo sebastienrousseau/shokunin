@@ -76,6 +76,13 @@ mod tests {
             twitter_site: "johndoe",
             twitter_title: "Test Page",
             twitter_url: "https://example.com",
+            banner_width: "100",
+            banner_height: "100",
+            banner_alt: "A simple test page",
+            logo: "./images/logo.png",
+            logo_width: "100",
+            logo_height: "100",
+            logo_alt: "A simple test page",
         };
         let template_path = String::from("./template");
         let layout = String::from("page");

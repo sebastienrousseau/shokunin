@@ -20,6 +20,9 @@ use std::{
 ///
 /// * `author`      - A string representing the author.
 /// * `banner`      - A string representing the banner image.
+/// * `banner_width` - A string representing the banner image width.
+/// * `banner_height` - A string representing the banner image height.
+/// * `banner_alt` - A string representing the banner image alt text.
 /// * `charset`     - A string representing the character set.
 /// * `content`     - A string representing the content.
 /// * `copyright`   - A string representing the copyright notice.
@@ -59,6 +62,12 @@ pub struct PageOptions<'a> {
     pub author: &'a str,
     /// A string representing the banner of the page.
     pub banner: &'a str,
+    /// A string representing the banner width of the page.
+    pub banner_width: &'a str,
+    /// A string representing the banner height of the page.
+    pub banner_height: &'a str,
+    /// A string representing the banner alt of the page.
+    pub banner_alt: &'a str,
     /// A string representing the bing_site_verification of the page.
     pub bing_site_verification: &'a str,
     /// A string representing the charset of the page.
@@ -85,6 +94,14 @@ pub struct PageOptions<'a> {
     pub lang: &'a str,
     /// A string representing the layout of the page.
     pub layout: &'a str,
+    /// A string representing the logo of the page.
+    pub logo: &'a str,
+    /// A string representing the logo width of the page.
+    pub logo_width: &'a str,
+    /// A string representing the logo height of the page.
+    pub logo_height: &'a str,
+    /// A string representing the logo alt of the page.
+    pub logo_alt: &'a str,
     /// A string representing the meta tags of the page.
     pub meta: &'a str,
     /// A string representing the msvalidate1 of the page.
@@ -195,6 +212,9 @@ pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<
 ///
 /// * `author`              - A string representing the author.
 /// * `banner`              - A string representing the banner image.
+/// * `banner_width`        - A string representing the banner width.
+/// * `banner_height`       - A string representing the banner height.
+/// * `banner_alt`          - A string representing the banner alt text.
 /// * `bing_site_verification`       - A string representing the bing_site_verification.
 /// * `charset`             - A string representing the character set.
 /// * `content`             - A string representing the content.
@@ -208,6 +228,10 @@ pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<
 /// * `keywords`            - A string representing the keywords.
 /// * `lang`                - A string representing the language.
 /// * `layout`              - A string representing the layout.
+/// * `logo`                - A string representing the logo.
+/// * `logo_width`          - A string representing the logo width.
+/// * `logo_height`         - A string representing the logo height.
+/// * `logo_alt`            - A string representing the logo alt text.
 /// * `meta`                - A string representing the meta tags.
 /// * `msvalidate1`         - A string representing the msvalidate1.
 /// * `msapplication_config` - A string representing the msapplication_config.
@@ -252,6 +276,9 @@ pub fn render_page(
     let mut context = HashMap::new();
     context.insert("author", options.author);
     context.insert("banner", options.banner);
+    context.insert("banner_width", options.banner_width);
+    context.insert("banner_height", options.banner_height);
+    context.insert("banner_alt", options.banner_alt);
     context.insert("bing_site_verification", options.bing_site_verification);
     context.insert("charset", options.charset);
     context.insert("content", options.content);
@@ -264,6 +291,10 @@ pub fn render_page(
     context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
+    context.insert("logo", options.logo);
+    context.insert("logo_width", options.logo_width);
+    context.insert("logo_height", options.logo_height);
+    context.insert("logo_alt", options.logo_alt);
     context.insert("meta", options.meta);
     context.insert("msvalidate1", options.msvalidate1);
     context.insert("msapplication_config", options.msapplication_config);
