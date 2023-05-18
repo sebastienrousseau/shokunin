@@ -38,7 +38,7 @@ last_build_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS pub date of the page.
 pub_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS generator of the page.
-generator: Shokunin (職人) 🦀 (version 0.0.11)
+generator: Shokunin (職人) 🦀 (version 0.0.12)
 ## rss - The RSS item title of the page.
 item_title: "RSS"
 ## rss - The RSS item link of the page.
