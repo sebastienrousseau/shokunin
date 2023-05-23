@@ -1,11 +1,13 @@
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
 use clap::{Arg, Command};
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+use criterion::{black_box, Criterion};
 use ssg::parser::args;
 
-#[cfg(test)]
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_parser(c: &mut Criterion) {
     // Test required arguments present
     let matches = Command::new("test")
         .arg(Arg::new("new"))
@@ -20,6 +22,3 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

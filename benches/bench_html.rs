@@ -1,10 +1,12 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
+use criterion::{black_box, Criterion};
 use ssg::html::generate_html;
 
-#[cfg(test)]
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_html(c: &mut Criterion) {
     let content = "---\n\
                    title: My Title\n\
                    description: My Description\n\
@@ -26,6 +28,3 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

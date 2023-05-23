@@ -1,9 +1,12 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+// Copyright © 2023 Shokunin (職人). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
+use criterion::{black_box, Criterion};
 use ssg::metatags::generate_metatags;
 
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_metatags(c: &mut Criterion) {
     let meta = vec![
         ("description".to_owned(), "My web page".to_owned()),
         ("author".to_owned(), "John Doe".to_owned()),
@@ -19,11 +22,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let result = generate_metatags(black_box(&meta));
             assert!(result.contains("<meta name=\"description\" content=\"My web page\">"));
             assert!(result.contains("<meta name=\"author\" content=\"John Doe\">"));
-            assert!(result.contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"));
+            assert!(result.contains(
+                "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+            ));
             assert!(result.contains("<meta name=\"robots\" content=\"noindex, nofollow\">"));
         })
     });
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
