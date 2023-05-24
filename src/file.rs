@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use quick_xml::escape::escape;
@@ -20,6 +20,8 @@ pub struct File {
     pub json: String,
     /// The content of the file, escaped for TXT.
     pub txt: String,
+    /// The content of the file, escaped for CNAME.
+    pub cname: String,
 }
 /// ## Function: add - returns a Result containing a vector of File structs
 ///
@@ -81,12 +83,18 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                 Cow::Owned(txt) => txt,
             };
 
+            let cname = match escape(&content) {
+                Cow::Borrowed(cname) => cname.to_string(),
+                Cow::Owned(cname) => cname,
+            };
+
             files.push(File {
                 name: file_name.to_string(),
                 content,
                 rss,
                 json,
                 txt,
+                cname,
             });
         }
     }

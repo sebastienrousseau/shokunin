@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::io::prelude::*;
@@ -74,7 +74,7 @@ pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
 /// * If the server fails to read data from a connection, it will
 /// return an error.
 ///
-pub fn handle_connection(mut stream: TcpStream, _document_root: &str) -> std::io::Result<()> {
+pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
 
@@ -104,7 +104,7 @@ pub fn handle_connection(mut stream: TcpStream, _document_root: &str) -> std::io
         _ => &path[1..], // Remove the leading "/"
     };
 
-    let document_root = "public/";
+    // let document_root = "public/";
     let file_path = Path::new(&document_root).join(requested_file);
 
     let (status_line, contents) = if file_path.exists() {

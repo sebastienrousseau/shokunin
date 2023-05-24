@@ -1,0 +1,15 @@
+{
+  "background_color": "#000",
+  "description": "We couldn’t find the page your looking for.",
+  "dir": "/",
+  "display": "fullscreen",
+  "icons": [],
+  "identity": "/",
+  "lang": "en-GB",
+  "name": "",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "/",
+  "start_url": "/",
+  "theme_color": "#fff"
+}

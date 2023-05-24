@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 /// ## Function: `generate_metatags` - Generates HTML meta tags
@@ -39,9 +39,11 @@
 /// ```
 pub fn generate_metatags(meta: &[(String, String)]) -> String {
     meta.iter()
-        .map(|(key, value)| {
-            format!("<meta name=\"{}\" content=\"{}\">", key, value)
-        })
+        .map(|(key, value)| format_meta_tag(key, value))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn format_meta_tag(key: &str, value: &str) -> String {
+    format!("<meta name=\"{}\" content=\"{}\">", key, value)
 }

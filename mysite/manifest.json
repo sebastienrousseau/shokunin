@@ -1,0 +1,22 @@
+{
+  "background_color": "#000",
+  "description": "A Fast and Flexible Static Site Generator written in Rust.",
+  "dir": "/",
+  "display": "fullscreen",
+  "icons": [
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "https://kura.pro/shokunin/images/icons/512x512.png",
+      "type": "image/png"
+    }
+  ],
+  "identity": "/",
+  "lang": "en-GB",
+  "name": "Shokunin (職人)",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "/",
+  "start_url": "/",
+  "theme_color": "#fff"
+}

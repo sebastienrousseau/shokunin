@@ -56,7 +56,6 @@
     />
     <link rel="manifest" href="manifest.json" />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
-    <link rel="alternate" type="application/atom+xml" href="/atom.xml" />
 
     <!-- # Start Open Graph / Facebook -->
     <meta name="og:description" content="{{og_description}}" />
@@ -128,7 +127,12 @@
     <meta name="twitter:url" content="{{twitter_url}}" />
     <!-- # End Twitter -->
   </head>
-  <body id="page-top" itemscope itemtype="http://schema.org/WebPage">
+  <body
+    id="page-top"
+    itemscope
+    itemtype="http://schema.org/WebPage"
+    class="bg-dark text-white text-center"
+  >
     <!-- Responsive navbar-->
     <nav
       class="navbar navbar-expand-lg navbar-dark bg-black bg-gradient fixed-top"
@@ -142,8 +146,7 @@
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
               src="{{image}}"
-              width="177"
-              height="54"
+              height="24"
               title="Logo of {{name}}"
             />
           </a>
@@ -162,10 +165,15 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-              <a class="nav-link" aria-current="page" href="/#page-top">Home</a>
+              <a
+                class="nav-link nav-link active"
+                aria-current="page"
+                href="/#page-top"
+                >Home</a
+              >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#features">Features</a>
+              <a class="nav-link" href="/#features">Features</a>
             </li>
             <li class="nav-item dropdown">
               <a
@@ -175,22 +183,20 @@
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
-                >Guides</a
+                >Documentation</a
               >
               <ul
                 class="dropdown-menu dropdown-menu-end"
                 aria-labelledby="navbarDropdown"
               >
                 <li>
-                  <a class="dropdown-item" href="https://docs.pain001.com/"
-                    >Documentation</a
+                  <a class="dropdown-item" href="/pain.001.001.03/"
+                    >pain001.001.03 - Customer Credit Transfer Initiation</a
                   >
                 </li>
                 <li>
-                  <a
-                    class="dropdown-item"
-                    href="https://github.com/sebastienrousseau/pain001"
-                    >GitHub</a
+                  <a class="dropdown-item" href="/pain.001.001.09/"
+                    >pain001.001.09 - Customer Credit Transfer Initiation</a
                   >
                 </li>
               </ul>
@@ -199,16 +205,43 @@
         </div>
       </div>
     </nav>
+
+    <header class="bg-dark text-white text-center" aria-label="header">
+      <div class="container px-5 py-5">
+        <img
+          src="{{banner}}"
+          alt="{{name}} banner"
+          title="{{name}}"
+          class="img-fluid"
+        />
+
+        <div class="d-sm-flex justify-content-sm-center d-grid gap-3">
+          <a
+            class="btn btn-success btn-lg px-4 me-sm-3"
+            alt="Features for {{name}}"
+            href="#features"
+            >Features</a
+          >
+          <a
+            class="btn btn-success btn-lg px-4 me-sm-3"
+            alt="Payment Messages"
+            href="#payment-messages"
+            >Payment Messages</a
+          >
+          <a
+            class="btn btn-warning btn-lg px-4 me-sm-3"
+            alt="Install from PyPI"
+            href="https://pypi.org/project/pain001/"
+            >Install from PyPI</a
+          >
+        </div>
+      </div>
+    </header>
     <!-- Main content-->
-    <main id="main" class="masthead px-5 py-5" aria-label="main">
-      <div class="text-left mt-5 justify-content-between">{{content}}</div>
-      <hr class="hr-text" data-content="{{title}}" />
+    <main id="main" class="bd-masthead fs-5 px-5 py-5" aria-label="main">
+      <div class="text-start mt-5 justify-content-between">{{content}}</div>
     </main>
-    <footer
-      id="footer"
-      class="py-1 bg-dark center text-center"
-      aria-label="footer"
-    >
+    <footer id="footer" class="bg-dark center text-center" aria-label="footer">
       <p class="m-0 text-center text-white">{{copyright}}</p>
     </footer>
 

@@ -1,15 +1,18 @@
-use crate::file::{add, File};
-use crate::frontmatter::extract;
-use crate::html::generate_html;
-use crate::json::ManifestOptions;
-use crate::json::{manifest, IconOptions};
-use crate::metatags::generate_metatags;
-use crate::navigation::generate_navigation;
-use crate::rss::generate_rss;
-use crate::rss::RssOptions;
-use crate::template::render_page;
-use crate::template::{create_template_folder, PageOptions};
-use crate::utilities::minify_html;
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+use crate::{
+    file::{add, File},
+    frontmatter::extract,
+    html::generate_html,
+    json::{cname, manifest, txt, CnameOptions, IconOptions, ManifestOptions},
+    macro_generate_metatags, macro_metadata_option,
+    metatags::generate_metatags,
+    navigation::generate_navigation,
+    rss::{generate_rss, RssOptions},
+    template::{create_template_folder, render_page, PageOptions},
+    utilities::minify_html,
+};
 use std::{error::Error, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from
@@ -53,36 +56,28 @@ pub fn compile(
     // The path to the output directory
     out_dir: &Path,
     // The path to the template directory
-    template_path: Option<&String>,
+    template_path: Option<&str>,
     // The name of the site
-    site_name: String,
+    site_name: &str,
 ) -> Result<(), Box<dyn Error>> {
     // Constants
+    // const PUBLIC_DIR: &str = "public";
+
     let src_dir = Path::new(src_dir);
     let out_dir = Path::new(out_dir);
-    let public_dir = Path::new("public");
+    let site_dir = Path::new(site_name);
 
     println!("\n❯ Generating a new site: \"{}\"", site_name);
     println!("  Done.\n");
+    println!("{}", src_dir.display());
+    println!("{}", out_dir.display());
+    println!("{}", site_dir.display());
 
     // Delete the output directory
-    println!(
-        "\n❯ Deleting any previous `{}` directory...",
-        out_dir.display()
-    );
-    // Remove the out_dir directory and all its contents
-    if out_dir.exists() {
-        fs::remove_dir_all(out_dir)?;
-    }
-
-    // Remove the public_dir directory and all its contents
-    if public_dir.exists() {
-        fs::remove_dir_all(public_dir)?;
-    }
-
+    cleanup_directory(out_dir)?;
+    cleanup_directory(site_dir)?;
     println!("  Done.\n");
 
-    // Creating the template directory
     println!(
         "\n❯ Creating a new `{}` directory...",
         template_path.unwrap()
@@ -92,13 +87,10 @@ pub fn compile(
     println!("  Done.\n");
 
     // Create the output directory
-    println!("❯ Creating a new `{}` directory...", out_dir.display());
-    fs::create_dir(<&Path>::clone(&out_dir))?;
-    println!("  Done.\n");
+    create_new_directory(out_dir)?;
 
-    // Create the public directory
-    println!("❯ Creating a new `{}` directory...", public_dir.display());
-    fs::create_dir(<&Path>::clone(&public_dir))?;
+    // Create the site directory
+    create_new_directory(site_dir)?;
     println!("  Done.\n");
 
     // Read the files in the source directory
@@ -118,87 +110,84 @@ pub fn compile(
         .map(|file| {
             // Extract metadata from front matter
             let metadata = extract(&file.content);
-            let meta = generate_metatags(&[(
-                "url".to_owned(),
-                metadata
-                    .get("permalink")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-            )]);
+            let meta =
+                macro_generate_metatags!("url", &macro_metadata_option!(metadata, "permalink"),);
 
             // Generate HTML
             let content = render_page(
                 &PageOptions {
-                    author: metadata.get("author").unwrap_or(&"".to_string()),
-                    banner: metadata.get("banner").unwrap_or(&"".to_string()),
-                    banner_width: metadata.get("banner_width").unwrap_or(&"".to_string()),
-                    banner_height: metadata.get("banner_height").unwrap_or(&"".to_string()),
-                    banner_alt: metadata.get("banner_alt").unwrap_or(&"".to_string()),
-                    bing_site_verification: metadata
-                        .get("bing_site_verification")
-                        .unwrap_or(&"".to_string()),
-                    charset: metadata.get("charset").unwrap_or(&"".to_string()),
+                    author: &macro_metadata_option!(metadata, "author"),
+                    banner: &macro_metadata_option!(metadata, "banner"),
+                    banner_width: &macro_metadata_option!(metadata, "banner_width"),
+                    banner_height: &macro_metadata_option!(metadata, "banner_height"),
+                    banner_alt: &macro_metadata_option!(metadata, "banner_alt"),
+                    bing_site_verification: &macro_metadata_option!(
+                        metadata,
+                        "bing_site_verification"
+                    ),
+                    charset: &macro_metadata_option!(metadata, "charset"),
                     content: &generate_html(
                         &file.content,
-                        metadata.get("title").unwrap_or(&"".to_string()),
-                        metadata.get("description").unwrap_or(&"".to_string()),
-                        Some(metadata.get("content").unwrap_or(&"".to_string())),
+                        &macro_metadata_option!(metadata, "title"),
+                        &macro_metadata_option!(metadata, "description"),
+                        Some(&macro_metadata_option!(metadata, "content")),
                     ),
-                    copyright: format!("Copyright © {} 2023. All rights reserved.", site_name)
-                        .as_str(),
-                    css: "style.css",
-                    date: metadata.get("date").unwrap_or(&"".to_string()),
-                    description: metadata.get("description").unwrap_or(&"".to_string()),
-                    generator: metadata.get("generator").unwrap_or(&"".to_string()),
-                    google_site_verification: metadata
-                        .get("google_site_verification")
-                        .unwrap_or(&"".to_string()),
-                    image: metadata.get("image").unwrap_or(&"".to_string()),
-                    keywords: metadata.get("keywords").unwrap_or(&"".to_string()),
-                    lang: metadata.get("language").unwrap_or(&"".to_string()),
-                    layout: metadata.get("layout").unwrap_or(&"".to_string()),
-                    logo: metadata.get("logo").unwrap_or(&"".to_string()),
-                    logo_width: metadata.get("logo_width").unwrap_or(&"".to_string()),
-                    logo_height: metadata.get("logo_height").unwrap_or(&"".to_string()),
-                    logo_alt: metadata.get("logo_alt").unwrap_or(&"".to_string()),
+                    copyright: &macro_metadata_option!(metadata, "copyright"),
+                    cname: &macro_metadata_option!(metadata, "cname"),
+                    css: &macro_metadata_option!(metadata, "css"),
+                    date: &macro_metadata_option!(metadata, "date"),
+                    description: &macro_metadata_option!(metadata, "description"),
+                    generator: &macro_metadata_option!(metadata, "generator"),
+                    google_site_verification: &macro_metadata_option!(
+                        metadata,
+                        "google_site_verification"
+                    ),
+                    image: &macro_metadata_option!(metadata, "image"),
+                    keywords: &macro_metadata_option!(metadata, "keywords"),
+                    lang: &macro_metadata_option!(metadata, "language"),
+                    layout: &macro_metadata_option!(metadata, "layout"),
+                    logo: &macro_metadata_option!(metadata, "logo"),
+                    logo_width: &macro_metadata_option!(metadata, "logo_width"),
+                    logo_height: &macro_metadata_option!(metadata, "logo_height"),
+                    logo_alt: &macro_metadata_option!(metadata, "logo_alt"),
                     meta: &meta,
-                    msvalidate1: metadata.get("msvalidate1").unwrap_or(&"".to_string()),
-                    msapplication_config: metadata
-                        .get("msapplication_config")
-                        .unwrap_or(&"".to_string()),
-                    msapplication_tap_highlight: metadata
-                        .get("msapplication_tap_highlight")
-                        .unwrap_or(&"".to_string()),
-                    msapplication_tile_color: metadata
-                        .get("msapplication_tile_color")
-                        .unwrap_or(&"".to_string()),
-                    msapplication_tile_image: metadata
-                        .get("msapplication_tile_image")
-                        .unwrap_or(&"".to_string()),
-                    name: metadata.get("name").unwrap_or(&"".to_string()),
+                    msvalidate1: &macro_metadata_option!(metadata, "msvalidate1"),
+                    msapplication_config: &macro_metadata_option!(metadata, "msapplication_config"),
+                    msapplication_tap_highlight: &macro_metadata_option!(
+                        metadata,
+                        "msapplication-tap-highlight"
+                    ),
+                    msapplication_tile_color: &macro_metadata_option!(
+                        metadata,
+                        "msapplication-tile-color"
+                    ),
+                    msapplication_tile_image: &macro_metadata_option!(
+                        metadata,
+                        "msapplication-tile-image"
+                    ),
+                    name: &macro_metadata_option!(metadata, "name"),
                     navigation: &navigation,
-                    og_description: metadata.get("og_description").unwrap_or(&"".to_string()),
-                    og_image_alt: metadata.get("og_image_alt").unwrap_or(&"".to_string()),
-                    og_image: metadata.get("og_image").unwrap_or(&"".to_string()),
-                    og_locale: metadata.get("og_locale").unwrap_or(&"".to_string()),
-                    og_site_name: metadata.get("og_site_name").unwrap_or(&"".to_string()),
-                    og_title: metadata.get("og_title").unwrap_or(&"".to_string()),
-                    og_type: metadata.get("og_type").unwrap_or(&"".to_string()),
-                    og_url: metadata.get("og_url").unwrap_or(&"".to_string()),
-                    robots: metadata.get("robots").unwrap_or(&"".to_string()),
-                    subtitle: metadata.get("subtitle").unwrap_or(&"".to_string()),
-                    theme_color: metadata.get("theme_color").unwrap_or(&"".to_string()),
-                    title: metadata.get("title").unwrap_or(&"".to_string()),
-                    twitter_card: metadata.get("twitter_card").unwrap_or(&"".to_string()),
-                    twitter_creator: metadata.get("twitter_creator").unwrap_or(&"".to_string()),
-                    twitter_description: metadata
-                        .get("twitter_description")
-                        .unwrap_or(&"".to_string()),
-                    twitter_image_alt: metadata.get("twitter_image_alt").unwrap_or(&"".to_string()),
-                    twitter_image: metadata.get("twitter_image").unwrap_or(&"".to_string()),
-                    twitter_site: metadata.get("twitter_site").unwrap_or(&"".to_string()),
-                    twitter_title: metadata.get("twitter_title").unwrap_or(&"".to_string()),
-                    twitter_url: metadata.get("twitter_url").unwrap_or(&"".to_string()),
+                    og_description: &macro_metadata_option!(metadata, "og_description"),
+                    og_image_alt: &macro_metadata_option!(metadata, "og_image_alt"),
+                    og_image: &macro_metadata_option!(metadata, "og_image"),
+                    og_locale: &macro_metadata_option!(metadata, "og_locale"),
+                    og_site_name: &macro_metadata_option!(metadata, "og_site_name"),
+                    og_title: &macro_metadata_option!(metadata, "og_title"),
+                    og_type: &macro_metadata_option!(metadata, "og_type"),
+                    og_url: &macro_metadata_option!(metadata, "og_url"),
+                    robots: &macro_metadata_option!(metadata, "robots"),
+                    subtitle: &macro_metadata_option!(metadata, "subtitle"),
+                    theme_color: &macro_metadata_option!(metadata, "theme_color"),
+                    title: &macro_metadata_option!(metadata, "title"),
+                    twitter_card: &macro_metadata_option!(metadata, "twitter_card"),
+                    twitter_creator: &macro_metadata_option!(metadata, "twitter_creator"),
+                    twitter_description: &macro_metadata_option!(metadata, "twitter_description"),
+                    twitter_image_alt: &macro_metadata_option!(metadata, "twitter_image_alt"),
+                    twitter_image: &macro_metadata_option!(metadata, "twitter_image"),
+                    twitter_site: &macro_metadata_option!(metadata, "twitter_site"),
+                    twitter_title: &macro_metadata_option!(metadata, "twitter_title"),
+                    twitter_url: &macro_metadata_option!(metadata, "twitter_url"),
+                    url: &macro_metadata_option!(metadata, "url"),
                 },
                 &template_path,
                 metadata.get("layout").unwrap_or(&"".to_string()),
@@ -207,53 +196,23 @@ pub fn compile(
 
             // Generate RSS
             let rss = generate_rss(&RssOptions {
-                title: metadata.get("title").unwrap_or(&"".to_string()).to_string(),
-                link: metadata.get("link").unwrap_or(&"".to_string()).to_string(),
-                description: metadata
-                    .get("description")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                atom_link: metadata
-                    .get("atom_link")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                last_build_date: metadata
-                    .get("last_build_date")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                pub_date: metadata
-                    .get("pub_date")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                generator: metadata
-                    .get("generator")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                item_title: metadata
-                    .get("item_title")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                item_link: metadata
-                    .get("item_link")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                item_guid: metadata
-                    .get("item_guid")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                item_description: metadata
-                    .get("item_description")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                item_pub_date: metadata
-                    .get("item_pub_date")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
+                title: (macro_metadata_option!(metadata, "title")),
+                link: (macro_metadata_option!(metadata, "link")),
+                description: (macro_metadata_option!(metadata, "description")),
+                atom_link: (macro_metadata_option!(metadata, "atom_link")),
+                last_build_date: (macro_metadata_option!(metadata, "last_build_date")),
+                pub_date: (macro_metadata_option!(metadata, "pub_date")),
+                generator: (macro_metadata_option!(metadata, "generator")),
+                item_title: (macro_metadata_option!(metadata, "item_title")),
+                item_link: (macro_metadata_option!(metadata, "item_link")),
+                item_guid: (macro_metadata_option!(metadata, "item_guid")),
+                item_description: (macro_metadata_option!(metadata, "item_description")),
+                item_pub_date: (macro_metadata_option!(metadata, "item_pub_date")),
             });
             let rss_data = rss.unwrap();
 
             // Generate JSON
-            let options = ManifestOptions {
+            let json = ManifestOptions {
                 background_color: "#000".to_string(),
                 description: metadata
                     .get("description")
@@ -282,13 +241,22 @@ pub fn compile(
                 start_url: "/".to_string(),
                 theme_color: "#fff".to_string(),
             };
-            let json_data = manifest(&options);
+
+            let cname_options: CnameOptions = CnameOptions {
+                cname: macro_metadata_option!(metadata, "cname"),
+            };
+
+            let json_data = manifest(&json);
+            let txt_data = txt();
+            let cname_data = cname(&cname_options);
 
             File {
                 name: file.name,
                 content,
                 rss: rss_data,
                 json: json_data,
+                txt: txt_data,
+                cname: cname_data,
             }
         })
         .collect();
@@ -308,7 +276,9 @@ pub fn compile(
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
             Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
             Some(ext) if ext == "json" => file.name.replace(".json", ""),
+            Some(ext) if ext == "js" => file.name.replace(".js", ""),
             Some(ext) if ext == ".xml" => file.name.replace(".xml", ""),
+            Some(ext) if ext == ".txt" => file.name.replace(".txt", ""),
             _ => file.name.to_string(),
         };
 
@@ -317,10 +287,14 @@ pub fn compile(
             let html_file = out_dir.join("index.html");
             let rss_file = out_dir.join("rss.xml");
             let json_file = out_dir.join("manifest.json");
+            let robots_file = out_dir.join("robots.txt");
+            let cname_file = out_dir.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
+            fs::write(&cname_file, &file.cname)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&json_file, &file.json)?;
+            fs::write(&robots_file, &file.txt)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -333,6 +307,8 @@ pub fn compile(
             println!("  - {}", html_file.display());
             println!("  - {}", rss_file.display());
             println!("  - {}", json_file.display());
+            println!("  - {}", robots_file.display());
+            println!("  - {}", cname_file.display());
         } else {
             let dir_name = out_dir.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
@@ -340,10 +316,14 @@ pub fn compile(
             let html_file = dir_name.join("index.html");
             let rss_file = dir_name.join("rss.xml");
             let json_file = dir_name.join("manifest.json");
+            let robots_file = dir_name.join("robots.txt");
+            // let cname_file = dir_name.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&json_file, &file.json)?;
+            fs::write(&robots_file, &file.txt)?;
+            // fs::write(&cname_file, &file.name)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -356,6 +336,8 @@ pub fn compile(
             println!("  - {}", html_file.display());
             println!("  - {}", rss_file.display());
             println!("  - {}", json_file.display());
+            println!("  - {}", robots_file.display());
+            // println!("  - {}", cname_file.display());
         }
     }
     println!("  Done.\n");
@@ -364,10 +346,30 @@ pub fn compile(
     println!(
         "❯ Moving the content of the `{}` directory to the `{}` directory...",
         out_dir.display(),
-        public_dir.display()
+        site_dir.display()
     );
-    fs::rename(out_dir, public_dir)?;
-    println!("  Done.\n");
+    fs::rename(out_dir, site_dir)?;
 
+    Ok(())
+}
+
+fn cleanup_directory(directory: &Path) -> Result<(), Box<dyn Error>> {
+    println!(
+        "\n❯ Deleting any previous `{}` directory...",
+        directory.display()
+    );
+
+    if directory.exists() {
+        fs::remove_dir_all(directory)?;
+    }
+
+    println!("  Done.\n");
+    Ok(())
+}
+
+fn create_new_directory(directory: &Path) -> Result<(), Box<dyn Error>> {
+    println!("❯ Creating a new `{}` directory...", directory.display());
+    fs::create_dir(<&Path>::clone(&directory))?;
+    println!("  Done.\n");
     Ok(())
 }

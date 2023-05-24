@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use serde_json::{Map, Value as JsonValue};
@@ -26,40 +26,23 @@ use yaml_rust::YamlLoader;
 pub fn extract(content: &str) -> HashMap<String, String> {
     let mut front_matter = HashMap::new();
 
-    if let Some(front_matter_str) =
-        extract_front_matter_str(content, "---\n", "\n---\n")
-    {
+    if let Some(front_matter_str) = extract_front_matter_str(content, "---\n", "\n---\n") {
         if let Ok(doc) = parse_yaml_document(front_matter_str) {
-            front_matter
-                .extend(parse_yaml_hash(doc.as_hash().unwrap()));
+            front_matter.extend(parse_yaml_hash(doc.as_hash().unwrap()));
         }
-    } else if let Some(front_matter_str) =
-        extract_front_matter_str(content, "+++\n", "\n+++\n")
-    {
+    } else if let Some(front_matter_str) = extract_front_matter_str(content, "+++\n", "\n+++\n") {
         if let Ok(toml_value) = front_matter_str.parse::<TomlValue>() {
-            front_matter.extend(parse_toml_table(
-                toml_value.as_table().unwrap(),
-            ));
+            front_matter.extend(parse_toml_table(toml_value.as_table().unwrap()));
         }
-    } else if let Some(front_matter_str) =
-        extract_json_object_str(content)
-    {
-        if let Ok(json_value) =
-            serde_json::from_str::<serde_json::Value>(front_matter_str)
-        {
-            if let Some(obj) = json_value
-                .get("frontmatter")
-                .and_then(|v| v.as_object())
-            {
+    } else if let Some(front_matter_str) = extract_json_object_str(content) {
+        if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(front_matter_str) {
+            if let Some(obj) = json_value.get("frontmatter").and_then(|v| v.as_object()) {
                 front_matter.extend(parse_json_object(obj));
             } else {
                 eprintln!("Error: Could not find frontmatter in JSON");
             }
-            if let Some(content) =
-                json_value.get("content").and_then(|v| v.as_str())
-            {
-                front_matter
-                    .insert("content".to_string(), content.to_string());
+            if let Some(content) = json_value.get("content").and_then(|v| v.as_str()) {
+                front_matter.insert("content".to_string(), content.to_string());
             }
         } else {
             eprintln!("Error parsing JSON");
@@ -116,8 +99,7 @@ pub fn extract_front_matter_str<'a>(
 pub fn parse_yaml_document(
     front_matter_str: &str,
 ) -> Result<yaml_rust::Yaml, yaml_rust::ScanError> {
-    YamlLoader::load_from_str(front_matter_str)
-        .map(|docs| docs.into_iter().next().unwrap())
+    YamlLoader::load_from_str(front_matter_str).map(|docs| docs.into_iter().next().unwrap())
 }
 
 /// ## Function: `parse_yaml_hash` - Parses a YAML hash into a `HashMap` of key-value pairs
@@ -134,15 +116,12 @@ pub fn parse_yaml_document(
 /// A `HashMap` of key-value pairs representing the YAML hash.
 /// If the YAML hash is not valid, an error is returned.
 ///
-pub fn parse_yaml_hash(
-    yaml_hash: &yaml_rust::yaml::Hash,
-) -> HashMap<String, String> {
+pub fn parse_yaml_hash(yaml_hash: &yaml_rust::yaml::Hash) -> HashMap<String, String> {
     let mut entries: Vec<_> = yaml_hash
         .iter()
         .filter_map(|(k, v)| {
-            v.as_str().map(|value| {
-                (k.as_str().unwrap().to_string(), value.to_string())
-            })
+            v.as_str()
+                .map(|value| (k.as_str().unwrap().to_string(), value.to_string()))
         })
         .collect();
     entries.sort_by(|a, b| a.0.cmp(&b.0));
@@ -163,14 +142,10 @@ pub fn parse_yaml_hash(
 /// A `HashMap` of key-value pairs representing the TOML table.
 /// If the TOML table is not valid, an error is returned.
 ///
-pub fn parse_toml_table(
-    toml_table: &toml::value::Table,
-) -> HashMap<String, String> {
+pub fn parse_toml_table(toml_table: &toml::value::Table) -> HashMap<String, String> {
     toml_table
         .iter()
-        .filter_map(|(k, v)| {
-            v.as_str().map(|s| (k.to_string(), s.to_string()))
-        })
+        .filter_map(|(k, v)| v.as_str().map(|s| (k.to_string(), s.to_string())))
         .collect()
 }
 /// ## Function: `extract_json_object_str` - Extracts a JSON object from a string of content
@@ -209,9 +184,7 @@ pub fn extract_json_object_str(content: &str) -> Option<&str> {
 /// If the JSON object is not valid, an error is returned. If the JSON
 /// object is not a string, an empty string is returned.
 ///
-pub fn parse_json_object(
-    json_object: &Map<String, JsonValue>,
-) -> HashMap<String, String> {
+pub fn parse_json_object(json_object: &Map<String, JsonValue>) -> HashMap<String, String> {
     let mut result = json_object
         .iter()
         .map(|(k, v)| {
@@ -227,10 +200,12 @@ pub fn parse_json_object(
                         },
                     },
                     JsonValue::Bool(b) => b.to_string(),
-                    JsonValue::Object(o) => serde_json::to_string(o)
-                        .unwrap_or_else(|_| "".to_string()),
-                    JsonValue::Array(a) => serde_json::to_string(a)
-                        .unwrap_or_else(|_| "".to_string()),
+                    JsonValue::Object(o) => {
+                        serde_json::to_string(o).unwrap_or_else(|_| "".to_string())
+                    }
+                    JsonValue::Array(a) => {
+                        serde_json::to_string(a).unwrap_or_else(|_| "".to_string())
+                    }
                     _ => "".to_string(),
                 },
             )

@@ -1,27 +1,22 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//! # Shokunin (職人) 🦀
+//! # Shokunin (職人) Static Site Generator
 //!
-//! [![Shokunin](https://kura.pro/shokunin/images/logos/shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
+//! [![Shokunin (職人) Static Site Generator Logo](https://kura.pro/shokunin/images/logos/shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
 //!
 //! A Fast and Flexible Static Site Generator written in Rust 🦀
 //!
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.10-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.12-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //!
 //! ## Overview 📖
 //!
-//! `Shokunin (職人)` is a highly-optimized, Rust-based static site
-//! generator (ssg) that aims to provide an easy-to-use and powerful
-//! tool for building professional static websites and blogs.
+//! `Shokunin (職人) Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 //!
-//! The library extracts metadata and content to generate static HTML
-//! files from Markdown, YAML, JSON, and TOML. It also supports HTML
-//! themes and custom templates to help you create high quality
-//! websites with ease.
+//! The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 //!
 //! ## Features ✨
 //!
@@ -36,23 +31,19 @@
 //!
 //! ## Getting Started 🚀
 //!
-//! It takes just a few minutes to get up and running with `Shokunin (職人)`.
+//! It takes just a few minutes to get up and running with `Shokunin (職人) Static Site Generator`.
 //!
 //! ### Installation
 //!
-//! To install `Shokunin (職人)`, you need to have the Rust toolchain installed on
-//! your machine. You can install the Rust toolchain by following the
-//! instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
+//! To install `Shokunin (職人) Static Site Generator`, you need to have the Rust toolchain installed on your machine. You can install the Rust toolchain by following the instructions on the [Rust website](https://www.rust-lang.org/learn/get-started).
 //!
-//! Once you have the Rust toolchain installed, you can install `Shokunin (職人)`
-//! using the following command:
+//! Once you have the Rust toolchain installed, you can install `Shokunin (職人) Static Site Generator` using the following command:
 //!
 //! ```shell
 //! cargo install ssg
 //! ```
 //!
-//! For simplicity, we have given `Shokunin (職人)` a simple alias `ssg` which can
-//! stand for `Shokunin Site Generator` or `Static Site Generator`.
+//! For simplicity, we have given `Shokunin (職人) Static Site Generator` a simple alias `ssg` which can stand for `Shokunin Site Generator` or `Static Site Generator`.
 //!
 //! You can then run the help command to see the available options:
 //!
@@ -62,15 +53,11 @@
 //!
 //! ## Examples and Usage 📚
 //!
-//! Check out the examples folder for helpful snippets of code that
-//! demonstrate how to use the `Shokunin (職人)` library. You can also check
-//! out the [documentation](https://docs.rs/ssg) for more information
-//! on how to use the library.
+//! Check out the examples folder for helpful snippets of code that demonstrate how to use the `Shokunin (職人) Static Site Generator` library. You can also check out the [documentation](https://docs.rs/ssg) for more information on how to use the library.
 //!
 //! ## License 📜
 //!
-//! The project is licensed under the terms of both the MIT license and
-//! the Apache License (Version 2.0).
+//! The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).
 //!
 //! - [Apache License, Version 2.0](https://opensource.org/license/apache-2-0/ "Apache License, Version 2.0")
 //! - [MIT license](http://opensource.org/licenses/MIT "MIT license")
@@ -81,7 +68,7 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![doc(
-    html_favicon_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
+    html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
@@ -104,6 +91,8 @@ pub mod frontmatter;
 pub mod html;
 /// The `json` module generates the JSON content.
 pub mod json;
+/// The `macros` module contains functions for generating macros.
+pub mod macros;
 /// The `metatags` module generates the meta tags.
 pub mod metatags;
 /// The `navigation` module generates the navigation menu.
@@ -139,49 +128,33 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
-    // Print the CLI banner
+    // Print the CLI banner and welcome message
     print_banner();
 
-    // Build the CLI
-    let result = match cli::build() {
-        // If CLI is built successfully, parse the arguments and check if the serve flag is set
-        Ok(matches) => {
-            parser::args(&matches)?;
-            if matches.get_one::<String>("serve").is_some() {
-                // If serve flag is set, start the server and return
-                let server_address = "127.0.0.1:8000";
-                let output_dir = matches.get_one::<String>("serve").unwrap();
-                serve::start(server_address, output_dir)?;
-                println!("\n✅ Server started at http://{}", server_address);
-                return Ok(());
-            }
-            Ok(())
-        }
-        // If CLI build fails, print the error message
-        Err(e) => Err(format!("❌ Error: {}", e)),
-    };
+    // Build the CLI and parse the arguments
+    let matches = cli::build()?;
+    parser::args(&matches)?;
 
-    // Check the result of CLI build
-    match result {
-        // If successful, print success message
-        Ok(_) => println!("\n✅ All Done"),
-        // If failed, print error message
-        Err(e) => println!("{}", e),
-    }
-
-    // Print the welcome message if no arguments were passed
-    if std::env::args().len() == 1 {
-        eprintln!("\n\nWelcome to Shokunin (職人) 🦀\n\nLet's get started! Please, run `ssg --help` for more information.\n");
+    if let Some(site_name) = matches.get_one::<String>("new") {
+        // Start the server using the specified server address and site name.
+        // If an error occurs, propagate it up the call stack.
+        serve::start("127.0.0.1:8000", site_name)?;
     }
 
     // Set the source and output directories, site name, and template path
     let src_dir = Path::new("src");
     let out_dir = Path::new("public");
-    let site_name = String::from("My Site");
+    let site_name = Path::new("site");
     let binding = String::from("templates");
     let template_path = Some(&binding);
 
     // Call the compile function with the above parameters
-    compile(src_dir, out_dir, template_path, site_name)?;
+    compile(
+        src_dir,
+        out_dir,
+        template_path.map(|x| x.as_str()),
+        site_name.to_str().unwrap(),
+    )?;
+
     Ok(())
 }

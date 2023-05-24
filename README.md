@@ -29,7 +29,7 @@ A Fast and Flexible Static Site Generator written in Rust 🦀
 
 ## Overview 📖
 
-`Shokunin (職人)` is a highly-optimized, Rust-based static site generator
+`Shokunin (職人) Static Site Generator` is a highly-optimized, Rust-based static site generator
 (ssg) that aims to provide an easy-to-use and powerful tool for building
 professional static websites and blogs.
 
@@ -50,22 +50,22 @@ custom templates to help you create high quality websites with ease.
 
 ## Getting Started 🚀
 
-It takes just a few minutes to get up and running with `Shokunin (職人)`.
+It takes just a few minutes to get up and running with `Shokunin (職人) Static Site Generator`.
 
 ### Installation
 
-To install `Shokunin (職人)`, you need to have the Rust toolchain
+To install `Shokunin (職人) Static Site Generator`, you need to have the Rust toolchain
 installed on your machine. You can install the Rust toolchain by
 following the instructions on the [Rust website][13].
 
 Once you have the Rust toolchain installed, you can install
-`Shokunin (職人)` using the following command:
+`Shokunin (職人) Static Site Generator` using the following command:
 
 ```shell
 cargo install ssg
 ```
 
-For simplicity, we have given `Shokunin (職人)` a simple alias `ssg`
+For simplicity, we have given `Shokunin (職人) Static Site Generator` a simple alias `ssg`
 which can stand for `Shokunin (職人) Site Generator` or
 `Static Site Generator`.
 
@@ -84,7 +84,7 @@ latest stable version of Rust.
 
 ### Platform support
 
-`Shokunin (職人)` is supported and tested on the following platforms:
+`Shokunin (職人) Static Site Generator` is supported and tested on the following platforms:
 
 ### Tier 1 platforms 🏆
 
@@ -115,7 +115,7 @@ latest stable version of Rust.
 | ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
 The [GitHub Actions][10] shows the platforms in which the
-`Shokunin (職人)` library tests are run.
+`Shokunin (職人) Static Site Generator` library tests are run.
 
 ### Documentation
 
@@ -127,11 +127,11 @@ You can find our documentation on [docs.rs][8], [lib.rs][9] and
 
 ### Command Line Interface (CLI)
 
-The `Shokunin (職人)` library runs in a Terminal window and can be used
+The `Shokunin (職人) Static Site Generator` library runs in a Terminal window and can be used
 to generate a static website.
 
 Here’s the first command you can enter in your Terminal window to run
-`Shokunin (職人)`:
+`Shokunin (職人) Static Site Generator`:
 
 ```shell
 ssg  --new=mysite --content=content --output=output --template=template
@@ -150,7 +150,7 @@ ssg  --new=mysite --content=content --output=output --template=template --serve=
 
 ### In your project
 
-To use the `Shokunin (職人)` library in your project, add the following
+To use the `Shokunin (職人) Static Site Generator` library in your project, add the following
 to your `Cargo.toml` file:
 
 ```toml
@@ -165,12 +165,12 @@ extern crate ssg;
 use ssg::*;
 ```
 
-then you can use the `Shokunin (職人)` functions in your application
+then you can use the `Shokunin (職人) Static Site Generator` functions in your application
 code.
 
 ### Examples
 
-To get started with `Shokunin (職人)`, you can use the examples
+To get started with `Shokunin (職人) Static Site Generator`, you can use the examples
 provided in the `examples` directory of the project.
 
 To run the examples, clone the repository and run the following
@@ -183,7 +183,7 @@ cargo run --example example
 ## Semantic Versioning Policy 🚥
 
 For transparency into our release cycle and in striving to maintain
-backward compatibility, `Shokunin (職人)` follows
+backward compatibility, `Shokunin (職人) Static Site Generator` follows
 [semantic versioning][6].
 
 ## License 📝

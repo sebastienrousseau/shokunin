@@ -22,6 +22,8 @@ mod tests {
                 content: "This is file1.\n".to_string(),
                 rss: "This is file1.\n".to_string(),
                 json: "\"This is file1.\\n\"".to_string(),
+                txt: "This is file1.\n".to_string(),
+                cname: "This is file1.\n".to_string(),
             }]
         );
     }

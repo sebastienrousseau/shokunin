@@ -28,6 +28,8 @@ image: https://kura.pro/kaishi/images/banners/banner-kaishi.svg
 banner: https://kura.pro/kaishi/images/logos/kaishi.svg
 ## theme_color - The theme color of the site.
 theme_color: "#7ce846"
+## url - The url of the site.
+url: https://kaishi.pro
 
 # RSS - The RSS feed front matter (YAML).
 
