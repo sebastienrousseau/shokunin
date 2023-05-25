@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use minify_html::{minify, Cfg};
+pub(crate) use std::error::Error;
 use std::{
     fs::{self, File},
     io::{self, Write},
     path::{Path, PathBuf},
 };
-
 /// ## Function: `directory` - Ensure a directory exists, creating it if necessary.
 ///
 /// This function takes a reference to a Path object for a directory and
@@ -257,5 +257,50 @@ pub fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
 fn write_minified_html(file_path: &Path, minified_html: &str) -> io::Result<()> {
     let mut file = File::create(file_path)?;
     file.write_all(minified_html.as_bytes())?;
+    Ok(())
+}
+
+/// Cleanups the directory at the given path.
+///
+/// If the directory does not exist, this function does nothing.
+///
+/// # Errors
+///
+/// This function will return an error if the directory cannot be deleted.
+pub fn cleanup_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
+    for directory in directories {
+        if !directory.exists() {
+            continue;
+        }
+
+        println!("❯ Cleaning up `{}` directory...", directory.display());
+
+        fs::remove_dir_all(directory)?;
+
+        println!("  Done.\n");
+    }
+
+    Ok(())
+}
+/// Creates a new directory at the given path.
+///
+/// If the directory already exists, this function does nothing.
+///
+/// # Errors
+///
+/// This function will return an error if the directory cannot be created.
+pub fn create_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
+    for directory in directories {
+        if directory.exists() {
+            continue;
+        }
+
+        println!("❯ Creating `{}` directory...", directory.display());
+
+        fs::create_dir(directory)?;
+
+        println!("  Done.\n");
+    }
+
     Ok(())
 }

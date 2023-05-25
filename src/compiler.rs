@@ -6,7 +6,8 @@ use crate::{
     frontmatter::extract,
     html::generate_html,
     json::{cname, manifest, txt, CnameOptions, IconOptions, ManifestOptions},
-    macro_generate_metatags, macro_metadata_option,
+    macro_cleanup_directories, macro_create_directories, macro_generate_metatags,
+    macro_metadata_option,
     metatags::generate_metatags,
     navigation::generate_navigation,
     rss::{generate_rss, RssOptions},
@@ -55,26 +56,16 @@ pub fn compile(
     template_path: &Path, // The path to the template directory
 ) -> Result<(), Box<dyn Error>> {
     // Declare the paths variables
-    let build_path = Path::new(build_path);
-    let content_path = Path::new(content_path);
-    let site_path = Path::new(site_path);
-    let template_path = Path::new(template_path);
+    let build_path = build_path;
+    let content_path = content_path;
+    let site_path = site_path;
+    let template_path = template_path;
 
-    // Delete the temp and site directories if they exist
-    cleanup_directory(build_path)?;
-    cleanup_directory(site_path)?;
-
-    // Re-creating the directories from scratch
-    print!("{}\n", build_path.display());
-    print!("{}\n", site_path.display());
-    create_new_directory(build_path)?;
-    create_new_directory(site_path)?;
-    // create_new_directory(template_path)?;
+    // Creating the build and site directories
+    macro_create_directories!(build_path, site_path);
 
     // Read the files in the source directory
     let files = add(content_path)?;
-    println!("  Found {} files to generate.", files.len());
-    println!("  Done.\n");
 
     // Generate the HTML code for the navigation menu
     let navigation = generate_navigation(&files);
@@ -238,8 +229,6 @@ pub fn compile(
     // Generate the HTML code for the navigation menu
     generate_navigation(&files_compiled);
 
-    println!("  Done.\n");
-
     // Write the compiled files to the output directory
     println!(
         "❯ Writing the generated, compiled and minified files to the `{}` directory...",
@@ -314,36 +303,13 @@ pub fn compile(
             // println!("  - {}", cname_file.display());
         }
     }
-    println!("  Done.\n");
 
-    // Move the site directory to the public directory
-    println!(
-        "❯ Moving the content of the `{}` directory to the `{}` directory...",
-        build_path.display(),
-        site_path.display()
-    );
+    // Remove the site directory if it exists
+    macro_cleanup_directories!(site_path);
+
+    // Move the content of the build directory to the site directory and
+    // remove the build directory
     fs::rename(build_path, site_path)?;
 
-    Ok(())
-}
-
-fn cleanup_directory(directory: &Path) -> Result<(), Box<dyn Error>> {
-    println!(
-        "\n❯ Deleting any previous `{}` directory...",
-        directory.display()
-    );
-
-    if directory.exists() {
-        fs::remove_dir_all(directory)?;
-    }
-
-    println!("  Done.\n");
-    Ok(())
-}
-
-fn create_new_directory(directory: &Path) -> Result<(), Box<dyn Error>> {
-    println!("❯ Creating a new `{}` directory...", directory.display());
-    fs::create_dir(<&Path>::clone(&directory))?;
-    println!("  Done.\n");
     Ok(())
 }

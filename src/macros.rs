@@ -44,3 +44,55 @@ macro_rules! macro_check_directory {
         }
     };
 }
+
+#[macro_export]
+/// ## Macro: `macro_create_directories` - Create a list of directories or
+/// return an error message if it does not succeed.
+macro_rules! macro_create_directories {
+    ( $($dir:expr),* ) => {
+        {
+            use $crate::utilities::create_directory;
+            let directories = &[ $($dir),* ];
+            create_directory(directories)?;
+        }
+    };
+}
+
+#[macro_export]
+/// ## Macro: `macro_cleanup_directories` - Delete a list of directories or
+/// return an error message if it does not succeed.
+macro_rules! macro_cleanup_directories {
+    ( $($dir:expr),* ) => {
+        {
+            use $crate::utilities::cleanup_directory;
+            let directories = &[ $($dir),* ];
+            cleanup_directory(directories)?;
+        }
+    };
+}
+
+#[macro_export]
+/// ## Macro: `macro_render_layout` - Render a layout template
+macro_rules! macro_render_layout {
+    ($layout:expr, $template_path:expr, $context:expr) => {{
+        let layout_str: &str = &$layout;
+
+        let template_file = match layout_str {
+            "archive" => "archive.html",
+            "category" => "category.html",
+            "homepage" => "homepage.html",
+            "index" => "index.html",
+            "page" => "page.html",
+            "post" => "post.html",
+            "rss" => "rss.xml",
+            "section" => "section.html",
+            "sitemap" => "sitemap.xml",
+            "tag" => "tag.html",
+            _ => "template.html",
+        };
+
+        let template_content =
+            fs::read_to_string(Path::new($template_path).join(template_file)).unwrap();
+        render_template(&template_content, &$context)
+    }};
+}

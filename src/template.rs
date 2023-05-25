@@ -1,11 +1,11 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::macro_render_layout;
 use reqwest;
 use std::{
     collections::HashMap,
     fs::{self, File},
-    io,
     path::Path,
 };
 
@@ -334,52 +334,9 @@ pub fn render_page(
     context.insert("twitter_title", options.twitter_title);
     context.insert("twitter_url", options.twitter_url);
     context.insert("url", options.url);
-    if layout == "index" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("index.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "post" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("post.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "page" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("page.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "tag" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("tag.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "category" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("category.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "archive" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("archive.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "rss" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("rss.xml")).unwrap(),
-            &context,
-        )
-    } else if layout == "sitemap" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("sitemap.xml")).unwrap(),
-            &context,
-        )
-    } else {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("template.html")).unwrap(),
-            &context,
-        )
-    }
+
+    // Renders the page using the specified template and layout
+    macro_render_layout!(layout, template_path, context)
 }
 
 /// Custom error type to handle both reqwest and io errors
@@ -401,20 +358,6 @@ impl From<std::io::Error> for TemplateError {
     fn from(err: std::io::Error) -> TemplateError {
         TemplateError::Io(err)
     }
-}
-
-/// Creates a directory if it does not exist. If the directory already
-/// exists, the function will return `Ok(())`.
-///
-/// # Arguments
-///
-/// - `path` - The path to the directory.
-///
-pub fn create_directory(path: &Path) -> io::Result<()> {
-    fs::create_dir(path).or_else(|e| match e.kind() {
-        io::ErrorKind::AlreadyExists => Ok(()),
-        _ => Err(e),
-    })
 }
 
 /**
