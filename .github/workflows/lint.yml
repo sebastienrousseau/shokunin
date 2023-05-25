@@ -1,13 +1,23 @@
 name: 🧪 Lint
-on: [push, pull_request]
+
+on:
+  push:
+    branches:
+      - feat/ssg
+  pull_request:
+    branches:
+      - feat/ssg
+  release:
+    types: [created]
+
 jobs:
   all:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-    - uses: hecrj/setup-rust-action@v1
-      with:
-        components: clippy
-    - uses: actions/checkout@master
-    - name: Check lints
-      run: cargo clippy --workspace --all-features --all-targets --no-deps -- -D warnings
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          components: clippy
+      - uses: actions/checkout@master
+      - name: Check lints
+        run: cargo clippy --workspace --all-features --all-targets --no-deps -- -D warnings
