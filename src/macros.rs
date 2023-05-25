@@ -21,3 +21,26 @@ macro_rules! macro_generate_metatags {
         generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
     };
 }
+
+#[macro_export]
+/// ## Macro: `macro_get_args` - Retrieve a command-line argument or return an
+/// error message
+macro_rules! macro_get_args {
+    ($matches:ident, $name:expr) => {
+        $matches.get_one::<String>($name).ok_or(format!(
+            "❌ Error: A required parameter was omitted. Add the required parameter. \"{}\".",
+            $name
+        ))?
+    };
+}
+
+#[macro_export]
+/// ## Macro: `macro_check_directory` - Check if a directory exists or return
+/// an error message if it does not
+macro_rules! macro_check_directory {
+    ($path:expr, $arg:expr) => {
+        if let Err(e) = directory($path, $arg) {
+            return Err(format!("❌ Error: {}", e));
+        }
+    };
+}

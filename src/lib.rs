@@ -99,7 +99,7 @@ pub mod metatags;
 pub mod navigation;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
-pub mod parser;
+pub mod process;
 /// The `rss` module generates the RSS content.
 pub mod rss;
 /// The `serve` module contains functions for the development server.
@@ -133,7 +133,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Build the CLI and parse the arguments
     let matches = cli::build()?;
-    parser::args(&matches)?;
+    process::args(&matches)?;
 
     if let Some(site_name) = matches.get_one::<String>("new") {
         // Start the server using the specified server address and site name.
@@ -141,20 +141,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         serve::start("127.0.0.1:8000", site_name)?;
     }
 
-    // Set the source and output directories, site name, and template path
-    let src_dir = Path::new("src");
-    let out_dir = Path::new("public");
-    let site_name = Path::new("site");
-    let binding = String::from("templates");
-    let template_path = Some(&binding);
+    // Set the build, content, site and template paths for the compile function.
+    let build_path = Path::new("public");
+    let content_path = Path::new("content");
+    let site_path = Path::new("site");
+    let template_path = Path::new("templates");
 
-    // Call the compile function with the above parameters
-    compile(
-        src_dir,
-        out_dir,
-        template_path.map(|x| x.as_str()),
-        site_name.to_str().unwrap(),
-    )?;
+    // Call the compile function with the above parameters to compile the site.
+    compile(build_path, content_path, site_path, template_path)?;
 
     Ok(())
 }

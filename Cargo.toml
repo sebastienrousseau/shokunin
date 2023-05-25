@@ -44,21 +44,21 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.2.7"
+clap = "4.3.0"
 comrak = "0.18.0"
 mime_guess = "2.0.4"
 minify-html = "0.11.1"
 quick-xml = "0.28.2"
-regex = "1.8.1"
+regex = "1.8.2"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
 serde_json = "1.0.96"
 tempfile = "3.5.0"
-toml = "0.7.3"
+toml = "0.7.4"
 yaml-rust = "0.4.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.11"
-criterion = "0.4.0"
+criterion = "0.5.0"
 
 [lib]
 crate-type = ["lib"]

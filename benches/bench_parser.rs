@@ -5,7 +5,7 @@ extern crate criterion;
 
 use clap::{Arg, Command};
 use criterion::{black_box, Criterion};
-use ssg::parser::args;
+use ssg::process::args;
 
 pub fn bench_parser(c: &mut Criterion) {
     // Test required arguments present

@@ -10,39 +10,37 @@ use crate::{
     metatags::generate_metatags,
     navigation::generate_navigation,
     rss::{generate_rss, RssOptions},
-    template::{create_template_folder, render_page, PageOptions},
+    template::{render_page, PageOptions},
     utilities::minify_html,
 };
 use std::{error::Error, fs, path::Path};
 
-/// Compiles files in a source directory, generates HTML pages from
-/// them, and writes the resulting pages to an output directory. Also
-/// generates an index page containing links to the generated pages.
-/// This function takes in the paths to the source and output
-/// directories as arguments.
+/// Compiles files in a source directory, generates HTML pages from them, and
+/// writes the resulting pages to an output directory. Also generates an index
+/// page containing links to the generated pages. This function takes in the
+/// paths to the source and output directories as arguments.
 ///
 /// The function reads in all Markdown files in the source directory and
-/// extracts metadata from them.
-/// The metadata is used to generate appropriate meta tags for the
-/// resulting HTML pages. The Markdown content of the files is then
-/// converted to HTML using the `generate_html` function and rendered
-/// into complete HTML pages using the `render_page` function. The
-/// resulting pages are written to the output directory as HTML files
-/// with the same names as the original Markdown files.
+/// extracts metadata from them. The metadata is used to generate appropriate
+/// meta tags for the resulting HTML pages. The Markdown content of the files
+/// is then converted to HTML using the `generate_html` function and rendered
+/// into complete HTML pages using the `render_page` function. The resulting
+/// pages are written to the output directory as HTML files with the same names
+/// as the original Markdown files.
 ///
-/// Finally, the function generates an index HTML page containing links
-/// to all the generated pages. The resulting index page is written to
-/// the output directory as "index.html".
+/// Finally, the function generates an index HTML page containing links to all
+/// the generated pages. The resulting index page is written to the output
+/// directory as "index.html.
 ///
-/// If any errors occur during the process (e.g. a file cannot be read
-/// or written), an error is returned. Otherwise, `Ok(())` is returned.
+/// If any errors occur during the process (e.g. a file cannot be read or
+/// written), an error is returned. Otherwise, `Ok(())` is returned.
 ///
 /// # Arguments
 ///
-/// * `src_dir` - The path to the source directory.
-/// * `out_dir` - The path to the output directory.
+/// * `content_path` - The path to the content directory.
+/// * `build_path` - The path to the output directory.
+/// * `site_path` - The name of the site.
 /// * `template_path` - The path to the template directory.
-/// * `site_name` - The name of the site.
 ///
 /// # Returns
 ///
@@ -51,54 +49,30 @@ use std::{error::Error, fs, path::Path};
 /// wrapped in a `Box<dyn Error>` to allow for different error types.
 ///
 pub fn compile(
-    // The path to the source directory
-    src_dir: &Path,
-    // The path to the output directory
-    out_dir: &Path,
-    // The path to the template directory
-    template_path: Option<&str>,
-    // The name of the site
-    site_name: &str,
+    build_path: &Path,    // The path to the temp directory
+    content_path: &Path,  // The path to the content directory
+    site_path: &Path,     // The path to the site directory
+    template_path: &Path, // The path to the template directory
 ) -> Result<(), Box<dyn Error>> {
-    // Constants
-    // const PUBLIC_DIR: &str = "public";
+    // Declare the paths variables
+    let build_path = Path::new(build_path);
+    let content_path = Path::new(content_path);
+    let site_path = Path::new(site_path);
+    let template_path = Path::new(template_path);
 
-    let src_dir = Path::new(src_dir);
-    let out_dir = Path::new(out_dir);
-    let site_dir = Path::new(site_name);
+    // Delete the temp and site directories if they exist
+    cleanup_directory(build_path)?;
+    cleanup_directory(site_path)?;
 
-    println!("\n❯ Generating a new site: \"{}\"", site_name);
-    println!("  Done.\n");
-    println!("{}", src_dir.display());
-    println!("{}", out_dir.display());
-    println!("{}", site_dir.display());
-
-    // Delete the output directory
-    cleanup_directory(out_dir)?;
-    cleanup_directory(site_dir)?;
-    println!("  Done.\n");
-
-    println!(
-        "\n❯ Creating a new `{}` directory...",
-        template_path.unwrap()
-    );
-    let template_path = create_template_folder(template_path)
-        .expect("❌ Error: Could not create template directory");
-    println!("  Done.\n");
-
-    // Create the output directory
-    create_new_directory(out_dir)?;
-
-    // Create the site directory
-    create_new_directory(site_dir)?;
-    println!("  Done.\n");
+    // Re-creating the directories from scratch
+    print!("{}\n", build_path.display());
+    print!("{}\n", site_path.display());
+    create_new_directory(build_path)?;
+    create_new_directory(site_path)?;
+    // create_new_directory(template_path)?;
 
     // Read the files in the source directory
-    println!(
-        "❯ Reading files from the `{}` directory...",
-        src_dir.display()
-    );
-    let files = add(src_dir)?;
+    let files = add(content_path)?;
     println!("  Found {} files to generate.", files.len());
     println!("  Done.\n");
 
@@ -189,7 +163,7 @@ pub fn compile(
                     twitter_url: &macro_metadata_option!(metadata, "twitter_url"),
                     url: &macro_metadata_option!(metadata, "url"),
                 },
-                &template_path,
+                &template_path.to_str().unwrap().to_string(),
                 metadata.get("layout").unwrap_or(&"".to_string()),
             )
             .unwrap();
@@ -269,7 +243,7 @@ pub fn compile(
     // Write the compiled files to the output directory
     println!(
         "❯ Writing the generated, compiled and minified files to the `{}` directory...",
-        out_dir.display()
+        build_path.display()
     );
     for file in &files_compiled {
         let file_name = match Path::new(&file.name).extension() {
@@ -284,11 +258,11 @@ pub fn compile(
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
-            let html_file = out_dir.join("index.html");
-            let rss_file = out_dir.join("rss.xml");
-            let json_file = out_dir.join("manifest.json");
-            let robots_file = out_dir.join("robots.txt");
-            let cname_file = out_dir.join("CNAME");
+            let html_file = build_path.join("index.html");
+            let rss_file = build_path.join("rss.xml");
+            let json_file = build_path.join("manifest.json");
+            let robots_file = build_path.join("robots.txt");
+            let cname_file = build_path.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
             fs::write(&cname_file, &file.cname)?;
@@ -310,7 +284,7 @@ pub fn compile(
             println!("  - {}", robots_file.display());
             println!("  - {}", cname_file.display());
         } else {
-            let dir_name = out_dir.join(file_name.clone());
+            let dir_name = build_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
 
             let html_file = dir_name.join("index.html");
@@ -345,10 +319,10 @@ pub fn compile(
     // Move the site directory to the public directory
     println!(
         "❯ Moving the content of the `{}` directory to the `{}` directory...",
-        out_dir.display(),
-        site_dir.display()
+        build_path.display(),
+        site_path.display()
     );
-    fs::rename(out_dir, site_dir)?;
+    fs::rename(build_path, site_path)?;
 
     Ok(())
 }

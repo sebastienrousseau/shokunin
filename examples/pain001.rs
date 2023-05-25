@@ -2,17 +2,13 @@ use ssg::compiler::compile;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let src_dir = Path::new("examples/pain001.com/content");
-    let out_dir = Path::new("examples/pain001.com/public");
-    let site_name = String::from("pain001.com");
-    let binding = String::from("examples/pain001.com/templates");
-    let template_path = Some(&binding);
-    compile(
-        src_dir,
-        out_dir,
-        template_path.map(|x| x.as_str()),
-        &site_name,
-    )?;
+    // Define the paths to the build, site, source and template directories.
+    let build_path = Path::new("examples/pain001.com/build");
+    let site_path = Path::new("examples/pain001.com/public");
+    let content_path = Path::new("examples/pain001.com/contents");
+    let template_path = Path::new("examples/pain001.com/templates");
+
+    compile(build_path, content_path, site_path, template_path)?;
 
     Ok(())
 }

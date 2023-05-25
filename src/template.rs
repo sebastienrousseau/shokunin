@@ -374,11 +374,6 @@ pub fn render_page(
             &fs::read_to_string(Path::new(template_path).join("sitemap.xml")).unwrap(),
             &context,
         )
-    } else if layout == "cname" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("CNAME")).unwrap(),
-            &context,
-        )
     } else {
         render_template(
             &fs::read_to_string(Path::new(template_path).join("template.html")).unwrap(),
