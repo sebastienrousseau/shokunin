@@ -58,8 +58,8 @@ The library extracts metadata and content to generate static HTML files from Mar
   - [Installation](#installation)
   - [Requirements](#requirements)
   - [Platform support](#platform-support)
-    - [Tier 1 platforms 🏆](#tier-1-platforms-)
-    - [Tier 2 platforms 🥈](#tier-2-platforms-)
+    - [Tier 1 platforms](#tier-1-platforms-)
+    - [Tier 2 platforms](#tier-2-platforms-)
   - [Documentation](#documentation)
 - [Usage 📖](#usage-)
   - [Command Line Interface (CLI)](#command-line-interface-cli)
@@ -105,7 +105,7 @@ latest stable version of Rust.
 
 `Shokunin (職人) Static Site Generator` is supported and tested on the following platforms:
 
-#### Tier 1 platforms 🏆
+#### Tier 1 platforms
 
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
@@ -118,7 +118,7 @@ latest stable version of Rust.
 | ✅ | Windows | x86_64-pc-windows-gnu | 64-bit Windows (7 or later) |
 | ✅ | Windows | x86_64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
-#### Tier 2 platforms 🥈
+#### Tier 2 platforms
 
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
