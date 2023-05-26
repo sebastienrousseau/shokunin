@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #[macro_export]
-/// ## Macro: `macro_check_directory` - Check if a directory exists or return
-/// an error message if it does not
+/// ## Macro: `macro_check_directory` - Check if a directory exists or return an error message if it does not.
 macro_rules! macro_check_directory {
     ($path:expr, $arg:expr) => {
         if let Err(e) = directory($path, $arg) {
@@ -13,8 +12,7 @@ macro_rules! macro_check_directory {
 }
 
 #[macro_export]
-/// ## Macro: `macro_cleanup_directories` - Delete a list of directories or
-/// return an error message if it does not succeed.
+/// ## Macro: `macro_cleanup_directories` - Delete a list of directories or return an error message if it does not succeed.
 macro_rules! macro_cleanup_directories {
     ( $($dir:expr),* ) => {
         {
@@ -26,8 +24,7 @@ macro_rules! macro_cleanup_directories {
 }
 
 #[macro_export]
-/// ## Macro: `macro_create_directories` - Create a list of directories or
-/// return an error message if it does not succeed.
+/// ## Macro: `macro_create_directories` - Create a list of directories or return an error message if it does not succeed.
 macro_rules! macro_create_directories {
     ( $($dir:expr),* ) => {
         {
@@ -39,8 +36,7 @@ macro_rules! macro_create_directories {
 }
 
 #[macro_export]
-/// ## Macro: `macro_generate_metatags` - Generates HTML meta tags from a list of
-/// key-value pairs
+/// ## Macro: `macro_generate_metatags` - Generates HTML meta tags from a list of key-value pairs.
 macro_rules! macro_generate_metatags {
     ($($key:literal, $value:expr),* $(,)?) => {
         generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
@@ -48,8 +44,7 @@ macro_rules! macro_generate_metatags {
 }
 
 #[macro_export]
-/// ## Macro: `macro_get_args` - Retrieve a command-line argument or return an
-/// error message
+/// ## Macro: `macro_get_args` - Retrieve a command-line argument or return an error message.
 macro_rules! macro_get_args {
     ($matches:ident, $name:expr) => {
         $matches.get_one::<String>($name).ok_or(format!(
@@ -60,8 +55,7 @@ macro_rules! macro_get_args {
 }
 
 #[macro_export]
-/// ## Macro: `macro_metadata_option` - Retrieve a metadata option or return an
-/// empty string
+/// ## Macro: `macro_metadata_option` - Retrieve a metadata option or return an empty string.
 macro_rules! macro_metadata_option {
     ($metadata:ident, $key:expr) => {
         $metadata.get($key).cloned().unwrap_or_default()
@@ -69,7 +63,7 @@ macro_rules! macro_metadata_option {
 }
 
 #[macro_export]
-/// ## Macro: `macro_render_layout` - Render a layout template
+/// ## Macro: `macro_render_layout` - Render a layout template.
 macro_rules! macro_render_layout {
     ($layout:expr, $template_path:expr, $context:expr) => {{
         let layout_str: &str = &$layout;
@@ -97,12 +91,9 @@ macro_rules! macro_render_layout {
 #[macro_export]
 /// ## Macro: `macro_serve` - Start a web server to serve the public directory.
 ///
-/// This macro takes a server address and a document root and generates code
-/// that creates a TCP listener listening at the server address.
+/// This macro takes a server address and a document root and generates code that creates a TCP listener listening at the server address.
 ///
-/// It then generates code that iterates over the incoming connections on the
-/// listener, and handles each connection by passing it to the
-/// `handle_connection` function.
+/// It then generates code that iterates over the incoming connections on the listener, and handles each connection by passing it to the `handle_connection` function.
 ///
 /// # Arguments
 ///

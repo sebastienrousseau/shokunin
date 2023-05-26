@@ -3,7 +3,7 @@
 //!
 //! # Shokunin (職人) Static Site Generator
 //!
-//! [![Shokunin (職人) Static Site Generator Logo](https://kura.pro/shokunin/images/logos/shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
+//! [![Shokunin (職人) Static Site Generator Logo](https://kura.pro/shokunin/images/banners/banner-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
 //!
 //! A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 //!
@@ -25,7 +25,7 @@
 //! `Shokunin (職人) Static Site Generator` feature highlights include:
 //!
 //! - Blazing fast and flexible static site generator written in Rust 🦀
-//! - Built-in support for [GitHub Flavored Markdown][12] (GFM).
+//! - Built-in support for [GitHub Flavored Markdown][1] (GFM).
 //! - Built-in support for Google Analytics and Bing Analytics.
 //! - Compatible with various HTML themes and Premium templates.
 //! - Generates Atom and RSS feeds for your blog posts.
@@ -56,17 +56,11 @@
 //!
 //! #### Arguments
 //!
-//! - `-n`, `--new`: The name of the new website.
-//! - `-c`, `--content`: The directory containing the website content.
-//! - `-t`, `--template`: The directory containing the website templates.
-//! - `-o`, `--output`: The directory where the generated website files will be saved temporarily.
-//! - `-s`, `--serve`: The document root directory from which the website will be created before being renamed to the website name and served.
-//!
-//! To run with the built-in Rust development server, you can use the following command:
-//!
-//! ```shell
-//! ssg  --new=mysite --content=content --output=output --template=template --serve=mysite
-//! ```
+//! - `-n`, `--new`: The name of the new website. (required)
+//! - `-c`, `--content`: The directory containing the website content. (required)
+//! - `-t`, `--template`: The directory containing the website templates. (required)
+//! - `-o`, `--output`: The directory where the generated website files will be saved temporarily. (required)
+//! - `-s`, `--serve`: Run the development server. (optional). The directory from which the website will be served.
 //!
 //! ### In your project
 //!
@@ -80,8 +74,20 @@
 //! Add the following to your `main.rs` file:
 //!
 //! ```rust
-//! extern crate ssg;
-//! use ssg::*;
+//! use ssg::compiler::compile;
+//! use std::path::Path;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Define the paths to the build, site, source and template directories.
+//!     let build_path = Path::new("examples/example.com/build");
+//!     let site_path = Path::new("examples/example.com/public");
+//!     let content_path = Path::new("examples/example.com/contents");
+//!     let template_path = Path::new("examples/example.com/templates");
+//!
+//!     compile(build_path, content_path, site_path, template_path)?;
+//!
+//!     Ok(())
+//! }
 //! ```
 //!
 //! then you can use the `Shokunin (職人) Static Site Generator` functions in your application code.
@@ -126,7 +132,7 @@
 //!
 //! #### Return value
 //!
-//! The main() function returns a Result. If the compilation is successful, the Result will be Ok(()). If there is an error, the Result will be Err(e), where e is a Box<dyn std::error::Error>.
+//! The main() function returns a Result. If the compilation is successful, the Result will be Ok(()). If there is an error, the Result will be Err(e), where e is a `Box<dyn std::error::Error>`.
 //!
 //! ## License 📜
 //!
@@ -136,6 +142,7 @@
 //! - [MIT license](http://opensource.org/licenses/MIT "MIT license")
 //!
 //! [0]: https://minifunctions.com/ "MiniFunctions"
+//! [1]: https://github.github.com/gfm/ "GitHub Flavored Markdown"
 //!
 
 #![forbid(unsafe_code)]

@@ -141,17 +141,11 @@ This command will create a new website with the name `mysite` in the current dir
 
 #### Arguments
 
-- `-n`, `--new`: The name of the new website.
-- `-c`, `--content`: The directory containing the website content.
-- `-t`, `--template`: The directory containing the website templates.
-- `-o`, `--output`: The directory where the generated website files will be saved temporarily.
-- `-s`, `--serve`: The document root directory from which the website will be created before being renamed to the website name and served.
-
-To run with the built-in Rust development server, you can use the following command:
-
-```shell
-ssg  --new=mysite --content=content --output=output --template=template --serve=mysite
-```
+- `-n`, `--new`: The name of the new website. (required)
+- `-c`, `--content`: The directory containing the website content. (required)
+- `-t`, `--template`: The directory containing the website templates. (required)
+- `-o`, `--output`: The directory where the generated website files will be saved temporarily. (required)
+- `-s`, `--serve`: Run the development server. (optional). The directory from which the website will be served.
 
 ### In your project
 
