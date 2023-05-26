@@ -1,16 +1,18 @@
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 extern crate criterion;
 
-use clap::{ArgMatches, Error};
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{black_box, Criterion};
 use ssg::cli::build;
-#[cfg(test)]
-fn build_benchmark(c: &mut Criterion) {
+
+pub fn bench_cli(c: &mut Criterion) {
     let mut group = c.benchmark_group("build");
 
     group.bench_function("valid arguments", |b| {
         b.iter(|| {
             // Call the build function to get the command-line arguments
-            let result: Result<ArgMatches, Error> = build();
+            let result = black_box(build());
 
             // Check for errors
             if let Err(e) = result {
@@ -45,6 +47,3 @@ fn build_benchmark(c: &mut Criterion) {
 
     group.finish();
 }
-
-criterion_group!(benches, build_benchmark);
-criterion_main!(benches);

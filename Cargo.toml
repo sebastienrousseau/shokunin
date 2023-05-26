@@ -8,7 +8,7 @@ categories = [
     "web-programming",
 ]
 description = "A Fast and Flexible Static Site Generator written in Rust."
-documentation = "https://lib.rs/crates/ssg"
+documentation = "https://docs.rs/ssg"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
@@ -18,7 +18,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.69.0"
-version = "0.0.11"
+version = "0.0.12"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -39,53 +39,26 @@ include = [
 members = ["xtask"]
 
 [[bench]]
-name = "cli"
-path = "benches/bench_cli.rs"
-
-[[bench]]
-name = "file"
-path = "benches/bench_file.rs"
-
-[[bench]]
-name = "frontmatter"
-path = "benches/bench_frontmatter.rs"
-
-[[bench]]
-name = "html"
-path = "benches/bench_html.rs"
-
-[[bench]]
-name = "json"
-path = "benches/bench_json.rs"
-
-[[bench]]
-name = "metatags"
-path = "benches/bench_metatags.rs"
-
-[[bench]]
-name = "parser"
-path = "benches/bench_parser.rs"
-
-[[bench]]
-name = "utilities"
-path = "benches/bench_utilities.rs"
+name = "bench"
+harness = false
+path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.2.4"
+clap = "4.3.0"
 comrak = "0.18.0"
 mime_guess = "2.0.4"
-minify-html = "0.10.8"
+minify-html = "0.11.1"
 quick-xml = "0.28.2"
-regex = "1.8.1"
-reqwest = { version = "0.11.16", features = ["blocking", "json"] }
+regex = "1.8.3"
+reqwest = { version = "0.11.18", features = ["blocking", "json"] }
 serde_json = "1.0.96"
 tempfile = "3.5.0"
-toml = "0.7.3"
+toml = "0.7.4"
 yaml-rust = "0.4.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.11"
-criterion = "0.4.0"
+criterion = "0.5.0"
 
 [lib]
 crate-type = ["lib"]

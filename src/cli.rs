@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use clap::{Arg, ArgMatches, Command, Error};
@@ -43,7 +43,7 @@ pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.10")
+        .version("0.0.12")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -79,7 +79,6 @@ pub fn build() -> Result<ArgMatches, Error> {
                 .short('s')
                 .value_name("SERVE")
         )
-
         .after_help(
             "\x1b[1;4mDocumentation:\x1b[0m\n\n  https://shokunin.one\n\n\x1b[1;4mLicense:\x1b[0m\n  The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).",
         )
@@ -110,7 +109,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin (職人) 🦀 (version 0.0.10)";
+    let title = "Shokunin (職人) 🦀 (version 0.0.12)";
     let description = "A Fast and Flexible Static Site Generator written in Rust";
 
     // Set the width of the box to fit the title and description
@@ -124,5 +123,5 @@ pub fn print_banner() {
     println!("│{: ^1$}│", title, width - 5);
     println!("├{}┤", horizontal_line);
     println!("│{: ^1$}│", description, width - 2);
-    println!("└{}┘", horizontal_line);
+    println!("└{}┘\n", horizontal_line);
 }

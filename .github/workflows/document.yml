@@ -1,51 +1,60 @@
 name: 🧪 Document
-on: [push, pull_request]
+
+on:
+  push:
+    branches:
+      - feat/ssg
+  pull_request:
+    branches:
+      - feat/ssg
+  release:
+    types: [created]
+
 jobs:
   all:
     name: Document
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
-        group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
 
-    - uses: hecrj/setup-rust-action@v1
-      with:
-        rust-version: nightly
+      - uses: actions/checkout@v3
 
-    - uses: actions/checkout@v3
+      - name: Update libssl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl1.1
 
-    - name: Update libssl
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libssl1.1
+      - name: Generate documentation for all features and publish it
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs" \
+            cargo doc --no-deps --all-features --workspace
+            # Write index.html with redirect
+            echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
 
-    - name: Generate documentation for all features and publish it
-      run: |
-        RUSTDOCFLAGS="--cfg docsrs" \
-          cargo doc --no-deps --all-features --workspace
-          # Write index.html with redirect
-          echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
+      - name: Deploy
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: target/doc
+          if-no-files-found: error
+          retention-days: 1
 
-    - name: Deploy
-      uses: actions/upload-artifact@v2
-      with:
-        name: documentation
-        path: target/doc
-        if-no-files-found: error
-        retention-days: 1
+      - name: Write CNAME file
+        run: echo 'docs.shokunin.one' > ./target/doc/CNAME
 
-    - name: Write CNAME file
-      run: echo 'docs.shokunin.one' > ./target/doc/CNAME
-
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc
-        publish_branch: gh-pages
-        cname: true
-        clean: true
-        commit_message: Deploy documentation at ${{ github.sha }}
-        commit_user_name: github-actions
-        commit_user_email: actions@users.noreply.github.com
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          publish_branch: gh-pages
+          cname: true
+          clean: true
+          commit_message: Deploy documentation at ${{ github.sha }}
+          commit_user_name: github-actions
+          commit_user_email: actions@users.noreply.github.com

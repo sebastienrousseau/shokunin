@@ -1,7 +1,15 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use serde_json::{json, Map};
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+
+/// ## Struct: `CnameOptions` - Options for the `cname` function
+pub struct CnameOptions {
+    /// A string representing the domain of the web app
+    pub cname: String,
+}
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `IconOptions` - Options for the `manifest` function
@@ -15,6 +23,7 @@ pub struct IconOptions {
     /// A string representing the purpose of the icon
     pub purpose: Option<String>,
 }
+
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `ManifestOptions` - Options for the `manifest` function
 pub struct ManifestOptions {
@@ -82,4 +91,17 @@ pub fn manifest(options: &ManifestOptions) -> String {
     json_map.insert("theme_color".to_string(), json!(options.theme_color));
 
     serde_json::to_string_pretty(&json_map).unwrap()
+}
+
+/// ## Function: `txt` - Generate a robots.txt for a web app
+pub fn txt() -> String {
+    "User-agent: *\nSitemap: /sitemap.xml".to_string()
+}
+
+/// ## Function: `cname` - Generate a CNAME for a web app
+pub fn cname(options: &CnameOptions) -> String {
+    let cname_value = options.cname.clone();
+    let full_domain = format!("www.{}", cname_value);
+    let base_domain = cname_value;
+    format!("{}\n{}", full_domain, base_domain)
 }

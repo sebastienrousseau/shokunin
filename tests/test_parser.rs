@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use clap::{Arg, Command};
-    use ssg::parser::args;
+    use ssg::process::args;
 
     #[test]
     fn test_args_required_args_missing() {
@@ -14,7 +14,10 @@ mod tests {
         let result = args(&matches);
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"name\" is required but missing.".to_owned())
+            Err(
+                "❌ Error: A required parameter was omitted. Add the required parameter. \"content\"."
+                    .to_owned()
+            )
         );
     }
 
@@ -29,7 +32,10 @@ mod tests {
         let result = args(&matches);
         assert_eq!(
             result,
-            Err("❌ Error: Argument \"output\" is required but missing.".to_owned())
+            Err(
+                "❌ Error: A required parameter was omitted. Add the required parameter. \"output\"."
+                    .to_owned()
+            )
         );
     }
 }

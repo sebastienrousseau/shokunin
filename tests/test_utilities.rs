@@ -49,8 +49,7 @@ mod tests {
     #[test]
     fn test_directory_create_nested_directory() {
         let temp = tempdir().unwrap();
-        let new_nested_dir =
-            temp.path().join("nested").join("directory");
+        let new_nested_dir = temp.path().join("nested").join("directory");
         let name = "nested_directory";
         let result = directory(&new_nested_dir, name);
         assert!(

@@ -1,11 +1,13 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
+use criterion::{black_box, Criterion};
 use ssg::file::add;
 use std::path::PathBuf;
 
-#[cfg(test)]
-fn add_benchmark(c: &mut Criterion) {
+pub fn bench_file(c: &mut Criterion) {
     let path = PathBuf::from("content");
     c.bench_function("add function", |b| {
         b.iter(|| {
@@ -18,6 +20,3 @@ fn add_benchmark(c: &mut Criterion) {
         })
     });
 }
-
-criterion_group!(benches, add_benchmark);
-criterion_main!(benches);

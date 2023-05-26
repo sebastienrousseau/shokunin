@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use quick_xml::escape::escape;
@@ -18,6 +18,10 @@ pub struct File {
     pub rss: String,
     /// The content of the file, escaped for JSON.
     pub json: String,
+    /// The content of the file, escaped for TXT.
+    pub txt: String,
+    /// The content of the file, escaped for CNAME.
+    pub cname: String,
 }
 /// ## Function: add - returns a Result containing a vector of File structs
 ///
@@ -48,39 +52,49 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let name = path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .map(|name| name.to_string())
-                .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "  Invalid filename",
-                    )
-                })?;
+            let file_name = match path.file_name().and_then(|name| name.to_str()) {
+                Some(name) => name,
+                None => continue,
+            };
+
+            if file_name == ".DS_Store" {
+                continue;
+            }
+
             let content = match fs::read_to_string(&path) {
                 Ok(content) => content,
-                Err(err) => {
-                    println!("  Skipping file\n    {}: {}", name, err);
-                    continue;
-                }
+                Err(_) => continue,
             };
+
+            // Rest of the code remains unchanged
+
             let rss = match escape(&content) {
                 Cow::Borrowed(rss) => rss.to_string(),
                 Cow::Owned(rss) => rss,
             };
+
             let json = match serde_json::to_string(&content) {
                 Ok(json) => json,
-                Err(err) => {
-                    println!("  Skipping file\n    {}: {}", name, err);
-                    continue;
-                }
+                Err(_) => continue,
             };
+
+            let txt = match escape(&content) {
+                Cow::Borrowed(txt) => txt.to_string(),
+                Cow::Owned(txt) => txt,
+            };
+
+            let cname = match escape(&content) {
+                Cow::Borrowed(cname) => cname.to_string(),
+                Cow::Owned(cname) => cname,
+            };
+
             files.push(File {
-                name,
+                name: file_name.to_string(),
                 content,
                 rss,
                 json,
+                txt,
+                cname,
             });
         }
     }

@@ -72,22 +72,15 @@ impl RssOptions {
 /// A `Result<String, Box<dyn std::error::Error>>` containing the RSS
 /// feed, or an error if the RSS feed cannot be generated.
 ///
-pub fn generate_rss(
-    options: &RssOptions,
-) -> Result<String, Box<dyn std::error::Error>> {
+pub fn generate_rss(options: &RssOptions) -> Result<String, Box<dyn std::error::Error>> {
     // Write the XML declaration
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    writer.write_event(Event::Decl(BytesDecl::new(
-        "1.0",
-        Some("utf-8"),
-        None,
-    )))?;
+    writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
 
     // Write the <rss> opening tag with version attribute
     let mut rss_start = BytesStart::new("rss");
     rss_start.push_attribute(("version", "2.0"));
-    rss_start
-        .push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
+    rss_start.push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
     writer.write_event(Event::Start(rss_start))?;
 
     // Write the <channel> opening tag
@@ -110,17 +103,13 @@ pub fn generate_rss(
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
-            writer.write_event(Event::Text(
-                BytesText::from_escaped(value),
-            ))?;
+            writer.write_event(Event::Text(BytesText::from_escaped(value)))?;
 
             let element_end = BytesEnd::new::<Cow<'static, str>>(
-                std::str::from_utf8(
-                    element_start.name().local_name().as_ref(),
-                )
-                .unwrap()
-                .to_string()
-                .into(),
+                std::str::from_utf8(element_start.name().local_name().as_ref())
+                    .unwrap()
+                    .to_string()
+                    .into(),
             );
 
             writer.write_event(Event::End(element_end))?;
@@ -145,16 +134,12 @@ pub fn generate_rss(
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
-            writer.write_event(Event::Text(
-                BytesText::from_escaped(value),
-            ))?;
+            writer.write_event(Event::Text(BytesText::from_escaped(value)))?;
             let element_end = BytesEnd::new::<Cow<'static, str>>(
-                std::str::from_utf8(
-                    element_start.name().local_name().as_ref(),
-                )
-                .unwrap()
-                .to_string()
-                .into(),
+                std::str::from_utf8(element_start.name().local_name().as_ref())
+                    .unwrap()
+                    .to_string()
+                    .into(),
             );
             writer.write_event(Event::End(element_end))?;
         }

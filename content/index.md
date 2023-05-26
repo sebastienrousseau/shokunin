@@ -2,6 +2,8 @@
 # Front Matter (YAML).
 ## name - The name of the site. (max 64 characters)
 name: Shokunin (職人)
+## cname - The cname value of the site
+cname: shokunin.one
 ## title - The title of the page. (max 64 characters)
 title: Shokunin (職人) Static Site Generator
 ## subtitle - The subtitle of the page. (max 64 characters)
@@ -44,6 +46,8 @@ banner_height: "615"
 banner_alt: Floral kimono and bamboo
 ## theme_color - The theme color of the site.
 theme_color: "#d70015"
+## url - The url of the site.
+url: https://shokunin.one
 
 # RSS - The RSS feed front matter (YAML).
 
@@ -54,7 +58,7 @@ last_build_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS pub date of the page.
 pub_date: 2023-03-23T00:00:00+00:00
 ## rss - The RSS generator of the page.
-generator: Shokunin (職人) 🦀 (version 0.0.11)
+generator: Shokunin (職人) 🦀 (version 0.0.12)
 ## rss - The RSS item title of the page.
 item_title: "RSS"
 ## rss - The RSS item link of the page.

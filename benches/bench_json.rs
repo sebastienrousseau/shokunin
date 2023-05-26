@@ -1,8 +1,12 @@
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
 use criterion::{black_box, Criterion};
 use ssg::json::{manifest, ManifestOptions};
 
-#[cfg(test)]
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_json(c: &mut Criterion) {
     use ssg::json::IconOptions;
 
     let options = ManifestOptions {

@@ -1,0 +1,364 @@
+name: 🧪 Release
+
+on: [push, pull_request]
+
+jobs:
+  # Build the project for all the targets and generate artifacts.
+  build:
+    # This job builds the project for all the targets and generates a
+    # release artifact that contains the binaries for all the targets.
+    name: ❯ Build 🛠
+
+    # Only run this job on the main branch when a commit is pushed.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # Set up the job environment variables.
+    env:
+      BUILD_ID: ${{ github.run_id }}
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_API_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OS: ${{ matrix.os }}
+      TARGET: ${{ matrix.target }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          # List of targets:
+          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
+
+          # Tier 1 platforms 🏆
+          - aarch64-unknown-linux-gnu # 64-bit Linux systems on ARM architecture
+          - i686-pc-windows-gnu # 32-bit Windows (i686-pc-windows-gnu)
+          - i686-pc-windows-msvc # 32-bit Windows (i686-pc-windows-msvc)
+          - i686-unknown-linux-gnu # 32-bit Linux (kernel 3.2+, glibc 2.17+)
+          - x86_64-apple-darwin # 64-bit macOS (10.7 Lion or later)
+          - x86_64-pc-windows-gnu # 64-bit Windows (x86_64-pc-windows-gnu)
+          - x86_64-pc-windows-msvc # 64-bit Windows (x86_64-pc-windows-msvc)
+          - x86_64-unknown-linux-gnu # 64-bit Linux (kernel 2.6.32+, glibc 2.11+)
+
+          # Tier 2 platforms 🥈
+          - aarch64-apple-darwin # 64-bit macOS on Apple Silicon
+          - aarch64-pc-windows-msvc # 64-bit Windows (aarch64-pc-windows-msvc)
+          - aarch64-unknown-linux-musl # 64-bit Linux systems on ARM architecture
+          - arm-unknown-linux-gnueabi # ARMv6 Linux (kernel 3.2, glibc 2.17)
+          - arm-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
+          - armv7-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
+          - mips-unknown-linux-gnu # MIPS Linux (kernel 3.2, glibc 2.17)
+          - mips64-unknown-linux-gnuabi64 # MIPS64 Linux (kernel 3.2, glibc 2.17)
+          - mips64el-unknown-linux-gnuabi64 # MIPS64el Linux (kernel 3.2, glibc 2.17)
+          - mipsel-unknown-linux-gnu # MIPSel Linux (kernel 3.2, glibc 2.17)
+          - powerpc-unknown-linux-gnu # PowerPC Linux (kernel 3.2, glibc 2.17)
+          - powerpc64-unknown-linux-gnu # PowerPC64 Linux (kernel 3.2, glibc 2.17)
+          - powerpc64le-unknown-linux-gnu # PowerPC64le Linux (kernel 3.2, glibc 2.17)
+          - riscv64gc-unknown-linux-gnu # RISC-V Linux (kernel 3.2, glibc 2.17)
+          - s390x-unknown-linux-gnu # s390x Linux (kernel 3.2, glibc 2.17)
+          - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64
+          # # - x86_64-unknown-illumos # 64-bit Illumos on x86-64
+          - x86_64-unknown-linux-musl # 64-bit Linux (kernel 2.6.32+, musl libc)
+          - x86_64-unknown-netbsd # 64-bit NetBSD on x86-64
+
+        include:
+          # Tier 1 platforms 🏆
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: i686-pc-windows-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+            cross: true
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            cross: true
+          - target: x86_64-pc-windows-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cross: true
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+
+          # Tier 2 platforms 🥈
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            cross: true
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            cross: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            cross: true
+          - target: arm-unknown-linux-gnueabi
+            os: ubuntu-latest
+            cross: true
+          - target: arm-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            cross: true
+          - target: armv7-unknown-linux-gnueabihf
+            os: ubuntu-latest
+            cross: true
+          - target: mips-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: mips64-unknown-linux-gnuabi64
+            os: ubuntu-latest
+            cross: true
+          - target: mips64el-unknown-linux-gnuabi64
+            os: ubuntu-latest
+            cross: true
+          - target: mipsel-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: powerpc-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: powerpc64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: powerpc64le-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: riscv64gc-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: s390x-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            cross: true
+          # - target: x86_64-unknown-illumos
+          #   os: ubuntu-latest
+          #   cross: true
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-unknown-netbsd
+            os: ubuntu-latest
+            cross: true
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # Check out the repository code.
+      - name: Checkout sources
+        id: checkout
+        uses: actions/checkout@v3
+
+      # Install the stable Rust toolchain.
+      - name: Install stable toolchain
+        id: install-toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Install the targets for the cross-compilation toolchain
+      - name: Install target
+        id: install-target
+        run: rustup target add ${{ env.TARGET }}
+
+      - name: Install Cross and clean artifacts
+        run: |
+          # Install cross
+          cargo install cross
+
+          # Clean the build artifacts
+          cargo clean --verbose
+        shell: bash
+
+      # Cache dependencies to speed up subsequent builds.
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: release-${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Build the targets
+      - name: Build targets
+        id: build-targets
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --verbose --workspace --release --target ${{ env.TARGET }}
+
+      # Package the binary for each target
+      - name: Package the binary
+        id: package-binary
+        run: |
+          if [[ ! -d "target/package" ]]; then
+            mkdir -p target/package
+          fi
+          tar czf target/package/${{ env.TARGET }}.tar.gz -C target/${{ env.TARGET }}/release .
+          echo "${{ env.TARGET }}.tar.gz=target/package/${{ env.TARGET }}.tar.gz" >> $GITHUB_ENV
+        shell: bash
+
+      # Upload the binary for each target
+      - name: Upload the binary
+        id: upload-binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.TARGET }}.tar.gz
+          path: target/package/${{ env.TARGET }}.tar.gz
+
+  # Release the binary to GitHub Releases
+  release:
+    name: ❯ Release 🚀
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      # Check out the repository code
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      # Install the stable Rust toolchain
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1.0.6
+        with:
+          toolchain: stable
+          override: true
+
+      # Update the version number based on the Cargo.toml file
+      - name: Update version number
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
+        shell: /bin/bash -e {0}
+
+      # Cache dependencies to speed up subsequent builds
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # Download the artifacts from the build job
+      - name: Download artifacts
+        run: |
+          for target in ${{ env.TARGET }}; do
+            echo "Downloading $target artifact"
+            name="${target}.tar.gz"
+            echo "Artifact name: $name"
+            curl -sSL -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -L "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${BUILD_ID}/artifacts/${name}" -o "target/package/${name}"
+          done
+
+        env:
+          VERSION: ${{ env.VERSION }}
+          TARGET: ${{ env.TARGET }}
+          OS: ${{ env.OS }}
+
+      # Generate the changelog based on the git log
+      - name: Generate Changelog
+        id: generate-changelog
+        env:
+          BUILD_ID: ${{ github.run_id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_URL: https://github.com/sebastienrousseau/shokunin/releases
+          TARGET: ${{ env.TARGET }}
+
+        run: |
+          if [[ ! -f CHANGELOG.md ]]; then
+            # Set path to changelog file
+            changelog_file="${{ github.workspace }}/CHANGELOG.md"
+
+            # Get version from Cargo.toml
+            version=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+
+            # Append version information to changelog
+            echo "## Release v${version} - $(date +'%Y-%m-%d')" >> "${changelog_file}"
+
+            # Copy content of template file to changelog
+            cat TEMPLATE.md >> "${changelog_file}"
+
+            # Append git log to changelog
+            echo "$(git log --pretty=format:'%s' --reverse HEAD)" >> "${changelog_file}"
+
+            # Append empty line to changelog
+            echo "" >> "${changelog_file}"
+
+          fi
+        shell: bash
+
+      # Create the release on GitHub releases
+      - name: Create Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ env.VERSION }}
+        with:
+          tag_name: v${{ env.VERSION }}
+          release_name: Shokunin (職人) 🦀 v${{ env.VERSION }}
+          body_path: ${{ github.workspace }}/CHANGELOG.md
+          draft: true
+          prerelease: false
+
+  # Publish the release to Crates.io automatically
+  crate:
+    name: ❯ Crate.io 🦀
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [release]
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Install the stable Rust toolchain
+      - name: Install stable toolchain
+        id: install-toolchain
+        uses: actions-rs/toolchain@v1.0.6
+        with:
+          toolchain: stable
+          override: true
+
+      # Cache dependencies to speed up subsequent builds
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v3
+        with:
+          path: /home/runner/.cargo/registry/index/
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      # Update the version number based on the Cargo.toml file
+      - name: Update version number
+        id: update-version
+        run: |
+          NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
+          echo "VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
+        shell: /bin/bash -e {0}
+
+      # Log in to crates.io
+      - name: Log in to crates.io
+        id: login-crate-io
+        run: cargo login ${{ secrets.CARGO_API_TOKEN }}
+
+      # Publish the Rust library to Crate.io
+      - name: Publish Library to Crate.io
+        id: publish-library
+        uses: actions-rs/cargo@v1.0.1
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_API_TOKEN }}
+        with:
+          command: publish
+          args: "--no-verify --allow-dirty"
+          use-cross: false

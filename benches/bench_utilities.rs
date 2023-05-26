@@ -1,17 +1,19 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
+use criterion::{black_box, Criterion};
 use ssg::utilities::directory;
 use tempfile::TempDir;
 
-fn directory_benchmark(c: &mut Criterion) {
+pub fn bench_utilities(c: &mut Criterion) {
     let tempdir = TempDir::new().unwrap();
     let dir = tempdir.path().join("test_dir");
 
     c.bench_function("create directory", |b| {
         b.iter(|| {
-            let result =
-                directory(black_box(&dir), black_box("test_dir"));
+            let result = directory(black_box(&dir), black_box("test_dir"));
             assert!(result.is_ok());
         })
     });
@@ -30,17 +32,11 @@ fn directory_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function(
-        "check if non-existent directory does not exist",
-        |b| {
-            let non_existent_dir = tempdir.path().join("non-existent");
-            b.iter(|| {
-                let result = non_existent_dir.exists();
-                assert!(!result);
-            })
-        },
-    );
+    c.bench_function("check if non-existent directory does not exist", |b| {
+        let non_existent_dir = tempdir.path().join("non-existent");
+        b.iter(|| {
+            let result = non_existent_dir.exists();
+            assert!(!result);
+        })
+    });
 }
-
-criterion_group!(benches, directory_benchmark);
-criterion_main!(benches);

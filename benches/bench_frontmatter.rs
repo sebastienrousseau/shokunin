@@ -1,10 +1,12 @@
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+extern crate criterion;
+
+use criterion::{black_box, Criterion};
 use ssg::frontmatter::extract;
 
-#[cfg(test)]
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn bench_frontmatter(c: &mut Criterion) {
     let content = "---\n\
                    title: My Title\n\
                    date: 2000-01-01\n\
@@ -41,13 +43,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 result.contains_key("layout"),
                 "layout not found in front matter"
             );
-            assert!(
-                result.contains_key("---"),
-                "--- not found in front matter"
-            );
+            assert!(result.contains_key("---"), "--- not found in front matter");
         })
     });
 }
-
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);

@@ -1,19 +1,16 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-/// ## Function: `main` - The main function of the program
+/// The main function of the program.
 ///
-/// The main function of the program. Calls the `run()` function from
-/// the `ssg` module to run the static site generator.
+/// Calls the `run()` function from the `ssg` module to run the static site generator.
 ///
-/// If an error occurs while running the `run()` function, the function
-/// prints an error message to standard error and exits the program with
-/// a status code of 1.
-///
+/// If an error occurs while running the `run()` function, the function prints an error message
+/// to standard error and exits the program with a non-zero status code.
 fn main() {
-    // Call the `run()` function from the `shokunin` module.
     if let Err(err) = ssg::run() {
-        eprintln!("Error running shokunin (ssg): {}", err);
+        eprintln!("{}", err);
+        eprintln!("\nPlease run `ssg --help` for more information.\n");
         std::process::exit(1);
     }
 }

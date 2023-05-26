@@ -1,11 +1,11 @@
-// Copyright © 2023 Shokunin (職人). All rights reserved.
+// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::macro_render_layout;
 use reqwest;
 use std::{
     collections::HashMap,
     fs::{self, File},
-    io,
     path::Path,
 };
 
@@ -76,6 +76,8 @@ pub struct PageOptions<'a> {
     pub content: &'a str,
     /// A string representing the copyright notice of the page.
     pub copyright: &'a str,
+    /// A string representing the CNAME of the page.
+    pub cname: &'a str,
     /// A string representing the CSS file of the page.
     pub css: &'a str,
     /// A string representing the date of the page.
@@ -158,6 +160,8 @@ pub struct PageOptions<'a> {
     pub twitter_title: &'a str,
     /// A string representing the twitter url of the page.
     pub twitter_url: &'a str,
+    /// A string representing the url of the page.
+    pub url: &'a str,
 }
 
 /// ## Function: `render_template` - Render a template with the given context
@@ -219,6 +223,7 @@ pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<
 /// * `charset`             - A string representing the character set.
 /// * `content`             - A string representing the content.
 /// * `copyright`           - A string representing the copyright notice.
+/// * `cname`               - A string representing the cname.
 /// * `css`                 - A string representing the css.
 /// * `date`                - A string representing the date.
 /// * `description`         - A string representing the description.
@@ -260,6 +265,7 @@ pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<
 /// * `twitter_site`        - A string representing the Twitter site.
 /// * `twitter_title`       - A string representing the Twitter title.
 /// * `twitter_url`         - A string representing the Twitter URL.
+/// * `url`                 - A string representing the URL.
 ///
 /// # Returns
 ///
@@ -283,6 +289,7 @@ pub fn render_page(
     context.insert("charset", options.charset);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
+    context.insert("cname", options.cname);
     context.insert("css", options.css);
     context.insert("date", options.date);
     context.insert("description", options.description);
@@ -326,57 +333,10 @@ pub fn render_page(
     context.insert("twitter_site", options.twitter_site);
     context.insert("twitter_title", options.twitter_title);
     context.insert("twitter_url", options.twitter_url);
-    if layout == "index" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("index.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "post" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("post.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "page" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("page.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "tag" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("tag.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "category" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("category.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "archive" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("archive.html")).unwrap(),
-            &context,
-        )
-    } else if layout == "rss" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("rss.xml")).unwrap(),
-            &context,
-        )
-    } else if layout == "sitemap" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("sitemap.xml")).unwrap(),
-            &context,
-        )
-    } else if layout == "atom" {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("atom.xml")).unwrap(),
-            &context,
-        )
-    } else {
-        render_template(
-            &fs::read_to_string(Path::new(template_path).join("template.html")).unwrap(),
-            &context,
-        )
-    }
+    context.insert("url", options.url);
+
+    // Renders the page using the specified template and layout
+    macro_render_layout!(layout, template_path, context)
 }
 
 /// Custom error type to handle both reqwest and io errors
@@ -398,20 +358,6 @@ impl From<std::io::Error> for TemplateError {
     fn from(err: std::io::Error) -> TemplateError {
         TemplateError::Io(err)
     }
-}
-
-/// Creates a directory if it does not exist. If the directory already
-/// exists, the function will return `Ok(())`.
-///
-/// # Arguments
-///
-/// - `path` - The path to the directory.
-///
-pub fn create_directory(path: &Path) -> io::Result<()> {
-    fs::create_dir(path).or_else(|e| match e.kind() {
-        io::ErrorKind::AlreadyExists => Ok(()),
-        _ => Err(e),
-    })
 }
 
 /**
@@ -436,7 +382,7 @@ pub fn create_directory(path: &Path) -> io::Result<()> {
  * `TemplateError` if an error occurs.
  *
  */
-pub fn create_template_folder(template_path: Option<&String>) -> Result<String, TemplateError> {
+pub fn create_template_folder(template_path: Option<&str>) -> Result<String, TemplateError> {
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
 
@@ -454,17 +400,18 @@ pub fn create_template_folder(template_path: Option<&String>) -> Result<String, 
 
                 let url = path;
                 let files = [
-                    "index.html",
-                    "template.html",
-                    "template.json",
-                    "post.html",
-                    "page.html",
-                    "tag.html",
-                    "category.html",
                     "archive.html",
+                    "browserconfig.xml",
+                    "category.html",
+                    "humans.txt",
+                    "index.html",
+                    "page.html",
+                    "post.html",
                     "rss.xml",
                     "sitemap.xml",
-                    "atom.xml",
+                    "tag.html",
+                    "template.html",
+                    "template.json",
                 ];
 
                 for file in files.iter() {
@@ -495,17 +442,18 @@ pub fn create_template_folder(template_path: Option<&String>) -> Result<String, 
 
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
             let files = [
-                "index.html",
-                "template.html",
-                "template.json",
-                "post.html",
-                "page.html",
-                "tag.html",
-                "category.html",
                 "archive.html",
+                "browserconfig.xml",
+                "category.html",
+                "humans.txt",
+                "index.html",
+                "page.html",
+                "post.html",
                 "rss.xml",
                 "sitemap.xml",
-                "atom.xml",
+                "tag.html",
+                "template.html",
+                "template.json",
             ];
 
             for file in files.iter() {
