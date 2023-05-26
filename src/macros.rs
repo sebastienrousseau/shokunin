@@ -109,17 +109,6 @@ macro_rules! macro_render_layout {
 /// * `server_address` - A string literal for the server address.
 /// * `document_root`  - A string literal for the document root.
 ///
-/// # Example
-///
-/// ```
-/// macro_serve!("localhost:8080", "public/");
-/// ```
-///
-/// This will expand to:
-///
-/// ```
-/// start("localhost:8080", "public/").unwrap();
-/// ```
 macro_rules! macro_serve {
     ($server_address:expr, $document_root:expr) => {
         start($server_address, $document_root).unwrap();
