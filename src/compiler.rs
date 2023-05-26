@@ -62,7 +62,7 @@ pub fn compile(
     let template_path = template_path;
 
     // Creating the build and site directories
-    macro_create_directories!(build_path, site_path);
+    macro_create_directories!(build_path, site_path)?;
 
     // Read the files in the source directory
     let files = add(content_path)?;

@@ -37,7 +37,7 @@ use std::{
 /// directory(dir, "logs").expect("Could not create logs directory");
 /// fs::remove_dir_all(dir).expect("Could not remove logs directory");
 /// ```
-pub fn directory(dir: &Path, name: &str) -> Result<(), String> {
+pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
     if dir.exists() {
         if !dir.is_dir() {
             return Err(format!("❌ Error: {} is not a directory.", name));
@@ -48,8 +48,7 @@ pub fn directory(dir: &Path, name: &str) -> Result<(), String> {
             Err(e) => return Err(format!("❌ Error: Cannot create {} directory: {}", name, e)),
         }
     }
-
-    Ok(())
+    Ok(String::new())
 }
 
 /// Moves the output directory to the public directory.

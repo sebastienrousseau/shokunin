@@ -1,7 +1,6 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use super::utilities::directory;
 use crate::macro_check_directory;
 use crate::{compile, macro_get_args};
 use clap::ArgMatches;
