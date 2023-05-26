@@ -8,7 +8,6 @@ use crate::{
     json::{cname, manifest, txt, CnameOptions, IconOptions, ManifestOptions},
     macro_cleanup_directories, macro_create_directories, macro_generate_metatags,
     macro_metadata_option,
-    metatags::generate_metatags,
     navigation::generate_navigation,
     rss::{generate_rss, RssOptions},
     template::{render_page, PageOptions},

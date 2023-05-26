@@ -11,10 +11,8 @@
 /// use ssg::macro_check_directory;
 /// use std::path::Path;
 ///
-/// fn main() {
-///     let path = Path::new("logs");
-///     macro_check_directory!(path, "logs");
-/// }
+/// let path = Path::new("logs");
+/// macro_check_directory!(path, "logs");
 /// ```
 ///
 /// ## Arguments
@@ -54,10 +52,8 @@ macro_rules! macro_check_directory {
 /// use std::path::Path;
 /// use ssg::macro_check_directory;
 ///
-/// fn main() {
-///     let path = Path::new("logs");
-///     macro_check_directory!(path, "logs");
-/// }
+/// let path = Path::new("logs");
+/// macro_check_directory!(path, "logs");
 /// ```
 ///
 /// ## Arguments
@@ -91,10 +87,7 @@ macro_rules! macro_cleanup_directories {
 ///
 /// ```rust
 /// use ssg::macro_create_directories;
-///
-/// fn main() {
-///     macro_create_directories!("logs", "cache", "data");
-/// }
+/// macro_create_directories!("logs", "cache", "data");
 /// ```
 ///
 /// ## Arguments
@@ -133,33 +126,89 @@ macro_rules! macro_create_directories {
     }};
 }
 
-
+/// # `macro_generate_metatags` Macro
+///
+/// Generate a sequence of metatags using the provided keys and values.
+///
+/// ## Usage
+///
+/// ```rust
+/// use ssg::macro_generate_metatags;
+/// macro_generate_metatags!("description", "This is a description", "keywords", "rust,macros,metatags");
+/// ```
+///
+/// ## Arguments
+///
+/// * `($key:literal, $value:expr)...` - Pairs of a literal key and an expression value, each specified as `literal, expr`. The pairs should be separated by commas.
+///
+/// ## Behavior
+///
+/// The `macro_generate_metatags` macro generates metatags using the provided keys and values. It takes pairs of literal keys and expression values and uses the `generate_metatags` function to create the metatags.
+///
+/// The pairs of keys and values are specified as `literal, expr` and separated by commas. For example, `macro_generate_metatags!("description", "This is a description", "keywords", "rust,macros,metatags")` will generate metatags with the keys `description` and `keywords` and the corresponding values.
+///
+/// The macro internally creates a slice of tuples of the keys and values and passes it to the `generate_metatags` function. The function should return a string that represents the generated metatags.
+///
+/// ## Example
+///
+/// ```rust
+/// use ssg::macro_generate_metatags;
+/// let description = "This is a test description.";
+/// let keywords = "test,rust,macro";
+/// let metatags = macro_generate_metatags!("description", description, "keywords", keywords);
+/// println!("{}", metatags);
+/// ```
 #[macro_export]
-/// ## Macro: `macro_generate_metatags` - Generates HTML meta tags from a list of key-value pairs.
-///
-/// This macro takes a list of key-value pairs and generates code that creates HTML meta tags.
-///
-/// ### Arguments
-///
-/// * `$key`   - The key for the meta tag.
-/// * `$value` - The value for the meta tag.
-///
 macro_rules! macro_generate_metatags {
     ($($key:literal, $value:expr),* $(,)?) => {
-        generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
+        $crate::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
     };
 }
 
+/// # `macro_get_args` Macro
+///
+/// Retrieve a named argument from a `clap::ArgMatches` object.
+///
+/// ## Usage
+///
+/// ```rust
+/// use clap::{Arg, ArgMatches, Command, Error};
+/// use ssg::macro_get_args;
+///
+/// fn test() -> Result<(), Box<dyn std::error::Error>> {
+///     let matches = Command::new("test_app")
+///         .arg(
+///             Arg::new("content")
+///                 .long("content")
+///                 .short('c')
+///                 .value_name("CONTENT"),
+///         )
+///         .get_matches_from(vec!["test_app", "--content", "test_content"]);
+///
+///     let content = macro_get_args!(matches, "content");
+///     println!("Content: {}", content);
+///     Ok(())
+/// }
+/// test();
+/// ```
+///
+/// ## Arguments
+///
+/// * `$matches` - A `clap::ArgMatches` object representing the parsed command-line arguments.
+/// * `$name` - A string literal specifying the name of the argument to retrieve.
+///
+/// ## Behavior
+///
+/// The `macro_get_args` macro retrieves the value of the named argument `$name` from the `$matches` object. If the argument is found and its value can be converted to `String`, the macro returns the value as a `Result<String, String>`. If the argument is not found or its value cannot be converted to `String`, an `Err` variant is returned with an error message indicating the omission of the required parameter.
+///
+/// The error message includes the name of the omitted parameter (`$name`) to assist with troubleshooting and providing meaningful feedback to users.
+///
+/// ## Notes
+///
+/// - This macro assumes the availability of the `clap` crate and the presence of a valid `ArgMatches` object.
+/// - Make sure to adjust the code example by providing a valid `ArgMatches` object and replacing `"arg_name"` with the actual name of the argument you want to retrieve.
+///
 #[macro_export]
-/// ## Macro: `macro_get_args` - Retrieve a command-line argument or return an error message.
-///
-/// This macro takes a `clap::ArgMatches` object and a string literal and generates code that retrieves the argument or returns an error message if it does not exist.
-///
-/// ### Arguments
-///
-/// * `$matches` - A `clap::ArgMatches` object.
-/// * `$name`    - A string literal for the error message.
-///
 macro_rules! macro_get_args {
     ($matches:ident, $name:expr) => {
         $matches.get_one::<String>($name).ok_or(format!(
@@ -169,33 +218,60 @@ macro_rules! macro_get_args {
     };
 }
 
+/// # `macro_metadata_option` Macro
+///
+/// Extracts an option value from metadata.
+///
+/// ## Usage
+///
+/// ```rust
+/// use std::collections::HashMap;
+/// use ssg::macro_metadata_option;
+///
+/// let mut metadata = HashMap::new();
+/// metadata.insert("key", "value");
+/// let value = macro_metadata_option!(metadata, "key");
+/// println!("{}", value);
+/// ```
+///
+/// ## Arguments
+///
+/// * `$metadata` - A mutable variable that represents the metadata (of type `HashMap<String, String>` or any other type that supports the `get` and `cloned` methods).
+/// * `$key` - A string literal that represents the key to search for in the metadata.
+///
+/// ## Behavior
+///
+/// The `macro_metadata_option` macro is used to extract an option value from metadata. It takes a mutable variable representing the metadata and a string literal representing the key as arguments, and uses the `get` method of the metadata to find an option value with the specified key.
+///
+/// If the key exists in the metadata, the macro clones the value and returns it. If the key does not exist, it returns the default value for the type of the metadata values.
+///
+/// The macro is typically used in contexts where metadata is stored in a data structure that supports the `get` and `cloned` methods, such as a `HashMap<String, String>`.
+///
+/// ## Example
+///
+/// ```rust
+/// use ssg::macro_metadata_option;
+/// use std::collections::HashMap;
+///
+/// let mut metadata = HashMap::new();
+/// metadata.insert("key", "value");
+/// let value = macro_metadata_option!(metadata, "key");
+/// println!("{}", value);
+/// ```
+///
 #[macro_export]
-/// ## Macro: `macro_metadata_option` - Retrieve a metadata option or return an empty string.
-///
-/// This macro takes a `HashMap` object and a string literal and generates code that retrieves the option or returns an empty string if it does not exist.
-///
-/// ### Arguments
-///
-/// * `$metadata` - A `HashMap` object.
-/// * `$key`      - A string literal for the error message.
-///
 macro_rules! macro_metadata_option {
     ($metadata:ident, $key:expr) => {
         $metadata.get($key).cloned().unwrap_or_default()
     };
 }
 
+/// # `macro_render_layout` Macro
+///
+/// Selects the appropriate template for rendering based on the specified layout,
+/// and uses this template to render a context into a string.
+///
 #[macro_export]
-/// ## Macro: `macro_render_layout` - Render a layout template.
-///
-/// This macro takes a layout, a template path, and a context and generates code that renders the layout template.
-///
-/// ### Arguments
-///
-/// * `$layout`        - The layout to render.
-/// * `$template_path` - The path to the template.
-/// * `$context`       - The context to render.
-///
 macro_rules! macro_render_layout {
     ($layout:expr, $template_path:expr, $context:expr) => {{
         let layout_str: &str = &$layout;
@@ -220,18 +296,22 @@ macro_rules! macro_render_layout {
     }};
 }
 
+/// # `macro_serve` Macro
+///
+/// Start a server at the specified address with the given document root.
+///
+/// ## Arguments
+///
+/// * `$server_address` - The address at which the server should listen, specified as an expression (`expr`).
+/// * `$document_root` - The root directory of the documents that the server should serve, specified as an expression (`expr`).
+///
+/// ## Behavior
+///
+/// The `macro_serve` macro starts a server at the specified address with the given document root. It internally calls the `start` function from an unspecified library, passing the server address and document root as arguments.
+///
+/// If the server starts successfully, the macro returns `Ok(())`. If an error occurs during server startup, the macro will panic with the error message provided by the `unwrap` method.
+///
 #[macro_export]
-/// ## Macro: `macro_serve` - Start a web server to serve the public directory.
-///
-/// This macro takes a server address and a document root and generates code that creates a TCP listener listening at the server address.
-///
-/// It then generates code that iterates over the incoming connections on the listener, and handles each connection by passing it to the `handle_connection` function.
-///
-/// ### Arguments
-///
-/// * `server_address` - A string literal for the server address.
-/// * `document_root`  - A string literal for the document root.
-///
 macro_rules! macro_serve {
     ($server_address:expr, $document_root:expr) => {
         start($server_address, $document_root).unwrap();
