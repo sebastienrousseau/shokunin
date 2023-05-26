@@ -52,6 +52,27 @@ The library extracts metadata and content to generate static HTML files from Mar
 - Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML, etc.
 - Built-in support for sitemap generation, robots.txt generation, canonical name (CNAME) records and custom 404 pages.
 
+## Table of Contents 📚
+
+- [Getting Started 🚀](#getting-started-)
+  - [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Platform support](#platform-support)
+    - [Tier 1 platforms 🏆](#tier-1-platforms-)
+    - [Tier 2 platforms 🥈](#tier-2-platforms-)
+  - [Documentation](#documentation)
+- [Usage 📖](#usage-)
+  - [Command Line Interface (CLI)](#command-line-interface-cli)
+    - [Arguments](#arguments)
+  - [In your project](#in-your-project)
+  - [Examples](#examples)
+    - [Args](#args)
+    - [Return value](#return-value)
+- [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
+- [License 📝](#license-)
+- [Contribution 🤝](#contribution-)
+- [Acknowledgements 💙](#acknowledgements-)
+
 ## Getting Started 🚀
 
 It takes just a few minutes to get up and running with `Shokunin (職人) Static Site Generator`.
@@ -84,7 +105,7 @@ latest stable version of Rust.
 
 `Shokunin (職人) Static Site Generator` is supported and tested on the following platforms:
 
-### Tier 1 platforms 🏆
+#### Tier 1 platforms 🏆
 
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
@@ -97,7 +118,7 @@ latest stable version of Rust.
 | ✅ | Windows | x86_64-pc-windows-gnu | 64-bit Windows (7 or later) |
 | ✅ | Windows | x86_64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
-### Tier 2 platforms 🥈
+#### Tier 2 platforms 🥈
 
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
