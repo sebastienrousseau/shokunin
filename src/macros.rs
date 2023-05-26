@@ -96,3 +96,36 @@ macro_rules! macro_render_layout {
         render_template(&template_content, &$context)
     }};
 }
+
+/// Macro: `macro_serve` - Start a web server to serve the public directory.
+///
+/// This macro takes a server address and a document root and generates code
+/// that creates a TCP listener listening at the server address.
+///
+/// It then generates code that iterates over the incoming connections on the
+/// listener, and handles each connection by passing it to the
+/// `handle_connection` function.
+///
+/// # Arguments
+///
+/// * `server_address` - A string literal for the server address.
+/// * `document_root`  - A string literal for the document root.
+///
+/// # Example
+///
+/// ```
+/// macro_serve!("localhost:8080", "public/");
+/// ```
+///
+/// This will expand to:
+///
+/// ```
+/// start("localhost:8080", "public/").unwrap();
+/// ```
+///
+#[macro_export]
+macro_rules! macro_serve {
+    ($server_address:expr, $document_root:expr) => {
+        start($server_address, $document_root).unwrap();
+    };
+}

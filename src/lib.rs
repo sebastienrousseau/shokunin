@@ -77,6 +77,7 @@
 
 use cli::print_banner;
 use compiler::compile;
+use serve::start;
 use std::{error::Error, path::Path};
 
 /// The `cli` module contains functions for the command-line interface.
@@ -138,7 +139,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     if let Some(site_name) = matches.get_one::<String>("new") {
         // Start the server using the specified server address and site name.
         // If an error occurs, propagate it up the call stack.
-        serve::start("127.0.0.1:8000", site_name)?;
+        macro_serve!("127.0.0.1:8000", site_name);
     }
 
     // Set the build, content, site and template paths for the compile function.
