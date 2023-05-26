@@ -2,14 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #[macro_export]
-/// ## Macro: `macro_metadata_option` - Retrieve a metadata option or return an
-/// empty string
-macro_rules! macro_metadata_option {
-    ($metadata:ident, $key:expr) => {
-        $metadata
-            .get($key)
-            .cloned()
-            .unwrap_or_else(|| "".to_string())
+/// ## Macro: `macro_check_directory` - Check if a directory exists or return
+/// an error message if it does not
+macro_rules! macro_check_directory {
+    ($path:expr, $arg:expr) => {
+        if let Err(e) = directory($path, $arg) {
+            return Err(format!("❌ Error: {}", e));
+        }
+    };
+}
+
+#[macro_export]
+/// ## Macro: `macro_cleanup_directories` - Delete a list of directories or
+/// return an error message if it does not succeed.
+macro_rules! macro_cleanup_directories {
+    ( $($dir:expr),* ) => {
+        {
+            use $crate::utilities::cleanup_directory;
+            let directories = &[ $($dir),* ];
+            cleanup_directory(directories)?;
+        }
+    };
+}
+
+#[macro_export]
+/// ## Macro: `macro_create_directories` - Create a list of directories or
+/// return an error message if it does not succeed.
+macro_rules! macro_create_directories {
+    ( $($dir:expr),* ) => {
+        {
+            use $crate::utilities::create_directory;
+            let directories = &[ $($dir),* ];
+            create_directory(directories)?;
+        }
     };
 }
 
@@ -35,39 +60,11 @@ macro_rules! macro_get_args {
 }
 
 #[macro_export]
-/// ## Macro: `macro_check_directory` - Check if a directory exists or return
-/// an error message if it does not
-macro_rules! macro_check_directory {
-    ($path:expr, $arg:expr) => {
-        if let Err(e) = directory($path, $arg) {
-            return Err(format!("❌ Error: {}", e));
-        }
-    };
-}
-
-#[macro_export]
-/// ## Macro: `macro_create_directories` - Create a list of directories or
-/// return an error message if it does not succeed.
-macro_rules! macro_create_directories {
-    ( $($dir:expr),* ) => {
-        {
-            use $crate::utilities::create_directory;
-            let directories = &[ $($dir),* ];
-            create_directory(directories)?;
-        }
-    };
-}
-
-#[macro_export]
-/// ## Macro: `macro_cleanup_directories` - Delete a list of directories or
-/// return an error message if it does not succeed.
-macro_rules! macro_cleanup_directories {
-    ( $($dir:expr),* ) => {
-        {
-            use $crate::utilities::cleanup_directory;
-            let directories = &[ $($dir),* ];
-            cleanup_directory(directories)?;
-        }
+/// ## Macro: `macro_metadata_option` - Retrieve a metadata option or return an
+/// empty string
+macro_rules! macro_metadata_option {
+    ($metadata:ident, $key:expr) => {
+        $metadata.get($key).cloned().unwrap_or_default()
     };
 }
 
@@ -97,6 +94,7 @@ macro_rules! macro_render_layout {
     }};
 }
 
+#[macro_export]
 /// ## Macro: `macro_serve` - Start a web server to serve the public directory.
 ///
 /// This macro takes a server address and a document root and generates code
@@ -120,12 +118,10 @@ macro_rules! macro_render_layout {
 /// This will expand to:
 ///
 /// ```
-/// start("localhost:8080", "public/")?;
+/// start("localhost:8080", "public/").unwrap();
 /// ```
-///
-#[macro_export]
 macro_rules! macro_serve {
     ($server_address:expr, $document_root:expr) => {
-        start($server_address, $document_root)?
+        start($server_address, $document_root).unwrap();
     };
 }
