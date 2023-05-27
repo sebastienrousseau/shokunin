@@ -2439,9 +2439,9 @@ dependencies = [
 
 [[package]]
 name = "xtaskops"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fdfbea0c34cf92e7c87c79eb4336d53a5810398645c26f6ae47aad7cd9d4cb9"
+checksum = "464ca5c2bac1d1fcdbef9da6c09c6a14f2c7ac6c8845f574ab12065a2b72bb8b"
 dependencies = [
  "anyhow",
  "clap 3.2.23",
