@@ -7,7 +7,7 @@ categories = [
     "template-engine",
     "web-programming",
 ]
-description = "A Fast and Flexible Static Site Generator written in Rust."
+description = "A Fast and Flexible open-source static site generator (ssg) written in Rust."
 documentation = "https://docs.rs/ssg"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
@@ -48,9 +48,11 @@ clap = "4.3.0"
 comrak = "0.18.0"
 mime_guess = "2.0.4"
 minify-html = "0.11.1"
+openssl = { version = "0.10.52", features = ["vendored"] }
 quick-xml = "0.28.2"
 regex = "1.8.3"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
+serde = { version = "1.0.163", features = ["derive"] }
 serde_json = "1.0.96"
 tempfile = "3.5.0"
 toml = "0.7.4"
@@ -58,7 +60,7 @@ yaml-rust = "0.4.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.11"
-criterion = "0.5.0"
+criterion = "0.5.1"
 
 [lib]
 crate-type = ["lib"]
@@ -79,7 +81,7 @@ incremental = true
 lto = false
 opt-level = 0
 overflow-checks = true
-panic = "unwind"
+panic = 'unwind'
 rpath = false
 strip = false
 
