@@ -12,6 +12,14 @@ pub struct CnameOptions {
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+
+/// ## Struct: `TxtOptions` - Options for the `txt` function
+pub struct TxtOptions {
+    /// A string representing the permalink of the web app
+    pub permalink: String,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// ## Struct: `IconOptions` - Options for the `manifest` function
 pub struct IconOptions {
     /// A string representing the source of the icon
@@ -62,7 +70,8 @@ pub fn manifest(options: &ManifestOptions) -> String {
         "background_color".to_string(),
         json!(options.background_color),
     );
-    json_map.insert("description".to_string(), json!(options.description));
+    json_map
+        .insert("description".to_string(), json!(options.description));
     json_map.insert("dir".to_string(), json!(options.dir));
     json_map.insert("display".to_string(), json!(options.display));
 
@@ -84,18 +93,23 @@ pub fn manifest(options: &ManifestOptions) -> String {
     json_map.insert("identity".to_string(), json!(options.identity));
     json_map.insert("lang".to_string(), json!(options.lang));
     json_map.insert("name".to_string(), json!(options.name));
-    json_map.insert("orientation".to_string(), json!(options.orientation));
+    json_map
+        .insert("orientation".to_string(), json!(options.orientation));
     json_map.insert("scope".to_string(), json!(options.scope));
-    json_map.insert("short_name".to_string(), json!(options.short_name));
+    json_map
+        .insert("short_name".to_string(), json!(options.short_name));
     json_map.insert("start_url".to_string(), json!(options.start_url));
-    json_map.insert("theme_color".to_string(), json!(options.theme_color));
+    json_map
+        .insert("theme_color".to_string(), json!(options.theme_color));
 
     serde_json::to_string_pretty(&json_map).unwrap()
 }
 
 /// ## Function: `txt` - Generate a robots.txt for a web app
-pub fn txt() -> String {
-    "User-agent: *\nSitemap: /sitemap.xml".to_string()
+pub fn txt(options: &TxtOptions) -> String {
+    let permalink = options.permalink.clone();
+    let url = format!("{}/sitemap.xml", permalink);
+    "User-agent: *\nSitemap: {{url}}".replace("{{url}}", &url)
 }
 
 /// ## Function: `cname` - Generate a CNAME for a web app

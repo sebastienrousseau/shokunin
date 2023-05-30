@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Quick Start</title>
+        <description>Shokunin Static Site Generator is a blazing fast and flexible static site
+            generator that can be used to create professional static websites and blogs. It features
+            built-in support for GitHub Flavored Markdown, Google Analytics, Bing Analytics, Atom
+            and RSS feeds, minification, a built-in development server, multiple content formats,
+            and more.</description>
+        <lastBuildDate>Thu, 01 June 2023 23:23:23 BST</lastBuildDate>
+        <pubDate>Thu, 01 June 2023 23:23:23 BST</pubDate>
+        <generator>Shokunin Static Site Generator 🦀 (version 0.0.13)</generator>
+        <item>
+            <item_title>Shokunin Static Site Generator - RSS Feed</item_title>
+            <item_link>https://shokunin.one/rss.xml</item_link>
+            <item_guid>https://shokunin.one/</item_guid>
+            <item_description>An open-source static site generators (ssg) written in Rust, designed
+                for speed, security and reliability.</item_description>
+            <item_pub_date>Thu, 01 June 2023 23:23:23 BST</item_pub_date>
+        </item>
+    </channel>
+</rss>

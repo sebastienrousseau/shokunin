@@ -29,7 +29,7 @@
     <link
       rel="icon"
       type="image/x-icon"
-      href="https://kura.pro/pain001/images/favicon.ico"
+      href="https://kura.pro/shokunin/images/favicon.ico"
     />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
@@ -39,23 +39,29 @@
     />
     <link
       rel="apple-touch-icon"
-      href="https://kura.pro/pain001/images/icons/192x192.png"
+      href="https://kura.pro/shokunin/images/icons/192x192.png"
       sizes="192x192"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/pain001/images/icons/16x16.png"
+      href="https://kura.pro/shokunin/images/icons/16x16.png"
       sizes="16x16"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/pain001/images/icons/32x32.png"
+      href="https://kura.pro/shokunin/images/icons/32x32.png"
       sizes="32x32"
     />
     <link rel="manifest" href="manifest.json" />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+    <style>
+      a {
+        color: var(--bs-link-color);
+        text-decoration: none;
+      }
+    </style>
 
     <!-- # Start Open Graph / Facebook -->
     <meta name="og:description" content="{{og_description}}" />
@@ -131,14 +137,19 @@
     id="page-top"
     itemscope
     itemtype="http://schema.org/WebPage"
-    class="bg-dark text-white text-center"
+    class="text-center"
   >
     <!-- Responsive navbar-->
     <nav
-      class="navbar navbar-expand-lg navbar-dark bg-black bg-gradient fixed-top"
+      class="navbar navbar-expand-lg navbar-light bg-transparent text-dark fixed-top"
+      id="mainNav"
+      role="navigation"
+      itemscope
+      itemtype="http://schema.org/SiteNavigationElement"
+      style="--bs-opacity: 0.9; opacity: 0.9"
     >
-      <div class="container">
-        <figure>
+      <div class="container p-3">
+        <figure class="py-0 mb-0">
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
@@ -146,7 +157,7 @@
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
               src="{{image}}"
-              height="24"
+              height="33"
               title="Logo of {{name}}"
             />
           </a>
@@ -166,16 +177,18 @@
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
               <a
-                class="nav-link nav-link active"
+                class="text-uppercase nav-link nav-link active"
                 aria-current="page"
                 href="/#page-top"
                 >Home</a
               >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/#features">Features</a>
+              <a class="text-uppercase nav-link" href="/quick-start/index.html"
+                >Quick Start</a
+              >
             </li>
-            <li class="nav-item dropdown">
+            <li class="text-uppercase nav-item dropdown">
               <a
                 class="nav-link dropdown-toggle"
                 id="navbarDropdown"
@@ -183,21 +196,26 @@
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
-                >Documentation</a
+                >Resources</a
               >
               <ul
                 class="dropdown-menu dropdown-menu-end"
                 aria-labelledby="navbarDropdown"
               >
                 <li>
-                  <a class="dropdown-item" href="/pain.001.001.03/"
-                    >pain001.001.03 - Customer Credit Transfer Initiation</a
+                  <a
+                    class="dropdown-item"
+                    href="https://github.com/sebastienrousseau/shokunin"
+                    >GitHub</a
                   >
                 </li>
                 <li>
-                  <a class="dropdown-item" href="/pain.001.001.09/"
-                    >pain001.001.09 - Customer Credit Transfer Initiation</a
+                  <a class="dropdown-item" href="https://docs.rs/crate/ssg/"
+                    >Documentation</a
                   >
+                </li>
+                <li>
+                  <a class="dropdown-item" href="https://kaishi.one">Themes</a>
                 </li>
               </ul>
             </li>
@@ -206,43 +224,26 @@
       </div>
     </nav>
 
-    <header class="bg-dark text-white text-center" aria-label="header">
-      <div class="container px-5 py-5">
+    <!-- Masthead-->
+    <header>
+      <div class="position-relative overflow-hidden text-center">
         <img
           src="{{banner}}"
           alt="{{name}} banner"
           title="{{name}}"
-          class="img-fluid"
+          class="img-fluid mw-100"
         />
-
-        <div class="d-sm-flex justify-content-sm-center d-grid gap-3">
-          <a
-            class="btn btn-success btn-lg px-4 me-sm-3"
-            alt="Features for {{name}}"
-            href="#features"
-            >Features</a
-          >
-          <a
-            class="btn btn-success btn-lg px-4 me-sm-3"
-            alt="Payment Messages"
-            href="#payment-messages"
-            >Payment Messages</a
-          >
-          <a
-            class="btn btn-warning btn-lg px-4 me-sm-3"
-            alt="Install from PyPI"
-            href="https://pypi.org/project/pain001/"
-            >Install from PyPI</a
-          >
-        </div>
       </div>
     </header>
+
     <!-- Main content-->
-    <main id="main" class="bd-masthead fs-5 px-5 py-5" aria-label="main">
-      <div class="text-start mt-5 justify-content-between">{{content}}</div>
+    <main id="main" class="bd-masthead p-5 fs-5" aria-label="main">
+      <div class="bg-light rounded-5 text-start justify-content-between p-5">
+        {{content}}
+      </div>
     </main>
-    <footer id="footer" class="bg-dark center text-center" aria-label="footer">
-      <p class="m-0 text-center text-white">{{copyright}}</p>
+    <footer id="footer" class="center text-center" aria-label="footer">
+      <p>{{copyright}}</p>
     </footer>
 
     <!-- Bootstrap core JS-->

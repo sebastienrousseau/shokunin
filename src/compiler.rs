@@ -5,9 +5,12 @@ use crate::{
     file::{add, File},
     frontmatter::extract,
     html::generate_html,
-    json::{cname, manifest, txt, CnameOptions, IconOptions, ManifestOptions},
-    macro_cleanup_directories, macro_create_directories, macro_generate_metatags,
-    macro_metadata_option,
+    json::{
+        cname, manifest, txt, CnameOptions, IconOptions,
+        ManifestOptions, TxtOptions,
+    },
+    macro_cleanup_directories, macro_create_directories,
+    macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
     rss::{generate_rss, RssOptions},
     template::{render_page, PageOptions},
@@ -210,8 +213,12 @@ pub fn compile(
                 cname: macro_metadata_option!(metadata, "cname"),
             };
 
+            let txt_options: TxtOptions = TxtOptions {
+                permalink: macro_metadata_option!(metadata, "permalink"),
+            };
+
             let json_data = manifest(&json);
-            let txt_data = txt();
+            let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
 
             File {
@@ -236,8 +243,12 @@ pub fn compile(
     for file in &files_compiled {
         let file_name = match Path::new(&file.name).extension() {
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
-            Some(ext) if ext == "json" => file.name.replace(".json", ""),
+            Some(ext) if ext == "toml" => {
+                file.name.replace(".toml", "")
+            }
+            Some(ext) if ext == "json" => {
+                file.name.replace(".json", "")
+            }
             Some(ext) if ext == "js" => file.name.replace(".js", ""),
             Some(ext) if ext == ".xml" => file.name.replace(".xml", ""),
             Some(ext) if ext == ".txt" => file.name.replace(".txt", ""),
