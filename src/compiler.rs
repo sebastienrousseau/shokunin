@@ -164,12 +164,14 @@ pub fn compile(
             // Generate RSS
             let rss = generate_rss(&RssOptions {
                 title: (macro_metadata_option!(metadata, "title")),
-                link: (macro_metadata_option!(metadata, "link")),
+                link: (macro_metadata_option!(metadata, "permalink")),
                 description: (macro_metadata_option!(metadata, "description")),
+                generator: (macro_metadata_option!(metadata, "generator")),
+                language: (macro_metadata_option!(metadata, "language")),
                 atom_link: (macro_metadata_option!(metadata, "atom_link")),
                 last_build_date: (macro_metadata_option!(metadata, "last_build_date")),
+                webmaster: (macro_metadata_option!(metadata, "webmaster")),
                 pub_date: (macro_metadata_option!(metadata, "pub_date")),
-                generator: (macro_metadata_option!(metadata, "generator")),
                 item_title: (macro_metadata_option!(metadata, "item_title")),
                 item_link: (macro_metadata_option!(metadata, "item_link")),
                 item_guid: (macro_metadata_option!(metadata, "item_guid")),

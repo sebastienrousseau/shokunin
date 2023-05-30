@@ -13,14 +13,18 @@ pub struct RssOptions {
     pub link: String,
     /// The description of the RSS feed.
     pub description: String,
-    /// The link to the RSS feed.
+    /// The generator of the RSS feed.
+    pub generator: String,
+    /// The language of the RSS feed.
+    pub language: String,
+    /// The atom link of the RSS feed.
     pub atom_link: String,
+    /// The webmaster of the RSS feed.
+    pub webmaster: String,
     /// The last build date of the RSS feed.
     pub last_build_date: String,
     /// The publication date of the RSS feed.
     pub pub_date: String,
-    /// The generator of the RSS feed.
-    pub generator: String,
     /// The title of the RSS feed item.
     pub item_title: String,
     /// The link to the RSS feed item.
@@ -40,15 +44,17 @@ impl RssOptions {
             title: "".to_string(),
             link: "".to_string(),
             description: "".to_string(),
+            generator: "".to_string(),
+            language: "".to_string(),
             atom_link: "".to_string(),
+            webmaster: "".to_string(),
             last_build_date: "".to_string(),
             pub_date: "".to_string(),
-            generator: "".to_string(),
             item_title: "".to_string(),
             item_link: "".to_string(),
+            item_pub_date: "".to_string(),
             item_guid: "".to_string(),
             item_description: "".to_string(),
-            item_pub_date: "".to_string(),
         }
     }
 }
@@ -72,15 +78,22 @@ impl RssOptions {
 /// A `Result<String, Box<dyn std::error::Error>>` containing the RSS
 /// feed, or an error if the RSS feed cannot be generated.
 ///
-pub fn generate_rss(options: &RssOptions) -> Result<String, Box<dyn std::error::Error>> {
+pub fn generate_rss(
+    options: &RssOptions,
+) -> Result<String, Box<dyn std::error::Error>> {
     // Write the XML declaration
     let mut writer = Writer::new(Cursor::new(Vec::new()));
-    writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+    writer.write_event(Event::Decl(BytesDecl::new(
+        "1.0",
+        Some("utf-8"),
+        None,
+    )))?;
 
     // Write the <rss> opening tag with version attribute
     let mut rss_start = BytesStart::new("rss");
     rss_start.push_attribute(("version", "2.0"));
-    rss_start.push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
+    rss_start
+        .push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
     writer.write_event(Event::Start(rss_start))?;
 
     // Write the <channel> opening tag
@@ -91,10 +104,11 @@ pub fn generate_rss(options: &RssOptions) -> Result<String, Box<dyn std::error::
         ("title", &options.title),
         ("link", &options.link),
         ("description", &options.description),
-        ("atom:link", &options.atom_link),
-        ("lastBuildDate", &options.last_build_date),
-        ("pubDate", &options.pub_date),
         ("generator", &options.generator),
+        ("language", &options.language),
+        ("lastBuildDate", &options.last_build_date),
+        ("webMaster", &options.webmaster),
+        ("pubDate", &options.pub_date),
     ];
 
     // Write each channel element that has a non-empty value
@@ -103,29 +117,40 @@ pub fn generate_rss(options: &RssOptions) -> Result<String, Box<dyn std::error::
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
-            writer.write_event(Event::Text(BytesText::from_escaped(value)))?;
+            writer.write_event(Event::Text(
+                BytesText::from_escaped(value),
+            ))?;
 
             let element_end = BytesEnd::new::<Cow<'static, str>>(
-                std::str::from_utf8(element_start.name().local_name().as_ref())
-                    .unwrap()
-                    .to_string()
-                    .into(),
+                std::str::from_utf8(
+                    element_start.name().local_name().as_ref(),
+                )
+                .unwrap()
+                .to_string()
+                .into(),
             );
 
             writer.write_event(Event::End(element_end))?;
         }
     }
 
+    let mut atom_link_start = BytesStart::new("atom:link");
+    atom_link_start
+        .push_attribute(("href", options.atom_link.as_str()));
+    atom_link_start.push_attribute(("rel", "self"));
+    atom_link_start.push_attribute(("type", "application/rss+xml"));
+    writer.write_event(Event::Empty(atom_link_start))?;
+
     // Write the <item> opening tag
     writer.write_event(Event::Start(BytesStart::new("item")))?;
 
     // Write the required item elements
     let item_elements = [
-        ("item_title", &options.item_title),
-        ("item_link", &options.item_link),
-        ("item_guid", &options.item_guid),
-        ("item_description", &options.item_description),
-        ("item_pub_date", &options.item_pub_date),
+        ("title", &options.item_title),
+        ("link", &options.item_link),
+        ("pubDate", &options.item_pub_date),
+        ("guid", &options.item_guid),
+        ("description", &options.item_description),
     ];
 
     // Write each item element that has a non-empty value
@@ -134,12 +159,16 @@ pub fn generate_rss(options: &RssOptions) -> Result<String, Box<dyn std::error::
         if !value.is_empty() {
             let element_start = BytesStart::new(element);
             writer.write_event(Event::Start(element_start.clone()))?;
-            writer.write_event(Event::Text(BytesText::from_escaped(value)))?;
+            writer.write_event(Event::Text(
+                BytesText::from_escaped(value),
+            ))?;
             let element_end = BytesEnd::new::<Cow<'static, str>>(
-                std::str::from_utf8(element_start.name().local_name().as_ref())
-                    .unwrap()
-                    .to_string()
-                    .into(),
+                std::str::from_utf8(
+                    element_start.name().local_name().as_ref(),
+                )
+                .unwrap()
+                .to_string()
+                .into(),
             );
             writer.write_event(Event::End(element_end))?;
         }

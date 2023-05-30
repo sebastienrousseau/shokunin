@@ -14,6 +14,7 @@ language: en-GB
 layout: index
 name: Homepage Template
 permalink: https://example.com
+atom_link: https://example.com/rss.xml
 subtitle: A Simple Homepage Template Website For Shokunin
 theme_color: "#027d1c"
 title: Homepage Template
@@ -25,10 +26,10 @@ generator: "Homepage Template Static Site Generator (v0.0.13)"
 item_description: An open-source static site generators (ssg) written in Rust, designed for speed, security and reliability.
 item_guid: https://example.com/
 item_link: https://example.com/rss.xml
-item_pub_date: "Thu, 01 June 2023 23:23:23 BST"
+item_pub_date: "Wed, 02 Oct 2002 13:00:00 GMT"
 item_title: "Homepage Template - RSS Feed"
-last_build_date: "Thu, 01 June 2023 23:23:23 BST"
-pub_date: "Thu, 01 June 2023 23:23:23 BST"
+last_build_date: "Wed, 02 Oct 2002 13:00:00 GMT"
+pub_date: "Wed, 02 Oct 2002 13:00:00 GMT"
 
 # MS Application - The MS Application front matter (YAML).
 
