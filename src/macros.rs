@@ -36,7 +36,10 @@ macro_rules! macro_check_directory {
         } else {
             match std::fs::create_dir_all($dir) {
                 Ok(_) => {}
-                Err(e) => panic!("❌ Error: Cannot create {} directory: {}", $name, e),
+                Err(e) => panic!(
+                    "❌ Error: Cannot create {} directory: {}",
+                    $name, e
+                ),
             }
         }
     };
@@ -290,8 +293,10 @@ macro_rules! macro_render_layout {
             _ => "template.html",
         };
 
-        let template_content =
-            fs::read_to_string(Path::new($template_path).join(template_file)).unwrap();
+        let template_content = fs::read_to_string(
+            Path::new($template_path).join(template_file),
+        )
+        .unwrap();
         render_template(&template_content, &$context)
     }};
 }
@@ -316,4 +321,34 @@ macro_rules! macro_serve {
     ($server_address:expr, $document_root:expr) => {
         start($server_address, $document_root).unwrap();
     };
+}
+
+#[macro_export]
+/// # `write_element` macro
+///
+/// Writes an XML element to the specified writer.
+///
+macro_rules! macro_write_element {
+    ($writer:expr, $name:expr, $value:expr) => {{
+        use quick_xml::events::BytesText;
+        if !$value.is_empty() {
+            let element_start = BytesStart::new($name);
+            $writer.write_event(Event::Start(element_start.clone()))?;
+            $writer.write_event(Event::Text(
+                BytesText::from_escaped($value),
+            ))?;
+
+            let element_end = BytesEnd::new::<Cow<'static, str>>(
+                std::str::from_utf8(
+                    element_start.name().local_name().as_ref(),
+                )
+                .unwrap()
+                .to_string()
+                .into(),
+            );
+
+            $writer.write_event(Event::End(element_end))?;
+        }
+        Ok::<(), Box<dyn std::error::Error>>(())
+    }};
 }
