@@ -39,16 +39,10 @@ pub struct ManifestOptions {
     pub background_color: String,
     /// A string representing the text direction of the web app
     pub description: String,
-    /// A string representing the text direction of the web app
-    pub dir: String,
     /// A string representing the display mode of the web app
     pub display: String,
     /// A Vector representing the icons of the web app
     pub icons: Vec<IconOptions>,
-    /// A string representing the identity of the web app
-    pub identity: String,
-    /// A string representing the language of the web app
-    pub lang: String,
     /// A string representing the name of the web app
     pub name: String,
     /// A string representing the orientation of the web app
@@ -66,14 +60,17 @@ pub struct ManifestOptions {
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
 pub fn manifest(options: &ManifestOptions) -> String {
     let mut json_map = Map::new();
+    json_map.insert("name".to_string(), json!(options.name));
+    json_map
+        .insert("short_name".to_string(), json!(options.short_name));
+    json_map.insert("start_url".to_string(), json!(options.start_url));
+    json_map.insert("display".to_string(), json!(options.display));
     json_map.insert(
         "background_color".to_string(),
         json!(options.background_color),
     );
     json_map
         .insert("description".to_string(), json!(options.description));
-    json_map.insert("dir".to_string(), json!(options.dir));
-    json_map.insert("display".to_string(), json!(options.display));
 
     let mut icons_vec = vec![];
     for icon in &options.icons {
@@ -90,15 +87,9 @@ pub fn manifest(options: &ManifestOptions) -> String {
     }
     json_map.insert("icons".to_string(), json!(icons_vec));
 
-    json_map.insert("identity".to_string(), json!(options.identity));
-    json_map.insert("lang".to_string(), json!(options.lang));
-    json_map.insert("name".to_string(), json!(options.name));
     json_map
         .insert("orientation".to_string(), json!(options.orientation));
     json_map.insert("scope".to_string(), json!(options.scope));
-    json_map
-        .insert("short_name".to_string(), json!(options.short_name));
-    json_map.insert("start_url".to_string(), json!(options.start_url));
     json_map
         .insert("theme_color".to_string(), json!(options.theme_color));
 

@@ -1,7 +1,6 @@
 {
-  "background_color": "#000",
+  "background_color": "#ffffff",
   "description": "This is a sample website for Shokunin Static Site Generator.",
-  "dir": "/",
   "display": "fullscreen",
   "icons": [
     {
@@ -11,12 +10,10 @@
       "type": "image/png"
     }
   ],
-  "identity": "/",
-  "lang": "en-GB",
-  "name": "Homepage Template",
+  "name": "Homepage",
   "orientation": "any",
   "scope": "/",
-  "short_name": "/",
-  "start_url": "/",
-  "theme_color": "#fff"
+  "short_name": "Home",
+  "start_url": ".",
+  "theme_color": "#027d1c"
 }

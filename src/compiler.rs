@@ -182,13 +182,12 @@ pub fn compile(
 
             // Generate JSON
             let json = ManifestOptions {
-                background_color: "#000".to_string(),
-                description: metadata
-                    .get("description")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                dir: "/".to_string(),
+                name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
+                short_name: (macro_metadata_option!(metadata, "short_name")),
+                start_url: ".".to_string(),
                 display: "fullscreen".to_string(),
+                background_color: "#ffffff".to_string(),
+                description: (macro_metadata_option!(metadata, "description")),
                 icons: match metadata.get("icon") {
                     Some(icon) => {
                         let icons = vec![IconOptions {
@@ -201,14 +200,9 @@ pub fn compile(
                     }
                     None => Vec::new(),
                 },
-                identity: "/".to_string(),
-                lang: "en-GB".to_string(),
-                name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
                 orientation: "any".to_string(),
                 scope: "/".to_string(),
-                short_name: "/".to_string(),
-                start_url: "/".to_string(),
-                theme_color: "#fff".to_string(),
+                theme_color: (macro_metadata_option!(metadata, "theme_color")),
             };
 
             let cname_options: CnameOptions = CnameOptions {

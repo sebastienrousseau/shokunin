@@ -1,28 +1,29 @@
 ---
-# Front Matter (YAML).
+# Front Matter (YAML)
 
-author: The Team
+atom_link: "https://example.com/rss.xml"
+author: "The Team"
 banner: "https://kura.pro/unsplash/images/banners/igor-son-unsplash.jpg"
-charset: utf-8
-cname: example.com
-copyright: © 2023 Homepage Template Website For Shokunin
-description: This is a sample website for Shokunin Static Site Generator.
+charset: "utf-8"
+cname: "example.com"
+copyright: "© 2023 Shokunin Static Site Generator"
+description: "This is a sample website for Shokunin Static Site Generator."
 icon: "https://kura.pro/shokunin/images/favicon.ico"
 image: "https://kura.pro/shokunin/images/titles/title-shokunin.svg"
-keywords: example, generator, html, markdown, rust, shokunin, site, ssg, static, website
-language: en-GB
-layout: index
-name: Homepage Template
-permalink: https://example.com
-atom_link: https://example.com/rss.xml
-subtitle: A Simple Homepage Template Website For Shokunin
+keywords: "example, generator, html, markdown, rust, shokunin, site, ssg, static, website"
+language: "en-GB"
+layout: "index"
+name: "Homepage"
+permalink: "https://example.com"
+short_name: "Home"
+subtitle: "A Simple Homepage Template Website For Shokunin"
 theme_color: "#027d1c"
-title: Homepage Template
-url: https://example.com
+title: "Homepage Template"
+url: "https://example.com"
 
 # RSS - The RSS feed front matter (YAML).
 
-generator: "Homepage Template Static Site Generator (v0.0.13)"
+generator: "Shokunin Static Site Generator (v0.0.13)"
 item_description: An open-source static site generators (ssg) written in Rust, designed for speed, security and reliability.
 item_guid: https://example.com/
 item_link: https://example.com/rss.xml
