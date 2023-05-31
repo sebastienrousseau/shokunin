@@ -78,7 +78,7 @@ mod tests {
     fn test_macro_write_element(
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
-        let result = ssg::macro_write_element!(
+        ssg::macro_write_element!(
             &mut writer,
             "testElement",
             "testValue"
@@ -86,7 +86,6 @@ mod tests {
         let xml = writer.into_inner().into_inner();
         let xml_str = String::from_utf8(xml)?;
         assert_eq!(xml_str, "<testElement>testValue</testElement>");
-        assert_eq!(result, ());
 
         Ok(())
     }
