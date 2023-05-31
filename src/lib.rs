@@ -180,6 +180,9 @@ pub mod macros;
 pub mod metatags;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
+
+/// The `options` module contains the structs
+pub mod options;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;

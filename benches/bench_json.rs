@@ -4,11 +4,10 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::json::{manifest, ManifestOptions};
+use ssg::json::manifest;
+use ssg::options::{IconOptions, ManifestOptions};
 
 pub fn bench_json(c: &mut Criterion) {
-    use ssg::json::IconOptions;
-
     let options = ManifestOptions {
         background_color: "#ffffff".to_owned(),
         description: "My Web App".to_owned(),

@@ -24,6 +24,7 @@ mod tests {
                 json: "\"This is file1.\\n\"".to_string(),
                 txt: "This is file1.\n".to_string(),
                 cname: "This is file1.\n".to_string(),
+                sitemap: "This is file1.\n".to_string(),
             }]
         );
     }

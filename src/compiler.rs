@@ -5,13 +5,14 @@ use crate::{
     file::{add, File},
     frontmatter::extract,
     html::generate_html,
-    json::{
-        cname, manifest, sitemap, txt, CnameOptions, IconOptions,
-        ManifestOptions, SitemapOptions, TxtOptions,
-    },
+    json::{cname, manifest, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
+    options::{
+        CnameOptions, IconOptions, ManifestOptions, SitemapOptions,
+        TxtOptions,
+    },
     rss::{generate_rss, RssOptions},
     template::{render_page, PageOptions},
     utilities::minify_html,
@@ -222,7 +223,7 @@ pub fn compile(
             let json_data = manifest(&json);
             let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
-            let sitemap_data = sitemap(&sitemap_options, &site_path);
+            let sitemap_data = sitemap(&sitemap_options, site_path);
 
             File {
                 name: file.name,

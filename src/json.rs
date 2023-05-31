@@ -8,70 +8,9 @@ use std::{
 
 use serde_json::{json, Map};
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-
-/// ## Struct: `CnameOptions` - Options for the `cname` function
-pub struct CnameOptions {
-    /// A string representing the domain of the web app
-    pub cname: String,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// ## Struct: `SitemapOptions` - Options for the `sitemap` function
-pub struct SitemapOptions {
-    /// A string representing the loc
-    pub loc: String,
-    /// A string representing the lastmod
-    pub lastmod: String,
-    /// A string representing the changefreq
-    pub changefreq: String,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-
-/// ## Struct: `TxtOptions` - Options for the `txt` function
-pub struct TxtOptions {
-    /// A string representing the permalink of the web app
-    pub permalink: String,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// ## Struct: `IconOptions` - Options for the `manifest` function
-pub struct IconOptions {
-    /// A string representing the source of the icon
-    pub src: String,
-    /// A string representing the sizes of the icon
-    pub sizes: String,
-    /// A string representing the type of the icon
-    pub icon_type: Option<String>,
-    /// A string representing the purpose of the icon
-    pub purpose: Option<String>,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// ## Struct: `ManifestOptions` - Options for the `manifest` function
-pub struct ManifestOptions {
-    /// A string representing the background color of the web app
-    pub background_color: String,
-    /// A string representing the text direction of the web app
-    pub description: String,
-    /// A string representing the display mode of the web app
-    pub display: String,
-    /// A Vector representing the icons of the web app
-    pub icons: Vec<IconOptions>,
-    /// A string representing the name of the web app
-    pub name: String,
-    /// A string representing the orientation of the web app
-    pub orientation: String,
-    /// A string representing the scope of the web app
-    pub scope: String,
-    /// A string representing the short name of the web app
-    pub short_name: String,
-    /// A string representing the start URL of the web app
-    pub start_url: String,
-    /// A string representing the theme color of the web app
-    pub theme_color: String,
-}
+use crate::options::{
+    CnameOptions, ManifestOptions, SitemapOptions, TxtOptions,
+};
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
 pub fn manifest(options: &ManifestOptions) -> String {
@@ -129,9 +68,8 @@ pub fn cname(options: &CnameOptions) -> String {
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
 pub fn sitemap(options: &SitemapOptions, dir: &Path) -> String {
-    let loc = options.loc.clone();
     let changefreq = options.changefreq.clone();
-    let base_url = format!("{}", loc);
+    let base_url = options.loc.clone();
     let base_dir = PathBuf::from(dir);
     let mut urls = vec![];
 
@@ -142,7 +80,7 @@ pub fn sitemap(options: &SitemapOptions, dir: &Path) -> String {
 
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">{}</urlset>"#,
-        urls_str.replace("\n", "").replace("    ", "")
+        urls_str.replace("'\n'", "").replace("    ", "")
     )
 }
 
@@ -167,7 +105,7 @@ fn visit_dirs(
                     .unwrap()
                     .to_str()
                     .unwrap()
-                    .replace("\\", "/");
+                    .replace("'\\'", "/");
                 urls.push(format!(
                     r#"
     <url>
