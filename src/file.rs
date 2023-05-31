@@ -22,6 +22,8 @@ pub struct File {
     pub txt: String,
     /// The content of the file, escaped for CNAME.
     pub cname: String,
+    /// The content of the file, escaped for sitemap.
+    pub sitemap: String,
 }
 /// ## Function: add - returns a Result containing a vector of File structs
 ///
@@ -52,10 +54,11 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
         let entry = entry?;
         let path = entry.path();
         if path.is_file() {
-            let file_name = match path.file_name().and_then(|name| name.to_str()) {
-                Some(name) => name,
-                None => continue,
-            };
+            let file_name =
+                match path.file_name().and_then(|name| name.to_str()) {
+                    Some(name) => name,
+                    None => continue,
+                };
 
             if file_name == ".DS_Store" {
                 continue;
@@ -88,6 +91,11 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                 Cow::Owned(cname) => cname,
             };
 
+            let sitemap = match escape(&content) {
+                Cow::Borrowed(sitemap) => sitemap.to_string(),
+                Cow::Owned(sitemap) => sitemap,
+            };
+
             files.push(File {
                 name: file_name.to_string(),
                 content,
@@ -95,6 +103,7 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                 json,
                 txt,
                 cname,
+                sitemap,
             });
         }
     }

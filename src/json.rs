@@ -1,6 +1,11 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 use serde_json::{json, Map};
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
@@ -9,6 +14,17 @@ use serde_json::{json, Map};
 pub struct CnameOptions {
     /// A string representing the domain of the web app
     pub cname: String,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+/// ## Struct: `SitemapOptions` - Options for the `sitemap` function
+pub struct SitemapOptions {
+    /// A string representing the loc
+    pub loc: String,
+    /// A string representing the lastmod
+    pub lastmod: String,
+    /// A string representing the changefreq
+    pub changefreq: String,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
@@ -109,4 +125,59 @@ pub fn cname(options: &CnameOptions) -> String {
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
     format!("{}\n{}", full_domain, base_domain)
+}
+
+/// ## Function: `sitemap` - Generate a sitemap for a web app
+pub fn sitemap(options: &SitemapOptions, dir: &Path) -> String {
+    let loc = options.loc.clone();
+    let changefreq = options.changefreq.clone();
+    let base_url = format!("{}", loc);
+    let base_dir = PathBuf::from(dir);
+    let mut urls = vec![];
+
+    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &mut urls)
+        .unwrap();
+
+    let urls_str = urls.join("\n");
+
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">{}</urlset>"#,
+        urls_str.replace("\n", "").replace("    ", "")
+    )
+}
+
+fn visit_dirs(
+    base_dir: &Path,
+    dir: &Path,
+    base_url: &str,
+    changefreq: &str,
+    urls: &mut Vec<String>,
+) -> std::io::Result<()> {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                visit_dirs(
+                    base_dir, &path, base_url, changefreq, urls,
+                )?;
+            } else if path.file_name().unwrap() == "index.html" {
+                let url = path
+                    .strip_prefix(base_dir)
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("\\", "/");
+                urls.push(format!(
+                    r#"
+    <url>
+        <loc>{}/{}</loc>
+        <changefreq>{}</changefreq>
+    </url>"#,
+                    base_url, url, changefreq
+                ));
+            }
+        }
+    }
+    Ok(())
 }

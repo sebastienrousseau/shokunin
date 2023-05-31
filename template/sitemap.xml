@@ -3,8 +3,8 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     <url>
-        <loc>{{website}}</loc>
-        <lastmod>{{pub_date}}</lastmod>
+        <loc>{{permalink}}</loc>
+        <lastmod>{{last_build_date}}</lastmod>
         <changefreq>weekly</changefreq>
     </url>
 </urlset>

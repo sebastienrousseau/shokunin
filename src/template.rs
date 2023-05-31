@@ -185,7 +185,10 @@ pub struct PageOptions<'a> {
 /// `Result::Ok`. If an error occurs, an error message is returned as a
 /// `String` wrapped in a `Result::Err`.
 ///
-pub fn render_template(template: &str, context: &HashMap<&str, &str>) -> Result<String, String> {
+pub fn render_template(
+    template: &str,
+    context: &HashMap<&str, &str>,
+) -> Result<String, String> {
     let mut output = template.to_owned();
     for (key, value) in context {
         output = output.replace(&format!("{{{{{}}}}}", key), value);
@@ -285,7 +288,10 @@ pub fn render_page(
     context.insert("banner_width", options.banner_width);
     context.insert("banner_height", options.banner_height);
     context.insert("banner_alt", options.banner_alt);
-    context.insert("bing_site_verification", options.bing_site_verification);
+    context.insert(
+        "bing_site_verification",
+        options.bing_site_verification,
+    );
     context.insert("charset", options.charset);
     context.insert("content", options.content);
     context.insert("copyright", options.copyright);
@@ -294,7 +300,10 @@ pub fn render_page(
     context.insert("date", options.date);
     context.insert("description", options.description);
     context.insert("generator", options.generator);
-    context.insert("google_site_verification", options.google_site_verification);
+    context.insert(
+        "google_site_verification",
+        options.google_site_verification,
+    );
     context.insert("image", options.image);
     context.insert("keywords", options.keywords);
     context.insert("lang", options.lang);
@@ -304,13 +313,20 @@ pub fn render_page(
     context.insert("logo_alt", options.logo_alt);
     context.insert("meta", options.meta);
     context.insert("msvalidate1", options.msvalidate1);
-    context.insert("msapplication_config", options.msapplication_config);
+    context
+        .insert("msapplication_config", options.msapplication_config);
     context.insert(
         "msapplication_tap_highlight",
         options.msapplication_tap_highlight,
     );
-    context.insert("msapplication_tile_color", options.msapplication_tile_color);
-    context.insert("msapplication_tile_image", options.msapplication_tile_image);
+    context.insert(
+        "msapplication_tile_color",
+        options.msapplication_tile_color,
+    );
+    context.insert(
+        "msapplication_tile_image",
+        options.msapplication_tile_image,
+    );
     context.insert("name", options.name);
     context.insert("navigation", options.navigation);
     context.insert("og_description", options.og_description);
@@ -382,14 +398,18 @@ impl From<std::io::Error> for TemplateError {
  * `TemplateError` if an error occurs.
  *
  */
-pub fn create_template_folder(template_path: Option<&str>) -> Result<String, TemplateError> {
+pub fn create_template_folder(
+    template_path: Option<&str>,
+) -> Result<String, TemplateError> {
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
 
     // Determine the template directory path based on the provided argument or use the default path
     let template_dir_path = match template_path {
         Some(path) => {
-            if path.starts_with("http://") || path.starts_with("https://") {
+            if path.starts_with("http://")
+                || path.starts_with("https://")
+            {
                 // If a URL is provided, download the template files to a temporary directory
                 let tempdir = tempfile::tempdir()?;
                 let template_dir_path = tempdir.into_path();
@@ -408,6 +428,7 @@ pub fn create_template_folder(template_path: Option<&str>) -> Result<String, Tem
                     "page.html",
                     "post.html",
                     "rss.xml",
+                    "service-worker.js",
                     "sitemap.xml",
                     "tag.html",
                     "template.html",
@@ -417,10 +438,14 @@ pub fn create_template_folder(template_path: Option<&str>) -> Result<String, Tem
                 for file in files.iter() {
                     let file_url = format!("{}/{}", url, file);
                     let file_path = template_dir_path.join(file);
-                    let mut download = reqwest::blocking::get(&file_url)?;
+                    let mut download =
+                        reqwest::blocking::get(&file_url)?;
                     let mut file = File::create(&file_path)?;
                     download.copy_to(&mut file)?;
-                    println!("Downloaded template file to: {:?}", file_path);
+                    println!(
+                        "Downloaded template file to: {:?}",
+                        file_path
+                    );
                 }
 
                 template_dir_path
@@ -450,6 +475,7 @@ pub fn create_template_folder(template_path: Option<&str>) -> Result<String, Tem
                 "page.html",
                 "post.html",
                 "rss.xml",
+                "service-worker.js",
                 "sitemap.xml",
                 "tag.html",
                 "template.html",
@@ -462,7 +488,10 @@ pub fn create_template_folder(template_path: Option<&str>) -> Result<String, Tem
                 let mut download = reqwest::blocking::get(&file_url)?;
                 let mut file = File::create(&file_path)?;
                 download.copy_to(&mut file)?;
-                println!("Downloaded default template file to: {:?}", file_path);
+                println!(
+                    "Downloaded default template file to: {:?}",
+                    file_path
+                );
             }
 
             template_dir_path

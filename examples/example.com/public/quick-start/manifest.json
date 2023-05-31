@@ -1,7 +1,7 @@
 {
   "background_color": "#ffffff",
   "description": "Shokunin Static Site Generator is a blazing fast and flexible static site generator that can be used to create professional static websites and blogs. It features built-in support for GitHub Flavored Markdown, Google Analytics, Bing Analytics, Atom and RSS feeds, minification, a built-in development server, multiple content formats, and more.",
-  "display": "fullscreen",
+  "display": "standalone",
   "icons": [
     {
       "purpose": "any maskable",
@@ -11,7 +11,7 @@
     }
   ],
   "name": "Quick Start",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "scope": "/",
   "short_name": "",
   "start_url": ".",

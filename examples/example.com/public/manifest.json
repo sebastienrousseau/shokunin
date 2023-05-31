@@ -1,7 +1,7 @@
 {
   "background_color": "#ffffff",
   "description": "This is a sample website for Shokunin Static Site Generator.",
-  "display": "fullscreen",
+  "display": "standalone",
   "icons": [
     {
       "purpose": "any maskable",
@@ -11,7 +11,7 @@
     }
   ],
   "name": "Homepage",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "scope": "/",
   "short_name": "Home",
   "start_url": ".",
