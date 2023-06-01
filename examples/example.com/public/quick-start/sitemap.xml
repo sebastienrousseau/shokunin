@@ -7,4 +7,9 @@
 <url>
 <loc>https://shokunin.one/quick-start/index.html</loc>
 <changefreq>weekly</changefreq>
+</url>
+
+<url>
+<loc>https://shokunin.one/404/index.html</loc>
+<changefreq>weekly</changefreq>
 </url></urlset>
