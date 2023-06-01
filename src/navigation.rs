@@ -1,5 +1,4 @@
-use crate::file;
-use file::File;
+use crate::data::FileData;
 use std::path::Path;
 
 /// Generates a navigation menu as an unordered list of links to the
@@ -7,7 +6,7 @@ use std::path::Path;
 ///
 /// # Arguments
 ///
-/// * `files` - A slice of `File` structs containing the compiled HTML
+/// * `files` - A slice of `FileData` structs containing the compiled HTML
 ///             files.
 ///
 /// # Returns
@@ -37,7 +36,7 @@ use std::path::Path;
 /// that preserves the structure of the path, without duplicating the
 /// directory names (e.g., `path_to/file.md` becomes `path_to_file`).
 ///
-pub fn generate_navigation(files: &[File]) -> String {
+pub fn generate_navigation(files: &[FileData]) -> String {
     let mut files_sorted = files.to_vec();
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 

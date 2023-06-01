@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use minify_html::{minify, Cfg};
+use quick_xml::{
+    events::{BytesEnd, BytesStart, BytesText, Event},
+    Writer,
+};
 use std::{
+    borrow::Cow,
     error::Error,
     fs::{self, File},
-    io::{self, Write},
+    io::{self, Cursor, Write},
     path::{Path, PathBuf},
 };
 
@@ -40,12 +45,20 @@ use std::{
 pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
     if dir.exists() {
         if !dir.is_dir() {
-            return Err(format!("❌ Error: {} is not a directory.", name));
+            return Err(format!(
+                "❌ Error: {} is not a directory.",
+                name
+            ));
         }
     } else {
         match fs::create_dir_all(dir) {
             Ok(_) => {}
-            Err(e) => return Err(format!("❌ Error: Cannot create {} directory: {}", name, e)),
+            Err(e) => {
+                return Err(format!(
+                    "❌ Error: Cannot create {} directory: {}",
+                    name, e
+                ))
+            }
         }
     }
     Ok(String::new())
@@ -67,7 +80,10 @@ pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
 ///     - `Ok(())` if the output directory was moved successfully.
 ///     - `Err(std::io::Error)` if the output directory could not be moved.
 ///
-pub fn move_output_directory(site_name: &str, out_dir: &Path) -> std::io::Result<()> {
+pub fn move_output_directory(
+    site_name: &str,
+    out_dir: &Path,
+) -> std::io::Result<()> {
     println!("❯ Moving output directory...");
 
     let public_dir = Path::new("public");
@@ -145,7 +161,9 @@ pub fn find_html_files(dir: &Path) -> io::Result<Vec<PathBuf>> {
         if entry.path().is_dir() {
             let sub_html_files = find_html_files(&entry.path())?;
             html_files.extend(sub_html_files);
-        } else if let Some(extension) = entry.path().extension().and_then(|ext| ext.to_str()) {
+        } else if let Some(extension) =
+            entry.path().extension().and_then(|ext| ext.to_str())
+        {
             if extension.eq_ignore_ascii_case("html") {
                 html_files.push(entry.path());
             }
@@ -184,7 +202,8 @@ pub fn minify_html(file_path: &Path) -> io::Result<String> {
     let file_content = fs::read(file_path)?;
     let minified_content = minify(&file_content, &cfg);
 
-    String::from_utf8(minified_content).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    String::from_utf8(minified_content)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
 }
 
 /// Creates a backup of a file.
@@ -223,7 +242,10 @@ pub fn backup_file(file_path: &Path) -> io::Result<PathBuf> {
 ///     - `Ok(())` if the minified HTML was written successfully.
 ///     - `Err(std::io::Error)` if the minified HTML could not be written.
 ///
-pub fn write_minified_html(file_path: &Path, minified_html: &str) -> io::Result<()> {
+pub fn write_minified_html(
+    file_path: &Path,
+    minified_html: &str,
+) -> io::Result<()> {
     let mut file = File::create(file_path)?;
     file.write_all(minified_html.as_bytes())?;
     Ok(())
@@ -243,13 +265,18 @@ pub fn write_minified_html(file_path: &Path, minified_html: &str) -> io::Result<
 ///     - `Ok(())` if the directories were cleaned up successfully.
 ///     - `Err(Box<dyn Error>)` if an error occurred during the cleanup process.
 ///
-pub fn cleanup_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
+pub fn cleanup_directory(
+    directories: &[&Path],
+) -> Result<(), Box<dyn Error>> {
     for directory in directories {
         if !directory.exists() {
             continue;
         }
 
-        println!("❯ Cleaning up `{}` directory...", directory.display());
+        println!(
+            "❯ Cleaning up `{}` directory...",
+            directory.display()
+        );
 
         fs::remove_dir_all(directory)?;
 
@@ -273,7 +300,9 @@ pub fn cleanup_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
 ///     - `Ok(())` if the directories were created successfully.
 ///     - `Err(Box<dyn Error>)` if an error occurred during the creation process.
 ///
-pub fn create_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
+pub fn create_directory(
+    directories: &[&Path],
+) -> Result<(), Box<dyn Error>> {
     for directory in directories {
         if directory.exists() {
             continue;
@@ -286,5 +315,31 @@ pub fn create_directory(directories: &[&Path]) -> Result<(), Box<dyn Error>> {
         println!("  Done.\n");
     }
 
+    Ok(())
+}
+
+/// Helper function to write XML element
+pub fn write_element(
+    writer: &mut Writer<Cursor<Vec<u8>>>,
+    name: &str,
+    value: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !value.is_empty() {
+        let element_start = BytesStart::new(name);
+        writer.write_event(Event::Start(element_start.clone()))?;
+        writer
+            .write_event(Event::Text(BytesText::from_escaped(value)))?;
+
+        let element_end = BytesEnd::new::<Cow<'static, str>>(
+            std::str::from_utf8(
+                element_start.name().local_name().as_ref(),
+            )
+            .unwrap()
+            .to_string()
+            .into(),
+        );
+
+        writer.write_event(Event::End(element_end))?;
+    }
     Ok(())
 }

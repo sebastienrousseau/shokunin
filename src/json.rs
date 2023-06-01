@@ -1,70 +1,29 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 use serde_json::{json, Map};
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-
-/// ## Struct: `CnameOptions` - Options for the `cname` function
-pub struct CnameOptions {
-    /// A string representing the domain of the web app
-    pub cname: String,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// ## Struct: `IconOptions` - Options for the `manifest` function
-pub struct IconOptions {
-    /// A string representing the source of the icon
-    pub src: String,
-    /// A string representing the sizes of the icon
-    pub sizes: String,
-    /// A string representing the type of the icon
-    pub icon_type: Option<String>,
-    /// A string representing the purpose of the icon
-    pub purpose: Option<String>,
-}
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// ## Struct: `ManifestOptions` - Options for the `manifest` function
-pub struct ManifestOptions {
-    /// A string representing the background color of the web app
-    pub background_color: String,
-    /// A string representing the text direction of the web app
-    pub description: String,
-    /// A string representing the text direction of the web app
-    pub dir: String,
-    /// A string representing the display mode of the web app
-    pub display: String,
-    /// A Vector representing the icons of the web app
-    pub icons: Vec<IconOptions>,
-    /// A string representing the identity of the web app
-    pub identity: String,
-    /// A string representing the language of the web app
-    pub lang: String,
-    /// A string representing the name of the web app
-    pub name: String,
-    /// A string representing the orientation of the web app
-    pub orientation: String,
-    /// A string representing the scope of the web app
-    pub scope: String,
-    /// A string representing the short name of the web app
-    pub short_name: String,
-    /// A string representing the start URL of the web app
-    pub start_url: String,
-    /// A string representing the theme color of the web app
-    pub theme_color: String,
-}
+use crate::data::{CnameData, ManifestOptions, SitemapData, TxtData};
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
 pub fn manifest(options: &ManifestOptions) -> String {
     let mut json_map = Map::new();
+    json_map.insert("name".to_string(), json!(options.name));
+    json_map
+        .insert("short_name".to_string(), json!(options.short_name));
+    json_map.insert("start_url".to_string(), json!(options.start_url));
+    json_map.insert("display".to_string(), json!(options.display));
     json_map.insert(
         "background_color".to_string(),
         json!(options.background_color),
     );
-    json_map.insert("description".to_string(), json!(options.description));
-    json_map.insert("dir".to_string(), json!(options.dir));
-    json_map.insert("display".to_string(), json!(options.display));
+    json_map
+        .insert("description".to_string(), json!(options.description));
 
     let mut icons_vec = vec![];
     for icon in &options.icons {
@@ -81,27 +40,80 @@ pub fn manifest(options: &ManifestOptions) -> String {
     }
     json_map.insert("icons".to_string(), json!(icons_vec));
 
-    json_map.insert("identity".to_string(), json!(options.identity));
-    json_map.insert("lang".to_string(), json!(options.lang));
-    json_map.insert("name".to_string(), json!(options.name));
-    json_map.insert("orientation".to_string(), json!(options.orientation));
+    json_map
+        .insert("orientation".to_string(), json!(options.orientation));
     json_map.insert("scope".to_string(), json!(options.scope));
-    json_map.insert("short_name".to_string(), json!(options.short_name));
-    json_map.insert("start_url".to_string(), json!(options.start_url));
-    json_map.insert("theme_color".to_string(), json!(options.theme_color));
+    json_map
+        .insert("theme_color".to_string(), json!(options.theme_color));
 
     serde_json::to_string_pretty(&json_map).unwrap()
 }
 
 /// ## Function: `txt` - Generate a robots.txt for a web app
-pub fn txt() -> String {
-    "User-agent: *\nSitemap: /sitemap.xml".to_string()
+pub fn txt(options: &TxtData) -> String {
+    let permalink = options.permalink.clone();
+    let url = format!("{}/sitemap.xml", permalink);
+    "User-agent: *\nSitemap: {{url}}".replace("{{url}}", &url)
 }
 
 /// ## Function: `cname` - Generate a CNAME for a web app
-pub fn cname(options: &CnameOptions) -> String {
+pub fn cname(options: &CnameData) -> String {
     let cname_value = options.cname.clone();
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
     format!("{}\n{}", full_domain, base_domain)
+}
+
+/// ## Function: `sitemap` - Generate a sitemap for a web app
+pub fn sitemap(options: &SitemapData, dir: &Path) -> String {
+    let changefreq = options.changefreq.clone();
+    let base_url = options.loc.clone();
+    let base_dir = PathBuf::from(dir);
+    let mut urls = vec![];
+
+    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &mut urls)
+        .unwrap();
+
+    let urls_str = urls.join("\n");
+
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">{}</urlset>"#,
+        urls_str.replace("'\n'", "").replace("    ", "")
+    )
+}
+
+fn visit_dirs(
+    base_dir: &Path,
+    dir: &Path,
+    base_url: &str,
+    changefreq: &str,
+    urls: &mut Vec<String>,
+) -> std::io::Result<()> {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                visit_dirs(
+                    base_dir, &path, base_url, changefreq, urls,
+                )?;
+            } else if path.file_name().unwrap() == "index.html" {
+                let url = path
+                    .strip_prefix(base_dir)
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .replace("'\\'", "/");
+                urls.push(format!(
+                    r#"
+    <url>
+        <loc>{}/{}</loc>
+        <changefreq>{}</changefreq>
+    </url>"#,
+                    base_url, url, changefreq
+                ));
+            }
+        }
+    }
+    Ok(())
 }

@@ -18,7 +18,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.69.0"
-version = "0.0.12"
+version = "0.0.13"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",

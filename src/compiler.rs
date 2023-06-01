@@ -1,13 +1,17 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::data::FileData;
 use crate::{
-    file::{add, File},
+    data::{
+        CnameData, IconData, ManifestOptions, SitemapData, TxtData,
+    },
+    file::add,
     frontmatter::extract,
     html::generate_html,
-    json::{cname, manifest, txt, CnameOptions, IconOptions, ManifestOptions},
-    macro_cleanup_directories, macro_create_directories, macro_generate_metatags,
-    macro_metadata_option,
+    json::{cname, manifest, sitemap, txt},
+    macro_cleanup_directories, macro_create_directories,
+    macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
     rss::{generate_rss, RssOptions},
     template::{render_page, PageOptions},
@@ -69,7 +73,7 @@ pub fn compile(
     // Generate the HTML code for the navigation menu
     let navigation = generate_navigation(&files);
 
-    let files_compiled: Vec<File> = files
+    let files_compiled: Vec<FileData> = files
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
@@ -161,12 +165,14 @@ pub fn compile(
             // Generate RSS
             let rss = generate_rss(&RssOptions {
                 title: (macro_metadata_option!(metadata, "title")),
-                link: (macro_metadata_option!(metadata, "link")),
+                link: (macro_metadata_option!(metadata, "permalink")),
                 description: (macro_metadata_option!(metadata, "description")),
+                generator: (macro_metadata_option!(metadata, "generator")),
+                language: (macro_metadata_option!(metadata, "language")),
                 atom_link: (macro_metadata_option!(metadata, "atom_link")),
                 last_build_date: (macro_metadata_option!(metadata, "last_build_date")),
+                webmaster: (macro_metadata_option!(metadata, "webmaster")),
                 pub_date: (macro_metadata_option!(metadata, "pub_date")),
-                generator: (macro_metadata_option!(metadata, "generator")),
                 item_title: (macro_metadata_option!(metadata, "item_title")),
                 item_link: (macro_metadata_option!(metadata, "item_link")),
                 item_guid: (macro_metadata_option!(metadata, "item_guid")),
@@ -177,16 +183,15 @@ pub fn compile(
 
             // Generate JSON
             let json = ManifestOptions {
-                background_color: "#000".to_string(),
-                description: metadata
-                    .get("description")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                dir: "/".to_string(),
-                display: "fullscreen".to_string(),
+                name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
+                short_name: (macro_metadata_option!(metadata, "short_name")),
+                start_url: ".".to_string(),
+                display: "standalone".to_string(),
+                background_color: "#ffffff".to_string(),
+                description: (macro_metadata_option!(metadata, "description")),
                 icons: match metadata.get("icon") {
                     Some(icon) => {
-                        let icons = vec![IconOptions {
+                        let icons = vec![IconData {
                             src: icon.to_string(),
                             sizes: "512x512".to_string(),
                             icon_type: Some("image/png".to_string()),
@@ -196,31 +201,38 @@ pub fn compile(
                     }
                     None => Vec::new(),
                 },
-                identity: "/".to_string(),
-                lang: "en-GB".to_string(),
-                name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
-                orientation: "any".to_string(),
+                orientation: "portrait-primary".to_string(),
                 scope: "/".to_string(),
-                short_name: "/".to_string(),
-                start_url: "/".to_string(),
-                theme_color: "#fff".to_string(),
+                theme_color: (macro_metadata_option!(metadata, "theme_color")),
             };
 
-            let cname_options: CnameOptions = CnameOptions {
+            let cname_options: CnameData = CnameData {
                 cname: macro_metadata_option!(metadata, "cname"),
             };
 
-            let json_data = manifest(&json);
-            let txt_data = txt();
-            let cname_data = cname(&cname_options);
+            let sitemap_options: SitemapData = SitemapData {
+                loc: macro_metadata_option!(metadata, "permalink"),
+                lastmod: macro_metadata_option!(metadata, "last_build_date"),
+                changefreq: "weekly".to_string(),
+            };
 
-            File {
+            let txt_options: TxtData = TxtData {
+                permalink: macro_metadata_option!(metadata, "permalink"),
+            };
+
+            let json_data = manifest(&json);
+            let txt_data = txt(&txt_options);
+            let cname_data = cname(&cname_options);
+            let sitemap_data = sitemap(&sitemap_options, site_path);
+
+            FileData {
                 name: file.name,
                 content,
                 rss: rss_data,
                 json: json_data,
                 txt: txt_data,
                 cname: cname_data,
+                sitemap: sitemap_data,
             }
         })
         .collect();
@@ -236,27 +248,33 @@ pub fn compile(
     for file in &files_compiled {
         let file_name = match Path::new(&file.name).extension() {
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
-            Some(ext) if ext == "json" => file.name.replace(".json", ""),
+            Some(ext) if ext == "toml" => {
+                file.name.replace(".toml", "")
+            }
+            Some(ext) if ext == "json" => {
+                file.name.replace(".json", "")
+            }
             Some(ext) if ext == "js" => file.name.replace(".js", ""),
-            Some(ext) if ext == ".xml" => file.name.replace(".xml", ""),
-            Some(ext) if ext == ".txt" => file.name.replace(".txt", ""),
+            Some(ext) if ext == "xml" => file.name.replace(".xml", ""),
+            Some(ext) if ext == "txt" => file.name.replace(".txt", ""),
             _ => file.name.to_string(),
         };
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
+            let cname_file = build_path.join("CNAME");
             let html_file = build_path.join("index.html");
-            let rss_file = build_path.join("rss.xml");
             let json_file = build_path.join("manifest.json");
             let robots_file = build_path.join("robots.txt");
-            let cname_file = build_path.join("CNAME");
+            let rss_file = build_path.join("rss.xml");
+            let sitemap_file = build_path.join("sitemap.xml");
 
-            fs::write(&html_file, &file.content)?;
             fs::write(&cname_file, &file.cname)?;
-            fs::write(&rss_file, &file.rss)?;
+            fs::write(&html_file, &file.content)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
+            fs::write(&rss_file, &file.rss)?;
+            fs::write(&sitemap_file, &file.sitemap)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -271,6 +289,7 @@ pub fn compile(
             println!("  - {}", json_file.display());
             println!("  - {}", robots_file.display());
             println!("  - {}", cname_file.display());
+            println!("  - {}", sitemap_file.display());
         } else {
             let dir_name = build_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
@@ -279,12 +298,14 @@ pub fn compile(
             let rss_file = dir_name.join("rss.xml");
             let json_file = dir_name.join("manifest.json");
             let robots_file = dir_name.join("robots.txt");
+            let sitemap_file = dir_name.join("sitemap.xml");
             // let cname_file = dir_name.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
+            fs::write(&sitemap_file, &file.sitemap)?;
             // fs::write(&cname_file, &file.name)?;
 
             // Create a backup of the source html file
@@ -299,6 +320,7 @@ pub fn compile(
             println!("  - {}", rss_file.display());
             println!("  - {}", json_file.display());
             println!("  - {}", robots_file.display());
+            println!("  - {}", sitemap_file.display());
             // println!("  - {}", cname_file.display());
         }
     }

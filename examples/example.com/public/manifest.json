@@ -1,0 +1,19 @@
+{
+  "background_color": "#ffffff",
+  "description": "This is a sample website for Shokunin Static Site Generator.",
+  "display": "standalone",
+  "icons": [
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "https://kura.pro/shokunin/images/favicon.ico",
+      "type": "image/png"
+    }
+  ],
+  "name": "Homepage",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "short_name": "Home",
+  "start_url": ".",
+  "theme_color": "#027d1c"
+}

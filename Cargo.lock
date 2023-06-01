@@ -1663,7 +1663,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.12"
+version = "0.0.13"
 dependencies = [
  "assert_cmd",
  "clap 4.3.0",

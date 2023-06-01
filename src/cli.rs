@@ -43,7 +43,7 @@ pub fn build() -> Result<ArgMatches, Error> {
     let matches = Command::new("Shokunin (職人) 🦀")
         .author("Sebastien Rousseau")
         .about("")
-        .version("0.0.12")
+        .version("0.0.13")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -109,8 +109,9 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin (職人) 🦀 (version 0.0.12)";
-    let description = "A Fast and Flexible Static Site Generator written in Rust";
+    let title = "Shokunin (職人) 🦀 (version 0.0.13)";
+    let description =
+        "A Fast and Flexible Static Site Generator written in Rust";
 
     // Set the width of the box to fit the title and description
     let width = title.len().max(description.len()) + 4;
