@@ -8,9 +8,7 @@ use std::{
 
 use serde_json::{json, Map};
 
-use crate::options::{
-    CnameOptions, ManifestOptions, SitemapOptions, TxtOptions,
-};
+use crate::data::{CnameData, ManifestOptions, SitemapData, TxtData};
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
 pub fn manifest(options: &ManifestOptions) -> String {
@@ -52,14 +50,14 @@ pub fn manifest(options: &ManifestOptions) -> String {
 }
 
 /// ## Function: `txt` - Generate a robots.txt for a web app
-pub fn txt(options: &TxtOptions) -> String {
+pub fn txt(options: &TxtData) -> String {
     let permalink = options.permalink.clone();
     let url = format!("{}/sitemap.xml", permalink);
     "User-agent: *\nSitemap: {{url}}".replace("{{url}}", &url)
 }
 
 /// ## Function: `cname` - Generate a CNAME for a web app
-pub fn cname(options: &CnameOptions) -> String {
+pub fn cname(options: &CnameData) -> String {
     let cname_value = options.cname.clone();
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
@@ -67,7 +65,7 @@ pub fn cname(options: &CnameOptions) -> String {
 }
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
-pub fn sitemap(options: &SitemapOptions, dir: &Path) -> String {
+pub fn sitemap(options: &SitemapData, dir: &Path) -> String {
     let changefreq = options.changefreq.clone();
     let base_url = options.loc.clone();
     let base_dir = PathBuf::from(dir);

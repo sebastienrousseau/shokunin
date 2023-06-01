@@ -3,14 +3,33 @@
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// Options for the `cname` function
-pub struct CnameOptions {
+pub struct CnameData {
     /// A string representing the domain of the web app
     pub cname: String,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+/// File struct to hold the name and content of a file.
+pub struct FileData {
+    /// The name of the file.
+    pub name: String,
+    /// The content of the file.
+    pub content: String,
+    /// The content of the file, escaped for RSS.
+    pub rss: String,
+    /// The content of the file, escaped for JSON.
+    pub json: String,
+    /// The content of the file, escaped for TXT.
+    pub txt: String,
+    /// The content of the file, escaped for CNAME.
+    pub cname: String,
+    /// The content of the file, escaped for sitemap.
+    pub sitemap: String,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// Options for the `icon` function
-pub struct IconOptions {
+pub struct IconData {
     /// A string representing the source of the icon
     pub src: String,
     /// A string representing the sizes of the icon
@@ -31,7 +50,7 @@ pub struct ManifestOptions {
     /// A string representing the display mode of the web app
     pub display: String,
     /// A Vector representing the icons of the web app
-    pub icons: Vec<IconOptions>,
+    pub icons: Vec<IconData>,
     /// A string representing the name of the web app
     pub name: String,
     /// A string representing the orientation of the web app
@@ -48,7 +67,7 @@ pub struct ManifestOptions {
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// Options for the `sitemap` function
-pub struct SitemapOptions {
+pub struct SitemapData {
     /// A string representing the local
     pub loc: String,
     /// A string representing the lastmod
@@ -59,7 +78,7 @@ pub struct SitemapOptions {
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 /// Options for the `txt` function
-pub struct TxtOptions {
+pub struct TxtData {
     /// A string representing the permalink of the web app
     pub permalink: String,
 }

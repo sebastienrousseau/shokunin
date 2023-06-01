@@ -1,30 +1,10 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::data::FileData;
 use quick_xml::escape::escape;
-use std::borrow::Cow;
-use std::fs;
-use std::io;
-use std::path::Path;
+use std::{borrow::Cow, fs, io, path::Path};
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-/// File struct to hold the name and content of a file.
-pub struct File {
-    /// The name of the file.
-    pub name: String,
-    /// The content of the file.
-    pub content: String,
-    /// The content of the file, escaped for RSS.
-    pub rss: String,
-    /// The content of the file, escaped for JSON.
-    pub json: String,
-    /// The content of the file, escaped for TXT.
-    pub txt: String,
-    /// The content of the file, escaped for CNAME.
-    pub cname: String,
-    /// The content of the file, escaped for sitemap.
-    pub sitemap: String,
-}
 /// ## Function: add - returns a Result containing a vector of File structs
 ///
 /// Reads all files in a directory specified by the given path and adds
@@ -44,11 +24,11 @@ pub struct File {
 ///
 /// # Returns
 ///
-/// A `Result<Vec<File>, io::Error>` containing a vector of `File`
+/// A `Result<Vec<FileData>, io::Error>` containing a vector of `FileData`
 /// structs representing all files in the directory, or an `io::Error`
 /// if the directory cannot be read.
 ///
-pub fn add(path: &Path) -> io::Result<Vec<File>> {
+pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
     let mut files = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;
@@ -96,7 +76,7 @@ pub fn add(path: &Path) -> io::Result<Vec<File>> {
                 Cow::Owned(sitemap) => sitemap,
             };
 
-            files.push(File {
+            files.push(FileData {
                 name: file_name.to_string(),
                 content,
                 rss,

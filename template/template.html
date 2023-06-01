@@ -59,11 +59,16 @@
     <meta name="apple-mobile-web-app-title" content="{{name}} - {{title}}" />
     <meta name="application-name" content="{{name}} - {{title}}" />
     <meta name="author" content="" />
+    <!-- # Start Content Security Policy -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src * 'unsafe-inline';
-      style-src 'self' https://unpkg.com/ 'unsafe-inline'; media-src *"
+      content="default-src 'self';
+        script-src 'self' https://www.googletagmanager.com https://www.clarity.ms https://cdn.jsdelivr.net;
+        style-src 'self' 'unsafe-inline' https://kura.pro https://unpkg.com/ https://cdn.jsdelivr.net;
+        img-src 'self' https://kura.pro https://unpkg.com/ data:;
+        media-src 'self';"
     />
+    <!-- # End Content Security Policy -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="msvalidate1" content="" />
     <meta name="msapplication_config" content="/browserconfig.xml" />

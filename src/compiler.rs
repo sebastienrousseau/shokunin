@@ -1,18 +1,18 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::data::FileData;
 use crate::{
-    file::{add, File},
+    data::{
+        CnameData, IconData, ManifestOptions, SitemapData, TxtData,
+    },
+    file::add,
     frontmatter::extract,
     html::generate_html,
     json::{cname, manifest, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
-    options::{
-        CnameOptions, IconOptions, ManifestOptions, SitemapOptions,
-        TxtOptions,
-    },
     rss::{generate_rss, RssOptions},
     template::{render_page, PageOptions},
     utilities::minify_html,
@@ -73,7 +73,7 @@ pub fn compile(
     // Generate the HTML code for the navigation menu
     let navigation = generate_navigation(&files);
 
-    let files_compiled: Vec<File> = files
+    let files_compiled: Vec<FileData> = files
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
@@ -191,7 +191,7 @@ pub fn compile(
                 description: (macro_metadata_option!(metadata, "description")),
                 icons: match metadata.get("icon") {
                     Some(icon) => {
-                        let icons = vec![IconOptions {
+                        let icons = vec![IconData {
                             src: icon.to_string(),
                             sizes: "512x512".to_string(),
                             icon_type: Some("image/png".to_string()),
@@ -206,17 +206,17 @@ pub fn compile(
                 theme_color: (macro_metadata_option!(metadata, "theme_color")),
             };
 
-            let cname_options: CnameOptions = CnameOptions {
+            let cname_options: CnameData = CnameData {
                 cname: macro_metadata_option!(metadata, "cname"),
             };
 
-            let sitemap_options: SitemapOptions = SitemapOptions {
+            let sitemap_options: SitemapData = SitemapData {
                 loc: macro_metadata_option!(metadata, "permalink"),
                 lastmod: macro_metadata_option!(metadata, "last_build_date"),
                 changefreq: "weekly".to_string(),
             };
 
-            let txt_options: TxtOptions = TxtOptions {
+            let txt_options: TxtData = TxtData {
                 permalink: macro_metadata_option!(metadata, "permalink"),
             };
 
@@ -225,7 +225,7 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
 
-            File {
+            FileData {
                 name: file.name,
                 content,
                 rss: rss_data,

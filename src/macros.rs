@@ -90,7 +90,14 @@ macro_rules! macro_cleanup_directories {
 ///
 /// ```rust
 /// use ssg::macro_create_directories;
+/// use std::path::Path;
 /// macro_create_directories!("logs", "cache", "data");
+/// assert!(Path::new("logs").exists());
+/// assert!(Path::new("cache").exists());
+/// assert!(Path::new("data").exists());
+/// std::fs::remove_dir("logs");
+/// std::fs::remove_dir("cache");
+/// std::fs::remove_dir("data");
 /// ```
 ///
 /// ## Arguments
@@ -115,6 +122,10 @@ macro_rules! macro_cleanup_directories {
 ///     let test = Path::new("test");
 ///     let test2  = Path::new("test2");
 ///     macro_create_directories!(test, test2)?;
+///     assert!(test.exists());
+///     assert!(test2.exists());
+///     std::fs::remove_dir(test)?;
+///     std::fs::remove_dir(test2)?;
 ///     Ok(())
 /// }
 /// ```

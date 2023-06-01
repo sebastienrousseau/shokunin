@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ssg::file::add;
+    use ssg::{data::FileData, file::add};
     use std::{fs::File, io::Write};
 
     #[test]
@@ -17,7 +17,7 @@ mod tests {
         // Verify the result
         assert_eq!(
             files,
-            vec![ssg::file::File {
+            vec![FileData {
                 cname: "This is file1.\n".to_string(),
                 content: "This is file1.\n".to_string(),
                 json: "\"This is file1.\\n\"".to_string(),
@@ -29,4 +29,3 @@ mod tests {
         );
     }
 }
-    

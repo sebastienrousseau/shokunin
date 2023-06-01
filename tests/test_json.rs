@@ -2,7 +2,7 @@
 mod tests {
     // Import necessary dependencies
     use serde_json::{json, Value};
-    use ssg::{json::manifest, options::ManifestOptions};
+    use ssg::{json::manifest, data::ManifestOptions};
 
     #[test]
     fn test_manifest_with_empty_options() {
