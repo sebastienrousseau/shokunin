@@ -48,7 +48,7 @@ clap = "4.3.0"
 comrak = "0.18.0"
 mime_guess = "2.0.4"
 minify-html = "0.11.1"
-openssl = { version = "0.10.53", features = ["vendored"] }
+openssl = { version = "0.10.54", features = ["vendored"] }
 quick-xml = "0.28.2"
 regex = "1.8.3"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
