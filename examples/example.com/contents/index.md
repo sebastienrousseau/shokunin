@@ -23,7 +23,7 @@ url: "https://example.com"
 
 # RSS - The RSS feed front matter (YAML).
 
-generator: "Shokunin Static Site Generator (v0.0.13)"
+generator: "Shokunin Static Site Generator (v0.0.14)"
 item_description: An open-source static site generators (ssg) written in Rust, designed for speed, security and reliability.
 item_guid: https://example.com/
 item_link: https://example.com/rss.xml

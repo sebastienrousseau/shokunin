@@ -17,8 +17,8 @@ license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.69.0"
-version = "0.0.13"
+rust-version = "1.70.0"
+version = "0.0.14"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -48,7 +48,7 @@ clap = "4.3.0"
 comrak = "0.18.0"
 mime_guess = "2.0.4"
 minify-html = "0.11.1"
-openssl = { version = "0.10.52", features = ["vendored"] }
+openssl = { version = "0.10.54", features = ["vendored"] }
 quick-xml = "0.28.2"
 regex = "1.8.3"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }

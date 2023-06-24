@@ -98,7 +98,7 @@ ssg --help
 ### Requirements
 
 The minimum supported Rust toolchain version is currently Rust
-**1.69.0** or later (stable). It is recommended that you install the
+**1.70.0** or later (stable). It is recommended that you install the
 latest stable version of Rust.
 
 ### Platform support
@@ -174,7 +174,7 @@ To use the `Shokunin (職人) Static Site Generator` library in your project, ad
 
 ```toml
 [dependencies]
-shokunin = "0.0.13"
+shokunin = "0.0.14"
 ```
 
 Add the following to your `main.rs` file:
@@ -278,6 +278,6 @@ A special thank you goes to the [Rust Reddit][13] community for providing a lot 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.13-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.14-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

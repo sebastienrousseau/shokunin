@@ -21,7 +21,7 @@ url: https://shokunin.one
 
 # RSS - The RSS feed front matter (YAML).
 
-generator: "Shokunin Static Site Generator 🦀 (version 0.0.13)"
+generator: "Shokunin Static Site Generator 🦀 (version 0.0.14)"
 item_description: An open-source static site generators (ssg) written in Rust, designed for speed, security and reliability.
 item_guid: https://shokunin.one/
 item_link: https://shokunin.one/rss.xml

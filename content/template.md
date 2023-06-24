@@ -29,7 +29,7 @@ url: "https://www.yoursite.com"                     # The URL of the site. (Requ
 
 # The RSS Front Matter (YAML)
 atom_link: "/rss.xml"                               # The link to the RSS feed of the page. (Required)
-generator: "Shokunin (職人) 🦀 (version 0.0.13)"     # The generator of the RSS feed. (Required)
+generator: "Shokunin (職人) 🦀 (version 0.0.14)"     # The generator of the RSS feed. (Required)
 item_description: "RSS feed for the site"           # A brief description of the RSS item. (Required)
 item_guid: "123e4567-e89b-12d3-a456-426614174000"   # The unique identifier of the RSS item. (Required)
 item_link: "/rss/"                                  # The link of the RSS item. (Required)
