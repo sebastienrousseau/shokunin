@@ -9,6 +9,7 @@ banner_width: "1200"                                # The width of the site's ba
 banner: "/path/to/banner.svg"                       # The path to the banner of the site. (Optional)
 charset: "utf-8"                                    # The charset of the site. (Optional, default: utf-8)
 cname: "yoursite"                                   # The canonical name value of the site. (Optional)
+copyright: "&copy; 2021 Sebastien Rousseau. All rights reserved." # The copyright of the site. (Optional)
 description: "Your Site Description"                # A brief description of the site. (Optional, max 160 characters)
 icon: "/path/to/icon.svg"                           # The path to the site's icon in SVG format. (Optional)
 id: "123e4567-e89b-12d3-a456-426614174000"          # The unique identifier of the site. (Required)
@@ -64,11 +65,6 @@ twitter_site: "@yourtwitterhandle"                  # The Twitter Card site of t
 twitter_title: "Your Page Title"                    # The Twitter Card title of the page. (Optional)
 twitter_url: "https://www.yoursite.com"             # The Twitter Card url of the page. (Optional)
 
-# Google Analytics
-google_site_verification: "1234567890" # The Google Analytics site verification of the page. (Optional)
-
-# Bing Webmaster Tools
-bing_site_verification: "1234567890" # The Bing Webmaster Tools site verification of the page. (Optional)
 ---
 
 

@@ -78,85 +78,32 @@ pub fn compile(
         .map(|file| {
             // Extract metadata from front matter
             let metadata = extract(&file.content);
-            let meta =
-                macro_generate_metatags!("url", &macro_metadata_option!(metadata, "permalink"),);
+            let meta = macro_generate_metatags!(
+                "url",
+                &macro_metadata_option!(metadata, "permalink"),
+            );
+
+            // Generate HTML content
+            let html_content = generate_html(
+                &file.content,
+                &macro_metadata_option!(metadata, "title"),
+                &macro_metadata_option!(metadata, "description"),
+                Some(&macro_metadata_option!(metadata, "content")),
+            );
 
             // Generate HTML
+            let mut page_options = PageOptions::new();
+            for (key, value) in metadata.iter() {
+                page_options.set(key, &value);
+            }
+
+            // Adding meta and navigation
+            page_options.set("meta", &meta);
+            page_options.set("navigation", &navigation);
+            page_options.set("content", &html_content);
+
             let content = render_page(
-                &PageOptions {
-                    author: &macro_metadata_option!(metadata, "author"),
-                    banner: &macro_metadata_option!(metadata, "banner"),
-                    banner_width: &macro_metadata_option!(metadata, "banner_width"),
-                    banner_height: &macro_metadata_option!(metadata, "banner_height"),
-                    banner_alt: &macro_metadata_option!(metadata, "banner_alt"),
-                    bing_site_verification: &macro_metadata_option!(
-                        metadata,
-                        "bing_site_verification"
-                    ),
-                    charset: &macro_metadata_option!(metadata, "charset"),
-                    content: &generate_html(
-                        &file.content,
-                        &macro_metadata_option!(metadata, "title"),
-                        &macro_metadata_option!(metadata, "description"),
-                        Some(&macro_metadata_option!(metadata, "content")),
-                    ),
-                    copyright: &macro_metadata_option!(metadata, "copyright"),
-                    cname: &macro_metadata_option!(metadata, "cname"),
-                    css: &macro_metadata_option!(metadata, "css"),
-                    date: &macro_metadata_option!(metadata, "date"),
-                    description: &macro_metadata_option!(metadata, "description"),
-                    generator: &macro_metadata_option!(metadata, "generator"),
-                    google_site_verification: &macro_metadata_option!(
-                        metadata,
-                        "google_site_verification"
-                    ),
-                    image: &macro_metadata_option!(metadata, "image"),
-                    keywords: &macro_metadata_option!(metadata, "keywords"),
-                    lang: &macro_metadata_option!(metadata, "language"),
-                    layout: &macro_metadata_option!(metadata, "layout"),
-                    logo: &macro_metadata_option!(metadata, "logo"),
-                    logo_width: &macro_metadata_option!(metadata, "logo_width"),
-                    logo_height: &macro_metadata_option!(metadata, "logo_height"),
-                    logo_alt: &macro_metadata_option!(metadata, "logo_alt"),
-                    meta: &meta,
-                    msvalidate1: &macro_metadata_option!(metadata, "msvalidate1"),
-                    msapplication_config: &macro_metadata_option!(metadata, "msapplication_config"),
-                    msapplication_tap_highlight: &macro_metadata_option!(
-                        metadata,
-                        "msapplication-tap-highlight"
-                    ),
-                    msapplication_tile_color: &macro_metadata_option!(
-                        metadata,
-                        "msapplication-tile-color"
-                    ),
-                    msapplication_tile_image: &macro_metadata_option!(
-                        metadata,
-                        "msapplication-tile-image"
-                    ),
-                    name: &macro_metadata_option!(metadata, "name"),
-                    navigation: &navigation,
-                    og_description: &macro_metadata_option!(metadata, "og_description"),
-                    og_image_alt: &macro_metadata_option!(metadata, "og_image_alt"),
-                    og_image: &macro_metadata_option!(metadata, "og_image"),
-                    og_locale: &macro_metadata_option!(metadata, "og_locale"),
-                    og_site_name: &macro_metadata_option!(metadata, "og_site_name"),
-                    og_title: &macro_metadata_option!(metadata, "og_title"),
-                    og_type: &macro_metadata_option!(metadata, "og_type"),
-                    og_url: &macro_metadata_option!(metadata, "og_url"),
-                    robots: &macro_metadata_option!(metadata, "robots"),
-                    subtitle: &macro_metadata_option!(metadata, "subtitle"),
-                    theme_color: &macro_metadata_option!(metadata, "theme_color"),
-                    title: &macro_metadata_option!(metadata, "title"),
-                    twitter_card: &macro_metadata_option!(metadata, "twitter_card"),
-                    twitter_creator: &macro_metadata_option!(metadata, "twitter_creator"),
-                    twitter_description: &macro_metadata_option!(metadata, "twitter_description"),
-                    twitter_image_alt: &macro_metadata_option!(metadata, "twitter_image_alt"),
-                    twitter_image: &macro_metadata_option!(metadata, "twitter_image"),
-                    twitter_site: &macro_metadata_option!(metadata, "twitter_site"),
-                    twitter_title: &macro_metadata_option!(metadata, "twitter_title"),
-                    twitter_url: &macro_metadata_option!(metadata, "twitter_url"),
-                    url: &macro_metadata_option!(metadata, "url"),
-                },
+                &page_options,
                 &template_path.to_str().unwrap().to_string(),
                 metadata.get("layout").unwrap_or(&"".to_string()),
             )
@@ -166,29 +113,72 @@ pub fn compile(
             let rss = generate_rss(&RssOptions {
                 title: (macro_metadata_option!(metadata, "title")),
                 link: (macro_metadata_option!(metadata, "permalink")),
-                description: (macro_metadata_option!(metadata, "description")),
-                generator: (macro_metadata_option!(metadata, "generator")),
-                language: (macro_metadata_option!(metadata, "language")),
-                atom_link: (macro_metadata_option!(metadata, "atom_link")),
-                last_build_date: (macro_metadata_option!(metadata, "last_build_date")),
-                webmaster: (macro_metadata_option!(metadata, "webmaster")),
-                pub_date: (macro_metadata_option!(metadata, "pub_date")),
-                item_title: (macro_metadata_option!(metadata, "item_title")),
-                item_link: (macro_metadata_option!(metadata, "item_link")),
-                item_guid: (macro_metadata_option!(metadata, "item_guid")),
-                item_description: (macro_metadata_option!(metadata, "item_description")),
-                item_pub_date: (macro_metadata_option!(metadata, "item_pub_date")),
+                description: (macro_metadata_option!(
+                    metadata,
+                    "description"
+                )),
+                generator: (macro_metadata_option!(
+                    metadata,
+                    "generator"
+                )),
+                language: (macro_metadata_option!(
+                    metadata, "language"
+                )),
+                atom_link: (macro_metadata_option!(
+                    metadata,
+                    "atom_link"
+                )),
+                last_build_date: (macro_metadata_option!(
+                    metadata,
+                    "last_build_date"
+                )),
+                webmaster: (macro_metadata_option!(
+                    metadata,
+                    "webmaster"
+                )),
+                pub_date: (macro_metadata_option!(
+                    metadata, "pub_date"
+                )),
+                item_title: (macro_metadata_option!(
+                    metadata,
+                    "item_title"
+                )),
+                item_link: (macro_metadata_option!(
+                    metadata,
+                    "item_link"
+                )),
+                item_guid: (macro_metadata_option!(
+                    metadata,
+                    "item_guid"
+                )),
+                item_description: (macro_metadata_option!(
+                    metadata,
+                    "item_description"
+                )),
+                item_pub_date: (macro_metadata_option!(
+                    metadata,
+                    "item_pub_date"
+                )),
             });
             let rss_data = rss.unwrap();
 
             // Generate JSON
             let json = ManifestOptions {
-                name: metadata.get("name").unwrap_or(&"".to_string()).to_string(),
-                short_name: (macro_metadata_option!(metadata, "short_name")),
+                name: metadata
+                    .get("name")
+                    .unwrap_or(&"".to_string())
+                    .to_string(),
+                short_name: (macro_metadata_option!(
+                    metadata,
+                    "short_name"
+                )),
                 start_url: ".".to_string(),
                 display: "standalone".to_string(),
                 background_color: "#ffffff".to_string(),
-                description: (macro_metadata_option!(metadata, "description")),
+                description: (macro_metadata_option!(
+                    metadata,
+                    "description"
+                )),
                 icons: match metadata.get("icon") {
                     Some(icon) => {
                         let icons = vec![IconData {
@@ -203,7 +193,10 @@ pub fn compile(
                 },
                 orientation: "portrait-primary".to_string(),
                 scope: "/".to_string(),
-                theme_color: (macro_metadata_option!(metadata, "theme_color")),
+                theme_color: (macro_metadata_option!(
+                    metadata,
+                    "theme_color"
+                )),
             };
 
             let cname_options: CnameData = CnameData {
@@ -212,12 +205,18 @@ pub fn compile(
 
             let sitemap_options: SitemapData = SitemapData {
                 loc: macro_metadata_option!(metadata, "permalink"),
-                lastmod: macro_metadata_option!(metadata, "last_build_date"),
+                lastmod: macro_metadata_option!(
+                    metadata,
+                    "last_build_date"
+                ),
                 changefreq: "weekly".to_string(),
             };
 
             let txt_options: TxtData = TxtData {
-                permalink: macro_metadata_option!(metadata, "permalink"),
+                permalink: macro_metadata_option!(
+                    metadata,
+                    "permalink"
+                ),
             };
 
             let json_data = manifest(&json);

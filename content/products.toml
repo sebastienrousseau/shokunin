@@ -1,11 +1,18 @@
 +++
+
+"copyright" = "&copy; 2021 Sebastien Rousseau. All rights reserved."
 "date" = "2023-03-23"
 "description" = "Description of the products page"
 "keywords" = "products, page, description"
+"language" = "en-GB"
 "layout" = "page"
+"name" = "Shokunin (職人)"
 "permalink" = "/products/"
 "title" = "Products"
 "image" = "https://kura.pro/shokunin/images/logos/shokunin.svg"
+"msapplication_config" = "/shokunin/browserconfig.xml"
+"msapplication_tap_highlight" = "no"
+
 +++
 
 This is the products page.

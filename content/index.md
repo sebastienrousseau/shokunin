@@ -12,10 +12,13 @@ subtitle: A Fast and Flexible Static Site Generator written in Rust.
 author: Sebastien Rousseau
 ## charset - The charset of the site. (default: utf-8)
 charset: utf-8
+copyright: "&copy; 2021 Sebastien Rousseau. All rights reserved."
 ## id - The id of the site.
 id: 4ef3bf81-5515-45f0-9254-6d70caf0d75f
 ## icon - The icon of the site in SVG format.
 icon: "https://kura.pro/shokunin/images/icons/512x512.png"
+## language - The language of the site. (default: en-GB)
+language: en-GB
 ## logo - The logo of the site in SVG format.
 logo: "https://kura.pro/shokunin/images/logos/shokunin.svg"
 ## logo_width - The logo width of the site.
@@ -118,16 +121,6 @@ twitter_site: sebastienrousseau
 twitter_title: Shokunin (職人) Static Site Generator
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: https://shokunin.one
-
-# Google Analytics - The Google Analytics front matter (YAML).
-
-## google_site_verification - The Google Analytics site verification of the page.
-google_site_verification: 1234567890
-
-# Bing Webmaster Tools - The Bing Webmaster Tools front matter (YAML).
-
-## bing_site_verification - The Bing Webmaster Tools site verification of the page.
-bing_site_verification: 1234567890
 
 ---
 

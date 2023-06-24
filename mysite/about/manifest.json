@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "description": "Description of the about page",
+  "display": "standalone",
+  "icons": [],
+  "name": "About",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "short_name": "",
+  "start_url": ".",
+  "theme_color": ""
+}

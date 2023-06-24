@@ -44,7 +44,6 @@ mod tests {
             date: "2021-01-01",
             description: "A simple test page",
             generator: "SSG",
-            google_site_verification: "1234567890",
             image: "./images/test.png",
             keywords: "test, page",
             lang: "en",
@@ -90,11 +89,14 @@ mod tests {
         let layout = String::from("page");
 
         // Create a temporary directory and copy the template file into it
-        let tempdir = tempfile::tempdir()
-            .map_err(|err| format!("Could not create temporary directory: {}", err))?;
+        let tempdir = tempfile::tempdir().map_err(|err| {
+            format!("Could not create temporary directory: {}", err)
+        })?;
         let template_file_path = tempdir.path().join("template.html");
         std::fs::copy("template/template.html", template_file_path)
-            .map_err(|err| format!("Could not copy template file: {}", err))?;
+            .map_err(|err| {
+                format!("Could not copy template file: {}", err)
+            })?;
 
         // Call the render_page function
         let result = render_page(&options, &template_path, &layout);

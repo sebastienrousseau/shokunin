@@ -1,12 +1,17 @@
 {
   "frontmatter": {
+    "copyright": "Copyright © 2021",
     "date": "2023-03-23",
     "description": "Description of the about page",
+    "image": "https://kura.pro/shokunin/images/logos/shokunin.svg",
     "keywords": "about, page, description",
+    "language": "en-GB",
     "layout": "page",
+    "msapplication_config": "/browserconfig.xml",
+    "msapplication_tap_highlight": "no",
+    "name": "About",
     "permalink": "/about/",
-    "title": "About",
-    "image": "https://kura.pro/shokunin/images/logos/shokunin.svg"
+    "title": "About"
   },
   "content": "Content of the about page"
 }

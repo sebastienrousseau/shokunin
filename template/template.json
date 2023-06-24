@@ -27,7 +27,7 @@
         }
     ],
     "id": "{{id}}",
-    "lang": "{{lang}}",
+    "lang": "{{language}}",
     "name": "{{name}}",
     "scope": "{{scope}}",
     "start_url": ".",

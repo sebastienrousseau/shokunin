@@ -36,7 +36,6 @@ pub_date: "Wed, 02 Oct 2002 13:00:00 GMT"
 
 ## msapplication - The MS Application config of the page.
 msapplication_config: /browserconfig.xml
-## msapplication_tap_highlight - The MS Application tap highlight of the page.
 msapplication_tap_highlight: no
 ## msapplication - The MS Application tile color of the page.
 msapplication_tile_color: "#7ce846"
@@ -80,16 +79,6 @@ twitter_site: wwdseb
 twitter_title: Homepage Template, a Static Site Generator (SSG) written in Rust
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: https://shokunin.com
-
-# Google Analytics - The Google Analytics front matter (YAML).
-
-## google_site_verification - The Google Analytics site verification of the page.
-google_site_verification: G-8MGBE9BCZC
-
-# Bing Webmaster Tools - The Bing Webmaster Tools front matter (YAML).
-
-## bing_site_verification - The Bing Webmaster Tools site verification of the page.
-bing_site_verification: 1234567890
 
 ---
 

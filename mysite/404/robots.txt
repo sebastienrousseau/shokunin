@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: /404//sitemap.xml
