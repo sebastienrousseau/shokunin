@@ -12,7 +12,7 @@ subtitle: A Fast and Flexible Static Site Generator written in Rust.
 author: Sebastien Rousseau
 ## charset - The charset of the site. (default: utf-8)
 charset: utf-8
-copyright: "&copy; 2021 Sebastien Rousseau. All rights reserved."
+copyright: "2021 Sebastien Rousseau. All rights reserved."
 ## id - The id of the site.
 id: 4ef3bf81-5515-45f0-9254-6d70caf0d75f
 ## icon - The icon of the site in SVG format.
@@ -32,7 +32,7 @@ description: A Fast and Flexible Static Site Generator written in Rust.
 ## keywords - The keywords of the site. (comma separated, max 10 keywords)
 keywords: Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML
 ## url - The url of the site.
-permalink: /
+permalink: https://shokunin.one
 ## language - The language of the site. (default: en-GB)
 language: en-GB
 ## layout - The layout of the site.
@@ -55,23 +55,33 @@ url: https://shokunin.one
 # RSS - The RSS feed front matter (YAML).
 
 ## rss - The RSS feed link of the page.
-atom_link: /rss.xml
+atom_link: https://shokunin.one/rss.xml
+## rss - A URL that points to the documentation for the format used in the RSS file.
+docs: https://validator.w3.org/feed/docs/rss2.html
 ## rss - The RSS last build date of the page.
-last_build_date: 2023-03-23T00:00:00+00:00
+last_build_date: Wed, 02 Oct 2002 13:00:00 GMT
 ## rss - The RSS pub date of the page.
-pub_date: 2023-03-23T00:00:00+00:00
+pub_date: Wed, 02 Oct 2002 13:00:00 GMT
 ## rss - The RSS generator of the page.
 generator: Shokunin (職人) 🦀 (version 0.0.14)
-## rss - The RSS item title of the page.
+## rss - The title of the item.
 item_title: "RSS"
-## rss - The RSS item link of the page.
-item_link: /rss/
+## rss - The URL of the item.
+item_link: https://shokunin.one/rss.xml
 ## rss - The RSS item guid of the page.
-item_guid: 4ef3bf81-5515-45f0-9254-6d70caf0d75f
-## rss - The RSS item description of the page.
+item_guid: https://shokunin.one/rss.xml
+## rss - The item synopsis.
 item_description: RSS feed for the site
 ## rss - The RSS item pub date of the page.
-item_pub_date: 2023-03-23T00:00:00+00:00
+item_pub_date: Wed, 02 Oct 2002 13:00:00 GMT
+## rss - ttl stands for time to live. It's a number of minutes that indicates how long a channel can be cached before refreshing from the source.
+ttl: "60"
+## rss - Email address for person responsible for technical issues relating to channel.
+webmaster: sebastian.rousseau@gmail.com
+## rss - Email address for person responsible for editorial content.
+managing_editor: sebastian.rousseau@gmail.com
+## rss -  The category of the channel and item(s).
+category: "Finance"
 
 # MS Application - The MS Application front matter (YAML).
 

@@ -34,10 +34,10 @@ generator: "Shokunin (職人) 🦀 (version 0.0.14)"     # The generator of the 
 item_description: "RSS feed for the site"           # A brief description of the RSS item. (Required)
 item_guid: "123e4567-e89b-12d3-a456-426614174000"   # The unique identifier of the RSS item. (Required)
 item_link: "/rss/"                                  # The link of the RSS item. (Required)
-item_pub_date: "2023-03-23T00:00:00+00:00"          # The publication date of the RSS item. (Required)
+item_pub_date: "Wed, 02 Oct 2002 13:00:00 GMT"          # The publication date of the RSS item. (Required)
 item_title: "RSS"                                   # The title of the RSS item. (Required)
-last_build_date: "2023-03-23T00:00:00+00:00"        # The last build date of the RSS feed. (Required)
-pub_date: "2023-03-23T00:00:00+00:00"               # The publication date of the RSS feed. (Required)
+last_build_date: "Wed, 02 Oct 2002 13:00:00 GMT"        # The last build date of the RSS feed. (Required)
+pub_date: "Wed, 02 Oct 2002 13:00:00 GMT"               # The publication date of the RSS feed. (Required)
 
 # MS Application Front Matter (YAML)
 msapplication_config: "/browserconfig.xml"          # The MS Application config of the page. (Optional)

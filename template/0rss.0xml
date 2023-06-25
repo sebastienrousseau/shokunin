@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <atom:link href="{{link}}" rel="self" type="application/rss+xml" />
+        <copyright>{{copyright}}</copyright>
+        <description>{{description}}</description>
+        <generator>{{generator}}</generator>
+        <image>{{image}}></image>
+        <language>{{language}}</language>
+        <lastBuildDate>{{lastBuildDate}}</lastBuildDate>
+        <link>{{link}}</link>
+        <pubDate>{{pubDate}}</pubDate>
+        <title>{{title}}</title>
+        <ttl>{{ttl}}</ttl>
+        <webmaster>{{webmaster}}</webmaster>
+        <item>
+            <description>{{itemDescription}}</description>
+            <guid>{{itemGuid}}</guid>
+            <link>{{itemLink}}</link>
+            <pubDate>{{itemPubDate}}</pubDate>
+            <title>{{itemTitle}}</title>
+        </item>
+    </channel>
+</rss>

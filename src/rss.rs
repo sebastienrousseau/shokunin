@@ -30,34 +30,50 @@ use std::io::Cursor;
 ///
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct RssOptions {
-    /// The title of the RSS feed.
-    pub title: String,
-    /// The URL of the RSS feed.
-    pub link: String,
-    /// The description of the RSS feed.
-    pub description: String,
-    /// The generator of the RSS feed.
-    pub generator: String,
-    /// The language of the RSS feed.
-    pub language: String,
     /// The link to the atom feed.
     pub atom_link: String,
-    /// The webmaster of the RSS feed.
-    pub webmaster: String,
-    /// The last build date of the RSS feed.
-    pub last_build_date: String,
-    /// The publication date of the RSS feed.
-    pub pub_date: String,
-    /// The title of the RSS item.
-    pub item_title: String,
-    /// The link of the RSS item.
-    pub item_link: String,
-    /// The guid of the RSS item.
+    /// The category of the RSS feed.
+    pub category: String,
+    /// The cloud of the RSS feed.
+    pub cloud: String,
+    /// The copyright notice for the content of the feed.
+    pub copyright: String,
+    /// The description of the RSS feed.
+    pub description: String,
+    /// The docs of the RSS feed.
+    pub docs: String,
+    /// The Enclosure of the RSS item. This is used for multimedia content.
+    pub enclosure: String,
+    /// The generator of the RSS feed.
+    pub generator: String,
+    /// The image of the RSS feed. This can be a URL pointing to an image file.
+    pub image: String,
+    /// The Guid of the RSS item. This is a unique identifier for the item.
     pub item_guid: String,
     /// The description of the RSS item.
     pub item_description: String,
+    /// The link of the RSS item.
+    pub item_link: String,
     /// The publication date of the RSS item.
     pub item_pub_date: String,
+    /// The title of the RSS item.
+    pub item_title: String,
+    /// The language of the RSS feed.
+    pub language: String,
+    /// The last build date of the RSS feed.
+    pub last_build_date: String,
+    /// The URL of the RSS feed.
+    pub link: String,
+    /// The managing editor of the RSS feed.
+    pub managing_editor: String,
+    /// The publication date of the RSS feed.
+    pub pub_date: String,
+    /// The title of the RSS feed.
+    pub title: String,
+    /// Time To Live: the number of minutes the feed should be cached before refreshing.
+    pub ttl: String,
+    /// The webmaster of the RSS feed.
+    pub webmaster: String,
 }
 
 impl RssOptions {
@@ -87,21 +103,29 @@ pub fn generate_rss(
     writer.write_event(Event::Start(BytesStart::new("channel")))?;
 
     let channel_elements = [
-        ("title", &options.title),
-        ("link", &options.link),
+        ("category", &options.category),
+        ("cloud", &options.cloud),
+        ("copyright", &options.copyright),
         ("description", &options.description),
+        ("docs", &options.docs),
         ("generator", &options.generator),
+        ("image", &options.image),
         ("language", &options.language),
         ("lastBuildDate", &options.last_build_date),
-        ("webMaster", &options.webmaster),
+        ("link", &options.link),
+        ("managingEditor", &options.managing_editor),
         ("pubDate", &options.pub_date),
+        ("title", &options.title),
+        ("ttl", &options.ttl),
+        ("webMaster", &options.webmaster),
     ];
 
     for &(element, value) in channel_elements.iter() {
         macro_write_element!(writer, element, value)?;
     }
 
-    let mut atom_link_start = BytesStart::new("atom:link");
+    let mut atom_link_start =
+        BytesStart::new(Cow::Borrowed("atom:link").into_owned());
     atom_link_start
         .push_attribute(("href", options.atom_link.as_str()));
     atom_link_start.push_attribute(("rel", "self"));
@@ -111,11 +135,11 @@ pub fn generate_rss(
     writer.write_event(Event::Start(BytesStart::new("item")))?;
 
     let item_elements = [
-        ("title", &options.item_title),
+        ("description", &options.item_description),
+        ("guid", &options.item_guid),
         ("link", &options.item_link),
         ("pubDate", &options.item_pub_date),
-        ("guid", &options.item_guid),
-        ("description", &options.item_description),
+        ("title", &options.item_title),
     ];
 
     for &(element, value) in item_elements.iter() {

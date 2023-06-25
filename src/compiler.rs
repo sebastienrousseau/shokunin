@@ -111,54 +111,67 @@ pub fn compile(
 
             // Generate RSS
             let rss = generate_rss(&RssOptions {
-                title: (macro_metadata_option!(metadata, "title")),
-                link: (macro_metadata_option!(metadata, "permalink")),
-                description: (macro_metadata_option!(
-                    metadata,
-                    "description"
-                )),
-                generator: (macro_metadata_option!(
-                    metadata,
-                    "generator"
-                )),
-                language: (macro_metadata_option!(
-                    metadata, "language"
-                )),
-                atom_link: (macro_metadata_option!(
+                atom_link: macro_metadata_option!(
                     metadata,
                     "atom_link"
-                )),
-                last_build_date: (macro_metadata_option!(
+                ),
+                category: macro_metadata_option!(metadata, "category"),
+                copyright: macro_metadata_option!(
                     metadata,
-                    "last_build_date"
-                )),
-                webmaster: (macro_metadata_option!(
+                    "copyright"
+                ),
+                cloud: macro_metadata_option!(metadata, "cloud"),
+                description: macro_metadata_option!(
                     metadata,
-                    "webmaster"
-                )),
-                pub_date: (macro_metadata_option!(
-                    metadata, "pub_date"
-                )),
-                item_title: (macro_metadata_option!(
+                    "description"
+                ),
+                docs: macro_metadata_option!(metadata, "docs"),
+                enclosure: macro_metadata_option!(
                     metadata,
-                    "item_title"
-                )),
-                item_link: (macro_metadata_option!(
+                    "enclosure"
+                ),
+                generator: macro_metadata_option!(
                     metadata,
-                    "item_link"
-                )),
-                item_guid: (macro_metadata_option!(
-                    metadata,
-                    "item_guid"
-                )),
-                item_description: (macro_metadata_option!(
+                    "generator"
+                ),
+                image: macro_metadata_option!(metadata, "image"),
+                item_description: macro_metadata_option!(
                     metadata,
                     "item_description"
-                )),
-                item_pub_date: (macro_metadata_option!(
+                ),
+                item_guid: macro_metadata_option!(
+                    metadata,
+                    "item_guid"
+                ),
+                item_link: macro_metadata_option!(
+                    metadata,
+                    "item_link"
+                ),
+                item_pub_date: macro_metadata_option!(
                     metadata,
                     "item_pub_date"
-                )),
+                ),
+                item_title: macro_metadata_option!(
+                    metadata,
+                    "item_title"
+                ),
+                language: macro_metadata_option!(metadata, "language"),
+                last_build_date: macro_metadata_option!(
+                    metadata,
+                    "last_build_date"
+                ),
+                link: macro_metadata_option!(metadata, "permalink"),
+                managing_editor: macro_metadata_option!(
+                    metadata,
+                    "managing_editor"
+                ),
+                pub_date: macro_metadata_option!(metadata, "pub_date"),
+                title: macro_metadata_option!(metadata, "title"),
+                ttl: macro_metadata_option!(metadata, "ttl"),
+                webmaster: macro_metadata_option!(
+                    metadata,
+                    "webmaster"
+                ),
             });
             let rss_data = rss.unwrap();
 
