@@ -94,7 +94,7 @@ pub fn compile(
             // Generate HTML
             let mut page_options = PageOptions::new();
             for (key, value) in metadata.iter() {
-                page_options.set(key, &value);
+                page_options.set(key, value);
             }
 
             // Adding meta and navigation
