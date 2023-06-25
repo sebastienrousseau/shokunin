@@ -9,25 +9,12 @@ use quick_xml::{
 use std::borrow::Cow;
 use std::io::Cursor;
 
-/// The `RssOptions` struct holds the options for an RSS feed.
+/// The `RssOptions` struct holds all necessary options and data for an RSS feed.
 ///
-/// # Fields
+/// This includes everything from metadata about the RSS feed itself, such as its title and language,
+/// to information about individual items in the feed, such as their titles and publication dates.
 ///
-/// * `title`: The title of the RSS feed.
-/// * `link`: The link to the RSS feed.
-/// * `description`: The description of the RSS feed.
-/// * `generator`: The generator of the RSS feed.
-/// * `language`: The language of the RSS feed.
-/// * `atom_link`: The atom link of the RSS feed.
-/// * `webmaster`: The webmaster of the RSS feed.
-/// * `last_build_date`: The last build date of the RSS feed.
-/// * `pub_date`: The publication date of the RSS feed.
-/// * `item_title`: The title of the RSS feed item.
-/// * `item_link`: The link to the RSS feed item.
-/// * `item_guid`: The GUID of the RSS feed item.
-/// * `item_description`: The description of the RSS feed item.
-/// * `item_pub_date`: The publication date of the RSS feed item.
-///
+/// The values contained in an instance of `RssOptions` can be used to generate a complete RSS feed in XML format.
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
 pub struct RssOptions {
     /// The link to the atom feed.
@@ -77,13 +64,22 @@ pub struct RssOptions {
 }
 
 impl RssOptions {
-    /// Creates a new `RssOptions` struct with default values.
+    /// Creates a new `RssOptions` struct with default values for all fields.
+    ///
+    /// This is a convenience function that makes it easy to create a new `RssOptions` without having to specify every field.
+    /// Fields can then be set individually on the returned instance.
     pub fn new() -> RssOptions {
         RssOptions::default()
     }
 }
 
 /// Generates an RSS feed from the given `RssOptions` struct.
+///
+/// This function creates a complete RSS feed in XML format based on the data contained in the provided `RssOptions`.
+/// It generates the feed by creating a series of XML elements corresponding to the fields of the `RssOptions`,
+/// and writing them to a `Writer` object.
+///
+/// The generated RSS feed is returned as a `String`. If an error occurs during generation, it returns an error.
 pub fn generate_rss(
     options: &RssOptions,
 ) -> Result<String, Box<dyn std::error::Error>> {
