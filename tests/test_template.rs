@@ -91,7 +91,7 @@ mod tests {
             format!("Could not create temporary directory: {}", err)
         })?;
         let template_file_path = tempdir.path().join("template.html");
-        std::fs::copy("template/template.html", &template_file_path)
+        std::fs::copy("template/template.html", template_file_path)
             .map_err(|err| {
                 format!("Could not copy template file: {}", err)
             })?;

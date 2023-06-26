@@ -88,6 +88,7 @@ pub fn handle_connection(
 ) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
+
     if bytes_read == 0 {
         return Ok(());
     }
@@ -130,7 +131,6 @@ pub fn handle_connection(
         return Ok(());
     }
 
-    // Continue processing as normal, the requested path has been validated
     let (status_line, contents) = if canonical_requested_path.exists() {
         (
             "HTTP/1.1 200 OK\r\n\r\n",
@@ -147,29 +147,20 @@ pub fn handle_connection(
         )
     };
 
-    match stream.write_all(status_line.as_bytes()) {
-        Err(e) => {
-            eprintln!("Error writing to stream: {}", e);
-            return Err(e);
-        }
-        _ => (),
-    };
+    if let Err(e) = stream.write_all(status_line.as_bytes()) {
+        eprintln!("Error writing to stream: {}", e);
+        return Err(e);
+    }
 
-    match stream.write_all(contents.as_bytes()) {
-        Err(e) => {
-            eprintln!("Error writing to stream: {}", e);
-            return Err(e);
-        }
-        _ => (),
-    };
+    if let Err(e) = stream.write_all(contents.as_bytes()) {
+        eprintln!("Error writing to stream: {}", e);
+        return Err(e);
+    }
 
-    match stream.flush() {
-        Err(e) => {
-            eprintln!("Error flushing stream: {}", e);
-            return Err(e);
-        }
-        _ => (),
-    };
+    if let Err(e) = stream.flush() {
+        eprintln!("Error flushing stream: {}", e);
+        return Err(e);
+    }
 
     Ok(())
 }
