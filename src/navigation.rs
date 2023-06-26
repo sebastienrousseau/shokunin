@@ -37,6 +37,7 @@ use std::path::Path;
 /// that preserves the structure of the path, without duplicating the
 /// directory names (e.g., `path_to/file.md` becomes `path_to_file`).
 ///
+#[allow(clippy::redundant_clone)]
 pub fn generate_navigation(files: &[FileData]) -> String {
     let supported_extensions = vec!["md", "toml", "json"];
     let mut files_sorted = files.to_vec();
