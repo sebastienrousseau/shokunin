@@ -1,49 +1,80 @@
 <!DOCTYPE html>
 <html lang="{{language}}">
   <head>
-    <meta charset="{{charset}}" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}}</title>
 
     <!-- # Start Primary Meta Tags -->
-    <title>{{title}}</title>
+    <meta charset="{{charset}}" />
+    <meta name="viewport" content="{{viewport}}" />
     {{meta}}
-    <meta name="title" content="{{title}}" />
     <meta name="description" content="{{description}}" />
-    <meta name="keywords" content="{{keywords}}" />
-    <meta name="generator" content="{{generator}}" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="robots" content="/robots.txt" />
-    <meta name="theme-color" content="{{theme_color}}" />
+    <meta name="generator" content="{{generator}}" />
+    <meta name="keywords" content="{{keywords}}" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="8 days" />
+    <meta name="robots" content="{{robots}}" />
+    <meta name="theme-color" content="rgb({{theme_color}})" />
+    <meta name="title" content="{{title}}" />
     <!-- # End Primary Meta Tags -->
+
+    <!- # Start Links -->
+    <link rel="canonical" href="{{url}}" />
     <link
       rel="icon"
       type="image/x-icon"
-      href="https://kura.pro/shokunin/images/favicon.ico"
+      href="https://kura.pro/{{short_name}}/images/favicon.ico"
     />
     <link
-      href="https://unpkg.com/skeletonic-stylus@1.0.5/css/skeletonic.min.css"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      type="text/css"
+      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      crossorigin="anonymous"
     />
     <link
       rel="apple-touch-icon"
-      href="https://kura.pro/shokunin/images/icons/192x192.png"
+      href="https://kura.pro/{{short_name}}/images/icons/192x192.png"
       sizes="192x192"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/shokunin/images/icons/16x16.png"
+      href="https://kura.pro/{{short_name}}/images/icons/16x16.png"
       sizes="16x16"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/shokunin/images/icons/32x32.png"
+      href="https://kura.pro/{{short_name}}/images/icons/32x32.png"
       sizes="32x32"
     />
-    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+    <!-- # End Links -->
+
+    <!-- # Start Styles -->
+    <style>
+      a {
+        color: rgb({{theme_color}});
+        text-decoration: none;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: rgb({{theme_color}});
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: rgb({{theme_color}});
+        text-decoration: underline;
+      }
+    </style>
+    <!-- # End Styles -->
 
     <!-- # Start Open Graph / Facebook -->
     <meta name="og:description" content="{{og_description}}" />
@@ -70,37 +101,30 @@
 
     <!-- # Start Apple -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="rgb({{theme_color}}"
+    />
     <meta name="apple-mobile-web-app-title" content="{{title}}" />
     <meta name="application-name" content="{{name}}" />
     <meta name="author" content="{{author}}" />
     <!-- # End Apple -->
 
     <!-- # Start Content Security Policy -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self';
-        script-src 'self' https://www.googletagmanager.com https://www.clarity.ms https://cdn.jsdelivr.net;
-        style-src 'self' 'unsafe-inline' https://kura.pro https://unpkg.com/ https://cdn.jsdelivr.net;
-        img-src 'self' https://kura.pro https://unpkg.com/ data:;
-        media-src 'self';"
-    />
+    <meta http-equiv="Content-Security-Policy" default-src 'self'; connect-src
+    'self' https://x.clarity.ms/collect https://*.google-analytics.com;
+    script-src 'self' 'unsafe-inline' https://www.googletagmanager.com
+    https://www.clarity.ms https://cdn.jsdelivr.net; style-src 'self'
+    'unsafe-inline' https://kura.pro https://unpkg.com/
+    https://cdn.jsdelivr.net; img-src 'self' https://kura.pro https://unpkg.com/
+    data:; media-src 'self'; " />
     <!-- # End Content Security Policy -->
 
     <!-- # Start Microsoft -->
     <meta name="msapplication-config" content="{{msapplication_config}}" />
-    <meta
-      name="msapplication-tap-highlight"
-      content="{{msapplication_tap_highlight}}"
-    />
-    <meta
-      name="msapplication-TileColor"
-      content="{{msapplication_tile_color}}"
-    />
-    <meta
-      name="msapplication-TileImage"
-      content="{{msapplication_tile_image}}"
-    />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-TileColor" content="rgb({{theme_color}})" />
+    <meta name="msapplication-TileImage" content="{{image}}" />
     <!-- # End Microsoft -->
 
     <!-- # Start Twitter -->
@@ -114,66 +138,118 @@
     <meta name="twitter:url" content="{{twitter_url}}" />
     <!-- # End Twitter -->
   </head>
-  <body itemscope itemtype="http://schema.org/WebPage">
-    <section id="navigation" aria-label="navigation">
-      <input
-        type="checkbox"
-        class="hamburger"
-        id="hamburger"
-        name="hamburger"
-      />
-      <label
-        title="Open the menu"
-        for="hamburger"
-        class="hamburger-toggle cl-white"
-        aria-hidden="true"
-      >
-        <span class="hidden" aria-hidden="true">Main menu</span>
-        <span class="spinner diagonal part-1"></span>
-        <span class="spinner horizontal"></span>
-        <span class="spinner diagonal part-2"></span>
-      </label>
-      <nav id="sidebar">{{navigation}}</nav>
-    </section>
-    <main id="main" class="container center text-center" aria-label="main">
-      <section id="logo" class="logo" aria-label="logo">
-        <figure>
-          <a href="/" tabindex="0">
+  <body
+    id="page-top"
+    itemscope
+    itemtype="http://schema.org/WebPage"
+    class="bg-transparent text-white text-center"
+  >
+    <--! # Responsive navbar -->
+    <nav
+      class="navbar navbar-expand-lg navbar-dark fixed-top"
+      id="mainNav"
+      itemscope
+      itemtype="http://schema.org/SiteNavigationElement"
+      style="background-color: rgba({{theme_color}}, .618033988749894)"
+    >
+      <div class="container">
+        <figure class="mb-0">
+          <a href="/" tabindex="0" class="navbar-brand">
             <img
-              alt="{{logo_alt}}"
+              alt="Logo of {{name}}"
+              height="24"
               id="{{name}}"
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
-              src="{{logo}}"
-              width="{{logo_width}}"
-              height="{{logo_height}}"
-              title="{{logo_alt}}"
+              src="{{image}}"
+              title="Logo of {{name}}"
+              width="24"
             />
+            <figcaption class="visually-hidden">Logo of {{name}}</figcaption>
           </a>
-          <figcaption>{{name}}</figcaption>
         </figure>
-      </section>
-      <section id="banner" class="banner" aria-label="banner">
-        <figure>
-          <img
-            alt="{{banner_alt}}"
-            id="{{title}}"
-            itemprop="image"
-            itemtype="http://schema.org/ImageObject"
-            src="{{banner}}"
-            width="{{banner_width}}"
-            height="{{banner_height}}"
-            title="{{banner_alt}}"
-          />
-        </figure>
-      </section>
-      <section id="content" class="content text-left center">
+        <button
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+          class="navbar-toggler"
+          data-bs-target="#navbarSupportedContent"
+          data-bs-toggle="collapse"
+          type="button"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          {{navigation}}
+        </div>
+      </div>
+    </nav>
+    <--! # End Responsive navbar -->
+
+    <!-- Header-->
+    <header>
+      <div
+        class="w-100"
+        style="
+          background-image: url({{banner}});
+          background-position: center center;
+          background-repeat: no-repeat;
+          background-size: cover;
+          height: 100vh;
+          width: 100vh;
+        "
+        role="img"
+        title="Banner of {{name}}"
+        aria-label="Banner of {{name}}"
+      >
+        <div class="position-relative overflow-hidden top-50 text-center">
+          <strong class="px-5 display-3 fw-normal">{{title}}</strong>
+          <p class="lead fw-normal">{{subtitle}}</p>
+          <p>
+            <a
+              href="https://pypi.org/project/{{short_name}}/"
+              class="btn btn-dark mx-3 fs-5"
+              >Download Pain001 ↓</a
+            >
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main content-->
+    <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
+      <div class="px-5 text-dark text-start justify-content-between">
         {{content}}
-      </section>
-      <hr class="hr-text" data-content="{{title}}" />
+      </div>
     </main>
-    <footer id="footer" class="center text-center" aria-label="footer">
-      <p>{{copyright}}</p>
+
+    <!-- Footer-->
+    <footer
+      id="footer"
+      aria-label="footer"
+      class="justify-content-between align-items-center p-3 my-4 border-top"
+    >
+      <img
+        src="https://kura.pro/{{short_name}}/images/logos/{{short_name}}.webp"
+        width="32"
+        height="32"
+        alt="{{short_name}}"
+      />
+      <span class="px-2 text-muted">{{copyright}}</span>
+      <span class="px-2 text-muted">
+        <a href="/privacy/index.html">Privacy</a>
+      </span>
+      <span class="px-2 text-muted">
+        <a href="/terms/index.html">Terms of Use</a>
+      </span>
+      <span class="px-2 text-muted">
+        <a href="/contact/index.html">Contact</a>
+      </span>
     </footer>
+    <script
+      crossorigin=""
+      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+    ></script>
   </body>
 </html>

@@ -37,7 +37,10 @@ use std::path::Path;
 /// * If the server fails to write data to a connection, it will
 /// return an error.
 ///
-pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
+pub fn start(
+    server_address: &str,
+    document_root: &str,
+) -> std::io::Result<()> {
     let listener = TcpListener::bind(server_address)?;
     println!("❯ Server is now running at http://{}", server_address);
     println!("  Done.\n");
@@ -45,10 +48,11 @@ pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                if let Err(e) = handle_connection(stream, document_root) {
+                if let Err(e) = handle_connection(stream, document_root)
+                {
                     eprintln!("Error handling connection: {}", e);
                 }
-            },
+            }
             Err(e) => {
                 eprintln!("Error: {}", e);
             }
@@ -78,12 +82,13 @@ pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
 /// * If the server fails to read data from a connection, it will
 /// return an error.
 ///
-pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io::Result<()> {
+pub fn handle_connection(
+    mut stream: TcpStream,
+    document_root: &str,
+) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
-
     if bytes_read == 0 {
-        eprintln!("Empty request received");
         return Ok(());
     }
 
@@ -96,7 +101,9 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
         request_parts.next(),
         request_parts.next(),
     ) {
-        (Some(method), Some(path), Some(version)) => (method, path, version),
+        (Some(method), Some(path), Some(version)) => {
+            (method, path, version)
+        }
         _ => {
             eprintln!("Malformed request line: {}", request_line);
             return Ok(());
@@ -116,7 +123,10 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
     let canonical_requested_path = requested_path.canonicalize()?;
 
     if !canonical_requested_path.starts_with(&canonical_document_root) {
-        eprintln!("Possible directory traversal attempt: {}", requested_file);
+        eprintln!(
+            "Possible directory traversal attempt: {}",
+            requested_file
+        );
         return Ok(());
     }
 
@@ -124,13 +134,16 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
     let (status_line, contents) = if canonical_requested_path.exists() {
         (
             "HTTP/1.1 200 OK\r\n\r\n",
-            std::fs::read_to_string(&canonical_requested_path).unwrap_or_default(),
+            std::fs::read_to_string(&canonical_requested_path)
+                .unwrap_or_default(),
         )
     } else {
         (
             "HTTP/1.1 404 NOT FOUND\r\n\r\n",
-            std::fs::read_to_string(canonical_document_root.join("404/index.html"))
-                .unwrap_or_else(|_| String::from("File not found")),
+            std::fs::read_to_string(
+                canonical_document_root.join("404/index.html"),
+            )
+            .unwrap_or_else(|_| String::from("File not found")),
         )
     };
 
@@ -138,24 +151,24 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
         Err(e) => {
             eprintln!("Error writing to stream: {}", e);
             return Err(e);
-        },
-        _ => ()
+        }
+        _ => (),
     };
 
     match stream.write_all(contents.as_bytes()) {
         Err(e) => {
             eprintln!("Error writing to stream: {}", e);
             return Err(e);
-        },
-        _ => ()
+        }
+        _ => (),
     };
 
     match stream.flush() {
         Err(e) => {
             eprintln!("Error flushing stream: {}", e);
             return Err(e);
-        },
-        _ => ()
+        }
+        _ => (),
     };
 
     Ok(())
