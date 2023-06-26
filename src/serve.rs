@@ -44,7 +44,11 @@ pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_connection(stream, document_root)?,
+            Ok(stream) => {
+                if let Err(e) = handle_connection(stream, document_root) {
+                    eprintln!("Error handling connection: {}", e);
+                }
+            },
             Err(e) => {
                 eprintln!("Error: {}", e);
             }
@@ -104,25 +108,55 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
         _ => &path[1..], // Remove the leading "/"
     };
 
-    // let document_root = "public/";
-    let file_path = Path::new(&document_root).join(requested_file);
+    let document_root = Path::new(&document_root);
+    let requested_path = document_root.join(requested_file);
 
-    let (status_line, contents) = if file_path.exists() {
+    // Canonicalize paths and check for directory traversal attempts
+    let canonical_document_root = document_root.canonicalize()?;
+    let canonical_requested_path = requested_path.canonicalize()?;
+
+    if !canonical_requested_path.starts_with(&canonical_document_root) {
+        eprintln!("Possible directory traversal attempt: {}", requested_file);
+        return Ok(());
+    }
+
+    // Continue processing as normal, the requested path has been validated
+    let (status_line, contents) = if canonical_requested_path.exists() {
         (
             "HTTP/1.1 200 OK\r\n\r\n",
-            std::fs::read_to_string(&file_path).unwrap_or_default(),
+            std::fs::read_to_string(&canonical_requested_path).unwrap_or_default(),
         )
     } else {
         (
             "HTTP/1.1 404 NOT FOUND\r\n\r\n",
-            std::fs::read_to_string(Path::new(&document_root).join("404/index.html"))
+            std::fs::read_to_string(canonical_document_root.join("404/index.html"))
                 .unwrap_or_else(|_| String::from("File not found")),
         )
     };
 
-    stream.write_all(status_line.as_bytes())?;
-    stream.write_all(contents.as_bytes())?;
-    stream.flush()?;
+    match stream.write_all(status_line.as_bytes()) {
+        Err(e) => {
+            eprintln!("Error writing to stream: {}", e);
+            return Err(e);
+        },
+        _ => ()
+    };
+
+    match stream.write_all(contents.as_bytes()) {
+        Err(e) => {
+            eprintln!("Error writing to stream: {}", e);
+            return Err(e);
+        },
+        _ => ()
+    };
+
+    match stream.flush() {
+        Err(e) => {
+            eprintln!("Error flushing stream: {}", e);
+            return Err(e);
+        },
+        _ => ()
+    };
 
     Ok(())
 }
