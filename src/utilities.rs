@@ -343,3 +343,17 @@ pub fn write_element(
     }
     Ok(())
 }
+
+/// Converts a string to title case.
+pub fn to_title_case(s: &str) -> String {
+    s.split_whitespace()
+        .map(|word| {
+            let mut c = word.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().chain(c).collect(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
