@@ -392,16 +392,11 @@ pub fn write_element(
 /// * `String` - A string with the first letter of each word capitalized.
 ///
 pub fn to_title_case(s: &str) -> String {
-    s.split_whitespace()
-        .map(|word| {
-            let mut c = word.chars();
-            match c.next() {
-                None => String::new(),
-                Some(f) => f.to_uppercase().chain(c).collect(),
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+    let re = Regex::new(r"(\b)(\w)(\w*)").unwrap();
+    let result = re.replace_all(s, |caps: &regex::Captures| {
+        format!("{}{}{}", &caps[1], caps[2].to_uppercase(), &caps[3])
+    });
+    result.to_string()
 }
 
 /// Formats a header string with an ID and class attribute.
@@ -435,7 +430,7 @@ pub fn format_header_with_id_class(
                 in_header_tag = true;
             }
         } else {
-            if !id_attribute_added && c == ' ' {
+            if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
                     " id=\"{}\"",
                     id_regex
@@ -544,51 +539,57 @@ pub fn extract_front_matter(content: &str) -> &str {
 /// * `Unsafe`: Allows raw HTML to be rendered.
 ///
 ///
+/// Initializes and returns the default Comrak options, enabling several
+/// non-standard Markdown features.
+///
+/// # Returns
+///
+/// * `ComrakOptions` - A `comrak::ComrakOptions` instance with non-standard Markdown features enabled.
 pub fn create_comrak_options() -> comrak::ComrakOptions {
     let mut options = comrak::ComrakOptions::default();
 
     // Enable non-standard Markdown features:
 
-    // Detects URLs and email addresses and makes them clickable.
+    // Enables auto-linking of URLs and email addresses, making them clickable in the output.
     options.extension.autolink = true;
 
-    // Allows you to create description lists.
+    // Enables creation of description lists in the Markdown source.
     options.extension.description_lists = true;
 
-    // Allows you to create footnotes.
+    // Enables creation of footnotes in the Markdown source.
     options.extension.footnotes = true;
 
-    // Ignore front-mater starting with '---'
+    // Sets the front matter delimiter to '---', thereby ignoring any front matter in the Markdown source.
     options.extension.front_matter_delimiter = Some("---".to_owned());
 
-    // Adds an ID to each header.
+    // Enables automatic generation of ID attributes for each header in the Markdown source.
     options.extension.header_ids = Some("".to_string());
 
-    // Allows you to create strikethrough text.
+    // Enables creation of strikethrough text in the Markdown source.
     options.extension.strikethrough = true;
 
-    // Allows you to create superscript text.
+    // Enables creation of superscript text in the Markdown source.
     options.extension.superscript = true;
 
-    // Allows you to create tables.
+    // Enables creation of tables in the Markdown source.
     options.extension.table = true;
 
-    // Allows you to filter HTML tags.
+    // Enables HTML tag filtering in the Markdown source.
     options.extension.tagfilter = true;
 
-    // Allows you to create task lists.
+    // Enables creation of task lists in the Markdown source.
     options.extension.tasklist = true;
 
-    // Enables smart punctuation.
+    // Enables smart punctuation, transforming straight quotes into curly quotes, -- into en-dashes, etc.
     options.parse.smart = true;
 
-    // Renders GitHub-style fenced code blocks.
+    // Enables GitHub-style fenced code blocks in the Markdown source.
     options.render.github_pre_lang = true;
 
-    // Renders hard line breaks as <br> tags.
+    // Disables transformation of hard line breaks to <br> tags in the HTML output.
     options.render.hardbreaks = false;
 
-    // Allows raw HTML to be rendered.
+    // Allows raw HTML to be included in the output.
     options.render.unsafe_ = true;
 
     options
@@ -622,13 +623,13 @@ pub fn update_class_attributes(
     class_regex: &Regex,
     img_regex: &Regex,
 ) -> String {
-    if line.contains(".class=&quot;") {
+    if line.contains(".class=&quot;") && line.contains("<img") {
         let captures = class_regex.captures(line).unwrap();
         let class_value = captures.get(1).unwrap().as_str();
         let updated_line = class_regex.replace(line, "");
         let updated_line_with_class = img_regex.replace(
             &updated_line,
-            &format!("$1 class=\"{}\"$2", class_value),
+            &format!("$1 class=\"{}\" />", class_value),
         );
         return updated_line_with_class.into_owned();
     }

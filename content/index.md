@@ -12,20 +12,20 @@ copyright: "© 2023 Shokunin. All rights reserved."
 description: "A Fast and Flexible Static Site Generator written in Rust." ## description - The description of the site. (max 160 characters)
 icon: "https://kura.pro/shokunin/images/icons/512x512.png" ## icon - The icon of the site in SVG format.
 id: "https://shokunin.one" ## id - The id of the site.
-image: "https://kura.pro/shokunin/images/logos/shokunin.svg" ## image - The main logo of the site in SVG format.
+image: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## image - The main logo of the site in SVG format.
 keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## keywords - The keywords of the site. (comma separated, max 10 keywords)
 language: "en-GB" ## language - The language of the site. (default: en-GB)
 layout: "index" ## layout - The layout of the site.
 logo_alt: "Logo for the Shokunin (職人) Static Site Generator" ## logo_alt - The logo alt of the site.
-logo_height: "58" ## logo_height - The logo height of the site.
-logo_width: "58" ## logo_width - The logo width of the site.
-logo: "https://kura.pro/shokunin/images/logos/shokunin.svg" ## logo - The logo of the site in SVG format.
+logo_height: "33" ## logo_height - The logo height of the site.
+logo_width: "181" ## logo_width - The logo width of the site.
+logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## logo - The logo of the site in SVG format.
 name: "Shokunin (職人)" ## name - The name of the site. (max 64 characters)
 permalink: "https://shokunin.one" ## url - The url of the site.
 robots: "index, follow" ## robots - The robots of the site.
 short_name: "shokunin" ## short_name - The short name of the site. (max 12 characters)
 subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## subtitle - The subtitle of the page. (max 64 characters)
-theme_color: "211, 35, 28" ## theme_color - The theme color of the site.
+theme_color: "255, 39, 34" ## theme_color - The theme color of the site.
 title: "Shokunin (職人) Static Site Generator" ## title - The title of the page. (max 64 characters)
 url: "https://shokunin.one" ## url - The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport - The viewport of the site.

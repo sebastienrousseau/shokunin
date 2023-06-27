@@ -142,28 +142,28 @@
     id="page-top"
     itemscope
     itemtype="http://schema.org/WebPage"
-    class="bg-transparent text-white text-center"
+    class="text-center"
   >
     <!-- # Start Responsive navbar -->
     <nav
-      class="navbar navbar-expand-lg navbar-dark fixed-top"
+      class="navbar navbar-expand-lg navbar-light bg-white text-dark fixed-top"
       id="mainNav"
       itemscope
       itemtype="http://schema.org/SiteNavigationElement"
-      style="background-color: rgba({{theme_color}}, .618033988749894)"
+      style="--bs-opacity: 0.9; opacity: 0.9"
     >
-      <div class="container">
-        <figure class="mb-0">
+      <div class="container p-3">
+        <figure class="py-0 mb-0">
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
-              height="24"
+              height="{{logo_height}}"
               id="{{name}}"
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
               src="{{image}}"
               title="Logo of {{name}}"
-              width="24"
+              width="{{logo_width}}"
             />
             <figcaption class="visually-hidden">Logo of {{name}}</figcaption>
           </a>
@@ -202,23 +202,28 @@
         title="Banner of {{name}}"
         aria-label="Banner of {{name}}"
       >
-        <div class="position-relative overflow-hidden top-50 text-center">
-          <strong class="px-5 display-3 fw-normal">{{title}}</strong>
-          <p class="lead fw-normal">{{subtitle}}</p>
-          <p>
-            <a
-              href="https://pypi.org/project/{{short_name}}/"
-              class="btn btn-dark mx-3 fs-5"
-              >Download Pain001 ↓</a
-            >
-          </p>
+        <div class="position-absolute top-50 start-50 w-100 translate-middle">
+          <div
+            class="w-50 h-auto p-3 text-center center mx-auto border border-3 rounded"
+            style="background: rgba(255, 255, 255, 0.618)"
+          >
+            <strong class="display-3 fw-normal">{{title}}</strong>
+            <p class="lead fw-normal">{{subtitle}}</p>
+            <p>
+              <a
+                href="https://pypi.org/project/{{short_name}}/"
+                class="btn btn-lg btn-primary mx-3 fs-5"
+                >Download Pain001 ↓</a
+              >
+            </p>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div class="px-5 text-dark text-start justify-content-between">
+      <div class="text-dark text-start justify-content-between">
         {{content}}
       </div>
     </main>
