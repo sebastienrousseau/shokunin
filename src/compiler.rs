@@ -78,25 +78,73 @@ pub fn compile(
         .map(|file| {
             // Extract metadata from front matter
             let metadata = extract(&file.content);
-            let meta = macro_generate_metatags!(
-                "charset",
-                &macro_metadata_option!(metadata, "charset"),
+            let primary_metatags = macro_generate_metatags!(
                 "description",
                 &macro_metadata_option!(metadata, "description"),
+                "format-detection",
+                &macro_metadata_option!(metadata, "format_detection"),
                 "generator",
                 &macro_metadata_option!(metadata, "generator"),
                 "keywords",
                 &macro_metadata_option!(metadata, "keywords"),
                 "language",
                 &macro_metadata_option!(metadata, "language"),
+                "revisit-after",
+                &macro_metadata_option!(metadata, "revisit_after"),
                 "robots",
                 &macro_metadata_option!(metadata, "robots"),
                 "theme-color",
-                &macro_metadata_option!(metadata, "theme-color"),
+                &macro_metadata_option!(metadata, "theme_color"),
                 "title",
                 &macro_metadata_option!(metadata, "title"),
+                "viewport",
+                &macro_metadata_option!(metadata, "viewport"),
                 "url",
                 &macro_metadata_option!(metadata, "permalink"),
+            );
+            let og_metadata = macro_generate_metatags!(
+                "og:description",
+                &macro_metadata_option!(metadata, "description"),
+                "og:image:alt",
+                &macro_metadata_option!(metadata, "image_alt"),
+                "og:image:height",
+                &macro_metadata_option!(metadata, "image_height"),
+                "og:image:width",
+                &macro_metadata_option!(metadata, "image_width"),
+                "og:image",
+                &macro_metadata_option!(metadata, "image"),
+                "og:locale",
+                &macro_metadata_option!(metadata, "locale"),
+                "og:site_name",
+                &macro_metadata_option!(metadata, "name"),
+                "og:title",
+                &macro_metadata_option!(metadata, "title"),
+                "og:type",
+                &macro_metadata_option!(metadata, "type"),
+                "og:url",
+                &macro_metadata_option!(metadata, "permalink"),
+            );
+            let msapplication_metadata = macro_generate_metatags!(
+                "msapplication-config",
+                &macro_metadata_option!(
+                    metadata,
+                    "msapplication_config"
+                ),
+                "msapplication-tap-highlight",
+                &macro_metadata_option!(
+                    metadata,
+                    "msapplication_tap_highlight"
+                ),
+                "msapplication-TileColor",
+                &macro_metadata_option!(
+                    metadata,
+                    "msapplication_tile_color"
+                ),
+                "msapplication-TileImage",
+                &macro_metadata_option!(
+                    metadata,
+                    "msapplication_tile_image"
+                ),
             );
 
             // Generate HTML content
@@ -114,7 +162,9 @@ pub fn compile(
             }
 
             // Adding meta and navigation
-            page_options.set("meta", &meta);
+            page_options.set("primary", &primary_metatags);
+            page_options.set("opengraph", &og_metadata);
+            page_options.set("microsoft", &msapplication_metadata);
             page_options.set("navigation", &navigation);
             page_options.set("content", &html_content);
 

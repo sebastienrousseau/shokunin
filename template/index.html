@@ -1,19 +1,67 @@
 <!DOCTYPE html>
 <html lang="{{language}}">
   <head>
+    <meta charset="{{charset}}" />
     <title>{{title}}</title>
 
     <!-- # Start Primary Meta Tags -->
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="revisit-after" content="8 days" />
-    <meta name="robots" content="{{robots}}" />
-    <meta name="theme-color" content="rgb({{theme_color}})" />
-    <meta name="title" content="{{title}}" />
-    {{meta}}
-    <meta name="viewport" content="{{viewport}}" />
+    {{primary}}
     <!-- # End Primary Meta Tags -->
 
+    <!-- # Start Open Graph / Facebook -->
+    {{opengraph}}
+    <!-- # End Open Graph / Facebook -->
+
+    <!-- # Start Schema.org -->
+    <meta itemprop="name" content="{{name}}" />
+    <meta itemprop="description" content="{{description}}" />
+    <meta itemprop="image" content="{{image}}" />
+    <!-- # End Schema.org -->
+
+    <!-- # Start Accessibility -->
+    <meta name="accessibility" content="ARIA" />
+    <meta name="accessibility" content="fullKeyboardControl" />
+    <meta name="accessibility" content="noFlashingHazard" />
+    <!-- # End Accessibility -->
+
+    <!-- # Start Apple -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="{{theme_color}}"
+    />
+    <meta name="apple-mobile-web-app-title" content="{{title}}" />
+    <meta name="application-name" content="{{name}}" />
+    <meta name="author" content="{{author}}" />
+    <!-- # End Apple -->
+
+    <!-- # Start Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" default-src 'self'; connect-src
+    'self' https://x.clarity.ms/collect https://*.google-analytics.com;
+    script-src 'self' 'unsafe-inline' https://www.googletagmanager.com
+    https://www.clarity.ms https://cdn.jsdelivr.net; style-src 'self'
+    'unsafe-inline' https://kura.pro https://unpkg.com/
+    https://cdn.jsdelivr.net; img-src 'self' https://kura.pro https://unpkg.com/
+    data:; media-src 'self'; " />
+    <!-- # End Content Security Policy -->
+
+    <!-- # Start Microsoft -->
+    {{microsoft}}
+    <!-- # End Microsoft -->
+
+    <!-- # Start Twitter -->
+    <meta name="twitter:card" content="{{twitter_card}}" />
+    <meta name="twitter:creator" content="@{{twitter_creator}}" />
+    <meta name="twitter:description" content="{{twitter_description}}" />
+    <meta name="twitter:image" content="{{twitter_image}}" />
+    <meta name="twitter:twitter_image_alt" content="{{twitter_image_alt}}" />
+    <meta name="twitter:site" content="@{{twitter_site}}" />
+    <meta name="twitter:title" content="{{twitter_title}}" />
+    <meta name="twitter:url" content="{{twitter_url}}" />
+    <!-- # End Twitter -->
+
     <!-- # Start Links -->
+    <link rel="alternate" href="{{url}}" hreflang="{{language}}" />
     <link rel="canonical" href="{{url}}" />
     <link
       rel="icon"
@@ -50,7 +98,7 @@
     <!-- # Start Start Styles -->
     <style>
       a {
-        color: rgb({{theme_color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
@@ -60,78 +108,16 @@
       h4,
       h5,
       h6 {
-        color: rgb({{theme_color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
       a:hover {
-        color: rgb({{theme_color}});
+        color: {{theme_color}};
         text-decoration: underline;
       }
     </style>
     <!-- # End Styles -->
-
-    <!-- # Start Open Graph / Facebook -->
-    <meta name="og:description" content="{{og_description}}" />
-    <meta name="og:image:alt" content="{{og_image_alt}}" />
-    <meta property="og:image" content="{{og_image}}" />
-    <meta property="og:locale" content="{{og_locale}}" />
-    <meta property="og:site_name" content="{{og_site_name}}" />
-    <meta property="og:title" content="{{og_title}}" />
-    <meta property="og:type" content="{{og_type}}" />
-    <meta property="og:url" content="{{og_url}}" />
-    <!-- # End Open Graph / Facebook -->
-
-    <!-- # Start Schema.org -->
-    <meta itemprop="name" content="{{name}}" />
-    <meta itemprop="description" content="{{description}}" />
-    <meta itemprop="image" content="{{image}}" />
-    <!-- # End Schema.org -->
-
-    <!-- # Start Accessibility -->
-    <meta name="accessibility" content="ARIA" />
-    <meta name="accessibility" content="fullKeyboardControl" />
-    <meta name="accessibility" content="noFlashingHazard" />
-    <!-- # End Accessibility -->
-
-    <!-- # Start Apple -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="rgb({{theme_color}}"
-    />
-    <meta name="apple-mobile-web-app-title" content="{{title}}" />
-    <meta name="application-name" content="{{name}}" />
-    <meta name="author" content="{{author}}" />
-    <!-- # End Apple -->
-
-    <!-- # Start Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" default-src 'self'; connect-src
-    'self' https://x.clarity.ms/collect https://*.google-analytics.com;
-    script-src 'self' 'unsafe-inline' https://www.googletagmanager.com
-    https://www.clarity.ms https://cdn.jsdelivr.net; style-src 'self'
-    'unsafe-inline' https://kura.pro https://unpkg.com/
-    https://cdn.jsdelivr.net; img-src 'self' https://kura.pro https://unpkg.com/
-    data:; media-src 'self'; " />
-    <!-- # End Content Security Policy -->
-
-    <!-- # Start Microsoft -->
-    <meta name="msapplication-config" content="{{msapplication_config}}" />
-    <meta name="msapplication-tap-highlight" content="no" />
-    <meta name="msapplication-TileColor" content="rgb({{theme_color}})" />
-    <meta name="msapplication-TileImage" content="{{image}}" />
-    <!-- # End Microsoft -->
-
-    <!-- # Start Twitter -->
-    <meta name="twitter:card" content="{{twitter_card}}" />
-    <meta name="twitter:creator" content="@{{twitter_creator}}" />
-    <meta name="twitter:description" content="{{twitter_description}}" />
-    <meta name="twitter:image" content="{{twitter_image}}" />
-    <meta name="twitter:twitter_image_alt" content="{{twitter_image_alt}}" />
-    <meta name="twitter:site" content="@{{twitter_site}}" />
-    <meta name="twitter:title" content="{{twitter_title}}" />
-    <meta name="twitter:url" content="{{twitter_url}}" />
-    <!-- # End Twitter -->
   </head>
   <body
     id="page-top"
@@ -152,15 +138,16 @@
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
+              class="img-fluid"
+              title="Logo of {{name}}"
               height="{{logo_height}}"
               id="{{name}}"
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
-              src="{{image}}"
-              title="Logo of {{name}}"
+              src="{{logo}}"
               width="{{logo_width}}"
             />
-            <figcaption class="visually-hidden">Logo of {{name}}</figcaption>
+            <figcaption class="visually-hidden">{{subtitle}}</figcaption>
           </a>
         </figure>
         <button
@@ -233,7 +220,8 @@
         src="https://kura.pro/{{short_name}}/images/logos/{{short_name}}.webp"
         width="32"
         height="32"
-        alt="{{short_name}}"
+        alt="{{subtitle}}"
+        title="{{subtitle}}"
       />
       <span class="px-2 text-muted">{{copyright}}</span>
       <span class="px-2 text-muted">

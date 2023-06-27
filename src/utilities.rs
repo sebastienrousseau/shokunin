@@ -563,7 +563,7 @@ pub fn create_comrak_options() -> comrak::ComrakOptions {
     options.extension.front_matter_delimiter = Some("---".to_owned());
 
     // Enables automatic generation of ID attributes for each header in the Markdown source.
-    options.extension.header_ids = Some("".to_string());
+    // options.extension.header_ids = Some("".to_string());
 
     // Enables creation of strikethrough text in the Markdown source.
     options.extension.strikethrough = true;

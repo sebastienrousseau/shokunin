@@ -10,22 +10,28 @@ charset: "utf-8" ## charset - The charset of the site. (default: utf-8)
 cname: "shokunin.one" ## cname - The cname value of the site
 copyright: "© 2023 Shokunin. All rights reserved."
 description: "A Fast and Flexible Static Site Generator written in Rust." ## description - The description of the site. (max 160 characters)
+format_detection: "telephone=no" ## format_detection - The format detection of the site.
 icon: "https://kura.pro/shokunin/images/icons/512x512.png" ## icon - The icon of the site in SVG format.
 id: "https://shokunin.one" ## id - The id of the site.
-image: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## image - The main logo of the site in SVG format.
+image: "https://kura.pro/shokunin/images/banners/banner-shokunin.webp" ## image - The main image of the site in SVG format.
+image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## image_alt - The image alt of the site.
+image_height: "630" ## image_height - The image height of the site.
+image_width: "1200" ## image_width - The image width of the site.
 keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## keywords - The keywords of the site. (comma separated, max 10 keywords)
 language: "en-GB" ## language - The language of the site. (default: en-GB)
 layout: "index" ## layout - The layout of the site.
+locale: "en_GB" ## locale - The locale of the site.
 logo_alt: "Logo for the Shokunin (職人) Static Site Generator" ## logo_alt - The logo alt of the site.
 logo_height: "33" ## logo_height - The logo height of the site.
 logo_width: "181" ## logo_width - The logo width of the site.
 logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## logo - The logo of the site in SVG format.
 name: "Shokunin (職人)" ## name - The name of the site. (max 64 characters)
 permalink: "https://shokunin.one" ## url - The url of the site.
+revisit_after: "7 days" ## revisit_after - The revisit after of the site.
 robots: "index, follow" ## robots - The robots of the site.
 short_name: "shokunin" ## short_name - The short name of the site. (max 12 characters)
 subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## subtitle - The subtitle of the page. (max 64 characters)
-theme_color: "255, 39, 34" ## theme_color - The theme color of the site.
+theme_color: "rgb(179, 3, 0)" ## theme_color - The theme color of the site.
 title: "Shokunin (職人) Static Site Generator" ## title - The title of the page. (max 64 characters)
 url: "https://shokunin.one" ## url - The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport - The viewport of the site.
@@ -54,6 +60,8 @@ item_description: RSS feed for the site
 item_pub_date: Wed, 02 Oct 2002 13:00:00 GMT
 ## rss - ttl stands for time to live. It's a number of minutes that indicates how long a channel can be cached before refreshing from the source.
 ttl: "60"
+## type - The type of the page.
+type: "website"
 ## rss - Email address for person responsible for technical issues relating to channel.
 webmaster: sebastian.rousseau@gmail.com
 ## rss - Email address for person responsible for editorial content.
@@ -71,25 +79,6 @@ msapplication_tap_highlight: no
 msapplication_tile_color: "#d70015"
 ## msapplication_tile_image - The MS Application tile image of the page.
 msapplication_tile_image: https://kura.pro/shokunin/images/logos/shokunin.svg
-
-# Open Graph - The Open Graph front matter (YAML).
-
-## og - The Open Graph description of the page.
-og_description: A Fast and Flexible Static Site Generator written in Rust.
-## og - The Open Graph image of the page.
-og_image: https://kura.pro/shokunin/images/logos/shokunin.svg
-## og:image:alt - The Open Graph image alt of the page.
-og_image_alt: Logo for the Shokunin (職人) Static Site Generator
-## og - The Open Graph locale of the page.
-og_locale: en_GB
-## og - The Open Graph site name of the page.
-og_site_name: Shokunin (職人)
-## og - The Open Graph title of the page.
-og_title: Shokunin (職人) Static Site Generator
-## og - The Open Graph type of the page.
-og_type: website
-## og - The Open Graph url of the page.
-og_url: https://shokunin.one
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
@@ -112,18 +101,18 @@ twitter_url: https://shokunin.one
 
 ---
 
-### Overview
+## Overview
 
 Shokunin (職人) is a highly-optimized, Rust-based static site generator (ssg) that provides an easy-to-use and powerful tool for building professional static websites and blogs. Shokunin enables you to generate static HTML files from Markdown, YAML, JSON, and TOML. You can also use HTML themes and custom templates to create websites quickly and easily.
 
-### Features
+## Features
 
 Blazing fast and flexible, Shokunin is the perfect tool for anyone looking to build a professional website. It's easy to use and written in Rust 🦀, which means it's both fast and reliable. The library supports multiple content formats, like Markdown, YAML, JSON, and TOML. You can also use HTML themes and Premium templates to create accessible websites quickly and efficiently. Shokunin even generates minified HTML and JSON versions for optimal performance and comes with a built-in Rust development server with live reloading.
 
-### Benefits
+## Benefits
 
 Static site generators like Shokunin offer several benefits over dynamic websites. For one, static sites are much faster and more secure than their dynamic counterparts. With a static site generator, you can generate a site quickly and easily without the need for a server-side language like PHP or JavaScript. It makes static sites perfect for blogs, portfolios, and other types of content that don't require dynamic features like user accounts or e-commerce. Another benefit of static sites is that they're more reliable and easier to deploy. Because static sites are generated ahead of time, there's no risk of a database outage or other server-related issues. Your site will be available 24/7 and won't go down due to a server problem.
 
-### Licenses
+## Licenses
 
 Shokunin is licensed under the terms of both the MIT license and the Apache License (Version 2.0). This means you're free to use, modify, and distribute the software as long as you comply with the terms of both licenses. The MIT License is one of the most permissive open source licenses available, while the Apache License is a more comprehensive license that includes patent protection and other legal provisions. Together, these licenses provide a solid legal framework for using and distributing Shokunin in your own projects.
