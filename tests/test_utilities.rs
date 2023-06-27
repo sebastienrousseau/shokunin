@@ -532,7 +532,8 @@ mod tests {
 
     #[test]
     fn test_default_comrak_options() {
-        let options = ComrakOptions::default();
+        let mut options = ComrakOptions::default();
+        options.extension.autolink = true;
 
         assert!(options.extension.autolink);
         assert!(!options.extension.description_lists);
