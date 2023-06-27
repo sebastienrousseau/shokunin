@@ -79,6 +79,22 @@ pub fn compile(
             // Extract metadata from front matter
             let metadata = extract(&file.content);
             let meta = macro_generate_metatags!(
+                "charset",
+                &macro_metadata_option!(metadata, "charset"),
+                "description",
+                &macro_metadata_option!(metadata, "description"),
+                "generator",
+                &macro_metadata_option!(metadata, "generator"),
+                "keywords",
+                &macro_metadata_option!(metadata, "keywords"),
+                "language",
+                &macro_metadata_option!(metadata, "language"),
+                "robots",
+                &macro_metadata_option!(metadata, "robots"),
+                "theme-color",
+                &macro_metadata_option!(metadata, "theme-color"),
+                "title",
+                &macro_metadata_option!(metadata, "title"),
                 "url",
                 &macro_metadata_option!(metadata, "permalink"),
             );

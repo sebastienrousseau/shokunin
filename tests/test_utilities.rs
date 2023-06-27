@@ -85,7 +85,7 @@ mod tests {
         let out_dir = Path::new("temp_out_dir");
         let dummy_file = out_dir.join("dummy_file.txt");
         fs::create_dir_all(out_dir)?;
-        fs::File::create(&dummy_file)?;
+        fs::File::create(dummy_file)?;
 
         // Call the function to test.
         let site_name = "My Test Site";
@@ -170,9 +170,9 @@ mod tests {
         let found_html_files = find_html_files(dir)?;
 
         // Check that the function found all of the .html files.
-        let mut expected_html_files: Vec<PathBuf> = file_paths.clone();
+        let mut expected_html_files: Vec<PathBuf> = file_paths;
         expected_html_files.sort_unstable();
-        let mut found_html_files_sorted = found_html_files.clone();
+        let mut found_html_files_sorted = found_html_files;
         found_html_files_sorted.sort_unstable();
 
         assert_eq!(
@@ -190,7 +190,7 @@ mod tests {
     fn test_minify_html() -> io::Result<()> {
         // Setup: Create a dummy HTML file.
         let file_path = Path::new("temp_html_file.html");
-        let mut file = File::create(&file_path)?;
+        let mut file = File::create(file_path)?;
         write!(file, "<!DOCTYPE html>\n<html>\n<head>\n    <title>Test Page</title>\n</head>\n<body>\n    <h1>Hello, world!</h1>\n</body>\n</html>")?;
 
         // Call the function to test.
@@ -214,11 +214,11 @@ mod tests {
     fn test_backup_file() -> std::io::Result<()> {
         // Setup: Create a dummy file.
         let file_path = Path::new("temp_file.txt");
-        let mut file = fs::File::create(&file_path)?;
+        let mut file = fs::File::create(file_path)?;
         file.write_all(b"Some text for the dummy file")?;
 
         // Call the function to test.
-        let backup_path = backup_file(&file_path)?;
+        let backup_path = backup_file(file_path)?;
 
         // Check that the backup file was created and that it has the expected content.
         assert!(backup_path.exists(), "Backup file was not created.");
@@ -267,12 +267,12 @@ mod tests {
         let dir1 = Path::new("temp_dir1");
         let dummy_file1 = dir1.join("dummy_file1.txt");
         fs::create_dir_all(dir1)?;
-        fs::File::create(&dummy_file1)?;
+        fs::File::create(dummy_file1)?;
 
         let dir2 = Path::new("temp_dir2");
         let dummy_file2 = dir2.join("dummy_file2.txt");
         fs::create_dir_all(dir2)?;
-        fs::File::create(&dummy_file2)?;
+        fs::File::create(dummy_file2)?;
 
         let directories: Vec<&Path> = vec![dir1, dir2];
 
@@ -511,43 +511,43 @@ mod tests {
     fn test_create_comrak_options() {
         let options = create_comrak_options();
 
-        assert_eq!(options.extension.autolink, true);
-        assert_eq!(options.extension.description_lists, true);
-        assert_eq!(options.extension.footnotes, true);
+        assert!(options.extension.autolink);
+        assert!(options.extension.description_lists);
+        assert!(options.extension.footnotes);
         assert_eq!(
             options.extension.front_matter_delimiter,
             Some("---".to_owned())
         );
         assert_eq!(options.extension.header_ids, Some("".to_string()));
-        assert_eq!(options.extension.strikethrough, true);
-        assert_eq!(options.extension.superscript, true);
-        assert_eq!(options.extension.table, true);
-        assert_eq!(options.extension.tagfilter, true);
-        assert_eq!(options.extension.tasklist, true);
-        assert_eq!(options.parse.smart, true);
-        assert_eq!(options.render.github_pre_lang, true);
-        assert_eq!(options.render.hardbreaks, false);
-        assert_eq!(options.render.unsafe_, true);
+        assert!(options.extension.strikethrough);
+        assert!(options.extension.superscript);
+        assert!(options.extension.table);
+        assert!(options.extension.tagfilter);
+        assert!(options.extension.tasklist);
+        assert!(options.parse.smart);
+        assert!(options.render.github_pre_lang);
+        assert!(!options.render.hardbreaks);
+        assert!(options.render.unsafe_);
     }
 
     #[test]
     fn test_default_comrak_options() {
         let options = ComrakOptions::default();
 
-        assert_eq!(options.extension.autolink, false);
-        assert_eq!(options.extension.description_lists, false);
-        assert_eq!(options.extension.footnotes, false);
+        assert!(options.extension.autolink);
+        assert!(!options.extension.description_lists);
+        assert!(!options.extension.footnotes);
         assert_eq!(options.extension.front_matter_delimiter, None);
         assert_eq!(options.extension.header_ids, None);
-        assert_eq!(options.extension.strikethrough, false);
-        assert_eq!(options.extension.superscript, false);
-        assert_eq!(options.extension.table, false);
-        assert_eq!(options.extension.tagfilter, false);
-        assert_eq!(options.extension.tasklist, false);
-        assert_eq!(options.parse.smart, false);
-        assert_eq!(options.render.github_pre_lang, false);
-        assert_eq!(options.render.hardbreaks, false);
-        assert_eq!(options.render.unsafe_, false);
+        assert!(!options.extension.strikethrough);
+        assert!(!options.extension.superscript);
+        assert!(!options.extension.table);
+        assert!(!options.extension.tagfilter);
+        assert!(!options.extension.tasklist);
+        assert!(!options.parse.smart);
+        assert!(!options.render.github_pre_lang);
+        assert!(!options.render.hardbreaks);
+        assert!(!options.render.unsafe_);
     }
 
     #[test]
