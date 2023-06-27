@@ -380,14 +380,14 @@ mod tests {
     }
 
     #[test]
-    fn to_title_case_single_word() {
+    fn test_to_title_case_single_word() {
         assert_eq!(to_title_case("hello"), "Hello");
         assert_eq!(to_title_case("WORLD"), "WORLD");
         assert_eq!(to_title_case("rust"), "Rust");
     }
 
     #[test]
-    fn to_title_case_multiple_words() {
+    fn test_to_title_case_multiple_words() {
         assert_eq!(to_title_case("hello world"), "Hello World");
         assert_eq!(to_title_case("HELLO WORLD"), "HELLO WORLD");
         assert_eq!(to_title_case("hello WORLD"), "Hello WORLD");
@@ -398,23 +398,23 @@ mod tests {
     }
 
     #[test]
-    fn to_title_case_empty_string() {
+    fn test_to_title_case_empty_string() {
         assert_eq!(to_title_case(""), "");
     }
 
     #[test]
-    fn to_title_case_only_spaces() {
+    fn test_to_title_case_only_spaces() {
         assert_eq!(to_title_case(""), "");
     }
 
     #[test]
-    fn to_title_case_leading_trailing_spaces() {
+    fn test_to_title_case_leading_trailing_spaces() {
         assert_eq!(to_title_case(" hello "), " Hello ");
         assert_eq!(to_title_case(" hello world "), " Hello World ");
     }
 
     #[test]
-    fn test_format_header_with_id_class() {
+    fn test_test_format_header_with_id_class() {
         let id_regex = Regex::new(r"[^a-z0-9]+").unwrap();
 
         let test_cases = vec![

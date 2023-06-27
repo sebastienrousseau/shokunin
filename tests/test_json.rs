@@ -2,7 +2,10 @@
 mod tests {
     // Import necessary dependencies
     use serde_json::{json, Value};
-    use ssg::{json::manifest, data::ManifestOptions};
+    use ssg::{
+        data::{CnameData, ManifestOptions, TxtData},
+        json::{cname, manifest, txt},
+    };
 
     #[test]
     fn test_manifest_with_empty_options() {
@@ -67,5 +70,37 @@ mod tests {
             serde_json::from_str::<Value>(&result).unwrap(),
             expected_result
         );
+    }
+
+    #[test]
+    fn test_cname_full_domain() {
+        let options = CnameData {
+            cname: "example.com".to_string(),
+        };
+
+        let output = cname(&options);
+        assert_eq!(output, "www.example.com\nexample.com");
+    }
+
+    #[test]
+    fn test_cname_empty() {
+        let options = CnameData {
+            cname: "".to_string(),
+        };
+
+        let output = cname(&options);
+        assert_eq!(output, "www.\n");
+    }
+
+    #[test]
+    fn test_txt() {
+        let expected =
+            "User-agent: *\nSitemap: https://example.com/sitemap.xml"
+                .to_string();
+        let txt_options: TxtData = TxtData {
+            permalink: "https://example.com".to_string(),
+        };
+        let result = txt(&txt_options);
+        assert_eq!(result, expected);
     }
 }
