@@ -79,7 +79,7 @@ mod tests {
         };
 
         let output = cname(&options);
-        assert_eq!(output, "www.example.com\nexample.com");
+        assert_eq!(output, "example.com\nwww.example.com");
     }
 
     #[test]
@@ -89,7 +89,7 @@ mod tests {
         };
 
         let output = cname(&options);
-        assert_eq!(output, "www.\n");
+        assert_eq!(output, "\nwww.");
     }
 
     #[test]

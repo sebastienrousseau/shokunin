@@ -23,7 +23,7 @@ url: "https://shokunin.one/offline.html"
 
 # RSS - The RSS feed front matter (YAML).
 
-generator: "Shokunin Static Site Generator (v0.0.13)"
+generator: "Shokunin Static Site Generator (v0.0.14)"
 item_description: "It looks like you’re offline. Check your connection and try again."
 item_guid: "https://shokunin.one/offline.html"
 item_link: https://shokunin.one/rss.xml

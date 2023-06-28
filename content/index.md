@@ -6,12 +6,13 @@ banner_alt: "Floral kimono and bamboo" ## The banner alt of the site.
 banner_height: "615" ## The banner height of the site.
 banner_width: "983" ## The banner width of the site.
 banner: "https://kura.pro/unsplash/images/banners/lan-pham-4qG2qqXi3tY-unsplash.jpg" ## The banner of the site.
+cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "shokunin.one" ## The cname value of the site
 copyright: "© 2023 Shokunin. All rights reserved." ## The copyright of the site.
 description: "A Fast and Flexible Static Site Generator written in Rust." ## The description of the site. (max 160 characters)
 format_detection: "telephone=no" ## The format detection of the site.
-icon: "https://kura.pro/shokunin/images/icons/512x512.png" ## The icon of the site in SVG format.
+icon: "https://kura.pro/shokunin/images/logos/shokunin.svg" ## The icon of the site in SVG format.
 id: "https://shokunin.one" ## The id of the site.
 image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The image alt of the site.
 image_height: "630" ## The image height of the site.
@@ -31,7 +32,7 @@ revisit_after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "shokunin" ## The short name of the site. (max 12 characters)
 subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## The subtitle of the page. (max 64 characters)
-theme_color: "rgb(179, 3, 0)" ## The theme color of the site.
+theme_color: "rgb(220, 53, 69)" ## The theme color of the site.
 title: "Shokunin (職人) Static Site Generator" ## The title of the page. (max 64 characters)
 url: "https://shokunin.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
@@ -68,6 +69,12 @@ webmaster: sebastian.rousseau@gmail.com
 managing_editor: sebastian.rousseau@gmail.com
 ## rss -  The category of the channel and item(s).
 category: "Finance"
+
+# Apple - The Apple front matter (YAML).
+apple_mobile_web_app_capable: "yes" ## The Apple mobile web app capable of the page.
+apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.
+apple_mobile_web_app_status_bar_style: "black-translucent" ## The Apple mobile web app status bar style of the page.
+apple_touch_icon_sizes: "512x512" ## The Apple touch icon sizes of the page.
 
 # MS Application - The MS Application front matter (YAML).
 

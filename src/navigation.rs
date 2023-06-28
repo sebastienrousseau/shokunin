@@ -58,7 +58,13 @@ pub fn generate_navigation(files: &[FileData]) -> String {
             _ => file.name.to_string(),
         };
 
-        if file_name == "index" || file_name == "404" {
+        if
+            file_name == "index" ||
+            file_name == "404" ||
+            file_name == "privacy" ||
+            file_name == "terms" ||
+            file_name == "offline"
+        {
             None
         } else {
             let mut dir_name = file_name.clone();
@@ -71,7 +77,7 @@ pub fn generate_navigation(files: &[FileData]) -> String {
             }
 
             Some(format!(
-                "<li class=\"nav-item\"><a href=\"/{}/index.html\" class=\"text-uppercase p-2 \" role=\"navigation\">{}</a></li>",
+                "<li class=\"nav-item\"><a href=\"/{}/index.html\" class=\"text-uppercase p-2 \">{}</a></li>",
                 dir_name,
                 to_title_case(&file_name),
             ))
@@ -79,7 +85,7 @@ pub fn generate_navigation(files: &[FileData]) -> String {
     }).collect::<Vec<_>>().join("\n");
 
     format!(
-        "<ul class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
+        "<ul role=\"navigation\" class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
         nav_links
     )
 }

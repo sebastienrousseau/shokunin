@@ -79,6 +79,32 @@ pub fn compile(
         .map(|file| {
             // Extract metadata from front matter
             let metadata = extract(&file.content);
+            let apple_metatags = macro_generate_metatags!(
+                "apple-mobile-web-app-orientations",
+                &macro_metadata_option!(
+                    metadata,
+                    "apple_mobile_web_app_orientations"
+                ),
+                "apple-mobile-web-app-title",
+                &macro_metadata_option!(metadata, "title"),
+                "application-name",
+                &macro_metadata_option!(metadata, "name"),
+                "apple-mobile-web-app-capable",
+                &macro_metadata_option!(
+                    metadata,
+                    "apple_mobile_web_app_capable"
+                ),
+                "apple-mobile-web-app-status-bar-style",
+                &macro_metadata_option!(
+                    metadata,
+                    "apple_mobile_web_app_status_bar_style"
+                ),
+                "apple-touch-icon",
+                &macro_metadata_option!(metadata, "icon"),
+                "apple-touch-icon-precomposed",
+                &macro_metadata_option!(metadata, "icon"),
+            );
+
             let primary_metatags = macro_generate_metatags!(
                 "description",
                 &macro_metadata_option!(metadata, "description"),
@@ -147,6 +173,28 @@ pub fn compile(
                     "msapplication_tile_image"
                 ),
             );
+            let twitter_metadata = macro_generate_metatags!(
+                "twitter:card",
+                &macro_metadata_option!(metadata, "twitter_card"),
+                "twitter:creator",
+                &macro_metadata_option!(metadata, "twitter_creator"),
+                "twitter:description",
+                &macro_metadata_option!(metadata, "description"),
+                "twitter:image",
+                &macro_metadata_option!(metadata, "image"),
+                "twitter:image:alt",
+                &macro_metadata_option!(metadata, "image_alt"),
+                "twitter:image:height",
+                &macro_metadata_option!(metadata, "image_height"),
+                "twitter:image:width",
+                &macro_metadata_option!(metadata, "image_width"),
+                "twitter:site",
+                &macro_metadata_option!(metadata, "url"),
+                "twitter:title",
+                &macro_metadata_option!(metadata, "title"),
+                "twitter:url",
+                &macro_metadata_option!(metadata, "url"),
+            );
 
             // Generate HTML content
             let html_content = generate_html(
@@ -162,12 +210,15 @@ pub fn compile(
                 page_options.set(key, value);
             }
 
-            // Adding meta and navigation
-            page_options.set("primary", &primary_metatags);
-            page_options.set("opengraph", &og_metadata);
+            // Adding metatags to page options for use in templates and
+            // navigation generation
+            page_options.set("apple", &apple_metatags);
+            page_options.set("content", &html_content);
             page_options.set("microsoft", &msapplication_metadata);
             page_options.set("navigation", &navigation);
-            page_options.set("content", &html_content);
+            page_options.set("opengraph", &og_metadata);
+            page_options.set("primary", &primary_metatags);
+            page_options.set("twitter", &twitter_metadata);
 
             let content = render_page(
                 &page_options,
