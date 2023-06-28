@@ -12,7 +12,7 @@ mod tests {
         // Create a temporary directory and a dummy file inside it.
         let tmp_dir = TempDir::new().unwrap();
         let file_path = tmp_dir.path().join("index.html");
-        let mut tmp_file = File::create(&file_path).unwrap();
+        let mut tmp_file = File::create(file_path).unwrap();
         write!(tmp_file, "Hello, world!").unwrap();
 
         // Start a server in a new thread.
@@ -20,7 +20,7 @@ mod tests {
         let document_root =
             tmp_dir.path().to_str().unwrap().to_string();
         thread::spawn(move || {
-            start(&server_addr, &document_root).unwrap();
+            start(server_addr, &document_root).unwrap();
         });
 
         // Wait for the server to start.
