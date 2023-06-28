@@ -82,3 +82,17 @@ pub struct TxtData {
     /// A string representing the permalink of the web app
     pub permalink: String,
 }
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+/// Represents the information about a file.
+///
+/// This includes the type of the file, the files to be created for
+/// this file type, and whether to display the files that were created.
+pub struct FileInfo {
+    /// A string representing the type of the file, e.g., "index", "404", "offline".
+    pub file_type: String,
+    /// A list of file names to be created for this file type.
+    pub files_to_create: Vec<&'static str>,
+    /// Indicates whether the files that were created should be displayed.
+    pub display: bool,
+}

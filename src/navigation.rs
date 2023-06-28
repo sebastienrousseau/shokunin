@@ -71,7 +71,7 @@ pub fn generate_navigation(files: &[FileData]) -> String {
             }
 
             Some(format!(
-                "<li class=\"nav-item\"><a href=\"/{}/index.html\" class=\"text-uppercase nav-link nav-link\" role=\"navigation\">{}</a></li>",
+                "<li class=\"nav-item\"><a href=\"/{}/index.html\" class=\"text-uppercase p-2 \" role=\"navigation\">{}</a></li>",
                 dir_name,
                 to_title_case(&file_name),
             ))

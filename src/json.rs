@@ -61,7 +61,7 @@ pub fn cname(options: &CnameData) -> String {
     let cname_value = options.cname.clone();
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
-    format!("{}\n{}", full_domain, base_domain)
+    format!("{}\n{}", base_domain, full_domain)
 }
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app

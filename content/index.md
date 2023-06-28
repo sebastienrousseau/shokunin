@@ -1,40 +1,40 @@
 ---
 # Front Matter (YAML).
 
-author: "Sebastien Rousseau" ## author - The author of the page. (max 64 characters)
-banner_alt: "Floral kimono and bamboo" ## banner_alt - The banner alt of the site.
-banner_height: "615" ## banner_height - The banner height of the site.
-banner_width: "983" ## banner_width - The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/lan-pham-4qG2qqXi3tY-unsplash.jpg" ## banner - The banner of the site.
-charset: "utf-8" ## charset - The charset of the site. (default: utf-8)
-cname: "shokunin.one" ## cname - The cname value of the site
-copyright: "© 2023 Shokunin. All rights reserved."
-description: "A Fast and Flexible Static Site Generator written in Rust." ## description - The description of the site. (max 160 characters)
-format_detection: "telephone=no" ## format_detection - The format detection of the site.
-icon: "https://kura.pro/shokunin/images/icons/512x512.png" ## icon - The icon of the site in SVG format.
-id: "https://shokunin.one" ## id - The id of the site.
-image: "https://kura.pro/shokunin/images/banners/banner-shokunin.webp" ## image - The main image of the site in SVG format.
-image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## image_alt - The image alt of the site.
-image_height: "630" ## image_height - The image height of the site.
-image_width: "1200" ## image_width - The image width of the site.
-keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## keywords - The keywords of the site. (comma separated, max 10 keywords)
-language: "en-GB" ## language - The language of the site. (default: en-GB)
-layout: "index" ## layout - The layout of the site.
-locale: "en_GB" ## locale - The locale of the site.
-logo_alt: "Logo for the Shokunin (職人) Static Site Generator" ## logo_alt - The logo alt of the site.
-logo_height: "33" ## logo_height - The logo height of the site.
-logo_width: "181" ## logo_width - The logo width of the site.
-logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## logo - The logo of the site in SVG format.
-name: "Shokunin (職人)" ## name - The name of the site. (max 64 characters)
-permalink: "https://shokunin.one" ## url - The url of the site.
-revisit_after: "7 days" ## revisit_after - The revisit after of the site.
-robots: "index, follow" ## robots - The robots of the site.
-short_name: "shokunin" ## short_name - The short name of the site. (max 12 characters)
-subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## subtitle - The subtitle of the page. (max 64 characters)
-theme_color: "rgb(179, 3, 0)" ## theme_color - The theme color of the site.
-title: "Shokunin (職人) Static Site Generator" ## title - The title of the page. (max 64 characters)
-url: "https://shokunin.one" ## url - The url of the site.
-viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport - The viewport of the site.
+author: "Sebastien Rousseau" ## The author of the page. (max 64 characters)
+banner_alt: "Floral kimono and bamboo" ## The banner alt of the site.
+banner_height: "615" ## The banner height of the site.
+banner_width: "983" ## The banner width of the site.
+banner: "https://kura.pro/unsplash/images/banners/lan-pham-4qG2qqXi3tY-unsplash.jpg" ## The banner of the site.
+charset: "utf-8" ## The charset of the site. (default: utf-8)
+cname: "shokunin.one" ## The cname value of the site
+copyright: "© 2023 Shokunin. All rights reserved." ## The copyright of the site.
+description: "A Fast and Flexible Static Site Generator written in Rust." ## The description of the site. (max 160 characters)
+format_detection: "telephone=no" ## The format detection of the site.
+icon: "https://kura.pro/shokunin/images/icons/512x512.png" ## The icon of the site in SVG format.
+id: "https://shokunin.one" ## The id of the site.
+image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The image alt of the site.
+image_height: "630" ## The image height of the site.
+image_width: "1200" ## The image width of the site.
+image: "https://kura.pro/shokunin/images/banners/banner-shokunin.webp" ## The main image of the site in SVG format.
+keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
+language: "en-GB" ## The language of the site. (default: en-GB)
+layout: "index" ## The layout of the site.
+locale: "en_GB" ## The locale of the site.
+logo_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The logo alt of the site.
+logo_height: "33" ## The logo height of the site.
+logo_width: "181" ## The logo width of the site.
+logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## The logo of the site in SVG format.
+name: "Shokunin (職人)" ## The name of the site. (max 64 characters)
+permalink: "https://shokunin.one" ## The url of the site.
+revisit_after: "7 days" ## The revisit after of the site.
+robots: "index, follow" ## The robots of the site.
+short_name: "shokunin" ## The short name of the site. (max 12 characters)
+subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## The subtitle of the page. (max 64 characters)
+theme_color: "rgb(179, 3, 0)" ## The theme color of the site.
+title: "Shokunin (職人) Static Site Generator" ## The title of the page. (max 64 characters)
+url: "https://shokunin.one" ## The url of the site.
+viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # RSS - The RSS feed front matter (YAML).
 
