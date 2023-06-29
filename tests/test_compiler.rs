@@ -15,7 +15,7 @@ title: My Title
 description: My Description
 ---
 ";
-        let metadata = extract(&content);
+        let metadata = extract(content);
         assert_eq!(metadata["title"], "My Title");
         assert_eq!(metadata["description"], "My Description");
     }
@@ -23,7 +23,7 @@ description: My Description
     #[test]
     fn test_extract_metadata_with_no_metadata() {
         let content = "This is some content with no frontmatter";
-        let metadata = extract(&content);
+        let metadata = extract(content);
         assert!(metadata.is_empty());
     }
 
