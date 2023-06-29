@@ -71,8 +71,41 @@ impl RssOptions {
     pub fn new() -> RssOptions {
         RssOptions::default()
     }
+    /// Sets the value of a field.
+    pub fn set(&mut self, key: &str, value: &str) {
+        match key {
+            "atom_link" => self.atom_link = value.to_string(),
+            "category" => self.category = value.to_string(),
+            "cloud" => self.cloud = value.to_string(),
+            "copyright" => self.copyright = value.to_string(),
+            "description" => self.description = value.to_string(),
+            "docs" => self.docs = value.to_string(),
+            "enclosure" => self.enclosure = value.to_string(),
+            "generator" => self.generator = value.to_string(),
+            "image" => self.image = value.to_string(),
+            "item_guid" => self.item_guid = value.to_string(),
+            "item_description" => {
+                self.item_description = value.to_string()
+            }
+            "item_link" => self.item_link = value.to_string(),
+            "item_pub_date" => self.item_pub_date = value.to_string(),
+            "item_title" => self.item_title = value.to_string(),
+            "language" => self.language = value.to_string(),
+            "last_build_date" => {
+                self.last_build_date = value.to_string()
+            }
+            "link" => self.link = value.to_string(),
+            "managing_editor" => {
+                self.managing_editor = value.to_string()
+            }
+            "pub_date" => self.pub_date = value.to_string(),
+            "title" => self.title = value.to_string(),
+            "ttl" => self.ttl = value.to_string(),
+            "webmaster" => self.webmaster = value.to_string(),
+            _ => (),
+        }
+    }
 }
-
 /// Generates an RSS feed from the given `RssOptions` struct.
 ///
 /// This function creates a complete RSS feed in XML format based on the data contained in the provided `RssOptions`.
@@ -83,19 +116,24 @@ impl RssOptions {
 pub fn generate_rss(
     options: &RssOptions,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    // Create a new `Writer` instance.
     let mut writer = Writer::new(Cursor::new(Vec::new()));
+
+    // Write the XML declaration.
     writer.write_event(Event::Decl(BytesDecl::new(
         "1.0",
         Some("utf-8"),
         None,
     )))?;
 
+    // Start the `rss` element.
     let mut rss_start = BytesStart::new("rss");
     rss_start.push_attribute(("version", "2.0"));
     rss_start
         .push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
     writer.write_event(Event::Start(rss_start))?;
 
+    // Start the `channel` element.
     writer.write_event(Event::Start(BytesStart::new("channel")))?;
 
     let channel_elements = [
@@ -116,10 +154,12 @@ pub fn generate_rss(
         ("webMaster", &options.webmaster),
     ];
 
+    // Write the `channel` elements.
     for &(element, value) in channel_elements.iter() {
         macro_write_element!(writer, element, value)?;
     }
 
+    // Write the `atom:link` element.
     let mut atom_link_start =
         BytesStart::new(Cow::Borrowed("atom:link").into_owned());
     atom_link_start
@@ -128,6 +168,7 @@ pub fn generate_rss(
     atom_link_start.push_attribute(("type", "application/rss+xml"));
     writer.write_event(Event::Empty(atom_link_start))?;
 
+    // Start the `item` element.
     writer.write_event(Event::Start(BytesStart::new("item")))?;
 
     let item_elements = [
@@ -138,16 +179,24 @@ pub fn generate_rss(
         ("title", &options.item_title),
     ];
 
+    // Write the `item` elements.
     for &(element, value) in item_elements.iter() {
         macro_write_element!(&mut writer, element, value)?;
     }
 
+    // End the `item` element.
     writer.write_event(Event::End(BytesEnd::new("item")))?;
+
+    // End the `channel` element.
     writer.write_event(Event::End(BytesEnd::new("channel")))?;
+
+    // End the `rss` element.
     writer.write_event(Event::End(BytesEnd::new("rss")))?;
 
+    // Convert the XML to a string.
     let xml = writer.into_inner().into_inner();
     let rss_str = String::from_utf8(xml)?;
 
+    // Return the RSS feed as a string.
     Ok(rss_str)
 }
