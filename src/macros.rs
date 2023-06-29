@@ -28,21 +28,23 @@
 ///
 #[macro_export]
 macro_rules! macro_check_directory {
-    ($dir:expr, $name:expr) => {
-        if $dir.exists() {
-            if !$dir.is_dir() {
-                panic!("❌ Error: {} is not a directory.", $name);
+    ($dir:expr, $name:expr) => {{
+        let directory: &std::path::Path = $dir;
+        let name = $name;
+        if directory.exists() {
+            if !directory.is_dir() {
+                panic!("❌ Error: '{}' is not a directory.", name);
             }
         } else {
-            match std::fs::create_dir_all($dir) {
+            match std::fs::create_dir_all(directory) {
                 Ok(_) => {}
                 Err(e) => panic!(
-                    "❌ Error: Cannot create {} directory: {}",
-                    $name, e
+                    "❌ Error: Cannot create '{}' directory: {}",
+                    name, e
                 ),
             }
         }
-    };
+    }};
 }
 
 /// # `macro_cleanup_directories` Macro
@@ -76,8 +78,11 @@ macro_rules! macro_cleanup_directories {
     ( $($dir:expr),* ) => {
         {
             use $crate::utilities::cleanup_directory;
-            let directories = &[ $($dir),* ];
-            cleanup_directory(directories)?;
+            let directories: &[&Path] = &[ $($dir),* ];
+            match cleanup_directory(directories) {
+                Ok(()) => (),
+                Err(err) => panic!("Cleanup failed: {:?}", err),
+            }
         }
     };
 }
@@ -341,25 +346,26 @@ macro_rules! macro_serve {
 ///
 macro_rules! macro_write_element {
     ($writer:expr, $name:expr, $value:expr) => {{
-        use quick_xml::events::BytesText;
-        if !$value.is_empty() {
-            let element_start = BytesStart::new($name);
-            $writer.write_event(Event::Start(element_start.clone()))?;
-            $writer.write_event(Event::Text(
-                BytesText::from_escaped($value),
-            ))?;
+        use quick_xml::events::{
+            BytesEnd, BytesStart, BytesText, Event,
+        };
+        use std::borrow::Cow;
 
-            let element_end = BytesEnd::new::<Cow<'static, str>>(
-                std::str::from_utf8(
-                    element_start.name().local_name().as_ref(),
-                )
-                .unwrap()
-                .to_string()
-                .into(),
-            );
+        let result: Result<(), Box<dyn std::error::Error>> = (|| -> Result<(), Box<dyn std::error::Error>> {
+            if !$value.is_empty() {
+                let element_start = BytesStart::new($name);
+                $writer.write_event(Event::Start(element_start.clone()))?;
+                $writer.write_event(Event::Text(BytesText::from_escaped($value)))?;
 
-            $writer.write_event(Event::End(element_end))?;
-        }
-        Ok::<(), Box<dyn std::error::Error>>(())
+                let element_end = BytesEnd::new::<Cow<'static, str>>(
+                    std::str::from_utf8(element_start.name().as_ref()).unwrap().to_string().into(),
+                );
+
+                $writer.write_event(Event::End(element_end))?;
+            }
+            Ok(())
+        })();
+
+        result
     }};
 }

@@ -2,12 +2,8 @@
 mod tests {
     use std::io::Cursor;
 
-    use quick_xml::{
-        events::{BytesEnd, BytesStart, Event},
-        Writer,
-    };
+    use quick_xml::Writer;
     use ssg::rss::{generate_rss, RssOptions};
-    use std::borrow::Cow;
 
     // Test the default constructor of RssOptions
     #[test]
