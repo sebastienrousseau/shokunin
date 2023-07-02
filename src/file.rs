@@ -77,13 +77,13 @@ pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
             };
 
             files.push(FileData {
-                name: file_name.to_string(),
-                content,
-                rss,
-                json,
-                txt,
                 cname,
+                content,
+                json,
+                name: file_name.to_string(),
+                rss,
                 sitemap,
+                txt,
             });
         }
     }

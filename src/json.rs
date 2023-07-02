@@ -8,10 +8,10 @@ use std::{
 
 use serde_json::{json, Map};
 
-use crate::data::{CnameData, ManifestOptions, SitemapData, TxtData};
+use crate::data::{CnameData, ManifestData, SitemapData, TxtData};
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
-pub fn manifest(options: &ManifestOptions) -> String {
+pub fn manifest(options: &ManifestData) -> String {
     let mut json_map = Map::new();
     json_map.insert("name".to_string(), json!(options.name));
     json_map

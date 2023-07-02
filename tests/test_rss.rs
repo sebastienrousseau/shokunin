@@ -3,12 +3,12 @@ mod tests {
     use std::io::Cursor;
 
     use quick_xml::Writer;
-    use ssg::rss::{generate_rss, RssOptions};
+    use ssg::rss::{generate_rss, RssData};
 
-    // Test the default constructor of RssOptions
+    // Test the default constructor of RssData
     #[test]
     fn test_rss_options_new() {
-        let options = RssOptions::new();
+        let options = RssData::new();
 
         assert_eq!(options.title, "");
         assert_eq!(options.link, "");
@@ -29,7 +29,7 @@ mod tests {
     // Test generating an RSS feed with default options
     #[test]
     fn test_generate_rss_with_default_options() {
-        let options = RssOptions::new();
+        let options = RssData::new();
         let rss_result = generate_rss(&options);
         assert!(rss_result.is_ok());
 
@@ -46,7 +46,7 @@ mod tests {
     // Test generating an RSS feed with some custom options
     #[test]
     fn test_generate_rss_with_custom_options() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         options.title = "My RSS Feed".to_string();
         options.link = "https://example.com".to_string();
         options.description =
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_generate_rss_with_invalid_url() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         options.link = "invalid-url".to_string();
 
         let rss_result = generate_rss(&options);
@@ -95,14 +95,14 @@ mod tests {
 
     #[test]
     fn test_generate_rss() {
-        let options = RssOptions::new();
+        let options = RssData::new();
         let rss_str = generate_rss(&options);
         assert!(rss_str.is_ok());
     }
 
     #[test]
     fn test_generate_rss_10000_items() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         for i in 0..10000 {
             options.item_title = format!("Item {}", i);
             options.item_link =
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_generate_rss_with_empty_title() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         options.title = "".to_string();
 
         let rss = generate_rss(&options);

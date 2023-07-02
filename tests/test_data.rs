@@ -2,8 +2,8 @@
 mod tests {
 
     use ssg::data::{
-        CnameData, FileData, FileInfo, IconData, ManifestOptions,
-        SitemapData, TxtData,
+        CnameData, FileData, IconData, ManifestData, SitemapData,
+        TxtData,
     };
 
     #[test]
@@ -44,8 +44,8 @@ mod tests {
 
     #[test]
     fn test_manifest_options_default() {
-        let manifest_options = ManifestOptions::default();
-        let expected_manifest_options = ManifestOptions {
+        let manifest_options = ManifestData::default();
+        let expected_manifest_options = ManifestData {
             background_color: String::default(),
             description: String::default(),
             display: String::default(),
@@ -80,14 +80,14 @@ mod tests {
         assert_eq!(txt_data, expected_txt_data);
     }
 
-    #[test]
-    fn test_file_info_default() {
-        let file_info = FileInfo::default();
-        let expected_file_info = FileInfo {
-            file_type: String::default(),
-            files_to_create: Vec::new(),
-            display: false,
-        };
-        assert_eq!(file_info, expected_file_info);
-    }
+    // #[test]
+    // fn test_file_info_default() {
+    //     let file_info = FileInfo::default();
+    //     let expected_file_info = FileInfo {
+    //         file_type: String::default(),
+    //         files_to_create: Vec::new(),
+    //         display: false,
+    //     };
+    //     assert_eq!(file_info, expected_file_info);
+    // }
 }

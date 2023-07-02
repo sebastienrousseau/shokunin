@@ -5,7 +5,7 @@ mod tests {
     use ssg::{
         frontmatter::extract,
         html::generate_html,
-        rss::{generate_rss, RssOptions},
+        rss::{generate_rss, RssData},
     };
 
     #[test]
@@ -41,7 +41,7 @@ description: My Description
 
     #[test]
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {
-        let options = RssOptions {
+        let options = RssData {
             category: "Technology".to_string(),
             cloud: "None".to_string(),
             copyright: "© 2023 My Company".to_string(),

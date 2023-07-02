@@ -38,37 +38,21 @@ url: "https://shokunin.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # RSS - The RSS feed front matter (YAML).
-
-## rss - The RSS feed link of the page.
 atom_link: https://shokunin.one/rss.xml
-## rss - A URL that points to the documentation for the format used in the RSS file.
-docs: https://validator.w3.org/feed/docs/rss2.html
-## rss - The RSS last build date of the page.
-last_build_date: Wed, 02 Oct 2002 13:00:00 GMT
-## rss - The RSS pub date of the page.
-pub_date: Wed, 02 Oct 2002 13:00:00 GMT
-## rss - The RSS generator of the page.
-generator: Shokunin (職人) 🦀 (version 0.0.14)
-## rss - The title of the item.
-item_title: "RSS"
-## rss - The URL of the item.
-item_link: https://shokunin.one/rss.xml
-## rss - The RSS item guid of the page.
-item_guid: https://shokunin.one/rss.xml
-## rss - The item synopsis.
-item_description: RSS feed for the site
-## rss - The RSS item pub date of the page.
-item_pub_date: Wed, 02 Oct 2002 13:00:00 GMT
-## rss - ttl stands for time to live. It's a number of minutes that indicates how long a channel can be cached before refreshing from the source.
-ttl: "60"
-## type - The type of the page.
-type: "website"
-## rss - Email address for person responsible for technical issues relating to channel.
-webmaster: sebastian.rousseau@gmail.com
-## rss - Email address for person responsible for editorial content.
-managing_editor: sebastian.rousseau@gmail.com
-## rss -  The category of the channel and item(s).
 category: "Finance"
+docs: https://validator.w3.org/feed/docs/rss2.html
+generator: Shokunin (職人) 🦀 (version 0.0.14)
+item_description: RSS feed for the site
+item_guid: https://shokunin.one/rss.xml
+item_link: https://shokunin.one/rss.xml
+item_pub_date: Wed, 02 Oct 2002 13:00:00 GMT
+item_title: "RSS"
+last_build_date: Wed, 02 Oct 2002 13:00:00 GMT
+managing_editor: sebastian.rousseau@gmail.com
+pub_date: Wed, 02 Oct 2002 13:00:00 GMT
+ttl: "60"
+type: "website"
+webmaster: sebastian.rousseau@gmail.com
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_capable: "yes" ## The Apple mobile web app capable of the page.

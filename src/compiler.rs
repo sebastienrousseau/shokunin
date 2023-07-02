@@ -4,7 +4,7 @@
 use crate::data::FileData;
 use crate::{
     data::{
-        CnameData, FileInfo, IconData, ManifestOptions, SitemapData,
+        CnameData, IconData, ManifestData, RssData, SitemapData,
         TxtData,
     },
     file::add,
@@ -14,7 +14,7 @@ use crate::{
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
-    rss::{generate_rss, RssOptions},
+    rss::generate_rss,
     template::{render_page, PageOptions},
     utilities::minify_html,
 };
@@ -228,26 +228,22 @@ pub fn compile(
             .unwrap();
 
             // Generate RSS
-            let rss = generate_rss(&RssOptions {
+            let rss = generate_rss(&RssData {
                 atom_link: macro_metadata_option!(
                     metadata,
                     "atom_link"
                 ),
+                author: macro_metadata_option!(metadata, "author"),
                 category: macro_metadata_option!(metadata, "category"),
                 copyright: macro_metadata_option!(
                     metadata,
                     "copyright"
                 ),
-                cloud: macro_metadata_option!(metadata, "cloud"),
                 description: macro_metadata_option!(
                     metadata,
                     "description"
                 ),
                 docs: macro_metadata_option!(metadata, "docs"),
-                enclosure: macro_metadata_option!(
-                    metadata,
-                    "enclosure"
-                ),
                 generator: macro_metadata_option!(
                     metadata,
                     "generator"
@@ -294,7 +290,7 @@ pub fn compile(
             let rss_data = rss.unwrap();
 
             // Generate JSON
-            let json = ManifestOptions {
+            let json = ManifestData {
                 name: metadata
                     .get("name")
                     .unwrap_or(&"".to_string())
@@ -390,72 +386,68 @@ pub fn compile(
             _ => file.name.to_string(),
         };
 
-        // Define file information for the different file types
-        let file_infos = vec![
-            FileInfo {
-                file_type: "index".to_string(),
-                files_to_create: vec![
-                    "CNAME",
-                    "index.html",
-                    "manifest.json",
-                    "robots.txt",
-                    "rss.xml",
-                    "sitemap.xml",
-                ],
-                display: true,
-            },
-            FileInfo {
-                file_type: "404".to_string(),
-                files_to_create: vec!["404.html"],
-                display: true,
-            },
-            FileInfo {
-                file_type: "offline".to_string(),
-                files_to_create: vec!["offline.html"],
-                display: true,
-            },
-        ];
+        // Check if the filename is "index.md" and write it to the root directory
+        if file_name == "index" {
+            let cname_file = build_path.join("CNAME");
+            let html_file = build_path.join("index.html");
+            let json_file = build_path.join("manifest.json");
+            let robots_file = build_path.join("robots.txt");
+            let rss_file = build_path.join("rss.xml");
+            let sitemap_file = build_path.join("sitemap.xml");
 
-        for info in &file_infos {
-            if file_name == info.file_type {
-                for file_to_create in &info.files_to_create {
-                    let file_path = build_path.join(file_to_create);
-                    fs::write(&file_path, &file.content)?;
+            fs::write(&cname_file, &file.cname)?;
+            fs::write(&html_file, &file.content)?;
+            fs::write(&json_file, &file.json)?;
+            fs::write(&robots_file, &file.txt)?;
+            fs::write(&rss_file, &file.rss)?;
+            fs::write(&sitemap_file, &file.sitemap)?;
 
-                    // Minify the html file and write it to the output directory
-                    let minified_file = minify_html(&file_path)?;
-                    fs::write(&file_path, &minified_file)?;
+            // Create a backup of the source html file
+            // let backup_file = backup_file(&html_file)?;
+            // fs::write(&backup_file, &file.content)?;
 
-                    if info.display {
-                        println!("  - {}", file_path.display());
-                    }
-                }
-            }
-        }
-        // Write and minify the files for this file type
-        if !file_infos.iter().any(|info| info.file_type == file_name) {
+            // Minify the html file and write it to the output directory
+            let minified_file = minify_html(&html_file)?;
+            fs::write(&html_file, &minified_file)?;
+
+            println!("  - {}", html_file.display());
+            println!("  - {}", rss_file.display());
+            println!("  - {}", json_file.display());
+            println!("  - {}", robots_file.display());
+            println!("  - {}", cname_file.display());
+            println!("  - {}", sitemap_file.display());
+        } else {
             let dir_name = build_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
 
-            let files_to_create = vec![
-                "index.html",
-                "rss.xml",
-                "manifest.json",
-                "robots.txt",
-                "sitemap.xml",
-            ];
-            // Handle files with different file types
-            for file_to_create in files_to_create {
-                let file_path = dir_name.join(file_to_create);
+            let html_file = dir_name.join("index.html");
+            let rss_file = dir_name.join("rss.xml");
+            let json_file = dir_name.join("manifest.json");
+            let robots_file = dir_name.join("robots.txt");
+            let sitemap_file = dir_name.join("sitemap.xml");
+            // let cname_file = dir_name.join("CNAME");
 
-                fs::write(&file_path, &file.content)?;
+            fs::write(&html_file, &file.content)?;
+            fs::write(&rss_file, &file.rss)?;
+            fs::write(&json_file, &file.json)?;
+            fs::write(&robots_file, &file.txt)?;
+            fs::write(&sitemap_file, &file.sitemap)?;
+            // fs::write(&cname_file, &file.name)?;
 
-                // Minify the html file and write it to the output directory
-                let minified_file = minify_html(&file_path)?;
-                fs::write(&file_path, &minified_file)?;
+            // Create a backup of the source html file
+            // let backup_file = backup_file(&html_file)?;
+            // fs::write(&backup_file, &file.content)?;
 
-                println!("  - {}", file_path.display());
-            }
+            // Minify the html file and write it to the output directory
+            let minified_file = minify_html(&html_file)?;
+            fs::write(&html_file, &minified_file)?;
+
+            println!("  - {}", html_file.display());
+            println!("  - {}", rss_file.display());
+            println!("  - {}", json_file.display());
+            println!("  - {}", robots_file.display());
+            println!("  - {}", sitemap_file.display());
+            // println!("  - {}", cname_file.display());
         }
     }
 

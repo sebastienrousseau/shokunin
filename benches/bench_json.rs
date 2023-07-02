@@ -4,11 +4,11 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::data::{IconData, ManifestOptions};
+use ssg::data::{IconData, ManifestData};
 use ssg::json::manifest;
 
 pub fn bench_json(c: &mut Criterion) {
-    let options = ManifestOptions {
+    let options = ManifestData {
         background_color: "#ffffff".to_owned(),
         description: "My Web App".to_owned(),
         display: "standalone".to_owned(),
