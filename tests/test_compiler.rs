@@ -3,9 +3,8 @@ mod tests {
     use std::error::Error;
 
     use ssg::{
-        frontmatter::extract,
-        html::generate_html,
-        rss::{generate_rss, RssData},
+        data::RssData, frontmatter::extract, html::generate_html,
+        rss::generate_rss,
     };
 
     #[test]
@@ -42,8 +41,8 @@ description: My Description
     #[test]
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {
         let options = RssData {
+            author: "Me".to_string(),
             category: "Technology".to_string(),
-            cloud: "None".to_string(),
             copyright: "© 2023 My Company".to_string(),
             description: "Latest technology news".to_string(),
             docs: "https://example.com/rss/docs".to_string(),
@@ -63,10 +62,9 @@ description: My Description
             item_link: "https://example.com/item".to_string(),
             item_pub_date: "2023-06-29T12:00:00Z".to_string(),
             item_title: "Item title".to_string(),
-            enclosure: "None".to_string(),
         };
 
-        const EXPECTED_RESULT: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?><rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\"><channel><category>Technology</category><cloud>None</cloud><copyright>© 2023 My Company</copyright><description>Latest technology news</description><docs>https://example.com/rss/docs</docs><generator>My RSS Generator</generator><image>None</image><language>en</language><lastBuildDate>2023-06-29T12:00:00Z</lastBuildDate><link>https://example.com</link><managingEditor>editor@example.com</managingEditor><pubDate>2023-06-29T12:00:00Z</pubDate><title>My RSS Feed</title><ttl>60</ttl><webMaster>webmaster@example.com</webMaster><atom:link href=\"https://example.com/rss/feed\" rel=\"self\" type=\"application/rss+xml\"/><item><description>Item description</description><guid>item-guid</guid><link>https://example.com/item</link><pubDate>2023-06-29T12:00:00Z</pubDate><title>Item title</title></item></channel></rss>";
+        const EXPECTED_RESULT: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?><rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\"><channel><title>My RSS Feed</title><link>https://example.com</link><description>Latest technology news</description><language>en</language><pubDate>2023-06-29T12:00:00Z</pubDate><lastBuildDate>2023-06-29T12:00:00Z</lastBuildDate><docs>https://example.com/rss/docs</docs><generator>My RSS Generator</generator><managingEditor>editor@example.com</managingEditor><webMaster>webmaster@example.com</webMaster><category>Technology</category><ttl>60</ttl><image><url>None</url><title>My RSS Feed</title><link>https://example.com</link></image><atom:link href=\"https://example.com/rss/feed\" rel=\"self\" type=\"application/rss+xml\"/><item><author>Me</author><description>Item description</description><guid>item-guid</guid><link>https://example.com/item</link><pubDate>2023-06-29T12:00:00Z</pubDate><title>Item title</title></item></channel></rss>";
 
         let result: Result<String, Box<dyn Error>> =
             generate_rss(&options);

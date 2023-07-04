@@ -1,7 +1,11 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `cname` function
 pub struct CnameData {
     /// A string representing the domain of the web app
@@ -15,7 +19,9 @@ impl CnameData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// File struct to hold the name and content of a file.
 pub struct FileData {
     /// The content of the file, escaped for CNAME.
@@ -41,7 +47,9 @@ impl FileData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `icon` function
 pub struct IconData {
     /// A string representing the purpose of the icon
@@ -61,7 +69,9 @@ impl IconData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `manifest` function
 pub struct ManifestData {
     /// A string representing the background color of the web app
@@ -93,7 +103,9 @@ impl ManifestData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `sitemap` function
 pub struct SitemapData {
     /// A string representing the changefreq
@@ -111,7 +123,9 @@ impl SitemapData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `txt` function
 pub struct TxtData {
     /// A string representing the permalink of the web app
@@ -131,7 +145,9 @@ impl TxtData {
 /// to information about individual items in the feed, such as their titles and publication dates.
 ///
 /// The values contained in an instance of `RssData` can be used to generate a complete RSS feed in XML format.
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 pub struct RssData {
     /// The Atom link of the RSS feed.
     pub atom_link: String,
@@ -218,5 +234,42 @@ impl RssData {
             "webmaster" => self.webmaster = value.to_string(),
             _ => (),
         }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// The `MetatagsData` struct holds all necessary data for a single metatag.
+/// This includes everything from the name of the metatag to its content.
+/// The values contained in an instance of `MetatagsData` can be used to
+/// generate a complete metatag in HTML format.
+/// The `MetatagsData` struct is used in the `Metatags` struct.
+pub struct MetatagsData {
+    /// The name of the metatag.
+    name: &'static str,
+    /// The content of the metatag.
+    value: String,
+}
+
+impl MetatagsData {
+    /// Creates a new `MetatagsData` struct with the given name and value.
+    ///
+    /// This includes all the information about the metatags of a web page.
+    pub fn new(name: &'static str, value: String) -> Self {
+        MetatagsData { name, value }
+    }
+
+    /// Generates a complete metatag in HTML format.
+    pub fn generate(&self) -> String {
+        format!(
+            r#"<meta name="{}" content="{}">"#,
+            self.name, self.value
+        )
+    }
+
+    /// Generates a complete list of metatags in HTML format.
+    pub fn generate_metatags(metatags: &[MetatagsData]) -> String {
+        metatags.iter().map(|metatag| metatag.generate()).collect()
     }
 }

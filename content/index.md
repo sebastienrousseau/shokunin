@@ -11,7 +11,7 @@ charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "shokunin.one" ## The cname value of the site
 copyright: "© 2023 Shokunin. All rights reserved." ## The copyright of the site.
 description: "A Fast and Flexible Static Site Generator written in Rust." ## The description of the site. (max 160 characters)
-format_detection: "telephone=no" ## The format detection of the site.
+format-detection: "telephone=no" ## The format detection of the site.
 icon: "https://kura.pro/shokunin/images/logos/shokunin.svg" ## The icon of the site in SVG format.
 id: "https://shokunin.one" ## The id of the site.
 image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The image alt of the site.
@@ -19,6 +19,7 @@ image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/shokunin/images/banners/banner-shokunin.webp" ## The main image of the site in SVG format.
 keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
+hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "index" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
@@ -28,11 +29,13 @@ logo_width: "181" ## The logo width of the site.
 logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## The logo of the site in SVG format.
 name: "Shokunin (職人)" ## The name of the site. (max 64 characters)
 permalink: "https://shokunin.one" ## The url of the site.
-revisit_after: "7 days" ## The revisit after of the site.
+rating: "general" ## The rating of the site.
+referrer: "no-referrer" ## The referrer of the site.
+revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "shokunin" ## The short name of the site. (max 12 characters)
 subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## The subtitle of the page. (max 64 characters)
-theme_color: "rgb(220, 53, 69)" ## The theme color of the site.
+theme-color: "rgb(220, 53, 69)" ## The theme color of the site.
 title: "Shokunin (職人) Static Site Generator" ## The title of the page. (max 64 characters)
 url: "https://shokunin.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
@@ -55,21 +58,24 @@ type: "website"
 webmaster: sebastian.rousseau@gmail.com
 
 # Apple - The Apple front matter (YAML).
-apple_mobile_web_app_capable: "yes" ## The Apple mobile web app capable of the page.
 apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.
-apple_mobile_web_app_status_bar_style: "black-translucent" ## The Apple mobile web app status bar style of the page.
 apple_touch_icon_sizes: "512x512" ## The Apple touch icon sizes of the page.
+apple-mobile-web-app-capable: "yes" ## The Apple mobile web app capable of the page.
+apple-mobile-web-app-status-bar-inset: "black" ## The Apple mobile web app status bar inset of the page.
+apple-mobile-web-app-status-bar-style: "black-translucent" ## The Apple mobile web app status bar style of the page.
+apple-mobile-web-app-title: "Shokunin (職人)" ## The Apple mobile web app title of the page.
+apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
 ## msapplication - The MS Application config of the page.
-msapplication_config: /browserconfig.xml
+msapplication-config: /browserconfig.xml
 ## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication_tap_highlight: no
+msapplication-tap-highlight: no
 ## msapplication - The MS Application tile color of the page.
-msapplication_tile_color: "#d70015"
+msapplication-TileColor: "#d70015"
 ## msapplication_tile_image - The MS Application tile image of the page.
-msapplication_tile_image: https://kura.pro/shokunin/images/logos/shokunin.svg
+msapplication-tile-image: https://kura.pro/shokunin/images/logos/shokunin.svg
 
 # Twitter Card - The Twitter Card front matter (YAML).
 

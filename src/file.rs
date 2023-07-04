@@ -3,89 +3,70 @@
 
 use crate::data::FileData;
 use quick_xml::escape::escape;
-use std::{borrow::Cow, fs, io, path::Path};
+use std::{fs, io, path::Path};
 
-/// ## Function: add - returns a Result containing a vector of File structs
+/// Reads all files in a directory specified by the given path and returns a vector of FileData.
 ///
-/// Reads all files in a directory specified by the given path and adds
-/// them to a vector. Each file is represented as a `File` struct
-/// containing the name and content of the file.
-///
-/// If an error occurs while reading a file, such as the file not
-/// existing or being unreadable, an error is printed to the console
-/// and the file is skipped. If all files are read successfully, the
-/// function returns a `Vec<File>` containing all the files in the
-/// directory.
+/// Each file is represented as a `FileData` struct containing the name and content of the file.
 ///
 /// # Arguments
 ///
-/// - `path`: A `Path` struct representing the directory containing the
-/// files to be read.
+/// * `path` - A `Path` representing the directory containing the files to be read.
 ///
 /// # Returns
 ///
-/// A `Result<Vec<FileData>, io::Error>` containing a vector of `FileData`
-/// structs representing all files in the directory, or an `io::Error`
-/// if the directory cannot be read.
-///
+/// A `Result` containing a vector of `FileData` structs representing all files in the directory,
+/// or an `io::Error` if the directory cannot be read.
 pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
-    let mut files = Vec::new();
-    for entry in fs::read_dir(path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() {
-            let file_name =
-                match path.file_name().and_then(|name| name.to_str()) {
-                    Some(name) => name,
-                    None => continue,
-                };
-
-            if file_name == ".DS_Store" {
-                continue;
+    let files = fs::read_dir(path)?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.is_file() {
+                let file_name =
+                    path.file_name()?.to_string_lossy().to_string();
+                if file_name == ".DS_Store" {
+                    return None;
+                }
+                let content = fs::read_to_string(&path)
+                    .map_err(|e| {
+                        eprintln!(
+                            "Error reading file {:?}: {}",
+                            path, e
+                        );
+                        e
+                    })
+                    .ok()?;
+                Some((file_name, content))
+            } else {
+                None
             }
+        })
+        .map(|(file_name, content)| {
+            let rss = escape(&content).to_string();
+            let json =
+                serde_json::to_string(&content).unwrap_or_else(|e| {
+                    eprintln!(
+                        "Error serializing JSON for file {}: {}",
+                        file_name, e
+                    );
+                    String::new()
+                });
+            let txt = escape(&content).to_string();
+            let cname = escape(&content).to_string();
+            let sitemap = escape(&content).to_string();
 
-            let content = match fs::read_to_string(&path) {
-                Ok(content) => content,
-                Err(_) => continue,
-            };
-
-            // Rest of the code remains unchanged
-
-            let rss = match escape(&content) {
-                Cow::Borrowed(rss) => rss.to_string(),
-                Cow::Owned(rss) => rss,
-            };
-
-            let json = match serde_json::to_string(&content) {
-                Ok(json) => json,
-                Err(_) => continue,
-            };
-
-            let txt = match escape(&content) {
-                Cow::Borrowed(txt) => txt.to_string(),
-                Cow::Owned(txt) => txt,
-            };
-
-            let cname = match escape(&content) {
-                Cow::Borrowed(cname) => cname.to_string(),
-                Cow::Owned(cname) => cname,
-            };
-
-            let sitemap = match escape(&content) {
-                Cow::Borrowed(sitemap) => sitemap.to_string(),
-                Cow::Owned(sitemap) => sitemap,
-            };
-
-            files.push(FileData {
+            FileData {
                 cname,
                 content,
                 json,
-                name: file_name.to_string(),
+                name: file_name,
                 rss,
                 sitemap,
                 txt,
-            });
-        }
-    }
+            }
+        })
+        .collect::<Vec<FileData>>();
+
     Ok(files)
 }

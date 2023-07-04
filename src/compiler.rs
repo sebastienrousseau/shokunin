@@ -4,13 +4,13 @@
 use crate::data::FileData;
 use crate::{
     data::{
-        CnameData, IconData, ManifestData, RssData, SitemapData,
-        TxtData,
+        CnameData, IconData, ManifestData, MetatagsData, RssData,
+        SitemapData, TxtData,
     },
     file::add,
     frontmatter::extract,
     html::generate_html,
-    json::{cname, manifest, sitemap, txt},
+    json::{cname, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
@@ -43,7 +43,7 @@ use std::{error::Error, fs, path::Path};
 /// # Arguments
 ///
 /// * `content_path` - The path to the content directory.
-/// * `build_path` - The path to the output directory.
+/// * `build_dir_path` - The path to the output directory.
 /// * `site_path` - The name of the site.
 /// * `template_path` - The path to the template directory.
 ///
@@ -54,81 +54,85 @@ use std::{error::Error, fs, path::Path};
 /// wrapped in a `Box<dyn Error>` to allow for different error types.
 ///
 pub fn compile(
-    build_path: &Path,    // The path to the temp directory
-    content_path: &Path,  // The path to the content directory
-    site_path: &Path,     // The path to the site directory
-    template_path: &Path, // The path to the template directory
+    build_dir_path: &Path, // The path to the temp directory
+    content_path: &Path,   // The path to the content directory
+    site_path: &Path,      // The path to the site directory
+    template_path: &Path,  // The path to the template directory
 ) -> Result<(), Box<dyn Error>> {
-    // Declare the paths variables
-    let build_path = build_path;
-    let content_path = content_path;
-    let site_path = site_path;
-    let template_path = template_path;
-
-    // Creating the build and site directories
-    macro_create_directories!(build_path, site_path)?;
+    // Creating the build and site path directories
+    macro_create_directories!(build_dir_path, site_path)?;
 
     // Read the files in the source directory
-    let files = add(content_path)?;
+    let source_files = add(content_path)?;
 
     // Generate the HTML code for the navigation menu
-    let navigation = generate_navigation(&files);
+    let navigation = generate_navigation(&source_files);
 
-    let files_compiled: Vec<FileData> = files
+    let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
             // Extract metadata from front matter
             let metadata = extract(&file.content);
-            let apple_metatags = macro_generate_metatags!(
-                "apple-mobile-web-app-orientations",
-                &macro_metadata_option!(
-                    metadata,
-                    "apple_mobile_web_app_orientations"
-                ),
-                "apple-mobile-web-app-title",
-                &macro_metadata_option!(metadata, "title"),
-                "application-name",
-                &macro_metadata_option!(metadata, "name"),
-                "apple-mobile-web-app-capable",
-                &macro_metadata_option!(
-                    metadata,
-                    "apple_mobile_web_app_capable"
-                ),
-                "apple-mobile-web-app-status-bar-style",
-                &macro_metadata_option!(
-                    metadata,
-                    "apple_mobile_web_app_status_bar_style"
-                ),
-                "apple-touch-icon",
-                &macro_metadata_option!(metadata, "icon"),
-                "apple-touch-icon-precomposed",
-                &macro_metadata_option!(metadata, "icon"),
-            );
 
-            let primary_metatags = macro_generate_metatags!(
+            // Define the Apple metatags
+            let apple_metatags_names = [
+                "apple_mobile_web_app_orientations",
+                "apple_touch_icon_sizes",
+                "apple-mobile-web-app-capable",
+                "apple-mobile-web-app-status-bar-inset",
+                "apple-mobile-web-app-status-bar-style",
+                "apple-mobile-web-app-title",
+                "apple-touch-fullscreen",
+            ];
+
+            // Loop through the Apple metatags and generate the HTML code
+            let apple_metatags: String = apple_metatags_names
+                .iter()
+                .map(|name| {
+                    let value = metadata
+                        .get(*name)
+                        .cloned()
+                        .unwrap_or_default();
+                    format!(
+                        "<meta name=\"{}\" content=\"{}\">",
+                        name, value
+                    )
+                })
+                .collect();
+
+            // Define the Primary metatags
+            let primary_metatags_names = [
+                "author",
                 "description",
-                &macro_metadata_option!(metadata, "description"),
                 "format-detection",
-                &macro_metadata_option!(metadata, "format_detection"),
                 "generator",
-                &macro_metadata_option!(metadata, "generator"),
                 "keywords",
-                &macro_metadata_option!(metadata, "keywords"),
                 "language",
-                &macro_metadata_option!(metadata, "language"),
+                "permalink",
+                "rating",
+                "referrer",
                 "revisit-after",
-                &macro_metadata_option!(metadata, "revisit_after"),
                 "robots",
-                &macro_metadata_option!(metadata, "robots"),
                 "theme-color",
-                &macro_metadata_option!(metadata, "theme_color"),
                 "title",
-                &macro_metadata_option!(metadata, "title"),
                 "viewport",
-                &macro_metadata_option!(metadata, "viewport"),
-                "url",
-                &macro_metadata_option!(metadata, "permalink"),
-            );
+            ];
+
+            // Loop through the Primary metatags and generate the HTML code
+            let primary_metatags: String = primary_metatags_names
+                .iter()
+                .map(|name| {
+                    let value = metadata
+                        .get(*name)
+                        .cloned()
+                        .unwrap_or_default();
+                    format!(
+                        "<meta name=\"{}\" content=\"{}\">",
+                        name, value
+                    )
+                })
+                .collect();
+
             let og_metadata = macro_generate_metatags!(
                 "og:description",
                 &macro_metadata_option!(metadata, "description"),
@@ -151,28 +155,29 @@ pub fn compile(
                 "og:url",
                 &macro_metadata_option!(metadata, "permalink"),
             );
-            let msapplication_metadata = macro_generate_metatags!(
+
+            // Define the Microsoft metatags
+            let msapplication_metadata_names = [
                 "msapplication-config",
-                &macro_metadata_option!(
-                    metadata,
-                    "msapplication_config"
-                ),
                 "msapplication-tap-highlight",
-                &macro_metadata_option!(
-                    metadata,
-                    "msapplication_tap_highlight"
-                ),
                 "msapplication-TileColor",
-                &macro_metadata_option!(
-                    metadata,
-                    "msapplication_tile_color"
-                ),
-                "msapplication-TileImage",
-                &macro_metadata_option!(
-                    metadata,
-                    "msapplication_tile_image"
-                ),
-            );
+                "msapplication_tile_image",
+            ];
+            // Loop through the Microsoft metatags and generate the HTML code
+            let msapplication_metatags: String =
+                msapplication_metadata_names
+                    .iter()
+                    .map(|name| {
+                        let value = metadata
+                            .get(*name)
+                            .cloned()
+                            .unwrap_or_default();
+                        MetatagsData::new(name, value)
+                    })
+                    .map(|metatag| metatag.generate())
+                    .collect::<Vec<String>>()
+                    .join("");
+
             let twitter_metadata = macro_generate_metatags!(
                 "twitter:card",
                 &macro_metadata_option!(metadata, "twitter_card"),
@@ -210,11 +215,11 @@ pub fn compile(
                 page_options.set(key, value);
             }
 
-            // Adding metatags to page options for use in templates and
+            // Adding metatags to page options for use in templates and in the
             // navigation generation
             page_options.set("apple", &apple_metatags);
             page_options.set("content", &html_content);
-            page_options.set("microsoft", &msapplication_metadata);
+            page_options.set("microsoft", &msapplication_metatags);
             page_options.set("navigation", &navigation);
             page_options.set("opengraph", &og_metadata);
             page_options.set("primary", &primary_metatags);
@@ -311,7 +316,9 @@ pub fn compile(
                         let icons = vec![IconData {
                             src: icon.to_string(),
                             sizes: "512x512".to_string(),
-                            icon_type: Some("image/png".to_string()),
+                            icon_type: Some(
+                                "image/svg+xml".to_string(),
+                            ),
                             purpose: Some("any maskable".to_string()),
                         }];
                         icons
@@ -346,10 +353,14 @@ pub fn compile(
                 ),
             };
 
-            let json_data = manifest(&json);
             let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
+            let json_data = serde_json::to_string(&json)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error serializing JSON: {}", e);
+                    String::new()
+                });
 
             FileData {
                 name: file.name,
@@ -364,14 +375,14 @@ pub fn compile(
         .collect();
 
     // Generate the HTML code for the navigation menu
-    generate_navigation(&files_compiled);
+    generate_navigation(&compiled_files);
 
     // Write the compiled files to the output directory
     println!(
         "❯ Writing the generated, compiled and minified files to the `{}` directory...",
-        build_path.display()
+        build_dir_path.display()
     );
-    for file in &files_compiled {
+    for file in &compiled_files {
         let file_name = match Path::new(&file.name).extension() {
             Some(ext) if ext == "md" => file.name.replace(".md", ""),
             Some(ext) if ext == "toml" => {
@@ -388,12 +399,12 @@ pub fn compile(
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
-            let cname_file = build_path.join("CNAME");
-            let html_file = build_path.join("index.html");
-            let json_file = build_path.join("manifest.json");
-            let robots_file = build_path.join("robots.txt");
-            let rss_file = build_path.join("rss.xml");
-            let sitemap_file = build_path.join("sitemap.xml");
+            let cname_file = build_dir_path.join("CNAME");
+            let html_file = build_dir_path.join("index.html");
+            let json_file = build_dir_path.join("manifest.json");
+            let robots_file = build_dir_path.join("robots.txt");
+            let rss_file = build_dir_path.join("rss.xml");
+            let sitemap_file = build_dir_path.join("sitemap.xml");
 
             fs::write(&cname_file, &file.cname)?;
             fs::write(&html_file, &file.content)?;
@@ -417,20 +428,20 @@ pub fn compile(
             println!("  - {}", cname_file.display());
             println!("  - {}", sitemap_file.display());
         } else {
-            let dir_name = build_path.join(file_name.clone());
+            let dir_name = build_dir_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
 
             let html_file = dir_name.join("index.html");
-            let rss_file = dir_name.join("rss.xml");
             let json_file = dir_name.join("manifest.json");
             let robots_file = dir_name.join("robots.txt");
+            let rss_file = dir_name.join("rss.xml");
             let sitemap_file = dir_name.join("sitemap.xml");
             // let cname_file = dir_name.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
-            fs::write(&rss_file, &file.rss)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
+            fs::write(&rss_file, &file.rss)?;
             fs::write(&sitemap_file, &file.sitemap)?;
             // fs::write(&cname_file, &file.name)?;
 
@@ -456,7 +467,7 @@ pub fn compile(
 
     // Move the content of the build directory to the site directory and
     // remove the build directory
-    fs::rename(build_path, site_path)?;
+    fs::rename(build_dir_path, site_path)?;
 
     Ok(())
 }
