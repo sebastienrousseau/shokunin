@@ -36,13 +36,14 @@ use clap::{Arg, ArgMatches, Command, Error};
 ///
 /// ```
 /// use ssg::cli;
-/// let matches = cli::build().unwrap();
+/// let cmd = cli::build().unwrap();
 ///
 /// ```
 pub fn build() -> Result<ArgMatches, Error> {
-    let matches = Command::new("Shokunin (職人) 🦀")
+    let cmd =  Command::new("Shokunin (職人) Static Site Generator")
         .author("Sebastien Rousseau")
         .about("")
+        .bin_name("ssg")
         .version("0.0.14")
         .arg(
             Arg::new("new")
@@ -83,8 +84,7 @@ pub fn build() -> Result<ArgMatches, Error> {
             "\x1b[1;4mDocumentation:\x1b[0m\n\n  https://shokunin.one\n\n\x1b[1;4mLicense:\x1b[0m\n  The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).",
         )
         .get_matches();
-
-    Ok(matches)
+    Ok(cmd)
 }
 
 /// # `print_banner` function
