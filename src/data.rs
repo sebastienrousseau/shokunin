@@ -14,8 +14,26 @@ pub struct CnameData {
 
 impl CnameData {
     /// Creates a new `CnameData` struct with the given cname.
-    pub fn new() -> CnameData {
-        CnameData::default()
+    pub fn new(cname: String) -> Self {
+        CnameData { cname }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `browserconfig` function
+pub struct BrowserConfigData {
+    /// A string representing the tile color of the web app
+    pub theme_color: String,
+    /// A string representing the icons of the web app
+    pub icon: String,
+}
+
+impl BrowserConfigData {
+    /// Creates a new `BrowserConfigData` struct with the given theme color and icon.
+    pub fn new(theme_color: String, icon: String) -> Self {
+        BrowserConfigData { theme_color, icon }
     }
 }
 
@@ -24,14 +42,18 @@ impl CnameData {
 )]
 /// File struct to hold the name and content of a file.
 pub struct FileData {
-    /// The content of the file, escaped for CNAME.
-    pub cname: String,
-    /// The content of the file, escaped for JSON.
-    pub json: String,
     /// The name of the file.
     pub name: String,
     /// The content of the file.
     pub content: String,
+    /// The content of the file, escaped for CNAME.
+    pub cname: String,
+    /// The content of the file, escaped for browserconfig.
+    pub browserconfig: String,
+    /// The content of the file, escaped for JSON.
+    pub json: String,
+    /// The content of the file, escaped for HUMANS.
+    pub human: String,
     /// The content of the file, escaped for RSS.
     pub rss: String,
     /// The content of the file, escaped for sitemap.
@@ -42,8 +64,34 @@ pub struct FileData {
 
 impl FileData {
     /// Creates a new `FileData` struct with the given name and content.
-    pub fn new() -> FileData {
-        FileData::default()
+    pub fn new(name: String, content: String) -> Self {
+        FileData {
+            name,
+            content,
+            cname: String::new(),
+            browserconfig: String::new(),
+            json: String::new(),
+            human: String::new(),
+            rss: String::new(),
+            sitemap: String::new(),
+            txt: String::new(),
+        }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `sw_file` function
+pub struct SwFileData {
+    /// A string representing the offline page of the web app
+    pub offline_page_url: String,
+}
+
+impl SwFileData {
+    /// Creates a new `SwFileData` struct with the given offline page.
+    pub fn new(offline_page_url: String) -> Self {
+        SwFileData { offline_page_url }
     }
 }
 
@@ -64,8 +112,13 @@ pub struct IconData {
 
 impl IconData {
     /// Creates a new `IconData` struct with the given source and sizes.
-    pub fn new() -> IconData {
-        IconData::default()
+    pub fn new(src: String, sizes: String) -> Self {
+        IconData {
+            purpose: None,
+            sizes,
+            src,
+            icon_type: None,
+        }
     }
 }
 
@@ -98,7 +151,7 @@ pub struct ManifestData {
 
 impl ManifestData {
     /// Creates a new `ManifestData` struct with default values for all fields.
-    pub fn new() -> ManifestData {
+    pub fn new() -> Self {
         ManifestData::default()
     }
 }
@@ -118,8 +171,16 @@ pub struct SitemapData {
 
 impl SitemapData {
     /// Creates a new `SitemapData` struct with the given loc, lastmod, and changefreq.
-    pub fn new() -> SitemapData {
-        SitemapData::default()
+    pub fn new(
+        loc: String,
+        lastmod: String,
+        changefreq: String,
+    ) -> Self {
+        SitemapData {
+            changefreq,
+            lastmod,
+            loc,
+        }
     }
 }
 
@@ -134,8 +195,50 @@ pub struct TxtData {
 
 impl TxtData {
     /// Creates a new `TxtData` struct with the given permalink.
-    pub fn new() -> TxtData {
-        TxtData::default()
+    pub fn new(permalink: String) -> Self {
+        TxtData { permalink }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `humans` function
+pub struct HumansData {
+    /// A string representing the author of the web app
+    pub author: String,
+    /// A string representing the website of the author
+    pub author_website: String,
+    /// A string representing the twitter of the author
+    pub author_twitter: String,
+    /// A string representing the location of the author
+    pub author_location: String,
+    /// A string representing the thanks of the author (name or url)
+    pub thanks: String,
+    /// A string representing the site last updated date
+    pub site_last_updated: String,
+    /// A string representing the site standards of the web app
+    pub site_standards: String,
+    /// A string representing the site components of the web app
+    pub site_components: String,
+    /// A string representingthe site software of the web app
+    pub site_software: String,
+}
+
+impl HumansData {
+    /// Creates a new `HumansData` struct with the given author and thanks.
+    pub fn new(author: String, thanks: String) -> Self {
+        HumansData {
+            author,
+            author_website: String::new(),
+            author_twitter: String::new(),
+            author_location: String::new(),
+            thanks,
+            site_last_updated: String::new(),
+            site_standards: String::new(),
+            site_components: String::new(),
+            site_software: String::new(),
+        }
     }
 }
 
@@ -195,81 +298,90 @@ pub struct RssData {
 
 impl RssData {
     /// Creates a new `RssData` struct with default values for all fields.
-    ///
-    /// This is a convenience function that makes it easy to create a new `RssData` without having to specify every field.
-    /// Fields can then be set individually on the returned instance.
-    pub fn new() -> RssData {
+    pub fn new() -> Self {
         RssData::default()
     }
 
     /// Sets the value of a field.
-    pub fn set(&mut self, key: &str, value: &str) {
+    pub fn set<T: Into<String>>(&mut self, key: &str, value: T) {
         match key {
-            "atom_link" => self.atom_link = value.to_string(),
-            "author" => self.author = value.to_string(),
-            "category" => self.category = value.to_string(),
-            "copyright" => self.copyright = value.to_string(),
-            "description" => self.description = value.to_string(),
-            "docs" => self.docs = value.to_string(),
-            "generator" => self.generator = value.to_string(),
-            "image" => self.image = value.to_string(),
-            "item_guid" => self.item_guid = value.to_string(),
-            "item_description" => {
-                self.item_description = value.to_string()
-            }
-            "item_link" => self.item_link = value.to_string(),
-            "item_pub_date" => self.item_pub_date = value.to_string(),
-            "item_title" => self.item_title = value.to_string(),
-            "language" => self.language = value.to_string(),
-            "last_build_date" => {
-                self.last_build_date = value.to_string()
-            }
-            "link" => self.link = value.to_string(),
-            "managing_editor" => {
-                self.managing_editor = value.to_string()
-            }
-            "pub_date" => self.pub_date = value.to_string(),
-            "title" => self.title = value.to_string(),
-            "ttl" => self.ttl = value.to_string(),
-            "webmaster" => self.webmaster = value.to_string(),
+            "atom_link" => self.atom_link = value.into(),
+            "author" => self.author = value.into(),
+            "category" => self.category = value.into(),
+            "copyright" => self.copyright = value.into(),
+            "description" => self.description = value.into(),
+            "docs" => self.docs = value.into(),
+            "generator" => self.generator = value.into(),
+            "image" => self.image = value.into(),
+            "item_guid" => self.item_guid = value.into(),
+            "item_description" => self.item_description = value.into(),
+            "item_link" => self.item_link = value.into(),
+            "item_pub_date" => self.item_pub_date = value.into(),
+            "item_title" => self.item_title = value.into(),
+            "language" => self.language = value.into(),
+            "last_build_date" => self.last_build_date = value.into(),
+            "link" => self.link = value.into(),
+            "managing_editor" => self.managing_editor = value.into(),
+            "pub_date" => self.pub_date = value.into(),
+            "title" => self.title = value.into(),
+            "ttl" => self.ttl = value.into(),
+            "webmaster" => self.webmaster = value.into(),
             _ => (),
         }
     }
 }
 
-#[derive(
-    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
-)]
 /// The `MetatagsData` struct holds all necessary data for a single metatag.
+///
 /// This includes everything from the name of the metatag to its content.
 /// The values contained in an instance of `MetatagsData` can be used to
 /// generate a complete metatag in HTML format.
 /// The `MetatagsData` struct is used in the `Metatags` struct.
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub struct MetatagsData {
     /// The name of the metatag.
-    name: &'static str,
+    pub name: String,
     /// The content of the metatag.
-    value: String,
+    pub value: String,
 }
 
 impl MetatagsData {
     /// Creates a new `MetatagsData` struct with the given name and value.
     ///
-    /// This includes all the information about the metatags of a web page.
-    pub fn new(name: &'static str, value: String) -> Self {
+    /// # Arguments
+    ///
+    /// * `name` - The name of the metatag.
+    /// * `value` - The content of the metatag.
+    ///
+    /// # Returns
+    ///
+    /// A new `MetatagsData` struct instance.
+    pub fn new(name: String, value: String) -> Self {
         MetatagsData { name, value }
     }
 
     /// Generates a complete metatag in HTML format.
+    ///
+    /// # Returns
+    ///
+    /// A string representing the complete metatag in HTML format.
     pub fn generate(&self) -> String {
         format!(
-            r#"<meta name="{}" content="{}">"#,
-            self.name, self.value
+            "<meta content=\"{}\" name=\"{}\">",
+            self.value, self.name
         )
     }
 
     /// Generates a complete list of metatags in HTML format.
+    ///
+    /// # Arguments
+    ///
+    /// * `metatags` - A slice containing the `MetatagsData` instances.
+    ///
+    /// # Returns
+    ///
+    /// A string representing the complete list of metatags in HTML format.
     pub fn generate_metatags(metatags: &[MetatagsData]) -> String {
-        metatags.iter().map(|metatag| metatag.generate()).collect()
+        metatags.iter().map(MetatagsData::generate).collect()
     }
 }

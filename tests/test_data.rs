@@ -19,13 +19,15 @@ mod tests {
     fn test_file_data_default() {
         let file_data = FileData::default();
         let expected_file_data = FileData {
-            name: String::default(),
-            content: String::default(),
-            rss: String::default(),
-            json: String::default(),
-            txt: String::default(),
+            browserconfig: "".to_string(),
             cname: String::default(),
+            content: String::default(),
+            human: String::default(),
+            json: String::default(),
+            name: String::default(),
+            rss: String::default(),
             sitemap: String::default(),
+            txt: String::default(),
         };
         assert_eq!(file_data, expected_file_data);
     }

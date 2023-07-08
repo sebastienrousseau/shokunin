@@ -171,39 +171,66 @@
           background-position: center center;
           background-repeat: no-repeat;
           background-size: cover;
-          height: 100vh;
+          height: 50vh;
           width: 100vh;
         "
         role="img"
         title="Banner of {{name}}"
         aria-label="Banner of {{name}}"
       >
-        <div class="position-absolute top-50 start-50 w-100 translate-middle">
-          <div
-            class="w-50 h-50 p-3 text-center text-white center mx-auto rounded rounded-3"
-            style="
-              background-color: rgba(0, 0, 0, 0.618);
-              width: 50vw;
-              height: 50vh;
-            "
-          >
-            <p class="display-1 fw-bold">{{name}}</p>
-            <p class="lead fw-normal">{{subtitle}}</p>
-            <p>
-              <a
-                href="{{download}}"
-                class="btn btn-lg btn-outline-light mx-3 fs-5"
-                >Download {{name}} ↓</a
-              >
-            </p>
-          </div>
-        </div>
+      <div class="position-relative overflow-hidden w-100 h-100 top-50">
+        <h1
+          class="fw-normal"
+          itemprop="name"
+          title="{{name}}"
+        >
+          {{name}}
+        </h1>
+        <p class="lead text-light text-center">
+          {{subtitle}}
+        </p>
       </div>
+
     </header>
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div class="text-start justify-content-between">{{content}}</div>
+      <div class="h-100 p-5  col-md-12 text-white bg-dark align-items-md-stretch text-start justify-content-between rounded-3">
+        <form action="{{form-id}}" method="POST">
+          <div class="row g-3">
+            <div class="row g-3">{{content}}</div>
+            <div class="col-12">
+              <label for="sender" class="form-label">Name</label>
+              <input type="text" class="form-control" id="sender" autocomplete="name" placeholder="" value="" required="">
+              <div class="invalid-feedback">A valid name is required.</div>
+            </div>
+            <div class="col-12">
+              <label for="email" class="form-label">Email</label>
+              <input  autocomplete="email" name="email" type="email" id="email" class="form-control" placeholder="" required="">
+              <div class="invalid-feedback">A valid email address is required.</div>
+            </div>
+            <div class="col-12">
+              <label for="subject" class="form-label">Subject</label><br>
+              <select name="subject" id="subject" class="form-select" required="" aria-label="Default select example">
+                <option>Choose a category...</option>
+                <option>Website comments</option>
+                <option>Evaluation, testing, or consultation</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="message" class="form-label">Message</label>
+              <textarea cols="47" rows="8" class="form-control" id="message" name="message" placeholder="Message"
+            required="" style="height: 168px;"></textarea>
+              <div class="invalid-feedback">Please enter your message.</div>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-lg btn-success end-50">Send Message</button>
+            </div>
+          </div>
+      </form>
+
+      </div>
     </main>
 
     <!-- Footer-->

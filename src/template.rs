@@ -178,18 +178,13 @@ pub fn create_template_folder(
                 let url = path;
                 let files = [
                     "archive.html",
-                    "browserconfig.xml",
                     "category.html",
-                    "humans.txt",
+                    "contact.html",
                     "index.html",
                     "page.html",
                     "post.html",
-                    "rss.xml",
-                    "service-worker.js",
-                    "sitemap.xml",
                     "tag.html",
                     "template.html",
-                    "template.json",
                 ];
 
                 for file in files.iter() {
@@ -225,18 +220,13 @@ pub fn create_template_folder(
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
             let files = [
                 "archive.html",
-                "browserconfig.xml",
                 "category.html",
-                "humans.txt",
+                "contact.html",
                 "index.html",
                 "page.html",
                 "post.html",
-                "rss.xml",
-                "service-worker.js",
-                "sitemap.xml",
                 "tag.html",
                 "template.html",
-                "template.json",
             ];
 
             for file in files.iter() {

@@ -2,269 +2,268 @@
 <html lang="{{language}}">
   <head>
     <meta charset="{{charset}}" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-
-    <!-- # Start search engines -->
-    <meta name="msvalidate.01" content="{{bing_site_verification}}" />
-    <meta
-      name="google-site-verification"
-      content="{{google_site_verification}}"
-    />
-    <!-- # End search engines -->
+    <title>{{title}}</title>
 
     <!-- # Start Primary Meta Tags -->
-    <title>{{title}}</title>
     {{primary}}
-    <meta name="title" content="{{title}}" />
-    <meta name="description" content="{{description}}" />
-    <meta name="keywords" content="{{keywords}}" />
-    <meta name="generator" content="{{generator}}" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="robots" content="{{robots}}" />
-    <meta name="theme-color" content="{{theme_color}}" />
     <!-- # End Primary Meta Tags -->
+
+    <!-- # Start Open Graph / Facebook Meta Tags -->
+    {{opengraph}}
+    <!-- # End Open Graph / Facebook Meta Tags -->
+
+    <!-- # Start Schema.org Meta Tags -->
+    <meta itemprop="description" content="{{description}}" />
+    <meta itemprop="image" content="{{image}}" />
+    <meta itemprop="name" content="{{name}}" />
+    <!-- # End Schema.org Meta Tags -->
+
+    <!-- # Start Accessibility Meta Tags -->
+    <meta name="accessibility" content="ARIA" />
+    <meta name="accessibility" content="fullKeyboardControl" />
+    <meta name="accessibility" content="noFlashingHazard" />
+    <!-- # End Accessibility Meta Tags -->
+
+    <!-- # Start Apple Meta Tags -->
+    {{apple}}
+    <!-- # End Apple Meta Tags -->
+
+    <!-- # Start Content Security Policy Meta Tags -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+            script-src 'self' 'unsafe-inline' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms;
+            connect-src 'self' collect;
+            img-src 'self' data: https: kura.pro;
+            style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+            media-src 'self';"
+    />
+    <!-- # End Content Security Policy Meta Tags -->
+
+    <!-- # Start Microsoft Meta Tags -->
+    {{microsoft}}
+    <!-- # End Microsoft Meta Tags -->
+
+    <!-- # Start Twitter Meta Tags -->
+    {{twitter}}
+    <!-- # End Twitter Meta Tags -->
+
+    <!-- # Start Links -->
+    <link rel="alternate" href="{{url}}" hreflang="{{hreflang}}" />
+    <link rel="canonical" href="{{url}}" />
     <link
       rel="icon"
       type="image/x-icon"
-      href="https://kura.pro/shokunin/images/favicon.ico"
+      href="{{cdn}}/{{short_name}}/images/favicon.ico"
     />
     <link
+      rel="preload"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
       integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
       crossorigin="anonymous"
     />
+
     <link
       rel="apple-touch-icon"
-      href="https://kura.pro/shokunin/images/icons/192x192.png"
+      href="{{cdn}}/{{short_name}}/images/icons/192x192.png"
       sizes="192x192"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/shokunin/images/icons/16x16.png"
+      href="{{cdn}}/{{short_name}}/images/icons/16x16.png"
       sizes="16x16"
     />
     <link
       rel="icon"
       type="image/png"
-      href="https://kura.pro/shokunin/images/icons/32x32.png"
+      href="{{cdn}}/{{short_name}}/images/icons/32x32.png"
       sizes="32x32"
     />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="{{permalink}}/manifest.json" />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+    <!-- # End Links -->
 
+    <!-- # Start Start Styles -->
     <style>
       a {
-        color: var(--bs-link-color);
+        color: rgba({{theme-color}}, 1);
         text-decoration: none;
       }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: rgb({{theme-color}});
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: rgba({{theme-color}}, 0.618);
+        text-decoration: underline;
+      }
     </style>
-
-    <!-- # Start Open Graph / Facebook -->
-    <meta name="og:description" content="{{og_description}}" />
-    <meta name="og:image:alt" content="{{og_image_alt}}" />
-    <meta property="og:image" content="{{og_image}}" />
-    <meta property="og:locale" content="{{og_locale}}" />
-    <meta property="og:site_name" content="{{og_site_name}}" />
-    <meta property="og:title" content="{{og_title}}" />
-    <meta property="og:type" content="{{og_type}}" />
-    <meta property="og:url" content="{{og_url}}" />
-    <!-- # End Open Graph / Facebook -->
-
-    <!-- # Start Schema.org -->
-    <meta itemprop="name" content="{{name}}" />
-    <meta itemprop="description" content="{{description}}" />
-    <meta itemprop="image" content="{{image}}" />
-    <!-- # End Schema.org -->
-
-    <!-- # Start Accessibility -->
-    <meta name="accessibility" content="ARIA" />
-    <meta name="accessibility" content="fullKeyboardControl" />
-    <meta name="accessibility" content="noFlashingHazard" />
-    <!-- # End Accessibility -->
-
-    <!-- # Start Apple -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <meta name="apple-mobile-web-app-title" content="{{title}}" />
-    <meta name="application-name" content="{{name}}" />
-    <meta name="author" content="{{author}}" />
-    <!-- # End Apple -->
-
-    <!-- # Start Content Security Policy -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self';
-        script-src 'self' https://www.googletagmanager.com https://www.clarity.ms https://cdn.jsdelivr.net;
-        style-src 'self' 'unsafe-inline' https://kura.pro https://unpkg.com/ https://cdn.jsdelivr.net;
-        img-src 'self' https://kura.pro https://unpkg.com/ data:;
-        media-src 'self';"
-    />
-    <!-- # End Content Security Policy -->
-
-    <!-- # Start Microsoft -->
-    <meta name="msvalidate1" content="{{msvalidate1}}" />
-    <meta name="msapplication-config" content="{{msapplication_config}}" />
-    <meta
-      name="msapplication-tap-highlight"
-      content="{{msapplication_tap_highlight}}"
-    />
-    <meta
-      name="msapplication-TileColor"
-      content="{{msapplication_tile_color}}"
-    />
-    <meta
-      name="msapplication-TileImage"
-      content="{{msapplication_tile_image}}"
-    />
-    <!-- # End Microsoft -->
-
-    <!-- # Start Twitter -->
-    <meta name="twitter:card" content="{{twitter_card}}" />
-    <meta name="twitter:creator" content="@{{twitter_creator}}" />
-    <meta name="twitter:description" content="{{twitter_description}}" />
-    <meta name="twitter:image" content="{{twitter_image}}" />
-    <meta name="twitter:twitter_image_alt" content="{{twitter_image_alt}}" />
-    <meta name="twitter:site" content="@{{twitter_site}}" />
-    <meta name="twitter:title" content="{{twitter_title}}" />
-    <meta name="twitter:url" content="{{twitter_url}}" />
-    <!-- # End Twitter -->
+    <!-- # End Styles -->
   </head>
   <body
     id="page-top"
     itemscope
     itemtype="http://schema.org/WebPage"
-    class="text-center"
+    class="text-center bg-black text-light"
   >
-    <!-- Responsive navbar-->
+    <!-- # Start Responsive navbar -->
     <nav
-      class="navbar navbar-expand-lg navbar-light bg-white text-dark fixed-top"
+      class="navbar navbar-expand-lg navbar-dark bg-black text-light fixed-top"
       id="mainNav"
-      role="navigation"
       itemscope
       itemtype="http://schema.org/SiteNavigationElement"
-      style="--bs-opacity: 0.9; opacity: 0.9"
     >
       <div class="container p-3">
         <figure class="py-0 mb-0">
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
+              class="img-fluid"
+              title="Logo of {{name}}"
+              height="{{logo_height}}"
               id="{{name}}"
               itemprop="image"
               itemtype="http://schema.org/ImageObject"
-              src="{{image}}"
-              height="33"
-              title="Logo of {{name}}"
+              src="{{logo}}"
+              width="{{logo_width}}"
             />
+            <figcaption class="visually-hidden">{{subtitle}}</figcaption>
           </a>
         </figure>
         <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarSupportedContent"
           aria-controls="navbarSupportedContent"
           aria-expanded="false"
           aria-label="Toggle navigation"
+          class="navbar-toggler"
+          data-bs-target="#navbarSupportedContent"
+          data-bs-toggle="collapse"
+          type="button"
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a
-                class="text-uppercase nav-link nav-link"
-                aria-current="page"
-                href="/#page-top"
-                >Home</a
-              >
-            </li>
-            <li class="nav-item">
-              <a
-                class="text-uppercase nav-link nav-link active"
-                aria-current="page"
-                href="/quick-start/index.html"
-                >Quick Start</a
-              >
-            </li>
-            <li class="text-uppercase nav-item dropdown">
-              <a
-                class="nav-link dropdown-toggle"
-                id="navbarDropdown"
-                href="#"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-                >Resources</a
-              >
-              <ul
-                class="dropdown-menu dropdown-menu-end"
-                aria-labelledby="navbarDropdown"
-              >
-                <li>
-                  <a
-                    class="dropdown-item"
-                    href="https://github.com/sebastienrousseau/shokunin"
-                    >GitHub</a
-                  >
-                </li>
-                <li>
-                  <a class="dropdown-item" href="https://docs.rs/crate/ssg/"
-                    >Documentation</a
-                  >
-                </li>
-                <li>
-                  <a class="dropdown-item" href="https://kaishi.one">Themes</a>
-                </li>
-              </ul>
-            </li>
-          </ul>
+        <div
+          class="collapse navbar-collapse"
+          role="navigation"
+          id="navbarSupportedContent"
+        >
+          {{navigation}}
         </div>
       </div>
     </nav>
+    <!-- # End Responsive navbar -->
 
-    <!-- Header -->
+    <!-- Header-->
     <header>
       <div
         class="w-100"
         style="
           background-image: url({{banner}});
-          background-position: center;
+          background-position: center center;
           background-repeat: no-repeat;
           background-size: cover;
-          background-position-x: left top;
-          background-position-y: bottom;
-          height: 100vh;
+          height: 50vh;
           width: 100vh;
         "
+        role="img"
+        title="Banner of {{name}}"
+        aria-label="Banner of {{name}}"
       >
-        <div class="position-relative overflow-hidden top-50 text-center">
-          <strong class="display-4 fw-normal">{{title}}</strong>
-          <p class="lead fw-normal">{{subtitle}}</p>
-        </div>
+      <div class="position-relative overflow-hidden w-100 h-100 top-50">
+        <h1
+          class="fw-normal"
+          itemprop="name"
+          title="{{name}}"
+        >
+          {{name}}
+        </h1>
+        <p class="lead text-light text-center">
+          {{subtitle}}
+        </p>
       </div>
+
     </header>
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div class="px-5 text-start justify-content-between">{{content}}</div>
+      <div
+        class="row align-items-md-stretch text-start justify-content-between"
+      >
+        <div class="col-md-12">
+          <div class="h-100 p-5 text-white bg-dark rounded-3">{{content}}</div>
+        </div>
+      </div>
     </main>
 
     <!-- Footer-->
-    <footer id="footer" class="center text-center" aria-label="footer">
-      <p>{{copyright}}</p>
-    </footer>
+    <footer id="footer" aria-label="footer" class="footer mt-auto py-3">
+      <img
+        alt="{{subtitle}}"
+        height="32"
+        itemprop="image"
+        itemtype="http://schema.org/ImageObject"
+        src="{{cdn}}/{{short_name}}/images/logos/{{short_name}}.webp"
+        title="{{subtitle}}"
+        width="32"
+      />
+      <span class="px-2 text-white">{{copyright}}</span>
+      <span class="px-2 text-white">
+        <a href="/privacy/index.html">Privacy</a>
+      </span>
 
-    <!-- Bootstrap core JS-->
+      <span class="px-2 text-white">
+        <a href="/terms/index.html">Terms of Use</a>
+      </span>
+      <span class="px-2 text-white">
+        <a href="/contact/index.html">Contact</a>
+      </span>
+    </footer>
     <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+      async
+      crossorigin=""
       integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-      crossorigin="anonymous"
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
     ></script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org/",
+        "@type": "WebSite",
+        "name": "{{name}}",
+        "url": "{{url}}"
+      }
+    </script>
+    <script>
+      // This is an Immediately Invoked Function Expression (IIFE) which helps
+      // to avoid declaring any globals.
+      (function () {
+        // Create a new script element
+        var script = document.createElement("script");
+
+        // Set the source of the script element to "/main.js".
+        // A timestamp is appended as a query string to ensure the browser
+        // always fetches the latest version of the script, bypassing the
+        // cache.
+        script.src = "/main.js?" + new Date().getTime();
+
+        // The script is of type "text/javascript"
+        script.type = "text/javascript";
+
+        // The script is set to execute asynchronously as soon as it's
+        // available
+        script.async = true;
+
+        // Append the script element to the head of the document
+        document.head.appendChild(script);
+      })(); // The function is immediately invoked
+    </script>
   </body>
 </html>

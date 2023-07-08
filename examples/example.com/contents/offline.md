@@ -3,10 +3,10 @@
 # Front Matter (YAML)
 
 author: "Sebastien Rousseau" ## The author of the page. (max 64 characters)
-banner_alt: "Snow Mountain With Aurora Borealis" ## The banner alt of the site.
+banner_alt: "Beautiful cityscape" ## The banner alt of the site.
 banner_height: "600" ## The banner height of the site.
 banner_width: "1000" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/jonatan-pie-EvKBHBGgaUo-unsplash.jpg" ## The banner of the site.
+banner: "https://kura.pro/unsplash/images/banners/tianyi-ma-WiONHd_zYI4-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site
@@ -44,12 +44,10 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 
 ---
 
-This page is a 404 error, which means you've clicked on a bad link or
-you've asked for a page that doesn't exist. Please find some helpful
-links below to get you back on track.
+Try:
 
-Here are a few links that may be helpful:
-
-- [homepage](/) - The homepage of this site
-- [about](/about/) - All you need to know about us
-- [contact](/contact/) - Get in touch with us
+- Turning off airplane mode.
+- Turning on Wi-Fi, mobile data, or cellular data.
+- Checking the signal in your area.
+- Checking the cables and connections.
+- Restarting your router.

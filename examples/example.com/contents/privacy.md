@@ -3,10 +3,10 @@
 # Front Matter (YAML)
 
 author: "Sebastien Rousseau" ## The author of the page. (max 64 characters)
-banner_alt: "Snow Mountain With Aurora Borealis" ## The banner alt of the site.
+banner_alt: "Beautiful cityscape" ## The banner alt of the site.
 banner_height: "600" ## The banner height of the site.
 banner_width: "1000" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/jonatan-pie-EvKBHBGgaUo-unsplash.jpg" ## The banner of the site.
+banner: "https://kura.pro/unsplash/images/banners/tianyi-ma-WiONHd_zYI4-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site
@@ -44,12 +44,32 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 
 ---
 
-This page is a 404 error, which means you've clicked on a bad link or
-you've asked for a page that doesn't exist. Please find some helpful
-links below to get you back on track.
+## Information Collection and Use
 
-Here are a few links that may be helpful:
+We do not directly collect any personal data from you while you navigate our website. We do not use cookies for logic or save any personal information from a user.
 
-- [homepage](/) - The homepage of this site
-- [about](/about/) - All you need to know about us
-- [contact](/contact/) - Get in touch with us
+## Use of Tracking Tools
+
+We use two third-party services to monitor and analyze web traffic: Google Analytics and Microsoft Clarity.
+
+### Google Analytics
+
+Google Analytics is a web analytics service offered by Google that tracks and reports website traffic. Google uses the data collected to track and monitor the use of our Website. This data is shared with other Google services. For more information on the privacy practices of Google, please visit the Google Privacy & Terms web page: [Google Privacy & Terms](https://policies.google.com/privacy)
+
+### Microsoft Clarity
+
+Microsoft Clarity is a user behavior analytics tool that helps us understand how users interact with our website. The data collected includes information such as mouse movements, clicks, and scrolls. For more information on the privacy practices of Microsoft, please visit the Microsoft Privacy Statement web page: [Microsoft Privacy Statement](https://privacy.microsoft.com/en-us/privacystatement)
+
+## Your Rights
+
+Depending on where you reside, you may have certain rights with respect to your personal data, such as the right to request access, correction, or deletion of your data, or to object to our use of your data.
+
+## Changes to This Privacy Policy
+
+We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
+
+We advise you to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
+
+## Contact Us
+
+If you have any questions about this Privacy Policy, please contact us.

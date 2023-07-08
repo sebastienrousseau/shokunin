@@ -1,0 +1,14 @@
+/* TEAM */
+	Name: Sebastien Rousseau
+	Website: https://kura.pro
+	Twitter: @wwdseb
+	Location: London, UK
+
+/* THANKS */
+	Thanks: Thanks for reading!
+
+/* SITE */
+	Last update: 2023-07-05
+	Standards: HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML
+	Components: Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes
+	Software: Shokunin, Rust

@@ -8,7 +8,10 @@ use std::{
 
 use serde_json::{json, Map};
 
-use crate::data::{CnameData, ManifestData, SitemapData, TxtData};
+use crate::data::{
+    BrowserConfigData, CnameData, HumansData, ManifestData,
+    SitemapData, TxtData,
+};
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
 pub fn manifest(options: &ManifestData) -> String {
@@ -62,6 +65,79 @@ pub fn cname(options: &CnameData) -> String {
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
     format!("{}\n{}", base_domain, full_domain)
+}
+
+/// ## Function: `browserconfig` - Generate a browserconfig.xml for a web app
+pub fn browserconfig(options: &BrowserConfigData) -> String {
+    let mut s = format!(
+        r#"<?xml version="1.0" encoding="utf-8"?>
+        <browserconfig>
+            <msapplication>
+                <tile>
+                    <square70x70logo src="{}"/>
+                    <square150x150logo src="{}"/>
+                    <square310x310logo src="{}"/>
+                    <wide310x150logo src="{}"/>
+                    <TileColor>rgb({})</TileColor>
+                </tile>
+            </msapplication>
+        </browserconfig>"#,
+        options.icon,
+        options.icon,
+        options.icon,
+        options.icon,
+        options.theme_color
+    );
+
+    s = s
+        .lines()
+        .map(|line| line.trim())
+        .collect::<Vec<&str>>()
+        .join("");
+
+    s
+}
+
+/// ## Function: `human` - Generate a humans.txt for a web app
+pub fn human(options: &HumansData) -> String {
+    let mut s = String::from("/* TEAM */\n");
+
+    if !options.author.is_empty() {
+        s.push_str(&format!("	Name: {}\n", options.author));
+    }
+    if !options.author_website.is_empty() {
+        s.push_str(&format!("	Website: {}\n", options.author_website));
+    }
+    if !options.author_twitter.is_empty() {
+        s.push_str(&format!("	Twitter: {}\n", options.author_twitter));
+    }
+    if !options.author_location.is_empty() {
+        s.push_str(&format!("	Location: {}\n", options.author_location));
+    }
+    s.push_str("\n/* THANKS */\n");
+    if !options.thanks.is_empty() {
+        s.push_str(&format!("	Thanks: {}\n", options.thanks));
+    }
+    s.push_str("\n/* SITE */\n");
+    if !options.site_last_updated.is_empty() {
+        s.push_str(&format!(
+            "	Last update: {}\n",
+            options.site_last_updated
+        ));
+    }
+    if !options.site_standards.is_empty() {
+        s.push_str(&format!("	Standards: {}\n", options.site_standards));
+    }
+    if !options.site_components.is_empty() {
+        s.push_str(&format!(
+            "	Components: {}\n",
+            options.site_components
+        ));
+    }
+    if !options.site_software.is_empty() {
+        s.push_str(&format!("	Software: {}\n", options.site_software));
+    }
+    s
 }
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app

@@ -298,14 +298,14 @@ macro_rules! macro_render_layout {
         let template_file = match layout_str {
             "archive" => "archive.html",
             "category" => "category.html",
+            "contact" => "contact.html",
             "homepage" => "homepage.html",
             "index" => "index.html",
+            "main" => "main.js",
             "page" => "page.html",
             "post" => "post.html",
-            "rss" => "rss.xml",
-            "section" => "section.html",
-            "sitemap" => "sitemap.xml",
-            "tag" => "tag.html",
+            "service-worker" => "service-worker.js",
+            "service-worker-setup" => "service-worker-setup.js",
             _ => "template.html",
         };
 

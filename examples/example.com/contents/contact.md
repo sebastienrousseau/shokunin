@@ -14,6 +14,7 @@ copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
 description: "We couldn’t find the page your looking for." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
+form-id: "https://formspree.io/f/meqwylbe" ## The form id of the site.
 icon: "https://kura.pro/kaishi/images/logos/kaishi.webp" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo for Kaishi" ## The image alt of the site.
@@ -23,7 +24,7 @@ image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main i
 keywords: "404, page not found, not available" ## The keywords of the site. (comma separated, max 10 keywords)
 hreflang: "en-us" ## The hreflang of the site. (default: en-gb)
 language: "en-US" ## The language of the site. (default: en-GB)
-layout: "page" ## The layout of the site.
+layout: "contact" ## The layout of the site.
 locale: "en_US" ## The locale of the site.
 logo_alt: "Logo for the Kaishi" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
@@ -35,7 +36,7 @@ rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
-short_name: "contact" ## The short name of the site. (max 12 characters)
+short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "How can we help you today?" ## The subtitle of the page. (max 64 characters)
 theme-color: "143, 250, 111" ## The theme color of the site.
 title: "Contact Us" ## The title of the page. (max 64 characters)
@@ -44,12 +45,6 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 
 ---
 
-This page is a 404 error, which means you've clicked on a bad link or
-you've asked for a page that doesn't exist. Please find some helpful
-links below to get you back on track.
+<!-- markdownlint-disable MD033 MD041 -->
 
-Here are a few links that may be helpful:
-
-- [homepage](/) - The homepage of this site
-- [about](/about/) - All you need to know about us
-- [contact](/contact/) - Get in touch with us
+<!-- markdownlint-enable MD033 MD041 -->

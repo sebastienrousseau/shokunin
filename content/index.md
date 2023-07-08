@@ -28,6 +28,7 @@ logo_height: "33" ## The logo height of the site.
 logo_width: "181" ## The logo width of the site.
 logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## The logo of the site in SVG format.
 name: "Shokunin (職人)" ## The name of the site. (max 64 characters)
+offline_page: "/offline/index.html" ## The offline page of the site.
 permalink: "https://shokunin.one" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
@@ -56,6 +57,7 @@ pub_date: Wed, 02 Oct 2002 13:00:00 GMT
 ttl: "60"
 type: "website"
 webmaster: sebastian.rousseau@gmail.com
+
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.
@@ -95,6 +97,7 @@ twitter_site: sebastienrousseau
 twitter_title: Shokunin (職人) Static Site Generator
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: https://shokunin.one
+
 
 ---
 

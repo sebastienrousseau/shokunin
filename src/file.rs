@@ -53,13 +53,17 @@ pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
                     String::new()
                 });
             let txt = escape(&content).to_string();
+            let human = escape(&content).to_string();
+            let browserconfig = escape(&content).to_string();
             let cname = escape(&content).to_string();
             let sitemap = escape(&content).to_string();
 
             FileData {
+                browserconfig,
                 cname,
                 content,
                 json,
+                human,
                 name: file_name,
                 rss,
                 sitemap,

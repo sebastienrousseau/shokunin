@@ -1,11 +1,11 @@
 ---
-
 # Front Matter (YAML).
+
 author: "Sebastien Rousseau" ## The author of the page. (max 64 characters)
 banner_alt: "Beautiful cityscape" ## The banner alt of the site.
 banner_height: "600" ## The banner height of the site.
 banner_width: "1000" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/tianyi-ma-WiONHd_zYI4-unsplash.jpg" ## The banner of the site.
+banner: "https://kura.pro/unsplash/images/banners/ryunosuke-kikuno-G5hYMUoJQf8-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site
@@ -13,7 +13,7 @@ copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
 description: "Make beautiful websites with Kaishi, a Shokunin (職人) Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
-icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
+icon: "https://kura.pro/kaishi/images/logos/kaishi.webp" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo for Kaishi" ## The image alt of the site.
 image_height: "630" ## The image height of the site.
@@ -22,7 +22,7 @@ image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main i
 keywords: "Sample, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
 hreflang: "en-us" ## The hreflang of the site. (default: en-gb)
 language: "en-US" ## The language of the site. (default: en-GB)
-layout: "index" ## The layout of the site.
+layout: "page" ## The layout of the site.
 locale: "en_US" ## The locale of the site.
 logo_alt: "Logo for the Kaishi" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
@@ -97,36 +97,22 @@ twitter_title: Kaishi
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: https://kaishi.one
 
-# Humans.txt - The Humans.txt front matter (YAML).
-author_website: "https://kura.pro" ## The author website of the page.
-author_twitter: "@wwdseb" ## The author twitter of the page.
-author_location: "London, UK" ## The author location of the page.
-thanks: "Thanks for reading!" ## The thanks of the page.
-site_last_updated: "2023-07-05" ## The last updated of the site.
-site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The standards of the site.
-site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
-site_software: "Shokunin, Rust" ## The software of the site.
-
 ---
 
+## Features
 
-## Overview
+Get started with Shokunin (職人) using any of our examples or use parts of them
+for building your custom layouts and content.
 
-Kaishi is a minimalist and modern [Shokunin (職人) static website generator ⧉][0]
-starter template designed for professionals who value simplicity and elegance.
-With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
-solution for those looking to showcase their work and services online. Built on
-a responsive framework, this template is ideal for professionals without coding
-or design skills.
+Kaishi has the following features enabled:
 
-Whether you're a freelance creative, a startup founder, or a small business
-owner. Kaishi's ready-to-use website and responsive starter templates provide
-the perfect foundation for your online presence. With its minimalist design,
-Kaishi is the ultimate website starter template for modern and professional
-websites.
-
-This page is an example for the Shokunin (職人) static website generator. You
-can use it as a template for your website or blog. It uses a markdown template
-for the content and a custom HTML theme for the layout.
-
-[0]: https://shokunin.one/
+- **Accessibility Meta-Tags:** These meta tags are designed to make the website more accessible to users with disabilities. By setting Accessible Rich Internet Applications (ARIA) roles and attributes, full keyboard control, and no flashing hazard, you can make sure your website is accessible to everyone.
+- **Apple Meta-Tags:** These meta tags improve websites for Apple devices, like iPhones, iPads, and Apple devices. You can change web app capabilities, status bar style, title, application name, and author to improve Apple devices' appearance.
+- **Bootstrap CSS:** Bootstrap is a popular CSS framework that provides you with a set of pre-designed styles and components. By using Bootstrap, you can quickly and easily create a professional-looking website without having to write CSS from scratch.
+- **Bootstrap JavaScript:** Bootstrap JavaScript is a set of pre-built scripts that provide you with responsive navigation menus and modal dialogues.
+- **Content Security Policy:** This meta tag is used to specify the sources of content allowed to load on the page. It is designed to prevent cross-site scripting (XSS) attacks and other security vulnerabilities.
+- **Microsoft Meta Tags:** These meta tags are designed to optimise the website for Microsoft devices. You can set site verification, application configuration, tap highlight colour, tile colour, and tile image to look good on Windows devices.
+- **Open Graph/Facebook Meta-Tags:** These meta tags allow you to control how your website appears when shared on Facebook and other social media platforms. By setting the title, description, and image, you can make sure that your website looks its best when shared online.
+- **Responsive Navigation Bar:** The responsive navigation bar provides users with an intuitive and easy-to-use interface for navigating the website. It aims to adapt to the size of the screen, making it accessible to users on both desktop and mobile devices.
+- **Schema.org Meta Tags:** These meta tags are used to provide structured data about the website's content. Setting the name, description, and image on a website helps search engines and others understand the content better.
+- **Twitter Meta Tags:** These meta tags are designed to optimise the website for Twitter sharing. You can set the card type, creator, description, image, site, title, and URL to make their website look good on Twitter.

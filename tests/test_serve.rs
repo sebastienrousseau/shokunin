@@ -16,7 +16,7 @@ mod tests {
         write!(tmp_file, "Hello, world!").unwrap();
 
         // Start a server in a new thread.
-        let server_addr = "127.0.0.1:8080";
+        let server_addr = "127.0.0.1:3000";
         let document_root =
             tmp_dir.path().to_str().unwrap().to_string();
         thread::spawn(move || {

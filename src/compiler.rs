@@ -1,16 +1,15 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::data::FileData;
 use crate::{
     data::{
-        CnameData, IconData, ManifestData, MetatagsData, RssData,
-        SitemapData, TxtData,
+        BrowserConfigData, CnameData, FileData, HumansData, IconData,
+        ManifestData, MetatagsData, RssData, SitemapData, TxtData,
     },
     file::add,
     frontmatter::extract,
     html::generate_html,
-    json::{cname, sitemap, txt},
+    json::{browserconfig, cname, human, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
@@ -93,12 +92,11 @@ pub fn compile(
                         .get(*name)
                         .cloned()
                         .unwrap_or_default();
-                    format!(
-                        "<meta name=\"{}\" content=\"{}\">",
-                        name, value
-                    )
+                    MetatagsData::new(name.to_string(), value)
+                        .generate()
                 })
-                .collect();
+                .collect::<Vec<String>>()
+                .join("");
 
             // Define the Primary metatags
             let primary_metatags_names = [
@@ -126,12 +124,11 @@ pub fn compile(
                         .get(*name)
                         .cloned()
                         .unwrap_or_default();
-                    format!(
-                        "<meta name=\"{}\" content=\"{}\">",
-                        name, value
-                    )
+                    MetatagsData::new(name.to_string(), value)
+                        .generate()
                 })
-                .collect();
+                .collect::<Vec<String>>()
+                .join("");
 
             let og_metadata = macro_generate_metatags!(
                 "og:description",
@@ -172,9 +169,9 @@ pub fn compile(
                             .get(*name)
                             .cloned()
                             .unwrap_or_default();
-                        MetatagsData::new(name, value)
+                        MetatagsData::new(name.to_string(), value)
+                            .generate()
                     })
-                    .map(|metatag| metatag.generate())
                     .collect::<Vec<String>>()
                     .join("");
 
@@ -337,6 +334,39 @@ pub fn compile(
                 cname: macro_metadata_option!(metadata, "cname"),
             };
 
+            let human_options: HumansData = HumansData {
+                author: macro_metadata_option!(metadata, "author"),
+                author_website: macro_metadata_option!(
+                    metadata,
+                    "author_website"
+                ),
+                author_twitter: macro_metadata_option!(
+                    metadata,
+                    "author_twitter"
+                ),
+                author_location: macro_metadata_option!(
+                    metadata,
+                    "author_location"
+                ),
+                thanks: macro_metadata_option!(metadata, "thanks"),
+                site_last_updated: macro_metadata_option!(
+                    metadata,
+                    "site_last_updated"
+                ),
+                site_standards: macro_metadata_option!(
+                    metadata,
+                    "site_standards"
+                ),
+                site_components: macro_metadata_option!(
+                    metadata,
+                    "site_components"
+                ),
+                site_software: macro_metadata_option!(
+                    metadata,
+                    "site_software"
+                ),
+            };
+
             let sitemap_options: SitemapData = SitemapData {
                 loc: macro_metadata_option!(metadata, "permalink"),
                 lastmod: macro_metadata_option!(
@@ -353,8 +383,20 @@ pub fn compile(
                 ),
             };
 
+            let browserconfig_options: BrowserConfigData =
+                BrowserConfigData {
+                    theme_color: macro_metadata_option!(
+                        metadata,
+                        "theme-color"
+                    ),
+                    icon: macro_metadata_option!(metadata, "icon"),
+                };
             let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
+            let browserconfig_data =
+                browserconfig(&browserconfig_options);
+            println!("{}", browserconfig_data);
+            let human_data = human(&human_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
@@ -363,13 +405,15 @@ pub fn compile(
                 });
 
             FileData {
-                name: file.name,
-                content,
-                rss: rss_data,
-                json: json_data,
-                txt: txt_data,
                 cname: cname_data,
+                content,
+                browserconfig: browserconfig_data,
+                human: human_data,
+                json: json_data,
+                name: file.name,
+                rss: rss_data,
                 sitemap: sitemap_data,
+                txt: txt_data,
             }
         })
         .collect();
@@ -399,15 +443,24 @@ pub fn compile(
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
+            let browserconfig_file =
+                build_dir_path.join("browserconfig.xml");
             let cname_file = build_dir_path.join("CNAME");
             let html_file = build_dir_path.join("index.html");
+            let human_file = build_dir_path.join("humans.txt");
             let json_file = build_dir_path.join("manifest.json");
+            let main_file = build_dir_path.join("main.js");
             let robots_file = build_dir_path.join("robots.txt");
             let rss_file = build_dir_path.join("rss.xml");
             let sitemap_file = build_dir_path.join("sitemap.xml");
+            let sw_file = build_dir_path.join("sw.js");
 
+            fs::copy(&template_path.join("main.js"), &main_file)?;
+            fs::copy(&template_path.join("sw.js"), &sw_file)?;
+            fs::write(&browserconfig_file, &file.browserconfig)?;
             fs::write(&cname_file, &file.cname)?;
             fs::write(&html_file, &file.content)?;
+            fs::write(&human_file, &file.human)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
             fs::write(&rss_file, &file.rss)?;
@@ -421,12 +474,15 @@ pub fn compile(
             let minified_file = minify_html(&html_file)?;
             fs::write(&html_file, &minified_file)?;
 
-            println!("  - {}", html_file.display());
-            println!("  - {}", rss_file.display());
-            println!("  - {}", json_file.display());
-            println!("  - {}", robots_file.display());
             println!("  - {}", cname_file.display());
+            println!("  - {}", html_file.display());
+            println!("  - {}", human_file.display());
+            println!("  - {}", json_file.display());
+            println!("  - {}", main_file.display());
+            println!("  - {}", robots_file.display());
+            println!("  - {}", rss_file.display());
             println!("  - {}", sitemap_file.display());
+            println!("  - {}", sw_file.display());
         } else {
             let dir_name = build_dir_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
@@ -436,14 +492,12 @@ pub fn compile(
             let robots_file = dir_name.join("robots.txt");
             let rss_file = dir_name.join("rss.xml");
             let sitemap_file = dir_name.join("sitemap.xml");
-            // let cname_file = dir_name.join("CNAME");
 
             fs::write(&html_file, &file.content)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&sitemap_file, &file.sitemap)?;
-            // fs::write(&cname_file, &file.name)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -454,11 +508,10 @@ pub fn compile(
             fs::write(&html_file, &minified_file)?;
 
             println!("  - {}", html_file.display());
-            println!("  - {}", rss_file.display());
             println!("  - {}", json_file.display());
             println!("  - {}", robots_file.display());
+            println!("  - {}", rss_file.display());
             println!("  - {}", sitemap_file.display());
-            // println!("  - {}", cname_file.display());
         }
     }
 
