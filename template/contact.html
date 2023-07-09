@@ -67,8 +67,8 @@
 
     <link
       rel="apple-touch-icon"
-      href="{{cdn}}/{{short_name}}/images/icons/192x192.png"
-      sizes="192x192"
+      href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png"
+      sizes="{{apple_touch_icon_sizes}}"
     />
     <link
       rel="icon"
@@ -89,7 +89,7 @@
     <!-- # Start Start Styles -->
     <style>
       a {
-        color: rgba({{theme-color}}, 1);
+        color: {{theme_color}};
         text-decoration: none;
       }
 
@@ -99,12 +99,13 @@
       h4,
       h5,
       h6 {
-        color: rgb({{theme-color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
       a:hover {
-        color: rgba({{theme-color}}, 0.618);
+        color: {{theme_color}};
+        opacity:0.618;
         text-decoration: underline;
       }
     </style>
@@ -195,14 +196,13 @@
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div
-        class="row align-items-md-stretch text-start justify-content-between"
-      >
+      <div class="h-100 p-5  col-md-12 text-white bg-dark align-items-md-stretch text-start justify-content-between rounded-3">
         <form action="{{form-id}}" method="POST">
           <div class="row g-3">
+            <div class="row g-3">{{content}}</div>
             <div class="col-12">
               <label for="sender" class="form-label">Name</label>
-              <input type="text" class="form-control" id="sender"  autocomplete="name" placeholder="" value="" required="">
+              <input type="text" class="form-control" id="sender" autocomplete="name" placeholder="" value="" required="">
               <div class="invalid-feedback">A valid name is required.</div>
             </div>
             <div class="col-12">
@@ -212,17 +212,20 @@
             </div>
             <div class="col-12">
               <label for="subject" class="form-label">Subject</label><br>
-              <select name="subject" id="subject" class="form-select" required="" aria-label="Default select example">
-                <option>Choose a category...</option>
-                <option>Website comments</option>
-                <option>Evaluation, testing, or consultation</option>
-                <option>Other</option>
+              <select name="subject" id="subject" class="form-select" required="" aria-label="select a subject">
+                <option>Select a subject</option>
+                <option>Advertising / Press Enquiries</option>
+                <option>Business Enquiries</option>
+                <option>Feedback / Feature Request</option>
+                <option>General Questions</option>
+                <option>Product Questions</option>
+                <option>Product Support</option>
               </select>
             </div>
             <div class="col-12">
               <label for="message" class="form-label">Message</label>
               <textarea cols="47" rows="8" class="form-control" id="message" name="message" placeholder="Message"
-            required="">
+            required="" style="height: 168px;"></textarea>
               <div class="invalid-feedback">Please enter your message.</div>
             </div>
             <div class="col-12">
@@ -230,9 +233,7 @@
             </div>
           </div>
       </form>
-      <div class="col-md-12">
-        <div class="h-100 p-5 text-white bg-dark rounded-3">{{content}}</div>
-      </div>
+
       </div>
     </main>
 
@@ -272,6 +273,30 @@
         "name": "{{name}}",
         "url": "{{url}}"
       }
+    </script>
+    <script>
+      // This is an Immediately Invoked Function Expression (IIFE) which helps
+      // to avoid declaring any globals.
+      (function () {
+        // Create a new script element
+        var script = document.createElement("script");
+
+        // Set the source of the script element to "/main.js".
+        // A timestamp is appended as a query string to ensure the browser
+        // always fetches the latest version of the script, bypassing the
+        // cache.
+        script.src = "/main.js?" + new Date().getTime();
+
+        // The script is of type "text/javascript"
+        script.type = "text/javascript";
+
+        // The script is set to execute asynchronously as soon as it's
+        //available
+        script.async = true;
+
+        // Append the script element to the head of the document
+        document.head.appendChild(script);
+      })(); // The function is immediately invoked
     </script>
   </body>
 </html>

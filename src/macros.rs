@@ -296,17 +296,10 @@ macro_rules! macro_render_layout {
         let layout_str: &str = &$layout;
 
         let template_file = match layout_str {
-            "archive" => "archive.html",
-            "category" => "category.html",
             "contact" => "contact.html",
-            "homepage" => "homepage.html",
             "index" => "index.html",
-            "main" => "main.js",
             "page" => "page.html",
-            "post" => "post.html",
-            "service-worker" => "service-worker.js",
-            "service-worker-setup" => "service-worker-setup.js",
-            _ => "template.html",
+            _ => "index.html",
         };
 
         let template_content = fs::read_to_string(

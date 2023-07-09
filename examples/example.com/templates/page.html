@@ -67,8 +67,8 @@
 
     <link
       rel="apple-touch-icon"
-      href="{{cdn}}/{{short_name}}/images/icons/192x192.png"
-      sizes="192x192"
+      href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png"
+      sizes="{{apple_touch_icon_sizes}}"
     />
     <link
       rel="icon"
@@ -89,7 +89,7 @@
     <!-- # Start Start Styles -->
     <style>
       a {
-        color: rgba({{theme-color}}, 1);
+        color: {{theme_color}};
         text-decoration: none;
       }
 
@@ -99,12 +99,13 @@
       h4,
       h5,
       h6 {
-        color: rgb({{theme-color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
       a:hover {
-        color: rgba({{theme-color}}, 0.618);
+        color: {{theme_color}};
+        opacity:0.618;
         text-decoration: underline;
       }
     </style>
@@ -128,7 +129,6 @@
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
-              class="img-fluid"
               title="Logo of {{name}}"
               height="{{logo_height}}"
               id="{{name}}"
@@ -165,43 +165,38 @@
     <!-- Header-->
     <header>
       <div
-        class="w-100"
+        class="w-100 p-5"
         style="
           background-image: url({{banner}});
-          background-position: center center;
+          background-position: center;
           background-repeat: no-repeat;
           background-size: cover;
-          height: 50vh;
-          width: 100vh;
+          height: {{banner_height}}px;
+          width: {{banner_width}}px;
         "
         role="img"
-        title="Banner of {{name}}"
-        aria-label="Banner of {{name}}"
+        title="{{banner_alt}}"
+        aria-label="{{banner_alt}}"
       >
-      <div class="position-relative overflow-hidden w-100 h-100 top-50">
-        <h1
-          class="fw-normal"
-          itemprop="name"
-          title="{{name}}"
-        >
-          {{name}}
-        </h1>
-        <p class="lead text-light text-center">
-          {{subtitle}}
-        </p>
+        <div class="w-100 py-5 container">
+          <div
+            class="text-center text-white center mx-auto rounded rounded-3"
+            style="
+              background-color: rgba(0, 0, 0, 0.618);
+              width: 50vw;
+              height: 20vh;
+            "
+          >
+            <p class="display-1 fw-bold">{{title}}</p>
+            <p class="lead fw-normal">{{subtitle}}</p>
+          </div>
+        </div>
       </div>
-
     </header>
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div
-        class="row align-items-md-stretch text-start justify-content-between"
-      >
-        <div class="col-md-12">
-          <div class="h-100 p-5 text-white bg-dark rounded-3">{{content}}</div>
-        </div>
-      </div>
+      <div class="text-start justify-content-between">{{content}}</div>
     </main>
 
     <!-- Footer-->
@@ -217,14 +212,13 @@
       />
       <span class="px-2 text-white">{{copyright}}</span>
       <span class="px-2 text-white">
+        <a href="/contact/index.html">Contact</a>
+      </span>
+      <span class="px-2 text-white">
         <a href="/privacy/index.html">Privacy</a>
       </span>
-
       <span class="px-2 text-white">
         <a href="/terms/index.html">Terms of Use</a>
-      </span>
-      <span class="px-2 text-white">
-        <a href="/contact/index.html">Contact</a>
       </span>
     </footer>
     <script
@@ -258,7 +252,7 @@
         script.type = "text/javascript";
 
         // The script is set to execute asynchronously as soon as it's
-        // available
+        //available
         script.async = true;
 
         // Append the script element to the head of the document

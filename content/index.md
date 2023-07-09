@@ -36,7 +36,7 @@ revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "shokunin" ## The short name of the site. (max 12 characters)
 subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## The subtitle of the page. (max 64 characters)
-theme-color: "rgb(220, 53, 69)" ## The theme color of the site.
+theme_color: "rgb(220, 53, 69)" ## The theme color of the site.
 title: "Shokunin (職人) Static Site Generator" ## The title of the page. (max 64 characters)
 url: "https://shokunin.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.

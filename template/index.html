@@ -67,8 +67,8 @@
 
     <link
       rel="apple-touch-icon"
-      href="{{cdn}}/{{short_name}}/images/icons/192x192.png"
-      sizes="192x192"
+      href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png"
+      sizes="{{apple_touch_icon_sizes}}"
     />
     <link
       rel="icon"
@@ -89,7 +89,7 @@
     <!-- # Start Start Styles -->
     <style>
       a {
-        color: rgba({{theme-color}}, 1);
+        color: {{theme_color}};
         text-decoration: none;
       }
 
@@ -99,12 +99,13 @@
       h4,
       h5,
       h6 {
-        color: rgb({{theme-color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
       a:hover {
-        color: rgba({{theme-color}}, 0.618);
+        color: {{theme_color}};
+        opacity:0.618;
         text-decoration: underline;
       }
     </style>
@@ -128,7 +129,6 @@
           <a href="/" tabindex="0" class="navbar-brand">
             <img
               alt="Logo of {{name}}"
-              class="img-fluid"
               title="Logo of {{name}}"
               height="{{logo_height}}"
               id="{{name}}"
@@ -165,26 +165,26 @@
     <!-- Header-->
     <header>
       <div
-        class="w-100"
+        class="w-100 p-5"
         style="
           background-image: url({{banner}});
-          background-position: center center;
+          background-position: center;
           background-repeat: no-repeat;
           background-size: cover;
-          height: 100vh;
-          width: 100vh;
+          height: 50vh;
+          width: 100vw;
         "
         role="img"
         title="Banner of {{name}}"
         aria-label="Banner of {{name}}"
       >
-        <div class="position-absolute top-50 start-50 w-100 translate-middle">
+        <div class="w-100 py-5 container">
           <div
-            class="w-50 h-50 p-3 text-center text-white center mx-auto rounded rounded-3"
+            class="text-center text-white center mx-auto rounded rounded-3"
             style="
               background-color: rgba(0, 0, 0, 0.618);
               width: 50vw;
-              height: 50vh;
+              height: 30vh;
             "
           >
             <p class="display-1 fw-bold">{{name}}</p>
@@ -192,7 +192,8 @@
             <p>
               <a
                 href="{{download}}"
-                class="btn btn-lg btn-outline-light mx-3 fs-5"
+                title="Download {{name}}"
+                class="opacity-100 btn btn-lg btn-outline-light mx-3 fs-5"
                 >Download {{name}} ↓</a
               >
             </p>
@@ -260,7 +261,7 @@
         script.type = "text/javascript";
 
         // The script is set to execute asynchronously as soon as it's
-        // available
+        //available
         script.async = true;
 
         // Append the script element to the head of the document

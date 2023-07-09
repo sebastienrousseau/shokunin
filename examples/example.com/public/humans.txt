@@ -1,5 +1,5 @@
 /* TEAM */
-	Name: Sebastien Rousseau
+	Name: Jane Doe
 	Website: https://kura.pro
 	Twitter: @wwdseb
 	Location: London, UK

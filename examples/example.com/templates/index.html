@@ -67,8 +67,8 @@
 
     <link
       rel="apple-touch-icon"
-      href="{{cdn}}/{{short_name}}/images/icons/192x192.png"
-      sizes="192x192"
+      href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png"
+      sizes="{{apple_touch_icon_sizes}}"
     />
     <link
       rel="icon"
@@ -89,7 +89,7 @@
     <!-- # Start Start Styles -->
     <style>
       a {
-        color: rgba({{theme-color}}, 1);
+        color: {{theme_color}};
         text-decoration: none;
       }
 
@@ -99,12 +99,13 @@
       h4,
       h5,
       h6 {
-        color: rgb({{theme-color}});
+        color: {{theme_color}};
         text-decoration: none;
       }
 
       a:hover {
-        color: rgba({{theme-color}}, 0.618);
+        color: {{theme_color}};
+        opacity:0.618;
         text-decoration: underline;
       }
     </style>
@@ -170,12 +171,12 @@
           background-position: center;
           background-repeat: no-repeat;
           background-size: cover;
-          height: 50vh;
-          width: 100vw;
+          height: {{banner_height}}px;
+          width: {{banner_width}}px;
         "
         role="img"
-        title="Banner of {{name}}"
-        aria-label="Banner of {{name}}"
+        title="{{banner_alt}}"
+        aria-label="{{banner_alt}}"
       >
         <div class="w-100 py-5 container">
           <div
@@ -191,7 +192,8 @@
             <p>
               <a
                 href="{{download}}"
-                class="btn btn-lg btn-outline-light mx-3 fs-5"
+                title="Download {{name}}"
+                class="opacity-100 btn btn-lg btn-outline-light mx-3 fs-5"
                 >Download {{name}} ↓</a
               >
             </p>
@@ -218,14 +220,13 @@
       />
       <span class="px-2 text-white">{{copyright}}</span>
       <span class="px-2 text-white">
+        <a href="/contact/index.html">Contact</a>
+      </span>
+      <span class="px-2 text-white">
         <a href="/privacy/index.html">Privacy</a>
       </span>
-
       <span class="px-2 text-white">
         <a href="/terms/index.html">Terms of Use</a>
-      </span>
-      <span class="px-2 text-white">
-        <a href="/contact/index.html">Contact</a>
       </span>
     </footer>
     <script

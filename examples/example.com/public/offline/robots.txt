@@ -1,2 +1,2 @@
 User-agent: *
-Sitemap: /404//sitemap.xml
+Sitemap: https://kaishi.one/sitemap.xml

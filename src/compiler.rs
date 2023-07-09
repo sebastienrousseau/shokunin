@@ -111,7 +111,7 @@ pub fn compile(
                 "referrer",
                 "revisit-after",
                 "robots",
-                "theme-color",
+                "theme_color",
                 "title",
                 "viewport",
             ];
@@ -387,7 +387,7 @@ pub fn compile(
                 BrowserConfigData {
                     theme_color: macro_metadata_option!(
                         metadata,
-                        "theme-color"
+                        "theme_color"
                     ),
                     icon: macro_metadata_option!(metadata, "icon"),
                 };
@@ -395,7 +395,6 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let browserconfig_data =
                 browserconfig(&browserconfig_options);
-            println!("{}", browserconfig_data);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
             let json_data = serde_json::to_string(&json)
