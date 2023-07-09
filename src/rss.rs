@@ -1,133 +1,111 @@
 // Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use super::data::RssData;
 use super::macro_write_element;
 use quick_xml::{
     events::{BytesDecl, BytesEnd, BytesStart, Event},
     Writer,
 };
-use std::borrow::Cow;
 use std::io::Cursor;
+use std::{borrow::Cow, error::Error};
 
-/// The `RssOptions` struct holds the options for an RSS feed.
+/// Generates an RSS feed from the given `RssData` struct.
 ///
-/// # Fields
+/// This function creates a complete RSS feed in XML format based on the data contained in the provided `RssData`.
+/// It generates the feed by creating a series of XML elements corresponding to the fields of the `RssData`,
+/// and writing them to a `Writer` object.
 ///
-/// * `title`: The title of the RSS feed.
-/// * `link`: The link to the RSS feed.
-/// * `description`: The description of the RSS feed.
-/// * `generator`: The generator of the RSS feed.
-/// * `language`: The language of the RSS feed.
-/// * `atom_link`: The atom link of the RSS feed.
-/// * `webmaster`: The webmaster of the RSS feed.
-/// * `last_build_date`: The last build date of the RSS feed.
-/// * `pub_date`: The publication date of the RSS feed.
-/// * `item_title`: The title of the RSS feed item.
-/// * `item_link`: The link to the RSS feed item.
-/// * `item_guid`: The GUID of the RSS feed item.
-/// * `item_description`: The description of the RSS feed item.
-/// * `item_pub_date`: The publication date of the RSS feed item.
-///
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
-pub struct RssOptions {
-    /// The title of the RSS feed.
-    pub title: String,
-    /// The URL of the RSS feed.
-    pub link: String,
-    /// The description of the RSS feed.
-    pub description: String,
-    /// The generator of the RSS feed.
-    pub generator: String,
-    /// The language of the RSS feed.
-    pub language: String,
-    /// The link to the atom feed.
-    pub atom_link: String,
-    /// The webmaster of the RSS feed.
-    pub webmaster: String,
-    /// The last build date of the RSS feed.
-    pub last_build_date: String,
-    /// The publication date of the RSS feed.
-    pub pub_date: String,
-    /// The title of the RSS item.
-    pub item_title: String,
-    /// The link of the RSS item.
-    pub item_link: String,
-    /// The guid of the RSS item.
-    pub item_guid: String,
-    /// The description of the RSS item.
-    pub item_description: String,
-    /// The publication date of the RSS item.
-    pub item_pub_date: String,
-}
-
-impl RssOptions {
-    /// Creates a new `RssOptions` struct with default values.
-    pub fn new() -> RssOptions {
-        RssOptions::default()
-    }
-}
-
-/// Generates an RSS feed from the given `RssOptions` struct.
+/// The generated RSS feed is returned as a `String`. If an error occurs during generation, it returns an error.
 pub fn generate_rss(
-    options: &RssOptions,
-) -> Result<String, Box<dyn std::error::Error>> {
+    options: &RssData,
+) -> Result<String, Box<dyn Error>> {
+    // Create a new `Writer` instance.
     let mut writer = Writer::new(Cursor::new(Vec::new()));
+
+    // Write the XML declaration.
     writer.write_event(Event::Decl(BytesDecl::new(
         "1.0",
         Some("utf-8"),
         None,
     )))?;
 
+    // Start the `rss` element.
     let mut rss_start = BytesStart::new("rss");
     rss_start.push_attribute(("version", "2.0"));
     rss_start
         .push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
     writer.write_event(Event::Start(rss_start))?;
 
+    // Start the `channel` element.
     writer.write_event(Event::Start(BytesStart::new("channel")))?;
 
-    let channel_elements = [
-        ("title", &options.title),
-        ("link", &options.link),
-        ("description", &options.description),
-        ("generator", &options.generator),
-        ("language", &options.language),
-        ("lastBuildDate", &options.last_build_date),
-        ("webMaster", &options.webmaster),
-        ("pubDate", &options.pub_date),
-    ];
+    macro_write_element!(writer, "title", &options.title)?;
+    macro_write_element!(writer, "link", &options.link)?;
+    macro_write_element!(writer, "description", &options.description)?;
+    macro_write_element!(writer, "language", &options.language)?;
+    macro_write_element!(writer, "pubDate", &options.pub_date)?;
+    macro_write_element!(
+        writer,
+        "lastBuildDate",
+        &options.last_build_date
+    )?;
+    macro_write_element!(writer, "docs", &options.docs)?;
+    macro_write_element!(writer, "generator", &options.generator)?;
+    macro_write_element!(
+        writer,
+        "managingEditor",
+        &options.managing_editor
+    )?;
+    macro_write_element!(writer, "webMaster", &options.webmaster)?;
+    macro_write_element!(writer, "category", &options.category)?;
+    macro_write_element!(writer, "ttl", &options.ttl)?;
 
-    for &(element, value) in channel_elements.iter() {
-        macro_write_element!(writer, element, value)?;
-    }
+    // Write the `image` element.
+    writer.write_event(Event::Start(BytesStart::new("image")))?;
+    macro_write_element!(writer, "url", &options.image)?;
+    macro_write_element!(writer, "title", &options.title)?;
+    macro_write_element!(writer, "link", &options.link)?;
+    writer.write_event(Event::End(BytesEnd::new("image")))?;
 
-    let mut atom_link_start = BytesStart::new("atom:link");
-    atom_link_start
-        .push_attribute(("href", options.atom_link.as_str()));
+    // Write the `atom:link` element.
+    let mut atom_link_start =
+        BytesStart::new(Cow::Borrowed("atom:link").into_owned());
+    atom_link_start.push_attribute((
+        "href",
+        options.atom_link.to_string().as_str(),
+    ));
     atom_link_start.push_attribute(("rel", "self"));
     atom_link_start.push_attribute(("type", "application/rss+xml"));
     writer.write_event(Event::Empty(atom_link_start))?;
 
+    // Write the `item` element.
     writer.write_event(Event::Start(BytesStart::new("item")))?;
 
-    let item_elements = [
-        ("title", &options.item_title),
-        ("link", &options.item_link),
-        ("pubDate", &options.item_pub_date),
-        ("guid", &options.item_guid),
-        ("description", &options.item_description),
-    ];
+    macro_write_element!(writer, "author", &options.author)?;
+    macro_write_element!(
+        writer,
+        "description",
+        &options.item_description
+    )?;
+    macro_write_element!(writer, "guid", &options.item_guid)?;
+    macro_write_element!(writer, "link", &options.item_link)?;
+    macro_write_element!(writer, "pubDate", &options.item_pub_date)?;
+    macro_write_element!(writer, "title", &options.item_title)?;
 
-    for &(element, value) in item_elements.iter() {
-        macro_write_element!(&mut writer, element, value)?;
-    }
-
+    // End the `item` element.
     writer.write_event(Event::End(BytesEnd::new("item")))?;
+
+    // End the `channel` element.
     writer.write_event(Event::End(BytesEnd::new("channel")))?;
+
+    // End the `rss` element.
     writer.write_event(Event::End(BytesEnd::new("rss")))?;
 
+    // Convert the XML to a string.
     let xml = writer.into_inner().into_inner();
     let rss_str = String::from_utf8(xml)?;
 
+    // Return the RSS feed as a string.
     Ok(rss_str)
 }

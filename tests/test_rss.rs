@@ -2,17 +2,13 @@
 mod tests {
     use std::io::Cursor;
 
-    use quick_xml::{
-        events::{BytesEnd, BytesStart, Event},
-        Writer,
-    };
-    use ssg::rss::{generate_rss, RssOptions};
-    use std::borrow::Cow;
+    use quick_xml::Writer;
+    use ssg::{data::RssData, rss::generate_rss};
 
-    // Test the default constructor of RssOptions
+    // Test the default constructor of RssData
     #[test]
     fn test_rss_options_new() {
-        let options = RssOptions::new();
+        let options = RssData::new();
 
         assert_eq!(options.title, "");
         assert_eq!(options.link, "");
@@ -33,20 +29,15 @@ mod tests {
     // Test generating an RSS feed with default options
     #[test]
     fn test_generate_rss_with_default_options() {
-        let options = RssOptions::new();
-        let rss = generate_rss(&options);
+        let options = RssData::new();
+        let rss_result = generate_rss(&options);
+        assert!(rss_result.is_ok());
 
-        assert!(rss.is_ok());
-
-        let rss_str = rss.unwrap();
-
-        // check for some basic elements
+        let rss_str = rss_result.unwrap();
         assert!(rss_str
             .contains("<?xml version=\"1.0\" encoding=\"utf-8\"?>"));
         assert!(rss_str.contains("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">"));
         assert!(rss_str.contains("</rss>"));
-
-        // check that the empty fields are not in the feed
         assert!(!rss_str.contains("<title></title>"));
         assert!(!rss_str.contains("<link></link>"));
         assert!(!rss_str.contains("<description></description>"));
@@ -55,25 +46,37 @@ mod tests {
     // Test generating an RSS feed with some custom options
     #[test]
     fn test_generate_rss_with_custom_options() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         options.title = "My RSS Feed".to_string();
         options.link = "https://example.com".to_string();
         options.description =
             "A description of my RSS feed.".to_string();
 
-        let rss = generate_rss(&options);
+        let rss_result = generate_rss(&options);
+        assert!(rss_result.is_ok());
 
-        assert!(rss.is_ok());
-
-        let rss_str = rss.unwrap();
-
-        // check for the custom elements
+        let rss_str = rss_result.unwrap();
         assert!(rss_str.contains("<title>My RSS Feed</title>"));
         assert!(rss_str.contains("<link>https://example.com</link>"));
         assert!(rss_str.contains(
             "<description>A description of my RSS feed.</description>"
         ));
     }
+
+    #[test]
+    fn test_generate_rss_with_invalid_url() {
+        let mut options = RssData::new();
+        options.link = "invalid-url".to_string();
+
+        let rss_result = generate_rss(&options);
+        assert!(rss_result.is_ok());
+
+        let rss_str = rss_result.unwrap();
+
+        // Check that the generated RSS feed contains the invalid URL value
+        assert!(rss_str.contains("<link>invalid-url</link>"));
+    }
+
     #[test]
     fn test_macro_write_element(
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -92,14 +95,14 @@ mod tests {
 
     #[test]
     fn test_generate_rss() {
-        let options = RssOptions::new();
+        let options = RssData::new();
         let rss_str = generate_rss(&options);
         assert!(rss_str.is_ok());
     }
 
     #[test]
     fn test_generate_rss_10000_items() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         for i in 0..10000 {
             options.item_title = format!("Item {}", i);
             options.item_link =
@@ -109,12 +112,10 @@ mod tests {
             options.item_pub_date =
                 "Wed, 20 May 2020 07:00:00 GMT".to_string();
 
-            let rss = generate_rss(&options);
+            let rss_result = generate_rss(&options);
+            assert!(rss_result.is_ok());
 
-            assert!(rss.is_ok());
-
-            let rss_str = rss.unwrap();
-
+            let rss_str = rss_result.unwrap();
             assert!(
                 rss_str.contains(&format!("<title>Item {}</title>", i))
             );
@@ -137,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_generate_rss_with_empty_title() {
-        let mut options = RssOptions::new();
+        let mut options = RssData::new();
         options.title = "".to_string();
 
         let rss = generate_rss(&options);
@@ -148,17 +149,5 @@ mod tests {
 
         // check that the title is not in the feed
         assert!(!rss_str.contains("<title></title>"));
-    }
-
-    #[test]
-    fn test_generate_rss_with_invalid_url() {
-        let mut options = RssOptions::new();
-        options.link = "invalid-url".to_string();
-
-        let rss = generate_rss(&options);
-
-        // Currently, generate_rss doesn't validate URLs,
-        // so it will still return an Ok result even if the URL is invalid.
-        assert!(rss.is_ok());
     }
 }

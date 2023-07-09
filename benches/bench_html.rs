@@ -6,25 +6,17 @@ extern crate criterion;
 use criterion::{black_box, Criterion};
 use ssg::html::generate_html;
 
-pub fn bench_html(c: &mut Criterion) {
-    let content = "---\n\
-                   title: My Title\n\
-                   description: My Description\n\
-                   keywords: foo, bar, baz\n\
-                   permalink: /my-permalink\n\
-                   ---\n\
-                   My content";
-    c.bench_function("generate HTML", |b| {
+pub fn bench_generate_html(c: &mut Criterion) {
+    let content = "## Hello, world!\n\nThis is a test.";
+    let title = "My Page";
+    let description = "This is a test page";
+    let json_content = Some("{\"name\": \"value\"}");
+
+    c.bench_function("generate_html", |b| {
         b.iter(|| {
-            let result = generate_html(
-                black_box(content),
-                black_box("My Title"),
-                black_box("My Description"),
-                black_box(None),
-            );
-            assert!(result.contains("<h1>My Title</h1>"));
-            assert!(result.contains("<h2>My Description</h2>"));
-            assert!(result.contains("<p>My content</p>"));
+            let html = generate_html(black_box(content), black_box(title), black_box(description), black_box(json_content));
+            criterion::black_box(html);
         })
     });
 }
+

@@ -1,4 +1,5 @@
 use crate::data::FileData;
+use crate::utilities::to_title_case;
 use std::path::Path;
 
 /// Generates a navigation menu as an unordered list of links to the
@@ -36,43 +37,55 @@ use std::path::Path;
 /// that preserves the structure of the path, without duplicating the
 /// directory names (e.g., `path_to/file.md` becomes `path_to_file`).
 ///
+#[allow(clippy::redundant_clone)]
 pub fn generate_navigation(files: &[FileData]) -> String {
+    let supported_extensions = vec!["md", "toml", "json"];
     let mut files_sorted = files.to_vec();
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
-    let nav_links = files_sorted.iter().filter(|file| {
-        let file_name = match Path::new(&file.name).extension() {
-            Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
-            Some(ext) if ext == "json" => file.name.replace(".json", ""),
-            _ => file.name.to_string(),
-        };
-        file_name != "index" && file_name != "404"
-    }).map(|file| {
-        let mut dir_name = match Path::new(&file.name).extension() {
-            Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
-            Some(ext) if ext == "json" => file.name.replace(".json", ""),
-            _ => file.name.to_string(),
-        };
-        // Handle special case for files in the same base directory
-        if let Some((index, _)) = dir_name.match_indices('/').next() {
-            let base_dir = &dir_name[..index];
-            let file_name = &dir_name[index + 1..];
-            dir_name = format!("{}{}", base_dir, file_name.replace(base_dir, ""));
-        }
+    let nav_links = files_sorted.iter().filter_map(|file| {
+        let path = Path::new(&file.name);
+        let file_stem = path.file_stem()
+            .and_then(|n| n.to_str())
+            .unwrap_or(&file.name)
+            .to_string();
 
-        format!(
-            "<li><a href=\"/{}/index.html\" role=\"navigation\">{}</a></li>",
-            dir_name,
-            match Path::new(&file.name).extension() {
-                Some(ext) if ext == "md" => file.name.replace(".md", ""),
-                Some(ext) if ext == "toml" => file.name.replace(".toml", ""),
-                Some(ext) if ext == "json" => file.name.replace(".json", ""),
-                _ => file.name.to_string(),
+        let file_extension = path.extension()
+            .and_then(|ext| ext.to_str());
+
+        let file_name = match file_extension {
+            Some(ext) if supported_extensions.contains(&ext) => file_stem,
+            _ => file.name.to_string(),
+        };
+
+        if
+            file_name == "index" ||
+            file_name == "404" ||
+            file_name == "privacy" ||
+            file_name == "terms" ||
+            file_name == "offline"
+        {
+            None
+        } else {
+            let mut dir_name = file_name.clone();
+
+            // Handle special case for files in the same base directory
+            if let Some((index, _)) = dir_name.match_indices('/').next() {
+                let base_dir = &dir_name[..index];
+                let file_name = &dir_name[index + 1..];
+                dir_name = format!("{}{}", base_dir, file_name.replace(base_dir, ""));
             }
-        )
+
+            Some(format!(
+                "<li class=\"nav-item\"><a href=\"/{}/index.html\" class=\"text-uppercase p-2 \">{}</a></li>",
+                dir_name,
+                to_title_case(&file_name),
+            ))
+        }
     }).collect::<Vec<_>>().join("\n");
 
-    format!("<ul class=\"nav\">\n{}\n</ul>", nav_links)
+    format!(
+        "<ul role=\"navigation\" class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
+        nav_links
+    )
 }

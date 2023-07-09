@@ -17,8 +17,8 @@ license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.69.0"
-version = "0.0.13"
+rust-version = "1.70.0"
+version = "0.0.14"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -44,18 +44,17 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.3.0"
+clap = "4.3.11"
 comrak = "0.18.0"
-mime_guess = "2.0.4"
 minify-html = "0.11.1"
-openssl = { version = "0.10.54", features = ["vendored"] }
-quick-xml = "0.28.2"
-regex = "1.8.3"
+openssl = { version = "0.10.55", features = ["vendored"] }
+quick-xml = "0.29.0"
+regex = "1.9.1"
 reqwest = { version = "0.11.18", features = ["blocking", "json"] }
-serde = { version = "1.0.163", features = ["derive"] }
-serde_json = "1.0.96"
-tempfile = "3.5.0"
-toml = "0.7.4"
+serde = { version = "1.0.169", features = ["derive"] }
+serde_json = "1.0.100"
+tempfile = "3.6.0"
+toml = "0.7.6"
 yaml-rust = "0.4.5"
 
 [dev-dependencies]

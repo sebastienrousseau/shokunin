@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 <url>
-<loc>https://example.com/404/index.html/index.html</loc>
+<loc>https://kaishi.one/404//contact/index.html</loc>
 <changefreq>weekly</changefreq>
 </url>
 
 <url>
-<loc>https://example.com/404/index.html/quick-start/index.html</loc>
+<loc>https://kaishi.one/404//index.html</loc>
 <changefreq>weekly</changefreq>
 </url>
 
 <url>
-<loc>https://example.com/404/index.html/404/index.html</loc>
+<loc>https://kaishi.one/404//privacy/index.html</loc>
+<changefreq>weekly</changefreq>
+</url>
+
+<url>
+<loc>https://kaishi.one/404//features/index.html</loc>
+<changefreq>weekly</changefreq>
+</url>
+
+<url>
+<loc>https://kaishi.one/404//terms/index.html</loc>
+<changefreq>weekly</changefreq>
+</url>
+
+<url>
+<loc>https://kaishi.one/404//404/index.html</loc>
+<changefreq>weekly</changefreq>
+</url>
+
+<url>
+<loc>https://kaishi.one/404//offline/index.html</loc>
 <changefreq>weekly</changefreq>
 </url></urlset>

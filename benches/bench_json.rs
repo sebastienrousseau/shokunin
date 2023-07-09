@@ -3,45 +3,54 @@
 
 extern crate criterion;
 
+use std::path::Path;
+
 use criterion::{black_box, Criterion};
-use ssg::data::{IconData, ManifestOptions};
-use ssg::json::manifest;
+use ssg::data::{CnameData, ManifestData, SitemapData, TxtData};
+use ssg::json::{manifest, cname, sitemap, txt};
 
 pub fn bench_json(c: &mut Criterion) {
-    let options = ManifestOptions {
-        background_color: "#ffffff".to_owned(),
-        description: "My Web App".to_owned(),
-        display: "standalone".to_owned(),
-        icons: vec![IconData {
-            src: "icons/icon-512x512.png".to_owned(),
-            sizes: "512x512".to_string(),
-            icon_type: Some("image/png".to_string()),
-            purpose: Some("any maskable".to_string()),
-        }],
-        name: "My Web App".to_owned(),
-        orientation: "portrait".to_owned(),
-        scope: "/".to_owned(),
-        short_name: "My App".to_owned(),
-        start_url: "/index.html".to_owned(),
-        theme_color: "#ffffff".to_owned(),
+    let manifest_data = ManifestData {
+        name: String::from("Test Name"),
+        short_name: String::from("Test Short Name"),
+        start_url: String::from("/"),
+        display: String::from("standalone"),
+        background_color: String::from("#000"),
+        description: String::from("Test Description"),
+        icons: Vec::new(),
+        orientation: String::from("portrait"),
+        scope: String::from("/"),
+        theme_color: String::from("#000"),
     };
 
-    c.bench_function("generate manifest", |b| {
-        b.iter(|| {
-            let result = manifest(black_box(&options));
-            assert!(
-                result.contains("\"background_color\": \"#ffffff\"")
-            );
-            assert!(result.contains("\"description\": \"My Web App\""));
-            assert!(result.contains("\"display\": \"standalone\""));
-            assert!(result
-                .contains("\"icons\": \"icons/icon-512x512.png\""));
-            assert!(result.contains("\"name\": \"My Web App\""));
-            assert!(result.contains("\"orientation\": \"portrait\""));
-            assert!(result.contains("\"scope\": \"/\""));
-            assert!(result.contains("\"short_name\": \"My App\""));
-            assert!(result.contains("\"start_url\": \"/index.html\""));
-            assert!(result.contains("\"theme_color\": \"#ffffff\""));
-        })
+    let txt_data = TxtData {
+        permalink: String::from("https://www.test.com"),
+    };
+
+    let cname_data = CnameData {
+        cname: String::from("test.com"),
+    };
+
+    let sitemap_data = SitemapData {
+        changefreq: String::from("always"),
+        loc: String::from("https://www.test.com"),
+        lastmod: String::from("2022-01-01"),
+    };
+
+    let dir = Path::new("./");
+
+    c.bench_function("manifest", |b| {
+        b.iter(|| manifest(black_box(&manifest_data)))
+    });
+
+    c.bench_function("txt", |b| b.iter(|| txt(black_box(&txt_data))));
+
+    c.bench_function("cname", |b| {
+        b.iter(|| cname(black_box(&cname_data)))
+    });
+
+    // This will be a file-system intensive benchmark
+    c.bench_function("sitemap", |b| {
+        b.iter(|| sitemap(black_box(&sitemap_data), black_box(dir)))
     });
 }

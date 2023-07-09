@@ -37,14 +37,22 @@ use std::path::Path;
 /// * If the server fails to write data to a connection, it will
 /// return an error.
 ///
-pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
+pub fn start(
+    server_address: &str,
+    document_root: &str,
+) -> std::io::Result<()> {
     let listener = TcpListener::bind(server_address)?;
     println!("❯ Server is now running at http://{}", server_address);
     println!("  Done.\n");
 
     for stream in listener.incoming() {
         match stream {
-            Ok(stream) => handle_connection(stream, document_root)?,
+            Ok(stream) => {
+                if let Err(e) = handle_connection(stream, document_root)
+                {
+                    eprintln!("Error handling connection: {}", e);
+                }
+            }
             Err(e) => {
                 eprintln!("Error: {}", e);
             }
@@ -74,12 +82,14 @@ pub fn start(server_address: &str, document_root: &str) -> std::io::Result<()> {
 /// * If the server fails to read data from a connection, it will
 /// return an error.
 ///
-pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io::Result<()> {
+pub fn handle_connection(
+    mut stream: TcpStream,
+    document_root: &str,
+) -> std::io::Result<()> {
     let mut buffer = [0; 1024];
     let bytes_read = stream.read(&mut buffer)?;
 
     if bytes_read == 0 {
-        eprintln!("Empty request received");
         return Ok(());
     }
 
@@ -92,7 +102,9 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
         request_parts.next(),
         request_parts.next(),
     ) {
-        (Some(method), Some(path), Some(version)) => (method, path, version),
+        (Some(method), Some(path), Some(version)) => {
+            (method, path, version)
+        }
         _ => {
             eprintln!("Malformed request line: {}", request_line);
             return Ok(());
@@ -104,25 +116,51 @@ pub fn handle_connection(mut stream: TcpStream, document_root: &str) -> std::io:
         _ => &path[1..], // Remove the leading "/"
     };
 
-    // let document_root = "public/";
-    let file_path = Path::new(&document_root).join(requested_file);
+    let document_root = Path::new(&document_root);
+    let requested_path = document_root.join(requested_file);
 
-    let (status_line, contents) = if file_path.exists() {
+    // Canonicalize paths and check for directory traversal attempts
+    let canonical_document_root = document_root.canonicalize()?;
+    let canonical_requested_path = requested_path.canonicalize()?;
+
+    if !canonical_requested_path.starts_with(&canonical_document_root) {
+        eprintln!(
+            "Possible directory traversal attempt: {}",
+            requested_file
+        );
+        return Ok(());
+    }
+
+    let (status_line, contents) = if canonical_requested_path.exists() {
         (
             "HTTP/1.1 200 OK\r\n\r\n",
-            std::fs::read_to_string(&file_path).unwrap_or_default(),
+            std::fs::read_to_string(&canonical_requested_path)
+                .unwrap_or_default(),
         )
     } else {
         (
             "HTTP/1.1 404 NOT FOUND\r\n\r\n",
-            std::fs::read_to_string(Path::new(&document_root).join("404/index.html"))
-                .unwrap_or_else(|_| String::from("File not found")),
+            std::fs::read_to_string(
+                canonical_document_root.join("404/index.html"),
+            )
+            .unwrap_or_else(|_| String::from("File not found")),
         )
     };
 
-    stream.write_all(status_line.as_bytes())?;
-    stream.write_all(contents.as_bytes())?;
-    stream.flush()?;
+    if let Err(e) = stream.write_all(status_line.as_bytes()) {
+        eprintln!("Error writing to stream: {}", e);
+        return Err(e);
+    }
+
+    if let Err(e) = stream.write_all(contents.as_bytes()) {
+        eprintln!("Error writing to stream: {}", e);
+        return Err(e);
+    }
+
+    if let Err(e) = stream.flush() {
+        eprintln!("Error flushing stream: {}", e);
+        return Err(e);
+    }
 
     Ok(())
 }

@@ -2,12 +2,15 @@
 mod tests {
     // Import necessary dependencies
     use serde_json::{json, Value};
-    use ssg::{json::manifest, data::ManifestOptions};
+    use ssg::{
+        data::{CnameData, ManifestData, TxtData},
+        json::{cname, manifest, txt},
+    };
 
     #[test]
     fn test_manifest_with_empty_options() {
-        // Create a default instance of ManifestOptions
-        let options = ManifestOptions::default();
+        // Create a default instance of ManifestData
+        let options = ManifestData::default();
 
         // Define the expected result as a raw string with consistent indentation
         let expected_result = r#"{
@@ -36,8 +39,8 @@ mod tests {
 
     #[test]
     fn test_manifest_with_non_empty_options() {
-        // Create an instance of ManifestOptions with custom values
-        let options = ManifestOptions {
+        // Create an instance of ManifestData with custom values
+        let options = ManifestData {
             name: "My App".to_string(),
             short_name: "My App".to_string(),
             start_url: "/".to_string(),
@@ -67,5 +70,37 @@ mod tests {
             serde_json::from_str::<Value>(&result).unwrap(),
             expected_result
         );
+    }
+
+    #[test]
+    fn test_cname_full_domain() {
+        let options = CnameData {
+            cname: "example.com".to_string(),
+        };
+
+        let output = cname(&options);
+        assert_eq!(output, "example.com\nwww.example.com");
+    }
+
+    #[test]
+    fn test_cname_empty() {
+        let options = CnameData {
+            cname: "".to_string(),
+        };
+
+        let output = cname(&options);
+        assert_eq!(output, "\nwww.");
+    }
+
+    #[test]
+    fn test_txt() {
+        let expected =
+            "User-agent: *\nSitemap: https://example.com/sitemap.xml"
+                .to_string();
+        let txt_options: TxtData = TxtData {
+            permalink: "https://example.com".to_string(),
+        };
+        let result = txt(&txt_options);
+        assert_eq!(result, expected);
     }
 }
