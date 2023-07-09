@@ -1,118 +1,133 @@
 ---
-# Front Matter (YAML).
 
-author: "Sebastien Rousseau" ## The author of the page. (max 64 characters)
-banner_alt: "Floral kimono and bamboo" ## The banner alt of the site.
-banner_height: "615" ## The banner height of the site.
-banner_width: "983" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/lan-pham-4qG2qqXi3tY-unsplash.jpg" ## The banner of the site.
+# Front Matter (YAML)
+
+author: "Jane Doe" ## The author of the page. (max 64 characters)
+banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
+banner_height: "398" ## The banner height of the site.
+banner_width: "1440" ## The banner width of the site.
+banner: "https://kura.pro/unsplash/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
-cname: "shokunin.one" ## The cname value of the site
-copyright: "© 2023 Shokunin. All rights reserved." ## The copyright of the site.
-description: "A Fast and Flexible Static Site Generator written in Rust." ## The description of the site. (max 160 characters)
+cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
+copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
+description: "Make beautiful websites with Kaishi, a Shokunin (職人) Static Site Generator starter template." ## The description of the site. (max 160 characters)
+download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
-icon: "https://kura.pro/shokunin/images/logos/shokunin.svg" ## The icon of the site in SVG format.
-id: "https://shokunin.one" ## The id of the site.
-image_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The image alt of the site.
+hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
+id: "https://kaishi.one" ## The id of the site.
+image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
-image: "https://kura.pro/shokunin/images/banners/banner-shokunin.webp" ## The main image of the site in SVG format.
-keywords: "Shokunin, 職人, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
+keywords: "Sample, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "index" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
-logo_alt: "Logo for the Shokunin (職人) Static Site Generator" ## The logo alt of the site.
+logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
-logo_width: "181" ## The logo width of the site.
-logo: "https://kura.pro/shokunin/images/titles/title-shokunin.webp" ## The logo of the site in SVG format.
-name: "Shokunin (職人)" ## The name of the site. (max 64 characters)
-offline_page: "/offline/index.html" ## The offline page of the site.
-permalink: "https://shokunin.one" ## The url of the site.
+logo_width: "100" ## The logo width of the site.
+logo: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The logo of the site in SVG format.
+name: "Kaishi" ## The name of the website. (max 64 characters)
+permalink: "https://kaishi.one" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
-short_name: "shokunin" ## The short name of the site. (max 12 characters)
-subtitle: "A Fast and Flexible Static Site Generator written in Rust." ## The subtitle of the page. (max 64 characters)
-theme_color: "rgb(220, 53, 69)" ## The theme color of the site.
-title: "Shokunin (職人) Static Site Generator" ## The title of the page. (max 64 characters)
-url: "https://shokunin.one" ## The url of the site.
+short_name: "kaishi" ## The short name of the site. (max 12 characters)
+subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
+theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
+title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
+url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # RSS - The RSS feed front matter (YAML).
-atom_link: https://shokunin.one/rss.xml
-category: "Finance"
+atom_link: https://kaishi.one/rss.xml
+category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: Shokunin (職人) 🦀 (version 0.0.14)
+generator: "Shokunin (職人) 🦀 (version 0.0.14)"
 item_description: RSS feed for the site
-item_guid: https://shokunin.one/rss.xml
-item_link: https://shokunin.one/rss.xml
-item_pub_date: Wed, 02 Oct 2002 13:00:00 GMT
+item_guid: https://kaishi.one/rss.xml
+item_link: https://kaishi.one/rss.xml
+item_pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
 item_title: "RSS"
-last_build_date: Wed, 02 Oct 2002 13:00:00 GMT
-managing_editor: sebastian.rousseau@gmail.com
-pub_date: Wed, 02 Oct 2002 13:00:00 GMT
+last_build_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+managing_editor: jane.doe@kaishi.one
+pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
 ttl: "60"
 type: "website"
-webmaster: sebastian.rousseau@gmail.com
-
+webmaster: jane.doe@kaishi.one
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.
-apple_touch_icon_sizes: "512x512" ## The Apple touch icon sizes of the page.
+apple_touch_icon_sizes: "192x192" ## The Apple touch icon sizes of the page.
 apple-mobile-web-app-capable: "yes" ## The Apple mobile web app capable of the page.
 apple-mobile-web-app-status-bar-inset: "black" ## The Apple mobile web app status bar inset of the page.
 apple-mobile-web-app-status-bar-style: "black-translucent" ## The Apple mobile web app status bar style of the page.
-apple-mobile-web-app-title: "Shokunin (職人)" ## The Apple mobile web app title of the page.
+apple-mobile-web-app-title: "Kaishi" ## The Apple mobile web app title of the page.
 apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
 ## msapplication - The MS Application config of the page.
-msapplication-config: /browserconfig.xml
+msapplication-config: "/browserconfig.xml"
 ## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication-tap-highlight: no
+msapplication-tap-highlight: "no"
 ## msapplication - The MS Application tile color of the page.
-msapplication-TileColor: "#d70015"
+msapplication-TileColor: "rgb(143, 250, 111)"
 ## msapplication_tile_image - The MS Application tile image of the page.
-msapplication-tile-image: https://kura.pro/shokunin/images/logos/shokunin.svg
+msapplication-tile-image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
 ## twitter_card - The Twitter Card type of the page.
-twitter_card: summary
+twitter_card: "summary"
 ## twitter_creator - The Twitter Card creator of the page.
-twitter_creator: sebastienrousseau
+twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
-twitter_description: A Fast and Flexible Static Site Generator written in Rust.
+twitter_description: "Make beautiful websites with Kaishi, a Shokunin (職人) Static Site Generator Starter Template."
 ## twitter_image - The Twitter Card image of the page.
-twitter_image: https://kura.pro/shokunin/images/logos/shokunin.svg
+twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
-twitter_image_alt: Logo for the Shokunin (職人) Static Site Generator
+twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
-twitter_site: sebastienrousseau
+twitter_site: "janedoe"
 ## twitter_title - The Twitter Card title of the page.
-twitter_title: Shokunin (職人) Static Site Generator
+twitter_title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template"
 ## twitter_url - The Twitter Card url of the page.
-twitter_url: https://shokunin.one
+twitter_url: "https://kaishi.one"
 
+# Humans.txt - The Humans.txt front matter (YAML).
+author_website: "https://kura.pro" ## The author website of the page.
+author_twitter: "@wwdseb" ## The author twitter of the page.
+author_location: "London, UK" ## The author location of the page.
+thanks: "Thanks for reading!" ## The thanks of the page.
+site_last_updated: "2023-07-05" ## The last updated of the site.
+site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The standards of the site.
+site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
+site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
+
 ## Overview
 
-Shokunin (職人) is a highly-optimized, Rust-based static site generator (ssg) that provides an easy-to-use and powerful tool for building professional static websites and blogs. Shokunin enables you to generate static HTML files from Markdown, YAML, JSON, and TOML. You can also use HTML themes and custom templates to create websites quickly and easily.
+Kaishi is a minimalist and modern [Shokunin (職人) static website generator ⧉][0]
+starter template designed for professionals who value simplicity and elegance.
+With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
+solution for those looking to showcase their work and services online. Built on
+a responsive framework, this template is ideal for professionals without coding
+or design skills.
 
-## Features
+Whether you're a freelance creative, a startup founder, or a small business
+owner. Kaishi's ready-to-use website and responsive starter templates provide
+the perfect foundation for your online presence. With its minimalist design,
+Kaishi is the ultimate website starter template for modern and professional
+websites.
 
-Blazing fast and flexible, Shokunin is the perfect tool for anyone looking to build a professional website. It's easy to use and written in Rust 🦀, which means it's both fast and reliable. The library supports multiple content formats, like Markdown, YAML, JSON, and TOML. You can also use HTML themes and Premium templates to create accessible websites quickly and efficiently. Shokunin even generates minified HTML and JSON versions for optimal performance and comes with a built-in Rust development server with live reloading.
+This page is an example for the Shokunin (職人) static website generator. You
+can use it as a template for your website or blog. It uses a markdown template
+for the content and a custom HTML theme for the layout.
 
-## Benefits
-
-Static site generators like Shokunin offer several benefits over dynamic websites. For one, static sites are much faster and more secure than their dynamic counterparts. With a static site generator, you can generate a site quickly and easily without the need for a server-side language like PHP or JavaScript. It makes static sites perfect for blogs, portfolios, and other types of content that don't require dynamic features like user accounts or e-commerce. Another benefit of static sites is that they're more reliable and easier to deploy. Because static sites are generated ahead of time, there's no risk of a database outage or other server-related issues. Your site will be available 24/7 and won't go down due to a server problem.
-
-## Licenses
-
-Shokunin is licensed under the terms of both the MIT license and the Apache License (Version 2.0). This means you're free to use, modify, and distribute the software as long as you comply with the terms of both licenses. The MIT License is one of the most permissive open source licenses available, while the Apache License is a more comprehensive license that includes patent protection and other legal provisions. Together, these licenses provide a solid legal framework for using and distributing Shokunin in your own projects.
+[0]: https://shokunin.one/

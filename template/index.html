@@ -171,12 +171,12 @@
           background-position: center;
           background-repeat: no-repeat;
           background-size: cover;
-          height: 50vh;
-          width: 100vw;
+          height: {{banner_height}}px;
+          width: {{banner_width}}px;
         "
         role="img"
-        title="Banner of {{name}}"
-        aria-label="Banner of {{name}}"
+        title="{{banner_alt}}"
+        aria-label="{{banner_alt}}"
       >
         <div class="w-100 py-5 container">
           <div
@@ -220,14 +220,13 @@
       />
       <span class="px-2 text-white">{{copyright}}</span>
       <span class="px-2 text-white">
+        <a href="/contact/index.html">Contact</a>
+      </span>
+      <span class="px-2 text-white">
         <a href="/privacy/index.html">Privacy</a>
       </span>
-
       <span class="px-2 text-white">
         <a href="/terms/index.html">Terms of Use</a>
-      </span>
-      <span class="px-2 text-white">
-        <a href="/contact/index.html">Contact</a>
       </span>
     </footer>
     <script
