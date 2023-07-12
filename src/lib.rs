@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.14-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.15-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -68,7 +68,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.14"
+//! shokunin = "0.0.15"
 //! ```
 //!
 //! Add the following to your `main.rs` file:
