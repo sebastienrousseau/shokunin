@@ -55,7 +55,6 @@
 //         options.set("logo_width", "100");
 //         options.set("logo", "./images/logo.png");
 //         options.set("meta", "");
-//         options.set("msapplication_config", "/browserconfig.xml");
 //         options.set("msapplication_tap_highlight", "no");
 //         options.set("msapplication_tile_color", "#da532c");
 //         options.set("msapplication_tile_image", "/mstile-144x144.png");

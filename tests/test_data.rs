@@ -19,7 +19,6 @@ mod tests {
     fn test_file_data_default() {
         let file_data = FileData::default();
         let expected_file_data = FileData {
-            browserconfig: "".to_string(),
             cname: String::default(),
             content: String::default(),
             human: String::default(),

@@ -23,7 +23,7 @@ image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
 keywords: "Sample, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
 language: "en-GB" ## The language of the site. (default: en-GB)
-layout: "index" ## The layout of the site.
+layout: "page" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
@@ -70,14 +70,7 @@ apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
-## msapplication - The MS Application config of the page.
-msapplication-config: "/browserconfig.xml"
-## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication-tap-highlight: "no"
-## msapplication - The MS Application tile color of the page.
-msapplication-TileColor: "rgb(143, 250, 111)"
-## msapplication_tile_image - The MS Application tile image of the page.
-msapplication-tile-image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
+msapplication-navbutton-color: "rgb(143, 250, 111)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 

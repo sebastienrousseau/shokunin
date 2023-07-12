@@ -22,24 +22,6 @@ impl CnameData {
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
-/// Options for the `browserconfig` function
-pub struct BrowserConfigData {
-    /// A string representing the tile color of the web app
-    pub theme_color: String,
-    /// A string representing the icons of the web app
-    pub icon: String,
-}
-
-impl BrowserConfigData {
-    /// Creates a new `BrowserConfigData` struct with the given theme color and icon.
-    pub fn new(theme_color: String, icon: String) -> Self {
-        BrowserConfigData { theme_color, icon }
-    }
-}
-
-#[derive(
-    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
-)]
 /// File struct to hold the name and content of a file.
 pub struct FileData {
     /// The name of the file.
@@ -48,8 +30,6 @@ pub struct FileData {
     pub content: String,
     /// The content of the file, escaped for CNAME.
     pub cname: String,
-    /// The content of the file, escaped for browserconfig.
-    pub browserconfig: String,
     /// The content of the file, escaped for JSON.
     pub json: String,
     /// The content of the file, escaped for HUMANS.
@@ -69,7 +49,6 @@ impl FileData {
             name,
             content,
             cname: String::new(),
-            browserconfig: String::new(),
             json: String::new(),
             human: String::new(),
             rss: String::new(),
