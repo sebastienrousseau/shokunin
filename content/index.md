@@ -68,17 +68,6 @@ apple-mobile-web-app-status-bar-style: "black-translucent" ## The Apple mobile w
 apple-mobile-web-app-title: "Kaishi" ## The Apple mobile web app title of the page.
 apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
-# MS Application - The MS Application front matter (YAML).
-
-## msapplication - The MS Application config of the page.
-msapplication-config: "/browserconfig.xml"
-## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication-tap-highlight: "no"
-## msapplication - The MS Application tile color of the page.
-msapplication-TileColor: "rgb(143, 250, 111)"
-## msapplication_tile_image - The MS Application tile image of the page.
-msapplication-tile-image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
-
 # Twitter Card - The Twitter Card front matter (YAML).
 
 ## twitter_card - The Twitter Card type of the page.

@@ -3,13 +3,13 @@
 
 use crate::{
     data::{
-        BrowserConfigData, CnameData, FileData, HumansData, IconData,
+        CnameData, FileData, HumansData, IconData,
         ManifestData, MetatagsData, RssData, SitemapData, TxtData,
     },
     file::add,
     frontmatter::extract,
     html::generate_html,
-    json::{browserconfig, cname, human, sitemap, txt},
+    json::{cname, human, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_generate_metatags, macro_metadata_option,
     navigation::generate_navigation,
@@ -153,28 +153,6 @@ pub fn compile(
                 &macro_metadata_option!(metadata, "permalink"),
             );
 
-            // Define the Microsoft metatags
-            let msapplication_metadata_names = [
-                "msapplication-config",
-                "msapplication-tap-highlight",
-                "msapplication-TileColor",
-                "msapplication_tile_image",
-            ];
-            // Loop through the Microsoft metatags and generate the HTML code
-            let msapplication_metatags: String =
-                msapplication_metadata_names
-                    .iter()
-                    .map(|name| {
-                        let value = metadata
-                            .get(*name)
-                            .cloned()
-                            .unwrap_or_default();
-                        MetatagsData::new(name.to_string(), value)
-                            .generate()
-                    })
-                    .collect::<Vec<String>>()
-                    .join("");
-
             let twitter_metadata = macro_generate_metatags!(
                 "twitter:card",
                 &macro_metadata_option!(metadata, "twitter_card"),
@@ -216,7 +194,6 @@ pub fn compile(
             // navigation generation
             page_options.set("apple", &apple_metatags);
             page_options.set("content", &html_content);
-            page_options.set("microsoft", &msapplication_metatags);
             page_options.set("navigation", &navigation);
             page_options.set("opengraph", &og_metadata);
             page_options.set("primary", &primary_metatags);
@@ -383,18 +360,8 @@ pub fn compile(
                 ),
             };
 
-            let browserconfig_options: BrowserConfigData =
-                BrowserConfigData {
-                    theme_color: macro_metadata_option!(
-                        metadata,
-                        "theme_color"
-                    ),
-                    icon: macro_metadata_option!(metadata, "icon"),
-                };
             let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
-            let browserconfig_data =
-                browserconfig(&browserconfig_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
             let json_data = serde_json::to_string(&json)
@@ -406,7 +373,6 @@ pub fn compile(
             FileData {
                 cname: cname_data,
                 content,
-                browserconfig: browserconfig_data,
                 human: human_data,
                 json: json_data,
                 name: file.name,
@@ -442,8 +408,6 @@ pub fn compile(
 
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
-            let browserconfig_file =
-                build_dir_path.join("browserconfig.xml");
             let cname_file = build_dir_path.join("CNAME");
             let html_file = build_dir_path.join("index.html");
             let human_file = build_dir_path.join("humans.txt");
@@ -456,7 +420,6 @@ pub fn compile(
 
             fs::copy(&template_path.join("main.js"), &main_file)?;
             fs::copy(&template_path.join("sw.js"), &sw_file)?;
-            fs::write(&browserconfig_file, &file.browserconfig)?;
             fs::write(&cname_file, &file.cname)?;
             fs::write(&html_file, &file.content)?;
             fs::write(&human_file, &file.human)?;

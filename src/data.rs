@@ -48,8 +48,6 @@ pub struct FileData {
     pub content: String,
     /// The content of the file, escaped for CNAME.
     pub cname: String,
-    /// The content of the file, escaped for browserconfig.
-    pub browserconfig: String,
     /// The content of the file, escaped for JSON.
     pub json: String,
     /// The content of the file, escaped for HUMANS.
@@ -69,7 +67,6 @@ impl FileData {
             name,
             content,
             cname: String::new(),
-            browserconfig: String::new(),
             json: String::new(),
             human: String::new(),
             rss: String::new(),
@@ -221,7 +218,7 @@ pub struct HumansData {
     pub site_standards: String,
     /// A string representing the site components of the web app
     pub site_components: String,
-    /// A string representingthe site software of the web app
+    /// A string representing the site software of the web app
     pub site_software: String,
 }
 
