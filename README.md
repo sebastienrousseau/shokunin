@@ -174,7 +174,7 @@ To use the `Shokunin (職人) Static Site Generator` library in your project, ad
 
 ```toml
 [dependencies]
-shokunin = "0.0.14"
+shokunin = "0.0.15"
 ```
 
 Add the following to your `main.rs` file:

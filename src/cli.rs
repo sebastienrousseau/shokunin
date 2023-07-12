@@ -44,7 +44,7 @@ pub fn build() -> Result<ArgMatches, Error> {
         .author("Sebastien Rousseau")
         .about("")
         .bin_name("ssg")
-        .version("0.0.14")
+        .version("0.0.15")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
