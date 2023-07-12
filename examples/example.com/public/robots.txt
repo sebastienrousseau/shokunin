@@ -1,2 +1,0 @@
-User-agent: *
-Sitemap: https://kaishi.one/sitemap.xml
