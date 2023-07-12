@@ -38,6 +38,7 @@ mod tests {
         let response = String::from_utf8(buffer).unwrap();
 
         assert!(response.contains("200 OK"));
+        assert!(response.contains("Content-Type: text/html"));
         assert!(response.contains("Hello, world!"));
     }
 }
