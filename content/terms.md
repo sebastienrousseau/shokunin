@@ -111,13 +111,13 @@ These Terms and Conditions of Use (the "Terms of Use") apply to the Shokunin
 BY USING THE SITE, YOU AGREE TO THESE TERMS OF USE; IF YOU DO NOT AGREE, DO NOT
 USE THE SITE.
 
-## Intellectual Property
+### Intellectual Property
 
 The Website and its original content, features, and functionality are and will
 remain the exclusive property of Kaishi. This Website is protected by
 United States and international copyright, trademark, and other laws.
 
-## Links to Other Sites and to the Kaishi Site
+### Links to Other Sites and to the Kaishi Site
 
 Our Website may contain links to third-party Web sites ("Linked Sites") or
 services that are not owned or controlled by Kaishi. These Linked
@@ -128,7 +128,7 @@ content, privacy policies, or practises of any Linked Sites or services. We do
 not warrant the offerings of any of these entities/individuals, their
 websites or services.
 
-## Limitation of Liability
+### Limitation of Liability
 
 SHOKUNIN (職人) DOES NOT PROMISE THAT THE SITE OR ANY CONTENT, SERVICE OR
 FEATURE OF THE SITE WILL BE ERROR-FREE OR UNINTERRUPTED, OR THAT ANY DEFECTS

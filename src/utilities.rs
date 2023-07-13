@@ -423,6 +423,13 @@ pub fn format_header_with_id_class(
     let mut id_attribute_added = false;
     let mut class_attribute_added = false;
 
+    let re = Regex::new(r"</?[^>]+>").unwrap();
+    let text_only = re.replace_all(header_str, "");
+    let re = Regex::new(r"^<(\w+)").unwrap();
+    let captures = re.captures(header_str);
+    let header_type = captures.map_or("", |cap| cap.get(1).map_or("", |m| m.as_str())).to_lowercase();
+    let first_word = text_only.split(|c: char| !c.is_alphanumeric()).next().unwrap_or("").to_lowercase();
+
     for c in header_str.chars() {
         if !in_header_tag {
             formatted_header_str.push(c);
@@ -432,33 +439,20 @@ pub fn format_header_with_id_class(
         } else {
             if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
-                    " id=\"{}\"",
+                    " id=\"{}-{}\"",
+                    header_type,
                     id_regex
-                        .replace_all(&header_str.to_lowercase(), "-")
-                        .trim_matches('-')
-                        .trim_end_matches("-h1")
-                        .trim_end_matches("-h2")
-                        .trim_end_matches("-h3")
-                        .trim_end_matches("-h4")
-                        .trim_end_matches("-h5")
-                        .trim_end_matches("-h6")
+                        .replace_all(&first_word, "-")
                 ));
-                id_attribute_added = true;
+                id_attribute_added = false;
             }
             if !class_attribute_added && c == '>' {
+                let class_value = format!("{}", id_regex.replace_all(&first_word, "-"));
                 formatted_header_str.push_str(&format!(
                     " class=\"{}\"",
-                    id_regex
-                        .replace_all(&header_str.to_lowercase(), "-")
-                        .trim_matches('-')
-                        .trim_end_matches("-h1")
-                        .trim_end_matches("-h2")
-                        .trim_end_matches("-h3")
-                        .trim_end_matches("-h4")
-                        .trim_end_matches("-h5")
-                        .trim_end_matches("-h6")
+                    class_value.replace("-", "-")
                 ));
-                class_attribute_added = true;
+                class_attribute_added = false;
             }
             formatted_header_str.push(c);
             if c == '>' {
@@ -468,6 +462,7 @@ pub fn format_header_with_id_class(
     }
     formatted_header_str
 }
+
 
 /// Extracts the front matter from the given content.
 ///

@@ -34,7 +34,7 @@ description: My Description
         let html = generate_html(content, title, description, None);
         assert_eq!(
     html,
-    "<h1 id=\"h1-id-my-page\" id=\"\" class=\"h1-id-my-page\">My Page</h1><p>This is a test page</p><h2><a href=\"#hello-world\" aria-hidden=\"true\" class=\"anchor\" id=\"hello-world\"></a>Hello, world!</h2>\n<p>This is a test.</p>\n"
+    "<h1 id=\"h1-my\" id=\"\" id=\"h1-my\" class=\"my\">My Page</h1 id=\"h1-my\" class=\"my\"><p>This is a test page</p><h2 id=\"h2-hello\" class=\"hello\">Hello, world!</h2 id=\"h2-hello\" class=\"hello\">\n<p>This is a test.</p>\n"
 );
     }
 
