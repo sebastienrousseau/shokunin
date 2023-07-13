@@ -14,7 +14,7 @@ copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
 description: "Everything You Need to Build a Stunning Website." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+hreflang: "en" ## The hreflang of the site. (default: en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
@@ -46,15 +46,15 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin (職人) 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.14)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
-item_pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+item_pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 item_title: "RSS"
-last_build_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+last_build_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 managing_editor: jane.doe@kaishi.one
-pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
@@ -70,14 +70,7 @@ apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
-## msapplication - The MS Application config of the page.
-msapplication-config: "/browserconfig.xml"
-## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication-tap-highlight: "no"
-## msapplication - The MS Application tile color of the page.
-msapplication-TileColor: "rgb(143, 250, 111)"
-## msapplication_tile_image - The MS Application tile image of the page.
-msapplication-tile-image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
+msapplication-navbutton-color: "rgb(143, 250, 111)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
@@ -94,7 +87,7 @@ twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
 twitter_site: "janedoe"
 ## twitter_title - The Twitter Card title of the page.
-twitter_title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template"
+twitter_title: "Kaishi, a Shokunin Static Site Generator Starter Template"
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: "https://kaishi.one"
 
@@ -116,7 +109,7 @@ All the starter templates, whether pages or websites are built from scratch
 using the same principles and features. This means that you can easily mix and
 match them together to create your own custom layouts and content.
 
-Get started with Shokunin (職人) using any of our Starter Templates for building
+Get started with Shokunin using any of our Starter Templates for building
 your website or web application.
 
 **Kaishi Starter Templates** has the following features enabled:

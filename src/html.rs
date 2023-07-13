@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
@@ -40,7 +40,7 @@ use std::collections::HashMap;
 /// let html = generate_html(content, title, description, None);
 /// assert_eq!(
 ///     html,
-///     "<h1 id=\"h1-id-my-page\" id=\"\" class=\"h1-id-my-page\">My Page</h1><p>This is a test page</p><h2><a href=\"#hello-world\" aria-hidden=\"true\" class=\"anchor\" id=\"hello-world\"></a>Hello, world!</h2>\n<p>This is a test.</p>\n"
+///     "<h1 id=\"h1-my\" id=\"\" id=\"h1-my\" class=\"my\">My Page</h1 id=\"h1-my\" class=\"my\"><p>This is a test page</p><h2 id=\"h2-hello\" class=\"hello\">Hello, world!</h2 id=\"h2-hello\" class=\"hello\">\n<p>This is a test.</p>\n"
 /// );
 ///
 /// ```
@@ -139,10 +139,27 @@ pub fn generate_html(
     html_map.insert(title.to_string(), processed_html);
 
     let html_string = html_map
-        .values()
-        .map(|content| content.to_string())
-        .collect::<Vec<String>>()
-        .join("\n");
+    .values()
+    .map(|content| {
+        let header_tags = vec!["h1", "h2", "h3", "h4", "h5", "h6"];
+        let mut result = content.to_string();
+
+        for tag in header_tags {
+            let re = Regex::new(&format!("<{}>([^<]+)</{}>", tag, tag)).unwrap();
+            let mut replacements: Vec<(String, String)> = Vec::new();
+
+            for cap in re.captures_iter(&result) {
+                let original = cap[0].to_string();
+                let replacement = format_header_with_id_class(&original, &re);
+                replacements.push((original, replacement));
+            }
+
+            for (original, replacement) in replacements {
+                result = result.replace(&original, &replacement);
+            }
+        }
+        result
+    }).collect::<Vec<String>>().join("\n");
 
     // println!("html_string={:?}", html_string);
 

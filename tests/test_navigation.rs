@@ -7,7 +7,6 @@ mod tests {
         // Create sample FileData items
         let files = vec![
             FileData {
-                browserconfig: "".to_string(),
                 cname: "".to_string(),
                 content: "".to_string(),
                 human: "".to_string(),
@@ -18,7 +17,6 @@ mod tests {
                 txt: "".to_string(),
             },
             FileData {
-                browserconfig: "".to_string(),
                 cname: "".to_string(),
                 content: "".to_string(),
                 human: "".to_string(),
@@ -29,7 +27,6 @@ mod tests {
                 txt: "".to_string(),
             },
             FileData {
-                browserconfig: "".to_string(),
                 cname: "".to_string(),
                 content: "".to_string(),
                 human: "".to_string(),

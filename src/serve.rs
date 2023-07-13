@@ -1,6 +1,7 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
@@ -95,6 +96,24 @@ pub fn handle_connection(
 
     let request = String::from_utf8_lossy(&buffer[..bytes_read]);
     let request_line = request.lines().next().unwrap_or("");
+
+    if request_line == "manifest.json" {
+        let manifest_path = Path::new(document_root).join(request_line);
+
+        let manifest_content = fs::read_to_string(manifest_path)
+            .unwrap_or_else(|_| String::from("File not found"));
+
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{}",
+            manifest_content
+        );
+
+        stream.write_all(response.as_bytes())?;
+        stream.flush()?;
+        return Ok(());
+    }
+
+
     let mut request_parts = request_line.split_whitespace();
 
     let (_method, path, _version) = match (
@@ -131,15 +150,24 @@ pub fn handle_connection(
         return Ok(());
     }
 
-    let (status_line, contents) = if canonical_requested_path.exists() {
+    let (status_line, content_type, contents) = if canonical_requested_path.exists() {
+        let content_type = match requested_path.extension().and_then(std::ffi::OsStr::to_str) {
+            Some("html") => "text/html",
+            Some("css") => "text/css",
+            Some("js") => "application/javascript",
+            _ => "text/plain", // default to plain text
+        };
+
         (
-            "HTTP/1.1 200 OK\r\n\r\n",
+            "HTTP/1.1 200 OK\r\n",
+            content_type,
             std::fs::read_to_string(&canonical_requested_path)
                 .unwrap_or_default(),
         )
     } else {
         (
-            "HTTP/1.1 404 NOT FOUND\r\n\r\n",
+            "HTTP/1.1 404 NOT FOUND\r\n",
+            "text/html",
             std::fs::read_to_string(
                 canonical_document_root.join("404/index.html"),
             )
@@ -148,6 +176,11 @@ pub fn handle_connection(
     };
 
     if let Err(e) = stream.write_all(status_line.as_bytes()) {
+        eprintln!("Error writing to stream: {}", e);
+        return Err(e);
+    }
+
+    if let Err(e) = stream.write_all(format!("Content-Type: {}\r\n\r\n", content_type).as_bytes()) {
         eprintln!("Error writing to stream: {}", e);
         return Err(e);
     }
@@ -164,3 +197,4 @@ pub fn handle_connection(
 
     Ok(())
 }
+

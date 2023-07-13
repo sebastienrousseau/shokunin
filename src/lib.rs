@@ -1,9 +1,9 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //!
-//! # Shokunin (職人) Static Site Generator
+//! # Shokunin Static Site Generator
 //!
-//! [![Shokunin (職人) Static Site Generator Logo](https://kura.pro/shokunin/images/banners/banner-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
+//! [![Shokunin Static Site Generator Logo](https://kura.pro/shokunin/images/banners/banner-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
 //!
 //! A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 //!
@@ -16,13 +16,13 @@
 //!
 //! ## Overview 📖
 //!
-//! `Shokunin (職人) Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+//! `Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 //!
 //! The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 //!
 //! ## Features ✨
 //!
-//! `Shokunin (職人) Static Site Generator` feature highlights include:
+//! `Shokunin Static Site Generator` feature highlights include:
 //!
 //! - Blazing fast and flexible static site generator written in Rust 🦀
 //! - Built-in support for [GitHub Flavored Markdown][1] (GFM).
@@ -38,9 +38,9 @@
 //!
 //! ### Command Line Interface (CLI)
 //!
-//! The `Shokunin (職人) Static Site Generator` library runs in a Terminal window and can be used to generate a static website.
+//! The `Shokunin Static Site Generator` library runs in a Terminal window and can be used to generate a static website.
 //!
-//! Here’s the first command you can enter in your Terminal window to run `Shokunin (職人) Static Site Generator`:
+//! Here’s the first command you can enter in your Terminal window to run `Shokunin Static Site Generator`:
 //!
 //! ```shell
 //! ssg  --new=mysite --content=content --template=template --output=output --serve=public
@@ -64,11 +64,11 @@
 //!
 //! ### In your project
 //!
-//! To use the `Shokunin (職人) Static Site Generator` library in your project, add the following to your `Cargo.toml` file:
+//! To use the `Shokunin Static Site Generator` library in your project, add the following to your `Cargo.toml` file:
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.14"
+//! shokunin = "0.0.15"
 //! ```
 //!
 //! Add the following to your `main.rs` file:
@@ -90,11 +90,11 @@
 //! }
 //! ```
 //!
-//! then you can use the `Shokunin (職人) Static Site Generator` functions in your application code.
+//! then you can use the `Shokunin Static Site Generator` functions in your application code.
 //!
 //! ### Examples
 //!
-//! To get started with `Shokunin (職人) Static Site Generator`, you can use the examples provided in the `examples` directory of the project.
+//! To get started with `Shokunin Static Site Generator`, you can use the examples provided in the `examples` directory of the project.
 //!
 //! To run the examples, clone the repository and run the following command in your terminal from the project root directory.
 //!

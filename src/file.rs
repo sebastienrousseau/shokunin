@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::data::FileData;
@@ -52,14 +52,12 @@ pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
                     );
                     String::new()
                 });
-            let txt = escape(&content).to_string();
-            let human = escape(&content).to_string();
-            let browserconfig = escape(&content).to_string();
             let cname = escape(&content).to_string();
+            let human = escape(&content).to_string();
             let sitemap = escape(&content).to_string();
+            let txt = escape(&content).to_string();
 
             FileData {
-                browserconfig,
                 cname,
                 content,
                 json,

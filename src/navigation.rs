@@ -85,7 +85,7 @@ pub fn generate_navigation(files: &[FileData]) -> String {
     }).collect::<Vec<_>>().join("\n");
 
     format!(
-        "<ul role=\"navigation\" class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
+        "<ul class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
         nav_links
     )
 }

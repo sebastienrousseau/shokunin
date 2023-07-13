@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::{
@@ -9,7 +9,7 @@ use std::{
 use serde_json::{json, Map};
 
 use crate::data::{
-    BrowserConfigData, CnameData, HumansData, ManifestData,
+    CnameData, HumansData, ManifestData,
     SitemapData, TxtData,
 };
 
@@ -65,37 +65,6 @@ pub fn cname(options: &CnameData) -> String {
     let full_domain = format!("www.{}", cname_value);
     let base_domain = cname_value;
     format!("{}\n{}", base_domain, full_domain)
-}
-
-/// ## Function: `browserconfig` - Generate a browserconfig.xml for a web app
-pub fn browserconfig(options: &BrowserConfigData) -> String {
-    let mut s = format!(
-        r#"<?xml version="1.0" encoding="utf-8"?>
-        <browserconfig>
-            <msapplication>
-                <tile>
-                    <square70x70logo src="{}"/>
-                    <square150x150logo src="{}"/>
-                    <square310x310logo src="{}"/>
-                    <wide310x150logo src="{}"/>
-                    <TileColor>rgb({})</TileColor>
-                </tile>
-            </msapplication>
-        </browserconfig>"#,
-        options.icon,
-        options.icon,
-        options.icon,
-        options.icon,
-        options.theme_color
-    );
-
-    s = s
-        .lines()
-        .map(|line| line.trim())
-        .collect::<Vec<&str>>()
-        .join("");
-
-    s
 }
 
 /// ## Function: `human` - Generate a humans.txt for a web app

@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 /// # `macro_check_directory` Macro
@@ -20,7 +20,7 @@
 /// * `$dir` - The path to check, as a `std::path::Path`.
 /// * `$name` - A string literal representing the directory name. This is used in error messages.
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_check_directory` macro checks if the directory specified by `$dir` exists. If it exists and is not a directory, a panic with an error message is triggered. If the directory doesn't exist, the macro attempts to create it using `std::fs::create_dir_all($dir)`. If the creation is successful, no action is taken. If an error occurs during the directory creation, a panic is triggered with an error message indicating the failure.
 ///
@@ -65,7 +65,7 @@ macro_rules! macro_check_directory {
 ///
 /// * `$( $dir:expr ),*` - A comma-separated list of directory paths to clean up.
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_cleanup_directories` macro takes multiple directory paths as arguments and invokes the `cleanup_directory` function for each path. It is assumed that the `cleanup_directory` function is available in the crate's utilities module (`$crate::utilities::cleanup_directory`).
 ///
@@ -109,7 +109,7 @@ macro_rules! macro_cleanup_directories {
 ///
 /// * `...` - Variable number of directory paths, each specified as an expression (`expr`).
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_create_directories` macro creates multiple directories at once. It takes a variable number of directory paths as arguments and uses the `create_directory` utility function from the `$crate` crate to create the directories.
 ///
@@ -160,7 +160,7 @@ macro_rules! macro_create_directories {
 ///
 /// * `($key:literal, $value:expr)...` - Pairs of a literal key and an expression value, each specified as `literal, expr`. The pairs should be separated by commas.
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_generate_metatags` macro generates metatags using the provided keys and values. It takes pairs of literal keys and expression values and uses the `generate_metatags` function to create the metatags.
 ///
@@ -216,7 +216,7 @@ macro_rules! macro_generate_metatags {
 /// * `$matches` - A `clap::ArgMatches` object representing the parsed command-line arguments.
 /// * `$name` - A string literal specifying the name of the argument to retrieve.
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_get_args` macro retrieves the value of the named argument `$name` from the `$matches` object. If the argument is found and its value can be converted to `String`, the macro returns the value as a `Result<String, String>`. If the argument is not found or its value cannot be converted to `String`, an `Err` variant is returned with an error message indicating the omission of the required parameter.
 ///
@@ -258,7 +258,7 @@ macro_rules! macro_get_args {
 /// * `$metadata` - A mutable variable that represents the metadata (of type `HashMap<String, String>` or any other type that supports the `get` and `cloned` methods).
 /// * `$key` - A string literal that represents the key to search for in the metadata.
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_metadata_option` macro is used to extract an option value from metadata. It takes a mutable variable representing the metadata and a string literal representing the key as arguments, and uses the `get` method of the metadata to find an option value with the specified key.
 ///
@@ -319,7 +319,7 @@ macro_rules! macro_render_layout {
 /// * `$server_address` - The address at which the server should listen, specified as an expression (`expr`).
 /// * `$document_root` - The root directory of the documents that the server should serve, specified as an expression (`expr`).
 ///
-/// ## Behavior
+/// ## Behaviour
 ///
 /// The `macro_serve` macro starts a server at the specified address with the given document root. It internally calls the `start` function from an unspecified library, passing the server address and document root as arguments.
 ///

@@ -15,7 +15,7 @@ description: "You can contact us using the contact form below." ## The descripti
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 form-id: "https://formspree.io/f/meqwylbe" ## The form id of the site.
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+hreflang: "en" ## The hreflang of the site. (default: en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
@@ -47,15 +47,15 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/contact/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin (職人) 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.14)"
 item_description: RSS feed for the contact page of the Kaishi website.
 item_guid: https://kaishi.one/contact/rss.xml
 item_link: https://kaishi.one/contact/rss.xml
-item_pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+item_pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 item_title: "Contact Us"
-last_build_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+last_build_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 managing_editor: jane.doe@kaishi.one
-pub_date: "Sun, 09 Jul 2023 09:09:09 GMT"
+pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
@@ -71,14 +71,7 @@ apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
-## msapplication - The MS Application config of the page.
-msapplication-config: "/browserconfig.xml"
-## msapplication_tap_highlight - The MS Application tap highlight of the page.
-msapplication-tap-highlight: "no"
-## msapplication - The MS Application tile color of the page.
-msapplication-TileColor: "rgb(143, 250, 111)"
-## msapplication_tile_image - The MS Application tile image of the page.
-msapplication-tile-image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
+msapplication-navbutton-color: "rgb(143, 250, 111)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
