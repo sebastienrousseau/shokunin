@@ -109,7 +109,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin 🦀 (version 0.0.14)";
+    let title = "Shokunin 🦀 (v0.0.14)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
 
@@ -121,7 +121,7 @@ pub fn print_banner() {
 
     // Print the title and description in a box
     println!("\n┌{}┐", horizontal_line);
-    println!("│{: ^1$}│", title, width - 5);
+    println!("│{: ^1$}│", title, width - 3);
     println!("├{}┤", horizontal_line);
     println!("│{: ^1$}│", description, width - 2);
     println!("└{}┘\n", horizontal_line);
