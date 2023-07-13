@@ -100,7 +100,7 @@ pub fn handle_connection(
     if request_line == "manifest.json" {
         let manifest_path = Path::new(document_root).join(request_line);
 
-        let manifest_content = fs::read_to_string(&manifest_path)
+        let manifest_content = fs::read_to_string(manifest_path)
             .unwrap_or_else(|_| String::from("File not found"));
 
         let response = format!(
