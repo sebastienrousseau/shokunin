@@ -450,7 +450,7 @@ pub fn format_header_with_id_class(
                 let class_value = format!("{}", id_regex.replace_all(&first_word, "-"));
                 formatted_header_str.push_str(&format!(
                     " class=\"{}\"",
-                    class_value.replace("-", "-")
+                    class_value
                 ));
                 class_attribute_added = false;
             }

@@ -151,7 +151,7 @@ pub fn generate_html(
             for cap in re.captures_iter(&result) {
                 let original = cap[0].to_string();
                 let replacement = format_header_with_id_class(&original, &re);
-                replacements.push((original, replacement.replace("-", "-")));
+                replacements.push((original, replacement));
             }
 
             for (original, replacement) in replacements {
