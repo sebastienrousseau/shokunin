@@ -15,7 +15,7 @@ description: "You can contact us using the contact form below." ## The descripti
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 form-id: "https://formspree.io/f/meqwylbe" ## The form id of the site.
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+hreflang: "en" ## The hreflang of the site. (default: en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.

@@ -14,7 +14,7 @@ copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
 description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+hreflang: "en" ## The hreflang of the site. (default: en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.

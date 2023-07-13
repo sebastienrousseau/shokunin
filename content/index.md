@@ -14,7 +14,7 @@ copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
 description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
-hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
+hreflang: "en" ## The hreflang of the site. (default: en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
@@ -39,7 +39,8 @@ short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
-url: "https://kaishi.one" ## The url of the site.
+# url: "https://kaishi.one" ## The url of the site.
+url: "http://127.0.0.1:8000/" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # RSS - The RSS feed front matter (YAML).
