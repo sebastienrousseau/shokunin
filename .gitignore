@@ -2,6 +2,7 @@
 *.profraw
 /.vscode/
 /examples/public/
+/mysite/
 /output/
 /public/
 /target/

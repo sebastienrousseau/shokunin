@@ -11,7 +11,7 @@ cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
-description: "Make beautiful websites with Kaishi, a Shokunin (職人) Static Site Generator starter template." ## The description of the site. (max 160 characters)
+description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 hreflang: "en-gb" ## The hreflang of the site. (default: en-gb)
@@ -38,7 +38,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
-title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
+title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
@@ -46,7 +46,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin (職人) 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.14)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -79,7 +79,7 @@ twitter_card: "summary"
 ## twitter_creator - The Twitter Card creator of the page.
 twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
-twitter_description: "Make beautiful websites with Kaishi, a Shokunin (職人) Static Site Generator Starter Template."
+twitter_description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator Starter Template."
 ## twitter_image - The Twitter Card image of the page.
 twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
@@ -87,7 +87,7 @@ twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
 twitter_site: "janedoe"
 ## twitter_title - The Twitter Card title of the page.
-twitter_title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template"
+twitter_title: "Kaishi, a Shokunin Static Site Generator Starter Template"
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: "https://kaishi.one"
 
@@ -106,7 +106,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ## Overview
 
-Kaishi is a minimalist and modern [Shokunin (職人) static website generator ⧉][0]
+Kaishi is a minimalist and modern [Shokunin static website generator ⧉][0]
 starter template designed for professionals who value simplicity and elegance.
 With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
 solution for those looking to showcase their work and services online. Built on
@@ -119,7 +119,7 @@ the perfect foundation for your online presence. With its minimalist design,
 Kaishi is the ultimate website starter template for modern and professional
 websites.
 
-This page is an example for the Shokunin (職人) static website generator. You
+This page is an example for the Shokunin static website generator. You
 can use it as a template for your website or blog. It uses a markdown template
 for the content and a custom HTML theme for the layout.
 

@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin (職人) Static Site Generator. All rights reserved.
+// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
@@ -563,7 +563,7 @@ pub fn create_comrak_options() -> comrak::ComrakOptions {
     options.extension.front_matter_delimiter = Some("---".to_owned());
 
     // Enables automatic generation of ID attributes for each header in the Markdown source.
-    options.extension.header_ids = Some("".to_string());
+    // options.extension.header_ids = Some("".to_string());
 
     // Enables creation of strikethrough text in the Markdown source.
     options.extension.strikethrough = true;

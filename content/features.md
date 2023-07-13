@@ -46,7 +46,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin (職人) 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.14)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -87,7 +87,7 @@ twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
 twitter_site: "janedoe"
 ## twitter_title - The Twitter Card title of the page.
-twitter_title: "Kaishi, a Shokunin (職人) Static Site Generator Starter Template"
+twitter_title: "Kaishi, a Shokunin Static Site Generator Starter Template"
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: "https://kaishi.one"
 
@@ -109,7 +109,7 @@ All the starter templates, whether pages or websites are built from scratch
 using the same principles and features. This means that you can easily mix and
 match them together to create your own custom layouts and content.
 
-Get started with Shokunin (職人) using any of our Starter Templates for building
+Get started with Shokunin using any of our Starter Templates for building
 your website or web application.
 
 **Kaishi Starter Templates** has the following features enabled:

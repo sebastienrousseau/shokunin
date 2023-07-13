@@ -2,7 +2,7 @@
 
 <img
   align="right"
-  alt="Logo of the Shokunin (職人) Static Site Generator"
+  alt="Logo of the Shokunin Static Site Generator"
   height="261"
   src="https://kura.pro/shokunin/images/logos/shokunin.svg"
   width="261"
@@ -10,7 +10,7 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin (職人) Static Site Generator v0.0.14 🦀
+# Shokunin Static Site Generator v0.0.14 🦀
 
 A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 
@@ -20,7 +20,7 @@ A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 <center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-![Banner of the Shokunin (職人) Static Site Generator][banner]
+![Banner of the Shokunin Static Site Generator][banner]
 
 [![Made With Rust][made-with-rust-badge]][14] [![Crates.io][crates-badge]][8] [![Lib.rs][libs-badge]][10] [![Docs.rs][docs-badge]][9] [![License][license-badge]][3] [![Codecov][codecov-badge]][15]
 
@@ -34,13 +34,13 @@ A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 
 ## Overview 📖
 
-`Shokunin (職人) Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+`Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
 ## Features ✨
 
-`Shokunin (職人) Static Site Generator` feature highlights include:
+`Shokunin Static Site Generator` feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust 🦀
 - Built-in support for [GitHub Flavored Markdown][12] (GFM).
@@ -53,7 +53,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 - Built-in support for sitemap generation, robots.txt generation, canonical name (CNAME) records and custom 404 pages.
 
 [0]: https://minifunctions.com/ "Mini Functions"
-[1]: https://shokunin.one "Shokunin (職人) Static Site Generator"
+[1]: https://shokunin.one "Shokunin Static Site Generator"
 [3]: http://opensource.org/licenses/MIT "MIT license"
 [4]: https://github.com/sebastienrousseau/shokunin/issues "Issues"
 [5]: https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md "Contributing"
@@ -64,7 +64,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 [14]: https://www.rust-lang.org/learn/get-started "Rust"
 [15]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main "Codecov"
 
-[banner]: https://kura.pro/shokunin/images/titles/title-shokunin.svg "Banner of the Shokunin (職人) Static Site Generator"
+[banner]: https://kura.pro/shokunin/images/titles/title-shokunin.svg "Banner of the Shokunin Static Site Generator"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
