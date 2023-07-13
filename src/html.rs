@@ -161,7 +161,7 @@ pub fn generate_html(
         result
     }).collect::<Vec<String>>().join("\n");
 
-    println!("html_string={:?}", html_string);
+    // println!("html_string={:?}", html_string);
 
     let json_html = if let Some(json_str) = json_content {
         format!("<p>{}</p>", json_str)
