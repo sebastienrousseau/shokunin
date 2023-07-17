@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 
 xtaskops = "0.4.2"
-anyhow = "1.0.71"
+anyhow = "1.0.72"
 
 [[bin]]
 name = "xtask"
