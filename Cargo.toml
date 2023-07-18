@@ -44,7 +44,7 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.3.11"
+clap = "4.3.15"
 comrak = "0.18.0"
 minify-html = "0.11.1"
 openssl = { version = "0.10.55", features = ["vendored"] }
