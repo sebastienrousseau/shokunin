@@ -10,7 +10,7 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator v0.0.14 🦀
+# Shokunin Static Site Generator v0.0.16 🦀
 
 A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 
@@ -43,7 +43,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 `Shokunin Static Site Generator` feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust 🦀
-- Built-in support for [GitHub Flavored Markdown][12] (GFM).
+- Built-in support for [GitHub Flavoured Markdown][12] (GFM).
 - Built-in support for Google Analytics and Bing Analytics.
 - Compatible with various HTML themes and Premium templates.
 - Generates Atom and RSS feeds for your blog posts.
@@ -52,7 +52,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 - Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML, etc.
 - Built-in support for sitemap generation, robots.txt generation, canonical name (CNAME) records and custom 404 pages.
 
-[0]: https://minifunctions.com/ "Mini Functions"
+[0]: https://minifunctions.com/ "The Rust Mini Functions"
 [1]: https://shokunin.one "Shokunin Static Site Generator"
 [3]: http://opensource.org/licenses/MIT "MIT license"
 [4]: https://github.com/sebastienrousseau/shokunin/issues "Issues"
@@ -60,7 +60,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 [8]: https://crates.io/crates/ssg "Crate.io"
 [9]: https://docs.rs/crate/ssg/ "Docs.rs"
 [10]: https://lib.rs/crates/ssg "Lib.rs"
-[12]: https://github.github.com/gfm/ "GitHub Flavored Markdown"
+[12]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
 [14]: https://www.rust-lang.org/learn/get-started "Rust"
 [15]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main "Codecov"
 
@@ -70,7 +70,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.14-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.16-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'
 
