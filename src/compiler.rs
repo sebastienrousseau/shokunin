@@ -4,20 +4,27 @@
 use crate::{
     data::{
         CnameData, FileData, HumansData, IconData,
-        ManifestData, MetatagsData, RssData, SitemapData, TxtData,
+        ManifestData, RssData, SitemapData, TagsData, TxtData,
     },
     file::add,
     frontmatter::extract,
     html::generate_html,
-    json::{cname, human, sitemap, txt},
+    json::{cname, human, sitemap, tags, txt},
     macro_cleanup_directories, macro_create_directories,
-    macro_generate_metatags, macro_metadata_option,
+    macro_metadata_option,
     navigation::generate_navigation,
     rss::generate_rss,
     template::{render_page, PageOptions},
     utilities::minify_html,
+    metatags::{
+        generate_apple_meta_tags,
+        generate_ms_meta_tags,
+        generate_og_meta_tags,
+        generate_primary_meta_tags,
+        generate_twitter_meta_tags,
+    },
 };
-use std::{error::Error, fs, path::Path};
+use std::{error::Error, fs, path::Path, collections::HashMap};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
@@ -67,133 +74,47 @@ pub fn compile(
     // Generate the HTML code for the navigation menu
     let navigation = generate_navigation(&source_files);
 
+    // The unique tags
+    let mut tag_to_urls_and_titles: HashMap<String, Vec<(String, String)>> = HashMap::new();
+
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
+
             // Extract metadata from front matter
             let metadata = extract(&file.content);
 
-            // Define the Apple metatags
-            let apple_metatags_names = [
-                "apple_mobile_web_app_orientations",
-                "apple_touch_icon_sizes",
-                "apple-mobile-web-app-capable",
-                "apple-mobile-web-app-status-bar-inset",
-                "apple-mobile-web-app-status-bar-style",
-                "apple-mobile-web-app-title",
-                "apple-touch-fullscreen",
-            ];
+            // Extract keywords and store them in a variable
+            let keywords = metadata
+                .get("keywords")
+                .map(|keywords| keywords.split(',').map(|kw| kw.trim().to_string()).collect::<Vec<_>>())
+                .unwrap_or_default();
 
-            // Loop through the Apple metatags and generate the HTML code
-            let apple_metatags: String = apple_metatags_names
-                .iter()
-                .map(|name| {
-                    let value = metadata
-                        .get(*name)
-                        .cloned()
-                        .unwrap_or_default();
-                    MetatagsData::new(name.to_string(), value)
-                        .generate()
-                })
-                .collect::<Vec<String>>()
-                .join("");
+            // Generate the HTML meta tags that are specifically designed for Apple devices and settings.
+            // This includes meta tags such as 'apple-mobile-web-app-capable' and 'apple-touch-icon'.
+            // The output is a string containing these meta tags formatted in HTML.
+            let apple_meta_tags = generate_apple_meta_tags(&metadata);
 
-            // Define the Primary metatags
-            let primary_metatags_names = [
-                "author",
-                "description",
-                "format-detection",
-                "generator",
-                "keywords",
-                "language",
-                "permalink",
-                "rating",
-                "referrer",
-                "revisit-after",
-                "robots",
-                "theme_color",
-                "title",
-                "viewport",
-            ];
+            // Generate essential HTML meta tags common to all web pages.
+            // This includes primary information like 'author', 'description', and 'viewport' settings.
+            // The output is a string containing these primary meta tags formatted in HTML.
+            let primary_meta_tags = generate_primary_meta_tags(&metadata);
 
-            // Loop through the Primary metatags and generate the HTML code
-            let primary_metatags: String = primary_metatags_names
-                .iter()
-                .map(|name| {
-                    let value = metadata
-                        .get(*name)
-                        .cloned()
-                        .unwrap_or_default();
-                    MetatagsData::new(name.to_string(), value)
-                        .generate()
-                })
-                .collect::<Vec<String>>()
-                .join("");
+            // Generate the HTML Open Graph meta tags, which are primarily used for enhancing the website's
+            // social media presence. This includes tags like 'og:title', 'og:description', and 'og:url'.
+            // The output is a string containing these Open Graph meta tags formatted in HTML.
+            let og_meta_tags = generate_og_meta_tags(&metadata);
 
-            let og_metadata = macro_generate_metatags!(
-                "og:description",
-                &macro_metadata_option!(metadata, "description"),
-                "og:image:alt",
-                &macro_metadata_option!(metadata, "image_alt"),
-                "og:image:height",
-                &macro_metadata_option!(metadata, "image_height"),
-                "og:image:width",
-                &macro_metadata_option!(metadata, "image_width"),
-                "og:image",
-                &macro_metadata_option!(metadata, "image"),
-                "og:locale",
-                &macro_metadata_option!(metadata, "locale"),
-                "og:site_name",
-                &macro_metadata_option!(metadata, "name"),
-                "og:title",
-                &macro_metadata_option!(metadata, "title"),
-                "og:type",
-                &macro_metadata_option!(metadata, "type"),
-                "og:url",
-                &macro_metadata_option!(metadata, "permalink"),
-            );
+            // Generate the HTML meta tags that are specific to Microsoft's browser features.
+            // This includes tags like 'msapplication-navbutton-color'.
+            // The output is a string containing these Microsoft-specific meta tags formatted in HTML.
+            let ms_application_meta_tags = generate_ms_meta_tags(&metadata);
 
-            // Define the Microsoft metatags
-            let msapplication_metadata_names = [
-                "msapplication-navbutton-color",
-            ];
-            // Loop through the Microsoft metatags and generate the HTML code
-            let msapplication_metatags: String =
-                msapplication_metadata_names
-                    .iter()
-                    .map(|name| {
-                        let value = metadata
-                            .get(*name)
-                            .cloned()
-                            .unwrap_or_default();
-                        MetatagsData::new(name.to_string(), value)
-                            .generate()
-                    })
-                    .collect::<Vec<String>>()
-                    .join("");
+            // Generate the HTML meta tags that are specific to Twitter cards.
+            // This includes Twitter-specific tags like 'twitter:card' and 'twitter:description'.
+            // The output is a string containing these Twitter-specific meta tags formatted in HTML.
+            let twitter_meta_tags = generate_twitter_meta_tags(&metadata);
 
-            let twitter_metadata = macro_generate_metatags!(
-                "twitter:card",
-                &macro_metadata_option!(metadata, "twitter_card"),
-                "twitter:creator",
-                &macro_metadata_option!(metadata, "twitter_creator"),
-                "twitter:description",
-                &macro_metadata_option!(metadata, "description"),
-                "twitter:image",
-                &macro_metadata_option!(metadata, "image"),
-                "twitter:image:alt",
-                &macro_metadata_option!(metadata, "image_alt"),
-                "twitter:image:height",
-                &macro_metadata_option!(metadata, "image_height"),
-                "twitter:image:width",
-                &macro_metadata_option!(metadata, "image_width"),
-                "twitter:site",
-                &macro_metadata_option!(metadata, "url"),
-                "twitter:title",
-                &macro_metadata_option!(metadata, "title"),
-                "twitter:url",
-                &macro_metadata_option!(metadata, "url"),
-            );
 
             // Generate HTML content
             let html_content = generate_html(
@@ -211,13 +132,13 @@ pub fn compile(
 
             // Adding metatags to page options for use in templates and in the
             // navigation generation
-            page_options.set("apple", &apple_metatags);
+            page_options.set("apple", &apple_meta_tags);
             page_options.set("content", &html_content);
-            page_options.set("microsoft", &msapplication_metatags);
+            page_options.set("microsoft", &ms_application_meta_tags);
             page_options.set("navigation", &navigation);
-            page_options.set("opengraph", &og_metadata);
-            page_options.set("primary", &primary_metatags);
-            page_options.set("twitter", &twitter_metadata);
+            page_options.set("opengraph", &og_meta_tags);
+            page_options.set("primary", &primary_meta_tags);
+            page_options.set("twitter", &twitter_meta_tags);
 
             let content = render_page(
                 &page_options,
@@ -373,6 +294,25 @@ pub fn compile(
                 changefreq: "weekly".to_string(),
             };
 
+            let tags_options: TagsData = TagsData {
+                titles: macro_metadata_option!(
+                    metadata,
+                    "title"
+                ),
+                descriptions: macro_metadata_option!(
+                    metadata,
+                    "description"
+                ),
+                permalinks: macro_metadata_option!(
+                    metadata,
+                    "permalink"
+                ),
+                keywords: macro_metadata_option!(
+                    metadata,
+                    "keywords"
+                ),
+            };
+
             let txt_options: TxtData = TxtData {
                 permalink: macro_metadata_option!(
                     metadata,
@@ -384,24 +324,43 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(&sitemap_options, site_path);
+            let tags_data: String = tags(&tags_options).html;
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
                     String::new()
                 });
 
+            // Return the FileData
             FileData {
                 cname: cname_data,
                 content,
+                keyword: keywords.join(", "),
                 human: human_data,
                 json: json_data,
                 name: file.name,
                 rss: rss_data,
                 sitemap: sitemap_data,
+                tags: tags_data,
                 txt: txt_data,
             }
         })
         .collect();
+
+        // Convert HashSet to Vec
+        // let mut all_keywords_vec: Vec<String> = all_keywords_set.into_iter().collect();
+        // all_keywords_vec.sort();
+
+        // let all_tags = all_keywords_vec.join(", ");  // Join all unique and sorted keywords into a single string separated by commas and spaces
+        // println!("All Tags: {:?}", all_tags);   // Print this once after all files have been processed
+
+        // Generate HTML for all_tags
+        // let all_tags_html = format!("<div id=\"all-tags\">\n<h2>All Tags:</h2>\n<p>{}</p>\n</div>", all_tags);
+        // final_html_tags.push_str(&all_tags_html);
+
+
+    // println!("Tags: {:?}", unique_tags);
+    // generate_tags(&compiled_files, &unique_tags.iter().map(|tag| tag.as_str()).collect::<Vec<&str>>());
 
     // Generate the HTML code for the navigation menu
     generate_navigation(&compiled_files);
@@ -426,6 +385,23 @@ pub fn compile(
             _ => file.name.to_string(),
         };
 
+        let tags = file.keyword.split(','); // Split by comma
+        for tag in tags {
+            let tag = tag.trim().to_lowercase(); // Remove whitespace and convert to lowercase
+            let title = &file_name; // Assume `file.title` contains the title of the page
+            let file_name_without_extension = Path::new(&file.name)
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap();
+            let url = if file_name_without_extension == "index" {
+                "/index.html".to_string() // Special case for the index page
+            } else {
+                format!("/{}/index.html", file_name_without_extension) // Generate URLs pointing to HTML files
+            };
+            tag_to_urls_and_titles.entry(tag).or_insert_with(Vec::new).push((url, title.clone()));
+        }
+
         // Check if the filename is "index.md" and write it to the root directory
         if file_name == "index" {
             let cname_file = build_dir_path.join("CNAME");
@@ -435,6 +411,7 @@ pub fn compile(
             let main_file = build_dir_path.join("main.js");
             let robots_file = build_dir_path.join("robots.txt");
             let rss_file = build_dir_path.join("rss.xml");
+            let tags_file = build_dir_path.join("tags.html");
             let sitemap_file = build_dir_path.join("sitemap.xml");
             let sw_file = build_dir_path.join("sw.js");
 
@@ -447,6 +424,7 @@ pub fn compile(
             fs::write(&robots_file, &file.txt)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&sitemap_file, &file.sitemap)?;
+            fs::write(&tags_file, &file.tags)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -465,6 +443,7 @@ pub fn compile(
             println!("  - {}", rss_file.display());
             println!("  - {}", sitemap_file.display());
             println!("  - {}", sw_file.display());
+            println!("  - {}", tags_file.display());
         } else {
             let dir_name = build_dir_path.join(file_name.clone());
             fs::create_dir_all(&dir_name)?;
@@ -474,12 +453,14 @@ pub fn compile(
             let robots_file = dir_name.join("robots.txt");
             let rss_file = dir_name.join("rss.xml");
             let sitemap_file = dir_name.join("sitemap.xml");
+            let tags_file = dir_name.join("tags.html");
 
             fs::write(&html_file, &file.content)?;
             fs::write(&json_file, &file.json)?;
             fs::write(&robots_file, &file.txt)?;
             fs::write(&rss_file, &file.rss)?;
             fs::write(&sitemap_file, &file.sitemap)?;
+            fs::write(&tags_file, &file.tags)?;
 
             // Create a backup of the source html file
             // let backup_file = backup_file(&html_file)?;
@@ -494,8 +475,36 @@ pub fn compile(
             println!("  - {}", robots_file.display());
             println!("  - {}", rss_file.display());
             println!("  - {}", sitemap_file.display());
+            println!("  - {}", tags_file.display());
         }
     }
+
+    let mut final_html_tags = String::new();
+    final_html_tags.push_str("<div id=\"all-tags\">\n<h2>All Tags</h2>\n");
+
+    // 1. Convert the keys to a Vec
+    let mut tags: Vec<_> = tag_to_urls_and_titles.keys().collect();
+
+
+    // 2. Sort the Vec
+    tags.sort();
+
+    // 3. Iterate over the sorted Vec
+    for tag in tags {
+        if let Some(urls_and_titles) = tag_to_urls_and_titles.get(tag) {  // Look up URLs and titles in HashMap
+            let count = urls_and_titles.len();  // Get the number of pages for this tag
+            let tag_url = format!("/tags/{}/index.html", tag);  // Generate the URL for this tag's page
+            final_html_tags.push_str(&format!("<h3><a href=\"{}\">{} ({})</a></h3>\n<ul>\n", tag_url, tag, count));
+            for (url, title) in urls_and_titles {
+                final_html_tags.push_str(&format!("<li><a href=\"{}\">{}</a></li>\n", url, title));
+            }
+            final_html_tags.push_str("</ul>\n");
+        }
+    }
+
+    final_html_tags.push_str("</div>\n");
+
+    fs::write(build_dir_path.join("tags.html"), &final_html_tags)?;
 
     // Remove the site directory if it exists
     macro_cleanup_directories!(site_path);

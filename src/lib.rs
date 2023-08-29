@@ -190,6 +190,8 @@ pub mod process;
 pub mod rss;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
+/// The `tags` module generates the tag list.
+pub mod tags;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;

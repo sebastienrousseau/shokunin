@@ -21,7 +21,7 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "Sample, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
+keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "index" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.

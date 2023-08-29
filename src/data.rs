@@ -34,10 +34,14 @@ pub struct FileData {
     pub json: String,
     /// The content of the file, escaped for HUMANS.
     pub human: String,
+    /// The content of the file, escaped for keywords.
+    pub keyword: String,
     /// The content of the file, escaped for RSS.
     pub rss: String,
     /// The content of the file, escaped for sitemap.
     pub sitemap: String,
+    /// The content of the file, escaped for tags.
+    pub tags: String,
     /// The content of the file, escaped for TXT.
     pub txt: String,
 }
@@ -51,9 +55,51 @@ impl FileData {
             cname: String::new(),
             json: String::new(),
             human: String::new(),
+            keyword: String::new(),
             rss: String::new(),
             sitemap: String::new(),
+            tags: String::new(),
             txt: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+/// Options for the `tags` function
+pub struct TagsData {
+    /// A string representing the title of the web app
+    pub titles: String,
+    /// A string representing the description of the web app
+    pub descriptions: String,
+    /// A string representing the permalink of the web app
+    pub permalinks: String,
+    /// A string representing the keywords of the web app
+    pub keywords: String,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+/// Define a new struct to hold the return data
+pub struct TagsResult {
+    /// Stores the titles of the tags
+    pub titles: Vec<String>,
+    /// Stores the descriptions of the tags
+    pub descriptions: Vec<String>,
+    /// Stores the permalinks of the tags
+    pub permalinks: Vec<String>,
+    /// Stores the keywords of the tags
+    pub keywords: Vec<String>,
+    /// Stores the html of the tags
+    pub html: String,
+}
+
+impl TagsData {
+    /// Creates a new `TagsData` struct with the given title, description, permalink, and keywords.
+    pub fn new(titles: String, descriptions: String, permalinks: String, keywords: String) -> Self {
+        TagsData {
+            titles,
+            descriptions,
+            permalinks,
+            keywords,
         }
     }
 }
