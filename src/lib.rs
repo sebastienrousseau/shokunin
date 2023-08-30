@@ -174,6 +174,9 @@ pub mod frontmatter;
 pub mod html;
 /// The `json` module generates the JSON content.
 pub mod json;
+
+/// The `keywords` module contains functions for extracting keywords.
+pub mod keywords;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
 /// The `metatags` module generates the meta tags.

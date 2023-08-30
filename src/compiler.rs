@@ -10,6 +10,7 @@ use crate::{
     frontmatter::extract,
     html::generate_html,
     json::{cname, human, sitemap, tags, txt},
+    keywords::extract_keywords,
     macro_cleanup_directories,
     macro_create_directories,
     macro_metadata_option,
@@ -80,67 +81,66 @@ pub fn compile(
     // The unique tags
     let mut tag_to_urls_and_titles: HashMap<String, Vec<(String, String)>> = HashMap::new();
 
+    // Create a new vector named 'compiled_files' to store the processed file data.
+    // This vector will hold the result of processing each file from 'source_files'.
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
 
-            // Extract metadata from front matter
-            let metadata = extract(&file.content);
+    // Extract metadata from the front matter of the file's content and store it in 'metadata'.
+    let metadata = extract(&file.content);
 
-            // Extract keywords and store them in a variable
-            let keywords = metadata
-                .get("keywords")
-                .map(|keywords| keywords.split(',').map(|kw| kw.trim().to_string()).collect::<Vec<_>>())
-                .unwrap_or_default();
+    // Extract keywords from the extracted metadata and store them in a combined variable named 'keywords'.
+    let keywords = extract_keywords(&metadata);
 
-            // Generate the HTML meta tags that are specifically designed for Apple devices and settings.
-            // This includes meta tags such as 'apple-mobile-web-app-capable' and 'apple-touch-icon'.
-            // The output is a string containing these meta tags formatted in HTML.
-            let apple_meta_tags = generate_apple_meta_tags(&metadata);
+    // Generate HTML meta tags specifically designed for Apple devices and settings.
+    // These include meta tags such as 'apple-mobile-web-app-capable' and 'apple-touch-icon'.
+    // The output is a string containing these meta tags formatted in HTML.
+    let apple_meta_tags = generate_apple_meta_tags(&metadata);
 
-            // Generate essential HTML meta tags common to all web pages.
-            // This includes primary information like 'author', 'description', and 'viewport' settings.
-            // The output is a string containing these primary meta tags formatted in HTML.
-            let primary_meta_tags = generate_primary_meta_tags(&metadata);
+    // Generate essential HTML meta tags common to all web pages.
+    // These include primary information like 'author', 'description', and 'viewport' settings.
+    // The output is a string containing these primary meta tags formatted in HTML.
+    let primary_meta_tags = generate_primary_meta_tags(&metadata);
 
-            // Generate the HTML Open Graph meta tags, which are primarily used for enhancing the website's
-            // social media presence. This includes tags like 'og:title', 'og:description', and 'og:url'.
-            // The output is a string containing these Open Graph meta tags formatted in HTML.
-            let og_meta_tags = generate_og_meta_tags(&metadata);
+    // Generate HTML Open Graph meta tags, primarily used for enhancing the website's
+    // social media presence. These include tags like 'og:title', 'og:description', and 'og:url'.
+    // The output is a string containing these Open Graph meta tags formatted in HTML.
+    let og_meta_tags = generate_og_meta_tags(&metadata);
 
-            // Generate the HTML meta tags that are specific to Microsoft's browser features.
-            // This includes tags like 'msapplication-navbutton-color'.
-            // The output is a string containing these Microsoft-specific meta tags formatted in HTML.
-            let ms_application_meta_tags = generate_ms_meta_tags(&metadata);
+    // Generate HTML meta tags specific to Microsoft's browser features.
+    // These include tags like 'msapplication-navbutton-color'.
+    // The output is a string containing these Microsoft-specific meta tags formatted in HTML.
+    let ms_application_meta_tags = generate_ms_meta_tags(&metadata);
 
-            // Generate the HTML meta tags that are specific to Twitter cards.
-            // This includes Twitter-specific tags like 'twitter:card' and 'twitter:description'.
-            // The output is a string containing these Twitter-specific meta tags formatted in HTML.
-            let twitter_meta_tags = generate_twitter_meta_tags(&metadata);
+    // Generate HTML meta tags specific to Twitter cards.
+    // These include Twitter-specific tags like 'twitter:card' and 'twitter:description'.
+    // The output is a string containing these Twitter-specific meta tags formatted in HTML.
+    let twitter_meta_tags = generate_twitter_meta_tags(&metadata);
 
-            // Generate HTML content
-            let html_content = generate_html(
-                &file.content,
-                &macro_metadata_option!(metadata, "title"),
-                &macro_metadata_option!(metadata, "description"),
-                Some(&macro_metadata_option!(metadata, "content")),
-            );
+    // Generate HTML content
+    let html_content = generate_html(
+        &file.content,
+        &macro_metadata_option!(metadata, "title"),
+        &macro_metadata_option!(metadata, "description"),
+        Some(&macro_metadata_option!(metadata, "content")),
+    );
 
-            // Generate HTML
-            let mut page_options = PageOptions::new();
-            for (key, value) in metadata.iter() {
-                page_options.set(key, value);
-            }
+    // Generate HTML
+    let mut page_options = PageOptions::new();
+    for (key, value) in metadata.iter() {
+        page_options.set(key, value);
+    }
 
-            // Adding metatags to page options for use in templates and in the
-            // navigation generation
-            page_options.set("apple", &apple_meta_tags);
-            page_options.set("content", &html_content);
-            page_options.set("microsoft", &ms_application_meta_tags);
-            page_options.set("navigation", &navigation);
-            page_options.set("opengraph", &og_meta_tags);
-            page_options.set("primary", &primary_meta_tags);
-            page_options.set("twitter", &twitter_meta_tags);
+    // Add metatags to page options for use in templates and navigation generation
+    page_options.set("apple", &apple_meta_tags);
+    page_options.set("content", &html_content);
+    page_options.set("microsoft", &ms_application_meta_tags);
+    page_options.set("navigation", &navigation);
+    page_options.set("opengraph", &og_meta_tags);
+    page_options.set("primary", &primary_meta_tags);
+    page_options.set("twitter", &twitter_meta_tags);
+
 
             let content = render_page(
                 &page_options,
