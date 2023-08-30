@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use crate::data::MetatagsData;
+use crate::{macro_generate_tags_from_list, macro_generate_tags_from_fields};
 
 /// Generates HTML meta tags based on custom key-value mappings.
 ///
@@ -76,7 +77,7 @@ pub fn generate_apple_meta_tags(metadata: &HashMap<String, String>) -> String {
         "apple-mobile-web-app-status-bar-style", "apple-mobile-web-app-title",
         "apple-touch-fullscreen",
     ];
-    load_metatags(&tag_names, metadata)
+    macro_generate_tags_from_list!(&tag_names, metadata)
 }
 
 /// Generates HTML meta tags for primary settings like author, description, etc.
@@ -93,7 +94,7 @@ pub fn generate_primary_meta_tags(metadata: &HashMap<String, String>) -> String 
         "language", "permalink", "rating", "referrer", "revisit-after",
         "robots", "theme_color", "title", "viewport",
     ];
-    load_metatags(&tag_names, metadata)
+    macro_generate_tags_from_list!(&tag_names, metadata)
 }
 
 /// Generates HTML meta tags for Open Graph settings, primarily for social media.
@@ -114,19 +115,20 @@ pub fn generate_primary_meta_tags(metadata: &HashMap<String, String>) -> String 
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_og_meta_tags(metadata: &HashMap<String, String>) -> String {
-    let og_mapping: Vec<(String, Option<String>)> = vec![
-        ("og:description", metadata.get("description").cloned()),
-        ("og:image", metadata.get("image").cloned()),
-        ("og:image:alt", metadata.get("image_alt").cloned()),
-        ("og:image:height", metadata.get("image_height").cloned()),
-        ("og:image:width", metadata.get("image_width").cloned()),
-        ("og:locale", metadata.get("locale").cloned()),
-        ("og:site_name", metadata.get("site_name").cloned()),
-        ("og:title", metadata.get("title").cloned()),
-        ("og:type", metadata.get("type").cloned()),
-        ("og:url", metadata.get("permalink").cloned()),
-    ].into_iter().map(|(k, v)| (k.to_string(), v)).collect();
-    generate_custom_meta_tags(&og_mapping)
+    macro_generate_tags_from_fields!(
+        generate_og_meta_tags,
+        metadata,
+        "og:description" => description,
+        "og:image" => image,
+        "og:image:alt" => image_alt,
+        "og:image:height" => image_height,
+        "og:image:width" => image_width,
+        "og:locale" => locale,
+        "og:site_name" => site_name,
+        "og:title" => title,
+        "og:type" => type_,
+        "og:url" => permalink
+    )
 }
 
 /// Generates HTML meta tags for Microsoft-specific settings.
@@ -139,7 +141,7 @@ pub fn generate_og_meta_tags(metadata: &HashMap<String, String>) -> String {
 ///
 pub fn generate_ms_meta_tags(metadata: &HashMap<String, String>) -> String {
     let tag_names = ["msapplication-navbutton-color"];
-    load_metatags(&tag_names, metadata)
+    macro_generate_tags_from_list!(&tag_names, metadata)
 }
 
 /// Generates HTML meta tags for Twitter-specific settings.
@@ -162,18 +164,18 @@ pub fn generate_ms_meta_tags(metadata: &HashMap<String, String>) -> String {
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_twitter_meta_tags(metadata: &HashMap<String, String>) -> String {
-    let twitter_mapping: Vec<(String, Option<String>)> = vec![
-        ("twitter:card", metadata.get("twitter_card").cloned()),
-        ("twitter:creator", metadata.get("twitter_creator").cloned()),
-        ("twitter:description", metadata.get("description").cloned()),
-        ("twitter:image", metadata.get("image").cloned()),
-        ("twitter:image:alt", metadata.get("image_alt").cloned()),
-        ("twitter:image:height", metadata.get("image_height").cloned()),
-        ("twitter:image:width", metadata.get("image_width").cloned()),
-        ("twitter:site", metadata.get("url").cloned()),
-        ("twitter:title", metadata.get("title").cloned()),
-        ("twitter:url", metadata.get("url").cloned()),
-        ].into_iter().map(|(k, v)| (k.to_string(), v)).collect();
-
-    generate_custom_meta_tags(&twitter_mapping)
+    macro_generate_tags_from_fields!(
+        generate_twitter_meta_tags,
+        metadata,
+        "twitter:card" => twitter_card,
+        "twitter:creator" => twitter_creator,
+        "twitter:description" => description,
+        "twitter:image" => image,
+        "twitter:image:alt" => image_alt,
+        "twitter:image:height" => image_height,
+        "twitter:image:width" => image_width,
+        "twitter:site" => url,
+        "twitter:title" => title,
+        "twitter:url" => url
+    )
 }

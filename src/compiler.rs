@@ -10,8 +10,10 @@ use crate::{
     frontmatter::extract,
     html::generate_html,
     json::{cname, human, sitemap, tags, txt},
-    macro_cleanup_directories, macro_create_directories,
+    macro_cleanup_directories,
+    macro_create_directories,
     macro_metadata_option,
+    macro_set_rss_data_fields,
     navigation::generate_navigation,
     rss::generate_rss,
     template::{render_page, PageOptions},
@@ -25,6 +27,7 @@ use crate::{
     },
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
+
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
@@ -115,7 +118,6 @@ pub fn compile(
             // The output is a string containing these Twitter-specific meta tags formatted in HTML.
             let twitter_meta_tags = generate_twitter_meta_tags(&metadata);
 
-
             // Generate HTML content
             let html_content = generate_html(
                 &file.content,
@@ -147,67 +149,35 @@ pub fn compile(
             )
             .unwrap();
 
+            // Create a new RssData instance
+            let mut rss_data = RssData::new();
+
+            // Set fields using the helper macro
+            macro_set_rss_data_fields!(rss_data, atom_link, macro_metadata_option!(metadata, "atom_link"));
+            macro_set_rss_data_fields!(rss_data, author, macro_metadata_option!(metadata, "author"));
+            macro_set_rss_data_fields!(rss_data, category, macro_metadata_option!(metadata, "category"));
+            macro_set_rss_data_fields!(rss_data, copyright, macro_metadata_option!(metadata, "copyright"));
+            macro_set_rss_data_fields!(rss_data, description, macro_metadata_option!(metadata, "description"));
+            macro_set_rss_data_fields!(rss_data, docs, macro_metadata_option!(metadata, "docs"));
+            macro_set_rss_data_fields!(rss_data, generator, macro_metadata_option!(metadata, "generator"));
+            macro_set_rss_data_fields!(rss_data, image, macro_metadata_option!(metadata, "image"));
+            macro_set_rss_data_fields!(rss_data, item_guid, macro_metadata_option!(metadata, "item_guid"));
+            macro_set_rss_data_fields!(rss_data, item_description, macro_metadata_option!(metadata, "item_description"));
+            macro_set_rss_data_fields!(rss_data, item_link, macro_metadata_option!(metadata, "item_link"));
+            macro_set_rss_data_fields!(rss_data, item_pub_date, macro_metadata_option!(metadata, "item_pub_date"));
+            macro_set_rss_data_fields!(rss_data, item_title, macro_metadata_option!(metadata, "item_title"));
+            macro_set_rss_data_fields!(rss_data, language, macro_metadata_option!(metadata, "language"));
+            macro_set_rss_data_fields!(rss_data, last_build_date, macro_metadata_option!(metadata, "last_build_date"));
+            macro_set_rss_data_fields!(rss_data, link, macro_metadata_option!(metadata, "permalink"));
+            macro_set_rss_data_fields!(rss_data, managing_editor, macro_metadata_option!(metadata, "managing_editor"));
+            macro_set_rss_data_fields!(rss_data, pub_date, macro_metadata_option!(metadata, "pub_date"));
+            macro_set_rss_data_fields!(rss_data, title, macro_metadata_option!(metadata, "title"));
+            macro_set_rss_data_fields!(rss_data, ttl, macro_metadata_option!(metadata, "ttl"));
+
             // Generate RSS
-            let rss = generate_rss(&RssData {
-                atom_link: macro_metadata_option!(
-                    metadata,
-                    "atom_link"
-                ),
-                author: macro_metadata_option!(metadata, "author"),
-                category: macro_metadata_option!(metadata, "category"),
-                copyright: macro_metadata_option!(
-                    metadata,
-                    "copyright"
-                ),
-                description: macro_metadata_option!(
-                    metadata,
-                    "description"
-                ),
-                docs: macro_metadata_option!(metadata, "docs"),
-                generator: macro_metadata_option!(
-                    metadata,
-                    "generator"
-                ),
-                image: macro_metadata_option!(metadata, "image"),
-                item_description: macro_metadata_option!(
-                    metadata,
-                    "item_description"
-                ),
-                item_guid: macro_metadata_option!(
-                    metadata,
-                    "item_guid"
-                ),
-                item_link: macro_metadata_option!(
-                    metadata,
-                    "item_link"
-                ),
-                item_pub_date: macro_metadata_option!(
-                    metadata,
-                    "item_pub_date"
-                ),
-                item_title: macro_metadata_option!(
-                    metadata,
-                    "item_title"
-                ),
-                language: macro_metadata_option!(metadata, "language"),
-                last_build_date: macro_metadata_option!(
-                    metadata,
-                    "last_build_date"
-                ),
-                link: macro_metadata_option!(metadata, "permalink"),
-                managing_editor: macro_metadata_option!(
-                    metadata,
-                    "managing_editor"
-                ),
-                pub_date: macro_metadata_option!(metadata, "pub_date"),
-                title: macro_metadata_option!(metadata, "title"),
-                ttl: macro_metadata_option!(metadata, "ttl"),
-                webmaster: macro_metadata_option!(
-                    metadata,
-                    "webmaster"
-                ),
-            });
+            let rss = generate_rss(&rss_data);
             let rss_data = rss.unwrap();
+
 
             // Generate JSON
             let json = ManifestData {
