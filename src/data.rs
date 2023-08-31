@@ -185,7 +185,7 @@ impl ManifestData {
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
 /// Options for the `sitemap` function
-pub struct SitemapData {
+pub struct SiteMapData {
     /// A string representing the changefreq
     pub changefreq: String,
     /// A string representing the lastmod
@@ -194,18 +194,73 @@ pub struct SitemapData {
     pub loc: String,
 }
 
-impl SitemapData {
-    /// Creates a new `SitemapData` struct with the given loc, lastmod, and changefreq.
+impl SiteMapData {
+    /// Creates a new `SiteMapData` struct with the given loc, lastmod, and changefreq.
     pub fn new(
         loc: String,
         lastmod: String,
         changefreq: String,
     ) -> Self {
-        SitemapData {
+        SiteMapData {
             changefreq,
             lastmod,
             loc,
         }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `human` function
+pub struct HumanData {
+    /// A string representing the author of the web app
+    pub author: Option<String>,
+    /// A string representing the website of the author
+    pub author_website: Option<String>,
+    /// A string representing the twitter of the author
+    pub author_twitter: Option<String>,
+    /// A string representing the location of the author
+    pub author_location: Option<String>,
+    /// A string representing the thanks of the author (name or url)
+    pub thanks: Option<String>,
+    /// A string representing the site last updated date
+    pub site_last_updated: Option<String>,
+    /// A string representing the site standards of the web app
+    pub site_standards: Option<String>,
+    /// A string representing the site components of the web app
+    pub site_components: Option<String>,
+    /// A string representing the site software of the web app
+    pub site_software: Option<String>,
+}
+
+impl HumanData {
+    /// Creates a new `HumanData` struct with default values for all fields.
+    pub fn new() -> Self {
+        HumanData::default()
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `MetaTags` function
+pub struct MetaTagsData {
+    /// Apple meta tags
+    pub apple: String,
+    /// Open Graph meta tags
+    pub primary: String,
+    /// Open Graph meta tags
+    pub og: String,
+    /// Microsoft meta tags
+    pub ms: String,
+    /// Twitter meta tags
+    pub twitter: String,
+}
+impl MetaTagsData {
+    /// Creates a new `MetaTagsData` struct with default values for all fields.
+    pub fn new() -> Self {
+        MetaTagsData::default()
     }
 }
 

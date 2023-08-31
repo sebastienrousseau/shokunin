@@ -1,10 +1,9 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use std::collections::HashMap;
-
+use crate::data::{FileData, TagsData};
 use regex::Regex;
-use crate::data::FileData;
+use std::collections::HashMap;
 
 /// Generates a tag list from the given `FileData` structs and prints it.
 ///
@@ -84,6 +83,16 @@ pub fn generate_tags(files: &[FileData], target_tags: &[&str]) -> HashMap<String
         }
     }
     keywords_data_map
+}
+
+/// Function to create TagsData
+pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
+    TagsData {
+        titles: metadata.get("title").cloned().unwrap_or_default(),
+        descriptions: metadata.get("description").cloned().unwrap_or_default(),
+        permalinks: metadata.get("permalink").cloned().unwrap_or_default(),
+        keywords: metadata.get("keywords").cloned().unwrap_or_default(),
+    }
 }
 
 

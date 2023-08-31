@@ -186,6 +186,19 @@ pub mod navigation;
 
 /// The `options` module contains the structs
 pub mod data;
+
+/// The `txt` module generates the robots.txt content.
+pub mod txt;
+
+/// The `cname` module generates the CNAME content.
+pub mod cname;
+/// The `human` module generates the human-readable content.
+pub mod human;
+
+/// The `sitemap` module generates the sitemap content.
+pub mod sitemap;
+/// The `manifest` module generates the manifest file.
+pub mod manifest;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
@@ -200,6 +213,8 @@ pub mod tags;
 pub mod template;
 /// The `directory` function ensures that a directory exists.
 pub mod utilities;
+/// The `write` module contains functions for writing files.
+pub mod write;
 
 #[allow(non_camel_case_types)]
 

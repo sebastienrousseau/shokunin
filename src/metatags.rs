@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::collections::HashMap;
-use crate::data::MetatagsData;
+use crate::data::{MetatagsData, MetaTagsData};
 use crate::{macro_generate_tags_from_list, macro_generate_tags_from_fields};
 
 /// Generates HTML meta tags based on custom key-value mappings.
@@ -178,4 +178,24 @@ pub fn generate_twitter_meta_tags(metadata: &HashMap<String, String>) -> String 
         "twitter:title" => title,
         "twitter:url" => url
     )
+}
+
+/// Generates meta tags for the given metadata.
+///
+/// # Arguments
+///
+/// * `metadata` - The metadata extracted from the file.
+///
+/// # Returns
+///
+/// Returns a tuple containing meta tags for Apple devices, primary information, Open Graph, Microsoft, and Twitter.
+///
+pub fn generate_all_meta_tags(metadata: &HashMap<String, String>) -> MetaTagsData {
+    MetaTagsData {
+        apple: generate_apple_meta_tags(metadata),
+        primary: generate_primary_meta_tags(metadata),
+        og: generate_og_meta_tags(metadata),
+        ms: generate_ms_meta_tags(metadata),
+        twitter: generate_twitter_meta_tags(metadata),
+    }
 }
