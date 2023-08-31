@@ -2,7 +2,7 @@
 mod tests {
 
     use ssg::data::{
-        CnameData, FileData, IconData, ManifestData, SitemapData,
+        CnameData, FileData, IconData, ManifestData, SiteMapData,
         TxtData,
     };
 
@@ -23,9 +23,11 @@ mod tests {
             content: String::default(),
             human: String::default(),
             json: String::default(),
+            keyword: String::default(),
             name: String::default(),
             rss: String::default(),
             sitemap: String::default(),
+            tags: String::default(),
             txt: String::default(),
         };
         assert_eq!(file_data, expected_file_data);
@@ -63,8 +65,8 @@ mod tests {
 
     #[test]
     fn test_sitemap_data_default() {
-        let sitemap_data = SitemapData::default();
-        let expected_sitemap_data = SitemapData {
+        let sitemap_data = SiteMapData::default();
+        let expected_sitemap_data = SiteMapData {
             loc: String::default(),
             lastmod: String::default(),
             changefreq: String::default(),

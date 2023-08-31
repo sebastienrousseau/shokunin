@@ -164,41 +164,34 @@ use std::{error::Error, path::Path};
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
+/// The `cname` module generates the CNAME content.
+pub mod cname;
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
+/// The `data` module contains the structs.
+pub mod data;
+/// The `directory` function ensures that a directory exists.
+pub mod utilities;
 /// The `file` module handles file reading and writing operations.
 pub mod file;
 /// The `frontmatter` module extracts the front matter from files.
 pub mod frontmatter;
 /// The `html` module generates the HTML content.
 pub mod html;
+/// The `human` module generates the human-readable content.
+pub mod human;
 /// The `json` module generates the JSON content.
 pub mod json;
-
 /// The `keywords` module contains functions for extracting keywords.
 pub mod keywords;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
+/// The `manifest` module generates the manifest file.
+pub mod manifest;
 /// The `metatags` module generates the meta tags.
 pub mod metatags;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
-
-/// The `options` module contains the structs
-pub mod data;
-
-/// The `txt` module generates the robots.txt content.
-pub mod txt;
-
-/// The `cname` module generates the CNAME content.
-pub mod cname;
-/// The `human` module generates the human-readable content.
-pub mod human;
-
-/// The `sitemap` module generates the sitemap content.
-pub mod sitemap;
-/// The `manifest` module generates the manifest file.
-pub mod manifest;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
@@ -206,15 +199,18 @@ pub mod process;
 pub mod rss;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
+/// The `sitemap` module generates the sitemap content.
+pub mod sitemap;
 /// The `tags` module generates the tag list.
 pub mod tags;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
-/// The `directory` function ensures that a directory exists.
-pub mod utilities;
+/// The `txt` module generates the robots.txt content.
+pub mod txt;
 /// The `write` module contains functions for writing files.
 pub mod write;
+
 
 #[allow(non_camel_case_types)]
 

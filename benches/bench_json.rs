@@ -6,8 +6,8 @@ extern crate criterion;
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::data::{CnameData, ManifestData, SitemapData, TxtData};
-use ssg::json::{manifest, cname, sitemap, txt};
+use ssg::data::{CnameData, ManifestData, SiteMapData, TxtData};
+use ssg::json::{manifest, cname, txt};
 
 pub fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
@@ -31,7 +31,7 @@ pub fn bench_json(c: &mut Criterion) {
         cname: String::from("test.com"),
     };
 
-    let sitemap_data = SitemapData {
+    let sitemap_data = SiteMapData {
         changefreq: String::from("always"),
         loc: String::from("https://www.test.com"),
         lastmod: String::from("2022-01-01"),
@@ -47,10 +47,5 @@ pub fn bench_json(c: &mut Criterion) {
 
     c.bench_function("cname", |b| {
         b.iter(|| cname(black_box(&cname_data)))
-    });
-
-    // This will be a file-system intensive benchmark
-    c.bench_function("sitemap", |b| {
-        b.iter(|| sitemap(black_box(&sitemap_data), black_box(dir)))
     });
 }

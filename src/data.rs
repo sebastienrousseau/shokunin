@@ -241,26 +241,29 @@ impl HumanData {
     }
 }
 
-#[derive(
-    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
-)]
-/// Options for the `MetaTags` function
-pub struct MetaTagsData {
-    /// Apple meta tags
+/// The `MetaTagGroups` struct holds collections of meta tags for different platforms and categories.
+///
+/// The struct includes fields for Apple-specific meta tags, primary meta tags, Open Graph meta tags,
+/// Microsoft-specific meta tags, and Twitter-specific meta tags. Each field contains a string
+/// representation of the HTML meta tags for its respective category or platform.
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+pub struct MetaTagGroups {
+    /// Meta tags specific to Apple devices
     pub apple: String,
-    /// Open Graph meta tags
+    /// Primary meta tags, such as author, description, etc.
     pub primary: String,
-    /// Open Graph meta tags
+    /// Open Graph meta tags, mainly used for social media
     pub og: String,
-    /// Microsoft meta tags
+    /// Microsoft-specific meta tags
     pub ms: String,
-    /// Twitter meta tags
+    /// Twitter-specific meta tags
     pub twitter: String,
 }
-impl MetaTagsData {
-    /// Creates a new `MetaTagsData` struct with default values for all fields.
+
+impl MetaTagGroups {
+    /// Creates a new `MetaTagGroups` instance with default values for all fields.
     pub fn new() -> Self {
-        MetaTagsData::default()
+        MetaTagGroups::default()
     }
 }
 
@@ -301,7 +304,7 @@ pub struct HumansData {
     pub site_standards: String,
     /// A string representing the site components of the web app
     pub site_components: String,
-    /// A string representingthe site software of the web app
+    /// A string representing the site software of the web app
     pub site_software: String,
 }
 
@@ -411,22 +414,22 @@ impl RssData {
     }
 }
 
-/// The `MetatagsData` struct holds all necessary data for a single metatag.
+/// The `MetaTag` struct holds all necessary data for a single metatag.
 ///
 /// This includes everything from the name of the metatag to its content.
-/// The values contained in an instance of `MetatagsData` can be used to
+/// The values contained in an instance of `MetaTag` can be used to
 /// generate a complete metatag in HTML format.
-/// The `MetatagsData` struct is used in the `Metatags` struct.
+/// The `MetaTag` struct is used in the `Metatags` struct.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct MetatagsData {
+pub struct MetaTag {
     /// The name of the metatag.
     pub name: String,
     /// The content of the metatag.
     pub value: String,
 }
 
-impl MetatagsData {
-    /// Creates a new `MetatagsData` struct with the given name and value.
+impl MetaTag {
+    /// Creates a new `MetaTag` struct with the given name and value.
     ///
     /// # Arguments
     ///
@@ -435,9 +438,9 @@ impl MetatagsData {
     ///
     /// # Returns
     ///
-    /// A new `MetatagsData` struct instance.
+    /// A new `MetaTag` struct instance.
     pub fn new(name: String, value: String) -> Self {
-        MetatagsData { name, value }
+        MetaTag { name, value }
     }
 
     /// Generates a complete metatag in HTML format.
@@ -456,12 +459,12 @@ impl MetatagsData {
     ///
     /// # Arguments
     ///
-    /// * `metatags` - A slice containing the `MetatagsData` instances.
+    /// * `metatags` - A slice containing the `MetaTag` instances.
     ///
     /// # Returns
     ///
     /// A string representing the complete list of metatags in HTML format.
-    pub fn generate_metatags(metatags: &[MetatagsData]) -> String {
-        metatags.iter().map(MetatagsData::generate).collect()
+    pub fn generate_metatags(metatags: &[MetaTag]) -> String {
+        metatags.iter().map(MetaTag::generate).collect()
     }
 }

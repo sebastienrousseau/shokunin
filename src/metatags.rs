@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::collections::HashMap;
-use crate::data::{MetatagsData, MetaTagsData};
+use crate::data::{MetaTag, MetaTagGroups};
 use crate::{macro_generate_tags_from_list, macro_generate_tags_from_fields};
+
+// Type alias for better readability
+type MetaDataMap = HashMap<String, String>;
 
 /// Generates HTML meta tags based on custom key-value mappings.
 ///
@@ -38,15 +41,17 @@ pub fn generate_metatags(meta: &[(String, String)]) -> String {
 ///
 /// # Arguments
 /// * `tag_names` - A slice of tag names as `&str`.
-/// * `metadata` - A reference to a `HashMap` containing metadata key-value pairs.
+/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
 ///
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
-pub fn load_metatags(tag_names: &[&str], metadata: &HashMap<String, String>) -> String {
-    tag_names.iter().fold(String::new(), |acc, &name| {
-        let value = metadata.get(name).unwrap_or(&String::new()).clone();
-        acc + &MetatagsData::new(name.to_string(), value).generate()
-    })
+pub fn load_metatags(tag_names: &[&str], metadata: &MetaDataMap) -> String {
+    let mut result = String::new();
+    for &name in tag_names {
+        let value = metadata.get(name).cloned().unwrap_or_else(|| "".to_string());
+        result.push_str(&MetaTag::new(name.to_string(), value).generate());
+    }
+    result
 }
 
 /// Utility function to format a single meta tag into its HTML representation.
@@ -57,7 +62,6 @@ pub fn load_metatags(tag_names: &[&str], metadata: &HashMap<String, String>) -> 
 ///
 /// # Returns
 /// A `String` containing the HTML representation of the meta tag.
-///
 fn format_meta_tag(key: &str, value: &str) -> String {
     format!("<meta name=\"{}\" content=\"{}\">", key, value)
 }
@@ -70,7 +74,7 @@ fn format_meta_tag(key: &str, value: &str) -> String {
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
 ///
-pub fn generate_apple_meta_tags(metadata: &HashMap<String, String>) -> String {
+pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
     let tag_names = [
         "apple_mobile_web_app_orientations", "apple_touch_icon_sizes",
         "apple-mobile-web-app-capable", "apple-mobile-web-app-status-bar-inset",
@@ -88,7 +92,7 @@ pub fn generate_apple_meta_tags(metadata: &HashMap<String, String>) -> String {
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
 ///
-pub fn generate_primary_meta_tags(metadata: &HashMap<String, String>) -> String {
+pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
     let tag_names = [
         "author", "description", "format-detection", "generator", "keywords",
         "language", "permalink", "rating", "referrer", "revisit-after",
@@ -99,22 +103,26 @@ pub fn generate_primary_meta_tags(metadata: &HashMap<String, String>) -> String 
 
 /// Generates HTML meta tags for Open Graph settings, primarily for social media.
 ///
+/// This function expects the `metadata` HashMap to contain keys such as:
+///
+/// - "og:description": The description of the content.
+/// - "og:image": The URL of the image to use.
+/// - "og:image:alt": The alt text for the image.
+/// - "og:image:height": The height of the image.
+/// - "og:image:width": The width of the image.
+/// - "og:locale": The locale of the content.
+/// - "og:site_name": The name of the site.
+/// - "og:title": The title of the content.
+/// - "og:type": The type of content.
+/// - "og:url": The URL of the content.
+///
 /// # Arguments
-/// * `og:description` - The description of the content.
-/// * `og:image` - The URL of the image to use.
-/// * `og:image:alt` - The alt text for the image.
-/// * `og:image:height` - The height of the image.
-/// * `og:image:width` - The width of the image.
-/// * `og:locale` - The locale of the content.
-/// * `og:site_name` - The name of the site.
-/// * `og:title` - The title of the content.
-/// * `og:type` - The type of content.
-/// * `og:url` - The URL of the content.
+/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
 ///
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
 ///
-pub fn generate_og_meta_tags(metadata: &HashMap<String, String>) -> String {
+pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
     macro_generate_tags_from_fields!(
         generate_og_meta_tags,
         metadata,
@@ -139,31 +147,32 @@ pub fn generate_og_meta_tags(metadata: &HashMap<String, String>) -> String {
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
 ///
-pub fn generate_ms_meta_tags(metadata: &HashMap<String, String>) -> String {
+pub fn generate_ms_meta_tags(metadata: &MetaDataMap) -> String {
     let tag_names = ["msapplication-navbutton-color"];
     macro_generate_tags_from_list!(&tag_names, metadata)
 }
 
 /// Generates HTML meta tags for Twitter-specific settings.
 ///
-/// # Arguments
+/// This function expects the `metadata` HashMap to contain keys such as:
+/// - "twitter:card": The type of Twitter card to use.
+/// - "twitter:creator": The Twitter handle of the content creator.
+/// - "twitter:description": The description of the content.
+/// - "twitter:image": The URL of the image to use.
+/// - "twitter:image:alt": The alt text for the image.
+/// - "twitter:image:height": The height of the image.
+/// - "twitter:image:width": The width of the image.
+/// - "twitter:site": The Twitter handle of the site.
+/// - "twitter:title": The title of the content.
+/// - "twitter:url": The URL of the content.
 ///
-/// * `metadata` - A reference to a `HashMap` containing metadata key-value pairs.
-/// * `twitter_card` - The type of Twitter card to use.
-/// * `twitter_creator` - The Twitter handle of the content creator.
-/// * `twitter_description` - The description of the content.
-/// * `twitter_image` - The URL of the image to use.
-/// * `twitter_image_alt` - The alt text for the image.
-/// * `twitter_image_height` - The height of the image.
-/// * `twitter_image_width` - The width of the image.
-/// * `twitter_site` - The Twitter handle of the site.
-/// * `twitter_title` - The title of the content.
-/// * `twitter_url` - The URL of the content.
+/// # Arguments
+/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
 ///
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
 ///
-pub fn generate_twitter_meta_tags(metadata: &HashMap<String, String>) -> String {
+pub fn generate_twitter_meta_tags(metadata: &MetaDataMap) -> String {
     macro_generate_tags_from_fields!(
         generate_twitter_meta_tags,
         metadata,
@@ -190,8 +199,8 @@ pub fn generate_twitter_meta_tags(metadata: &HashMap<String, String>) -> String 
 ///
 /// Returns a tuple containing meta tags for Apple devices, primary information, Open Graph, Microsoft, and Twitter.
 ///
-pub fn generate_all_meta_tags(metadata: &HashMap<String, String>) -> MetaTagsData {
-    MetaTagsData {
+pub fn generate_all_meta_tags(metadata: &MetaDataMap) -> MetaTagGroups {
+    MetaTagGroups {
         apple: generate_apple_meta_tags(metadata),
         primary: generate_primary_meta_tags(metadata),
         og: generate_og_meta_tags(metadata),
