@@ -19,31 +19,13 @@ use std::collections::HashMap;
 /// # Example
 ///
 /// ```
-/// let files = vec![
-///     FileData {
-///         content: r#"<title>Overview</title>
-///             <meta content="This is a description" name="description">
-///             <meta content="/overview" name="permalink">
-///         </title>".to_string(),
-///     },
-///     FileData {
-///         content: r#"<title>Other</title>
-///             <meta content="This is another description" name="description">
-///             <meta content="/other" name="permalink">
-///         </title>".to_string(),
-///     },
-/// ];
+/// use ssg::data::FileData;
+/// use ssg::tags::generate_tags;
+/// let files = vec![FileData { content: "This is a test".to_string(), ..Default::default() }];
 ///
-/// generate_tags(files);
+/// generate_tags(&files, &["test"]);
 /// ```
 ///
-/// This code will print the following to the console:
-///
-/// ```
-/// Title: Overview
-/// Description: This is a description
-/// Permalink: /overview
-/// ```
 pub fn generate_tags(files: &[FileData], target_tags: &[&str]) -> HashMap<String, Vec<HashMap<String, String>>> {
     let title_regex = Regex::new(r"<title>([^<]+)</title>").unwrap();
     let meta_regex = Regex::new(r#"<meta\s+content="([^"]+)"\s+name="([^"]+)">"#).unwrap();

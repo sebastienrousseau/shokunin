@@ -42,9 +42,23 @@ mod tests {
                 tags: "".to_string(),
                 txt: "".to_string(),
             },
+            FileData {
+                cname: "".to_string(),
+                content: "".to_string(),
+                human: "".to_string(),
+                json: "".to_string(),
+                keyword: "".to_string(),
+                name: "contact.md".to_string(),
+                rss: "".to_string(),
+                sitemap: "".to_string(),
+                tags: "".to_string(),
+                txt: "".to_string(),
+            },
         ];
 
         let navigation = generate_navigation(&files);
+
+        println!("Generated navigation: {}", navigation);
 
         // Assert that the generated navigation contains expected HTML elements
         assert!(navigation.contains("<li class=\"nav-item\"><a href=\"/about/index.html\" class=\"text-uppercase p-2 \">About</a></li>"));

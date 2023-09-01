@@ -180,7 +180,7 @@ macro_rules! macro_create_directories {
 #[macro_export]
 macro_rules! macro_generate_metatags {
     ($($key:literal, $value:expr),* $(,)?) => {
-        $crate::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
+        $crate::modules::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
     };
 }
 

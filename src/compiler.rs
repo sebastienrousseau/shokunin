@@ -62,7 +62,6 @@ pub fn compile(
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
-
             let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file.content);
 
             // Generate HTML
@@ -210,8 +209,6 @@ pub fn compile(
             let rss = generate_rss(&rss_data);
             let rss_data = rss.unwrap();
 
-           
-
             // Generate a manifest data structure by extracting relevant information from the metadata.
             let json = create_manifest_data(&metadata);
 
@@ -300,9 +297,14 @@ pub fn compile(
 /// # Examples
 ///
 /// ```rust
+/// use ssg::data::FileData;
+/// use ssg::compiler::extract_and_prepare_metadata;
+///
+/// let file_content = "---\n\n# Front Matter (YAML)\n\nauthor: \"Jane Doe\"\ncategory: \"Rust\"\ndescription: \"A blog about Rust programming.\"\nlayout: \"post\"\npermalink: \"https://example.com/blog/rust\"\ntags: \"rust,programming\"\ntitle: \"Rust\"\n\n---\n\n# Content\n\nThis is a blog about Rust programming.\n";
+///
 /// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
 /// ```
-fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
+pub fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
     // Extract metadata from front matter
     let metadata = extract(content);
 
