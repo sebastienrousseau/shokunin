@@ -72,14 +72,7 @@ pub fn generate_html(
 
     // 4. Generate headers and descriptions
     let header = generate_header(title, &id_regex);
-    let description = generate_description(&description);
-
-
-
-
-
-  
-
+    let description = generate_description(description);
 
     // Regex to remove non-alphanumeric characters from IDs.
     // let id_regex = Regex::new(r"[^a-zA-Z0-9]+").unwrap();
@@ -195,7 +188,7 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
     let html_content = markdown_to_html(markdown_content, options);
 
     // Return the HTML content
-    return html_content;
+    html_content.to_string()
 }
 
 /// Post-process HTML

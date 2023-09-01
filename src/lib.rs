@@ -188,15 +188,13 @@ pub mod keywords;
 pub mod macros;
 /// The `manifest` module generates the manifest file.
 pub mod manifest;
-/// The `metatags` module generates the meta tags.
-pub mod metatags;
+/// The `modules` module contains the application modules.
+pub mod modules;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
-/// The `rss` module generates the RSS content.
-pub mod rss;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
 /// The `sitemap` module generates the sitemap content.

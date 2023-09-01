@@ -15,7 +15,11 @@ pub fn bench_generate_html(c: &mut Criterion) {
     c.bench_function("generate_html", |b| {
         b.iter(|| {
             let html = generate_html(black_box(content), black_box(title), black_box(description), black_box(json_content));
-            criterion::black_box(html);
+            match html {
+                Ok(_) => (),
+                Err(_) => panic!("HTML generation failed"),
+            }
+            let _ = criterion::black_box(html);
         })
     });
 }

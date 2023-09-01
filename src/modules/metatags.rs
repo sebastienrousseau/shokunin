@@ -48,7 +48,7 @@ pub fn generate_metatags(meta: &[(String, String)]) -> String {
 pub fn load_metatags(tag_names: &[&str], metadata: &MetaDataMap) -> String {
     let mut result = String::new();
     for &name in tag_names {
-        let value = metadata.get(name).cloned().unwrap_or_else(|| "".to_string());
+        let value = metadata.get(name).cloned().unwrap_or_default();
         result.push_str(&MetaTag::new(name.to_string(), value).generate());
     }
     result

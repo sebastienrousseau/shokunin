@@ -4,7 +4,7 @@ mod tests {
 
     use ssg::{
         data::RssData, frontmatter::extract, html::generate_html,
-        rss::generate_rss,
+        modules::rss::generate_rss,
     };
 
     #[test]
@@ -31,12 +31,21 @@ description: My Description
         let content = "## Hello, world!\n\nThis is a test.";
         let title = "My Page";
         let description = "This is a test page";
-        let html = generate_html(content, title, description, None);
-        assert_eq!(
-    html,
-    "<h1 id=\"h1-my\" id=\"\" id=\"h1-my\" class=\"my\">My Page</h1 id=\"h1-my\" class=\"my\"><p>This is a test page</p><h2 id=\"h2-hello\" class=\"hello\">Hello, world!</h2 id=\"h2-hello\" class=\"hello\">\n<p>This is a test.</p>\n"
-);
+        let html_result = generate_html(content, title, description, None);
+
+        match html_result {
+            Ok(html) => {
+                assert_eq!(
+                    html,
+                    "<h1 id=\"h1-my\" id=\"\" id=\"h1-my\" class=\"my\">My Page</h1 id=\"h1-my\" class=\"my\"><p>This is a test page</p><h2 id=\"h2-hello\" class=\"hello\">Hello, world!</h2 id=\"h2-hello\" class=\"hello\">\n<p>This is a test.</p>\n"
+                );
+            },
+            Err(err) => {
+                panic!("HTML generation failed with error: {:?}", err);
+            }
+        }
     }
+
 
     #[test]
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {

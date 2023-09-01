@@ -265,6 +265,17 @@ impl MetaTagGroups {
     pub fn new() -> Self {
         MetaTagGroups::default()
     }
+    /// Returns the value for the given key, if it exists
+    pub fn get(&self, key: &str) -> Option<&String> {
+        match key {
+            "apple" => Some(&self.apple),
+            "primary" => Some(&self.primary),
+            "og" => Some(&self.og),
+            "ms" => Some(&self.ms),
+            "twitter" => Some(&self.twitter),
+            _ => None,
+        }
+    }
 }
 
 #[derive(

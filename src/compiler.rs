@@ -3,7 +3,7 @@
 
 use crate::{
     cname::create_cname_data,
-    data::{FileData, RssData},
+    data::{FileData, RssData, MetaTagGroups},
     file::add,
     frontmatter::extract,
     html::generate_html,
@@ -11,18 +11,18 @@ use crate::{
     json::{cname, human, sitemap, tags, txt},
     keywords::extract_keywords,
     macro_cleanup_directories, macro_create_directories,
-    macro_metadata_option, macro_set_rss_data_fields,
+    macro_metadata_option,macro_set_rss_data_fields,
     manifest::create_manifest_data,
-    metatags::generate_all_meta_tags,
+    modules::metatags::generate_all_meta_tags,
+    modules::rss::generate_rss,
     navigation::generate_navigation,
-    rss::generate_rss,
     sitemap::create_site_map_data,
     tags::create_tags_data,
     template::{render_page, PageOptions},
     txt::create_txt_data,
     write::write_files,
 };
-use std::{error::Error, fs, path::Path};
+use std::{error::Error, fs, path::Path, collections::HashMap};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
@@ -63,14 +63,7 @@ pub fn compile(
         .into_iter()
         .map(|file| {
 
-            // Extract metadata from front matter
-            let metadata = extract(&file.content);
-
-            // Extract keywords
-            let keywords = extract_keywords(&metadata);
-
-            // Generate all meta tags
-            let all_meta_tags = generate_all_meta_tags(&metadata);
+            let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file.content);
 
             // Generate HTML
             let html_content = generate_html(
@@ -217,6 +210,8 @@ pub fn compile(
             let rss = generate_rss(&rss_data);
             let rss_data = rss.unwrap();
 
+           
+
             // Generate a manifest data structure by extracting relevant information from the metadata.
             let json = create_manifest_data(&metadata);
 
@@ -282,3 +277,41 @@ pub fn compile(
 
     Ok(())
 }
+
+/// Extracts metadata from the content, generates keywords based on the metadata,
+/// and prepares meta tag groups.
+///
+/// This function performs three key tasks:
+/// 1. It extracts metadata from the front matter of the content.
+/// 2. It extracts keywords based on this metadata.
+/// 3. It generates various meta tags required for the page.
+///
+/// # Arguments
+///
+/// * `content` - A string slice representing the content from which to extract metadata.
+///
+/// # Returns
+///
+/// Returns a tuple containing:
+/// * `HashMap<String, String>`: Extracted metadata
+/// * `Vec<String>`: A list of keywords
+/// * `MetaTagGroups`: A structure containing various meta tags
+///
+/// # Examples
+///
+/// ```rust
+/// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
+/// ```
+fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
+    // Extract metadata from front matter
+    let metadata = extract(content);
+
+    // Extract keywords
+    let keywords = extract_keywords(&metadata);
+
+    // Generate all meta tags
+    let all_meta_tags = generate_all_meta_tags(&metadata);
+
+    (metadata, keywords, all_meta_tags)
+}
+

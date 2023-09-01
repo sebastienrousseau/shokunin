@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ssg::metatags::generate_metatags;
+    use ssg::modules::metatags::generate_metatags;
 
     #[test]
     fn test_generate_metatags() {

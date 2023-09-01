@@ -12,7 +12,10 @@ mod tests {
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
         let expected = "<h1 id=\"h1-welcome\" id=\"\" id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\"><p>Say hi to the world!</p><h1 id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\">";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
@@ -22,7 +25,10 @@ mod tests {
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
         let expected = "<h1 id=\"h1-welcome\" id=\"\" id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\"><p>Say hi to the world!</p><h1 id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\">";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
@@ -33,7 +39,10 @@ mod tests {
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
         let expected = "<p>Say hi to the world!</p><h1 id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\">";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
@@ -43,7 +52,10 @@ mod tests {
         let description = "";
         let result = generate_html(content, title, description, None);
         let expected = "<h1 id=\"h1-welcome\" id=\"\" id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\"><h1 id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\">";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
@@ -53,7 +65,10 @@ mod tests {
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
         let expected = "<h1 id=\"h1-welcome\" id=\"\" id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\"><p>Say hi to the world!</p><h1 id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\">";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
@@ -63,7 +78,10 @@ mod tests {
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
         let expected = "<h1 id=\"h1-welcome\" id=\"\" id=\"h1-welcome\" class=\"welcome\">Welcome</h1 id=\"h1-welcome\" class=\"welcome\"><p>Say hi to the world!</p>";
-        assert_eq!(result.trim(), expected);
+        match result {
+            Ok(res) => assert_eq!(res.trim(), expected),
+            Err(e) => panic!("Error: {:?}", e),
+        }
     }
 
     #[test]
