@@ -132,7 +132,7 @@ mod tests {
 
         // Check that the HTML file has been minified.
         // This assumes that your minify_html function simply removes newline characters.
-        // Update this to match the actual behavior of your minify_html function.
+        // Update this to match the actual behaviour of your minify_html function.
         let minified_contents = fs::read_to_string(&dummy_file)?;
         assert_eq!(
             minified_contents,

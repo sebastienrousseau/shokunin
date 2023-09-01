@@ -24,7 +24,7 @@
 ///
 /// The `macro_check_directory` macro checks if the directory specified by `$dir` exists. If it exists and is not a directory, a panic with an error message is triggered. If the directory doesn't exist, the macro attempts to create it using `std::fs::create_dir_all($dir)`. If the creation is successful, no action is taken. If an error occurs during the directory creation, a panic is triggered with an error message indicating the failure.
 ///
-/// Please note that the macro panics on failure. Consider using this macro in scenarios where panicking is an acceptable behavior, such as during application startup or setup.
+/// Please note that the macro panics on failure. Consider using this macro in scenarios where panicking is an acceptable behaviour, such as during application startup or setup.
 ///
 #[macro_export]
 macro_rules! macro_check_directory {
