@@ -3,25 +3,23 @@
 
 use crate::{
     cname::create_cname_data,
-    data::{FileData, RssData, MetaTagGroups},
+    data::{FileData, RssData, MetaTagGroups, PageData},
     file::add,
     frontmatter::extract,
     human::create_human_data,
-    json::{cname, human, sitemap, tags, txt},
+    json::{cname, human, sitemap, txt},
     keywords::extract_keywords,
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
     manifest::create_manifest_data,
-    modules::html::generate_html,
-    modules::metatags::generate_all_meta_tags,
-    modules::rss::generate_rss,
+    modules::{html::generate_html, metatags::generate_all_meta_tags, rss::generate_rss},
     navigation::generate_navigation,
     sitemap::create_site_map_data,
-    tags::create_tags_data,
     template::{render_page, PageOptions},
     txt::create_txt_data,
-    write::write_files,
+    write::write_files, tags::{generate_tags_html, write_tags_html_to_file},
 };
+use crate::tags::generate_tags;
 use std::{error::Error, fs, path::Path, collections::HashMap};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -57,6 +55,9 @@ pub fn compile(
 
     // Generate navigation bar HTML
     let navigation = generate_navigation(&source_files); // Generates a navigation bar HTML
+
+    let mut global_tags_data: HashMap<String, Vec<PageData>> = HashMap::new();
+
 
     // Process source files and store results in 'compiled_files' vector
     let compiled_files: Vec<FileData> = source_files
@@ -221,8 +222,22 @@ pub fn compile(
             // Initialize a structure to store sitemap-related information, using values from the metadata.
             let sitemap_options = create_site_map_data(&metadata);
 
-            // Create a structure for tags-related data, populating it with values from the metadata.
-            let tags_options = create_tags_data(&metadata);
+            let tags_data = generate_tags(&file, &metadata);
+            // println!("Tags: {:?}", tags_data);
+
+            // Update the global tags data
+            for (tag, pages_data) in tags_data.iter() {
+                let page_info: Vec<PageData> = pages_data.iter()
+                    .map(|page_data| PageData {
+                        title: page_data.get("title").cloned().unwrap_or_default(),
+                        description: page_data.get("description").cloned().unwrap_or_default(),
+                        permalink: page_data.get("permalink").cloned().unwrap_or_default(),
+                        date: page_data.get("date").cloned().unwrap_or_default(),
+                    })
+                    .collect();
+
+                global_tags_data.entry(tag.clone()).or_insert_with(Vec::new).extend(page_info);
+            }
 
             // Generate a TxtData structure, filling it with values extracted from the metadata.
             let txt_options = create_txt_data(&metadata);
@@ -232,7 +247,6 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(sitemap_options, site_path);
-            let tags_data: String = tags(&tags_options).html;
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
@@ -249,7 +263,6 @@ pub fn compile(
                 name: file.name,
                 rss: rss_data,
                 sitemap: sitemap_data,
-                tags: tags_data,
                 txt: txt_data,
             }
         })
@@ -265,6 +278,9 @@ pub fn compile(
     for file in &compiled_files {
         write_files(build_dir_path, file, template_path)?;
     }
+
+    let tags_html_content = generate_tags_html(&global_tags_data);
+    write_tags_html_to_file(&tags_html_content, build_dir_path)?;
 
     // Cleanup site directory
     macro_cleanup_directories!(site_path);

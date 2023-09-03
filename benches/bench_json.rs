@@ -6,8 +6,8 @@ extern crate criterion;
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData, TagsData};
-use ssg::json::{manifest, txt, cname, human, tags, sitemap};
+use ssg::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData};
+use ssg::json::{manifest, txt, cname, human, sitemap};
 
 pub fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
@@ -49,13 +49,6 @@ pub fn bench_json(c: &mut Criterion) {
         lastmod: String::from("2022-01-01"),
     };
 
-    let tags_data = TagsData {
-        titles: String::from("Test Titles"),
-        descriptions: String::from("Test Descriptions"),
-        permalinks: String::from("Test Permalinks"),
-        keywords: String::from("Test Keywords"),
-    };
-
     let dir = Path::new("./");
 
     c.bench_function("manifest", |b| {
@@ -70,10 +63,6 @@ pub fn bench_json(c: &mut Criterion) {
 
     c.bench_function("humans_data", |b| {
         b.iter(|| human(black_box(&humans_data)))
-    });
-
-    c.bench_function("tags_data", |b| {
-        b.iter(|| tags(black_box(&tags_data)))
     });
 
     c.bench_function("sitemap", |b| {

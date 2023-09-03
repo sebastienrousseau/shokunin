@@ -27,7 +27,6 @@ mod tests {
             name: String::default(),
             rss: String::default(),
             sitemap: String::default(),
-            tags: String::default(),
             txt: String::default(),
         };
         assert_eq!(file_data, expected_file_data);
@@ -82,15 +81,4 @@ mod tests {
         };
         assert_eq!(txt_data, expected_txt_data);
     }
-
-    // #[test]
-    // fn test_file_info_default() {
-    //     let file_info = FileInfo::default();
-    //     let expected_file_info = FileInfo {
-    //         file_type: String::default(),
-    //         files_to_create: Vec::new(),
-    //         display: false,
-    //     };
-    //     assert_eq!(file_info, expected_file_info);
-    // }
 }

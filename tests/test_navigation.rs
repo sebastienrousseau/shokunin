@@ -15,7 +15,6 @@ mod tests {
                 name: "index.md".to_string(),
                 rss: "".to_string(),
                 sitemap: "".to_string(),
-                tags: "".to_string(),
                 txt: "".to_string(),
             },
             FileData {
@@ -27,7 +26,6 @@ mod tests {
                 name: "about.md".to_string(),
                 rss: "".to_string(),
                 sitemap: "".to_string(),
-                tags: "".to_string(),
                 txt: "".to_string(),
             },
             FileData {
@@ -39,7 +37,6 @@ mod tests {
                 name: "blog.md".to_string(),
                 rss: "".to_string(),
                 sitemap: "".to_string(),
-                tags: "".to_string(),
                 txt: "".to_string(),
             },
             FileData {
@@ -51,7 +48,6 @@ mod tests {
                 name: "contact.md".to_string(),
                 rss: "".to_string(),
                 sitemap: "".to_string(),
-                tags: "".to_string(),
                 txt: "".to_string(),
             },
         ];

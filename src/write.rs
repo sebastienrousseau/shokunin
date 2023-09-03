@@ -29,7 +29,6 @@ pub fn write_files(build_dir_path: &Path, file: &FileData, template_path: &Path)
             ("robots.txt", &file.txt),
             ("rss.xml", &file.rss),
             ("sitemap.xml", &file.sitemap),
-            ("tags.html", &file.tags),
         ];
 
         for (file_name, content) in &file_paths {
@@ -57,7 +56,6 @@ pub fn write_files(build_dir_path: &Path, file: &FileData, template_path: &Path)
             ("robots.txt", &file.txt),
             ("rss.xml", &file.rss),
             ("sitemap.xml", &file.sitemap),
-            ("tags.html", &file.tags),
         ];
 
         for (file_name, content) in &file_paths {

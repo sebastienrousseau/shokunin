@@ -289,7 +289,7 @@ pub fn cleanup_directory(
         }
 
         println!(
-            "❯ Cleaning up `{}` directory...",
+            "\n❯ Cleaning up `{}` directory...",
             directory.display()
         );
 

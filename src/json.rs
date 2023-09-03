@@ -9,7 +9,7 @@ use serde_json::{json, Map};
 
 use crate::data::{
     CnameData, HumansData, ManifestData,
-    SiteMapData, TxtData, TagsData, TagsResult
+    SiteMapData, TxtData
 };
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
@@ -107,71 +107,6 @@ pub fn human(options: &HumansData) -> String {
     }
     s
 }
-
-/// ## Function: `tags` - Generate a tags.html for a web app
-pub fn tags(options: &TagsData) -> TagsResult {
-
-    let titles_value = &options.titles;
-    let descriptions_value = &options.descriptions;
-    let permalinks_value = &options.permalinks;
-    let keywords_value = &options.keywords;
-
-    let titles: Vec<String> = titles_value
-        .split(',')
-        .map(|title| title.trim().to_lowercase())
-        .filter(|title| !title.is_empty())
-        .collect();
-
-    let descriptions: Vec<String> = descriptions_value
-        .split(',')
-        .map(|description| description.trim().to_lowercase())
-        .filter(|description| !description.is_empty())
-        .collect();
-
-    let permalinks: Vec<String> = permalinks_value
-        .split(',')
-        .map(|permalink| permalink.trim().to_lowercase())
-        .filter(|permalink| !permalink.is_empty())
-        .collect();
-
-    let keywords: Vec<String> = keywords_value
-        .split(',')
-        .map(|keyword| keyword.trim().to_lowercase())
-        .filter(|keyword| !keyword.is_empty())
-        .collect();
-
-    // Debug prints (You can remove these once you're confident that the function is working as expected)
-    // println!("Debugging Titles: {:?}", titles);
-    // println!("Debugging Descriptions: {:?}", descriptions);
-    // println!("Debugging Permalinks: {:?}", permalinks);
-    // println!("Debugging Keywords: {:?}", keywords);
-
-    let mut tags_html = String::new();
-    tags_html.push_str("<ul>\n");
-
-    let min_length = std::cmp::min(std::cmp::min(titles.len(), descriptions.len()), permalinks.len());
-
-    for i in 0..min_length {
-        let title = &titles[i];
-        let description = &descriptions[i];
-        let permalink = &permalinks[i];
-        let keyword = &keywords[i];
-        tags_html.push_str(&format!("<h2>{}</h2>", keyword));
-
-        tags_html.push_str(&format!("<li><a href=\"{}\"><strong>{}</strong> - {}</a><ul><li>{:?}</li></ul></li>\n", permalink, title, description, keywords));
-    }
-
-    tags_html.push_str("</ul>\n");
-
-    TagsResult {
-        titles,
-        descriptions,
-        permalinks,
-        keywords,
-        html: tags_html,
-    }
-}
-
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
 pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
