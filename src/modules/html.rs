@@ -34,7 +34,7 @@ use std::collections::HashMap;
 ///
 /// ```
 ///
-/// use ssg::html::generate_html;
+/// use ssg::modules::html::generate_html;
 ///
 /// let content = "## Hello, world!\n\nThis is a test.";
 /// let title = "My Page";

@@ -4,7 +4,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::html::generate_html;
+use ssg::modules::html::generate_html;
 
 pub fn bench_generate_html(c: &mut Criterion) {
     let content = "## Hello, world!\n\nThis is a test.";

@@ -176,8 +176,6 @@ pub mod utilities;
 pub mod file;
 /// The `frontmatter` module extracts the front matter from files.
 pub mod frontmatter;
-/// The `html` module generates the HTML content.
-pub mod html;
 /// The `human` module generates the human-readable content.
 pub mod human;
 /// The `json` module generates the JSON content.

@@ -2,7 +2,8 @@
 mod tests {
     use regex::Regex;
     use ssg::{
-        html::generate_html, utilities::format_header_with_id_class,
+        utilities::format_header_with_id_class,
+        modules::html::generate_html,
     };
 
     #[test]
