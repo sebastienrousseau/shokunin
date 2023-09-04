@@ -14,3 +14,6 @@ pub mod rss;
 /// The `tags` module contains functions for generating a tags page.
 pub mod tags;
 
+/// The `human` module generates the human-readable content.
+pub mod human;
+
