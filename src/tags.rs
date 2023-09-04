@@ -210,7 +210,7 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
         let tag = key;
         let pages = &global_tags_data[key];
         let count = pages.len();
-        html_content.push_str(&format!("<h3 class=\"{}\" id=\"h3-{}\" tabindex=\"0\">{} ({} Posts)</h3>\n<ul>", tag.replace(" ", "-"), tag.replace(" ", "-"), to_title_case(tag), count));
+        html_content.push_str(&format!("<h3 class=\"{}\" id=\"h3-{}\" tabindex=\"0\">{} ({} Posts)</h3>\n<ul>", tag.replace(' ', "-"), tag.replace(' ', "-"), to_title_case(tag), count));
         for page in pages.iter() {
             html_content.push_str(&format!("<li>{}: <a href=\"{}\">{}</a> - <strong>{}</strong></li>\n", page.date, page.permalink, page.title, page.description));
         }

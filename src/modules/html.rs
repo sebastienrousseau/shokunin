@@ -192,22 +192,7 @@ pub fn preprocess_content(content: &str, class_regex: &Regex, img_regex: &Regex)
 ///
 /// A `String` containing the converted HTML content.
 ///
-/// # Example
-///
-/// ```rust
-/// use comrak::{markdown_to_html, ComrakOptions};
-/// use ssg::modules::html::convert_markdown_to_html;
-///
-/// fn main() {
-///     let markdown_content = "# Hello, World!";
-///     let options = ComrakOptions::default();
-///
-///     let html_content = convert_markdown_to_html(markdown_content, &options);
-///     println!("{}", html_content);
-/// }
-/// ```
 pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions) -> String {
-    // Use the Comrak library's markdown_to_html function to convert the Markdown to HTML
     let html_content = markdown_to_html(markdown_content, options);
 
     // Return the HTML content
