@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::data::{FileData, TagsData, PageData};
-use std::io::{Read, Write};
-use std::{collections::HashMap, path::Path, fs};
 use crate::utilities::to_title_case;
+use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
 ///
@@ -21,7 +20,7 @@ use crate::utilities::to_title_case;
 ///
 /// ```rust
 /// use ssg::data::FileData;
-/// use ssg::tags::generate_tags;
+/// use ssg::modules::tags::generate_tags;
 /// use std::collections::HashMap;
 ///
 /// let file = FileData { content: "This is a test".to_string(), ..Default::default() };
@@ -114,7 +113,7 @@ pub fn generate_tags(file: &FileData, metadata: &HashMap<String, String>) -> Has
 ///
 /// ```rust
 /// use std::collections::HashMap;
-/// use ssg::tags::create_tags_data;
+/// use ssg::modules::tags::create_tags_data;
 ///
 /// let mut metadata = HashMap::new();
 /// metadata.insert("date".to_string(), "2021-09-04".to_string());
@@ -161,7 +160,7 @@ pub fn create_tags_data(
 /// ```rust
 /// use std::collections::HashMap;
 /// use ssg::data::PageData;
-/// use ssg::tags::generate_tags_html;
+/// use ssg::modules::tags::generate_tags_html;
 ///
 /// let mut global_tags_data = HashMap::new();
 /// global_tags_data.insert(
@@ -224,7 +223,7 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
 
 /// Writes the given HTML content into an existing `index.html` file, replacing a placeholder.
 ///
-/// This function takes in the generated HTML content and a path to the output directory. 
+/// This function takes in the generated HTML content and a path to the output directory.
 /// It then reads an existing `index.html` file located in `tags/` sub-directory of the given output directory,
 /// replaces a `[[content]]` placeholder with the given HTML content, and writes it back to the file.
 ///
@@ -235,14 +234,14 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
 ///
 /// # Returns
 ///
-/// Returns an `std::io::Result<()>` which is `Ok` if the operation was successful. 
+/// Returns an `std::io::Result<()>` which is `Ok` if the operation was successful.
 /// Any IO error that occurs will be propagated in the `Err` variant of the result.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use std::path::Path;
-/// use ssg::tags::write_tags_html_to_file;
+/// use ssg::modules::tags::write_tags_html_to_file;
 ///
 /// let html_content = "<h1>Hello World</h1>";
 /// let output_path = Path::new("/path/to/output");

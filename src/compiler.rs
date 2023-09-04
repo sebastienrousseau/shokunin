@@ -12,14 +12,13 @@ use crate::{
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
     manifest::create_manifest_data,
-    modules::{html::generate_html, metatags::generate_all_meta_tags, rss::generate_rss},
+    modules::{html::generate_html, metatags::generate_all_meta_tags, rss::generate_rss, tags::*},
     navigation::generate_navigation,
     sitemap::create_site_map_data,
     template::{render_page, PageOptions},
     txt::create_txt_data,
-    write::write_files, tags::{generate_tags_html, write_tags_html_to_file},
+    write::write_files
 };
-use crate::tags::generate_tags;
 use std::{error::Error, fs, path::Path, collections::HashMap};
 
 /// Compiles files in a source directory, generates HTML pages from them, and

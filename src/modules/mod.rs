@@ -11,3 +11,6 @@ pub mod metatags;
 /// The `rss` module contains functions for generating RSS feeds.
 pub mod rss;
 
+/// The `tags` module contains functions for generating a tags page.
+pub mod tags;
+

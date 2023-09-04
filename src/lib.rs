@@ -197,8 +197,7 @@ pub mod process;
 pub mod serve;
 /// The `sitemap` module generates the sitemap content.
 pub mod sitemap;
-/// The `tags` module generates the tag list.
-pub mod tags;
+
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
