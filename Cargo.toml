@@ -17,7 +17,7 @@ license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.72.0"
+rust-version = "1.71.1"
 version = "0.0.16"
 include = [
     "/CONTRIBUTING.md",
