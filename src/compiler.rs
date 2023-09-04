@@ -2,22 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    cname::create_cname_data,
     data::{FileData, RssData, MetaTagGroups, PageData},
     file::add,
     frontmatter::extract,
     json::{cname, human, sitemap, txt},
-    keywords::extract_keywords,
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
     manifest::create_manifest_data,
-    modules::{
-        html::generate_html,
-        human::create_human_data,
-        metatags::generate_all_meta_tags,
-        rss::generate_rss,
-        tags::*
-    },
+    modules::{cname::create_cname_data, html::generate_html, human::create_human_data, keywords::extract_keywords, metatags::generate_all_meta_tags, rss::generate_rss, tags::*},
     navigation::generate_navigation,
     sitemap::create_site_map_data,
     template::{render_page, PageOptions},

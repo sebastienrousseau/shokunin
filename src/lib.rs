@@ -164,8 +164,6 @@ use std::{error::Error, path::Path};
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
-/// The `cname` module generates the CNAME content.
-pub mod cname;
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
 /// The `data` module contains the structs.
@@ -178,8 +176,6 @@ pub mod file;
 pub mod frontmatter;
 /// The `json` module generates the JSON content.
 pub mod json;
-/// The `keywords` module contains functions for extracting keywords.
-pub mod keywords;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
 /// The `manifest` module generates the manifest file.

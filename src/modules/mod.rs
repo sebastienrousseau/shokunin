@@ -17,3 +17,9 @@ pub mod tags;
 /// The `human` module generates the human-readable content.
 pub mod human;
 
+/// The `cname` module generates the CNAME content.
+pub mod cname;
+
+/// The `keywords` module contains functions for extracting keywords.
+pub mod keywords;
+
