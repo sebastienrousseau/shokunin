@@ -23,3 +23,6 @@ pub mod cname;
 /// The `keywords` module contains functions for extracting keywords.
 pub mod keywords;
 
+/// The `sitemap` module generates the sitemap content.
+pub mod sitemap;
+

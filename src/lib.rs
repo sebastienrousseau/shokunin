@@ -189,8 +189,6 @@ pub mod navigation;
 pub mod process;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
-/// The `sitemap` module generates the sitemap content.
-pub mod sitemap;
 
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
