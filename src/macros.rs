@@ -333,7 +333,7 @@ macro_rules! macro_serve {
 }
 
 #[macro_export]
-/// # `write_element` macro
+/// # `macro_write_element` Macro
 ///
 /// Writes an XML element to the specified writer.
 ///
@@ -364,7 +364,7 @@ macro_rules! macro_write_element {
 }
 
 #[macro_export]
-/// # `macro_generate_tags_from_list` macro
+/// # `macro_generate_tags_from_list` Macro
 ///
 /// Generates HTML meta tags based on a list of tag names and a metadata HashMap.
 ///
@@ -375,7 +375,7 @@ macro_rules! macro_generate_tags_from_list {
 }
 
 #[macro_export]
-/// # `macro_generate_tags_from_fields` macro
+/// # `macro_generate_tags_from_fields` Macro
 ///
 /// Generates HTML meta tags based on a list of tag names and a metadata HashMap.
 ///
@@ -393,6 +393,8 @@ macro_rules! macro_generate_tags_from_fields {
 }
 
 #[macro_export]
+/// # `macro_generate_rss` Macro
+///
 /// Generates an RSS feed from the given `RssData` struct.
 ///
 /// This macro generates a complete RSS feed in XML format based on the data contained in the provided `RssData`.
@@ -485,9 +487,34 @@ macro_rules! macro_generate_rss {
     };
 }
 #[macro_export]
-/// # `macro_set_rss_data_fields` macro
+/// # `macro_set_rss_data_fields` Macro
 macro_rules! macro_set_rss_data_fields {
     ($rss_data:expr, $field:ident, $value:expr) => {
         $rss_data.set(stringify!($field), $value);
+    };
+}
+
+#[macro_export]
+/// # `macro_log_info` Macro
+macro_rules! macro_log_info {
+    ($level:expr, $component:expr, $description:expr, $format:expr) => {
+        {
+            use $crate::loggers::{Log, LogLevel, LogFormat};
+
+            extern crate dtt;
+            use dtt::DateTime;
+            // Get the current date and time in ISO 8601 format.
+            let date = DateTime::new();
+            let iso = date.iso_8601;
+
+            extern crate vrd;
+            use vrd::Random;
+            // Create a new random number generator
+            let mut rng = Random::default();
+            let session_id = rng.rand().to_string();
+
+            let log = Log::new(&session_id, &iso, $level, $component, $description, $format);
+            let _ = log.log();
+        }
     };
 }
