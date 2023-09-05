@@ -186,8 +186,8 @@ jobs:
       # Install LibSSL for the cross-compilation toolchain
       - name: LibSSL for the cross-compilation toolchain
         run: |
-          sudo apt-get -y update
-          sudo apt-get install -y libssl-dev
+          sudo apt update -y
+          sudo apt install libssl-dev
 
       # Build the targets
       - name: Build targets
