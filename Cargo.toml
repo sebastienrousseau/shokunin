@@ -63,6 +63,7 @@ vrd = "0.0.4"
 [dev-dependencies]
 assert_cmd = "2.0.12"
 criterion = "0.5.1"
+openssl = { version = "0.10.57", features = ["vendored"] }
 
 [lib]
 crate-type = ["lib"]

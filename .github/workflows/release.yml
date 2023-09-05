@@ -190,12 +190,6 @@ jobs:
           cargo clean --verbose
         shell: bash
 
-      # Install pkg-config for the cross-compilation toolchain
-      - name: pkg-config for the cross-compilation toolchain
-        run: |
-          sudo apt update -y
-          sudo apt install pkg-config
-
       # Build the targets
       - name: Build targets
         id: build-targets
