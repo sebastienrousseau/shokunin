@@ -111,18 +111,6 @@ jobs:
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             cross: true
-          # - target: mips-unknown-linux-gnu
-          #   os: ubuntu-latest
-          #   cross: true
-          # - target: mips64-unknown-linux-gnuabi64
-          #   os: ubuntu-latest
-          #   cross: true
-          # - target: mips64el-unknown-linux-gnuabi64
-          #   os: ubuntu-latest
-          #   cross: true
-          # - target: mipsel-unknown-linux-gnu
-          #   os: ubuntu-latest
-          #   cross: true
           - target: powerpc-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
@@ -141,9 +129,6 @@ jobs:
           - target: x86_64-unknown-freebsd
             os: ubuntu-latest
             cross: true
-          # - target: x86_64-unknown-illumos
-          #   os: ubuntu-latest
-          #   cross: true
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             cross: true
