@@ -178,8 +178,7 @@ pub mod frontmatter;
 pub mod json;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
-/// The `manifest` module generates the manifest file.
-pub mod manifest;
+
 /// The `modules` module contains the application modules.
 pub mod modules;
 /// The `navigation` module generates the navigation menu.

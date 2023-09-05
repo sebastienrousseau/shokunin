@@ -26,3 +26,5 @@ pub mod keywords;
 /// The `sitemap` module generates the sitemap content.
 pub mod sitemap;
 
+/// The `manifest` module generates the manifest file.
+pub mod manifest;

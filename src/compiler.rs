@@ -8,8 +8,16 @@ use crate::{
     json::{cname, human, sitemap, txt},
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
-    manifest::create_manifest_data,
-    modules::{cname::create_cname_data, html::generate_html, human::create_human_data, keywords::extract_keywords, metatags::generate_all_meta_tags, rss::generate_rss, tags::*, sitemap::create_site_map_data},
+    modules::{
+        cname::create_cname_data,
+        html::generate_html,
+        human::create_human_data,
+        keywords::extract_keywords,
+        manifest::create_manifest_data,
+        metatags::generate_all_meta_tags,
+        rss::generate_rss, tags::*,
+        sitemap::create_site_map_data
+    },
     navigation::generate_navigation,
     template::{render_page, PageOptions},
     txt::create_txt_data,
