@@ -30,7 +30,7 @@ pub fn write_files(build_dir_path: &Path, file: &FileData, template_path: &Path)
             ("rss.xml", &file.rss),
             ("sitemap.xml", &file.sitemap),
         ];
-
+        println!("\n {}", file_name.to_uppercase());
         for (file_name, content) in &file_paths {
             let file_path = build_dir_path.join(file_name);
             fs::write(&file_path, content)?;
@@ -58,6 +58,7 @@ pub fn write_files(build_dir_path: &Path, file: &FileData, template_path: &Path)
             ("sitemap.xml", &file.sitemap),
         ];
 
+        println!("\n {}", file_name.to_uppercase());
         for (file_name, content) in &file_paths {
             let file_path = dir_name.join(file_name);
             fs::write(&file_path, content)?;

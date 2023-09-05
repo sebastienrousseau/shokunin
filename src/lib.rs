@@ -162,6 +162,10 @@ use cli::print_banner;
 use compiler::compile;
 use std::{error::Error, path::Path};
 
+
+/// The `loggers` module contains functions for logging.
+pub mod loggers;
+
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
 /// The `compiler` module contains functions for the compilation process.

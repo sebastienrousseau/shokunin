@@ -6,6 +6,7 @@ use crate::{
     file::add,
     frontmatter::extract,
     json::{cname, human, sitemap, txt},
+    macro_log_info,
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
     modules::{
@@ -21,7 +22,7 @@ use crate::{
     navigation::generate_navigation,
     template::{render_page, PageOptions},
     txt::create_txt_data,
-    write::write_files
+    write::write_files,
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
 
@@ -76,8 +77,8 @@ pub fn compile(
                 Some(&macro_metadata_option!(metadata, "content")),
             )
             .unwrap_or_else(|err| {
-                // Log the error and provide a fallback HTML content
-                println!("Error generating HTML: {:?}", err);
+                let description = format!("Error generating HTML: {:?}", err);
+                macro_log_info!(LogLevel::ERROR, "compiler.rs - Line 81", &description, LogFormat::CLF);
                 String::from("Fallback HTML content")
             });
 
@@ -272,10 +273,16 @@ pub fn compile(
         .collect();
 
     // Write compiled files to output directory
-    println!(
-        "❯ Writing the generated, compiled and minified files to the `{}` directory...",
+    let cli_description = format!(
+        "<Notice>: Successfully generated, compiled, and minified all HTML files to the `{:?}` directory",
         build_dir_path.display()
     );
+
+    // Log the generated files information to a log file (shokunin.log)
+    macro_log_info!(LogLevel::INFO, "compiler.rs (Line 280)", &cli_description, LogFormat::JSON);
+
+    // Print the generated files to the console
+    println!("{} ", cli_description);
 
     // Iterate over compiled files and write pages to output directory
     for file in &compiled_files {
