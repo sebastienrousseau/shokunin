@@ -183,6 +183,11 @@ jobs:
           cargo clean --verbose
         shell: bash
 
+      # Install OpenSSL for the cross-compilation toolchain
+      - name: Check for OpenSSL
+        run: |
+          cargo install --force --verbose openssl-sys
+
       # Build the targets
       - name: Build targets
         id: build-targets
