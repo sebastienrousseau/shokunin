@@ -5,6 +5,7 @@
   alt="Logo of the Shokunin Static Site Generator"
   height="261"
   src="https://kura.pro/shokunin/images/logos/shokunin.svg"
+  title="Logo of the Shokunin Static Site Generator"
   width="261"
   />
 
@@ -43,7 +44,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 `Shokunin Static Site Generator` feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust 🦀
-- Built-in support for [GitHub Flavored Markdown][12] (GFM).
+- Built-in support for [GitHub Flavoured Markdown][12] (GFM).
 - Built-in support for Google Analytics and Bing Analytics.
 - Compatible with various HTML themes and Premium templates.
 - Generates Atom and RSS feeds for your blog posts.
@@ -54,24 +55,28 @@ The library extracts metadata and content to generate static HTML files from Mar
 
 ## Table of Contents 📚
 
-- [Getting Started 🚀](#getting-started-)
-  - [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Platform support](#platform-support)
-    - [Tier 1 platforms](#tier-1-platforms)
-    - [Tier 2 platforms](#tier-2-platforms)
-  - [Documentation](#documentation)
-- [Usage 📖](#usage-)
-  - [Command Line Interface (CLI)](#command-line-interface-cli)
-    - [Arguments](#arguments)
-  - [In your project](#in-your-project)
-  - [Examples](#examples)
-    - [Args](#args)
-    - [Return value](#return-value)
-- [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
-- [License 📝](#license-)
-- [Contribution 🤝](#contribution-)
-- [Acknowledgements 💙](#acknowledgements-)
+- [Shokunin Static Site Generator](#shokunin-static-site-generator)
+  - [Overview 📖](#overview-)
+  - [Features ✨](#features-)
+  - [Table of Contents 📚](#table-of-contents-)
+  - [Getting Started 🚀](#getting-started-)
+    - [Installation](#installation)
+    - [Requirements](#requirements)
+    - [Platform support](#platform-support)
+      - [Tier 1 platforms](#tier-1-platforms)
+      - [Tier 2 platforms](#tier-2-platforms)
+    - [Documentation](#documentation)
+  - [Usage 📖](#usage-)
+    - [Command Line Interface (CLI)](#command-line-interface-cli)
+      - [Arguments](#arguments)
+    - [In your project](#in-your-project)
+    - [Examples](#examples)
+      - [Args](#args)
+      - [Return value](#return-value)
+  - [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
+  - [License 📝](#license-)
+  - [Contribution 🤝](#contribution-)
+  - [Acknowledgements 💙](#acknowledgements-)
 
 ## Getting Started 🚀
 
@@ -98,7 +103,7 @@ ssg --help
 ### Requirements
 
 The minimum supported Rust toolchain version is currently Rust
-**1.70.0** or later (stable). It is recommended that you install the
+**1.72.0** or later (stable). It is recommended that you install the
 latest stable version of Rust.
 
 ### Platform support
@@ -174,7 +179,7 @@ To use the `Shokunin Static Site Generator` library in your project, add the fol
 
 ```toml
 [dependencies]
-shokunin = "0.0.15"
+shokunin = "0.0.16"
 ```
 
 Add the following to your `main.rs` file:
@@ -254,7 +259,7 @@ A big thank you to all the awesome contributors of [Shokunin][6] for their help 
 
 A special thank you goes to the [Rust Reddit][13] community for providing a lot of useful suggestions on how to improve this project.
 
-[0]: https://minifunctions.com/ "Mini Functions"
+[0]: https://minifunctions.com/ "The Rust Mini Functions"
 [1]: https://shokunin.one "Shokunin Static Site Generator"
 [2]: https://opensource.org/license/apache-2-0/ "Apache License, Version 2.0"
 [3]: http://opensource.org/licenses/MIT "MIT license"
@@ -266,7 +271,7 @@ A special thank you goes to the [Rust Reddit][13] community for providing a lot 
 [9]: https://docs.rs/crate/ssg/ "Docs.rs"
 [10]: https://lib.rs/crates/ssg "Lib.rs"
 [11]: https://github.com/sebastienrousseau/shokunin/actions "Actions"
-[12]: https://github.github.com/gfm/ "GitHub Flavored Markdown"
+[12]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
 [13]: https://www.reddit.com/r/rust/ "Rust Reddit"
 [14]: https://www.rust-lang.org/learn/get-started "Rust"
 [15]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main "Codecov"
@@ -278,6 +283,6 @@ A special thank you goes to the [Rust Reddit][13] community for providing a lot 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.14-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.16-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

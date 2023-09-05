@@ -11,6 +11,7 @@ cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
+date: "July 12, 2023"
 description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
@@ -21,7 +22,7 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "Sample, Rust, static site generator, ssg, dynamic websites, HTML themes, templates, Markdown, YAML, JSON, TOML" ## The keywords of the site. (comma separated, max 10 keywords)
+keywords: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "page" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
@@ -30,13 +31,14 @@ logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
 logo: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
-permalink: "https://kaishi.one" ## The url of the site.
+permalink: "https://kaishi.one/privacy" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
+tags: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The tags of the site. (max 160 characters)
 theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
@@ -46,7 +48,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.16)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml

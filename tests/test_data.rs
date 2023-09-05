@@ -2,7 +2,7 @@
 mod tests {
 
     use ssg::data::{
-        CnameData, FileData, IconData, ManifestData, SitemapData,
+        CnameData, FileData, IconData, ManifestData, SiteMapData,
         TxtData,
     };
 
@@ -23,6 +23,7 @@ mod tests {
             content: String::default(),
             human: String::default(),
             json: String::default(),
+            keyword: String::default(),
             name: String::default(),
             rss: String::default(),
             sitemap: String::default(),
@@ -63,8 +64,8 @@ mod tests {
 
     #[test]
     fn test_sitemap_data_default() {
-        let sitemap_data = SitemapData::default();
-        let expected_sitemap_data = SitemapData {
+        let sitemap_data = SiteMapData::default();
+        let expected_sitemap_data = SiteMapData {
             loc: String::default(),
             lastmod: String::default(),
             changefreq: String::default(),
@@ -80,15 +81,4 @@ mod tests {
         };
         assert_eq!(txt_data, expected_txt_data);
     }
-
-    // #[test]
-    // fn test_file_info_default() {
-    //     let file_info = FileInfo::default();
-    //     let expected_file_info = FileInfo {
-    //         file_type: String::default(),
-    //         files_to_create: Vec::new(),
-    //         display: false,
-    //     };
-    //     assert_eq!(file_info, expected_file_info);
-    // }
 }

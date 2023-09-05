@@ -39,7 +39,7 @@ use std::path::Path;
 ///
 #[allow(clippy::redundant_clone)]
 pub fn generate_navigation(files: &[FileData]) -> String {
-    let supported_extensions = vec!["md", "toml", "json"];
+    let supported_extensions = ["md", "toml", "json"];
     let mut files_sorted = files.to_vec();
     files_sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -88,4 +88,5 @@ pub fn generate_navigation(files: &[FileData]) -> String {
         "<ul class=\"navbar-nav ms-auto mb-2 mb-lg-0\">\n{}\n</ul>",
         nav_links
     )
+
 }

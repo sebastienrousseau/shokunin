@@ -1,8 +1,8 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use super::data::RssData;
-use super::macro_write_element;
+use crate::data::RssData;
+use crate::macro_write_element;
 use quick_xml::{
     events::{BytesDecl, BytesEnd, BytesStart, Event},
     Writer,

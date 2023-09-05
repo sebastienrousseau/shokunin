@@ -24,7 +24,7 @@
 ///
 /// The `macro_check_directory` macro checks if the directory specified by `$dir` exists. If it exists and is not a directory, a panic with an error message is triggered. If the directory doesn't exist, the macro attempts to create it using `std::fs::create_dir_all($dir)`. If the creation is successful, no action is taken. If an error occurs during the directory creation, a panic is triggered with an error message indicating the failure.
 ///
-/// Please note that the macro panics on failure. Consider using this macro in scenarios where panicking is an acceptable behavior, such as during application startup or setup.
+/// Please note that the macro panics on failure. Consider using this macro in scenarios where panicking is an acceptable behaviour, such as during application startup or setup.
 ///
 #[macro_export]
 macro_rules! macro_check_directory {
@@ -180,7 +180,7 @@ macro_rules! macro_create_directories {
 #[macro_export]
 macro_rules! macro_generate_metatags {
     ($($key:literal, $value:expr),* $(,)?) => {
-        $crate::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
+        $crate::modules::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
     };
 }
 
@@ -333,7 +333,7 @@ macro_rules! macro_serve {
 }
 
 #[macro_export]
-/// # `write_element` macro
+/// # `macro_write_element` Macro
 ///
 /// Writes an XML element to the specified writer.
 ///
@@ -361,4 +361,160 @@ macro_rules! macro_write_element {
 
         result
     }};
+}
+
+#[macro_export]
+/// # `macro_generate_tags_from_list` Macro
+///
+/// Generates HTML meta tags based on a list of tag names and a metadata HashMap.
+///
+macro_rules! macro_generate_tags_from_list {
+    ($tag_names:expr, $metadata:expr) => {
+        load_metatags($tag_names, $metadata)
+    };
+}
+
+#[macro_export]
+/// # `macro_generate_tags_from_fields` Macro
+///
+/// Generates HTML meta tags based on a list of tag names and a metadata HashMap.
+///
+macro_rules! macro_generate_tags_from_fields {
+    ($name:ident, $metadata:expr, $($tag:literal => $field:ident),*) => {
+        {
+            let tag_mapping: Vec<(String, Option<String>)> = vec![
+                $(
+                    ($tag.to_string(), $metadata.get(stringify!($field)).cloned()),
+                )*
+            ];
+            generate_custom_meta_tags(&tag_mapping)
+        }
+    };
+}
+
+#[macro_export]
+/// # `macro_generate_rss` Macro
+///
+/// Generates an RSS feed from the given `RssData` struct.
+///
+/// This macro generates a complete RSS feed in XML format based on the data contained in the provided `RssData`.
+/// It dynamically generates XML elements for each field of the `RssData` using the provided metadata values and
+/// writes them to the specified Writer instance.
+///
+/// # Arguments
+///
+/// * `$writer` - The Writer instance to write the generated XML events.
+/// * `$options` - The RssData instance containing the metadata values for generating the RSS feed.
+///
+/// # Returns
+///
+/// Returns `Result<(), Box<dyn Error>>` indicating success or an error if XML writing fails.
+///
+macro_rules! macro_generate_rss {
+    ($writer:expr, $options:expr) => {
+        writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+
+        let mut rss_start = BytesStart::new("rss");
+        rss_start.push_attribute(("version", "2.0"));
+        rss_start.push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
+        writer.write_event(Event::Start(rss_start))?;
+
+        writer.write_event(Event::Start(BytesStart::new("channel")))?;
+
+        macro_write_element!($writer, "title", &$options.title)?;
+        macro_write_element!($writer, "link", &$options.link)?;
+        macro_write_element!($writer, "description", &$options.description)?;
+        macro_write_element!($writer, "language", &$options.language)?;
+        macro_write_element!($writer, "pubDate", &$options.pub_date)?;
+        macro_write_element!(
+            $writer,
+            "lastBuildDate",
+            &$options.last_build_date
+        )?;
+        macro_write_element!($writer, "docs", &$options.docs)?;
+        macro_write_element!($writer, "generator", &$options.generator)?;
+        macro_write_element!(
+            $writer,
+            "managingEditor",
+            &$options.managing_editor
+        )?;
+        macro_write_element!($writer, "webMaster", &$options.webmaster)?;
+        macro_write_element!($writer, "category", &$options.category)?;
+        macro_write_element!($writer, "ttl", &$options.ttl)?;
+
+        // Write the `image` element.
+        writer.write_event(Event::Start(BytesStart::new("image")))?;
+        macro_write_element!($writer, "url", &$options.image)?;
+        macro_write_element!($writer, "title", &$options.title)?;
+        macro_write_element!($writer, "link", &$options.link)?;
+        writer.write_event(Event::End(BytesEnd::new("image")))?;
+
+        // Write the `atom:link` element.
+        let mut atom_link_start =
+            BytesStart::new(Cow::Borrowed("atom:link").into_owned());
+        atom_link_start.push_attribute((
+            "href",
+            $options.atom_link.to_string().as_str(),
+        ));
+        atom_link_start.push_attribute(("rel", "self"));
+        atom_link_start.push_attribute(("type", "application/rss+xml"));
+        writer.write_event(Event::Empty(atom_link_start))?;
+
+        // Write the `item` element.
+        writer.write_event(Event::Start(BytesStart::new("item")))?;
+
+        macro_write_element!($writer, "author", &$options.author)?;
+        macro_write_element!(
+            $writer,
+            "description",
+            &$options.item_description
+        )?;
+        macro_write_element!($writer, "guid", &$options.item_guid)?;
+        macro_write_element!($writer, "link", &$options.item_link)?;
+        macro_write_element!($writer, "pubDate", &$options.item_pub_date)?;
+        macro_write_element!($writer, "title", &$options.item_title)?;
+
+        // End the `item` element.
+        writer.write_event(Event::End(BytesEnd::new("item")))?;
+
+        // End the `channel` element.
+        writer.write_event(Event::End(BytesEnd::new("channel")))?;
+
+        // End the `rss` element.
+        writer.write_event(Event::End(BytesEnd::new("rss")))?;
+
+        Ok(())
+    };
+}
+#[macro_export]
+/// # `macro_set_rss_data_fields` Macro
+macro_rules! macro_set_rss_data_fields {
+    ($rss_data:expr, $field:ident, $value:expr) => {
+        $rss_data.set(stringify!($field), $value);
+    };
+}
+
+#[macro_export]
+/// # `macro_log_info` Macro
+macro_rules! macro_log_info {
+    ($level:expr, $component:expr, $description:expr, $format:expr) => {
+        {
+            use $crate::loggers::{Log, LogLevel, LogFormat};
+
+            extern crate dtt;
+            use dtt::DateTime;
+            // Get the current date and time in ISO 8601 format.
+            let date = DateTime::new();
+            let iso = date.iso_8601;
+
+            extern crate vrd;
+            use vrd::Random;
+            // Create a new random number generator
+            let mut rng = Random::default();
+            let session_id = rng.rand().to_string();
+
+            let log = Log::new(&session_id, &iso, $level, $component, $description, $format);
+            let _ = log.log();
+        }
+    };
 }

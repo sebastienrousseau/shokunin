@@ -2,397 +2,266 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    data::{
-        CnameData, FileData, HumansData, IconData,
-        ManifestData, MetatagsData, RssData, SitemapData, TxtData,
-    },
+    data::{FileData, RssData, MetaTagGroups, PageData},
     file::add,
     frontmatter::extract,
-    html::generate_html,
     json::{cname, human, sitemap, txt},
+    macro_log_info,
     macro_cleanup_directories, macro_create_directories,
-    macro_generate_metatags, macro_metadata_option,
+    macro_metadata_option,macro_set_rss_data_fields,
+    modules::{
+        cname::create_cname_data,
+        html::generate_html,
+        human::create_human_data,
+        keywords::extract_keywords,
+        manifest::create_manifest_data,
+        metatags::generate_all_meta_tags,
+        rss::generate_rss, tags::*,
+        sitemap::create_site_map_data
+    },
     navigation::generate_navigation,
-    rss::generate_rss,
     template::{render_page, PageOptions},
-    utilities::minify_html,
+    txt::create_txt_data,
+    write::write_files,
 };
-use std::{error::Error, fs, path::Path};
+use std::{error::Error, fs, path::Path, collections::HashMap};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
-/// page containing links to the generated pages. This function takes in the
-/// paths to the source and output directories as arguments.
+/// page containing links to the generated pages.
 ///
-/// The function reads in all Markdown files in the source directory and
-/// extracts metadata from them. The metadata is used to generate appropriate
-/// meta tags for the resulting HTML pages. The Markdown content of the files
-/// is then converted to HTML using the `generate_html` function and rendered
-/// into complete HTML pages using the `render_page` function. The resulting
-/// pages are written to the output directory as HTML files with the same names
-/// as the original Markdown files.
-///
-/// Finally, the function generates an index HTML page containing links to all
-/// the generated pages. The resulting index page is written to the output
-/// directory as "index.html.
-///
-/// If any errors occur during the process (e.g. a file cannot be read or
-/// written), an error is returned. Otherwise, `Ok(())` is returned.
+/// This function takes paths to source, output, site, and template directories
+/// as arguments and performs the compilation process. It reads Markdown files,
+/// extracts metadata, generates HTML content, and writes resulting pages.
 ///
 /// # Arguments
 ///
+/// * `build_dir_path` - The path to the temporary build directory.
 /// * `content_path` - The path to the content directory.
-/// * `build_dir_path` - The path to the output directory.
-/// * `site_path` - The name of the site.
+/// * `site_path` - The path to the output site directory.
 /// * `template_path` - The path to the template directory.
 ///
 /// # Returns
 ///
-/// `Ok(())` if the compilation is successful.
-/// `Err` if an error occurs during the compilation. The error is
-/// wrapped in a `Box<dyn Error>` to allow for different error types.
-///
+/// Returns `Ok(())` if the compilation is successful, otherwise returns an error
+/// wrapped in a `Box<dyn Error>`.
 pub fn compile(
     build_dir_path: &Path, // The path to the temp directory
     content_path: &Path,   // The path to the content directory
     site_path: &Path,      // The path to the site directory
     template_path: &Path,  // The path to the template directory
 ) -> Result<(), Box<dyn Error>> {
-    // Creating the build and site path directories
+    // Create build and site directories
     macro_create_directories!(build_dir_path, site_path)?;
 
-    // Read the files in the source directory
+    // Read files in the source directory
     let source_files = add(content_path)?;
 
-    // Generate the HTML code for the navigation menu
-    let navigation = generate_navigation(&source_files);
+    // Generate navigation bar HTML
+    let navigation = generate_navigation(&source_files); // Generates a navigation bar HTML
 
+    let mut global_tags_data: HashMap<String, Vec<PageData>> = HashMap::new();
+
+
+    // Process source files and store results in 'compiled_files' vector
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
-            // Extract metadata from front matter
-            let metadata = extract(&file.content);
+            let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file.content);
 
-            // Define the Apple metatags
-            let apple_metatags_names = [
-                "apple_mobile_web_app_orientations",
-                "apple_touch_icon_sizes",
-                "apple-mobile-web-app-capable",
-                "apple-mobile-web-app-status-bar-inset",
-                "apple-mobile-web-app-status-bar-style",
-                "apple-mobile-web-app-title",
-                "apple-touch-fullscreen",
-            ];
-
-            // Loop through the Apple metatags and generate the HTML code
-            let apple_metatags: String = apple_metatags_names
-                .iter()
-                .map(|name| {
-                    let value = metadata
-                        .get(*name)
-                        .cloned()
-                        .unwrap_or_default();
-                    MetatagsData::new(name.to_string(), value)
-                        .generate()
-                })
-                .collect::<Vec<String>>()
-                .join("");
-
-            // Define the Primary metatags
-            let primary_metatags_names = [
-                "author",
-                "description",
-                "format-detection",
-                "generator",
-                "keywords",
-                "language",
-                "permalink",
-                "rating",
-                "referrer",
-                "revisit-after",
-                "robots",
-                "theme_color",
-                "title",
-                "viewport",
-            ];
-
-            // Loop through the Primary metatags and generate the HTML code
-            let primary_metatags: String = primary_metatags_names
-                .iter()
-                .map(|name| {
-                    let value = metadata
-                        .get(*name)
-                        .cloned()
-                        .unwrap_or_default();
-                    MetatagsData::new(name.to_string(), value)
-                        .generate()
-                })
-                .collect::<Vec<String>>()
-                .join("");
-
-            let og_metadata = macro_generate_metatags!(
-                "og:description",
-                &macro_metadata_option!(metadata, "description"),
-                "og:image:alt",
-                &macro_metadata_option!(metadata, "image_alt"),
-                "og:image:height",
-                &macro_metadata_option!(metadata, "image_height"),
-                "og:image:width",
-                &macro_metadata_option!(metadata, "image_width"),
-                "og:image",
-                &macro_metadata_option!(metadata, "image"),
-                "og:locale",
-                &macro_metadata_option!(metadata, "locale"),
-                "og:site_name",
-                &macro_metadata_option!(metadata, "name"),
-                "og:title",
-                &macro_metadata_option!(metadata, "title"),
-                "og:type",
-                &macro_metadata_option!(metadata, "type"),
-                "og:url",
-                &macro_metadata_option!(metadata, "permalink"),
-            );
-
-            // Define the Microsoft metatags
-            let msapplication_metadata_names = [
-                "msapplication-navbutton-color",
-            ];
-            // Loop through the Microsoft metatags and generate the HTML code
-            let msapplication_metatags: String =
-                msapplication_metadata_names
-                    .iter()
-                    .map(|name| {
-                        let value = metadata
-                            .get(*name)
-                            .cloned()
-                            .unwrap_or_default();
-                        MetatagsData::new(name.to_string(), value)
-                            .generate()
-                    })
-                    .collect::<Vec<String>>()
-                    .join("");
-
-            let twitter_metadata = macro_generate_metatags!(
-                "twitter:card",
-                &macro_metadata_option!(metadata, "twitter_card"),
-                "twitter:creator",
-                &macro_metadata_option!(metadata, "twitter_creator"),
-                "twitter:description",
-                &macro_metadata_option!(metadata, "description"),
-                "twitter:image",
-                &macro_metadata_option!(metadata, "image"),
-                "twitter:image:alt",
-                &macro_metadata_option!(metadata, "image_alt"),
-                "twitter:image:height",
-                &macro_metadata_option!(metadata, "image_height"),
-                "twitter:image:width",
-                &macro_metadata_option!(metadata, "image_width"),
-                "twitter:site",
-                &macro_metadata_option!(metadata, "url"),
-                "twitter:title",
-                &macro_metadata_option!(metadata, "title"),
-                "twitter:url",
-                &macro_metadata_option!(metadata, "url"),
-            );
-
-            // Generate HTML content
+            // Generate HTML
             let html_content = generate_html(
                 &file.content,
                 &macro_metadata_option!(metadata, "title"),
                 &macro_metadata_option!(metadata, "description"),
                 Some(&macro_metadata_option!(metadata, "content")),
-            );
+            )
+            .unwrap_or_else(|err| {
+                let description = format!("Error generating HTML: {:?}", err);
+                macro_log_info!(LogLevel::ERROR, "compiler.rs - Line 81", &description, LogFormat::CLF);
+                String::from("Fallback HTML content")
+            });
 
-            // Generate HTML
+            // Create page options
             let mut page_options = PageOptions::new();
             for (key, value) in metadata.iter() {
                 page_options.set(key, value);
             }
 
-            // Adding metatags to page options for use in templates and in the
-            // navigation generation
-            page_options.set("apple", &apple_metatags);
+            // Set various meta tags
+            page_options.set("apple", &all_meta_tags.apple);
             page_options.set("content", &html_content);
-            page_options.set("microsoft", &msapplication_metatags);
+            page_options.set("microsoft", &all_meta_tags.ms);
             page_options.set("navigation", &navigation);
-            page_options.set("opengraph", &og_metadata);
-            page_options.set("primary", &primary_metatags);
-            page_options.set("twitter", &twitter_metadata);
+            page_options.set("opengraph", &all_meta_tags.og);
+            page_options.set("primary", &all_meta_tags.primary);
+            page_options.set("twitter", &all_meta_tags.twitter);
 
+            // Render page content
             let content = render_page(
                 &page_options,
                 &template_path.to_str().unwrap().to_string(),
-                metadata.get("layout").unwrap_or(&"".to_string()),
+                &metadata.get("layout").cloned().unwrap_or_default(),
             )
             .unwrap();
 
+            // Generate RSS data
+            let mut rss_data = RssData::new();
+
+            // Set fields using the helper macro
+            macro_set_rss_data_fields!(
+                rss_data,
+                atom_link,
+                macro_metadata_option!(metadata, "atom_link")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                author,
+                macro_metadata_option!(metadata, "author")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                category,
+                macro_metadata_option!(metadata, "category")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                copyright,
+                macro_metadata_option!(metadata, "copyright")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                description,
+                macro_metadata_option!(metadata, "description")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                docs,
+                macro_metadata_option!(metadata, "docs")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                generator,
+                macro_metadata_option!(metadata, "generator")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                image,
+                macro_metadata_option!(metadata, "image")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                item_guid,
+                macro_metadata_option!(metadata, "item_guid")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                item_description,
+                macro_metadata_option!(metadata, "item_description")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                item_link,
+                macro_metadata_option!(metadata, "item_link")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                item_pub_date,
+                macro_metadata_option!(metadata, "item_pub_date")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                item_title,
+                macro_metadata_option!(metadata, "item_title")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                language,
+                macro_metadata_option!(metadata, "language")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                last_build_date,
+                macro_metadata_option!(metadata, "last_build_date")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                link,
+                macro_metadata_option!(metadata, "permalink")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                managing_editor,
+                macro_metadata_option!(metadata, "managing_editor")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                pub_date,
+                macro_metadata_option!(metadata, "pub_date")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                title,
+                macro_metadata_option!(metadata, "title")
+            );
+            macro_set_rss_data_fields!(
+                rss_data,
+                ttl,
+                macro_metadata_option!(metadata, "ttl")
+            );
+
             // Generate RSS
-            let rss = generate_rss(&RssData {
-                atom_link: macro_metadata_option!(
-                    metadata,
-                    "atom_link"
-                ),
-                author: macro_metadata_option!(metadata, "author"),
-                category: macro_metadata_option!(metadata, "category"),
-                copyright: macro_metadata_option!(
-                    metadata,
-                    "copyright"
-                ),
-                description: macro_metadata_option!(
-                    metadata,
-                    "description"
-                ),
-                docs: macro_metadata_option!(metadata, "docs"),
-                generator: macro_metadata_option!(
-                    metadata,
-                    "generator"
-                ),
-                image: macro_metadata_option!(metadata, "image"),
-                item_description: macro_metadata_option!(
-                    metadata,
-                    "item_description"
-                ),
-                item_guid: macro_metadata_option!(
-                    metadata,
-                    "item_guid"
-                ),
-                item_link: macro_metadata_option!(
-                    metadata,
-                    "item_link"
-                ),
-                item_pub_date: macro_metadata_option!(
-                    metadata,
-                    "item_pub_date"
-                ),
-                item_title: macro_metadata_option!(
-                    metadata,
-                    "item_title"
-                ),
-                language: macro_metadata_option!(metadata, "language"),
-                last_build_date: macro_metadata_option!(
-                    metadata,
-                    "last_build_date"
-                ),
-                link: macro_metadata_option!(metadata, "permalink"),
-                managing_editor: macro_metadata_option!(
-                    metadata,
-                    "managing_editor"
-                ),
-                pub_date: macro_metadata_option!(metadata, "pub_date"),
-                title: macro_metadata_option!(metadata, "title"),
-                ttl: macro_metadata_option!(metadata, "ttl"),
-                webmaster: macro_metadata_option!(
-                    metadata,
-                    "webmaster"
-                ),
-            });
+            let rss = generate_rss(&rss_data);
             let rss_data = rss.unwrap();
 
-            // Generate JSON
-            let json = ManifestData {
-                name: metadata
-                    .get("name")
-                    .unwrap_or(&"".to_string())
-                    .to_string(),
-                short_name: (macro_metadata_option!(
-                    metadata,
-                    "short_name"
-                )),
-                start_url: ".".to_string(),
-                display: "standalone".to_string(),
-                background_color: "#ffffff".to_string(),
-                description: (macro_metadata_option!(
-                    metadata,
-                    "description"
-                )),
-                icons: match metadata.get("icon") {
-                    Some(icon) => {
-                        let icons = vec![IconData {
-                            src: icon.to_string(),
-                            sizes: "512x512".to_string(),
-                            icon_type: Some(
-                                "image/svg+xml".to_string(),
-                            ),
-                            purpose: Some("any maskable".to_string()),
-                        }];
-                        icons
-                    }
-                    None => Vec::new(),
-                },
-                orientation: "portrait-primary".to_string(),
-                scope: "/".to_string(),
-                theme_color: (macro_metadata_option!(
-                    metadata,
-                    "theme_color"
-                )),
-            };
+            // Generate a manifest data structure by extracting relevant information from the metadata.
+            let json = create_manifest_data(&metadata);
 
-            let cname_options: CnameData = CnameData {
-                cname: macro_metadata_option!(metadata, "cname"),
-            };
+            // Create a structure to hold CNAME-related options, populated with values from the metadata.
+            let cname_options = create_cname_data(&metadata);
 
-            let human_options: HumansData = HumansData {
-                author: macro_metadata_option!(metadata, "author"),
-                author_website: macro_metadata_option!(
-                    metadata,
-                    "author_website"
-                ),
-                author_twitter: macro_metadata_option!(
-                    metadata,
-                    "author_twitter"
-                ),
-                author_location: macro_metadata_option!(
-                    metadata,
-                    "author_location"
-                ),
-                thanks: macro_metadata_option!(metadata, "thanks"),
-                site_last_updated: macro_metadata_option!(
-                    metadata,
-                    "site_last_updated"
-                ),
-                site_standards: macro_metadata_option!(
-                    metadata,
-                    "site_standards"
-                ),
-                site_components: macro_metadata_option!(
-                    metadata,
-                    "site_components"
-                ),
-                site_software: macro_metadata_option!(
-                    metadata,
-                    "site_software"
-                ),
-            };
+            // Generate a structure for human-readable data, filling it with values from the metadata.
+            let human_options = create_human_data(&metadata);
 
-            let sitemap_options: SitemapData = SitemapData {
-                loc: macro_metadata_option!(metadata, "permalink"),
-                lastmod: macro_metadata_option!(
-                    metadata,
-                    "last_build_date"
-                ),
-                changefreq: "weekly".to_string(),
-            };
+            // Initialize a structure to store sitemap-related information, using values from the metadata.
+            let sitemap_options = create_site_map_data(&metadata);
 
-            let txt_options: TxtData = TxtData {
-                permalink: macro_metadata_option!(
-                    metadata,
-                    "permalink"
-                ),
-            };
+            let tags_data = generate_tags(&file, &metadata);
+            // println!("Tags: {:?}", tags_data);
 
+            // Update the global tags data
+            for (tag, pages_data) in tags_data.iter() {
+                let page_info: Vec<PageData> = pages_data.iter()
+                    .map(|page_data| PageData {
+                        title: page_data.get("title").cloned().unwrap_or_default(),
+                        description: page_data.get("description").cloned().unwrap_or_default(),
+                        permalink: page_data.get("permalink").cloned().unwrap_or_default(),
+                        date: page_data.get("date").cloned().unwrap_or_default(),
+                    })
+                    .collect();
+
+                global_tags_data.entry(tag.clone()).or_insert_with(Vec::new).extend(page_info);
+            }
+
+            // Generate a TxtData structure, filling it with values extracted from the metadata.
+            let txt_options = create_txt_data(&metadata);
+
+            // Generate the data for the various files
             let txt_data = txt(&txt_options);
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
-            let sitemap_data = sitemap(&sitemap_options, site_path);
+            let sitemap_data = sitemap(sitemap_options, site_path);
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
                     String::new()
                 });
 
+            // Return FileData
             FileData {
                 cname: cname_data,
                 content,
+                keyword: keywords.join(", "),
                 human: human_data,
                 json: json_data,
                 name: file.name,
@@ -403,106 +272,74 @@ pub fn compile(
         })
         .collect();
 
-    // Generate the HTML code for the navigation menu
-    generate_navigation(&compiled_files);
-
-    // Write the compiled files to the output directory
-    println!(
-        "❯ Writing the generated, compiled and minified files to the `{}` directory...",
+    // Write compiled files to output directory
+    let cli_description = format!(
+        "<Notice>: Successfully generated, compiled, and minified all HTML files to the `{:?}` directory",
         build_dir_path.display()
     );
+
+    // Log the generated files information to a log file (shokunin.log)
+    macro_log_info!(LogLevel::INFO, "compiler.rs (Line 280)", &cli_description, LogFormat::JSON);
+
+    // Print the generated files to the console
+    println!("{} ", cli_description);
+
+    // Iterate over compiled files and write pages to output directory
     for file in &compiled_files {
-        let file_name = match Path::new(&file.name).extension() {
-            Some(ext) if ext == "md" => file.name.replace(".md", ""),
-            Some(ext) if ext == "toml" => {
-                file.name.replace(".toml", "")
-            }
-            Some(ext) if ext == "json" => {
-                file.name.replace(".json", "")
-            }
-            Some(ext) if ext == "js" => file.name.replace(".js", ""),
-            Some(ext) if ext == "xml" => file.name.replace(".xml", ""),
-            Some(ext) if ext == "txt" => file.name.replace(".txt", ""),
-            _ => file.name.to_string(),
-        };
-
-        // Check if the filename is "index.md" and write it to the root directory
-        if file_name == "index" {
-            let cname_file = build_dir_path.join("CNAME");
-            let html_file = build_dir_path.join("index.html");
-            let human_file = build_dir_path.join("humans.txt");
-            let json_file = build_dir_path.join("manifest.json");
-            let main_file = build_dir_path.join("main.js");
-            let robots_file = build_dir_path.join("robots.txt");
-            let rss_file = build_dir_path.join("rss.xml");
-            let sitemap_file = build_dir_path.join("sitemap.xml");
-            let sw_file = build_dir_path.join("sw.js");
-
-            fs::copy(&template_path.join("main.js"), &main_file)?;
-            fs::copy(&template_path.join("sw.js"), &sw_file)?;
-            fs::write(&cname_file, &file.cname)?;
-            fs::write(&html_file, &file.content)?;
-            fs::write(&human_file, &file.human)?;
-            fs::write(&json_file, &file.json)?;
-            fs::write(&robots_file, &file.txt)?;
-            fs::write(&rss_file, &file.rss)?;
-            fs::write(&sitemap_file, &file.sitemap)?;
-
-            // Create a backup of the source html file
-            // let backup_file = backup_file(&html_file)?;
-            // fs::write(&backup_file, &file.content)?;
-
-            // Minify the html file and write it to the output directory
-            let minified_file = minify_html(&html_file)?;
-            fs::write(&html_file, &minified_file)?;
-
-            println!("  - {}", cname_file.display());
-            println!("  - {}", html_file.display());
-            println!("  - {}", human_file.display());
-            println!("  - {}", json_file.display());
-            println!("  - {}", main_file.display());
-            println!("  - {}", robots_file.display());
-            println!("  - {}", rss_file.display());
-            println!("  - {}", sitemap_file.display());
-            println!("  - {}", sw_file.display());
-        } else {
-            let dir_name = build_dir_path.join(file_name.clone());
-            fs::create_dir_all(&dir_name)?;
-
-            let html_file = dir_name.join("index.html");
-            let json_file = dir_name.join("manifest.json");
-            let robots_file = dir_name.join("robots.txt");
-            let rss_file = dir_name.join("rss.xml");
-            let sitemap_file = dir_name.join("sitemap.xml");
-
-            fs::write(&html_file, &file.content)?;
-            fs::write(&json_file, &file.json)?;
-            fs::write(&robots_file, &file.txt)?;
-            fs::write(&rss_file, &file.rss)?;
-            fs::write(&sitemap_file, &file.sitemap)?;
-
-            // Create a backup of the source html file
-            // let backup_file = backup_file(&html_file)?;
-            // fs::write(&backup_file, &file.content)?;
-
-            // Minify the html file and write it to the output directory
-            let minified_file = minify_html(&html_file)?;
-            fs::write(&html_file, &minified_file)?;
-
-            println!("  - {}", html_file.display());
-            println!("  - {}", json_file.display());
-            println!("  - {}", robots_file.display());
-            println!("  - {}", rss_file.display());
-            println!("  - {}", sitemap_file.display());
-        }
+        write_files(build_dir_path, file, template_path)?;
     }
 
-    // Remove the site directory if it exists
+    let tags_html_content = generate_tags_html(&global_tags_data);
+    write_tags_html_to_file(&tags_html_content, build_dir_path)?;
+
+    // Cleanup site directory
     macro_cleanup_directories!(site_path);
 
-    // Move the content of the build directory to the site directory and
-    // remove the build directory
+    // Move build content to site directory and remove build directory
     fs::rename(build_dir_path, site_path)?;
 
     Ok(())
 }
+
+/// Extracts metadata from the content, generates keywords based on the metadata,
+/// and prepares meta tag groups.
+///
+/// This function performs three key tasks:
+/// 1. It extracts metadata from the front matter of the content.
+/// 2. It extracts keywords based on this metadata.
+/// 3. It generates various meta tags required for the page.
+///
+/// # Arguments
+///
+/// * `content` - A string slice representing the content from which to extract metadata.
+///
+/// # Returns
+///
+/// Returns a tuple containing:
+/// * `HashMap<String, String>`: Extracted metadata
+/// * `Vec<String>`: A list of keywords
+/// * `MetaTagGroups`: A structure containing various meta tags
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::data::FileData;
+/// use ssg::compiler::extract_and_prepare_metadata;
+///
+/// let file_content = "---\n\n# Front Matter (YAML)\n\nauthor: \"Jane Doe\"\ncategory: \"Rust\"\ndescription: \"A blog about Rust programming.\"\nlayout: \"post\"\npermalink: \"https://example.com/blog/rust\"\ntags: \"rust,programming\"\ntitle: \"Rust\"\n\n---\n\n# Content\n\nThis is a blog about Rust programming.\n";
+///
+/// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
+/// ```
+pub fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
+    // Extract metadata from front matter
+    let metadata = extract(content);
+
+    // Extract keywords
+    let keywords = extract_keywords(&metadata);
+
+    // Generate all meta tags
+    let all_meta_tags = generate_all_meta_tags(&metadata);
+
+    (metadata, keywords, all_meta_tags)
+}
+

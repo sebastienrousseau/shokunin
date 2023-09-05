@@ -6,8 +6,8 @@ extern crate criterion;
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::data::{CnameData, ManifestData, SitemapData, TxtData};
-use ssg::json::{manifest, cname, sitemap, txt};
+use ssg::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData};
+use ssg::json::{manifest, txt, cname, human, sitemap};
 
 pub fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
@@ -27,11 +27,23 @@ pub fn bench_json(c: &mut Criterion) {
         permalink: String::from("https://www.test.com"),
     };
 
+    let humans_data = HumansData {
+        author: String::from("Test Author"),
+        author_website: String::from("https://www.test.com"),
+        author_twitter: String::from("Test Twitter"),
+        author_location: String::from("Test Location"),
+        thanks: String::from("Test Thanks"),
+        site_last_updated: String::from("2022-01-01"),
+        site_standards: String::from("Test Standards"),
+        site_components: String::from("Test Components"),
+        site_software: String::from("Test Software"),
+    };
+
     let cname_data = CnameData {
         cname: String::from("test.com"),
     };
 
-    let sitemap_data = SitemapData {
+    let sitemap_data = SiteMapData {
         changefreq: String::from("always"),
         loc: String::from("https://www.test.com"),
         lastmod: String::from("2022-01-01"),
@@ -49,8 +61,12 @@ pub fn bench_json(c: &mut Criterion) {
         b.iter(|| cname(black_box(&cname_data)))
     });
 
-    // This will be a file-system intensive benchmark
-    c.bench_function("sitemap", |b| {
-        b.iter(|| sitemap(black_box(&sitemap_data), black_box(dir)))
+    c.bench_function("humans_data", |b| {
+        b.iter(|| human(black_box(&humans_data)))
     });
+
+    c.bench_function("sitemap", |b| {
+        b.iter(|| sitemap(black_box(sitemap_data.clone()), black_box(dir)))
+    });
+
 }

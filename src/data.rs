@@ -1,7 +1,10 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+// use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
@@ -22,6 +25,31 @@ impl CnameData {
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
+/// File struct to hold the title, permalink of a file.
+pub struct PageData {
+    /// The title of the file.
+    pub title: String,
+    /// The description of the file.
+    pub description: String,
+    /// The publication date of the file.
+    pub date: String,
+    /// The permalink of the file.
+    pub permalink: String,
+}
+
+impl fmt::Display for PageData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {} {} {}",
+        self.title,
+        self.description,
+        self.date,
+        self.permalink)
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// File struct to hold the name and content of a file.
 pub struct FileData {
     /// The name of the file.
@@ -34,10 +62,14 @@ pub struct FileData {
     pub json: String,
     /// The content of the file, escaped for HUMANS.
     pub human: String,
+    /// The content of the file, escaped for keywords.
+    pub keyword: String,
     /// The content of the file, escaped for RSS.
     pub rss: String,
     /// The content of the file, escaped for sitemap.
     pub sitemap: String,
+    //  The content of the file, escaped for tags.
+    // pub tags: String,
     /// The content of the file, escaped for TXT.
     pub txt: String,
 }
@@ -51,11 +83,28 @@ impl FileData {
             cname: String::new(),
             json: String::new(),
             human: String::new(),
+            keyword: String::new(),
             rss: String::new(),
             sitemap: String::new(),
+            // tags: String::new(),
             txt: String::new(),
         }
     }
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+/// Options for the `tags` function
+pub struct TagsData {
+    /// A string representing the publication date of the web app
+    pub dates: String,
+    /// A string representing the title of the web app
+    pub titles: String,
+    /// A string representing the description of the web app
+    pub descriptions: String,
+    /// A string representing the permalink of the web app
+    pub permalinks: String,
+    /// A string representing the keywords of the web app
+    pub keywords: String,
 }
 
 #[derive(
@@ -139,7 +188,7 @@ impl ManifestData {
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
 /// Options for the `sitemap` function
-pub struct SitemapData {
+pub struct SiteMapData {
     /// A string representing the changefreq
     pub changefreq: String,
     /// A string representing the lastmod
@@ -148,17 +197,86 @@ pub struct SitemapData {
     pub loc: String,
 }
 
-impl SitemapData {
-    /// Creates a new `SitemapData` struct with the given loc, lastmod, and changefreq.
+impl SiteMapData {
+    /// Creates a new `SiteMapData` struct with the given loc, lastmod, and changefreq.
     pub fn new(
         loc: String,
         lastmod: String,
         changefreq: String,
     ) -> Self {
-        SitemapData {
+        SiteMapData {
             changefreq,
             lastmod,
             loc,
+        }
+    }
+}
+
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
+/// Options for the `human` function
+pub struct HumanData {
+    /// A string representing the author of the web app
+    pub author: Option<String>,
+    /// A string representing the website of the author
+    pub author_website: Option<String>,
+    /// A string representing the twitter of the author
+    pub author_twitter: Option<String>,
+    /// A string representing the location of the author
+    pub author_location: Option<String>,
+    /// A string representing the thanks of the author (name or url)
+    pub thanks: Option<String>,
+    /// A string representing the site last updated date
+    pub site_last_updated: Option<String>,
+    /// A string representing the site standards of the web app
+    pub site_standards: Option<String>,
+    /// A string representing the site components of the web app
+    pub site_components: Option<String>,
+    /// A string representing the site software of the web app
+    pub site_software: Option<String>,
+}
+
+impl HumanData {
+    /// Creates a new `HumanData` struct with default values for all fields.
+    pub fn new() -> Self {
+        HumanData::default()
+    }
+}
+
+/// The `MetaTagGroups` struct holds collections of meta tags for different platforms and categories.
+///
+/// The struct includes fields for Apple-specific meta tags, primary meta tags, Open Graph meta tags,
+/// Microsoft-specific meta tags, and Twitter-specific meta tags. Each field contains a string
+/// representation of the HTML meta tags for its respective category or platform.
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+pub struct MetaTagGroups {
+    /// Meta tags specific to Apple devices
+    pub apple: String,
+    /// Primary meta tags, such as author, description, etc.
+    pub primary: String,
+    /// Open Graph meta tags, mainly used for social media
+    pub og: String,
+    /// Microsoft-specific meta tags
+    pub ms: String,
+    /// Twitter-specific meta tags
+    pub twitter: String,
+}
+
+impl MetaTagGroups {
+    /// Creates a new `MetaTagGroups` instance with default values for all fields.
+    pub fn new() -> Self {
+        MetaTagGroups::default()
+    }
+    /// Returns the value for the given key, if it exists
+    pub fn get(&self, key: &str) -> Option<&String> {
+        match key {
+            "apple" => Some(&self.apple),
+            "primary" => Some(&self.primary),
+            "og" => Some(&self.og),
+            "ms" => Some(&self.ms),
+            "twitter" => Some(&self.twitter),
+            _ => None,
         }
     }
 }
@@ -200,7 +318,7 @@ pub struct HumansData {
     pub site_standards: String,
     /// A string representing the site components of the web app
     pub site_components: String,
-    /// A string representingthe site software of the web app
+    /// A string representing the site software of the web app
     pub site_software: String,
 }
 
@@ -310,22 +428,22 @@ impl RssData {
     }
 }
 
-/// The `MetatagsData` struct holds all necessary data for a single metatag.
+/// The `MetaTag` struct holds all necessary data for a single metatag.
 ///
 /// This includes everything from the name of the metatag to its content.
-/// The values contained in an instance of `MetatagsData` can be used to
+/// The values contained in an instance of `MetaTag` can be used to
 /// generate a complete metatag in HTML format.
-/// The `MetatagsData` struct is used in the `Metatags` struct.
+/// The `MetaTag` struct is used in the `Metatags` struct.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
-pub struct MetatagsData {
+pub struct MetaTag {
     /// The name of the metatag.
     pub name: String,
     /// The content of the metatag.
     pub value: String,
 }
 
-impl MetatagsData {
-    /// Creates a new `MetatagsData` struct with the given name and value.
+impl MetaTag {
+    /// Creates a new `MetaTag` struct with the given name and value.
     ///
     /// # Arguments
     ///
@@ -334,9 +452,9 @@ impl MetatagsData {
     ///
     /// # Returns
     ///
-    /// A new `MetatagsData` struct instance.
+    /// A new `MetaTag` struct instance.
     pub fn new(name: String, value: String) -> Self {
-        MetatagsData { name, value }
+        MetaTag { name, value }
     }
 
     /// Generates a complete metatag in HTML format.
@@ -355,12 +473,12 @@ impl MetatagsData {
     ///
     /// # Arguments
     ///
-    /// * `metatags` - A slice containing the `MetatagsData` instances.
+    /// * `metatags` - A slice containing the `MetaTag` instances.
     ///
     /// # Returns
     ///
     /// A string representing the complete list of metatags in HTML format.
-    pub fn generate_metatags(metatags: &[MetatagsData]) -> String {
-        metatags.iter().map(MetatagsData::generate).collect()
+    pub fn generate_metatags(metatags: &[MetaTag]) -> String {
+        metatags.iter().map(MetaTag::generate).collect()
     }
 }

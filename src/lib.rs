@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.14-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.16-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -25,7 +25,7 @@
 //! `Shokunin Static Site Generator` feature highlights include:
 //!
 //! - Blazing fast and flexible static site generator written in Rust 🦀
-//! - Built-in support for [GitHub Flavored Markdown][1] (GFM).
+//! - Built-in support for [GitHub Flavoured Markdown][1] (GFM).
 //! - Built-in support for Google Analytics and Bing Analytics.
 //! - Compatible with various HTML themes and Premium templates.
 //! - Generates Atom and RSS feeds for your blog posts.
@@ -68,7 +68,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.15"
+//! shokunin = "0.0.16"
 //! ```
 //!
 //! Add the following to your `main.rs` file:
@@ -142,7 +142,7 @@
 //! - [MIT license](http://opensource.org/licenses/MIT "MIT license")
 //!
 //! [0]: https://minifunctions.com/ "MiniFunctions"
-//! [1]: https://github.github.com/gfm/ "GitHub Flavored Markdown"
+//! [1]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
 //!
 
 #![forbid(unsafe_code)]
@@ -162,39 +162,45 @@ use cli::print_banner;
 use compiler::compile;
 use std::{error::Error, path::Path};
 
+
+/// The `loggers` module contains functions for logging.
+pub mod loggers;
+
 /// The `cli` module contains functions for the command-line interface.
 pub mod cli;
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
+/// The `data` module contains the structs.
+pub mod data;
+/// The `directory` function ensures that a directory exists.
+pub mod utilities;
 /// The `file` module handles file reading and writing operations.
 pub mod file;
 /// The `frontmatter` module extracts the front matter from files.
 pub mod frontmatter;
-/// The `html` module generates the HTML content.
-pub mod html;
 /// The `json` module generates the JSON content.
 pub mod json;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
-/// The `metatags` module generates the meta tags.
-pub mod metatags;
+
+/// The `modules` module contains the application modules.
+pub mod modules;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
-
-/// The `options` module contains the structs
-pub mod data;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
-/// The `rss` module generates the RSS content.
-pub mod rss;
 /// The `serve` module contains functions for the development server.
 pub mod serve;
+
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
-/// The `directory` function ensures that a directory exists.
-pub mod utilities;
+/// The `txt` module generates the robots.txt content.
+pub mod txt;
+/// The `write` module contains functions for writing files.
+pub mod write;
+
 
 #[allow(non_camel_case_types)]
 

@@ -3,14 +3,13 @@
 
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}
 };
-
 use serde_json::{json, Map};
 
 use crate::data::{
     CnameData, HumansData, ManifestData,
-    SitemapData, TxtData,
+    SiteMapData, TxtData
 };
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
@@ -110,7 +109,7 @@ pub fn human(options: &HumansData) -> String {
 }
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
-pub fn sitemap(options: &SitemapData, dir: &Path) -> String {
+pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
     let changefreq = options.changefreq.clone();
     let base_url = options.loc.clone();
     let base_dir = PathBuf::from(dir);

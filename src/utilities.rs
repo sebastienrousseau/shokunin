@@ -289,7 +289,7 @@ pub fn cleanup_directory(
         }
 
         println!(
-            "❯ Cleaning up `{}` directory...",
+            "\n❯ Cleaning up `{}` directory...",
             directory.display()
         );
 
@@ -437,22 +437,24 @@ pub fn format_header_with_id_class(
                 in_header_tag = true;
             }
         } else {
+
             if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
-                    " id=\"{}-{}\"",
+                    " id=\"{}-{}\" tabindex=\"0\"",
                     header_type,
                     id_regex
-                        .replace_all(&first_word, "-")
+                        .replace_all(&first_word, "-"),
                 ));
-                id_attribute_added = false;
+                id_attribute_added = true;
             }
+
             if !class_attribute_added && c == '>' {
                 let class_value = format!("{}", id_regex.replace_all(&first_word, "-"));
                 formatted_header_str.push_str(&format!(
                     " class=\"{}\"",
                     class_value
                 ));
-                class_attribute_added = false;
+                class_attribute_added = true;
             }
             formatted_header_str.push(c);
             if c == '>' {
@@ -460,8 +462,10 @@ pub fn format_header_with_id_class(
             }
         }
     }
+
     formatted_header_str
 }
+
 
 
 /// Extracts the front matter from the given content.

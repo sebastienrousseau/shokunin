@@ -4,7 +4,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::metatags::generate_metatags;
+use ssg::modules::metatags::generate_metatags;
 
 pub fn bench_metatags(c: &mut Criterion) {
     let meta = vec![

@@ -11,6 +11,7 @@ cdn: "https://kura.pro" ## The CDN of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
+date: "2023-07-12" ## The date of the page.
 description: "You can contact us using the contact form below." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
@@ -22,7 +23,7 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "Contact us, contact, contact us form" ## The keywords of the site. (comma separated, max 10 keywords)
+keywords: "contact us, contact form, get in touch, contact page, contact information, customer service, support, feedback, questions, inquiries, help" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "contact" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
@@ -31,13 +32,14 @@ logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
 logo: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
-permalink: "https://kaishi.one" ## The url of the site.
+permalink: "https://kaishi.one/contact" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "How can we help you today?" ## The subtitle of the page. (max 64 characters)
+tags: "contact us, contact form, get in touch, contact page, contact information, customer service, support, feedback, questions, inquiries, help" ## The tags of the site. (max 160 characters)
 theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Contact Us" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
@@ -47,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/contact/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin 🦀 (version 0.0.14)"
+generator: "Shokunin 🦀 (version 0.0.16)"
 item_description: RSS feed for the contact page of the Kaishi website.
 item_guid: https://kaishi.one/contact/rss.xml
 item_link: https://kaishi.one/contact/rss.xml

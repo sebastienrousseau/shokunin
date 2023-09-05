@@ -3,7 +3,7 @@ mod tests {
     use std::io::Cursor;
 
     use quick_xml::Writer;
-    use ssg::{data::RssData, rss::generate_rss};
+    use ssg::{data::RssData, modules::rss::generate_rss};
 
     // Test the default constructor of RssData
     #[test]
