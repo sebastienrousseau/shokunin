@@ -214,6 +214,8 @@ impl Default for Log {
 #[cfg(test)]
 /// Tests for the `log_info!` macro.
 mod tests {
+    use crate::macro_log_info;
+
     #[test]
     fn test_log_info() {
         macro_log_info!(
