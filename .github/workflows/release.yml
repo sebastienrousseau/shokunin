@@ -183,10 +183,11 @@ jobs:
           cargo clean --verbose
         shell: bash
 
-      # Install OpenSSL for the cross-compilation toolchain
-      - name: Check for OpenSSL
+      # Install LibSSL for the cross-compilation toolchain
+      - name: LibSSL for the cross-compilation toolchain
         run: |
-          cargo add openssl-sys
+          sudo apt-get -y update
+          sudo apt-get install -y libssl-dev
 
       # Build the targets
       - name: Build targets
