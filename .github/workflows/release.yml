@@ -51,10 +51,10 @@ jobs:
           - arm-unknown-linux-gnueabi # ARMv6 Linux (kernel 3.2, glibc 2.17)
           - arm-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
           - armv7-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
-          - mips-unknown-linux-gnu # MIPS Linux (kernel 3.2, glibc 2.17)
-          - mips64-unknown-linux-gnuabi64 # MIPS64 Linux (kernel 3.2, glibc 2.17)
-          - mips64el-unknown-linux-gnuabi64 # MIPS64el Linux (kernel 3.2, glibc 2.17)
-          - mipsel-unknown-linux-gnu # MIPSel Linux (kernel 3.2, glibc 2.17)
+          # - mips-unknown-linux-gnu # MIPS Linux (kernel 3.2, glibc 2.17)
+          # - mips64-unknown-linux-gnuabi64 # MIPS64 Linux (kernel 3.2, glibc 2.17)
+          # - mips64el-unknown-linux-gnuabi64 # MIPS64el Linux (kernel 3.2, glibc 2.17)
+          # - mipsel-unknown-linux-gnu # MIPSel Linux (kernel 3.2, glibc 2.17)
           - powerpc-unknown-linux-gnu # PowerPC Linux (kernel 3.2, glibc 2.17)
           - powerpc64-unknown-linux-gnu # PowerPC64 Linux (kernel 3.2, glibc 2.17)
           - powerpc64le-unknown-linux-gnu # PowerPC64le Linux (kernel 3.2, glibc 2.17)
@@ -111,6 +111,18 @@ jobs:
           - target: armv7-unknown-linux-gnueabihf
             os: ubuntu-latest
             cross: true
+          # - target: mips-unknown-linux-gnu
+          #   os: ubuntu-latest
+          #   cross: true
+          # - target: mips64-unknown-linux-gnuabi64
+          #   os: ubuntu-latest
+          #   cross: true
+          # - target: mips64el-unknown-linux-gnuabi64
+          #   os: ubuntu-latest
+          #   cross: true
+          # - target: mipsel-unknown-linux-gnu
+          #   os: ubuntu-latest
+          #   cross: true
           - target: powerpc-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
@@ -129,6 +141,9 @@ jobs:
           - target: x86_64-unknown-freebsd
             os: ubuntu-latest
             cross: true
+          # - target: x86_64-unknown-illumos
+          #   os: ubuntu-latest
+          #   cross: true
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             cross: true
