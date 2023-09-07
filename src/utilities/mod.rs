@@ -10,3 +10,6 @@ pub mod directory;
 
 /// The `minification` module contains functions for minifying HTML files.
 pub mod minification;
+
+/// The `element` module contains functions for writing XML files.
+pub mod element;

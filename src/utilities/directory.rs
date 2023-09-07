@@ -2,17 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
-// use minify_html::{minify, Cfg};
-use quick_xml::{
-    events::{BytesEnd, BytesStart, BytesText, Event},
-    Writer,
-};
 use regex::Regex;
 use std::{
-    borrow::Cow,
     error::Error,
     fs::{self},
-    io::{self, Cursor},
+    io,
     path::{Path, PathBuf},
 };
 
@@ -220,49 +214,7 @@ pub fn create_directory(
     Ok(())
 }
 
-/// Helper function to write XML element
-///
-/// This function takes a reference to a `Writer` object, a string containing
-/// the name of the element, and a string containing the value of the element,
-///
-/// # Arguments
-///
-/// * `writer` - A reference to a `Writer` object.
-/// * `name` - A string containing the name of the element.
-/// * `value` - A string containing the value of the element.
-///
-/// # Returns
-///
-/// * `Result<(), Box<dyn std::error::Error>>` - A result indicating success or
-///    failure.
-///    - `Ok(())` if the element was written successfully.
-///    - `Err(Box<dyn std::error::Error>)` if an error occurred during the
-///       writing process.
-///
-pub fn write_element(
-    writer: &mut Writer<Cursor<Vec<u8>>>,
-    name: &str,
-    value: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    if !value.is_empty() {
-        let element_start = BytesStart::new(name);
-        writer.write_event(Event::Start(element_start.clone()))?;
-        writer
-            .write_event(Event::Text(BytesText::from_escaped(value)))?;
 
-        let element_end = BytesEnd::new::<Cow<'static, str>>(
-            std::str::from_utf8(
-                element_start.name().local_name().as_ref(),
-            )
-            .unwrap()
-            .to_string()
-            .into(),
-        );
-
-        writer.write_event(Event::End(element_end))?;
-    }
-    Ok(())
-}
 
 /// Converts a string to title case.
 ///
@@ -519,4 +471,52 @@ pub fn update_class_attributes(
         return updated_line_with_class.into_owned();
     }
     line.to_owned()
+}
+
+/// Truncates a path to only have a set number of path components.
+///
+/// Will truncate a path to only show the last `length` components in a path.
+/// If a length of `0` is provided, the path will not be truncated.
+/// A value will only be returned if the path has been truncated.
+///
+/// # Arguments
+///
+/// * `path` - The path to truncate.
+/// * `length` - The number of path components to keep.
+///
+/// # Returns
+///
+/// * An `Option` of the truncated path as a string. If the path was not truncated, `None` is returned.
+///
+pub fn truncate(path: &PathBuf, length: usize) -> Option<String> {
+
+    // Checks if the length is 0. If it is, returns `None`.
+    if length == 0 {
+        return None;
+    }
+
+    // Creates a new PathBuf object to store the truncated path.
+    let mut truncated = PathBuf::new();
+
+    // Iterates over the components of the path in reverse order.
+    let mut count = 0;
+    while let Some(component) = path.components().next_back() {
+
+        // Adds the component to the truncated path.
+        truncated.push(component);
+        count += 1;
+
+        // If the count reaches the desired length, breaks out of the loop.
+        if count == length {
+            break;
+        }
+    }
+
+    // If the count is equal to the desired length, returns the truncated path as a string.
+    if count == length {
+        Some(truncated.to_string_lossy().to_string())
+    } else {
+        // Otherwise, returns `None`.
+        None
+    }
 }

@@ -16,9 +16,9 @@ mod tests {
             move_output_directory,
             to_title_case,
             update_class_attributes,
-            write_element
         },
         backup::backup_file,
+        element::write_element,
         minification::{minify_html_files, minify_html,write_minified_html}};
     use std::{
         error::Error,
@@ -340,6 +340,7 @@ mod tests {
 
         Ok(())
     }
+    
     #[test]
     fn test_write_element() -> Result<(), Box<dyn std::error::Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
