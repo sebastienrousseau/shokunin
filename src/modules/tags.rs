@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::data::{FileData, TagsData, PageData};
-use crate::utilities::to_title_case;
+use crate::utilities::directory::to_title_case;
 use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.

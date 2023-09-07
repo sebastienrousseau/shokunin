@@ -1,5 +1,5 @@
 use crate::data::FileData;
-use crate::utilities::to_title_case;
+use crate::utilities::directory::to_title_case;
 use std::path::Path;
 
 /// Generates a navigation menu as an unordered list of links to the

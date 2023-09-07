@@ -3,7 +3,7 @@
 
 
 use crate::data::FileData;
-use crate::utilities::minify_html;
+use crate::utilities::minification::minify_html;
 use std::error::Error;
 use std::fs;
 use std::path::Path;

@@ -5,7 +5,7 @@ extern crate regex;
 use regex::Regex;
 use std::{error::Error, collections::HashMap};
 use comrak::{ComrakOptions, markdown_to_html};
-use crate::utilities::{
+use crate::utilities::directory::{
     create_comrak_options, extract_front_matter,
     format_header_with_id_class, update_class_attributes,
 };

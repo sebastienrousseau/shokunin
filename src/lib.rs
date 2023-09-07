@@ -172,8 +172,6 @@ pub mod cli;
 pub mod compiler;
 /// The `data` module contains the structs.
 pub mod data;
-/// The `directory` function ensures that a directory exists.
-pub mod utilities;
 /// The `file` module handles file reading and writing operations.
 pub mod file;
 /// The `frontmatter` module extracts the front matter from files.
@@ -200,6 +198,9 @@ pub mod template;
 pub mod txt;
 /// The `write` module contains functions for writing files.
 pub mod write;
+
+/// The `utilities` module contains utility functions.
+pub mod utilities;
 
 
 #[allow(non_camel_case_types)]
