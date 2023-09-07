@@ -48,7 +48,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin 🦀 (version 0.0.16)"
+generator: "Shokunin 🦀 (version 0.0.17)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
