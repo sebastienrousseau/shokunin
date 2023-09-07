@@ -6,7 +6,6 @@ mod tests {
     use regex::Regex;
     use
         ssg::utilities::{directory::{
-            backup_file,
             cleanup_directory,
             create_comrak_options,
             create_directory,
@@ -19,6 +18,7 @@ mod tests {
             update_class_attributes,
             write_element
         },
+        backup::backup_file,
         minification::{minify_html_files, minify_html,write_minified_html}};
     use std::{
         error::Error,
