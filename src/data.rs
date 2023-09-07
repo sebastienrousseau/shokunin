@@ -1,8 +1,6 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -22,9 +20,7 @@ impl CnameData {
     }
 }
 
-#[derive(
-    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
-)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 /// File struct to hold the title, permalink of a file.
 pub struct PageData {
     /// The title of the file.
