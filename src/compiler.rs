@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    data::{FileData, RssData, MetaTagGroups, PageData},
+    data::{FileData, RssData, PageData},
     file::add,
-    frontmatter::extract,
     json::{cname, human, sitemap, txt},
     macro_log_info,
     macro_cleanup_directories, macro_create_directories,
@@ -13,9 +12,8 @@ use crate::{
         cname::create_cname_data,
         html::generate_html,
         human::create_human_data,
-        keywords::extract_keywords,
         manifest::create_manifest_data,
-        metatags::generate_all_meta_tags,
+        metadata::extract_and_prepare_metadata,
         rss::generate_rss, tags::*,
         sitemap::create_site_map_data
     },
@@ -301,45 +299,45 @@ pub fn compile(
     Ok(())
 }
 
-/// Extracts metadata from the content, generates keywords based on the metadata,
-/// and prepares meta tag groups.
-///
-/// This function performs three key tasks:
-/// 1. It extracts metadata from the front matter of the content.
-/// 2. It extracts keywords based on this metadata.
-/// 3. It generates various meta tags required for the page.
-///
-/// # Arguments
-///
-/// * `content` - A string slice representing the content from which to extract metadata.
-///
-/// # Returns
-///
-/// Returns a tuple containing:
-/// * `HashMap<String, String>`: Extracted metadata
-/// * `Vec<String>`: A list of keywords
-/// * `MetaTagGroups`: A structure containing various meta tags
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::data::FileData;
-/// use ssg::compiler::extract_and_prepare_metadata;
-///
-/// let file_content = "---\n\n# Front Matter (YAML)\n\nauthor: \"Jane Doe\"\ncategory: \"Rust\"\ndescription: \"A blog about Rust programming.\"\nlayout: \"post\"\npermalink: \"https://example.com/blog/rust\"\ntags: \"rust,programming\"\ntitle: \"Rust\"\n\n---\n\n# Content\n\nThis is a blog about Rust programming.\n";
-///
-/// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
-/// ```
-pub fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
-    // Extract metadata from front matter
-    let metadata = extract(content);
+// Extracts metadata from the content, generates keywords based on the metadata,
+// and prepares meta tag groups.
+//
+// This function performs three key tasks:
+// 1. It extracts metadata from the front matter of the content.
+// 2. It extracts keywords based on this metadata.
+// 3. It generates various meta tags required for the page.
+//
+// # Arguments
+//
+// * `content` - A string slice representing the content from which to extract metadata.
+//
+// # Returns
+//
+// Returns a tuple containing:
+// * `HashMap<String, String>`: Extracted metadata
+// * `Vec<String>`: A list of keywords
+// * `MetaTagGroups`: A structure containing various meta tags
+//
+// # Examples
+//
+// ```rust
+// use ssg::data::FileData;
+// use ssg::compiler::extract_and_prepare_metadata;
+//
+// let file_content = "---\n\n# Front Matter (YAML)\n\nauthor: \"Jane Doe\"\ncategory: \"Rust\"\ndescription: \"A blog about Rust programming.\"\nlayout: \"post\"\npermalink: \"https://example.com/blog/rust\"\ntags: \"rust,programming\"\ntitle: \"Rust\"\n\n---\n\n# Content\n\nThis is a blog about Rust programming.\n";
+//
+// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
+// ```
+// pub fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
+//     // Extract metadata from front matter
+//     let metadata = extract(content);
 
-    // Extract keywords
-    let keywords = extract_keywords(&metadata);
+//     // Extract keywords
+//     let keywords = extract_keywords(&metadata);
 
-    // Generate all meta tags
-    let all_meta_tags = generate_all_meta_tags(&metadata);
+//     // Generate all meta tags
+//     let all_meta_tags = generate_all_meta_tags(&metadata);
 
-    (metadata, keywords, all_meta_tags)
-}
+//     (metadata, keywords, all_meta_tags)
+// }
 

@@ -8,6 +8,9 @@ pub mod html;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
 
+/// The `metadata` module contains functions for extracting metadata.
+pub mod metadata;
+
 /// The `rss` module contains functions for generating RSS feeds.
 pub mod rss;
 
