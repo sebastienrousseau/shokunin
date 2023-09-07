@@ -1,5 +1,5 @@
 [package]
-authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+authors = ["Shokunin Contributors"]
 build = "build.rs"
 categories = [
     "command-line-utilities",
@@ -7,8 +7,10 @@ categories = [
     "template-engine",
     "web-programming",
 ]
-description = "A Fast and Flexible open-source static site generator (ssg) written in Rust."
-documentation = "https://docs.rs/ssg"
+description = """
+A Content-First Open Source Static Site Generator (SSG) written in Rust.
+"""
+documentation = "https://shokunin.one/documentation/index.html"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
