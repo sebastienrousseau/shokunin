@@ -3,7 +3,6 @@
 
 use crate::{
     data::{FileData, RssData, PageData},
-    json::{cname, human, sitemap, txt},
     macro_log_info,
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
@@ -11,6 +10,7 @@ use crate::{
         cname::create_cname_data,
         html::generate_html,
         human::create_human_data,
+        json::{cname, human, sitemap, txt},
         manifest::create_manifest_data,
         metadata::extract_and_prepare_metadata,
         rss::generate_rss, tags::*,

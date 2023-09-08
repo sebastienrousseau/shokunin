@@ -14,6 +14,9 @@
     /// The `html` module contains functions for generating HTML.
     pub mod html;
 
+    /// The `json` module generates the JSON content.
+    pub mod json;
+
     /// The `keywords` module contains functions for extracting keywords.
     pub mod keywords;
 

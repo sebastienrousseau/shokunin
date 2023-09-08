@@ -173,8 +173,6 @@ pub mod compiler;
 /// The `data` module contains the structs.
 pub mod data;
 
-/// The `json` module generates the JSON content.
-pub mod json;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
 
