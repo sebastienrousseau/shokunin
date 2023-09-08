@@ -13,11 +13,11 @@ use crate::{
         json::{cname, human, sitemap, txt},
         manifest::create_manifest_data,
         metadata::extract_and_prepare_metadata,
+        navigation::generate_navigation,
         rss::generate_rss, tags::*,
         sitemap::create_site_map_data,
         txt::create_txt_data,
     },
-    navigation::generate_navigation,
     utilities::{
         file::add,
         template::{render_page, PageOptions},

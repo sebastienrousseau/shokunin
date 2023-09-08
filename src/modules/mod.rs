@@ -29,6 +29,9 @@
     /// The `metadata` module contains functions for extracting metadata.
     pub mod metadata;
 
+    /// The `navigation` module generates the navigation menu.
+    pub mod navigation;
+
     /// The `rss` module contains functions for generating RSS feeds.
     pub mod rss;
 

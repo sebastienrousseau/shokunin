@@ -178,11 +178,11 @@ pub mod macros;
 
 /// The `modules` module contains the application modules.
 pub mod modules;
-/// The `navigation` module generates the navigation menu.
-pub mod navigation;
+
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
+
 /// The `utilities` module contains utility functions.
 pub mod utilities;
 
