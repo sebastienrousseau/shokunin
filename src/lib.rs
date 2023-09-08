@@ -172,8 +172,7 @@ pub mod cli;
 pub mod compiler;
 /// The `data` module contains the structs.
 pub mod data;
-/// The `file` module handles file reading and writing operations.
-pub mod file;
+
 
 /// The `json` module generates the JSON content.
 pub mod json;

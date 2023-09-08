@@ -3,7 +3,6 @@
 
 use crate::{
     data::{FileData, RssData, PageData},
-    file::add,
     json::{cname, human, sitemap, txt},
     macro_log_info,
     macro_cleanup_directories, macro_create_directories,
@@ -20,6 +19,7 @@ use crate::{
     },
     navigation::generate_navigation,
     template::{render_page, PageOptions},
+    utilities::file::add,
     write::write_files,
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};

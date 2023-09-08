@@ -8,6 +8,9 @@ pub mod backup;
 /// The `directory` module contains functions for creating directories.
 pub mod directory;
 
+/// The `file` module handles file reading and writing operations.
+pub mod file;
+
 /// The `minification` module contains functions for minifying HTML files.
 pub mod minification;
 
