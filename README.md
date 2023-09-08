@@ -13,9 +13,9 @@
 
 # Shokunin Static Site Generator
 
-A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
+A Content-First Open Source Static Site Generator (SSG) written in Rust
 
-*Part of the [Mini Functions][0] family of libraries.*
+*Part of the [Mini Functions][0] family of Rust libraries.*
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -33,17 +33,17 @@ A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 
 ![divider][divider]
 
-## Overview 📖
+## Overview
 
 `Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
-## Features ✨
+## Features
 
 `Shokunin Static Site Generator` feature highlights include:
 
-- Blazing fast and flexible static site generator written in Rust 🦀
+- Blazing fast and flexible static site generator written in Rust
 - Built-in support for [GitHub Flavoured Markdown][12] (GFM).
 - Built-in support for Google Analytics and Bing Analytics.
 - Compatible with various HTML themes and Premium templates.
@@ -53,20 +53,20 @@ The library extracts metadata and content to generate static HTML files from Mar
 - Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML, etc.
 - Built-in support for sitemap generation, robots.txt generation, canonical name (CNAME) records and custom 404 pages.
 
-## Table of Contents 📚
+## Table of Contents
 
 - [Shokunin Static Site Generator](#shokunin-static-site-generator)
-  - [Overview 📖](#overview-)
-  - [Features ✨](#features-)
-  - [Table of Contents 📚](#table-of-contents-)
-  - [Getting Started 🚀](#getting-started-)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
     - [Installation](#installation)
     - [Requirements](#requirements)
     - [Platform support](#platform-support)
       - [Tier 1 platforms](#tier-1-platforms)
       - [Tier 2 platforms](#tier-2-platforms)
     - [Documentation](#documentation)
-  - [Usage 📖](#usage-)
+  - [Usage](#usage)
     - [Command Line Interface (CLI)](#command-line-interface-cli)
       - [Arguments](#arguments)
     - [In your project](#in-your-project)
@@ -74,11 +74,11 @@ The library extracts metadata and content to generate static HTML files from Mar
       - [Args](#args)
       - [Return value](#return-value)
   - [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
-  - [License 📝](#license-)
-  - [Contribution 🤝](#contribution-)
-  - [Acknowledgements 💙](#acknowledgements-)
+  - [License](#license)
+  - [Contribution](#contribution)
+  - [Acknowledgements](#acknowledgements)
 
-## Getting Started 🚀
+## Getting Started
 
 It takes just a few minutes to get up and running with `Shokunin Static Site Generator`.
 
@@ -108,9 +108,15 @@ latest stable version of Rust.
 
 ### Platform support
 
-`Shokunin Static Site Generator` is supported and tested on the following platforms:
+
+`Shokunin Static Site Generator` is supported and tested on the following
+platforms and architectures as part of our [CI/CD pipeline][11].
+
+This list is based on the [Rust Platform Support][17] list.
 
 #### Tier 1 platforms
+
+Rust Tier 1 targets are officially supported and guaranteed to work.
 
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
@@ -125,16 +131,14 @@ latest stable version of Rust.
 
 #### Tier 2 platforms
 
+Rust Tier 2 targets are supported for building, but not necessarily running.
+
 | | Operating System | Target | Description |
 | --- | --- | --- | --- |
 | ✅ | Linux   | aarch64-unknown-linux-musl | 64-bit Linux systems on ARM architecture |
 | ✅ | Linux   | arm-unknown-linux-gnueabi | ARMv6 Linux (kernel 3.2, glibc 2.17) |
 | ✅ | Linux   | arm-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
 | ✅ | Linux   | armv7-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
-| ❌ | Linux   | mips-unknown-linux-gnu | MIPS Linux (kernel 2.6.32+, glibc 2.11+) |
-| ❌ | Linux   | mips64-unknown-linux-gnuabi64 | MIPS64 Linux (kernel 2.6.32+, glibc 2.11+) |
-| ❌ | Linux   | mips64el-unknown-linux-gnuabi64 | MIPS64 Linux (kernel 2.6.32+, glibc 2.11+) |
-| ❌ | Linux   | mipsel-unknown-linux-gnu | MIPS Linux (kernel 2.6.32+, glibc 2.11+) |
 | ✅ | macOS   | aarch64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
 | ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
@@ -145,7 +149,7 @@ The [GitHub Actions][11] shows the platforms in which the `Shokunin Static Site 
 > ℹ️ **Info:** Please check out our [website][1] for more information.
 You can find our documentation on [docs.rs][9], [lib.rs][10] and [crates.io][8].
 
-## Usage 📖
+## Usage
 
 ### Command Line Interface (CLI)
 
@@ -237,14 +241,14 @@ The main() function returns a Result. If the compilation is successful, the Resu
 
 For transparency into our release cycle and in striving to maintain backward compatibility, `Shokunin Static Site Generator` follows [semantic versioning][7].
 
-## License 📝
+## License
 
 The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).
 
 - [Apache License, Version 2.0][2]
 - [MIT license][3]
 
-## Contribution 🤝
+## Contribution
 
 We welcome all people who want to contribute. Please see the [contributing instructions][5] for more information.
 
@@ -253,7 +257,7 @@ Contributions in any form (issues, pull requests, etc.) to this project must adh
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the
 Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
-## Acknowledgements 💙
+## Acknowledgements
 
 A big thank you to all the awesome contributors of [Shokunin][6] for their help and support.
 
@@ -276,6 +280,7 @@ A special thank you goes to the [Rust Reddit][13] community for providing a lot 
 [14]: https://www.rust-lang.org/learn/get-started "Rust"
 [15]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main "Codecov"
 [16]: https://www.rust-lang.org/policies/code-of-conduct "Rust's Code of Conduct"
+[17]: https://forge.rust-lang.org/release/platform-support.html "Rust Platform Support"
 
 [banner]: https://kura.pro/shokunin/images/titles/title-shokunin.svg "Banner of the Shokunin Static Site Generator"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
