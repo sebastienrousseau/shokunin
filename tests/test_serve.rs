@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ssg::serve::start;
+    use ssg::utilities::serve::start;
     use std::fs::File;
     use std::io::{Read, Write};
     use std::net::TcpStream;

@@ -157,7 +157,7 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use crate::serve::start;
+use crate::utilities::serve::start;
 use cli::print_banner;
 use compiler::compile;
 use std::{error::Error, path::Path};
@@ -173,7 +173,6 @@ pub mod compiler;
 /// The `data` module contains the structs.
 pub mod data;
 
-
 /// The `json` module generates the JSON content.
 pub mod json;
 /// The `macros` module contains functions for generating macros.
@@ -186,8 +185,6 @@ pub mod navigation;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
-/// The `serve` module contains functions for the development server.
-pub mod serve;
 
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
