@@ -72,7 +72,6 @@ Shokunin Static Site Generator (SSG) feature highlights include:
     - [In your project](#in-your-project)
     - [Examples](#examples)
       - [Args](#args)
-      - [Return value](#return-value)
   - [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
   - [License](#license)
   - [Contribution](#contribution)
@@ -107,7 +106,6 @@ The minimum supported Rust toolchain version is currently Rust
 latest stable version of Rust.
 
 ### Platform support
-
 
 Shokunin Static Site Generator (SSG) is supported and tested on the following
 platforms and architectures as part of our [CI/CD pipeline][11].
@@ -232,10 +230,6 @@ The main() function in this code compiles a website from the `content` directory
 - `content_path:` The path to the directory containing the website content.
 - `site_path:` The path to the directory where the generated website files will be served from.
 - `template_path:` The path to the directory containing the website templates.
-
-#### Return value
-
-The main() function returns a Result. If the compilation is successful, the Result will be Ok(()). If there is an error, the Result will be Err(e), where e is a Box<dyn std::error::Error>.
 
 ## Semantic Versioning Policy 🚥
 
