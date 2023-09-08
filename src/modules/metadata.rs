@@ -3,8 +3,8 @@
 
 use crate::{
     data:: MetaTagGroups,
-    frontmatter::extract,
     modules::{
+        frontmatter::extract,
         keywords::extract_keywords,
         metatags::generate_all_meta_tags,
     }

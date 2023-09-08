@@ -487,8 +487,7 @@ pub fn update_class_attributes(
 /// # Returns
 ///
 /// * An `Option` of the truncated path as a string. If the path was not truncated, `None` is returned.
-///
-pub fn truncate(path: &PathBuf, length: usize) -> Option<String> {
+pub fn truncate(path: &Path, length: usize) -> Option<String> {
 
     // Checks if the length is 0. If it is, returns `None`.
     if length == 0 {

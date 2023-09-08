@@ -174,8 +174,7 @@ pub mod compiler;
 pub mod data;
 /// The `file` module handles file reading and writing operations.
 pub mod file;
-/// The `frontmatter` module extracts the front matter from files.
-pub mod frontmatter;
+
 /// The `json` module generates the JSON content.
 pub mod json;
 /// The `macros` module contains functions for generating macros.
