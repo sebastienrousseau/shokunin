@@ -183,11 +183,6 @@ pub mod navigation;
 /// The `parser` module contains functions for parsing command-line
 /// arguments and options.
 pub mod process;
-
-/// The `template` module renders the HTML content using the pre-defined
-/// template.
-pub mod template;
-
 /// The `utilities` module contains utility functions.
 pub mod utilities;
 

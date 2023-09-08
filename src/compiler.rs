@@ -18,8 +18,11 @@ use crate::{
         txt::create_txt_data,
     },
     navigation::generate_navigation,
-    template::{render_page, PageOptions},
-    utilities::{file::add, write::write_files},
+    utilities::{
+        file::add,
+        template::{render_page, PageOptions},
+        write::write_files
+    },
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
 

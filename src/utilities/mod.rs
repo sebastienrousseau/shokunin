@@ -20,5 +20,9 @@
     /// The `serve` module contains functions for the development server.
     pub mod serve;
 
+    /// The `template` module renders the HTML content using the pre-defined
+    /// template.
+    pub mod template;
+
     /// The `write` module contains functions for writing files.
     pub mod write;
