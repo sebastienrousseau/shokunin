@@ -3,8 +3,8 @@ mod tests {
     // Import necessary dependencies
     use serde_json::{json, Value};
     use ssg::{
-        data::{CnameData, ManifestData, TxtData},
-        json::{cname, manifest, txt},
+        models::data::{CnameData, ManifestData, TxtData},
+        modules::json::{cname, manifest, txt},
     };
 
     #[test]
@@ -14,16 +14,16 @@ mod tests {
 
         // Define the expected result as a raw string with consistent indentation
         let expected_result = r#"{
-  "background_color": "",
-  "description": "",
-  "display": "",
-  "icons": [],
-  "name": "",
-  "orientation": "",
-  "scope": "",
-  "short_name": "",
-  "start_url": "",
-  "theme_color": ""
+"background_color": "",
+"description": "",
+"display": "",
+"icons": [],
+"name": "",
+"orientation": "",
+"scope": "",
+"short_name": "",
+"start_url": "",
+"theme_color": ""
 }"#;
 
         // Generate the result using the manifest function

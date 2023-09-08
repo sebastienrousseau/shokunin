@@ -1,5 +1,5 @@
 [package]
-authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+authors = ["Shokunin Contributors"]
 build = "build.rs"
 categories = [
     "command-line-utilities",
@@ -7,8 +7,10 @@ categories = [
     "template-engine",
     "web-programming",
 ]
-description = "A Fast and Flexible open-source static site generator (ssg) written in Rust."
-documentation = "https://docs.rs/ssg"
+description = """
+A Content-First Open Source Static Site Generator (SSG) written in Rust.
+"""
+documentation = "https://shokunin.one/documentation/index.html"
 edition = "2021"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
@@ -18,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.16"
+version = "0.0.17"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -49,7 +51,7 @@ comrak = "0.18.0"
 dtt = "0.0.4"
 log = {version="0.4.20", features = ["std"] }
 minify-html = "0.11.1"
-openssl = { version = "0.10.57", features = ["vendored"] }
+# openssl = { version = "0.10.57", features = ["vendored"] }
 quick-xml = "0.30.0"
 regex = "1.9.5"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
@@ -57,7 +59,7 @@ serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.105"
 serde_yaml = "0.9.25"
 tempfile = "3.8.0"
-toml = "0.7.6"
+toml = "0.7.7"
 yaml-rust = "0.4.5"
 vrd = "0.0.4"
 

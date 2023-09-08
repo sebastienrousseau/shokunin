@@ -4,7 +4,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::frontmatter::{extract, parse_yaml_document};
+use ssg::modules::frontmatter::{extract, parse_yaml_document};
 
 pub fn bench_extract(c: &mut Criterion) {
     let content = r#"

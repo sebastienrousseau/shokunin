@@ -1,8 +1,8 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::data::{FileData, TagsData, PageData};
-use crate::utilities::to_title_case;
+use crate::models::data::{FileData, TagsData, PageData};
+use crate::utilities::directory::to_title_case;
 use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
@@ -19,7 +19,7 @@ use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 /// # Example
 ///
 /// ```rust
-/// use ssg::data::FileData;
+/// use ssg::models::data::FileData;
 /// use ssg::modules::tags::generate_tags;
 /// use std::collections::HashMap;
 ///
@@ -159,7 +159,7 @@ pub fn create_tags_data(
 ///
 /// ```rust
 /// use std::collections::HashMap;
-/// use ssg::data::PageData;
+/// use ssg::models::data::PageData;
 /// use ssg::modules::tags::generate_tags_html;
 ///
 /// let mut global_tags_data = HashMap::new();

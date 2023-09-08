@@ -10,11 +10,11 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator v0.0.16 🦀
+# Shokunin Static Site Generator v0.0.17 🦀
 
-A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
+A Content-First Open Source Static Site Generator (SSG) written in Rust
 
-*Part of the [Mini Functions][0] family of libraries.*
+*Part of the [Mini Functions][0] family of Rust libraries.*
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -32,17 +32,17 @@ A Fast and Flexible open-source static site generator (ssg) written in Rust 🦀
 
 ![divider][divider]
 
-## Overview 📖
+## Overview
 
-`Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+Shokunin Static Site Generator (SSG) is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
-## Features ✨
+## Features
 
-`Shokunin Static Site Generator` feature highlights include:
+Shokunin Static Site Generator (SSG) feature highlights include:
 
-- Blazing fast and flexible static site generator written in Rust 🦀
+- Blazing fast and flexible static site generator written in Rust
 - Built-in support for [GitHub Flavoured Markdown][12] (GFM).
 - Built-in support for Google Analytics and Bing Analytics.
 - Compatible with various HTML themes and Premium templates.
@@ -70,7 +70,7 @@ The library extracts metadata and content to generate static HTML files from Mar
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.16-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.17-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'
 

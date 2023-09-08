@@ -4,7 +4,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::file::add;
+use ssg::utilities::file::add;
 use std::path::PathBuf;
 
 pub fn bench_file(c: &mut Criterion) {

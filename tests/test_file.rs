@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ssg::file::add;
+    use ssg::utilities::file::add;
     use std::{fs::File, io::Write, path::Path};
 
     #[test]

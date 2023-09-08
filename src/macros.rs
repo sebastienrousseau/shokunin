@@ -77,7 +77,7 @@ macro_rules! macro_check_directory {
 macro_rules! macro_cleanup_directories {
     ( $($dir:expr),* ) => {
         {
-            use $crate::utilities::cleanup_directory;
+            use $crate::utilities::directory::cleanup_directory;
             let directories: &[&Path] = &[ $($dir),* ];
             match cleanup_directory(directories) {
                 Ok(()) => (),
@@ -138,7 +138,7 @@ macro_rules! macro_cleanup_directories {
 #[macro_export]
 macro_rules! macro_create_directories {
     ( $($dir:expr),* ) => {{
-        use $crate::utilities::create_directory;
+        use $crate::utilities::directory::create_directory;
         use std::path::Path;
         let directories: Vec<&Path> = vec![ $(Path::new($dir)),* ];
         create_directory(&directories)

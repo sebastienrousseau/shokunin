@@ -2,29 +2,44 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-/// The `html` module contains functions for generating HTML.
-pub mod html;
+    /// The `cname` module generates the CNAME content.
+    pub mod cname;
 
-/// The `metatags` module contains functions for generating meta tags.
-pub mod metatags;
+    /// The `frontmatter` module extracts the front matter from files.
+    pub mod frontmatter;
 
-/// The `rss` module contains functions for generating RSS feeds.
-pub mod rss;
+    /// The `human` module contains functions for generating human-readable
+    pub mod human;
 
-/// The `tags` module contains functions for generating a tags page.
-pub mod tags;
+    /// The `html` module contains functions for generating HTML.
+    pub mod html;
 
-/// The `human` module generates the human-readable content.
-pub mod human;
+    /// The `json` module generates the JSON content.
+    pub mod json;
 
-/// The `cname` module generates the CNAME content.
-pub mod cname;
+    /// The `keywords` module contains functions for extracting keywords.
+    pub mod keywords;
 
-/// The `keywords` module contains functions for extracting keywords.
-pub mod keywords;
+    /// The `manifest` module generates the manifest file.
+    pub mod manifest;
 
-/// The `sitemap` module generates the sitemap content.
-pub mod sitemap;
+    /// The `metatags` module contains functions for generating meta tags.
+    pub mod metatags;
 
-/// The `manifest` module generates the manifest file.
-pub mod manifest;
+    /// The `metadata` module contains functions for extracting metadata.
+    pub mod metadata;
+
+    /// The `navigation` module generates the navigation menu.
+    pub mod navigation;
+
+    /// The `rss` module contains functions for generating RSS feeds.
+    pub mod rss;
+
+    /// The `sitemap` module generates the sitemap content.
+    pub mod sitemap;
+
+    /// The `tags` module contains functions for generating a tags page.
+    pub mod tags;
+
+    /// The `txt` module generates the robots.txt content.
+    pub mod txt;

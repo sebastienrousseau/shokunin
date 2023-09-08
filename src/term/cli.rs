@@ -35,8 +35,8 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// # Examples
 ///
 /// ```
-/// use ssg::cli;
-/// let cmd = cli::build().unwrap();
+/// use ssg::term::cli::build;
+/// let cmd = build().unwrap();
 ///
 /// ```
 pub fn build() -> Result<ArgMatches, Error> {
@@ -44,7 +44,7 @@ pub fn build() -> Result<ArgMatches, Error> {
         .author("Sebastien Rousseau")
         .about("")
         .bin_name("ssg")
-        .version("0.0.16")
+        .version("0.0.17")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -103,13 +103,13 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// # Examples
 ///
 /// ```
-/// use ssg::cli::print_banner;
+/// use ssg::term::cli::print_banner;
 ///
 /// print_banner();
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin 🦀 (v0.0.16)";
+    let title = "Shokunin 🦀 (v0.0.17)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
 

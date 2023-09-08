@@ -1,7 +1,7 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::{data::{IconData, ManifestData}, macro_metadata_option};
+use crate::{models::data::{IconData, ManifestData}, macro_metadata_option};
 use std::collections::HashMap;
 
 /// Function to create ManifestData

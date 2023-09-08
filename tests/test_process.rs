@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use clap::{Arg, Command};
-    use ssg::process::args;
+    use ssg::term::process::args;
 
     #[test]
     fn test_args_required_args_missing() {

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
 
-    use ssg::data::{
+    use ssg::models::data::{
         CnameData, FileData, IconData, ManifestData, SiteMapData,
         TxtData,
     };

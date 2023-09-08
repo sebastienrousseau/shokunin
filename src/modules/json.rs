@@ -7,7 +7,7 @@ use std::{
 };
 use serde_json::{json, Map};
 
-use crate::data::{
+use crate::models::data::{
     CnameData, HumansData, ManifestData,
     SiteMapData, TxtData
 };

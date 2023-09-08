@@ -4,7 +4,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use ssg::utilities::directory;
+use ssg::utilities::directory::directory;
 use tempfile::TempDir;
 
 pub fn bench_utilities(c: &mut Criterion) {
