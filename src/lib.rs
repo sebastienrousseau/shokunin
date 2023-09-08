@@ -193,8 +193,7 @@ pub mod serve;
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
-/// The `txt` module generates the robots.txt content.
-pub mod txt;
+
 /// The `write` module contains functions for writing files.
 pub mod write;
 

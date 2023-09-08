@@ -34,3 +34,6 @@
 
     /// The `tags` module contains functions for generating a tags page.
     pub mod tags;
+
+    /// The `txt` module generates the robots.txt content.
+    pub mod txt;

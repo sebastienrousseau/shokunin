@@ -15,11 +15,11 @@ use crate::{
         manifest::create_manifest_data,
         metadata::extract_and_prepare_metadata,
         rss::generate_rss, tags::*,
-        sitemap::create_site_map_data
+        sitemap::create_site_map_data,
+        txt::create_txt_data,
     },
     navigation::generate_navigation,
     template::{render_page, PageOptions},
-    txt::create_txt_data,
     write::write_files,
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
