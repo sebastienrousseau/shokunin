@@ -3,7 +3,7 @@ mod tests {
     use std::error::Error;
 
     use ssg::{
-        data::RssData,
+        models::data::RssData,
         modules::{frontmatter::extract, html::generate_html, rss::generate_rss},
     };
 

@@ -6,7 +6,7 @@ extern crate criterion;
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData};
+use ssg::models::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData};
 use ssg::modules::json::{manifest, txt, cname, human, sitemap};
 
 pub fn bench_json(c: &mut Criterion) {

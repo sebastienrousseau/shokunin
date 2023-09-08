@@ -116,18 +116,15 @@
 #![crate_type = "lib"]
 
 use crate::utilities::serve::start;
-use cli::print_banner;
+use term::cli::print_banner;
 use compiler::compile;
 use std::{error::Error, path::Path};
 
     /// The `cli` module contains functions for the command-line interface.
-    pub mod cli;
+    pub mod term;
 
     /// The `compiler` module contains functions for the compilation process.
     pub mod compiler;
-
-    /// The `data` module contains the structs.
-    pub mod data;
 
     /// The `loggers` module contains functions for logging.
     pub mod loggers;
@@ -135,12 +132,11 @@ use std::{error::Error, path::Path};
     /// The `macros` module contains functions for generating macros.
     pub mod macros;
 
+    /// The `models` module contains the structs.
+    pub mod models;
+
     /// The `modules` module contains the application modules.
     pub mod modules;
-
-    /// The `parser` module contains functions for parsing command-line
-    /// arguments and options.
-    pub mod process;
 
     /// The `utilities` module contains utility functions.
     pub mod utilities;
@@ -167,8 +163,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     print_banner();
 
     // Build the CLI and parse the arguments
-    let matches = cli::build()?;
-    process::args(&matches)?;
+    let matches = term::cli::build()?;
+    term::process::args(&matches)?;
 
     if let Some(site_name) = matches.get_one::<String>("new") {
         // Start the server using the specified server address and site name.

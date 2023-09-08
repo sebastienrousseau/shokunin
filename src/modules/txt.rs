@@ -1,7 +1,7 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::data::TxtData;
+use crate::models::data::TxtData;
 use std::collections::HashMap;
 
 /// Function to create TxtData

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 
-use crate::data::FileData;
+use crate::models::data::FileData;
 use crate::utilities::minification::minify_html;
 use std::error::Error;
 use std::fs;

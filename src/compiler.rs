@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    data::{FileData, RssData, PageData},
     macro_log_info,
     macro_cleanup_directories, macro_create_directories,
     macro_metadata_option,macro_set_rss_data_fields,
+    models::data::{FileData, RssData, PageData},
     modules::{
         cname::create_cname_data,
         html::generate_html,

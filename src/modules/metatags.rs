@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::collections::HashMap;
-use crate::data::{MetaTag, MetaTagGroups};
+use crate::models::data::{MetaTag, MetaTagGroups};
 use crate::{macro_generate_tags_from_list, macro_generate_tags_from_fields};
 
 // Type alias for better readability

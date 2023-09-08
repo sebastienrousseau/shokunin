@@ -1,4 +1,4 @@
-use crate::data::FileData;
+use crate::models::data::FileData;
 use crate::utilities::directory::to_title_case;
 use std::path::Path;
 
