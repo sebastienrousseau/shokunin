@@ -19,8 +19,7 @@ use crate::{
     },
     navigation::generate_navigation,
     template::{render_page, PageOptions},
-    utilities::file::add,
-    write::write_files,
+    utilities::{file::add, write::write_files},
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
 

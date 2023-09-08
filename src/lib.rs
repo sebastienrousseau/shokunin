@@ -188,9 +188,6 @@ pub mod process;
 /// template.
 pub mod template;
 
-/// The `write` module contains functions for writing files.
-pub mod write;
-
 /// The `utilities` module contains utility functions.
 pub mod utilities;
 

@@ -19,3 +19,6 @@
 
     /// The `serve` module contains functions for the development server.
     pub mod serve;
+
+    /// The `write` module contains functions for writing files.
+    pub mod write;
