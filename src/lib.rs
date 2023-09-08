@@ -62,7 +62,7 @@
 //!
 //! ### In your project
 //!
-//! To incorporate `Shokunin Static Site Generator` in your Rust project, add the following to your `Cargo.toml`:
+//! To incorporate Shokunin Static Site Generator (SSG) in your Rust project, add the following to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]

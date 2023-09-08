@@ -34,13 +34,13 @@ A Content-First Open Source Static Site Generator (SSG) written in Rust
 
 ## Overview
 
-`Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+Shokunin Static Site Generator (SSG) is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
 ## Features
 
-`Shokunin Static Site Generator` feature highlights include:
+Shokunin Static Site Generator (SSG) feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust
 - Built-in support for [GitHub Flavoured Markdown][12] (GFM).

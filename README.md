@@ -35,13 +35,13 @@ A Content-First Open Source Static Site Generator (SSG) written in Rust
 
 ## Overview
 
-`Shokunin Static Site Generator` is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+Shokunin Static Site Generator (SSG) is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
 ## Features
 
-`Shokunin Static Site Generator` feature highlights include:
+Shokunin Static Site Generator (SSG) feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust
 - Built-in support for [GitHub Flavoured Markdown][12] (GFM).
@@ -80,19 +80,19 @@ The library extracts metadata and content to generate static HTML files from Mar
 
 ## Getting Started
 
-It takes just a few minutes to get up and running with `Shokunin Static Site Generator`.
+It takes just a few minutes to get up and running with Shokunin Static Site Generator (SSG).
 
 ### Installation
 
-To install `Shokunin Static Site Generator`, you need to have the Rust toolchain installed on your machine. You can install the Rust toolchain by following the instructions on the [Rust website][14].
+To install Shokunin Static Site Generator (SSG), you need to have the Rust toolchain installed on your machine. You can install the Rust toolchain by following the instructions on the [Rust website][14].
 
-Once you have the Rust toolchain installed, you can install `Shokunin Static Site Generator` using the following command:
+Once you have the Rust toolchain installed, you can install Shokunin Static Site Generator (SSG) using the following command:
 
 ```shell
 cargo install ssg
 ```
 
-For simplicity, we have given `Shokunin Static Site Generator` a simple alias `ssg` which can stand for `Shokunin Site Generator` or `Static Site Generator`.
+For simplicity, we have given Shokunin Static Site Generator (SSG) a simple alias `ssg` which can stand for `Shokunin Site Generator` or `Static Site Generator`.
 
 You can then run the help command to see the available options and commands:
 
@@ -109,7 +109,7 @@ latest stable version of Rust.
 ### Platform support
 
 
-`Shokunin Static Site Generator` is supported and tested on the following
+Shokunin Static Site Generator (SSG) is supported and tested on the following
 platforms and architectures as part of our [CI/CD pipeline][11].
 
 This list is based on the [Rust Platform Support][17] list.
@@ -142,7 +142,7 @@ Rust Tier 2 targets are supported for building, but not necessarily running.
 | ✅ | macOS   | aarch64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
 | ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
-The [GitHub Actions][11] shows the platforms in which the `Shokunin Static Site Generator` library tests are run.
+The [GitHub Actions][11] shows the platforms in which the Shokunin Static Site Generator (SSG) library tests are run.
 
 ### Documentation
 
@@ -153,9 +153,9 @@ You can find our documentation on [docs.rs][9], [lib.rs][10] and [crates.io][8].
 
 ### Command Line Interface (CLI)
 
-The `Shokunin Static Site Generator` library runs in a Terminal window and can be used to generate a static website.
+The Shokunin Static Site Generator (SSG) library runs in a Terminal window and can be used to generate a static website.
 
-Here’s the first command you can enter in your Terminal window to run `Shokunin Static Site Generator`:
+Here’s the first command you can enter in your Terminal window to run Shokunin Static Site Generator (SSG):
 
 ```shell
 ssg  --new=mysite --content=content --template=template --output=output --serve=public
@@ -179,7 +179,7 @@ This command will create a new website with the name `mysite` in the current dir
 
 ### In your project
 
-To use the `Shokunin Static Site Generator` library in your project, add the following to your `Cargo.toml` file:
+To use the Shokunin Static Site Generator (SSG) library in your project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
@@ -193,11 +193,11 @@ extern crate ssg;
 use ssg::*;
 ```
 
-then you can use the `Shokunin Static Site Generator` functions in your application code.
+then you can use the Shokunin Static Site Generator (SSG) functions in your application code.
 
 ### Examples
 
-To get started with `Shokunin Static Site Generator`, you can use the examples provided in the `examples` directory of the project.
+To get started with Shokunin Static Site Generator (SSG), you can use the examples provided in the `examples` directory of the project.
 
 To run the examples, clone the repository and run the following command in your terminal from the project root directory.
 
@@ -239,7 +239,7 @@ The main() function returns a Result. If the compilation is successful, the Resu
 
 ## Semantic Versioning Policy 🚥
 
-For transparency into our release cycle and in striving to maintain backward compatibility, `Shokunin Static Site Generator` follows [semantic versioning][7].
+For transparency into our release cycle and in striving to maintain backward compatibility, Shokunin Static Site Generator (SSG) follows [semantic versioning][7].
 
 ## License
 
