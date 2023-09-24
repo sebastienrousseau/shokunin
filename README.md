@@ -181,7 +181,7 @@ To use the Shokunin Static Site Generator (SSG) library in your project, add the
 
 ```toml
 [dependencies]
-shokunin = "0.0.17"
+shokunin = "0.0.18"
 ```
 
 Add the following to your `main.rs` file:
