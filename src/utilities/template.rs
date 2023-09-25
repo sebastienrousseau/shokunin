@@ -6,7 +6,7 @@ use reqwest;
 use std::{
     collections::HashMap,
     fs::{self, File},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
@@ -161,82 +161,59 @@ pub fn create_template_folder(
     // Get the current working directory
     let current_dir = std::env::current_dir()?;
 
-    // Determine the template directory path based on the provided argument or use the default path
     let template_dir_path = match template_path {
+        Some(path) if path.starts_with("http://") || path.starts_with("https://") => {
+            download_files_from_url(path)?
+        },
         Some(path) => {
-            if path.starts_with("http://")
-                || path.starts_with("https://")
-            {
-                // If a URL is provided, download the template files to a temporary directory
-                let tempdir = tempfile::tempdir()?;
-                let template_dir_path = tempdir.into_path();
-                println!(
-                    "Creating temporary directory for template: {:?}",
-                    template_dir_path
-                );
-
-                let url = path;
-                let files = [
-                    "contact.html",
-                    "index.html",
-                    "main.js",
-                    "page.html",
-                    "sw.js",
-                ];
-
-                for file in files.iter() {
-                    let file_url = format!("{}/{}", url, file);
-                    let file_path = template_dir_path.join(file);
-                    let mut download =
-                        reqwest::blocking::get(&file_url)?;
-                    let mut file = File::create(&file_path)?;
-                    download.copy_to(&mut file)?;
-                    println!(
-                        "Downloaded template file to: {:?}",
-                        file_path
-                    );
-                }
-
-                template_dir_path
+            let local_path = current_dir.join(path);
+            if local_path.exists() && local_path.is_dir() {
+                println!("Using local template directory: {}", path);
+                local_path
             } else {
-                // If a local path is provided, use it as the template
-                // directory path
-                // println!("Using local template directory: {}", path);
-                current_dir.join(path)
+                return Err(TemplateError::Io(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("Template directory not found: {}", path),
+                )));
             }
-        }
+        },
         None => {
-            // If no path is provided, download the default template files to a temporary directory
-            let tempdir = tempfile::tempdir()?;
-            let template_dir_path = tempdir.into_path();
-            println!(
-                "Creating temporary directory for default template: {:?}",
-                template_dir_path
-            );
-
-            let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
-            let files = [
-                "contact.html",
-                "index.html",
-                "main.js",
-                "page.html",
-                "sw.js",
-            ];
-
-            for file in files.iter() {
-                let file_url = format!("{}/{}", url, file);
-                let file_path = template_dir_path.join(file);
-                let mut download = reqwest::blocking::get(&file_url)?;
-                let mut file = File::create(&file_path)?;
-                download.copy_to(&mut file)?;
-                println!(
-                    "Downloaded default template file to: {:?}",
-                    file_path
-                );
-            }
-
-            template_dir_path
+            let default_url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
+            download_files_from_url(default_url)?
         }
     };
+
     Ok(String::from(template_dir_path.to_str().unwrap()))
 }
+
+fn download_files_from_url(url: &str) -> Result<PathBuf, TemplateError> {
+    let tempdir = tempfile::tempdir()?;
+    let template_dir_path = tempdir.into_path();
+    println!(
+        "Creating temporary directory for template: {:?}",
+        template_dir_path
+    );
+
+    let files = [
+        "contact.html",
+        "index.html",
+        "main.js",
+        "page.html",
+        "sw.js",
+    ];
+
+    for file in files.iter() {
+        let file_url = format!("{}/{}", url, file);
+        let file_path = template_dir_path.join(file);
+        let mut download = reqwest::blocking::get(&file_url)?;
+        let mut file = File::create(&file_path)?;
+        download.copy_to(&mut file)?;
+        println!(
+            "Downloaded template file to: {:?}",
+            file_path
+        );
+    }
+
+    Ok(template_dir_path)
+}
+
