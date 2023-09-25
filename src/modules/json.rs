@@ -110,12 +110,13 @@ pub fn human(options: &HumansData) -> String {
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
 pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
+    let lastmod = options.lastmod.clone();
     let changefreq = options.changefreq.clone();
     let base_url = options.loc.clone();
     let base_dir = PathBuf::from(dir);
     let mut urls = vec![];
 
-    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &mut urls)
+    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &lastmod, &mut urls)
         .unwrap();
 
     let urls_str = urls.join("\n");
@@ -131,6 +132,7 @@ fn visit_dirs(
     dir: &Path,
     base_url: &str,
     changefreq: &str,
+    lastmod: &str,
     urls: &mut Vec<String>,
 ) -> std::io::Result<()> {
     if dir.is_dir() {
@@ -139,7 +141,7 @@ fn visit_dirs(
             let path = entry.path();
             if path.is_dir() {
                 visit_dirs(
-                    base_dir, &path, base_url, changefreq, urls,
+                    base_dir, &path, base_url, changefreq, lastmod, urls,
                 )?;
             } else if path.file_name().unwrap() == "index.html" {
                 let url = path
@@ -149,12 +151,8 @@ fn visit_dirs(
                     .unwrap()
                     .replace("'\\'", "/");
                 urls.push(format!(
-                    r#"
-    <url>
-        <loc>{}/{}</loc>
-        <changefreq>{}</changefreq>
-    </url>"#,
-                    base_url, url, changefreq
+                    r#"<url><changefreq>{}</changefreq><lastmod>{}</lastmod><loc>{}/{}</loc></url>"#,
+                    changefreq, lastmod, base_url, url
                 ));
             }
         }
