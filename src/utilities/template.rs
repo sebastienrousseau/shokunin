@@ -199,6 +199,7 @@ fn download_files_from_url(url: &str) -> Result<PathBuf, TemplateError> {
         "index.html",
         "main.js",
         "page.html",
+        "post.html",
         "sw.js",
     ];
 

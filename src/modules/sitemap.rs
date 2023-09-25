@@ -9,7 +9,7 @@ pub fn create_site_map_data(metadata: &HashMap<String, String>) -> SiteMapData {
     SiteMapData {
         loc: metadata.get("permalink").cloned().unwrap_or_default(),
         lastmod: metadata.get("last_build_date").cloned().unwrap_or_default(),
-        changefreq: metadata.get("weekly").cloned().unwrap_or_default(),
+        changefreq: metadata.get("changefreq").cloned().unwrap_or_default(),
     }
 }
 

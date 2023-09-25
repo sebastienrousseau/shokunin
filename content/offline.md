@@ -8,6 +8,7 @@ banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
 banner: "https://kura.pro/unsplash/images/banners/tianyi-ma-WiONHd_zYI4-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
+changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.

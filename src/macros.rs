@@ -325,6 +325,7 @@ macro_rules! macro_render_layout {
                 "contact" => "contact.html",
                 "index" => "index.html",
                 "page" => "page.html",
+                "post" => "post.html",
                 _ => "index.html",
             }.to_string()
         };
