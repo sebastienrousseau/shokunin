@@ -144,7 +144,7 @@ your website or web application.
 <div class="card-body">
 <!-- markdownlint-disable restore -->
 
-## Starter Templates
+## Starter Templates 2
 
 All the starter templates, whether pages or websites are built from scratch
 using the same principles and features. This means that you can easily mix and
