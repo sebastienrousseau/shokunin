@@ -96,7 +96,7 @@ pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
     let tag_names = [
         "author", "description", "format-detection", "generator", "keywords",
         "language", "permalink", "rating", "referrer", "revisit-after",
-        "robots", "theme_color", "title", "viewport",
+        "robots", "theme-color", "title", "viewport",
     ];
     macro_generate_tags_from_list!(&tag_names, metadata)
 }

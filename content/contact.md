@@ -41,7 +41,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "How can we help you today?" ## The subtitle of the page. (max 64 characters)
 tags: "contact us, contact form, get in touch, contact page, contact information, customer service, support, feedback, questions, inquiries, help" ## The tags of the site. (max 160 characters)
-theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Contact Us" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.

@@ -40,7 +40,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 tags: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The tags of the site. (max 160 characters)
-theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
