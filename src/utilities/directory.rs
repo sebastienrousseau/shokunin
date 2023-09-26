@@ -278,11 +278,17 @@ pub fn format_header_with_id_class(
 
             if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
-                    " id=\"{}-{}\" tabindex=\"0\"",
+                    " id=\"{}-{}\" tabindex=\"0\" {}",
                     header_type,
-                    id_regex
-                        .replace_all(&first_word, "-"),
+                    id_regex.replace_all(&first_word, "-"),
+                    if header_type == "h1" {
+                        "itemprop=\"headline\""
+                    } else {
+                        "itemprop=\"subheadline\""
+                    }
                 ));
+                
+                print!("header_type={:?}", header_type);
                 id_attribute_added = true;
             }
 
