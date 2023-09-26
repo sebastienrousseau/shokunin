@@ -67,7 +67,7 @@ pub fn write_files_to_build_directory(
         for (file_name, content) in &file_paths {
             write_and_minify_file(
                 build_dir_path,
-                &file_name,
+                file_name,
                 content,
                 index_html_minified
             )?;
@@ -102,7 +102,7 @@ pub fn write_files_to_build_directory(
         for (file_name, content) in &file_paths {
             write_and_minify_file(
                 &dir_name,
-                &file_name,
+                file_name,
                 content,
                 index_html_minified
             )?;
@@ -125,7 +125,7 @@ fn write_and_minify_file(
     // Minify "index.html" content if required.
     if minify && file_name == "index.html" {
         let minified_content = minify_html(&file_path)?;
-        fs::write(&file_path, &minified_content)?;
+        fs::write(&file_path, minified_content)?;
     }
 
     // Print the file path.
@@ -140,7 +140,7 @@ fn copy_template_file(
     file_name: &str
 ) -> Result<(), Box<dyn Error>> {
     let dest_path = dest_dir.join(file_name);
-    fs::copy(template_path.join(file_name), &dest_path)?;
+    fs::copy(template_path.join(file_name), dest_path)?;
 
     Ok(())
 }
