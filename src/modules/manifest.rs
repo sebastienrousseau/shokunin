@@ -5,6 +5,10 @@ use crate::{models::data::{IconData, ManifestData}, macro_metadata_option};
 use std::collections::HashMap;
 
 /// Function to create ManifestData
+///
+/// The `metadata` parameter is a map of metadata strings.
+///
+/// Returns a `ManifestData` object.
 pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData {
     ManifestData {
         name: metadata.get("name").cloned().unwrap_or_default(),
