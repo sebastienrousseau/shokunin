@@ -46,12 +46,12 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.4.4"
+clap = "4.4.5"
 comrak = "0.18.0"
 dtt = "0.0.4"
 log = {version="0.4.20", features = ["std"] }
 minify-html = "0.11.1"
-# openssl = { version = "0.10.57", features = ["vendored"] }
+openssl = { version = "0.10.57", features = ["vendored"] }
 quick-xml = "0.30.0"
 regex = "1.9.5"
 reqwest = { version = "0.11.20", features = ["blocking", "json"] }
@@ -59,7 +59,7 @@ serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 serde_yaml = "0.9.25"
 tempfile = "3.8.0"
-toml = "0.8.0"
+toml = "0.8.1"
 yaml-rust = "0.4.5"
 vrd = "0.0.4"
 
