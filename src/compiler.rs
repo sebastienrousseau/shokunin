@@ -21,7 +21,7 @@ use crate::{
     utilities::{
         file::add,
         template::{render_page, PageOptions},
-        write::write_files
+        write::write_files_to_build_directory
     },
 };
 use std::{error::Error, fs, path::Path, collections::HashMap};
@@ -286,7 +286,7 @@ pub fn compile(
 
     // Iterate over compiled files and write pages to output directory
     for file in &compiled_files {
-        write_files(build_dir_path, file, template_path)?;
+        write_files_to_build_directory(build_dir_path, file, template_path)?;
     }
 
     let tags_html_content = generate_tags_html(&global_tags_data);

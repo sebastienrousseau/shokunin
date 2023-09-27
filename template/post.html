@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="{{language}}">
+
+<head>
+    <meta charset="{{charset}}" />
+    <title>{{title}}</title>
+
+    <!-- # Start Primary Meta Tags -->
+    {{primary}}
+    <!-- # End Primary Meta Tags -->
+
+    <!-- # Start Open Graph / Facebook Meta Tags -->
+    {{opengraph}}
+    <!-- # End Open Graph / Facebook Meta Tags -->
+
+    <!-- # Start Accessibility Meta Tags -->
+    <meta name="accessibility" content="ARIA" />
+    <meta name="accessibility" content="fullKeyboardControl" />
+    <meta name="accessibility" content="noFlashingHazard" />
+    <!-- # End Accessibility Meta Tags -->
+
+    <!-- # Start Apple Meta Tags -->
+    {{apple}}
+    <!-- # End Apple Meta Tags -->
+
+    <!-- # Start Content Security Policy Meta Tags -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms; connect-src 'self' collect; img-src 'self' data: https: kura.pro; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; media-src 'self';" />
+    <!-- # End Content Security Policy Meta Tags -->
+
+    <!-- # Start Microsoft Meta Tags -->
+    {{microsoft}}
+    <!-- # End Microsoft Meta Tags -->
+
+    <!-- # Start Twitter Meta Tags -->
+    {{twitter}}
+    <!-- # End Twitter Meta Tags -->
+
+    <!-- # Start Links -->
+    <link as="style" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" onload="this.onload=null;this.rel='stylesheet'" rel="preload" />
+    <link rel="alternate" href="{{url}}" hreflang="{{hreflang}}" />
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+    <link rel="apple-touch-icon" href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png" sizes="{{apple_touch_icon_sizes}}" />
+    <link rel="canonical" href="{{url}}" />
+    <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/16x16.png" sizes="16x16" />
+    <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/x-icon" href="{{cdn}}/{{short_name}}/images/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <!-- # End Links -->
+
+    <!-- # Start Styles -->
+    <style>
+        :root {
+            --theme-color: {
+                    {
+                    theme-color
+                }
+            }
+
+            ;
+        }
+
+        a {
+            color: var(--theme-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--theme-color);
+            opacity: .618;
+            text-decoration: underline;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            color: var(--theme-color);
+            text-decoration: none;
+        }
+
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+            border-spacing: 0;
+            empty-cells: show;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+
+        td,
+        th,
+        thead {
+            vertical-align: top;
+        }
+
+        thead {
+            background-color: #f1f1f1;
+            text-align: left;
+            border-bottom: 1px solid black;
+        }
+
+        td,
+        th {
+            background-color: transparent;
+            border-left: 1px solid black;
+            border-width: 0 0 0 1px;
+            margin: 0;
+            overflow: visible;
+            padding: 6px 12px;
+        }
+
+        body {
+            background-color: black;
+        }
+    </style>
+    <!-- # End Styles -->
+</head>
+
+<body id="page-top" itemscope itemtype="http://schema.org/WebPage" class="text-center bg-black text-white text-start">
+    <!-- # Start Responsive navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-black text-white fixed-top position-relative" id="mainNav"
+        itemscope itemtype="http://schema.org/SiteNavigationElement">
+        <div class="container p-3">
+            <figure class="py-0 mb-0">
+                <a href="/" tabindex="0" class="navbar-brand">
+                    <img alt="Logo of {{name}}" height="{{logo_height}}" id="{{name}}" src="{{logo}}"
+                        width="{{logo_width}}" />
+                </a>
+                <figcaption class="visually-hidden">{{subtitle}}</figcaption>
+            </figure>
+            <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
+                class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" role="navigation" id="navbarSupportedContent">
+                {{navigation}}
+            </div>
+        </div>
+    </nav>
+    <!-- # End Responsive navbar -->
+
+    <!-- Header-->
+    <header>
+        <div class="w-100 p-5" style="
+            background-image: url({{banner}});
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            height: {{banner_height}};
+            width: {{banner_width}}";
+            role="img" title="{{banner_alt}}" aria-label="{{banner_alt}}">
+            <div class="w-100 h-100 p-5 d-flex align-items-center">
+                <div class="text-center text-white center mx-auto rounded rounded-3 p-5" style="
+            background-color: rgba(0, 0, 0, 0.618);
+            width: 61.8vw;
+            height: auto;">
+                <p class="display-3 fw-bold">{{name}}</p>
+                <p class="display-6 fw-normal">{{subtitle}}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main content-->
+    <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
+        <div class="container text-start justify-content-between">
+            {{content}}
+        </div>
+    </main>
+
+    <!-- Footer-->
+    <footer id="footer" aria-label="footer" class="footer border-top mt-auto py-3">
+        <img alt="{{subtitle}}" height="32" src="{{cdn}}/{{short_name}}/images/logos/{{short_name}}.webp" width="32" />
+        <span class="px-2">{{copyright}}</span>
+        <span class="px-2">
+            <a href="/contact/index.html">Contact</a>
+        </span>
+        <span class="px-2">
+            <a href="/privacy/index.html">Privacy & Cookie Policy</a>
+        </span>
+        <span class="px-2">
+            <a href="/terms/index.html">Terms of Use</a>
+        </span>
+    </footer>
+    <script async crossorigin="anonymous" integrity="sha512-ToL6UYWePxjhDQKNioSi4AyJ5KkRxY+F1+Fi7Jgh0Hp5Kk2/s8FD7zusJDdonfe5B00Qw+B8taXxF6CFLnqNCw==" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" />
+    <script type="application/ld+json">{"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"{{last_build_date}}","datePublished":"{{item_pub_date}}","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}</script>
+    <script>
+        // This is an Immediately Invoked Function Expression (IIFE) which helps
+        // to avoid declaring any globals.
+        (function () {
+            // Create a new script element
+            var script = document.createElement("script");
+
+            // Set the source of the script element to "/main.js".
+            // A timestamp is appended as a query string to ensure the browser
+            // always fetches the latest version of the script, bypassing the
+            // cache.
+            script.src = "/main.js";
+
+            // The script is of type "text/javascript"
+            script.type = "text/javascript";
+
+            // The script is set to execute asynchronously as soon as it's
+            //available
+            script.async = true;
+
+            // Append the script element to the head of the document
+            document.head.appendChild(script);
+        })(); // The function is immediately invoked
+    </script>
+</body>
+
+</html>

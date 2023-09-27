@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
-// use minify_html::{minify, Cfg};
 use std::{
     fs::{self},
     io::{self},

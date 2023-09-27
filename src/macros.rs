@@ -287,23 +287,51 @@ macro_rules! macro_metadata_option {
 
 /// # `macro_render_layout` Macro
 ///
-/// Selects the appropriate template for rendering based on the specified layout,
-/// and uses this template to render a context into a string.
+/// This macro selects and renders a specified layout with a given context.
+///
+/// * `$layout`: The desired layout name (e.g., "contact", "index", "page").
+///   If a template file corresponding to `$layout.html` exists in the template directory,
+///   it will be used. Otherwise, the macro falls back to predefined mappings.
+///
+/// * `$template_path`: The path to the directory containing the template files.
+///
+/// * `$context`: The context to be rendered into the template.
+///
+/// ## Behaviour:
+///
+/// 1. If a file named `$layout.html` exists in `$template_path`, it will be used as the template.
+/// 2. If no such file exists, the macro checks for predefined layout names:
+///     * "contact" maps to "contact.html"
+///     * "index" maps to "index.html"
+///     * "page" maps to "page.html"
+/// 3. If `$layout` is unrecognized and doesn't correspond to a file in the template directory,
+///    the macro defaults to using "index.html".
+///
+/// ## Returns:
+///
+/// The macro returns a rendered string using the selected template and provided context.
 ///
 #[macro_export]
 macro_rules! macro_render_layout {
     ($layout:expr, $template_path:expr, $context:expr) => {{
         let layout_str: &str = &$layout;
 
-        let template_file = match layout_str {
-            "contact" => "contact.html",
-            "index" => "index.html",
-            "page" => "page.html",
-            _ => "index.html",
+        // Check if a file with the name of the layout exists in the template directory
+        let file_path = Path::new($template_path).join(format!("{}.html", layout_str));
+        let template_file = if file_path.exists() {
+            format!("{}.html", layout_str)
+        } else {
+            match layout_str {
+                "contact" => "contact.html",
+                "index" => "index.html",
+                "page" => "page.html",
+                "post" => "post.html",
+                _ => "index.html",
+            }.to_string()
         };
 
         let template_content = fs::read_to_string(
-            Path::new($template_path).join(template_file),
+            Path::new($template_path).join(&template_file),
         )
         .unwrap();
         render_template(&template_content, &$context)

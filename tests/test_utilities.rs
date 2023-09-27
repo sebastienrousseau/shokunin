@@ -429,27 +429,27 @@ mod tests {
         let test_cases = vec![
             (
                 "<h1>This is a test</h1>",
-                "<h1 id=\"h1-this\" tabindex=\"0\" class=\"this\">This is a test</h1>"
+                "<h1 id=\"h1-this\" tabindex=\"0\" itemprop=\"headline\" class=\"this\">This is a test</h1>"
             ),
             (
                 "<h2>Another Test</h2>",
-                "<h2 id=\"h2-another\" tabindex=\"0\" class=\"another\">Another Test</h2>"
+                "<h2 id=\"h2-another\" tabindex=\"0\" itemprop=\"subheadline\" class=\"another\">Another Test</h2>"
             ),
             (
                 "<h3>Test with special characters!@#$%^&*</h3>",
-                "<h3 id=\"h3-test\" tabindex=\"0\" class=\"test\">Test with special characters!@#$%^&*</h3>"
+                "<h3 id=\"h3-test\" tabindex=\"0\" itemprop=\"subheadline\" class=\"test\">Test with special characters!@#$%^&*</h3>"
             ),
             (
                 "<h1>Test with multiple     spaces</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" class=\"test\">Test with multiple     spaces</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test with multiple     spaces</h1>"
             ),
             (
                 "<h1>Test_with_underscores</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" class=\"test\">Test_with_underscores</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test_with_underscores</h1>"
             ),
             (
                 "<h1>Test-with-dashes</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" class=\"test\">Test-with-dashes</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test-with-dashes</h1>"
             ),
         ];
 

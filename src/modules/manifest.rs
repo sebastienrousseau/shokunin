@@ -5,6 +5,10 @@ use crate::{models::data::{IconData, ManifestData}, macro_metadata_option};
 use std::collections::HashMap;
 
 /// Function to create ManifestData
+///
+/// The `metadata` parameter is a map of metadata strings.
+///
+/// Returns a `ManifestData` object.
 pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData {
     ManifestData {
         name: metadata.get("name").cloned().unwrap_or_default(),
@@ -25,7 +29,7 @@ pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData 
             .unwrap_or_else(Vec::new),
         orientation: "portrait-primary".to_string(),
         scope: "/".to_string(),
-        theme_color: macro_metadata_option!(metadata, "theme_color"),
+        theme_color: macro_metadata_option!(metadata, "theme-color"),
     }
 }
 

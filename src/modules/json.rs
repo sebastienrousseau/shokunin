@@ -13,19 +13,26 @@ use crate::models::data::{
 };
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
+///
+/// The `ManifestData` object contains the following fields:
+///
+/// * `background_color`: The background color of the web app.
+/// * `description`: The description of the web app.
+/// * `display`: The display mode of the web app.
+/// * `icons`: A list of icons for the web app.
+/// * `name`: The name of the web app.
+/// * `orientation`: The orientation of the web app.
+/// * `scope`: The scope of the web app.
+/// * `short_name`: The short name of the web app.
+/// * `start_url`: The start URL of the web app.
+/// * `theme_color`: The theme color of the web app.
+///
+/// Returns a JSON string containing the manifest.
 pub fn manifest(options: &ManifestData) -> String {
     let mut json_map = Map::new();
-    json_map.insert("name".to_string(), json!(options.name));
-    json_map
-        .insert("short_name".to_string(), json!(options.short_name));
-    json_map.insert("start_url".to_string(), json!(options.start_url));
+    json_map.insert("background_color".to_string(),json!(options.background_color),);
+    json_map.insert("description".to_string(), json!(options.description));
     json_map.insert("display".to_string(), json!(options.display));
-    json_map.insert(
-        "background_color".to_string(),
-        json!(options.background_color),
-    );
-    json_map
-        .insert("description".to_string(), json!(options.description));
 
     let mut icons_vec = vec![];
     for icon in &options.icons {
@@ -41,17 +48,23 @@ pub fn manifest(options: &ManifestData) -> String {
         icons_vec.push(json!(icon_map));
     }
     json_map.insert("icons".to_string(), json!(icons_vec));
-
-    json_map
-        .insert("orientation".to_string(), json!(options.orientation));
+    json_map.insert("name".to_string(), json!(options.name));
+    json_map.insert("orientation".to_string(), json!(options.orientation));
     json_map.insert("scope".to_string(), json!(options.scope));
-    json_map
-        .insert("theme_color".to_string(), json!(options.theme_color));
+    json_map.insert("short_name".to_string(), json!(options.short_name));
+    json_map.insert("start_url".to_string(), json!(options.start_url));
+    json_map.insert("theme_color".to_string(), json!(options.theme_color));
 
     serde_json::to_string_pretty(&json_map).unwrap()
 }
 
 /// ## Function: `txt` - Generate a robots.txt for a web app
+///
+/// The `TxtData` object contains the following fields:
+///
+/// * `permalink`: The permalink of the web app.
+///
+/// Returns a string containing the robots.txt file.
 pub fn txt(options: &TxtData) -> String {
     let permalink = options.permalink.clone();
     let url = format!("{}/sitemap.xml", permalink);
@@ -59,6 +72,12 @@ pub fn txt(options: &TxtData) -> String {
 }
 
 /// ## Function: `cname` - Generate a CNAME for a web app
+///
+/// The `CnameData` object contains the following fields:
+///
+/// * `cname`: The CNAME value of the web app.
+///
+/// Returns a string containing the CNAME file.
 pub fn cname(options: &CnameData) -> String {
     let cname_value = options.cname.clone();
     let full_domain = format!("www.{}", cname_value);
@@ -67,6 +86,20 @@ pub fn cname(options: &CnameData) -> String {
 }
 
 /// ## Function: `human` - Generate a humans.txt for a web app
+///
+/// The `HumansData` object contains the following fields:
+///
+/// * `author_location`: The location of the author.
+/// * `author_twitter`: The Twitter handle of the author.
+/// * `author_website`: The website of the author.
+/// * `author`: The author of the web app.
+/// * `site_components`: The components that the web app uses.
+/// * `site_last_updated`: The date on which the web app was last updated.
+/// * `site_software`: The software that the web app uses.
+/// * `site_standards`: The standards that the web app follows.
+/// * `thanks`: A list of people or organizations to thank for their contributions to the web app.
+///
+/// Returns a string containing the humans.txt file.
 pub fn human(options: &HumansData) -> String {
     let mut s = String::from("/* TEAM */\n");
 
@@ -109,13 +142,24 @@ pub fn human(options: &HumansData) -> String {
 }
 
 /// ## Function: `sitemap` - Generate a sitemap for a web app
+///
+/// The `SiteMapData` object contains the following fields:
+///
+/// * `changefreq`: The change frequency of the web app.
+/// * `lastmod`: The last modified date of the web app.
+/// * `loc`: The base URL of the web app.
+///
+/// The `dir` parameter is the directory containing the web app.
+///
+/// Returns a string containing the sitemap.xml file.
 pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
+    let lastmod = options.lastmod.clone();
     let changefreq = options.changefreq.clone();
     let base_url = options.loc.clone();
     let base_dir = PathBuf::from(dir);
     let mut urls = vec![];
 
-    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &mut urls)
+    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &lastmod, &mut urls)
         .unwrap();
 
     let urls_str = urls.join("\n");
@@ -126,11 +170,27 @@ pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
     )
 }
 
-fn visit_dirs(
+/// ## Function: `visit_dirs` - Recursively visit all directories in a tree and add the URLs of all index.html files to the `urls` vector.
+///
+/// The `base_dir` parameter is the root directory of the tree.
+///
+/// The `dir` parameter is the current directory being visited.
+///
+/// The `base_url` parameter is the base URL of the website.
+///
+/// The `changefreq` parameter is the change frequency of the website.
+///
+/// The `lastmod` parameter is the last modified date of the website.
+///
+/// The `urls` parameter is a vector of URLs that will be populated by the function.
+///
+/// Returns a `std::io::Result` value.
+pub fn visit_dirs(
     base_dir: &Path,
     dir: &Path,
     base_url: &str,
     changefreq: &str,
+    lastmod: &str,
     urls: &mut Vec<String>,
 ) -> std::io::Result<()> {
     if dir.is_dir() {
@@ -139,7 +199,7 @@ fn visit_dirs(
             let path = entry.path();
             if path.is_dir() {
                 visit_dirs(
-                    base_dir, &path, base_url, changefreq, urls,
+                    base_dir, &path, base_url, changefreq, lastmod, urls,
                 )?;
             } else if path.file_name().unwrap() == "index.html" {
                 let url = path
@@ -149,12 +209,8 @@ fn visit_dirs(
                     .unwrap()
                     .replace("'\\'", "/");
                 urls.push(format!(
-                    r#"
-    <url>
-        <loc>{}/{}</loc>
-        <changefreq>{}</changefreq>
-    </url>"#,
-                    base_url, url, changefreq
+                    r#"<url><changefreq>{}</changefreq><lastmod>{}</lastmod><loc>{}/{}</loc></url>"#,
+                    changefreq, lastmod, base_url, url
                 ));
             }
         }

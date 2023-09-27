@@ -8,6 +8,7 @@ banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
 banner: "https://kura.pro/unsplash/images/banners/ryunosuke-kikuno-G5hYMUoJQf8-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
+changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
@@ -24,7 +25,7 @@ image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
 keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
-layout: "page" ## The layout of the site.
+layout: "post" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
@@ -39,7 +40,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 tags: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The tags of the site. (max 160 characters)
-theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Features" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
@@ -105,6 +106,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
+
 ## Starter Templates
 
 All the starter templates, whether pages or websites are built from scratch
@@ -116,13 +118,37 @@ your website or web application.
 
 **Kaishi Starter Templates** has the following features enabled:
 
+<!-- markdownlint-disable MD033 -->
+<div class="row g-4 py-5 row-cols-1 row-cols-lg-2">
+<div class="p-3">
+<div class="card bg-light text-dark p-5 h-100">
+<div class="card-body">
+<!-- markdownlint-restore -->
+
 - **Accessibility Meta-Tags:** These meta tags are designed to make the website more accessible to users with disabilities. By setting Accessible Rich Internet Applications (ARIA) roles and attributes, full keyboard control, and no flashing hazard, you can make sure your website is accessible to everyone.
 - **Apple Meta-Tags:** These meta tags improve websites for Apple devices, like iPhones, iPads, and Apple devices. You can change web app capabilities, status bar style, title, application name, and author to improve Apple devices' appearance.
 - **Bootstrap CSS:** Bootstrap is a popular CSS framework that provides you with a set of pre-designed styles and components. By using Bootstrap, you can quickly and easily create a professional-looking website without having to write CSS from scratch.
 - **Bootstrap JavaScript:** Bootstrap JavaScript is a set of pre-built scripts that provide you with responsive navigation menus and modal dialogues.
+<!-- markdownlint-disable MD033 -->
+</div>
+</div>
+</div>
+
+<div class="p-3">
+<div class="card bg-dark text-light p-5 h-100">
+<div class="card-body">
+<!-- markdownlint-disable restore -->
+
 - **Content Security Policy:** This meta tag is used to specify the sources of content allowed to load on the page. It is designed to prevent cross-site scripting (XSS) attacks and other security vulnerabilities.
 - **Microsoft Meta Tags:** These meta tags are designed to optimise the website for Microsoft devices. You can set site verification, application configuration, tap highlight colour, tile colour, and tile image to look good on Windows devices.
 - **Open Graph/Facebook Meta-Tags:** These meta tags allow you to control how your website appears when shared on Facebook and other social media platforms. By setting the title, description, and image, you can make sure that your website looks its best when shared online.
 - **Responsive Navigation Bar:** The responsive navigation bar provides users with an intuitive and easy-to-use interface for navigating the website. It aims to adapt to the size of the screen, making it accessible to users on both desktop and mobile devices.
 - **Schema.org Meta Tags:** These meta tags are used to provide structured data about the website's content. Setting the name, description, and image on a website helps search engines and others understand the content better.
 - **Twitter Meta Tags:** These meta tags are designed to optimise the website for Twitter sharing. You can set the card type, creator, description, image, site, title, and URL to make their website look good on Twitter.
+
+<!-- markdownlint-disable MD033 -->
+</div>
+</div>
+</div>
+</div>
+<!-- markdownlint-disable restore -->

@@ -23,16 +23,7 @@
     <!-- # End Apple Meta Tags -->
 
     <!-- # Start Content Security Policy Meta Tags -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self';
-            script-src 'self' 'unsafe-inline' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms;
-            connect-src 'self' collect;
-            img-src 'self' data: https: kura.pro;
-            style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
-            font-src 'self' https://fonts.gstatic.com;
-            media-src 'self';"
-    />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms; connect-src 'self' collect; img-src 'self' data: https: kura.pro; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; media-src 'self';" />
     <!-- # End Content Security Policy Meta Tags -->
 
     <!-- # Start Microsoft Meta Tags -->
@@ -82,7 +73,7 @@
     <!-- # End Links -->
 
     <!-- # Start Styles -->
-    <style>:root{--theme-color:{{theme_color}};}a{color:var(--theme-color);text-decoration:none;}a:hover{color:var(--theme-color);opacity:.618;text-decoration:underline;}h1,h2,h3,h4,h5,h6{color:var(--theme-color);text-decoration:none;}table{border:1px solid black;border-collapse:collapse;border-spacing:0;empty-cells:show;margin-bottom:25px;width:100%;}td,th,thead{vertical-align:top;}thead{background-color:#f1f1f1;text-align:left;border-bottom:1px solid black;}td,th{background-color:transparent;border-left:1px solid black;border-width:0 0 0 1px;margin:0;overflow:visible;padding:6px 12px;}body{background-color:black;}</style>
+    <style>:root{--theme-color: {{theme-color}};}a{color:var(--theme-color);text-decoration:none;}a:hover{color:var(--theme-color);opacity:.618;text-decoration:underline;}h1,h2,h3,h4,h5,h6{color:var(--theme-color);text-decoration:none;}table{border:1px solid black;border-collapse:collapse;border-spacing:0;empty-cells:show;margin-bottom:25px;width:100%;}td,th,thead{vertical-align:top;}thead{background-color:#f1f1f1;text-align:left;border-bottom:1px solid black;}td,th{background-color:transparent;border-left:1px solid black;border-width:0 0 0 1px;margin:0;overflow:visible;padding:6px 12px;}body{background-color:black;}</style>
     <!-- # End Styles -->
   </head>
   <body
@@ -198,38 +189,7 @@
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js">
     ></script>
     <script type="application/ld+json">
-      {
-        "@context": "https://schema.org/",
-        "@type": "WebPage",
-        "author": {
-          "@type": "Person",
-          "@id": "{{author}}"
-        },
-        "copyrightHolder": {
-          "@type": "Person",
-          "@id": "{{author}}"
-        },
-        "copyrightYear": "{{copyright}}",
-        "creator": {
-          "@type": "Person",
-          "@id": "{{author}}"
-        },
-        "dateModified": "{{last_build_date}}",
-        "datePublished": "{{item_pub_date}}",
-        "description": "{{description}}",
-        "headline": "{{subtitle}}",
-        "image": {
-          "@type": "ImageObject",
-          "url": "{{image}}"
-        },
-        "inLanguage": "{{language}}",
-        "mainEntityOfPage": "{{permalink}}",
-        "name": "{{name}}",
-        "publisher": {
-          "@type": "Person",
-          "@id": "{{author}}"
-        }
-      }
+      {"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"{{last_build_date}}","datePublished":"{{item_pub_date}}","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
       </script>
     <script>
       // This is an Immediately Invoked Function Expression (IIFE) which helps

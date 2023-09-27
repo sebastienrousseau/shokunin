@@ -8,6 +8,7 @@ banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
 banner: "https://kura.pro/unsplash/images/banners/johannes-plenio-6XUA5KQ9-1k-unsplash.jpg" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
+changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
@@ -39,7 +40,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 tags: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The tags of the site. (max 160 characters)
-theme_color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
 title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
