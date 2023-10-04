@@ -54,7 +54,7 @@ minify-html = "0.11.1"
 openssl = { version = "0.10.57", features = ["vendored"] }
 quick-xml = "0.30.0"
 regex = "1.9.5"
-reqwest = { version = "0.11.20", features = ["blocking", "json"] }
+reqwest = { version = "0.11.22", features = ["blocking", "json"] }
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 serde_yaml = "0.9.25"
