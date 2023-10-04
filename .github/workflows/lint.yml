@@ -18,6 +18,6 @@ jobs:
       - uses: hecrj/setup-rust-action@v2
         with:
           components: clippy
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Check lints
         run: cargo clippy --workspace --all-features --all-targets --no-deps -- -D warnings

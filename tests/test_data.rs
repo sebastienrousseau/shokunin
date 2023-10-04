@@ -16,6 +16,12 @@ mod tests {
     }
 
     #[test]
+    fn test_cname_data_new() {
+        let cname_data = CnameData::new("example.com".to_string());
+        assert_eq!(cname_data.cname, "example.com");
+    }
+
+    #[test]
     fn test_file_data_default() {
         let file_data = FileData::default();
         let expected_file_data = FileData {
@@ -33,6 +39,13 @@ mod tests {
     }
 
     #[test]
+    fn test_file_data_new() {
+        let file_data = FileData::new("file.txt".to_string(), "Content".to_string());
+        assert_eq!(file_data.name, "file.txt");
+        assert_eq!(file_data.content, "Content");
+    }
+
+    #[test]
     fn test_icon_data_default() {
         let icon_data = IconData::default();
         let expected_icon_data = IconData {
@@ -42,6 +55,13 @@ mod tests {
             purpose: None,
         };
         assert_eq!(icon_data, expected_icon_data);
+    }
+
+    #[test]
+    fn test_icon_data_new() {
+        let icon_data = IconData::new("icon.png".to_string(), "32x32".to_string());
+        assert_eq!(icon_data.src, "icon.png");
+        assert_eq!(icon_data.sizes, "32x32");
     }
 
     #[test]
@@ -63,6 +83,21 @@ mod tests {
     }
 
     #[test]
+    fn test_manifest_data_new() {
+        let manifest_data = ManifestData::new();
+        assert_eq!(manifest_data.background_color, "");
+        assert_eq!(manifest_data.description, "");
+        assert_eq!(manifest_data.display, "");
+        assert_eq!(manifest_data.icons, Vec::<IconData>::new());
+        assert_eq!(manifest_data.name, "");
+        assert_eq!(manifest_data.orientation, "");
+        assert_eq!(manifest_data.scope, "");
+        assert_eq!(manifest_data.short_name, "");
+        assert_eq!(manifest_data.start_url, "");
+        assert_eq!(manifest_data.theme_color, "");
+    }
+
+    #[test]
     fn test_sitemap_data_default() {
         let sitemap_data = SiteMapData::default();
         let expected_sitemap_data = SiteMapData {
@@ -74,11 +109,25 @@ mod tests {
     }
 
     #[test]
+    fn test_sitemap_data_new() {
+        let sitemap_data = SiteMapData::new("example.com".to_string(), "2023-01-01".to_string(), "daily".to_string());
+        assert_eq!(sitemap_data.loc, "example.com");
+        assert_eq!(sitemap_data.lastmod, "2023-01-01");
+        assert_eq!(sitemap_data.changefreq, "daily");
+    }
+
+    #[test]
     fn test_txt_data_default() {
         let txt_data = TxtData::default();
         let expected_txt_data = TxtData {
             permalink: String::default(),
         };
         assert_eq!(txt_data, expected_txt_data);
+    }
+
+    #[test]
+    fn test_txt_data_new() {
+        let txt_data = TxtData::new("example.com".to_string());
+        assert_eq!(txt_data.permalink, "example.com");
     }
 }
