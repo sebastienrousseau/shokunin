@@ -275,6 +275,14 @@ impl MetaTagGroups {
             _ => None,
         }
     }
+    /// Returns true if all fields are empty.
+    pub fn is_empty(&self) -> bool {
+        self.apple.is_empty() &&
+        self.primary.is_empty() &&
+        self.og.is_empty() &&
+        self.ms.is_empty() &&
+        self.twitter.is_empty()
+    }
 }
 
 #[derive(

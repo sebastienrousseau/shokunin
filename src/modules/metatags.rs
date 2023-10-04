@@ -18,7 +18,17 @@ type MetaDataMap = HashMap<String, String>;
 pub fn generate_custom_meta_tags(mapping: &[(String, Option<String>)]) -> String {
     let filtered_mapping: Vec<(String, String)> = mapping
         .iter()
-        .filter_map(|(key, value)| value.as_ref().map(|v| (key.clone(), v.clone())))
+        .filter_map(|(key, value)| {
+            if let Some(val) = value.as_ref() {
+                if !val.is_empty() {
+                    Some((key.clone(), val.clone()))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
         .collect();
     generate_metatags(&filtered_mapping)
 }
@@ -62,7 +72,7 @@ pub fn load_metatags(tag_names: &[&str], metadata: &MetaDataMap) -> String {
 ///
 /// # Returns
 /// A `String` containing the HTML representation of the meta tag.
-fn format_meta_tag(key: &str, value: &str) -> String {
+pub fn format_meta_tag(key: &str, value: &str) -> String {
     format!("<meta name=\"{}\" content=\"{}\">", key, value)
 }
 
