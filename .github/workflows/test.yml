@@ -64,6 +64,6 @@ jobs:
         # Only run this job on the main branch when a commit is pushed.
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: upload-report-codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v3
         with:
           files: coverage/*.lcov
