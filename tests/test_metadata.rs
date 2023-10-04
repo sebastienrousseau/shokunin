@@ -29,7 +29,7 @@ This is a blog about Rust programming.
 
 
         let (metadata, keywords, all_meta_tags) =
-            extract_and_prepare_metadata(&file_content);
+            extract_and_prepare_metadata(file_content);
 
         // Check extracted metadata
         let mut expected_metadata = HashMap::new();
