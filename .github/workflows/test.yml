@@ -54,7 +54,7 @@ jobs:
         # Only run this job on the main branch when a commit is pushed.
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: generate-code-coverage
-        uses: actions-rs/cargo@v1.0.1
+        uses: actions-rs/cargo@v1
         with:
           command: xtask
           args: coverage
