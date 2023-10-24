@@ -52,7 +52,7 @@ dtt = "0.0.4"
 log = {version="0.4.20", features = ["std"] }
 minify-html = "0.11.1"
 openssl = { version = "0.10.57", features = ["vendored"] }
-quick-xml = "0.30.0"
+quick-xml = "0.31.0"
 regex = "1.9.6"
 reqwest = { version = "0.11.22", features = ["blocking", "json"] }
 serde = { version = "1.0.188", features = ["derive"] }
