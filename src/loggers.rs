@@ -4,16 +4,15 @@
 // Standard library imports for formatting and I/O operations.
 use std::{
     fmt,
-    io::{self, Write as IoWrite},
     fs::OpenOptions,
+    io::{self, Write as IoWrite},
 };
-
 
 /// Enum representing the different log formats that can be used.
 ///
 /// This enum allows the developer to specify the format in which log messages should be displayed.
 ///
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd)]
 pub enum LogFormat {
     /// The log format is set to the Common Log Format (CLF)
     CLF,
@@ -29,12 +28,12 @@ pub enum LogFormat {
     GELF,
 }
 
-/// Implements Display trait for LogFormat enum.
+/// Implements Display trait for `LogFormat` enum.
 ///
 /// This allows easy conversion of the log format enums to strings.
 impl fmt::Display for LogFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{:?}", self)
+        writeln!(f, "{self:?}")
     }
 }
 
@@ -55,7 +54,7 @@ impl fmt::Display for LogFormat {
 /// * `VERBOSE` - The log level is set to verbose.
 /// * `WARNING` - The log level is set to warning.
 ///
-#[derive(Debug, PartialEq, Eq, Hash, Clone,PartialOrd)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd)]
 pub enum LogLevel {
     /// The log level is set to all.
     ALL,
@@ -83,7 +82,7 @@ pub enum LogLevel {
 /// This converts the enum to a string representation.
 impl fmt::Display for LogLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -120,31 +119,41 @@ impl Log {
     pub fn log(&self) -> io::Result<()> {
         // Open the file in append mode. If the file does not exist, create it.
         let mut file = OpenOptions::new()
-    .write(true)
-    .truncate(true)
-    .open("shokunin.log")?;
+            .write(true)
+            .truncate(true)
+            .open("shokunin.log")?;
         match self.format {
             LogFormat::CLF => {
                 writeln!(
                     file,
                     "SessionID={}\tTimestamp={}\tDescription={}\tLevel={}\tComponent={}\tFormat={}",
-                    self.session_id, self.time, self.description, self.level, self.component, self.format
+                    self.session_id,
+                    self.time,
+                    self.description,
+                    self.level,
+                    self.component,
+                    self.format
                 )
-            },
+            }
             LogFormat::JSON => {
                 writeln!(
                     file,
                     r#"{{"session_id": "{}", "timestamp": "{}", "description": "{}", "level": "{}", "component": "{}", "format": "{}"}}"#,
-                    self.session_id, self.time, self.description, self.level, self.component, self.format
+                    self.session_id,
+                    self.time,
+                    self.description,
+                    self.level,
+                    self.component,
+                    self.format
                 )
-            },
+            }
             LogFormat::CEF => {
                 writeln!(
                     file,
                     r#"[CEF]
                     <Event xmlns="http://www.w3.org/2003/05/events/Log">
                         <LogID>1</LogID>
-                        <SourceName>shokunin</SourceName>
+                        <SourceName>Shokunin</SourceName>
                         <SourceType>Application</SourceType>
                         <EventReceivedTime>{}</EventReceivedTime>
                         <EventType>Log</EventType>
@@ -161,10 +170,16 @@ impl Log {
                         <ModuleID>-</ModuleID>
                     </Event>
                     "#,
-                    self.time, self.level, self.description, self.session_id
+                    self.time,
+                    self.level,
+                    self.description,
+                    self.session_id
                 )
-            },
-            _ => Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported log format")),
+            }
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Unsupported log format",
+            )),
         }?;
         file.flush()?;
         Ok(())
@@ -204,10 +219,10 @@ impl Default for Log {
         Self {
             session_id: String::default(),
             time: String::default(),
-            level: LogLevel::INFO,  // Default log level
+            level: LogLevel::INFO, // Default log level
             component: String::default(),
             description: String::default(),
-            format: LogFormat::CLF,  // Default log format
+            format: LogFormat::CLF, // Default log format
         }
     }
 }
