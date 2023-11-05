@@ -60,7 +60,7 @@ last_build_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 managing_editor: jane.doe@kaishi.one
 pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
 ttl: "60"
-type: "website"
+type: "website" ## The type of the site.
 webmaster: jane.doe@kaishi.one
 
 # Apple - The Apple front matter (YAML).

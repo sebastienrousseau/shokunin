@@ -144,7 +144,7 @@ pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
         "og:locale" => locale,
         "og:site_name" => site_name,
         "og:title" => title,
-        "og:type" => type_,
+        "og:type" => type,
         "og:url" => permalink
     )
 }
