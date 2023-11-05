@@ -240,7 +240,7 @@ pub fn compile(
                     })
                     .collect();
 
-                global_tags_data.entry(tag.clone()).or_insert_with(Vec::new).extend(page_info);
+                global_tags_data.entry(tag.clone()).or_default().extend(page_info);
             }
 
             // Generate a TxtData structure, filling it with values extracted from the metadata.

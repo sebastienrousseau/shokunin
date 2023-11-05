@@ -26,7 +26,7 @@ pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData 
                     purpose: Some("any maskable".to_string()),
                 }
             ])
-            .unwrap_or_else(Vec::new),
+            .unwrap_or_default(),
         orientation: "portrait-primary".to_string(),
         scope: "/".to_string(),
         theme_color: macro_metadata_option!(metadata, "theme-color"),
