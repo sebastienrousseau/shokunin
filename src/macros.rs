@@ -522,27 +522,101 @@ macro_rules! macro_set_rss_data_fields {
     };
 }
 
+/// Custom logging macro for various log levels and formats.
+///
+/// # Parameters
+///
+/// * `$level`: The log level of the message.
+/// * `$component`: The component where the log is coming from.
+/// * `$description`: A description of the log message.
+/// * `$format`: The format of the log message.
+///
 #[macro_export]
-/// # `macro_log_info` Macro
 macro_rules! macro_log_info {
-    ($level:expr, $component:expr, $description:expr, $format:expr) => {
-        {
-            use $crate::loggers::{Log, LogLevel, LogFormat};
+    ($level:expr, $component:expr, $description:expr, $format:expr) => {{
+        use dtt::DateTime;
+        use vrd::Random;
+        use $crate::loggers::{Log, LogFormat, LogLevel};
 
-            extern crate dtt;
-            use dtt::DateTime;
-            // Get the current date and time in ISO 8601 format.
-            let date = DateTime::new();
-            let iso = date.iso_8601;
+        // Get the current date and time in ISO 8601 format.
+        let date = DateTime::new();
+        let iso = date.iso_8601;
 
-            extern crate vrd;
-            use vrd::Random;
-            // Create a new random number generator
-            let mut rng = Random::default();
-            let session_id = rng.rand().to_string();
+        // Create a new random number generator
+        let mut rng = Random::default();
+        let session_id = rng.rand().to_string();
 
-            let log = Log::new(&session_id, &iso, $level, $component, $description, $format);
-            let _ = log.log();
-        }
-    };
+        let log = Log::new(
+            &session_id,
+            &iso,
+            $level,
+            $component,
+            $description,
+            $format,
+        );
+        let _ = log.log();
+        log // Return the Log instance
+    }};
+}
+
+/// Macros related to executing shell commands.
+///
+/// Executes a shell command, logs the start and completion of the operation, and handles any errors that occur.
+///
+/// # Parameters
+///
+/// * `$command`: The shell command to execute.
+/// * `$package`: The name of the package the command is being run on.
+/// * `$operation`: A description of the operation being performed.
+/// * `$start_message`: The log message to be displayed at the start of the operation.
+/// * `$complete_message`: The log message to be displayed upon successful completion of the operation.
+/// * `$error_message`: The log message to be displayed in case of an error.
+///
+/// # Returns
+///
+/// Returns a `Result<(), anyhow::Error>` indicating the success or failure of the operation.
+///
+#[macro_export]
+macro_rules! macro_execute_and_log {
+    ($command:expr, $package:expr, $operation:expr, $start_message:expr, $complete_message:expr, $error_message:expr) => {{
+        use anyhow::{Context, Result as AnyResult};
+        use $crate::loggers::{LogFormat, LogLevel};
+        use $crate::macro_log_info;
+
+        macro_log_info!(
+            LogLevel::INFO,
+            $operation,
+            $start_message,
+            LogFormat::CLF
+        );
+
+        $command
+            .run()
+            .map(|_| ())
+            .map_err(|err| {
+                macro_log_info!(
+                    LogLevel::ERROR,
+                    $operation,
+                    $error_message,
+                    LogFormat::CLF
+                );
+                err
+            })
+            .with_context(|| {
+                format!(
+                    "Failed to execute '{}' for {} on package '{}'",
+                    stringify!($command),
+                    $operation,
+                    $package
+                )
+            })?;
+
+        macro_log_info!(
+            LogLevel::INFO,
+            $operation,
+            $complete_message,
+            LogFormat::CLF
+        );
+        Ok(())
+    }};
 }

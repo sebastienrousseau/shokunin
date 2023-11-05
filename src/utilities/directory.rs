@@ -288,7 +288,7 @@ pub fn format_header_with_id_class(
                     }
                 ));
                 
-                print!("header_type={:?}", header_type);
+                // print!("header_type={:?}", header_type);
                 id_attribute_added = true;
             }
 

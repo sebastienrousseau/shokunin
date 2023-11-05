@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.19"
+//! shokunin = "0.0.20"
 //! ```
 //!
 //! And in your `main.rs`:

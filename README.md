@@ -11,9 +11,9 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator
+# Shokunin Static Site Generator (SSG)
 
-A Content-First Open Source Static Site Generator (SSG) written in Rust
+The fastest Rust-based Static Site Generator (SSG) for building professional websites and blogs.
 
 *Part of the [Mini Functions][0] family of Rust libraries.*
 
@@ -35,7 +35,7 @@ A Content-First Open Source Static Site Generator (SSG) written in Rust
 
 ## Overview
 
-Shokunin Static Site Generator (SSG) is a highly-optimized, Rust-based static site generator (ssg) that aims to provide an easy-to-use and powerful tool for building professional static websites and blogs.
+Shokunin is a lightning-fast static site generator (SSG) that is optimised for Search Engine Optimisation (SEO) and fully aligned with Accessibility Standards.
 
 The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
 
@@ -55,7 +55,7 @@ Shokunin Static Site Generator (SSG) feature highlights include:
 
 ## Table of Contents
 
-- [Shokunin Static Site Generator](#shokunin-static-site-generator)
+- [Shokunin Static Site Generator (SSG)](#shokunin-static-site-generator-ssg)
   - [Overview](#overview)
   - [Features](#features)
   - [Table of Contents](#table-of-contents)
@@ -72,7 +72,7 @@ Shokunin Static Site Generator (SSG) feature highlights include:
     - [In your project](#in-your-project)
     - [Examples](#examples)
       - [Args](#args)
-  - [Semantic Versioning Policy 🚥](#semantic-versioning-policy-)
+  - [Semantic Versioning Policy](#semantic-versioning-policy)
   - [License](#license)
   - [Contribution](#contribution)
   - [Acknowledgements](#acknowledgements)
@@ -101,9 +101,9 @@ ssg --help
 
 ### Requirements
 
-The minimum supported Rust toolchain version is currently Rust
-**1.72.0** or later (stable). It is recommended that you install the
-latest stable version of Rust.
+The minimum supported Rust toolchain version is currently Rust **1.71.1** or
+later (stable). It is recommended that you install the latest stable version of
+Rust.
 
 ### Platform support
 
@@ -181,7 +181,7 @@ To use the Shokunin Static Site Generator (SSG) library in your project, add the
 
 ```toml
 [dependencies]
-shokunin = "0.0.19"
+shokunin = "0.0.20"
 ```
 
 Add the following to your `main.rs` file:
@@ -231,7 +231,7 @@ The main() function in this code compiles a website from the `content` directory
 - `site_path:` The path to the directory where the generated website files will be served from.
 - `template_path:` The path to the directory containing the website templates.
 
-## Semantic Versioning Policy 🚥
+## Semantic Versioning Policy
 
 For transparency into our release cycle and in striving to maintain backward compatibility, Shokunin Static Site Generator (SSG) follows [semantic versioning][7].
 

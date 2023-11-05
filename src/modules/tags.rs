@@ -89,7 +89,7 @@ pub fn generate_tags(file: &FileData, metadata: &HashMap<String, String>) -> Has
 
 
             // Insert or update the entry in keywords_data_map.
-            keywords_data_map.entry(tag.to_string()).or_insert_with(Vec::new).push(tags_data);
+            keywords_data_map.entry(tag.to_string()).or_default().push(tags_data);
         }
     }
     keywords_data_map
