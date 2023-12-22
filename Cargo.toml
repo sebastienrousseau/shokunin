@@ -57,7 +57,7 @@ regex = "1.10.2"
 reqwest = { version = "0.11.23", features = ["blocking", "json"] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
-serde_yaml = "0.9.28"
+serde_yaml = "0.9.29"
 tempfile = "3.8.1"
 toml = "0.8.8"
 yaml-rust = "0.4.5"
