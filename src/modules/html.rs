@@ -238,7 +238,7 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 ///     let img_regex = Regex::new(r#"(<img[^>]*?)(/?>)"#)?;
 ///     let title = "Unused Placeholder Title";
 ///
-///     let processed_html = post_process_html(html, &class_regex, &img_regex, title)?;
+///     let processed_html = post_process_html(html, &class_regex, &img_regex)?;
 ///     println!("{}", processed_html);
 ///
 ///     Ok(())
