@@ -126,9 +126,6 @@ use std::{error::Error, path::Path};
     /// The `compiler` module contains functions for the compilation process.
     pub mod compiler;
 
-    /// The `loggers` module contains functions for logging.
-    pub mod loggers;
-
     /// The `macros` module contains functions for generating macros.
     pub mod macros;
 

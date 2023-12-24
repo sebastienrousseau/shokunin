@@ -1,6 +1,8 @@
 // Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use rlg::LogLevel::ERROR;
+
 use crate::{
     macro_log_info,
     macro_cleanup_directories, macro_create_directories,
@@ -78,7 +80,7 @@ pub fn compile(
             )
             .unwrap_or_else(|err| {
                 let description = format!("Error generating HTML: {:?}", err);
-                macro_log_info!(LogLevel::ERROR, "compiler.rs - Line 81", &description, LogFormat::CLF);
+                macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
                 String::from("Fallback HTML content")
             });
 
@@ -279,7 +281,7 @@ pub fn compile(
     );
 
     // Log the generated files information to a log file (shokunin.log)
-    macro_log_info!(LogLevel::INFO, "compiler.rs (Line 280)", &cli_description, LogFormat::JSON);
+    macro_log_info!(&ERROR, "compiler.rs - Line 280", &cli_description, &LogFormat::CLF);
 
     // Print the generated files to the console
     println!("{} ", cli_description);
