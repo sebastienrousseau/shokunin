@@ -66,7 +66,7 @@ pub fn generate_html(
     let markdown_html = convert_markdown_to_html(&processed_content, &options);
 
     // 3. Post-process the HTML
-    let processed_html = post_process_html(&markdown_html, &class_regex, &img_regex, title).unwrap();
+    let processed_html = post_process_html(&markdown_html, &class_regex, &img_regex).unwrap();
 
     // 4. Generate headers and descriptions
     let header = generate_header(title, &id_regex);
@@ -203,15 +203,16 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 ///
 /// This function processes each line of the HTML content to:
 /// - Replace class attributes in HTML tags using `class_regex`.
-/// - Add `alt` and `title` attributes to `<img>` tags if they are missing, using `img_regex`.
-/// The `title` used for `alt` and `title` attributes is provided separately.
+/// - Ensure that each `<img>` tag has both `alt` and `title` attributes.
+///   If `title` is missing, it is set to the value of `alt`. If both are missing,
+///   they remain unchanged.
 ///
 /// # Arguments
 ///
 /// * `html` - The original HTML content as a string.
 /// * `class_regex` - A `Regex` object for matching and replacing class attributes in HTML tags.
-/// * `img_regex` - A `Regex` object for matching `<img>` tags in HTML and adding `alt` and `title` attributes.
-/// * `title` - The title string to be used for `alt` and `title` attributes in `<img>` tags.
+/// * `img_regex` - A `Regex` object for matching `<img>` tags in HTML.
+/// * `title` - A placeholder title string, not used in current logic but kept for potential future use.
 ///
 /// # Returns
 ///
@@ -235,7 +236,7 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 ///     let html = "<img src=\"image.jpg\" class=\"img-fluid\">";
 ///     let class_regex = Regex::new(r#".class=&quot;([^&]+)&quot;"#)?;
 ///     let img_regex = Regex::new(r#"(<img[^>]*?)(/?>)"#)?;
-///     let title = "Example Image";
+///     let title = "Unused Placeholder Title";
 ///
 ///     let processed_html = post_process_html(html, &class_regex, &img_regex, title)?;
 ///     println!("{}", processed_html);
@@ -243,7 +244,7 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 ///     Ok(())
 /// }
 /// ```
-pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex, title: &str) -> Result<String, Box<dyn Error>> {
+pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> Result<String, Box<dyn Error>> {
     let mut processed_html = String::new();
 
     for line in html.lines() {
@@ -268,19 +269,25 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex, tit
         processed_line = img_regex.replace_all(&processed_line, |caps: &regex::Captures| {
             let img_tag_start = &caps[1]; // <img... up to the closure
             let img_tag_end = &caps[2];   // /> or >
-        
+
             let mut new_img_tag = img_tag_start.to_string();
-        
-            // Check if 'alt' is present; if not, add it.
-            if !img_tag_start.contains("alt=") {
-                new_img_tag.push_str(&format!(" alt=\"{}\"", title));
+
+            // Regex to find the alt attribute
+            let alt_regex = regex::Regex::new(r#"alt="([^"]*)""#).unwrap();
+
+            // Extract the value of the alt attribute
+            let alt_value = alt_regex.captures(img_tag_start)
+                            .and_then(|c| c.get(1))
+                            .map_or("", |m| m.as_str());
+
+            // Check if 'title' is present; if not, add it. If it is, replace it with the alt value
+            if new_img_tag.contains("title=") {
+                let title_regex = regex::Regex::new(r#"title="([^"]*)""#).unwrap();
+                new_img_tag = title_regex.replace(&new_img_tag, format!(r#"title="{}""#, alt_value)).to_string();
+            } else {
+                new_img_tag.push_str(&format!(" title=\"{}\"", alt_value));
             }
-        
-            // Check if 'title' is present; if not, add it.
-            if !img_tag_start.contains("title=") {
-                new_img_tag.push_str(&format!(" title=\"{}\"", title));
-            }
-        
+
             // Append the closure of the tag (either /> or >)
             new_img_tag.push_str(img_tag_end);
             new_img_tag

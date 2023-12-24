@@ -106,7 +106,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-![A very tall building that has a lot of holes in it][00].class=\"img-fluid clearfix\"
+![Nature shinning][00].class=\"img-fluid clearfix\"
 
 ## Starter Templates
 

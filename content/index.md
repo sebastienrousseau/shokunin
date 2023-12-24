@@ -106,7 +106,6 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-
 ## Overview
 
 Kaishi is a minimalist and modern [Shokunin static website generator ⧉][0]
