@@ -52,7 +52,7 @@ description: My Description
         let options = RssData {
             author: "Me".to_string(),
             category: "Technology".to_string(),
-            copyright: "© 2023 My Company".to_string(),
+            copyright: "© 2023-2024 My Company".to_string(),
             description: "Latest technology news".to_string(),
             docs: "https://example.com/rss/docs".to_string(),
             generator: "My RSS Generator".to_string(),

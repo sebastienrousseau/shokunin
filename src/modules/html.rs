@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
@@ -66,7 +66,7 @@ pub fn generate_html(
     let markdown_html = convert_markdown_to_html(&processed_content, &options);
 
     // 3. Post-process the HTML
-    let processed_html = post_process_html(&markdown_html, &class_regex, &img_regex).unwrap();
+    let processed_html = post_process_html(&markdown_html, &class_regex, &img_regex, title).unwrap();
 
     // 4. Generate headers and descriptions
     let header = generate_header(title, &id_regex);
@@ -201,11 +201,17 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 
 /// Post-processes HTML content by performing various transformations.
 ///
+/// This function processes each line of the HTML content to:
+/// - Replace class attributes in HTML tags using `class_regex`.
+/// - Add `alt` and `title` attributes to `<img>` tags if they are missing, using `img_regex`.
+/// The `title` used for `alt` and `title` attributes is provided separately.
+///
 /// # Arguments
 ///
 /// * `html` - The original HTML content as a string.
-/// * `class_regex` - A `Regex` object for matching class attributes in HTML tags.
-/// * `img_regex` - A `Regex` object for matching `<img>` tags in HTML.
+/// * `class_regex` - A `Regex` object for matching and replacing class attributes in HTML tags.
+/// * `img_regex` - A `Regex` object for matching `<img>` tags in HTML and adding `alt` and `title` attributes.
+/// * `title` - The title string to be used for `alt` and `title` attributes in `<img>` tags.
 ///
 /// # Returns
 ///
@@ -215,8 +221,8 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 /// # Errors
 ///
 /// Returns an error if:
-/// - A class attribute cannot be captured by the regular expression.
-/// - A class value cannot be retrieved from the captured class attribute.
+/// - A class attribute cannot be captured or a class value cannot be retrieved from the captured class attribute.
+/// - The regular expression processing fails for any reason.
 ///
 /// # Example
 ///
@@ -229,29 +235,58 @@ pub fn convert_markdown_to_html(markdown_content: &str, options: &ComrakOptions)
 ///     let html = "<img src=\"image.jpg\" class=\"img-fluid\">";
 ///     let class_regex = Regex::new(r#".class=&quot;([^&]+)&quot;"#)?;
 ///     let img_regex = Regex::new(r#"(<img[^>]*?)(/?>)"#)?;
+///     let title = "Example Image";
 ///
-///     let processed_html = post_process_html(html, &class_regex, &img_regex)?;
+///     let processed_html = post_process_html(html, &class_regex, &img_regex, title)?;
 ///     println!("{}", processed_html);
 ///
 ///     Ok(())
 /// }
 /// ```
-pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> Result<String, Box<dyn Error>> {
+pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex, title: &str) -> Result<String, Box<dyn Error>> {
     let mut processed_html = String::new();
 
     for line in html.lines() {
-        if line.contains(".class=&quot;") {
-            let captures = class_regex.captures(line).ok_or("Failed to capture class attributes")?;
-            let class_value = captures.get(1).ok_or("Failed to get class value")?.as_str();
-            let updated_line = class_regex.replace(line, "");
-            let updated_line_with_class = img_regex.replace(
-                &updated_line,
-                &format!("$1 class=\"{}\"$2", class_value),
-            );
-            processed_html.push_str(&updated_line_with_class);
+        let mut processed_line = line.to_string();
+
+        // Temporarily store class value
+        let class_value = if line.contains(".class=&quot;") {
+            class_regex.captures(&processed_line)
+                .and_then(|caps| caps.get(1))
+                .map(|m| m.as_str().to_string())
         } else {
-            processed_html.push_str(line);
+            None
+        };
+
+        // Process class attributes
+        if let Some(class_value) = class_value {
+            processed_line = class_regex.replace(&processed_line, "").to_string();
+            processed_line = img_regex.replace(&processed_line, &format!("$1 class=\"{}\"$2", class_value)).to_string();
         }
+
+        // Add alt and title attributes to img tags
+        processed_line = img_regex.replace_all(&processed_line, |caps: &regex::Captures| {
+            let img_tag_start = &caps[1]; // <img... up to the closure
+            let img_tag_end = &caps[2];   // /> or >
+        
+            let mut new_img_tag = img_tag_start.to_string();
+        
+            // Check if 'alt' is present; if not, add it.
+            if !img_tag_start.contains("alt=") {
+                new_img_tag.push_str(&format!(" alt=\"{}\"", title));
+            }
+        
+            // Check if 'title' is present; if not, add it.
+            if !img_tag_start.contains("title=") {
+                new_img_tag.push_str(&format!(" title=\"{}\"", title));
+            }
+        
+            // Append the closure of the tag (either /> or >)
+            new_img_tag.push_str(img_tag_end);
+            new_img_tag
+        }).to_string();
+
+        processed_html.push_str(&processed_line);
         processed_html.push('\n');
     }
 

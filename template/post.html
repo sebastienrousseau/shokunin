@@ -49,78 +49,14 @@
 
     <!-- # Start Styles -->
     <style>
-        :root {
-            --theme-color: {
-                    {
-                    theme-color
-                }
-            }
-
-            ;
-        }
-
-        a {
-            color: var(--theme-color);
-            text-decoration: none;
-        }
-
-        a:hover {
-            color: var(--theme-color);
-            opacity: .618;
-            text-decoration: underline;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            color: var(--theme-color);
-            text-decoration: none;
-        }
-
-        table {
-            border: 1px solid black;
-            border-collapse: collapse;
-            border-spacing: 0;
-            empty-cells: show;
-            margin-bottom: 25px;
-            width: 100%;
-        }
-
-        td,
-        th,
-        thead {
-            vertical-align: top;
-        }
-
-        thead {
-            background-color: #f1f1f1;
-            text-align: left;
-            border-bottom: 1px solid black;
-        }
-
-        td,
-        th {
-            background-color: transparent;
-            border-left: 1px solid black;
-            border-width: 0 0 0 1px;
-            margin: 0;
-            overflow: visible;
-            padding: 6px 12px;
-        }
-
-        body {
-            background-color: black;
-        }
+      @keyframes dropDown{from{transform:translateY(-.618rem)}to{transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}.blur-light{backdrop-filter:saturate(180%) blur(20px);background-color:rgba(255,255,255,.618)}.card{overflow:hidden}.drop-down{animation:1.618s dropDown}.fade-in{animation:3s fadeIn}*{font-weight:300}pre{background:#f9f9f9;border:1px solid #ddd;border-left:3px solid var(--theme-color);color:#666;display:block;font-family:monospace;font-size:15px;line-height:1.618;margin-bottom:1.618em;max-width:100%;overflow:auto;padding:1em 1.618em;page-break-inside:avoid;word-wrap:break-word}.zoom-in{transition:transform .618s cubic-bezier(.618,1,.618,1)}.zoom-in:hover{transform:scale(1.0618)}.content .container{padding:30px 20px;box-shadow:2px 15px 20px #1f1f1f10,-2px -8px 20px #1f1f1f1a}.container .rollers{flex:0 0 230px}.container .start-roller{left:0;top:0;background-image:linear-gradient(to right,#fff 30%,transparent)}.container .end-roller,.container .start-roller{height:100%;width:40px;position:absolute;z-index:1}.container .end-roller{right:0;top:0;background-image:linear-gradient(to left,#fff 30%,transparent)}.container .rollers .wrapper{position:relative;width:1400px;height:100px;margin:0 0 20px;flex:0 0 auto}.container .rollers .wrapper .items-container{display:flex;align-items:center;position:absolute;width:200%;height:100%;animation-duration:16s;animation-iteration-count:infinite;animation-timing-function:linear}.container .rollers .wrapper .items-container.roll-LL{animation-name:roll}@keyframes roll{from{left:0}to{left:-100%}}.container .rollers .wrapper .items-container .item{flex:1 1 200px;min-width:0;margin:20px}.container .rollers .wrapper .items-container .item .company{filter:grayscale(100%);opacity:.2;width:100%;object-fit:contain}.container .rollers .wrapper .items-container .item .company:hover{filter:grayscale(0);opacity:1;cursor:not-allowed}.container img{vertical-align:middle}:root{--theme-color:rgb({{theme-color}})}a{color:var(--theme-color);text-decoration:none}a:hover{text-decoration:underline}.active,.article-info,h1,h2,h3,h4,h5,h6,strong{font-weight:400}.article-info,h1,h2,h3,h4,h5,h6{color:var(--theme-color)}
     </style>
     <!-- # End Styles -->
 </head>
 
-<body id="page-top" itemscope itemtype="http://schema.org/WebPage" class="text-center bg-black text-white text-start">
+<body id="page-top" itemscope itemtype="http://schema.org/WebPage" class="text-center bg-black text-white text-start fs-6">
     <!-- # Start Responsive navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-black text-white fixed-top position-relative" id="mainNav"
+    <nav class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg" id="mainNav"
         itemscope itemtype="http://schema.org/SiteNavigationElement">
         <div class="container p-3">
             <figure class="py-0 mb-0">
@@ -142,26 +78,31 @@
     <!-- # End Responsive navbar -->
 
     <!-- Header-->
-    <header>
-        <div class="w-100 p-5" style="
-            background-image: url({{banner}});
-            background-position: center center;
-            background-repeat: no-repeat;
-            background-size: cover;
-            height: {{banner_height}};
-            width: {{banner_width}}";
-            role="img" title="{{banner_alt}}" aria-label="{{banner_alt}}">
-            <div class="w-100 h-100 p-5 d-flex align-items-center">
-                <div class="text-center text-white center mx-auto rounded rounded-3 p-5" style="
-            background-color: rgba(0, 0, 0, 0.618);
-            width: 61.8vw;
-            height: auto;">
-                <p class="display-3 fw-bold">{{name}}</p>
-                <p class="display-6 fw-normal">{{subtitle}}</p>
-                </div>
-            </div>
+    <header class="w-100 py-5 position-relative">
+        <img
+          alt="{{banner_alt}}"
+          aria-hidden="false"
+          class="fade-in position-absolute top-0 start-0 w-100 h-100"
+          data-has-animated="true"
+          data-show-type="fade-in"
+          height="{{banner_height}}"
+          loading="lazy"
+          src="{{banner}}"
+          style="object-fit: cover; z-index: -1;"
+          title="{{banner_alt}}"
+          width="{{banner_width}}"
+        />
+        <div class="text-center text-white center mx-auto rounded rounded-3 p-5"
+          style="
+            background-color: rgba(0,0,0, 0.618);
+            width: 61vw;
+            height: auto;
+            z-index: 1;">
+            <p class="display-2">{{name}}</p>
+            <p class="lead fs-3">{{subtitle}}</p>
         </div>
-    </header>
+      </header>
+      <!-- # End Header-->
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
@@ -185,7 +126,7 @@
         </span>
     </footer>
     <script async crossorigin="anonymous" integrity="sha512-ToL6UYWePxjhDQKNioSi4AyJ5KkRxY+F1+Fi7Jgh0Hp5Kk2/s8FD7zusJDdonfe5B00Qw+B8taXxF6CFLnqNCw==" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" />
-    <script type="application/ld+json">{"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"{{last_build_date}}","datePublished":"{{item_pub_date}}","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"","datePublished":"","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}</script>
     <script>
         // This is an Immediately Invoked Function Expression (IIFE) which helps
         // to avoid declaring any globals.

@@ -6,12 +6,12 @@ author: "Jane Doe" ## The author of the page. (max 64 characters)
 banner_alt: "Snow Mountain With Aurora Borealis" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/vishal-bansal-SC5sXeyjloE-unsplash.jpg" ## The banner of the site.
+banner: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
-copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
+copyright: "© 2023-2024 Kaishi. All rights reserved." ## The copyright of the site.
 date: "2023-07-12" ## The date of the page.
 description: "You can contact us using the contact form below." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
@@ -41,7 +41,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "How can we help you today?" ## The subtitle of the page. (max 64 characters)
 tags: "contact us, contact form, get in touch, contact page, contact information, customer service, support, feedback, questions, inquiries, help" ## The tags of the site. (max 160 characters)
-theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "143, 250, 113" ## The theme color of the site.
 title: "Contact Us" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
@@ -74,7 +74,7 @@ apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
-msapplication-navbutton-color: "rgb(143, 250, 111)"
+msapplication-navbutton-color: "rgb(0,102,204)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
