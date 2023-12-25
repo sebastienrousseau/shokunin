@@ -20,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.20"
+version = "0.0.21"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -50,11 +50,12 @@ clap = "4.4.11"
 comrak = "0.20.0"
 dtt = "0.0.5"
 log = {version="0.4.20", features = ["std"] }
-minify-html = "0.11.1"
-openssl = { version = "0.10.61", features = ["vendored"] }
+minify-html = "0.15.0"
+openssl = { version = "0.10.62", features = ["vendored"] }
 quick-xml = "0.31.0"
 regex = "1.10.2"
 reqwest = { version = "0.11.23", features = ["blocking", "json"] }
+rlg = "0.0.2"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 serde_yaml = "0.9.29"

@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 /// # `macro_check_directory` Macro
@@ -536,7 +536,7 @@ macro_rules! macro_log_info {
     ($level:expr, $component:expr, $description:expr, $format:expr) => {{
         use dtt::DateTime;
         use vrd::Random;
-        use $crate::loggers::{Log, LogFormat, LogLevel};
+        use rlg::{Log, LogFormat};
 
         // Get the current date and time in ISO 8601 format.
         let date = DateTime::new();
@@ -554,7 +554,6 @@ macro_rules! macro_log_info {
             $description,
             $format,
         );
-        let _ = log.log();
         log // Return the Log instance
     }};
 }
@@ -579,8 +578,12 @@ macro_rules! macro_log_info {
 #[macro_export]
 macro_rules! macro_execute_and_log {
     ($command:expr, $package:expr, $operation:expr, $start_message:expr, $complete_message:expr, $error_message:expr) => {{
+        extern crate dtt;
+        extern crate rlg;
+
+        use self::dtt::DateTime;
+        use self::rlg::{Log, LogFormat, LogLevel};
         use anyhow::{Context, Result as AnyResult};
-        use $crate::loggers::{LogFormat, LogLevel};
         use $crate::macro_log_info;
 
         macro_log_info!(

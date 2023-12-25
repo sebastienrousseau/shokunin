@@ -1,4 +1,4 @@
-// Copyright © 2023 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! # Shokunin Static Site Generator (SSG)
@@ -125,9 +125,6 @@ use std::{error::Error, path::Path};
 
     /// The `compiler` module contains functions for the compilation process.
     pub mod compiler;
-
-    /// The `loggers` module contains functions for logging.
-    pub mod loggers;
 
     /// The `macros` module contains functions for generating macros.
     pub mod macros;

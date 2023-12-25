@@ -6,12 +6,12 @@ author: "Jane Doe" ## The author of the page. (max 64 characters)
 banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://kura.pro/unsplash/images/banners/johannes-plenio-6XUA5KQ9-1k-unsplash.jpg" ## The banner of the site.
+banner: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
 cdn: "https://kura.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
-copyright: "© 2023 Kaishi. All rights reserved." ## The copyright of the site.
+copyright: "© 2023-2024 Kaishi. All rights reserved." ## The copyright of the site.
 date: "July 12, 2023"
 description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
@@ -40,7 +40,7 @@ robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 tags: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The tags of the site. (max 160 characters)
-theme-color: "rgb(143, 250, 111)" ## The theme color of the site.
+theme-color: "143, 250, 113" ## The theme color of the site.
 title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
@@ -73,7 +73,7 @@ apple-touch-fullscreen: "yes" ## The Apple touch fullscreen of the page.
 
 # MS Application - The MS Application front matter (YAML).
 
-msapplication-navbutton-color: "rgb(143, 250, 111)"
+msapplication-navbutton-color: "rgb(0,102,204)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 
