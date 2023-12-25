@@ -55,7 +55,7 @@ jobs:
           - s390x-unknown-linux-gnu # s390x Linux (kernel 3.2, glibc 2.17)
           - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64
           - x86_64-unknown-linux-musl # 64-bit Linux (kernel 2.6.32+, musl libc)
-          - x86_64-unknown-netbsd # 64-bit NetBSD on x86-64
+          # - x86_64-unknown-netbsd # 64-bit NetBSD on x86-64
 
         include:
           # Tier 1 platforms 🏆
@@ -124,9 +124,9 @@ jobs:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             cross: true
-          - target: x86_64-unknown-netbsd
-            os: ubuntu-latest
-            cross: true
+          # - target: x86_64-unknown-netbsd
+          #   os: ubuntu-latest
+          #   cross: true
 
     runs-on: ${{ matrix.os }}
 
