@@ -51,7 +51,7 @@ comrak = "0.20.0"
 dtt = "0.0.5"
 log = {version="0.4.20", features = ["std"] }
 minify-html = "0.11.1"
-openssl = { version = "0.10.61", features = ["vendored"] }
+openssl = { version = "0.10.62", features = ["vendored"] }
 quick-xml = "0.31.0"
 regex = "1.10.2"
 reqwest = { version = "0.11.23", features = ["blocking", "json"] }
