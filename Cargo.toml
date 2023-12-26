@@ -62,7 +62,7 @@ serde_yaml = "0.9.29"
 tempfile = "3.8.1"
 toml = "0.8.8"
 yaml-rust = "0.4.5"
-vrd = "0.0.4"
+vrd = "0.0.5"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"
