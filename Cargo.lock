@@ -344,9 +344,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.4.12"
+version = "4.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcfab8ba68f3668e89f6ff60f5b205cea56aa7b769451a59f34b8682f51c056d"
+checksum = "33e92c5c1a78c62968ec57dbc2440366a2d6e5a23faf829970ff1585dc6b18e2"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -354,9 +354,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.4.12"
+version = "4.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb7fb5e4e979aec3be7791562fcba452f94ad85e954da024396433e0e25a79e9"
+checksum = "f4323769dc8a61e2c39ad7dc26f6f2800524691a44d74fe3d1071a5c24db6370"
 dependencies = [
  "anstream",
  "anstyle",
@@ -404,7 +404,7 @@ version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f18e72341e6cdc7489cffb76f993812a14a906db54dedb020044ccc211dcaae"
 dependencies = [
- "clap 4.4.12",
+ "clap 4.4.14",
  "derive_builder",
  "entities",
  "memchr",
@@ -485,7 +485,7 @@ dependencies = [
  "anes",
  "cast",
  "ciborium",
- "clap 4.4.12",
+ "clap 4.4.14",
  "criterion-plot",
  "is-terminal",
  "itertools 0.10.5",
@@ -2262,7 +2262,7 @@ name = "ssg"
 version = "0.0.21"
 dependencies = [
  "assert_cmd",
- "clap 4.4.12",
+ "clap 4.4.14",
  "comrak",
  "criterion",
  "dtt",
