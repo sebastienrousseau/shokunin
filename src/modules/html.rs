@@ -282,10 +282,24 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
 
             // Check if 'title' is present; if not, add it. If it is, replace it with the alt value
             if new_img_tag.contains("title=") {
+                let title_prefix = "Example Image, ";
+                let max_alt_length = 66 - title_prefix.len();
+                let alt_substr = if alt_value.len() > max_alt_length {
+                    &alt_value[..max_alt_length]
+                } else {
+                    &alt_value
+                };
                 let title_regex = regex::Regex::new(r#"title="([^"]*)""#).unwrap();
-                new_img_tag = title_regex.replace(&new_img_tag, format!(r#"title="{}""#, alt_value)).to_string();
+                new_img_tag = title_regex.replace(&new_img_tag, format!(r#"title="{}{}""#, title_prefix, alt_substr)).to_string();
             } else {
-                new_img_tag.push_str(&format!(" title=\"{}\"", alt_value));
+                let title_prefix = "Image of ";
+                let max_alt_length = 66 - title_prefix.len();
+                let alt_substr = if alt_value.len() > max_alt_length {
+                    &alt_value[..max_alt_length]
+                } else {
+                    &alt_value
+                };
+                new_img_tag.push_str(&format!(" title=\"{}{}\"", title_prefix, alt_substr));
             }
 
             // Append the closure of the tag (either /> or >)
