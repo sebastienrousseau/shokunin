@@ -25,7 +25,7 @@ image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
 keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
-layout: "post" ## The layout of the site.
+layout: "feature" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.

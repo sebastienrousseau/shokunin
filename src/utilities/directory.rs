@@ -287,7 +287,7 @@ pub fn format_header_with_id_class(
                         "itemprop=\"name\""
                     }
                 ));
-                
+
                 // print!("header_type={:?}", header_type);
                 id_attribute_added = true;
             }

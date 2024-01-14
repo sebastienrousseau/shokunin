@@ -54,61 +54,87 @@
     <!-- # End Styles -->
 </head>
 
-<body id="page-top" itemscope itemtype="http://schema.org/WebPage" class="text-center bg-black text-white text-start fs-6">
+<body
+    id="page-top"
+    itemscope
+    itemtype="http://schema.org/WebPage"
+    class="text-center bg-black text-white text-start fs-6"
+  >
     <!-- # Start Responsive navbar -->
-    <nav class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg" id="mainNav"
-        itemscope itemtype="http://schema.org/SiteNavigationElement">
-        <div class="container p-3">
-            <figure class="py-0 mb-0">
-                <a href="/" tabindex="0" class="navbar-brand">
-                    <img alt="Logo of {{name}}" height="{{logo_height}}" id="{{name}}" src="{{logo}}"
-                        width="{{logo_width}}" />
-                </a>
-                <figcaption class="visually-hidden">{{subtitle}}</figcaption>
-            </figure>
-            <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
-                class="navbar-toggler" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" role="navigation" id="navbarSupportedContent">
-                {{navigation}}
-            </div>
+    <nav
+      class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
+      id="mainNav"
+      itemscope
+      itemtype="http://schema.org/SiteNavigationElement"
+    >
+      <div class="container-xxl p-3">
+      <a class="navbar-brand p-0 me-0 me-lg-2" href="/" aria-label="logo">
+        <img
+          class="d-inline-block align-top"
+          width="{{logo_width}}"
+          height="{{logo_height}}"
+          src="{{logo}}"
+          alt="{{logo_alt}}"
+          title="{{logo_alt}}"
+          loading="lazy"
+        />
+      </a>
+      <span itemprop="name">{{name}}</span>
+      <button
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+          class="navbar-toggler"
+          data-bs-target="#navbarSupportedContent"
+          data-bs-toggle="collapse"
+          type="button"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div
+          class="collapse navbar-collapse"
+          role="navigation"
+          id="navbarSupportedContent"
+        >
+          {{navigation}}
         </div>
+      </div>
     </nav>
     <!-- # End Responsive navbar -->
 
     <!-- Header-->
-    <header class="w-100 py-5 position-relative">
-        <img
-          alt="{{banner_alt}}"
-          aria-hidden="false"
-          class="fade-in position-absolute top-0 start-0 w-100 h-100"
-          data-has-animated="true"
-          data-show-type="fade-in"
-          height="{{banner_height}}"
-          loading="lazy"
-          src="{{banner}}"
-          style="object-fit: cover; z-index: -1;"
-          title="{{banner_alt}}"
-          width="{{banner_width}}"
-        />
-        <div class="text-center text-white center mx-auto rounded rounded-3 p-5"
-          style="
-            background-color: rgba(0,0,0, 0.618);
-            width: 61vw;
-            height: auto;
-            z-index: 1;">
-            <p class="display-2">{{name}}</p>
-            <p class="lead fs-3">{{subtitle}}</p>
-        </div>
-      </header>
-      <!-- # End Header-->
+    <header class="w-100 position-relative">
+      <img
+        alt="{{banner_alt}}"
+        aria-hidden="false"
+        class="fade-in position-absolute top-0 start-0 w-100 h-100"
+        data-has-animated="true"
+        data-show-type="fade-in"
+        height="{{banner_height}}"
+        loading="lazy"
+        src="{{banner}}"
+        style="object-fit: cover; z-index: -1;"
+        title="{{banner_alt}}"
+        width="{{banner_width}}"
+      />
+      <div class="text-center text-theme center mx-auto"
+        style="
+          background: rgba(0,0,0,.618);
+          width: 100vw;
+          height: 100vh;
+          z-index: 1;">
+        <section
+          class="position-absolute top-50 start-50 translate-middle w-75 p-5">
+              <h1 class="mb-3 fw-semibold text-white display-1 lh-1">{{name}}</h1>
+              <p class="fs-4">{{subtitle}}</p>
+        </section>
+      </div>
+    </header>
+    <!-- # End Header-->
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-        <div class="container text-start justify-content-between">
-            {{content}}
-        </div>
+      <div class="text-start justify-content-between">{{content}}</div>
     </main>
 
     <!-- Footer-->

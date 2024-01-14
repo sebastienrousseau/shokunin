@@ -86,7 +86,7 @@
   >
     <!-- # Start Responsive navbar -->
     <nav
-    class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
+      class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
       id="mainNav"
       itemscope
       itemtype="http://schema.org/SiteNavigationElement"
@@ -127,7 +127,7 @@
     <!-- # End Responsive navbar -->
 
     <!-- Header-->
-    <header class="w-100 py-5 position-relative">
+    <header class="w-100 position-relative">
       <img
         alt="{{banner_alt}}"
         aria-hidden="false"
@@ -141,15 +141,17 @@
         title="{{banner_alt}}"
         width="{{banner_width}}"
       />
-      <div class="text-center text-white center mx-auto rounded rounded-3 p-5"
+      <div class="text-center text-theme center mx-auto"
         style="
-          background-color: rgba(0,0,0, 0.618);
-          width: 61vw;
-          height: auto;
+          background: rgba(0,0,0,.618);
+          width: 100vw;
+          height: 100vh;
           z-index: 1;">
-          <p class="display-2">{{name}}</p>
-          <p class="lead fs-3">{{subtitle}}</p>
-            
+        <section
+          class="position-absolute top-50 start-50 translate-middle w-75 p-5">
+              <h1 class="mb-3 fw-semibold text-white display-1 lh-1">{{name}}</h1>
+              <p class="fs-4">{{subtitle}}</p>
+        </section>
       </div>
     </header>
     <!-- # End Header-->
