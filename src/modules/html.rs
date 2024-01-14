@@ -41,7 +41,7 @@ use crate::utilities::directory::{
 /// let html = generate_html(content, title, description, None);
 /// let html_str = html.unwrap_or_else(|e| panic!("Error: {:?}", e));
 ///
-/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" itemprop=\"subheadline\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n");
+/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n");
 ///
 /// ```
 //
@@ -126,7 +126,7 @@ fn generate_header(title: &str, id_regex: &Regex) -> String {
     if title.is_empty() {
         return String::new();
     }
-    let header_str = format!("<h1 id=\"\" tabindex=\"0\" itemprop=\"headline\">{}</h1>", title);
+    let header_str = format!("<h1 id=\"\">{}</h1>", title);
     format_header_with_id_class(&header_str, id_regex)
 }
 
@@ -282,10 +282,24 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
 
             // Check if 'title' is present; if not, add it. If it is, replace it with the alt value
             if new_img_tag.contains("title=") {
+                let title_prefix = "Example Image, ";
+                let max_alt_length = 66 - title_prefix.len();
+                let alt_substr = if alt_value.len() > max_alt_length {
+                    &alt_value[..max_alt_length]
+                } else {
+                    alt_value
+                };
                 let title_regex = regex::Regex::new(r#"title="([^"]*)""#).unwrap();
-                new_img_tag = title_regex.replace(&new_img_tag, format!(r#"title="{}""#, alt_value)).to_string();
+                new_img_tag = title_regex.replace(&new_img_tag, format!(r#"title="{}{}""#, title_prefix, alt_substr)).to_string();
             } else {
-                new_img_tag.push_str(&format!(" title=\"{}\"", alt_value));
+                let title_prefix = "Image of ";
+                let max_alt_length = 66 - title_prefix.len();
+                let alt_substr = if alt_value.len() > max_alt_length {
+                    &alt_value[..max_alt_length]
+                } else {
+                    alt_value
+                };
+                new_img_tag.push_str(&format!(" title=\"{}{}\"", title_prefix, alt_substr));
             }
 
             // Append the closure of the tag (either /> or >)

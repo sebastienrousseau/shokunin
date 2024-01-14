@@ -37,7 +37,7 @@ description: My Description
             Ok(html) => {
                 assert_eq!(
                     html,
-                    "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" itemprop=\"subheadline\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n"
+                    "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n"
                 );
             },
             Err(err) => {

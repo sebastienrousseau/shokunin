@@ -11,7 +11,7 @@ cdn: "https://kura.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
-copyright: "© 2023-2024 Kaishi. All rights reserved." ## The copyright of the site.
+copyright: "© 2024 Kaishi. All rights reserved." ## The copyright of the site.
 date: "July 12, 2023"
 description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
@@ -30,7 +30,7 @@ locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
-logo: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The logo of the site in SVG format.
+logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
 permalink: "https://kaishi.one" ## The url of the site.
 rating: "general" ## The rating of the site.

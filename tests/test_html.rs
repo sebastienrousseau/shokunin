@@ -12,7 +12,7 @@ mod tests {
         let title = "Welcome";
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
+        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
             Ok(res) => assert_eq!(res.trim(), expected),
             Err(e) => panic!("Error: {:?}", e),
@@ -25,7 +25,7 @@ mod tests {
         let title = "Welcome";
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
+        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
             Ok(res) => assert_eq!(res.trim(), expected),
             Err(e) => panic!("Error: {:?}", e),
@@ -52,7 +52,7 @@ mod tests {
         let title = "Welcome";
         let description = "";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
+        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"welcome\">Welcome</h1><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
             Ok(res) => assert_eq!(res.trim(), expected),
             Err(e) => panic!("Error: {:?}", e),
@@ -65,7 +65,7 @@ mod tests {
         let title = "Welcome";
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
+        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
             Ok(res) => assert_eq!(res.trim(), expected),
             Err(e) => panic!("Error: {:?}", e),
@@ -78,7 +78,7 @@ mod tests {
         let title = "Welcome";
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" tabindex=\"0\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p>";
+        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"welcome\">Welcome</h1><p>Say hi to the world!</p>";
         match result {
             Ok(res) => assert_eq!(res.trim(), expected),
             Err(e) => panic!("Error: {:?}", e),

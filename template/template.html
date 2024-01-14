@@ -86,25 +86,25 @@
   >
     <!-- # Start Responsive navbar -->
     <nav
-    class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
+      class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
       id="mainNav"
       itemscope
       itemtype="http://schema.org/SiteNavigationElement"
     >
-      <div class="container p-3">
-        <figure class="py-0 mb-0">
-          <a href="/" tabindex="0" class="navbar-brand">
-            <img
-              alt="Logo of {{name}}"
-              height="{{logo_height}}"
-              id="{{name}}"
-              src="{{logo}}"
-              width="{{logo_width}}"
-            />
-          </a>
-          <figcaption class="visually-hidden">{{subtitle}}</figcaption>
-        </figure>
-        <button
+      <div class="container-xxl p-3">
+      <a class="navbar-brand p-0 me-0 me-lg-2" href="/" aria-label="logo">
+        <img
+          class="d-inline-block align-top"
+          width="{{logo_width}}"
+          height="{{logo_height}}"
+          src="{{logo}}"
+          alt="{{logo_alt}}"
+          title="{{logo_alt}}"
+          loading="lazy"
+        />
+      </a>
+      <span itemprop="name">{{name}}</span>
+      <button
           aria-controls="navbarSupportedContent"
           aria-expanded="false"
           aria-label="Toggle navigation"
@@ -127,7 +127,7 @@
     <!-- # End Responsive navbar -->
 
     <!-- Header-->
-    <header class="w-100 py-5 position-relative">
+    <header class="w-100 position-relative">
       <img
         alt="{{banner_alt}}"
         aria-hidden="false"
@@ -141,15 +141,17 @@
         title="{{banner_alt}}"
         width="{{banner_width}}"
       />
-      <div class="text-center text-white center mx-auto rounded rounded-3 p-5"
+      <div class="text-center text-theme center mx-auto"
         style="
-          background-color: rgba(0,0,0, 0.618);
-          width: 61vw;
-          height: auto;
+          background: rgba(0,0,0,.618);
+          width: 100vw;
+          height: 100vh;
           z-index: 1;">
-          <p class="display-2">{{name}}</p>
-          <p class="lead fs-3">{{subtitle}}</p>
-            
+        <section
+          class="position-absolute top-50 start-50 translate-middle w-75 p-5">
+              <h1 class="mb-3 fw-semibold text-white display-1 lh-1">{{name}}</h1>
+              <p class="fs-4">{{subtitle}}</p>
+        </section>
       </div>
     </header>
     <!-- # End Header-->
@@ -162,24 +164,17 @@
     </main>
 
     <!-- Footer-->
-    <footer id="footer" aria-label="footer" class="footer border-top mt-auto py-3">
-      <img
-        alt="{{subtitle}}"
-        height="32"
-        src="{{cdn}}/{{short_name}}/images/logos/{{short_name}}.webp"
-        width="32"
-      />
-      <span class="px-2">{{copyright}}</span>
-      <span class="px-2">
-        <a href="/contact/index.html">Contact</a>
-      </span>
-      <span class="px-2">
-        <a href="/privacy/index.html">Privacy & Cookie Policy</a>
-      </span>
-      <span class="px-2">
-        <a href="/terms/index.html">Terms of Use</a>
-      </span>
+    <footer id="footer" aria-label="footer" class="footer bg-dark text-white mt-auto fs-6 py-5">
+      <p class="mb-0 text-center">
+        <span class="px-2"><a href="/contact/index.html">Contact us</a></span>
+        <span class="px-2"><a href="/privacy/index.html">Privacy notice and cookies</a></span>
+        <span class="px-2"><a href="/terms/index.html">Terms of use</a></span>
+      </p>
+      <p class="mb-0 text-center py-2">
+        <span class="px-2">{{copyright}}</span>
+      </p>
     </footer>
+    <!-- # End Footer-->
     <script
       async
       crossorigin="anonymous"
@@ -187,8 +182,8 @@
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js">
     ></script>
     <script type="application/ld+json">
-      {"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"{{last_build_date}}","datePublished":"{{item_pub_date}}","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
-      </script>
+      {"@context":"http://schema.org/","@type":"BlogPosting","headline":"{{title}}","datePublished":"{{last_build_date}}","dateModified":"{{item_pub_date}}","description":"{{description}}","image":{"@type":"ImageObject","height":"2048","width":"2048","url":"{{logo}}"},"mainEntityOfPage":{"@type":"WebPage","@id":"{{id}}","name":"{{subtitle}}"},"author":"{{author}}","copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"inLanguage":"{{language}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
+    </script>
     <script>
       // This is an Immediately Invoked Function Expression (IIFE) which helps
       // to avoid declaring any globals.

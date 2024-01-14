@@ -284,10 +284,10 @@ pub fn format_header_with_id_class(
                     if header_type == "h1" {
                         "itemprop=\"headline\""
                     } else {
-                        "itemprop=\"subheadline\""
+                        "itemprop=\"name\""
                     }
                 ));
-                
+
                 // print!("header_type={:?}", header_type);
                 id_attribute_added = true;
             }
