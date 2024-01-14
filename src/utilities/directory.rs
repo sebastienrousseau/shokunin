@@ -284,7 +284,7 @@ pub fn format_header_with_id_class(
                     if header_type == "h1" {
                         "itemprop=\"headline\""
                     } else {
-                        "itemprop=\"subheadline\""
+                        "itemprop=\"name\""
                     }
                 ));
                 

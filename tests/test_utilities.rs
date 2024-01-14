@@ -433,11 +433,11 @@ mod tests {
             ),
             (
                 "<h2>Another Test</h2>",
-                "<h2 id=\"h2-another\" tabindex=\"0\" itemprop=\"subheadline\" class=\"another\">Another Test</h2>"
+                "<h2 id=\"h2-another\" tabindex=\"0\" itemprop=\"name\" class=\"another\">Another Test</h2>"
             ),
             (
                 "<h3>Test with special characters!@#$%^&*</h3>",
-                "<h3 id=\"h3-test\" tabindex=\"0\" itemprop=\"subheadline\" class=\"test\">Test with special characters!@#$%^&*</h3>"
+                "<h3 id=\"h3-test\" tabindex=\"0\" itemprop=\"name\" class=\"test\">Test with special characters!@#$%^&*</h3>"
             ),
             (
                 "<h1>Test with multiple     spaces</h1>",
