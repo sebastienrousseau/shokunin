@@ -106,7 +106,9 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-![Nature shinning][00].class=\"img-fluid clearfix\"
+![Nature shinning][00].class=\"img-fluid w-50 clearfix\"
+
+![][00].class=\"img-fluid w-50 clearfix\"
 
 ## Starter Templates
 
@@ -114,7 +116,47 @@ All the starter templates, whether pages or websites are built from scratch
 using the same principles and features. This means that you can easily mix and
 match them together to create your own custom layouts and content.
 
+### Pages
+
 Get started with Shokunin using any of our Starter Templates for building
-your website or web application.
+your website or web application. Our templates are designed to be flexible and easy to modify.
+
+#### Template Features
+
+- **Responsive Design**: All templates are fully responsive, ensuring they look great on any device.
+- **Modular Components**: Templates are built with modular components, making them easy to customize.
+- **Modern Aesthetics**: Each template is crafted with modern design trends in mind.
+
+#### Getting Started
+
+To get started, select a template that suits your project's needs. Customize it with your content, style, and functionality.
+
+1. **Choose a Template**: Browse through our collection and pick a starting point.
+2. **Customize**: Modify the layout, add your content, and tweak the styles.
+3. **Launch**: Deploy your new website or web app to the world.
+
+### Websites
+
+Building a website from scratch can be a daunting task, but our starter templates make it simple and straightforward.
+
+#### Why Use Our Templates?
+
+- **Speed**: Jumpstart your development with pre-made designs.
+- **Quality**: High-quality, well-tested templates ensure reliability.
+- **Support**: Our team is here to help with any questions or issues.
+
+### Customization
+
+Customize templates to fit your specific needs. The possibilities are endless!
+
+#### Tips for Customization
+
+- **Understand the Structure**: Familiarize yourself with the template's structure and components.
+- **Experiment**: Don't be afraid to experiment with different layouts and styles.
+- **Feedback**: Seek feedback on your designs and iterate based on the input.
+
+## Conclusion
+
+With our range of starter templates, you have a solid foundation to build something unique and tailored to your specific requirements. Dive in and start creating!
 
 [00]: https://kura.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
