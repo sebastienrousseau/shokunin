@@ -277,11 +277,10 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
             // Regex to find the alt attribute
             let alt_regex = regex::Regex::new(r#"alt="([^"]*)""#).unwrap();
 
-            // Extract the value of the alt attribute
+            // Extract the value of the alt attribute and convert it to lowercase
             let alt_value = alt_regex.captures(img_tag_start)
                             .and_then(|c| c.get(1))
-                            .map_or("", |m| m.as_str())
-                            .to_lowercase();
+                            .map_or(String::new(), |m| m.as_str().to_lowercase());
 
             // Check if 'title' is present; if not, add it. If it is, replace it with the alt value
             if new_img_tag.contains("title=") {
@@ -290,19 +289,11 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
 
                 // Ensure that we slice at a valid character boundary
                 let alt_substr = if !alt_value.is_empty() && alt_value.chars().count() > max_alt_length {
-                    let mut char_count = 0;
-                    let mut char_boundary = 0;
-
-                    for (idx, _) in alt_value.char_indices() {
-                        if char_count < max_alt_length {
-                            char_boundary = idx;
-                        } else {
-                            break;
-                        }
-                        char_count += 1;
-                    }
-
-                    &alt_value[..char_boundary]
+                    alt_value.char_indices().enumerate().take_while(|&(char_count, _)| {
+                        char_count < max_alt_length
+                    }).last().map_or(&alt_value[..], |(_, (idx, _))| {
+                        &alt_value[..idx]
+                    })
                 } else {
                     &alt_value
                 };
@@ -315,19 +306,11 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
 
                 // Ensure that we slice at a valid character boundary
                 let alt_substr = if !alt_value.is_empty() && alt_value.chars().count() > max_alt_length {
-                    let mut char_count = 0;
-                    let mut char_boundary = 0;
-
-                    for (idx, _) in alt_value.char_indices() {
-                        if char_count < max_alt_length {
-                            char_boundary = idx;
-                        } else {
-                            break;
-                        }
-                        char_count += 1;
-                    }
-
-                    &alt_value[..char_boundary]
+                    alt_value.char_indices().enumerate().take_while(|&(char_count,_)| {
+                        char_count < max_alt_length
+                    }).last().map_or(&alt_value[..], |(_, (idx, _))| {
+                        &alt_value[..idx]
+                    })
                 } else {
                     &alt_value
                 };
