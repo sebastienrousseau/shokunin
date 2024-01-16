@@ -1,4 +1,4 @@
-// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use clap::{Arg, ArgMatches, Command, Error};
@@ -44,7 +44,7 @@ pub fn build() -> Result<ArgMatches, Error> {
         .author("Sebastien Rousseau")
         .about("")
         .bin_name("ssg")
-        .version("0.0.22")
+        .version("0.0.23")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
@@ -109,7 +109,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// ```
 pub fn print_banner() {
     // Set the title and description for the CLI
-    let title = "Shokunin 🦀 (v0.0.22)";
+    let title = "Shokunin 🦀 (v0.0.23)";
     let description =
         "A Fast and Flexible Static Site Generator written in Rust";
 
