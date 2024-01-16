@@ -1,4 +1,4 @@
-// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
@@ -247,7 +247,8 @@ pub fn post_process_html(html: &str, class_regex: &Regex, img_regex: &Regex) -> 
             .and_then(|caps| caps.get(1))
             .map(|m| m.as_str().to_string()) {
 
-            processed_line = class_regex.replace(&processed_line, "").to_string();
+            // Process class attributes: Either remove or modify them
+            processed_line = class_regex.replace_all(&processed_line, "").to_string(); // Adjust this line as needed
             processed_line = img_regex.replace(&processed_line, &format!("$1 class=\"{}\"$2", class_value)).to_string();
         }
 
