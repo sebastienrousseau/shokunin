@@ -1,3 +1,7 @@
+# Shokunin Static Site Generator (SSG)
+
+The fastest Rust-based Static Site Generator (SSG) for building professional websites and blogs.
+
 <!-- markdownlint-disable MD033 MD041 -->
 
 <img
@@ -10,10 +14,6 @@
   />
 
 <!-- markdownlint-enable MD033 MD041 -->
-
-# Shokunin Static Site Generator (SSG)
-
-The fastest Rust-based Static Site Generator (SSG) for building professional websites and blogs.
 
 *Part of the [Mini Functions][0] family of Rust libraries.*
 
