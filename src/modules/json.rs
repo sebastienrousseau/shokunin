@@ -1,15 +1,14 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use serde_json::{json, Map};
 use std::{
     fs,
-    path::{Path, PathBuf}
+    path::{Path, PathBuf},
 };
-use serde_json::{json, Map};
 
 use crate::models::data::{
-    CnameData, HumansData, ManifestData,
-    SiteMapData, TxtData
+    CnameData, HumansData, ManifestData, SiteMapData, TxtData,
 };
 
 /// ## Function: `manifest` - Generate a JSON manifest for a web app
@@ -30,8 +29,12 @@ use crate::models::data::{
 /// Returns a JSON string containing the manifest.
 pub fn manifest(options: &ManifestData) -> String {
     let mut json_map = Map::new();
-    json_map.insert("background_color".to_string(),json!(options.background_color),);
-    json_map.insert("description".to_string(), json!(options.description));
+    json_map.insert(
+        "background_color".to_string(),
+        json!(options.background_color),
+    );
+    json_map
+        .insert("description".to_string(), json!(options.description));
     json_map.insert("display".to_string(), json!(options.display));
 
     let mut icons_vec = vec![];
@@ -49,11 +52,14 @@ pub fn manifest(options: &ManifestData) -> String {
     }
     json_map.insert("icons".to_string(), json!(icons_vec));
     json_map.insert("name".to_string(), json!(options.name));
-    json_map.insert("orientation".to_string(), json!(options.orientation));
+    json_map
+        .insert("orientation".to_string(), json!(options.orientation));
     json_map.insert("scope".to_string(), json!(options.scope));
-    json_map.insert("short_name".to_string(), json!(options.short_name));
+    json_map
+        .insert("short_name".to_string(), json!(options.short_name));
     json_map.insert("start_url".to_string(), json!(options.start_url));
-    json_map.insert("theme_color".to_string(), json!(options.theme_color));
+    json_map
+        .insert("theme_color".to_string(), json!(options.theme_color));
 
     serde_json::to_string_pretty(&json_map).unwrap()
 }
@@ -121,19 +127,17 @@ pub fn human(options: &HumansData) -> String {
     }
     s.push_str("\n/* SITE */\n");
     if !options.site_last_updated.is_empty() {
-        s.push_str(&format!(
-            "	Last update: {}\n",
-            options.site_last_updated
-        ));
+        s.push_str(
+            &format!("	Last update: {}\n", options.site_last_updated)
+        );
     }
     if !options.site_standards.is_empty() {
         s.push_str(&format!("	Standards: {}\n", options.site_standards));
     }
     if !options.site_components.is_empty() {
-        s.push_str(&format!(
-            "	Components: {}\n",
-            options.site_components
-        ));
+        s.push_str(
+            &format!("	Components: {}\n", options.site_components)
+        );
     }
     if !options.site_software.is_empty() {
         s.push_str(&format!("	Software: {}\n", options.site_software));
@@ -159,8 +163,15 @@ pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
     let base_dir = PathBuf::from(dir);
     let mut urls = vec![];
 
-    visit_dirs(&base_dir, &base_dir, &base_url, &changefreq, &lastmod, &mut urls)
-        .unwrap();
+    visit_dirs(
+        &base_dir,
+        &base_dir,
+        &base_url,
+        &changefreq,
+        &lastmod,
+        &mut urls,
+    )
+    .unwrap();
 
     let urls_str = urls.join("\n");
 
@@ -199,7 +210,8 @@ pub fn visit_dirs(
             let path = entry.path();
             if path.is_dir() {
                 visit_dirs(
-                    base_dir, &path, base_url, changefreq, lastmod, urls,
+                    base_dir, &path, base_url, changefreq, lastmod,
+                    urls,
                 )?;
             } else if path.file_name().unwrap() == "index.html" {
                 let url = path

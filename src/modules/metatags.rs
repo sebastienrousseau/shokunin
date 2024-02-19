@@ -1,9 +1,11 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use std::collections::HashMap;
 use crate::models::data::{MetaTag, MetaTagGroups};
-use crate::{macro_generate_tags_from_list, macro_generate_tags_from_fields};
+use crate::{
+    macro_generate_tags_from_fields, macro_generate_tags_from_list,
+};
+use std::collections::HashMap;
 
 // Type alias for better readability
 type MetaDataMap = HashMap<String, String>;
@@ -15,21 +17,24 @@ type MetaDataMap = HashMap<String, String>;
 ///
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
-pub fn generate_custom_meta_tags(mapping: &[(String, Option<String>)]) -> String {
-    let filtered_mapping: Vec<(String, String)> = mapping
-        .iter()
-        .filter_map(|(key, value)| {
-            if let Some(val) = value.as_ref() {
-                if !val.is_empty() {
-                    Some((key.clone(), val.clone()))
+pub fn generate_custom_meta_tags(
+    mapping: &[(String, Option<String>)],
+) -> String {
+    let filtered_mapping: Vec<(String, String)> =
+        mapping
+            .iter()
+            .filter_map(|(key, value)| {
+                if let Some(val) = value.as_ref() {
+                    if !val.is_empty() {
+                        Some((key.clone(), val.clone()))
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
-            } else {
-                None
-            }
-        })
-        .collect();
+            })
+            .collect();
     generate_metatags(&filtered_mapping)
 }
 
@@ -55,11 +60,16 @@ pub fn generate_metatags(meta: &[(String, String)]) -> String {
 ///
 /// # Returns
 /// A `String` containing the HTML code for the meta tags.
-pub fn load_metatags(tag_names: &[&str], metadata: &MetaDataMap) -> String {
+pub fn load_metatags(
+    tag_names: &[&str],
+    metadata: &MetaDataMap,
+) -> String {
     let mut result = String::new();
     for &name in tag_names {
         let value = metadata.get(name).cloned().unwrap_or_default();
-        result.push_str(&MetaTag::new(name.to_string(), value).generate());
+        result.push_str(
+            &MetaTag::new(name.to_string(), value).generate(),
+        );
     }
     result
 }
@@ -85,12 +95,16 @@ pub fn format_meta_tag(key: &str, value: &str) -> String {
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
-    let tag_names = [
-        "apple_mobile_web_app_orientations", "apple_touch_icon_sizes",
-        "apple-mobile-web-app-capable", "apple-mobile-web-app-status-bar-inset",
-        "apple-mobile-web-app-status-bar-style", "apple-mobile-web-app-title",
-        "apple-touch-fullscreen",
-    ];
+    let tag_names =
+        [
+            "apple_mobile_web_app_orientations",
+            "apple_touch_icon_sizes",
+            "apple-mobile-web-app-capable",
+            "apple-mobile-web-app-status-bar-inset",
+            "apple-mobile-web-app-status-bar-style",
+            "apple-mobile-web-app-title",
+            "apple-touch-fullscreen",
+        ];
     macro_generate_tags_from_list!(&tag_names, metadata)
 }
 
@@ -104,9 +118,20 @@ pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
 ///
 pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
     let tag_names = [
-        "author", "description", "format-detection", "generator", "keywords",
-        "language", "permalink", "rating", "referrer", "revisit-after",
-        "robots", "theme-color", "title", "viewport",
+        "author",
+        "description",
+        "format-detection",
+        "generator",
+        "keywords",
+        "language",
+        "permalink",
+        "rating",
+        "referrer",
+        "revisit-after",
+        "robots",
+        "theme-color",
+        "title",
+        "viewport",
     ];
     macro_generate_tags_from_list!(&tag_names, metadata)
 }

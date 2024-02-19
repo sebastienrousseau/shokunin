@@ -38,10 +38,12 @@ macro_rules! macro_check_directory {
         } else {
             match std::fs::create_dir_all(directory) {
                 Ok(_) => {}
-                Err(e) => panic!(
-                    "❌ Error: Cannot create '{}' directory: {}",
-                    name, e
-                ),
+                Err(e) => {
+                    panic!(
+                        "❌ Error: Cannot create '{}' directory: {}",
+                        name, e
+                    )
+                }
             }
         }
     }};
@@ -440,18 +442,27 @@ macro_rules! macro_generate_tags_from_fields {
 ///
 macro_rules! macro_generate_rss {
     ($writer:expr, $options:expr) => {
-        writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+        writer.write_event(Event::Decl(
+            BytesDecl::new("1.0", Some("utf-8"), None)
+        ))?;
 
         let mut rss_start = BytesStart::new("rss");
         rss_start.push_attribute(("version", "2.0"));
-        rss_start.push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
+        rss_start
+            .push_attribute(
+                ("xmlns:atom", "http://www.w3.org/2005/Atom")
+            );
         writer.write_event(Event::Start(rss_start))?;
 
         writer.write_event(Event::Start(BytesStart::new("channel")))?;
 
         macro_write_element!($writer, "title", &$options.title)?;
         macro_write_element!($writer, "link", &$options.link)?;
-        macro_write_element!($writer, "description", &$options.description)?;
+        macro_write_element!(
+            $writer,
+            "description",
+            &$options.description
+        )?;
         macro_write_element!($writer, "language", &$options.language)?;
         macro_write_element!($writer, "pubDate", &$options.pub_date)?;
         macro_write_element!(
@@ -460,13 +471,21 @@ macro_rules! macro_generate_rss {
             &$options.last_build_date
         )?;
         macro_write_element!($writer, "docs", &$options.docs)?;
-        macro_write_element!($writer, "generator", &$options.generator)?;
+        macro_write_element!(
+            $writer,
+            "generator",
+            &$options.generator
+        )?;
         macro_write_element!(
             $writer,
             "managingEditor",
             &$options.managing_editor
         )?;
-        macro_write_element!($writer, "webMaster", &$options.webmaster)?;
+        macro_write_element!(
+            $writer,
+            "webMaster",
+            &$options.webmaster
+        )?;
         macro_write_element!($writer, "category", &$options.category)?;
         macro_write_element!($writer, "ttl", &$options.ttl)?;
 
@@ -480,10 +499,9 @@ macro_rules! macro_generate_rss {
         // Write the `atom:link` element.
         let mut atom_link_start =
             BytesStart::new(Cow::Borrowed("atom:link").into_owned());
-        atom_link_start.push_attribute((
-            "href",
-            $options.atom_link.to_string().as_str(),
-        ));
+        atom_link_start.push_attribute(
+            ("href", $options.atom_link.to_string().as_str())
+        );
         atom_link_start.push_attribute(("rel", "self"));
         atom_link_start.push_attribute(("type", "application/rss+xml"));
         writer.write_event(Event::Empty(atom_link_start))?;
@@ -499,7 +517,11 @@ macro_rules! macro_generate_rss {
         )?;
         macro_write_element!($writer, "guid", &$options.item_guid)?;
         macro_write_element!($writer, "link", &$options.item_link)?;
-        macro_write_element!($writer, "pubDate", &$options.item_pub_date)?;
+        macro_write_element!(
+            $writer,
+            "pubDate",
+            &$options.item_pub_date
+        )?;
         macro_write_element!($writer, "title", &$options.item_title)?;
 
         // End the `item` element.
@@ -535,8 +557,8 @@ macro_rules! macro_set_rss_data_fields {
 macro_rules! macro_log_info {
     ($level:expr, $component:expr, $description:expr, $format:expr) => {{
         use dtt::DateTime;
-        use vrd::Random;
         use rlg::{Log, LogFormat};
+        use vrd::Random;
 
         // Get the current date and time in ISO 8601 format.
         let date = DateTime::new();

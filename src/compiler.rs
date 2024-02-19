@@ -4,10 +4,9 @@
 use rlg::LogLevel::ERROR;
 
 use crate::{
-    macro_log_info,
     macro_cleanup_directories, macro_create_directories,
-    macro_metadata_option,macro_set_rss_data_fields,
-    models::data::{FileData, RssData, PageData},
+    macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
+    models::data::{FileData, PageData, RssData},
     modules::{
         cname::create_cname_data,
         html::generate_html,
@@ -16,17 +15,18 @@ use crate::{
         manifest::create_manifest_data,
         metadata::extract_and_prepare_metadata,
         navigation::generate_navigation,
-        rss::generate_rss, tags::*,
+        rss::generate_rss,
         sitemap::create_site_map_data,
+        tags::*,
         txt::create_txt_data,
     },
     utilities::{
         file::add,
         template::{render_page, PageOptions},
-        write::write_files_to_build_directory
+        write::write_files_to_build_directory,
     },
 };
-use std::{error::Error, fs, path::Path, collections::HashMap};
+use std::{collections::HashMap, error::Error, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
@@ -62,14 +62,15 @@ pub fn compile(
     // Generate navigation bar HTML
     let navigation = generate_navigation(&source_files); // Generates a navigation bar HTML
 
-    let mut global_tags_data: HashMap<String, Vec<PageData>> = HashMap::new();
-
+    let mut global_tags_data: HashMap<String, Vec<PageData>> =
+        HashMap::new();
 
     // Process source files and store results in 'compiled_files' vector
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
-            let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file.content);
+            let (metadata, keywords, all_meta_tags) =
+                extract_and_prepare_metadata(&file.content);
 
             // Generate HTML
             let html_content = generate_html(
@@ -79,8 +80,14 @@ pub fn compile(
                 Some(&macro_metadata_option!(metadata, "content")),
             )
             .unwrap_or_else(|err| {
-                let description = format!("Error generating HTML: {:?}", err);
-                macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
+                let description =
+                    format!("Error generating HTML: {:?}", err);
+                macro_log_info!(
+                    &ERROR,
+                    "compiler.rs - Line 81",
+                    &description,
+                    &LogFormat::CLF
+                );
                 String::from("Fallback HTML content")
             });
 
@@ -233,16 +240,32 @@ pub fn compile(
 
             // Update the global tags data
             for (tag, pages_data) in tags_data.iter() {
-                let page_info: Vec<PageData> = pages_data.iter()
+                let page_info: Vec<PageData> = pages_data
+                    .iter()
                     .map(|page_data| PageData {
-                        title: page_data.get("title").cloned().unwrap_or_default(),
-                        description: page_data.get("description").cloned().unwrap_or_default(),
-                        permalink: page_data.get("permalink").cloned().unwrap_or_default(),
-                        date: page_data.get("date").cloned().unwrap_or_default(),
+                        title: page_data
+                            .get("title")
+                            .cloned()
+                            .unwrap_or_default(),
+                        description: page_data
+                            .get("description")
+                            .cloned()
+                            .unwrap_or_default(),
+                        permalink: page_data
+                            .get("permalink")
+                            .cloned()
+                            .unwrap_or_default(),
+                        date: page_data
+                            .get("date")
+                            .cloned()
+                            .unwrap_or_default(),
                     })
                     .collect();
 
-                global_tags_data.entry(tag.clone()).or_default().extend(page_info);
+                global_tags_data
+                    .entry(tag.clone())
+                    .or_default()
+                    .extend(page_info);
             }
 
             // Generate a TxtData structure, filling it with values extracted from the metadata.
@@ -281,14 +304,23 @@ pub fn compile(
     );
 
     // Log the generated files information to a log file (shokunin.log)
-    macro_log_info!(&ERROR, "compiler.rs - Line 280", &cli_description, &LogFormat::CLF);
+    macro_log_info!(
+        &ERROR,
+        "compiler.rs - Line 280",
+        &cli_description,
+        &LogFormat::CLF
+    );
 
     // Print the generated files to the console
     println!("{} ", cli_description);
 
     // Iterate over compiled files and write pages to output directory
     for file in &compiled_files {
-        write_files_to_build_directory(build_dir_path, file, template_path)?;
+        write_files_to_build_directory(
+            build_dir_path,
+            file,
+            template_path,
+        )?;
     }
 
     let tags_html_content = generate_tags_html(&global_tags_data);

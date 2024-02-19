@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    models::data:: MetaTagGroups,
+    models::data::MetaTagGroups,
     modules::{
-        frontmatter::extract,
-        keywords::extract_keywords,
+        frontmatter::extract, keywords::extract_keywords,
         metatags::generate_all_meta_tags,
-    }
+    },
 };
 use std::collections::HashMap;
 
@@ -40,7 +39,9 @@ use std::collections::HashMap;
 ///
 /// let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file_content);
 /// ```
-pub fn extract_and_prepare_metadata(content: &str) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
+pub fn extract_and_prepare_metadata(
+    content: &str,
+) -> (HashMap<String, String>, Vec<String>, MetaTagGroups) {
     // Extract metadata from front matter
     let metadata = extract(content);
 

@@ -116,16 +116,14 @@ mod tests {
             assert!(rss_result.is_ok());
 
             let rss_str = rss_result.unwrap();
-            assert!(
-                rss_str.contains(&format!("<title>Item {}</title>", i))
-            );
+            assert!(rss_str
+                .contains(&format!("<title>Item {}</title>", i)));
             assert!(rss_str.contains(&format!(
                 "<link>https://example.com/item{}</link>",
                 i
             )));
-            assert!(
-                rss_str.contains(&format!("<guid>item{}</guid>", i))
-            );
+            assert!(rss_str
+                .contains(&format!("<guid>item{}</guid>", i)));
             assert!(rss_str.contains(&format!(
                 "<description>This is item {}.</description>",
                 i

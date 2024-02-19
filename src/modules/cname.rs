@@ -26,13 +26,12 @@ use std::collections::HashMap;
 /// * To distribute traffic across multiple servers.
 /// * To use a domain name or subdomain with a service provider that does not
 ///   allow you to create your own DNS records.
-pub fn create_cname_data(metadata: &HashMap<String, String>) -> CnameData {
+pub fn create_cname_data(
+    metadata: &HashMap<String, String>,
+) -> CnameData {
     // Get the value of the `cname` key from the `metadata` HashMap.
     let cname = metadata.get("cname").cloned().unwrap_or_default();
 
     // Create a new CnameData object with the CNAME record value.
-    CnameData {
-        cname,
-    }
+    CnameData { cname }
 }
-

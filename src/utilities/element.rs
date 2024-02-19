@@ -5,10 +5,7 @@ use quick_xml::{
     events::{BytesEnd, BytesStart, BytesText, Event},
     Writer,
 };
-use std::{
-    borrow::Cow,
-    io::Cursor,
-};
+use std::{borrow::Cow, io::Cursor};
 
 /// Helper function to write XML element
 ///

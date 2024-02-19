@@ -3,12 +3,9 @@ mod tests {
     use ssg::models::data::MetaTagGroups;
     use ssg::modules::metadata::extract_and_prepare_metadata;
     use ssg::modules::metatags::{
-        generate_apple_meta_tags,
-        generate_ms_meta_tags,
-        generate_og_meta_tags,
-        generate_primary_meta_tags,
+        generate_apple_meta_tags, generate_ms_meta_tags,
+        generate_og_meta_tags, generate_primary_meta_tags,
         generate_twitter_meta_tags,
-
     };
     use std::collections::HashMap;
 
@@ -26,7 +23,6 @@ title: \"Rust\"
 ---
 This is a blog about Rust programming.
 ";
-
 
         let (metadata, keywords, all_meta_tags) =
             extract_and_prepare_metadata(file_content);
@@ -47,8 +43,10 @@ This is a blog about Rust programming.
             "permalink".to_string(),
             "https://example.com/blog/rust".to_string(),
         );
-        expected_metadata
-            .insert("keywords".to_string(), "rust,programming".to_string());
+        expected_metadata.insert(
+            "keywords".to_string(),
+            "rust,programming".to_string(),
+        );
         expected_metadata
             .insert("title".to_string(), "Rust".to_string());
         assert_eq!(metadata, expected_metadata);
@@ -66,5 +64,4 @@ This is a blog about Rust programming.
         };
         assert_eq!(all_meta_tags, expected_meta_tags);
     }
-
 }

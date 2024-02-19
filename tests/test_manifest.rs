@@ -8,9 +8,13 @@ mod tests {
         let mut metadata = HashMap::new();
         metadata.insert("name".to_string(), "My Web App".to_string());
         metadata.insert("short_name".to_string(), "App".to_string());
-        metadata.insert("description".to_string(), "A cool web app".to_string());
+        metadata.insert(
+            "description".to_string(),
+            "A cool web app".to_string(),
+        );
         metadata.insert("icon".to_string(), "app-icon.svg".to_string());
-        metadata.insert("theme-color".to_string(), "#00aabb".to_string());
+        metadata
+            .insert("theme-color".to_string(), "#00aabb".to_string());
 
         let manifest_data = create_manifest_data(&metadata);
 
@@ -23,8 +27,14 @@ mod tests {
         assert_eq!(manifest_data.icons.len(), 1);
         assert_eq!(manifest_data.icons[0].src, "app-icon.svg");
         assert_eq!(manifest_data.icons[0].sizes, "512x512");
-        assert_eq!(manifest_data.icons[0].icon_type, Some("image/svg+xml".to_string()));
-        assert_eq!(manifest_data.icons[0].purpose, Some("any maskable".to_string()));
+        assert_eq!(
+            manifest_data.icons[0].icon_type,
+            Some("image/svg+xml".to_string())
+        );
+        assert_eq!(
+            manifest_data.icons[0].purpose,
+            Some("any maskable".to_string())
+        );
         assert_eq!(manifest_data.orientation, "portrait-primary");
         assert_eq!(manifest_data.scope, "/");
         assert_eq!(manifest_data.theme_color, "#00aabb");

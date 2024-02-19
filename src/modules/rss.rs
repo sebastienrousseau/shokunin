@@ -1,8 +1,8 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::models::data::RssData;
 use crate::macro_write_element;
+use crate::models::data::RssData;
 use quick_xml::{
     events::{BytesDecl, BytesEnd, BytesStart, Event},
     Writer,
@@ -24,11 +24,9 @@ pub fn generate_rss(
     let mut writer = Writer::new(Cursor::new(Vec::new()));
 
     // Write the XML declaration.
-    writer.write_event(Event::Decl(BytesDecl::new(
-        "1.0",
-        Some("utf-8"),
-        None,
-    )))?;
+    writer.write_event(Event::Decl(
+        BytesDecl::new("1.0", Some("utf-8"), None)
+    ))?;
 
     // Start the `rss` element.
     let mut rss_start = BytesStart::new("rss");
@@ -71,10 +69,9 @@ pub fn generate_rss(
     // Write the `atom:link` element.
     let mut atom_link_start =
         BytesStart::new(Cow::Borrowed("atom:link").into_owned());
-    atom_link_start.push_attribute((
-        "href",
-        options.atom_link.to_string().as_str(),
-    ));
+    atom_link_start.push_attribute(
+        ("href", options.atom_link.to_string().as_str())
+    );
     atom_link_start.push_attribute(("rel", "self"));
     atom_link_start.push_attribute(("type", "application/rss+xml"));
     writer.write_event(Event::Empty(atom_link_start))?;

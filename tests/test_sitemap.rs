@@ -7,8 +7,14 @@ mod tests {
     fn test_create_site_map_data_with_all_fields() {
         let mut metadata = HashMap::new();
         metadata.insert("changefreq".to_string(), "daily".to_string());
-        metadata.insert("last_build_date".to_string(), "2023-01-01".to_string());
-        metadata.insert("permalink".to_string(), "https://example.com".to_string());
+        metadata.insert(
+            "last_build_date".to_string(),
+            "2023-01-01".to_string(),
+        );
+        metadata.insert(
+            "permalink".to_string(),
+            "https://example.com".to_string(),
+        );
 
         let site_map_data = create_site_map_data(&metadata);
 

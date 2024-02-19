@@ -14,7 +14,9 @@ use std::collections::HashMap;
 /// Returns a `TxtData` object.
 pub fn create_txt_data(metadata: &HashMap<String, String>) -> TxtData {
     TxtData {
-        permalink: metadata.get("permalink").cloned().unwrap_or_default(),
+        permalink: metadata
+            .get("permalink")
+            .cloned()
+            .unwrap_or_default(),
     }
 }
-

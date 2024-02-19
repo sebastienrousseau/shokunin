@@ -162,9 +162,12 @@ pub fn create_template_folder(
     let current_dir = std::env::current_dir()?;
 
     let template_dir_path = match template_path {
-        Some(path) if path.starts_with("http://") || path.starts_with("https://") => {
+        Some(path)
+            if path.starts_with("http://")
+                || path.starts_with("https://") =>
+        {
             download_files_from_url(path)?
-        },
+        }
         Some(path) => {
             let local_path = current_dir.join(path);
             if local_path.exists() && local_path.is_dir() {
@@ -176,7 +179,7 @@ pub fn create_template_folder(
                     format!("Template directory not found: {}", path),
                 )));
             }
-        },
+        }
         None => {
             let default_url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template/";
             download_files_from_url(default_url)?
@@ -186,7 +189,9 @@ pub fn create_template_folder(
     Ok(String::from(template_dir_path.to_str().unwrap()))
 }
 
-fn download_files_from_url(url: &str) -> Result<PathBuf, TemplateError> {
+fn download_files_from_url(
+    url: &str,
+) -> Result<PathBuf, TemplateError> {
     let tempdir = tempfile::tempdir()?;
     let template_dir_path = tempdir.into_path();
     println!(
@@ -209,12 +214,8 @@ fn download_files_from_url(url: &str) -> Result<PathBuf, TemplateError> {
         let mut download = reqwest::blocking::get(&file_url)?;
         let mut file = File::create(&file_path)?;
         download.copy_to(&mut file)?;
-        println!(
-            "Downloaded template file to: {:?}",
-            file_path
-        );
+        println!("Downloaded template file to: {:?}", file_path);
     }
 
     Ok(template_dir_path)
 }
-

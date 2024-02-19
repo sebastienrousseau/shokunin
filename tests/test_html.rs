@@ -2,8 +2,8 @@
 mod tests {
     use regex::Regex;
     use ssg::{
+        modules::html::{generate_html, post_process_html},
         utilities::directory::format_header_with_id_class,
-        modules::html::{generate_html,post_process_html}
     };
 
     #[test]
@@ -125,7 +125,8 @@ mod tests {
         let html = r#"<p class="old-class">Hello</p><img src="image.jpg" alt="A picture">"#;
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"(.*<img[^>]*)(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         assert!(result.contains(r#"<img src="image.jpg" alt="A picture" title="Image of a picture">"#));
     }
@@ -135,7 +136,8 @@ mod tests {
         let html = r#"<img src="image.jpg">"#;
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"(.*<img[^>]*)(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         // Expect no change as both alt and title are missing
         assert_eq!(result.trim(), r#"<img src="image.jpg">"#);
@@ -162,7 +164,8 @@ mod tests {
         let html = "";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         assert_eq!(result, "");
     }
@@ -172,7 +175,8 @@ mod tests {
         let html = "<p>Hello</p>\n";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         assert_eq!(result, html);
     }

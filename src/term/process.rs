@@ -56,7 +56,8 @@ pub fn args(matches: &ArgMatches) -> Result<(), String> {
     macro_check_directory!(template_path, "template");
 
     // Create the new project
-    let compilation_result = compile(build_path, content_path, site_path, template_path);
+    let compilation_result =
+        compile(build_path, content_path, site_path, template_path);
     match compilation_result {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("❌ Error: {}", e)),

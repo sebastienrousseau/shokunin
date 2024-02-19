@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.23-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.24-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.23"
+//! shokunin = "0.0.24"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -116,27 +116,27 @@
 #![crate_type = "lib"]
 
 use crate::utilities::serve::start;
-use term::cli::print_banner;
 use compiler::compile;
 use std::{error::Error, path::Path};
+use term::cli::print_banner;
 
-    /// The `cli` module contains functions for the command-line interface.
-    pub mod term;
+/// The `cli` module contains functions for the command-line interface.
+pub mod term;
 
-    /// The `compiler` module contains functions for the compilation process.
-    pub mod compiler;
+/// The `compiler` module contains functions for the compilation process.
+pub mod compiler;
 
-    /// The `macros` module contains functions for generating macros.
-    pub mod macros;
+/// The `macros` module contains functions for generating macros.
+pub mod macros;
 
-    /// The `models` module contains the structs.
-    pub mod models;
+/// The `models` module contains the structs.
+pub mod models;
 
-    /// The `modules` module contains the application modules.
-    pub mod modules;
+/// The `modules` module contains the application modules.
+pub mod modules;
 
-    /// The `utilities` module contains utility functions.
-    pub mod utilities;
+/// The `utilities` module contains utility functions.
+pub mod utilities;
 
 #[allow(non_camel_case_types)]
 

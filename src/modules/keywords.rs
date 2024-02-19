@@ -18,7 +18,9 @@ use std::collections::HashMap;
 ///
 /// A vector of strings representing the extracted keywords.
 ///
-pub fn extract_keywords(metadata: &HashMap<String, String>) -> Vec<String> {
+pub fn extract_keywords(
+    metadata: &HashMap<String, String>,
+) -> Vec<String> {
     // Check if the "keywords" key exists in the metadata.
     // If it exists, split the keywords using a comma and process each keyword.
     // If it doesn't exist, return an empty vector as the default value.
@@ -28,8 +30,8 @@ pub fn extract_keywords(metadata: &HashMap<String, String>) -> Vec<String> {
             // Split the keywords using commas and process each keyword.
             keywords
                 .split(',')
-                .map(|kw| kw.trim().to_string())  // Trim whitespace from each keyword.
-                .collect::<Vec<_>>()  // Collect the processed keywords into a vector.
+                .map(|kw| kw.trim().to_string()) // Trim whitespace from each keyword.
+                .collect::<Vec<_>>() // Collect the processed keywords into a vector.
         })
-        .unwrap_or_default()  // Return an empty vector if "keywords" is not found.
+        .unwrap_or_default() // Return an empty vector if "keywords" is not found.
 }

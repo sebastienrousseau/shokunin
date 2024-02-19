@@ -12,13 +12,21 @@ use std::collections::HashMap;
 /// The `metadata` parameter is a map of metadata strings.
 ///
 /// Returns a `SiteMapData` object.
-pub fn create_site_map_data(metadata: &HashMap<String, String>) -> SiteMapData {
+pub fn create_site_map_data(
+    metadata: &HashMap<String, String>,
+) -> SiteMapData {
     SiteMapData {
         // The change frequency of the website.
-        changefreq: metadata.get("changefreq").cloned().unwrap_or_default(),
+        changefreq: metadata
+            .get("changefreq")
+            .cloned()
+            .unwrap_or_default(),
 
         // The last modified date of the website.
-        lastmod: metadata.get("last_build_date").cloned().unwrap_or_default(),
+        lastmod: metadata
+            .get("last_build_date")
+            .cloned()
+            .unwrap_or_default(),
 
         // The base URL of the website.
         loc: metadata.get("permalink").cloned().unwrap_or_default(),

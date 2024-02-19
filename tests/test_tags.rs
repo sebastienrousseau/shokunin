@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use ssg::models::data::{FileData, PageData};
-    use ssg::modules::tags::{create_tags_data, generate_tags, generate_tags_html};
+    use ssg::modules::tags::{
+        create_tags_data, generate_tags, generate_tags_html,
+    };
     use std::collections::HashMap;
 
     #[test]
@@ -46,7 +48,10 @@ mod tests {
     fn test_create_tags_data_with_metadata() {
         let mut metadata = HashMap::new();
         metadata.insert("date".to_string(), "2021-09-04".to_string());
-        metadata.insert("description".to_string(), "A sample description".to_string());
+        metadata.insert(
+            "description".to_string(),
+            "A sample description".to_string(),
+        );
 
         let tags_data = create_tags_data(&metadata);
 
@@ -62,14 +67,12 @@ mod tests {
         let mut global_tags_data = HashMap::new();
         global_tags_data.insert(
             "tag1".to_string(),
-            vec![
-                PageData {
-                    date: "2022-09-01".to_string(),
-                    description: "Description 1".to_string(),
-                    permalink: "/page1".to_string(),
-                    title: "Page 1".to_string(),
-                },
-            ],
+            vec![PageData {
+                date: "2022-09-01".to_string(),
+                description: "Description 1".to_string(),
+                permalink: "/page1".to_string(),
+                title: "Page 1".to_string(),
+            }],
         );
 
         let global_tags_data = generate_tags_html(&global_tags_data);
@@ -78,6 +81,4 @@ mod tests {
         assert!(global_tags_data.contains("<h3 class=\"tag1\" id=\"h3-tag1\" tabindex=\"0\">Tag1 (1 Posts)</h3>"));
         assert!(global_tags_data.contains("<li>2022-09-01: <a href=\"/page1\">Page 1</a> - <strong>Description 1</strong></li>"));
     }
-
-    
 }

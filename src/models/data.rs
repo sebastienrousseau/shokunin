@@ -20,7 +20,9 @@ impl CnameData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// File struct to hold the title, permalink of a file.
 pub struct PageData {
     /// The title of the file.
@@ -35,11 +37,11 @@ pub struct PageData {
 
 impl fmt::Display for PageData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} {} {}",
-        self.title,
-        self.description,
-        self.date,
-        self.permalink)
+        write!(
+            f,
+            "{} {} {} {}",
+            self.title, self.description, self.date, self.permalink
+        )
     }
 }
 
@@ -88,7 +90,9 @@ impl FileData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `tags` function
 pub struct TagsData {
     /// A string representing the publication date of the web app
@@ -245,7 +249,9 @@ impl HumanData {
 /// The struct includes fields for Apple-specific meta tags, primary meta tags, Open Graph meta tags,
 /// Microsoft-specific meta tags, and Twitter-specific meta tags. Each field contains a string
 /// representation of the HTML meta tags for its respective category or platform.
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 pub struct MetaTagGroups {
     /// Meta tags specific to Apple devices
     pub apple: String,
@@ -277,11 +283,11 @@ impl MetaTagGroups {
     }
     /// Returns true if all fields are empty.
     pub fn is_empty(&self) -> bool {
-        self.apple.is_empty() &&
-        self.primary.is_empty() &&
-        self.og.is_empty() &&
-        self.ms.is_empty() &&
-        self.twitter.is_empty()
+        self.apple.is_empty()
+            && self.primary.is_empty()
+            && self.og.is_empty()
+            && self.ms.is_empty()
+            && self.twitter.is_empty()
     }
 }
 

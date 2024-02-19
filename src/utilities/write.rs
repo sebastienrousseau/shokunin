@@ -29,17 +29,19 @@ use std::path::Path;
 pub fn write_files_to_build_directory(
     build_dir_path: &Path,
     file: &FileData,
-    template_path: &Path
+    template_path: &Path,
 ) -> Result<(), Box<dyn Error>> {
-
     // Determine the file name without extension and check if it's "index".
-    let file_name = match (Path::new(&file.name).extension().and_then(
-        |s| s.to_str()
-    ), &file.name) {
-        (Some(ext), name) if
-        ["js", "json", "md", "toml", "txt", "xml"].contains(&ext) => {
+    let file_name = match (
+        Path::new(&file.name).extension().and_then(|s| s.to_str()),
+        &file.name,
+    ) {
+        (Some(ext), name)
+            if ["js", "json", "md", "toml", "txt", "xml"]
+                .contains(&ext) =>
+        {
             name.replace(&format!(".{}", ext), "")
-        },
+        }
         _ => file.name.to_string(),
     };
 
@@ -69,7 +71,7 @@ pub fn write_files_to_build_directory(
                 build_dir_path,
                 file_name,
                 content,
-                index_html_minified
+                index_html_minified,
             )?;
         }
 
@@ -79,7 +81,7 @@ pub fn write_files_to_build_directory(
             copy_template_file(
                 template_path,
                 build_dir_path,
-                file_name
+                file_name,
             )?;
         }
     } else {
@@ -104,7 +106,7 @@ pub fn write_files_to_build_directory(
                 &dir_name,
                 file_name,
                 content,
-                index_html_minified
+                index_html_minified,
             )?;
         }
     }
@@ -137,7 +139,7 @@ fn write_and_minify_file(
 fn copy_template_file(
     template_path: &Path,
     dest_dir: &Path,
-    file_name: &str
+    file_name: &str,
 ) -> Result<(), Box<dyn Error>> {
     let dest_path = dest_dir.join(file_name);
     fs::copy(template_path.join(file_name), dest_path)?;

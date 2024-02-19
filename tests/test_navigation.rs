@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use ssg::{models::data::FileData, modules::navigation::generate_navigation};
+    use ssg::{
+        models::data::FileData,
+        modules::navigation::generate_navigation,
+    };
 
     #[test]
     fn test_generate_navigation() {

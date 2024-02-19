@@ -6,7 +6,10 @@ mod tests {
     #[test]
     fn test_create_txt_data_with_permalink() {
         let mut metadata = HashMap::new();
-        metadata.insert("permalink".to_string(), "https://example.com".to_string());
+        metadata.insert(
+            "permalink".to_string(),
+            "https://example.com".to_string(),
+        );
 
         let txt_data = create_txt_data(&metadata);
 
