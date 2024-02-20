@@ -65,7 +65,7 @@ yaml-rust = "0.4.5"
 vrd = "0.0.5"
 
 [dev-dependencies]
-assert_cmd = "2.0.13"
+assert_cmd = "2.0.14"
 criterion = "0.5.1"
 
 [lib]
