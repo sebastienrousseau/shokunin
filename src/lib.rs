@@ -124,6 +124,7 @@ use term::cli::print_banner;
 use dtt::DateTime;
 use rlg::{macro_log, LogFormat, LogLevel};
 use crate::loggers::init_logger;
+use crate::utilities::uuid::generate_unique_string;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod term;
@@ -177,10 +178,10 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // Print the CLI banner and welcome message
     print_banner();
 
-    // Generate a log entry
-    let quote_log =
+    // Generate a log entry for the banner
+    let banner_log =
         macro_log!(
-            "id",
+            &generate_unique_string(),
             &iso,
             &LogLevel::INFO,
             "process",
@@ -189,17 +190,45 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         );
 
     // Write the log to both the console and the file
-    writeln!(log_file, "{}", quote_log)?;
+    writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
     let matches = term::cli::build()?;
     term::process::args(&matches)?;
+
+    // Generate a log entry for the arguments
+    let args_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Arguments processed successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", args_log)?;
 
     if let Some(site_name) = matches.get_one::<String>("new") {
         // Start the server using the specified server address and site name.
         // If an error occurs, propagate it up the call stack.
         macro_serve!("127.0.0.1:8000", site_name);
     }
+
+    // Generate a log entry for the server
+    let server_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Server started successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", server_log)?;
 
     // Set the build, content, site and template paths for the compile function.
     let build_path = Path::new("public");
@@ -209,6 +238,20 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Call the compile function with the above parameters to compile the site.
     compile(build_path, content_path, site_path, template_path)?;
+
+    // Generate a log entry for the compilation
+    let compile_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Site compiled successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", compile_log)?;
 
     Ok(())
 }

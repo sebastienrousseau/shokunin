@@ -2,6 +2,7 @@
 *.profraw
 *.log
 /.vscode/
+/docs/
 /examples/public/
 /mysite/
 /output/

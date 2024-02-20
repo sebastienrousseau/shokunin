@@ -25,3 +25,7 @@ pub mod template;
 
 /// The `write` module contains functions for writing files.
 pub mod write;
+
+/// The `uuid` module contains functions for generating unique strings.
+pub mod uuid;
+
