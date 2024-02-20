@@ -1,5 +1,6 @@
 *.DS_Store
 *.profraw
+*.log
 /.vscode/
 /examples/public/
 /mysite/

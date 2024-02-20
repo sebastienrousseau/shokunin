@@ -115,16 +115,24 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
+use std::io::Write;
 use crate::utilities::serve::start;
+use std::fs::File;
 use compiler::compile;
 use std::{error::Error, path::Path};
 use term::cli::print_banner;
+use dtt::DateTime;
+use rlg::{macro_log, LogFormat, LogLevel};
+use crate::loggers::init_logger;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod term;
 
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
+
+/// The `loggers` module contains the loggers for the library.
+pub mod loggers;
 
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
@@ -156,8 +164,32 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
+    // Initialize the logger using the `env_logger` crate
+    init_logger(None)?;
+
+    // Define date and time
+    let date = DateTime::new();
+    let iso = date.iso_8601;
+
+    // Open the log file for appending
+    let mut log_file = File::create("./ssg.log")?;
+
     // Print the CLI banner and welcome message
     print_banner();
+
+    // Generate a log entry
+    let quote_log =
+        macro_log!(
+            "id",
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Banner printed successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", quote_log)?;
 
     // Build the CLI and parse the arguments
     let matches = term::cli::build()?;
