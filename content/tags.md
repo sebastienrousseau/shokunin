@@ -2,7 +2,7 @@
 
 # Front Matter (YAML)
 
-author: "Jane Doe" ## The author of the page. (max 64 characters)
+author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 characters)
 banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
@@ -53,11 +53,11 @@ generator: "Shokunin 🦀 (version 0.0.17)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
-item_pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
+item_pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 item_title: "Tags"
-last_build_date: "Thu, 12 Jul 2023 15:15:15 GMT"
-managing_editor: jane.doe@kaishi.one
-pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
+last_build_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+managing_editor: jane.doe@kaishi.one (Jane Doe)
+pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
