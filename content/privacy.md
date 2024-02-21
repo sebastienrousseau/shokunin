@@ -53,11 +53,11 @@ generator: "Shokunin 🦀 (version 0.0.24)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
-item_pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+item_pub_date: "Sun, 18 Feb 2024 15:15:15 GMT"
 item_title: "RSS"
-last_build_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+last_build_date: "Sun, 18 Feb 2024 15:15:15 GMT"
 managing_editor: jane.doe@kaishi.one (Jane Doe)
-pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+pub_date: "Sun, 18 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
