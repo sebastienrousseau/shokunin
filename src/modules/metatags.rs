@@ -1,10 +1,8 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::macro_generate_tags_from_fields;
 use crate::models::data::{MetaTag, MetaTagGroups};
-use crate::{
-    macro_generate_tags_from_fields, macro_generate_tags_from_list,
-};
 use std::collections::HashMap;
 
 // Type alias for better readability
@@ -24,15 +22,10 @@ pub fn generate_custom_meta_tags(
         mapping
             .iter()
             .filter_map(|(key, value)| {
-                if let Some(val) = value.as_ref() {
-                    if !val.is_empty() {
-                        Some((key.clone(), val.clone()))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+                value
+                    .as_ref()
+                    .map(|val| (key.clone(), val.clone()))
+                    .filter(|(_, val)| !val.is_empty())
             })
             .collect();
     generate_metatags(&filtered_mapping)
@@ -47,7 +40,7 @@ pub fn generate_custom_meta_tags(
 /// A `String` containing the HTML code for the meta tags.
 pub fn generate_metatags(meta: &[(String, String)]) -> String {
     meta.iter()
-        .map(|(key, value)| format_meta_tag(key, value))
+        .map(|(key, value)| format_meta_tag(key, value.trim()))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -66,7 +59,10 @@ pub fn load_metatags(
 ) -> String {
     let mut result = String::new();
     for &name in tag_names {
-        let value = metadata.get(name).cloned().unwrap_or_default();
+        let value = metadata
+            .get(name)
+            .cloned()
+            .unwrap_or_else(|| String::new());
         result.push_str(
             &MetaTag::new(name.to_string(), value).generate(),
         );
@@ -83,7 +79,9 @@ pub fn load_metatags(
 /// # Returns
 /// A `String` containing the HTML representation of the meta tag.
 pub fn format_meta_tag(key: &str, value: &str) -> String {
-    format!("<meta name=\"{}\" content=\"{}\">", key, value)
+    // Sanitize the value by replacing newline characters with spaces
+    let sanitized_value = value.replace("\n", " ");
+    format!("<meta name=\"{}\" content=\"{}\">", key, &sanitized_value)
 }
 
 /// Generates HTML meta tags for Apple-specific settings.
@@ -95,17 +93,17 @@ pub fn format_meta_tag(key: &str, value: &str) -> String {
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
-    let tag_names =
-        [
-            "apple_mobile_web_app_orientations",
-            "apple_touch_icon_sizes",
-            "apple-mobile-web-app-capable",
-            "apple-mobile-web-app-status-bar-inset",
-            "apple-mobile-web-app-status-bar-style",
-            "apple-mobile-web-app-title",
-            "apple-touch-fullscreen",
-        ];
-    macro_generate_tags_from_list!(&tag_names, metadata)
+    macro_generate_tags_from_fields!(
+        tag_names,
+        metadata,
+        "apple_mobile_web_app_orientations" => apple_mobile_web_app_orientations,
+        "apple_touch_icon_sizes" => apple_touch_icon_sizes,
+        "apple-mobile-web-app-capable" => apple_mobile_web_app_capable,
+        "apple-mobile-web-app-status-bar-inset" => apple_mobile_web_app_status_bar_inset,
+        "apple-mobile-web-app-status-bar-style" => apple_mobile_web_app_status_bar_style,
+        "apple-mobile-web-app-title" => apple_mobile_web_app_title,
+        "apple-touch-fullscreen" => apple_touch_fullscreen
+    )
 }
 
 /// Generates HTML meta tags for primary settings like author, description, etc.
@@ -117,23 +115,24 @@ pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
-    let tag_names = [
-        "author",
-        "description",
-        "format-detection",
-        "generator",
-        "keywords",
-        "language",
-        "permalink",
-        "rating",
-        "referrer",
-        "revisit-after",
-        "robots",
-        "theme-color",
-        "title",
-        "viewport",
-    ];
-    macro_generate_tags_from_list!(&tag_names, metadata)
+    macro_generate_tags_from_fields!(
+        tag_names,
+        metadata,
+        "author" => author,
+        "description" => description,
+        "format-detection" => format_detection,
+        "generator" => generator,
+        "keywords" => keywords,
+        "language" => language,
+        "permalink" => permalink,
+        "rating" => rating,
+        "referrer" => referrer,
+        "revisit-after" => revisit_after,
+        "robots" => robots,
+        "theme-color" => theme_color,
+        "title" => title,
+        "viewport" => viewport
+    )
 }
 
 /// Generates HTML meta tags for Open Graph settings, primarily for social media.
@@ -159,7 +158,7 @@ pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
 ///
 pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
     macro_generate_tags_from_fields!(
-        generate_og_meta_tags,
+        tag_names,
         metadata,
         "og:description" => description,
         "og:image" => image,
@@ -170,7 +169,7 @@ pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
         "og:site_name" => site_name,
         "og:title" => title,
         "og:type" => type,
-        "og:url" => permalink
+        "og:url" => url
     )
 }
 
@@ -183,8 +182,11 @@ pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
 /// A `String` containing the HTML code for the meta tags.
 ///
 pub fn generate_ms_meta_tags(metadata: &MetaDataMap) -> String {
-    let tag_names = ["msapplication-navbutton-color"];
-    macro_generate_tags_from_list!(&tag_names, metadata)
+    macro_generate_tags_from_fields!(
+        tag_names,
+        metadata,
+        "msapplication-navbutton-color" => msapplication_navbutton_color
+    )
 }
 
 /// Generates HTML meta tags for Twitter-specific settings.
@@ -209,18 +211,18 @@ pub fn generate_ms_meta_tags(metadata: &MetaDataMap) -> String {
 ///
 pub fn generate_twitter_meta_tags(metadata: &MetaDataMap) -> String {
     macro_generate_tags_from_fields!(
-        generate_twitter_meta_tags,
+        tag_names,
         metadata,
         "twitter:card" => twitter_card,
         "twitter:creator" => twitter_creator,
-        "twitter:description" => description,
-        "twitter:image" => image,
-        "twitter:image:alt" => image_alt,
-        "twitter:image:height" => image_height,
-        "twitter:image:width" => image_width,
-        "twitter:site" => url,
-        "twitter:title" => title,
-        "twitter:url" => url
+        "twitter:description" => twitter_description,
+        "twitter:image" => twitter_image,
+        "twitter:image:alt" => twitter_image_alt,
+        "twitter:image:height" => twitter_image_height,
+        "twitter:image:width" => twitter_image_width,
+        "twitter:site" => twitter_site,
+        "twitter:title" => twitter_title,
+        "twitter:url" => twitter_url
     )
 }
 
