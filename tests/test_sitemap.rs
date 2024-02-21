@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use serde_json;
     use ssg::models::data::SiteMapData;
     use ssg::modules::sitemap::create_site_map_data;
     use std::collections::HashMap;
