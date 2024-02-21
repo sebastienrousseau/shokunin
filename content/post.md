@@ -106,9 +106,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-![Nature shinning][00].class=\"img-fluid w-50 clearfix\"
-
-![][00].class=\"img-fluid w-50 clearfix\"
+![Nature shinning][00].class=\"img-fluid w-50 float-start p-5 mb-3\"
 
 ## Starter Templates
 
@@ -139,7 +137,10 @@ To get started, select a template that suits your project's needs. Customize it 
 
 Building a website from scratch can be a daunting task, but our starter templates make it simple and straightforward.
 
-#### Why Use Our Templates?
+
+![Nature shinning][00].class=\"img-fluid w-50 float-end p-5 mb-3\"
+
+### Why Use Our Templates?
 
 - **Speed**: Jumpstart your development with pre-made designs.
 - **Quality**: High-quality, well-tested templates ensure reliability.
