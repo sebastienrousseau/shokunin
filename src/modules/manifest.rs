@@ -2,21 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    macro_metadata_option,
-    models::data::{IconData, ManifestData},
+    macro_metadata_option, models::data::{IconData, ManifestData}
 };
 use std::collections::HashMap;
 
-/// Function to create ManifestData
+/// Creates a `ManifestData` object based on the provided metadata.
 ///
-/// The `metadata` parameter is a map of metadata strings.
+/// # Arguments
 ///
-/// Returns a `ManifestData` object.
-pub fn create_manifest_data(
-    metadata: &HashMap<String, String>,
-) -> ManifestData {
+/// * `metadata` - A map of metadata strings.
+///
+/// # Returns
+///
+/// A `ManifestData` object.
+pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData {
     ManifestData {
-        name: metadata.get("name").cloned().unwrap_or_default(),
+        name: metadata
+            .get("name")
+            .map_or_else(|| "".to_string(), |v| v.to_string()),
         short_name: macro_metadata_option!(metadata, "short_name"),
         start_url: ".".to_string(),
         display: "standalone".to_string(),
@@ -35,6 +38,9 @@ pub fn create_manifest_data(
             .unwrap_or_default(),
         orientation: "portrait-primary".to_string(),
         scope: "/".to_string(),
-        theme_color: macro_metadata_option!(metadata, "theme-color"),
+        theme_color: metadata
+            .get("theme-color")
+            .map(|color| format!("rgb({})", color))
+            .unwrap_or_default(),
     }
 }
