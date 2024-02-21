@@ -41,7 +41,7 @@ mod tests {
         ];
 
         for (input_metadata, expected_output) in test_cases.iter() {
-            let result = generate_metatags(&input_metadata);
+            let result = generate_metatags(input_metadata);
             assert_eq!(
                 result, *expected_output,
                 "Mismatch in generated meta tags for general tests"
@@ -136,8 +136,7 @@ mod tests {
             ),
             ("keywords".to_string(), "Rust, programming".to_string()),
         ];
-        let expected_order = vec!["author", "description", "keywords"];
-
+        let expected_order = ["author", "description", "keywords"];
         let result = generate_metatags(&input_metadata);
         let regex =
             Regex::new(r#"<meta name="([^"]+)" content="[^"]*">"#)

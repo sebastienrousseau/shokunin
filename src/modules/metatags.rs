@@ -62,7 +62,7 @@ pub fn load_metatags(
         let value = metadata
             .get(name)
             .cloned()
-            .unwrap_or_else(|| String::new());
+            .unwrap_or_else(String::new);
         result.push_str(
             &MetaTag::new(name.to_string(), value).generate(),
         );
@@ -80,7 +80,7 @@ pub fn load_metatags(
 /// A `String` containing the HTML representation of the meta tag.
 pub fn format_meta_tag(key: &str, value: &str) -> String {
     // Sanitize the value by replacing newline characters with spaces
-    let sanitized_value = value.replace("\n", " ");
+    let sanitized_value = value.replace('\n', " ");
     format!("<meta name=\"{}\" content=\"{}\">", key, &sanitized_value)
 }
 
