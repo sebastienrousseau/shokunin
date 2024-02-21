@@ -53,7 +53,10 @@ pub fn generate_tags(
     file: &FileData,
     metadata: &HashMap<String, String>,
 ) -> HashMap<String, Vec<HashMap<String, String>>> {
-    let mut keywords_data_map: HashMap<String, Vec<HashMap<String, String>>> = HashMap::new();
+    let mut keywords_data_map: HashMap<
+        String,
+        Vec<HashMap<String, String>>,
+    > = HashMap::new();
     let file_content = &file.content;
 
     // Extract target tags from metadata if available.
@@ -77,7 +80,13 @@ pub fn generate_tags(
             let mut tags_data = HashMap::new();
 
             // Extract metadata for the tag
-            let metadata_keys = ["title", "date", "description", "permalink", "keywords"];
+            let metadata_keys = [
+                "title",
+                "date",
+                "description",
+                "permalink",
+                "keywords",
+            ];
             for key in &metadata_keys {
                 if let Some(value) = metadata.get(*key) {
                     tags_data.insert((*key).to_string(), value.clone());
@@ -120,11 +129,16 @@ pub fn generate_tags(
 /// let tags_data = create_tags_data(&metadata);
 /// ```
 ///
-pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
+pub fn create_tags_data(
+    metadata: &HashMap<String, String>,
+) -> TagsData {
     let dates = metadata.get("date").cloned().unwrap_or_default();
-    let descriptions = metadata.get("description").cloned().unwrap_or_default();
-    let keywords = metadata.get("keywords").cloned().unwrap_or_default();
-    let permalinks = metadata.get("permalink").cloned().unwrap_or_default();
+    let descriptions =
+        metadata.get("description").cloned().unwrap_or_default();
+    let keywords =
+        metadata.get("keywords").cloned().unwrap_or_default();
+    let permalinks =
+        metadata.get("permalink").cloned().unwrap_or_default();
     let titles = metadata.get("title").cloned().unwrap_or_default();
 
     TagsData {
@@ -186,7 +200,9 @@ pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
 /// let html_content = generate_tags_html(&global_tags_data);
 /// ```
 ///
-pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> String {
+pub fn generate_tags_html(
+    global_tags_data: &HashMap<String, Vec<PageData>>,
+) -> String {
     let mut html_content = String::new();
 
     // Create a sorted Vec of keys
@@ -194,7 +210,8 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
     keys.sort();
 
     // First, calculate the total number of posts
-    let total_posts: usize = global_tags_data.values().map(|pages| pages.len()).sum();
+    let total_posts: usize =
+        global_tags_data.values().map(|pages| pages.len()).sum();
 
     // Add an h2 element for the total number of posts
     html_content.push_str(&format!(
@@ -253,7 +270,10 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
 /// write_tags_html_to_file(html_content, &output_path);
 /// ```
 ///
-pub fn write_tags_html_to_file(html_content: &str, output_path: &Path) -> io::Result<()> {
+pub fn write_tags_html_to_file(
+    html_content: &str,
+    output_path: &Path,
+) -> io::Result<()> {
     // Define the file path for the output
     let file_path = output_path.join("tags/index.html");
 

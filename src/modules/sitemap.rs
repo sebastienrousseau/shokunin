@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::models::data::SiteMapData; // Import the SiteMapData model from the local crate.
-use std::collections::HashMap; // Standard library import for using HashMap.
-use regex::Regex; // Ensure the regex crate is imported for regular expression functionality.
+use regex::Regex;
+use std::collections::HashMap; // Standard library import for using HashMap. // Ensure the regex crate is imported for regular expression functionality.
 
 /// Generates `SiteMapData` from metadata.
 ///
@@ -12,13 +12,20 @@ use regex::Regex; // Ensure the regex crate is imported for regular expression f
 ///
 /// # Returns
 /// A `SiteMapData` object populated with values from the metadata.
-pub fn create_site_map_data(metadata: &HashMap<String, String>) -> SiteMapData {
+pub fn create_site_map_data(
+    metadata: &HashMap<String, String>,
+) -> SiteMapData {
     // Convert the last build date from metadata to the desired format.
-    let lastmod = convert_date_format(metadata.get("last_build_date").unwrap_or(&"".to_string()));
+    let lastmod = convert_date_format(
+        metadata.get("last_build_date").unwrap_or(&"".to_string()),
+    );
 
     // Construct and return SiteMapData with converted and extracted metadata values.
     SiteMapData {
-        changefreq: metadata.get("changefreq").cloned().unwrap_or_default(),
+        changefreq: metadata
+            .get("changefreq")
+            .cloned()
+            .unwrap_or_default(),
         lastmod,
         loc: metadata.get("permalink").cloned().unwrap_or_default(),
     }
@@ -46,10 +53,18 @@ fn convert_date_format(input: &str) -> String {
         if parts.len() == 3 {
             let day = parts[0];
             let month = match parts[1] {
-                "Jan" => "01", "Feb" => "02", "Mar" => "03",
-                "Apr" => "04", "May" => "05", "Jun" => "06",
-                "Jul" => "07", "Aug" => "08", "Sep" => "09",
-                "Oct" => "10", "Nov" => "11", "Dec" => "12",
+                "Jan" => "01",
+                "Feb" => "02",
+                "Mar" => "03",
+                "Apr" => "04",
+                "May" => "05",
+                "Jun" => "06",
+                "Jul" => "07",
+                "Aug" => "08",
+                "Sep" => "09",
+                "Oct" => "10",
+                "Nov" => "11",
+                "Dec" => "12",
                 _ => return input.to_string(), // Return original input for unrecognized months.
             };
             let year = parts[2];

@@ -14,7 +14,7 @@ use crate::{
         json::{cname, human, sitemap, txt},
         manifest::create_manifest_data,
         metadata::extract_and_prepare_metadata,
-        navigation::generate_navigation,
+        navigation::NavigationGenerator,
         rss::generate_rss,
         sitemap::create_site_map_data,
         tags::*,
@@ -60,7 +60,8 @@ pub fn compile(
     let source_files = add(content_path)?;
 
     // Generate navigation bar HTML
-    let navigation = generate_navigation(&source_files); // Generates a navigation bar HTML
+    let navigation =
+        NavigationGenerator::generate_navigation(&source_files);
 
     let mut global_tags_data: HashMap<String, Vec<PageData>> =
         HashMap::new();

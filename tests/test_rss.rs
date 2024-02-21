@@ -4,8 +4,7 @@ mod tests {
 
     use quick_xml::{escape::escape, Writer};
     use ssg::{
-        macro_write_element,
-        models::data::RssData,
+        macro_write_element, models::data::RssData,
         modules::rss::generate_rss,
     };
 
@@ -51,7 +50,9 @@ mod tests {
             assert!(rss_result.is_ok());
 
             let rss_str = rss_result.unwrap();
-            assert!(rss_str.contains("<?xml version=\"1.0\" encoding=\"utf-8\"?>"));
+            assert!(rss_str.contains(
+                "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            ));
             assert!(rss_str.contains("<rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\">"));
             assert!(rss_str.contains("</rss>"));
             assert!(!rss_str.contains("<title></title>"));
@@ -65,14 +66,16 @@ mod tests {
             let mut options = RssData::new();
             options.title = "My RSS Feed".to_string();
             options.link = "https://example.com".to_string();
-            options.description = "A description of my RSS feed.".to_string();
+            options.description =
+                "A description of my RSS feed.".to_string();
 
             let rss_result = generate_rss(&options);
             assert!(rss_result.is_ok());
 
             let rss_str = rss_result.unwrap();
             assert!(rss_str.contains("<title>My RSS Feed</title>"));
-            assert!(rss_str.contains("<link>https://example.com</link>"));
+            assert!(rss_str
+                .contains("<link>https://example.com</link>"));
             assert!(rss_str.contains("<description>A description of my RSS feed.</description>"));
         }
     }
@@ -85,9 +88,14 @@ mod tests {
 
         // Test macro_write_element function
         #[test]
-        fn test_macro_write_element() -> Result<(), Box<dyn std::error::Error>> {
+        fn test_macro_write_element(
+        ) -> Result<(), Box<dyn std::error::Error>> {
             let mut writer = Writer::new(Cursor::new(Vec::new()));
-            macro_write_element!(&mut writer, "testElement", escape("testValue"))?;
+            macro_write_element!(
+                &mut writer,
+                "testElement",
+                escape("testValue")
+            )?;
             let xml = writer.into_inner().into_inner();
             let xml_str = String::from_utf8(xml)?;
             assert_eq!(xml_str, "<testElement>testValue</testElement>");

@@ -115,16 +115,16 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use std::io::Write;
+use crate::loggers::init_logger;
 use crate::utilities::serve::start;
-use std::fs::File;
+use crate::utilities::uuid::generate_unique_string;
 use compiler::compile;
-use std::{error::Error, path::Path};
-use term::cli::print_banner;
 use dtt::DateTime;
 use rlg::{macro_log, LogFormat, LogLevel};
-use crate::loggers::init_logger;
-use crate::utilities::uuid::generate_unique_string;
+use std::fs::File;
+use std::io::Write;
+use std::{error::Error, path::Path};
+use term::cli::print_banner;
 
 /// The `cli` module contains functions for the command-line interface.
 pub mod term;
@@ -197,15 +197,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     term::process::args(&matches)?;
 
     // Generate a log entry for the arguments
-    let args_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Arguments processed successfully",
-            &LogFormat::CLF
-        );
+    let args_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        "Arguments processed successfully",
+        &LogFormat::CLF
+    );
 
     // Write the log to both the console and the file
     writeln!(log_file, "{}", args_log)?;

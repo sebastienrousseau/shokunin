@@ -2245,6 +2245,7 @@ dependencies = [
  "criterion",
  "dtt",
  "env_logger",
+ "lazy_static",
  "log",
  "minify-html",
  "quick-xml",

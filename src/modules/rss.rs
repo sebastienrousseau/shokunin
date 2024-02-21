@@ -17,16 +17,21 @@ use std::error::Error;
 /// and writing them to a `Writer` object.
 ///
 /// The generated RSS feed is returned as a `String`. If an error occurs during generation, it returns an error.
-pub fn generate_rss(options: &RssData) -> Result<String, Box<dyn Error>> {
+pub fn generate_rss(
+    options: &RssData,
+) -> Result<String, Box<dyn Error>> {
     let mut writer = Writer::new(Vec::new());
 
     // Write the XML declaration.
-    writer.write_event(Event::Decl(BytesDecl::new("1.0", Some("utf-8"), None)))?;
+    writer.write_event(Event::Decl(
+        BytesDecl::new("1.0", Some("utf-8"), None)
+    ))?;
 
     // Start the `rss` element.
     let mut rss_start = BytesStart::new("rss");
     rss_start.push_attribute(("version", "2.0"));
-    rss_start.push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
+    rss_start
+        .push_attribute(("xmlns:atom", "http://www.w3.org/2005/Atom"));
     writer.write_event(Event::Start(rss_start))?;
 
     // Start the `channel` element.
@@ -57,24 +62,58 @@ pub fn generate_rss(options: &RssData) -> Result<String, Box<dyn Error>> {
 }
 
 /// Write the specified elements to the writer.
-pub fn write_elements<W: std::io::Write>(writer: &mut Writer<W>, options: &RssData) -> Result<(), Box<dyn Error>> {
+pub fn write_elements<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    options: &RssData,
+) -> Result<(), Box<dyn Error>> {
     macro_write_element!(writer, "title", escape(&options.title))?;
     macro_write_element!(writer, "link", escape(&options.link))?;
-    macro_write_element!(writer, "description", escape(&options.description))?;
-    macro_write_element!(writer, "language", escape(&options.language))?;
+    macro_write_element!(
+        writer,
+        "description",
+        escape(&options.description)
+    )?;
+    macro_write_element!(
+        writer,
+        "language",
+        escape(&options.language)
+    )?;
     macro_write_element!(writer, "pubDate", escape(&options.pub_date))?;
-    macro_write_element!(writer, "lastBuildDate", escape(&options.last_build_date))?;
+    macro_write_element!(
+        writer,
+        "lastBuildDate",
+        escape(&options.last_build_date)
+    )?;
     macro_write_element!(writer, "docs", escape(&options.docs))?;
-    macro_write_element!(writer, "generator", escape(&options.generator))?;
-    macro_write_element!(writer, "managingEditor", escape(&options.managing_editor))?;
-    macro_write_element!(writer, "webMaster", escape(&options.webmaster))?;
-    macro_write_element!(writer, "category", escape(&options.category))?;
+    macro_write_element!(
+        writer,
+        "generator",
+        escape(&options.generator)
+    )?;
+    macro_write_element!(
+        writer,
+        "managingEditor",
+        escape(&options.managing_editor)
+    )?;
+    macro_write_element!(
+        writer,
+        "webMaster",
+        escape(&options.webmaster)
+    )?;
+    macro_write_element!(
+        writer,
+        "category",
+        escape(&options.category)
+    )?;
     macro_write_element!(writer, "ttl", escape(&options.ttl))?;
     Ok(())
 }
 
 /// Write the image element to the writer.
-pub fn write_image_element<W: std::io::Write>(writer: &mut Writer<W>, options: &RssData) -> Result<(), Box<dyn Error>> {
+pub fn write_image_element<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    options: &RssData,
+) -> Result<(), Box<dyn Error>> {
     writer.write_event(Event::Start(BytesStart::new("image")))?;
     macro_write_element!(writer, "url", &options.image)?;
     macro_write_element!(writer, "title", &options.title)?;
@@ -84,12 +123,14 @@ pub fn write_image_element<W: std::io::Write>(writer: &mut Writer<W>, options: &
 }
 
 /// Write the Atom link element to the writer.
-pub fn write_atom_link_element<W: std::io::Write>(writer: &mut Writer<W>, options: &RssData) -> Result<(), Box<dyn Error>> {
+pub fn write_atom_link_element<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    options: &RssData,
+) -> Result<(), Box<dyn Error>> {
     let mut atom_link_start = BytesStart::new("atom:link");
-    atom_link_start.push_attribute((
-        "href",
-        options.atom_link.to_string().as_str(),
-    ));
+    atom_link_start.push_attribute(
+        ("href", options.atom_link.to_string().as_str())
+    );
     atom_link_start.push_attribute(("rel", "self"));
     atom_link_start.push_attribute(("type", "application/rss+xml"));
     writer.write_event(Event::Empty(atom_link_start))?;
@@ -97,13 +138,24 @@ pub fn write_atom_link_element<W: std::io::Write>(writer: &mut Writer<W>, option
 }
 
 /// Write the `item` element.
-pub fn write_item_element<W: std::io::Write>(writer: &mut Writer<W>, options: &RssData) -> Result<(), Box<dyn Error>> {
+pub fn write_item_element<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    options: &RssData,
+) -> Result<(), Box<dyn Error>> {
     writer.write_event(Event::Start(BytesStart::new("item")))?;
     macro_write_element!(writer, "author", escape(&options.author))?;
-    macro_write_element!(writer, "description", escape(&options.item_description))?;
+    macro_write_element!(
+        writer,
+        "description",
+        escape(&options.item_description)
+    )?;
     macro_write_element!(writer, "guid", escape(&options.item_guid))?;
     macro_write_element!(writer, "link", escape(&options.item_link))?;
-    macro_write_element!(writer, "pubDate", escape(&options.item_pub_date))?;
+    macro_write_element!(
+        writer,
+        "pubDate",
+        escape(&options.item_pub_date)
+    )?;
     macro_write_element!(writer, "title", escape(&options.item_title))?;
     writer.write_event(Event::End(BytesEnd::new("item")))?;
     Ok(())
