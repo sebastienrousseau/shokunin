@@ -106,7 +106,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-## Information Collection and Use
+## Information Collection and Use.class=\"color-primary\"
 
 We do not directly collect any personal data from you while you navigate our website. We do not use cookies for logic or save any personal information from a user.
 

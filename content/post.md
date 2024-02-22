@@ -110,7 +110,7 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ## Starter Templates
 
-All the starter templates, whether pages or websites are built from scratch
+.class=\"fw-bold\"All the starter templates, whether pages or websites are built from scratch
 using the same principles and features. This means that you can easily mix and
 match them together to create your own custom layouts and content.
 
@@ -127,7 +127,7 @@ your website or web application. Our templates are designed to be flexible and e
 
 #### Getting Started
 
-To get started, select a template that suits your project's needs. Customize it with your content, style, and functionality.
+.class=\"fw-bold text-danger\"To get started, select a template that suits your project's needs. Customize it with your content, style, and functionality.
 
 1. **Choose a Template**: Browse through our collection and pick a starting point.
 2. **Customize**: Modify the layout, add your content, and tweak the styles.
@@ -135,7 +135,7 @@ To get started, select a template that suits your project's needs. Customize it 
 
 ### Websites
 
-Building a website from scratch can be a daunting task, but our starter templates make it simple and straightforward.
+.class=\"display-1\"Building a website from scratch can be a daunting task, but our starter templates make it simple and straightforward.
 
 
 ![Nature shinning][00].class=\"img-fluid w-50 float-end p-5 mb-3\"

@@ -9,7 +9,6 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-
 /// Ensures a directory exists, creating it if necessary.
 ///
 /// This function takes a reference to a `Path` object for a directory and a
@@ -270,7 +269,7 @@ pub fn format_header_with_id_class(
             .next()
             .unwrap_or("")
             .to_lowercase();
-
+    let aria_label = to_title_case(first_word.as_str());
     for c in header_str.chars() {
         if !in_header_tag {
             formatted_header_str.push(c);
@@ -280,9 +279,10 @@ pub fn format_header_with_id_class(
         } else {
             if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
-                    " id=\"{}-{}\" tabindex=\"0\" {}",
+                    " id=\"{}-{}\" tabindex=\"0\" aria-label=\"{} Heading\" {}",
                     header_type,
-                    id_regex.replace_all(&first_word, "-"),
+                    first_word,
+                    id_regex.replace_all(&aria_label, "-"),
                     if header_type == "h1" {
                         "itemprop=\"headline\""
                     } else {

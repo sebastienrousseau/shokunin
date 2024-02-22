@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
+
 use crate::utilities::directory::{
     create_comrak_options, extract_front_matter,
     format_header_with_id_class, update_class_attributes,
@@ -10,33 +11,22 @@ use comrak::{markdown_to_html, ComrakOptions};
 use regex::{Captures, Regex};
 use std::error::Error;
 
-/// ## Function: `generate_html` - Generates an HTML page from Markdown
+/// Generates an HTML page from Markdown content, title, and description.
 ///
-/// Generates an HTML page from the given Markdown content, title, and
-/// description.
+/// # Arguments
 ///
-/// This function takes in a Markdown string `content`, as well as a
-/// `title` and `description` string to use for the HTML page. The
-/// function converts the Markdown content to HTML using the Comrak
-/// library, and adds a header and subheader to the HTML page using the
-/// title and description strings, respectively.
+/// * `content` - A string slice containing the Markdown content.
+/// * `title` - A string slice containing the title of the HTML page.
+/// * `description` - A string slice containing the description of the HTML page.
+/// * `json_content` - An optional string slice containing JSON content to be included in the HTML.
 ///
-/// If `content` begins with front matter (denoted by "---\n"), the
-/// front matter is skipped and only the Markdown content below it is
-/// used to generate the HTML. If `title` or `description` are empty
-/// strings, they are not included in the generated HTML page.
+/// # Returns
 ///
-/// The function handles errors more gracefully, returning a `Result`
-/// instead of panicking in cases where processing fails.
-///
-/// An optional JSON content string can be provided and will be included
-/// in the generated HTML if present.
-///
-/// The resulting HTML page is returned as a string.
+/// A `Result` containing a `String` representing the generated HTML page if successful, or a `Box<dyn Error>` if an error occurs.
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
 /// use ssg::modules::html::generate_html;
 ///
 /// let content = "## Hello, world!\n\nThis is a test.";
@@ -45,7 +35,7 @@ use std::error::Error;
 /// let html = generate_html(content, title, description, None);
 /// let html_str = html.unwrap_or_else(|e| panic!("Error: {:?}", e));
 ///
-/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n");
+/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" aria-label=\"Hello Heading\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n");
 /// ```
 pub fn generate_html(
     content: &str,
@@ -53,25 +43,27 @@ pub fn generate_html(
     description: &str,
     json_content: Option<&str>,
 ) -> Result<String, Box<dyn Error>> {
+    // Regex patterns for ID, class, and image tags
     let id_regex = Regex::new(r"[^a-zA-Z0-9]+")?;
-    let class_regex = Regex::new(r"\.class=&quot;([^&]+)&quot;")?;
+    let class_regex = Regex::new(r#"\.class=&quot;([^&"]+)&quot;"#)?;
     let img_regex = Regex::new(r"(<img[^>]*?)(/?>)")?;
 
-    // 1. Preprocess the content
+    // Extract front matter from content
     let markdown_content = extract_front_matter(content);
+    // Preprocess content to update class attributes and image tags
     let processed_content =
         preprocess_content(markdown_content, &class_regex, &img_regex)?;
 
-    // 2. Convert Markdown to HTML
+    // Convert Markdown to HTML
     let options = create_comrak_options();
     let markdown_html =
-        convert_markdown_to_html(&processed_content, &options);
+        convert_markdown_to_html(&processed_content, &options)?;
 
-    // 3. Post-process the HTML
+    // Post-process HTML content
     let processed_html =
         post_process_html(&markdown_html, &class_regex, &img_regex)?;
 
-    // 4. Generate headers and descriptions
+    // Generate header and description
     let header = generate_header(title, &id_regex);
     let desc = generate_description(description);
 
@@ -99,29 +91,29 @@ pub fn generate_html(
         || "".to_string(),
         |json_str| format!("<p>{}</p>", json_str),
     );
+
     Ok(format!("{}{}{}{}", header, desc, json_html, html_string))
 }
 
 /// Generate header HTML string based on title
 ///
-/// This function takes a title string and a compiled regular expression (id_regex) and
-/// generates an HTML header tag (<h1>) with the given title.
+/// # Arguments
 ///
-/// Arguments:
-/// * `title`: A string slice that holds the title to be included in the header tag.
-/// * `id_regex`: A reference to a compiled Regex object used for processing the header string.
+/// * `title` - A string slice that holds the title to be included in the header tag.
+/// * `id_regex` - A reference to a compiled Regex object used for processing the header string.
 ///
-/// Returns:
+/// # Returns
+///
 /// A `String` that represents the HTML <h1> header tag with the title.
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust
 /// use regex::Regex;
 /// use ssg::modules::html::generate_header;
 /// let id_regex = Regex::new(r"[^a-zA-Z0-9]+").unwrap();
 /// let header_html = generate_header("My Page Title", &id_regex);
-/// assert_eq!(header_html, "<h1 id=\"h1-my\" tabindex=\"0\" itemprop=\"headline\" id=\"\" class=\"my\">My Page Title</h1>");
+/// assert_eq!(header_html, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page Title</h1>");
 /// ```
 pub fn generate_header(title: &str, id_regex: &Regex) -> String {
     // Check if the title is empty. If so, return an empty string as no header is needed.
@@ -130,7 +122,7 @@ pub fn generate_header(title: &str, id_regex: &Regex) -> String {
     }
 
     // Format the title into an HTML <h1> tag. Initially, the id attribute is left empty.
-    let header_str = format!("<h1 id=\"\">{}</h1>", title);
+    let header_str = format!("<h1>{}</h1>", title);
 
     // Call format_header_with_id_class function to add appropriate id and class attributes
     // based on the id_regex. This function is expected to process the header string and
@@ -207,11 +199,9 @@ pub fn preprocess_content(
 pub fn convert_markdown_to_html(
     markdown_content: &str,
     options: &ComrakOptions,
-) -> String {
+) -> Result<String, Box<dyn Error>> {
     let html_content = markdown_to_html(markdown_content, options);
-
-    // Return the HTML content
-    html_content.to_string()
+    Ok(html_content.to_string())
 }
 
 /// Post-processes HTML content by performing various transformations.
@@ -248,87 +238,59 @@ pub fn post_process_html(
     class_regex: &Regex,
     img_regex: &Regex,
 ) -> Result<String, Box<dyn Error>> {
-    let mut processed_html = String::new();
-
     // Pre-compiled regex for alt and title attributes (outside the loop for efficiency)
     let alt_regex = Regex::new(r#"alt="([^"]*)""#)
         .map_err(|e| format!("Failed to compile alt regex: {}", e))?;
-    let title_regex = Regex::new(r#"title="([^"]*)""#)
+    let _title_regex = Regex::new(r#"title="([^"]*)""#)
         .map_err(|e| format!("Failed to compile title regex: {}", e))?;
+
+    let mut processed_html = String::new();
 
     for line in html.lines() {
         let mut processed_line = line.to_string();
+        let mut modified_line = processed_line.clone();
 
-        // Process class attributes
-        if let Some(class_value) = class_regex
-            .captures(&processed_line)
-            .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str().to_string())
-        {
-            // Process class attributes: Either remove or modify them
-            processed_line = class_regex
-                .replace_all(&processed_line, "")
-                .to_string(); // Adjust this line as needed
-            processed_line =
-                img_regex
-                    .replace(
-                        &processed_line,
-                        &format!("$1 class=\"{}\"$2", class_value),
-                    )
-                    .to_string();
+        for class_captures in class_regex.captures_iter(&processed_line) {
+            let class_attribute = class_captures.get(1).unwrap().as_str();
+            modified_line = class_regex.replace(
+                &modified_line,
+                format!("<p class=\"{}\">", class_attribute).as_str(),
+            ).to_string();
         }
 
-        // Process <img> tags
-        processed_line = img_regex
-            .replace_all(&processed_line, |caps: &Captures| {
-                let img_tag_start = &caps[1];
-                let img_tag_end = &caps[2];
+        if let Some(class_value) =
+            img_regex.captures(&processed_line).and_then(|caps| caps.get(1)).map(|m| m.as_str().to_string())
+        {
+            modified_line =
+            img_regex.replace(&modified_line, &class_value.to_string()).to_string();
 
-                let mut new_img_tag = img_tag_start.to_string();
+        }
 
-                // Extract the value of the alt attribute and convert it to lowercase
-                let alt_value = alt_regex
-                    .captures(img_tag_start)
-                    .map_or(String::new(), |c| {
-                        c.get(1).map_or(String::new(), |m| {
-                            m.as_str().to_lowercase()
-                        })
-                    });
+        processed_line = modified_line;
 
-                // Check if 'title' is present; if not, add it. If it is, replace it with the alt value
-                if new_img_tag.contains("title=") {
-                    let title_prefix = if !alt_value.is_empty() {
-                        "Image of "
-                    } else {
-                        ""
-                    };
-                    let max_alt_length = 66 - title_prefix.len();
+        processed_line = img_regex.replace_all(&processed_line, |caps: &Captures| {
+            let img_tag_start = &caps[1];
+            let img_tag_end = &caps[2];
 
-                    let alt_substr = alt_value
-                        .chars()
-                        .take(max_alt_length)
-                        .collect::<String>();
-                    new_img_tag = title_regex
-                        .replace(
-                            &new_img_tag,
-                            format!(
-                                r#"title="{}{}""#,
-                                title_prefix, alt_substr
-                            ),
-                        )
-                        .to_string();
-                } else if !alt_value.is_empty() {
-                    // Add 'title' attribute if it's missing
-                    new_img_tag.push_str(
-                        &format!(" title=\"Image of {}\"", alt_value)
-                    );
-                }
+            let mut new_img_tag = img_tag_start.to_string();
 
-                // Append the closure of the tag
-                new_img_tag.push_str(img_tag_end);
-                new_img_tag
-            })
-            .to_string();
+            let alt_value = alt_regex
+                .captures(img_tag_start)
+                .map_or(String::new(), |c| {
+                    c.get(1).map_or(String::new(), |m| m.as_str().to_lowercase())
+                });
+
+            if !new_img_tag.contains("title=") && !alt_value.is_empty() {
+                let title_prefix = "Image of ";
+                let max_alt_length = 66 - title_prefix.len();
+
+                let alt_substr = alt_value.chars().take(max_alt_length).collect::<String>();
+                new_img_tag.push_str(&format!(" title=\"{}\"", alt_substr));
+            }
+
+            new_img_tag.push_str(img_tag_end);
+            new_img_tag
+        }).to_string();
 
         processed_html.push_str(&processed_line);
         processed_html.push('\n');
