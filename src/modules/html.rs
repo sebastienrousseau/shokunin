@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 extern crate regex;
+extern crate image;
 
 use crate::utilities::directory::{
     create_comrak_options, extract_front_matter,
     format_header_with_id_class, update_class_attributes,
 };
 use comrak::{markdown_to_html, ComrakOptions};
+
+
+use pulldown_cmark::{Event, Parser, Tag};
 use regex::{Captures, Regex};
 use std::error::Error;
 
@@ -69,22 +73,7 @@ pub fn generate_html(
 
     // Process headers in HTML
     let header_tags = vec!["h1", "h2", "h3", "h4", "h5", "h6"];
-    let mut html_string = processed_html;
-    for tag in header_tags {
-        let re = Regex::new(&format!("<{}>([^<]+)</{}>", tag, tag))?;
-        let mut replacements: Vec<(String, String)> = Vec::new();
-
-        for cap in re.captures_iter(&html_string) {
-            let original = cap[0].to_string();
-            let replacement =
-                format_header_with_id_class(&original, &re);
-            replacements.push((original, replacement));
-        }
-
-        for (original, replacement) in replacements {
-            html_string = html_string.replace(&original, &replacement);
-        }
-    }
+    let html_string = process_headers(&processed_html, &header_tags, &id_regex);
 
     // Construct the final HTML with JSON content if available
     let json_html = json_content.map_or_else(
@@ -93,6 +82,80 @@ pub fn generate_html(
     );
 
     Ok(format!("{}{}{}{}", header, desc, json_html, html_string))
+}
+
+fn process_headers(
+    html: &str,
+    header_tags: &[&str],
+    _id_regex: &Regex,
+) -> String {
+    let mut html_string = html.to_string();
+    for tag in header_tags {
+        let re = Regex::new(&format!("<{}>([^<]+)</{}>", tag, tag)).unwrap();
+        let mut replacements: Vec<(String, String)> = Vec::new();
+
+        for cap in re.captures_iter(&html_string) {
+            let original = cap[0].to_string();
+            let replacement = format_header_with_id_class(&original, &re);
+            replacements.push((original, replacement));
+        }
+
+        for (original, replacement) in replacements {
+            html_string = html_string.replace(&original, &replacement);
+        }
+    }
+    html_string
+}
+
+/// Generate a plain text representation of the Markdown content.
+///
+pub fn generate_plain_text(
+    content: &str,
+) -> Result<String, Box<dyn Error>> {
+    // Regex patterns for class, and image tags
+    let class_regex = Regex::new(r#"\.class\s*=\s*"\s*[^"]*"\s*"#)?;
+    let img_regex = Regex::new(r"(<img[^>]*?)(/?>)")?;
+    let link_ref_regex = Regex::new(r"\[([^\]]+)\]\[\d+\]")?;
+
+    // Extract front matter from content
+    let markdown_content = extract_front_matter(content);
+    // Preprocess content to update class attributes and image tags
+    let processed_content =
+        preprocess_content(markdown_content, &class_regex, &img_regex)?;
+
+    // Further preprocess to remove Markdown link references.
+    let no_markdown_links = link_ref_regex.replace_all(&processed_content, "$1");
+
+    let mut plain_text = String::new();
+    let parser = Parser::new(&no_markdown_links);
+
+    let mut last_was_text = false;
+    let mut need_extra_line_break = false;
+
+    for event in parser {
+        match event {
+            Event::Text(text) => {
+                if need_extra_line_break && !text.trim().is_empty() {
+                    plain_text.push('\n');
+                    need_extra_line_break = false;
+                }
+                if last_was_text && !text.trim().is_empty() {
+                    plain_text.push('\n');
+                }
+                plain_text.push_str(text.trim_end());
+                last_was_text = true;
+            }
+            Event::Start(tag) => {
+                if tag == Tag::Paragraph && last_was_text {
+                    need_extra_line_break = true;
+                    plain_text.push('\n');
+                }
+                last_was_text = false;
+            },
+            _ => {}
+        }
+    }
+    Ok(plain_text)
 }
 
 /// Generate header HTML string based on title
@@ -116,17 +179,11 @@ pub fn generate_html(
 /// assert_eq!(header_html, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page Title</h1>");
 /// ```
 pub fn generate_header(title: &str, id_regex: &Regex) -> String {
-    // Check if the title is empty. If so, return an empty string as no header is needed.
     if title.is_empty() {
         return String::new();
     }
 
-    // Format the title into an HTML <h1> tag. Initially, the id attribute is left empty.
     let header_str = format!("<h1>{}</h1>", title);
-
-    // Call format_header_with_id_class function to add appropriate id and class attributes
-    // based on the id_regex. This function is expected to process the header string and
-    // return the final HTML header tag string with id and possibly class attributes set.
     format_header_with_id_class(&header_str, id_regex)
 }
 
@@ -173,7 +230,6 @@ pub fn preprocess_content(
     class_regex: &Regex,
     img_regex: &Regex,
 ) -> Result<String, Box<dyn Error>> {
-    // Map each line in the content through the update_class_attributes function
     let processed_content: Vec<String> = content
         .lines()
         .map(|line| {
@@ -181,7 +237,6 @@ pub fn preprocess_content(
         })
         .collect();
 
-    // Join the processed lines back into a single string
     Ok(processed_content.join("\n"))
 }
 
@@ -238,7 +293,6 @@ pub fn post_process_html(
     class_regex: &Regex,
     img_regex: &Regex,
 ) -> Result<String, Box<dyn Error>> {
-    // Pre-compiled regex for alt and title attributes (outside the loop for efficiency)
     let alt_regex = Regex::new(r#"alt="([^"]*)""#)
         .map_err(|e| format!("Failed to compile alt regex: {}", e))?;
     let _title_regex = Regex::new(r#"title="([^"]*)""#)
@@ -250,47 +304,66 @@ pub fn post_process_html(
         let mut processed_line = line.to_string();
         let mut modified_line = processed_line.clone();
 
-        for class_captures in class_regex.captures_iter(&processed_line) {
-            let class_attribute = class_captures.get(1).unwrap().as_str();
-            modified_line = class_regex.replace(
-                &modified_line,
-                format!("<p class=\"{}\">", class_attribute).as_str(),
-            ).to_string();
+        for class_captures in class_regex.captures_iter(&processed_line)
+        {
+            let class_attribute =
+                class_captures.get(1).unwrap().as_str();
+            modified_line = class_regex
+                .replace(
+                    &modified_line,
+                    format!("<p class=\"{}\">", class_attribute)
+                        .as_str(),
+                )
+                .to_string();
         }
 
-        if let Some(class_value) =
-            img_regex.captures(&processed_line).and_then(|caps| caps.get(1)).map(|m| m.as_str().to_string())
+        if let Some(class_value) = img_regex
+            .captures(&processed_line)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().to_string())
         {
-            modified_line =
-            img_regex.replace(&modified_line, &class_value.to_string()).to_string();
-
+            modified_line = img_regex
+                .replace(&modified_line, &class_value.to_string())
+                .to_string();
         }
 
         processed_line = modified_line;
 
-        processed_line = img_regex.replace_all(&processed_line, |caps: &Captures| {
-            let img_tag_start = &caps[1];
-            let img_tag_end = &caps[2];
+        processed_line =
+            img_regex
+                .replace_all(&processed_line, |caps: &Captures| {
+                    let img_tag_start = &caps[1];
+                    let img_tag_end = &caps[2];
 
-            let mut new_img_tag = img_tag_start.to_string();
+                    let mut new_img_tag = img_tag_start.to_string();
 
-            let alt_value = alt_regex
-                .captures(img_tag_start)
-                .map_or(String::new(), |c| {
-                    c.get(1).map_or(String::new(), |m| m.as_str().to_lowercase())
-                });
+                    let alt_value = alt_regex
+                        .captures(img_tag_start)
+                        .map_or(String::new(), |c| {
+                            c.get(1).map_or(String::new(), |m| {
+                                m.as_str().to_lowercase()
+                            })
+                        });
 
-            if !new_img_tag.contains("title=") && !alt_value.is_empty() {
-                let title_prefix = "Image of ";
-                let max_alt_length = 66 - title_prefix.len();
+                    if !new_img_tag.contains("title=")
+                        && !alt_value.is_empty()
+                    {
+                        let title_prefix = "Image of ";
+                        let max_alt_length = 66 - title_prefix.len();
 
-                let alt_substr = alt_value.chars().take(max_alt_length).collect::<String>();
-                new_img_tag.push_str(&format!(" title=\"{}\"", alt_substr));
-            }
+                        let alt_substr = alt_value
+                            .chars()
+                            .take(max_alt_length)
+                            .collect::<String>();
+                        new_img_tag.push_str(
+                            &format!(" title=\"{}\"", alt_substr)
+                        );
+                    }
 
-            new_img_tag.push_str(img_tag_end);
-            new_img_tag
-        }).to_string();
+                    new_img_tag.push_str(img_tag_end);
+                    new_img_tag
+                })
+                .to_string();
 
         processed_html.push_str(&processed_line);
         processed_html.push('\n');

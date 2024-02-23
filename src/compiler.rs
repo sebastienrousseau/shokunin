@@ -9,7 +9,7 @@ use crate::{
     models::data::{FileData, PageData, RssData},
     modules::{
         cname::create_cname_data,
-        html::generate_html,
+        html::{generate_html, generate_plain_text},
         human::create_human_data,
         json::{cname, human, sitemap, txt},
         manifest::create_manifest_data,
@@ -26,6 +26,7 @@ use crate::{
         write::write_files_to_build_directory,
     },
 };
+use crate::modules::pdf::generate_pdf;
 use std::{collections::HashMap, error::Error, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -91,6 +92,36 @@ pub fn compile(
                 );
                 String::from("Fallback HTML content")
             });
+
+            // Generate PDF
+            let text_content = generate_plain_text(
+                &file.content,
+            )
+            .unwrap_or_else(|err| {
+                let description =
+                    format!("Error generating Plain Text: {:?}", err);
+                macro_log_info!(
+                    &ERROR,
+                    "compiler.rs - Line 107",
+                    &description,
+                    &LogFormat::CLF
+                );
+                String::from("Fallback Plain Text content")
+            });
+            // print!("Text Content: {:?}", text_content);
+
+            let filename_without_extension = Path::new(&file.name)
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or(&file.name);
+                // println!("File Name: {}", filename_without_extension);
+
+            if let Err(err) = generate_pdf(&text_content, "pdfs", filename_without_extension) {
+                let description = format!("Error generating PDF: {:?}", err);
+                macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
+                // Handle the error here, for example, return early or log it
+            }
+
 
             // Create page options
             let mut page_options = PageOptions::new();

@@ -31,6 +31,9 @@ pub mod metadata;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
 
+/// The `pdf` module contains functions for generating PDFs.
+pub mod pdf;
+
 /// The `rss` module contains functions for generating RSS feeds.
 pub mod rss;
 
