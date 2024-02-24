@@ -6,6 +6,7 @@ mod tests {
         utilities::directory::format_header_with_id_class,
     };
     use ssg::modules::postprocessor::post_process_html;
+    use ssg::modules::html::HtmlGenerationError;
 
     #[test]
     fn test_generate_html_with_front_matter() {
@@ -40,10 +41,15 @@ mod tests {
         let title = "";
         let description = "Say hi to the world!";
         let result = generate_html(content, title, description, None);
-        let expected = "<p>Say hi to the world!</p><h1 id=\"h1-welcome\" tabindex=\"0\" aria-label=\"Welcome Heading\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
-            Ok(res) => assert_eq!(res.trim(), expected),
-            Err(e) => panic!("Error: {:?}", e),
+            Ok(_) => panic!("Expected an error but got Ok"),
+            Err(e) => {
+                if let HtmlGenerationError::EmptyTitle = e {
+                    // Test passed
+                } else {
+                    panic!("Unexpected error: {:?}", e);
+                }
+            }
         }
     }
 
@@ -53,10 +59,15 @@ mod tests {
         let title = "Welcome";
         let description = "";
         let result = generate_html(content, title, description, None);
-        let expected = "<h1 id=\"h1-welcome\" tabindex=\"0\" aria-label=\"Welcome Heading\" itemprop=\"headline\" class=\"welcome\">Welcome</h1><h1 id=\"h1-welcome\" tabindex=\"0\" aria-label=\"Welcome Heading\" itemprop=\"headline\" class=\"welcome\">Welcome</h1>";
         match result {
-            Ok(res) => assert_eq!(res.trim(), expected),
-            Err(e) => panic!("Error: {:?}", e),
+            Ok(_) => panic!("Expected an error but got Ok"),
+            Err(e) => {
+                if let HtmlGenerationError::EmptyDescription = e {
+                    // Test passed
+                } else {
+                    panic!("Unexpected error: {:?}", e);
+                }
+            }
         }
     }
 

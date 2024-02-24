@@ -1,12 +1,48 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::{modules::{markdown::convert_markdown_to_html, postprocessor::post_process_html}, utilities::directory::{
-    create_comrak_options, extract_front_matter,
-    format_header_with_id_class, update_class_attributes,
-}};
+use crate::{
+    modules::{
+        markdown::convert_markdown_to_html,
+        postprocessor::post_process_html,
+    },
+    utilities::directory::{
+        extract_front_matter,
+        format_header_with_id_class, update_class_attributes,
+    },
+};
 use regex::Regex;
-use std::error::Error;
+
+/// Error enum for HTML generation.
+#[derive(Debug)]
+pub enum HtmlGenerationError {
+    /// Title cannot be empty
+    EmptyTitle,
+    /// Description cannot be empty
+    EmptyDescription,
+    /// Regex compilation error
+    RegexCompilationError(regex::Error),
+}
+
+impl std::fmt::Display for HtmlGenerationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::EmptyTitle => write!(f, "Title cannot be empty."),
+            Self::EmptyDescription => write!(f, "Description cannot be empty."),
+            Self::RegexCompilationError(ref err) => {
+                write!(f, "Regex compilation error: {}", err)
+            }
+        }
+    }
+}
+
+impl std::error::Error for HtmlGenerationError {}
+
+impl From<regex::Error> for HtmlGenerationError {
+    fn from(err: regex::Error) -> Self {
+        Self::RegexCompilationError(err)
+    }
+}
 
 /// Generates an HTML page from Markdown content, title, and description.
 ///
@@ -19,13 +55,12 @@ use std::error::Error;
 ///
 /// # Returns
 ///
-/// A `Result` containing a `String` representing the generated HTML page if successful, or a `Box<dyn Error>` if an error occurs.
+/// A `Result` containing a `String` representing the generated HTML page if successful, or a `HtmlGenerationError` if an error occurs.
 ///
 /// # Examples
 ///
 /// ```rust
 /// use ssg::modules::html::generate_html;
-/// use ssg::modules::postprocessor::post_process_html;
 ///
 /// let content = "## Hello, world!\n\nThis is a test.";
 /// let title = "My Page";
@@ -40,7 +75,16 @@ pub fn generate_html(
     title: &str,
     description: &str,
     json_content: Option<&str>,
-) -> Result<String, Box<dyn Error>> {
+) -> Result<String, HtmlGenerationError> {
+    // Validate arguments
+    if title.is_empty() {
+        return Err(HtmlGenerationError::EmptyTitle);
+    }
+
+    if description.is_empty() {
+        return Err(HtmlGenerationError::EmptyDescription);
+    }
+
     // Regex patterns for ID, class, and image tags
     let id_regex = Regex::new(r"[^a-zA-Z0-9]+")?;
     let class_regex = Regex::new(r#"\.class=&quot;([^&"]+)&quot;"#)?;
@@ -48,21 +92,27 @@ pub fn generate_html(
 
     // Extract front matter from content
     let markdown_content = extract_front_matter(content);
+
     // Preprocess content to update class attributes and image tags
     let processed_content =
         preprocess_content(markdown_content, &class_regex, &img_regex)?;
 
     // Convert Markdown to HTML
-    let options = create_comrak_options();
     let markdown_html =
-        convert_markdown_to_html(&processed_content, &options)?;
+        convert_markdown_to_html(&processed_content, &Default::default());
+
+    // Unwrap the Result to get the String
+    let markdown_html = markdown_html.unwrap();
 
     // Post-process HTML content
     let processed_html =
-        post_process_html(&markdown_html, &class_regex, &img_regex)?;
+        post_process_html(&markdown_html, &class_regex, &img_regex);
+    
+    // Unwrap the Result to get the String
+    let processed_html = processed_html.unwrap();
 
-    // Generate header and description
-    let header = generate_header(title, &id_regex);
+    // Generate page header and description
+    let header = generate_page_header(title, &id_regex);
     let desc = generate_description(description);
 
     // Process headers in HTML
@@ -76,6 +126,45 @@ pub fn generate_html(
     );
 
     Ok(format!("{}{}{}{}", header, desc, json_html, html_string))
+}
+
+/// Preprocesses the HTML content to update class attributes and image tags.
+///
+/// # Arguments
+///
+/// * `content` - A string containing the HTML content to be processed.
+/// * `class_regex` - A reference to a `Regex` object for matching class attributes.
+/// * `img_regex` - A reference to a `Regex` object for matching image tags.
+///
+/// # Returns
+///
+/// A `Result` containing a `String` with the processed HTML content, or a `HtmlGenerationError` if an error occurs.
+///
+/// # Example
+///
+/// ```rust
+/// use regex::Regex;
+/// use ssg::modules::html::preprocess_content;
+///
+/// let content = "<div class=\"some-class\">...</div>";
+/// let class_regex = Regex::new(r#".class="([^"]+)""#).unwrap();
+/// let img_regex = Regex::new(r#"<img([^>]+)>"#).unwrap();
+///
+/// let processed_content = preprocess_content(content, &class_regex, &img_regex).unwrap();
+/// println!("{}", processed_content);
+/// ```
+pub fn preprocess_content(
+    content: &str,
+    class_regex: &Regex,
+    img_regex: &Regex,
+) -> Result<String, HtmlGenerationError> {
+    let processed_content: Vec<String> = content
+        .lines()
+        .map(|line| {
+            update_class_attributes(line, class_regex, img_regex)
+        })
+        .collect();
+    Ok(processed_content.join("\n"))
 }
 
 fn process_headers(
@@ -101,7 +190,7 @@ fn process_headers(
     html_string
 }
 
-/// Generate header HTML string based on title
+/// Generate page header HTML string based on title
 ///
 /// # Arguments
 ///
@@ -116,69 +205,17 @@ fn process_headers(
 ///
 /// ```rust
 /// use regex::Regex;
-/// use ssg::modules::html::generate_header;
+/// use ssg::modules::html::generate_page_header;
 /// let id_regex = Regex::new(r"[^a-zA-Z0-9]+").unwrap();
-/// let header_html = generate_header("My Page Title", &id_regex);
+/// let header_html = generate_page_header("My Page Title", &id_regex);
 /// assert_eq!(header_html, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page Title</h1>");
 /// ```
-pub fn generate_header(title: &str, id_regex: &Regex) -> String {
-    if title.is_empty() {
-        return String::new();
-    }
-
+pub fn generate_page_header(title: &str, id_regex: &Regex) -> String {
     let header_str = format!("<h1>{}</h1>", title);
     format_header_with_id_class(&header_str, id_regex)
 }
 
 /// Generate description HTML string based on description
 fn generate_description(description: &str) -> String {
-    if description.is_empty() {
-        return String::new();
-    }
     format!("<p>{}</p>", description)
-}
-
-/// Preprocesses the HTML content to update class attributes and image tags.
-///
-/// # Arguments
-///
-/// * `content` - A string containing the HTML content to be processed.
-/// * `class_regex` - A reference to a `Regex` object for matching class attributes.
-/// * `img_regex` - A reference to a `Regex` object for matching image tags.
-///
-/// # Returns
-///
-/// A `Result` containing a `String` with the processed HTML content, or a `Box<dyn Error>` if an error occurs.
-///
-/// # Example
-///
-/// ```rust
-/// use regex::Regex;
-/// use std::error::Error;
-/// use ssg::modules::html::preprocess_content;
-///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let content = "<div class=\"some-class\">...</div>";
-///     let class_regex = Regex::new(r#".class="([^"]+)""#)?;
-///     let img_regex = Regex::new(r#"<img([^>]+)>"#)?;
-///
-///     let processed_content = preprocess_content(content, &class_regex, &img_regex)?;
-///     println!("{}", processed_content);
-///
-///     Ok(())
-/// }
-/// ```
-pub fn preprocess_content(
-    content: &str,
-    class_regex: &Regex,
-    img_regex: &Regex,
-) -> Result<String, Box<dyn Error>> {
-    let processed_content: Vec<String> = content
-        .lines()
-        .map(|line| {
-            update_class_attributes(line, class_regex, img_regex)
-        })
-        .collect();
-    // println!("{}", processed_content.join("\n"));
-    Ok(processed_content.join("\n"))
 }
