@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.23-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.24-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.23"
+//! shokunin = "0.0.24"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -115,28 +115,37 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
+use crate::loggers::init_logger;
 use crate::utilities::serve::start;
-use term::cli::print_banner;
+use crate::utilities::uuid::generate_unique_string;
 use compiler::compile;
+use dtt::DateTime;
+use rlg::{macro_log, LogFormat, LogLevel};
+use std::fs::File;
+use std::io::Write;
 use std::{error::Error, path::Path};
+use term::cli::print_banner;
 
-    /// The `cli` module contains functions for the command-line interface.
-    pub mod term;
+/// The `cli` module contains functions for the command-line interface.
+pub mod term;
 
-    /// The `compiler` module contains functions for the compilation process.
-    pub mod compiler;
+/// The `compiler` module contains functions for the compilation process.
+pub mod compiler;
 
-    /// The `macros` module contains functions for generating macros.
-    pub mod macros;
+/// The `loggers` module contains the loggers for the library.
+pub mod loggers;
 
-    /// The `models` module contains the structs.
-    pub mod models;
+/// The `macros` module contains functions for generating macros.
+pub mod macros;
 
-    /// The `modules` module contains the application modules.
-    pub mod modules;
+/// The `models` module contains the structs.
+pub mod models;
 
-    /// The `utilities` module contains utility functions.
-    pub mod utilities;
+/// The `modules` module contains the application modules.
+pub mod modules;
+
+/// The `utilities` module contains utility functions.
+pub mod utilities;
 
 #[allow(non_camel_case_types)]
 
@@ -156,18 +165,69 @@ use std::{error::Error, path::Path};
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 pub fn run() -> Result<(), Box<dyn Error>> {
+    // Initialize the logger using the `env_logger` crate
+    init_logger(None)?;
+
+    // Define date and time
+    let date = DateTime::new();
+    let iso = date.iso_8601;
+
+    // Open the log file for appending
+    let mut log_file = File::create("./ssg.log")?;
+
     // Print the CLI banner and welcome message
     print_banner();
+
+    // Generate a log entry for the banner
+    let banner_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Banner printed successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
     let matches = term::cli::build()?;
     term::process::args(&matches)?;
+
+    // Generate a log entry for the arguments
+    let args_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        "Arguments processed successfully",
+        &LogFormat::CLF
+    );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", args_log)?;
 
     if let Some(site_name) = matches.get_one::<String>("new") {
         // Start the server using the specified server address and site name.
         // If an error occurs, propagate it up the call stack.
         macro_serve!("127.0.0.1:8000", site_name);
     }
+
+    // Generate a log entry for the server
+    let server_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Server started successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", server_log)?;
 
     // Set the build, content, site and template paths for the compile function.
     let build_path = Path::new("public");
@@ -177,6 +237,20 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Call the compile function with the above parameters to compile the site.
     compile(build_path, content_path, site_path, template_path)?;
+
+    // Generate a log entry for the compilation
+    let compile_log =
+        macro_log!(
+            &generate_unique_string(),
+            &iso,
+            &LogLevel::INFO,
+            "process",
+            "Site compiled successfully",
+            &LogFormat::CLF
+        );
+
+    // Write the log to both the console and the file
+    writeln!(log_file, "{}", compile_log)?;
 
     Ok(())
 }

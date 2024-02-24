@@ -1,3 +1,8 @@
+# Shokunin Static Site Generator (SSG)
+
+The fastest Rust-based Static Site Generator (SSG) for building professional
+websites and blogs.
+
 <!-- markdownlint-disable MD033 MD041 -->
 
 <img
@@ -11,10 +16,6 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator (SSG)
-
-The fastest Rust-based Static Site Generator (SSG) for building professional websites and blogs.
-
 *Part of the [Mini Functions][0] family of Rust libraries.*
 
 <!-- markdownlint-disable MD033 MD041 -->
@@ -23,9 +24,18 @@ The fastest Rust-based Static Site Generator (SSG) for building professional web
 
 ![Banner of the Shokunin Static Site Generator][banner]
 
-[![Made With Rust][made-with-rust-badge]][14] [![Crates.io][crates-badge]][8] [![Lib.rs][libs-badge]][10] [![Docs.rs][docs-badge]][9] [![License][license-badge]][3] [![Codecov][codecov-badge]][15]
+[![Made With Rust][made-with-rust-badge]][14]
+[![Crates.io][crates-badge]][8]
+[![Lib.rs][libs-badge]][10]
+[![Docs.rs][docs-badge]][9]
+[![License][license-badge]][3]
+[![Codecov][codecov-badge]][15]
 
-• [Website][1] • [Documentation][9] • [Report Bug][4] • [Request Feature][4] • [Contributing Guidelines][5]
+• [Website][1]
+• [Documentation][9]
+• [Report Bug][4]
+• [Request Feature][4]
+• [Contributing Guidelines][5]
 
 <!-- markdownlint-disable MD033 MD041 -->
 </center>
@@ -35,9 +45,12 @@ The fastest Rust-based Static Site Generator (SSG) for building professional web
 
 ## Overview
 
-Shokunin is a lightning-fast static site generator (SSG) that is optimised for Search Engine Optimisation (SEO) and fully aligned with Accessibility Standards.
+Shokunin is a lightning-fast static site generator (SSG) that is optimised for
+Search Engine Optimisation (SEO) and fully aligned with Accessibility Standards.
 
-The library extracts metadata and content to generate static HTML files from Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom templates to help you create high quality websites with ease.
+The library extracts metadata and content to generate static HTML files from
+Markdown, YAML, JSON, and TOML. It also supports HTML themes and custom
+templates to help you create high quality websites with ease.
 
 ## Features
 
@@ -50,8 +63,10 @@ Shokunin Static Site Generator (SSG) feature highlights include:
 - Generates Atom and RSS feeds for your blog posts.
 - Generates minified versions for optimal performance and SEO.
 - Includes a built-in Rust development server for local development and testing.
-- Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML, etc.
-- Built-in support for sitemap generation, robots.txt generation, canonical name (CNAME) records and custom 404 pages.
+- Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML,
+  etc.
+- Built-in support for sitemap generation, robots.txt generation, canonical
+  name (CNAME) records and custom 404 pages.
 
 ## Table of Contents
 
@@ -79,19 +94,25 @@ Shokunin Static Site Generator (SSG) feature highlights include:
 
 ## Getting Started
 
-It takes just a few minutes to get up and running with Shokunin Static Site Generator (SSG).
+It takes just a few minutes to get up and running with Shokunin Static Site
+Generator (SSG).
 
 ### Installation
 
-To install Shokunin Static Site Generator (SSG), you need to have the Rust toolchain installed on your machine. You can install the Rust toolchain by following the instructions on the [Rust website][14].
+To install Shokunin Static Site Generator (SSG), you need to have the Rust
+toolchain installed on your machine. You can install the Rust toolchain by
+following the instructions on the [Rust website][14].
 
-Once you have the Rust toolchain installed, you can install Shokunin Static Site Generator (SSG) using the following command:
+Once you have the Rust toolchain installed, you can install Shokunin Static Site
+Generator (SSG) using the following command:
 
 ```shell
 cargo install ssg
 ```
 
-For simplicity, we have given Shokunin Static Site Generator (SSG) a simple alias `ssg` which can stand for `Shokunin Site Generator` or `Static Site Generator`.
+For simplicity, we have given Shokunin Static Site Generator (SSG) a simple
+alias `ssg` which can stand for `Shokunin Site Generator` or
+`Static Site Generator`.
 
 You can then run the help command to see the available options and commands:
 
@@ -140,7 +161,8 @@ Rust Tier 2 targets are supported for building, but not necessarily running.
 | ✅ | macOS   | aarch64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
 | ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
 
-The [GitHub Actions][11] shows the platforms in which the Shokunin Static Site Generator (SSG) library tests are run.
+The [GitHub Actions][11] shows the platforms in which the Shokunin Static Site
+Generator (SSG) library tests are run.
 
 ### Documentation
 
@@ -151,9 +173,11 @@ You can find our documentation on [docs.rs][9], [lib.rs][10] and [crates.io][8].
 
 ### Command Line Interface (CLI)
 
-The Shokunin Static Site Generator (SSG) library runs in a Terminal window and can be used to generate a static website.
+The Shokunin Static Site Generator (SSG) library runs in a Terminal window and
+can be used to generate a static website.
 
-Here’s the first command you can enter in your Terminal window to run Shokunin Static Site Generator (SSG):
+Here’s the first command you can enter in your Terminal window to run Shokunin
+Static Site Generator (SSG):
 
 ```shell
 ssg  --new=mysite --content=content --template=template --output=output --serve=public
@@ -165,23 +189,30 @@ or
 ssg  -n=mysite -c=content -t=template -o=output -s=public
 ```
 
-This command will create a new website with the name `mysite` in the current directory. It will use the `content` directory to gather the website content and the `template` directory to generate the website files. It will serve the website directly from the `mysite` directory.
+This command will create a new website with the name `mysite` in the current
+directory. It will use the `content` directory to gather the website content
+and the `template` directory to generate the website files. It will serve the
+website directly from the `mysite` directory.
 
 #### Arguments
 
 - `-n`, `--new`: The name of the new website. (required)
 - `-c`, `--content`: The directory containing the website content. (required)
-- `-t`, `--template`: The directory containing the website templates. (required)
-- `-o`, `--output`: The directory where the generated website files will be saved temporarily. (required)
-- `-s`, `--serve`: Run the development server. (optional). The directory from which the website will be served.
+- `-t`, `--template`: The directory containing the website templates.
+  (required)
+- `-o`, `--output`: The directory where the generated website files will be
+  saved temporarily. (required)
+- `-s`, `--serve`: Run the development server. (optional). The directory from
+  which the website will be served.
 
 ### In your project
 
-To use the Shokunin Static Site Generator (SSG) library in your project, add the following to your `Cargo.toml` file:
+To use the Shokunin Static Site Generator (SSG) library in your project, add the
+following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-shokunin = "0.0.23"
+shokunin = "0.0.24"
 ```
 
 Add the following to your `main.rs` file:
@@ -191,19 +222,23 @@ extern crate ssg;
 use ssg::*;
 ```
 
-then you can use the Shokunin Static Site Generator (SSG) functions in your application code.
+then you can use the Shokunin Static Site Generator (SSG) functions in your
+application code.
 
 ### Examples
 
-To get started with Shokunin Static Site Generator (SSG), you can use the examples provided in the `examples` directory of the project.
+To get started with Shokunin Static Site Generator (SSG), you can use the
+examples provided in the `examples` directory of the project.
 
-To run the examples, clone the repository and run the following command in your terminal from the project root directory.
+To run the examples, clone the repository and run the following command in your
+terminal from the project root directory.
 
 ```shell
 cargo run --example example
 ```
 
-The command will generate a static website based on the configuration details in the `examples` directory.
+The command will generate a static website based on the configuration details
+in the `examples` directory.
 
 ```shell
 use ssg::compiler::compile;
@@ -222,40 +257,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The main() function in this code compiles a website from the `content` directory, using the `template` directory to generate the website files. The compiled website is saved in the `build` directory and served directly from the `example.com` directory.
+The main() function in this code compiles a website from the `content`
+directory, using the `template` directory to generate the website files. The
+compiled website is saved in the `build` directory and served directly from
+the `example.com` directory.
 
 #### Args
 
-- `build_path:` The path to the directory where the compiled website will be saved.
+- `build_path:` The path to the directory where the compiled website will be
+saved.
 - `content_path:` The path to the directory containing the website content.
-- `site_path:` The path to the directory where the generated website files will be served from.
+- `site_path:` The path to the directory where the generated website files will
+be served from.
 - `template_path:` The path to the directory containing the website templates.
 
 ## Semantic Versioning Policy
 
-For transparency into our release cycle and in striving to maintain backward compatibility, Shokunin Static Site Generator (SSG) follows [semantic versioning][7].
+For transparency into our release cycle and in striving to maintain backward
+compatibility, Shokunin Static Site Generator (SSG) follows
+[semantic versioning][7].
 
 ## License
 
-The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).
+The project is licensed under the terms of both the MIT license and the Apache
+License (Version 2.0).
 
 - [Apache License, Version 2.0][2]
 - [MIT license][3]
 
 ## Contribution
 
-We welcome all people who want to contribute. Please see the [contributing instructions][5] for more information.
+We welcome all people who want to contribute. Please see the
+[contributing instructions][5] for more information.
 
-Contributions in any form (issues, pull requests, etc.) to this project must adhere to the [Rust's Code of Conduct][16].
+Contributions in any form (issues, pull requests, etc.) to this project must
+adhere to the [Rust's Code of Conduct][16].
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the
-Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
 
 ## Acknowledgements
 
-A big thank you to all the awesome contributors of [Shokunin][6] for their help and support.
+A big thank you to all the awesome contributors of [Shokunin][6] for their help
+and support.
 
-A special thank you goes to the [Rust Reddit][13] community for providing a lot of useful suggestions on how to improve this project.
+A special thank you goes to the [Rust Reddit][13] community for providing a lot
+of useful suggestions on how to improve this project.
 
 [0]: https://minifunctions.com/ "The Rust Mini Functions"
 [1]: https://shokunin.one "Shokunin Static Site Generator"
@@ -282,6 +330,6 @@ A special thank you goes to the [Rust Reddit][13] community for providing a lot 
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.23-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.24-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

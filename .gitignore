@@ -1,9 +1,12 @@
 *.DS_Store
 *.profraw
+*.log
 /.vscode/
+/docs/
 /examples/public/
 /mysite/
 /output/
+/pdfs/
 /public/
 /target/
 build

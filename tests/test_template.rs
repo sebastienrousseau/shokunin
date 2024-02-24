@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::template::{render_page, render_template, PageOptions};
+    use ssg::utilities::template::{
+        render_page, render_template, PageOptions,
+    };
     use std::{collections::HashMap, error::Error};
 
     #[test]
@@ -45,8 +47,11 @@ mod tests {
         options.set("copyright", "Copyright 2023");
         options.set("date", "2000-01-01");
         options.set("description", "A simple test page");
-        options.set("download", "<a href=\"https://example.com\">Download</a>");
-        options.set("format-detection","telephone=no");
+        options.set(
+            "download",
+            "<a href=\"https://example.com\">Download</a>",
+        );
+        options.set("format-detection", "telephone=no");
         options.set("generator", "SSG");
         options.set("hreflang", "en");
         options.set("icon", "/favicon.ico");
@@ -75,15 +80,18 @@ mod tests {
         options.set("tags", "test, page");
         options.set("title", "Test Page");
         options.set("url", "https://example.com");
-        options.set("viewport", "width=device-width, initial-scale=1.0");
+        options
+            .set("viewport", "width=device-width, initial-scale=1.0");
 
         let template_path = String::from("./template");
         let layout = String::from("page");
 
         // Create a temporary directory and copy the template file into it
-        let tempdir = tempfile::tempdir().expect("Could not create temporary directory");
+        let tempdir = tempfile::tempdir()
+            .expect("Could not create temporary directory");
         let template_file_path = tempdir.path().join("template.html");
-        std::fs::copy("template/template.html", template_file_path).expect("Could not copy template file");
+        std::fs::copy("template/template.html", template_file_path)
+            .expect("Could not copy template file");
 
         // Call the render_page function
         let result = render_page(&options, &template_path, &layout);

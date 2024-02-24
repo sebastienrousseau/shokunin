@@ -6,8 +6,10 @@ extern crate criterion;
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::models::data::{ManifestData, TxtData, CnameData, HumansData, SiteMapData};
-use ssg::modules::json::{manifest, txt, cname, human, sitemap};
+use ssg::models::data::{
+    CnameData, HumansData, ManifestData, SiteMapData, TxtData,
+};
+use ssg::modules::json::{cname, human, manifest, sitemap, txt};
 
 pub fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
@@ -39,9 +41,10 @@ pub fn bench_json(c: &mut Criterion) {
         site_software: String::from("Test Software"),
     };
 
-    let cname_data = CnameData {
-        cname: String::from("test.com"),
-    };
+    let cname_data =
+        CnameData {
+            cname: String::from("test.com"),
+        };
 
     let sitemap_data = SiteMapData {
         changefreq: String::from("always"),
@@ -66,7 +69,8 @@ pub fn bench_json(c: &mut Criterion) {
     });
 
     c.bench_function("sitemap", |b| {
-        b.iter(|| sitemap(black_box(sitemap_data.clone()), black_box(dir)))
+        b.iter(
+            || sitemap(black_box(sitemap_data.clone()), black_box(dir))
+        )
     });
-
 }

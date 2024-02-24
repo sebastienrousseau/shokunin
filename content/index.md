@@ -2,7 +2,7 @@
 
 # Front Matter (YAML)
 
-author: "Jane Doe" ## The author of the page. (max 64 characters)
+author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 characters)
 banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
@@ -49,15 +49,15 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin 🦀 (version 0.0.17)"
+generator: "Shokunin SSG (version 0.0.24)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
-item_pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
+item_pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 item_title: "RSS"
-last_build_date: "Thu, 12 Jul 2023 15:15:15 GMT"
-managing_editor: jane.doe@kaishi.one
-pub_date: "Thu, 12 Jul 2023 15:15:15 GMT"
+last_build_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+managing_editor: jane.doe@kaishi.one (Jane Doe)
+pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
@@ -108,8 +108,9 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ## Overview
 
-Kaishi is a minimalist and modern [Shokunin static website generator ⧉][0]
+**Kaishi** is a minimalist and modern [Shokunin static website generator ⧉][0]
 starter template designed for professionals who value simplicity and elegance.
+
 With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
 solution for those looking to showcase their work and services online. Built on
 a responsive framework, this template is ideal for professionals without coding

@@ -84,9 +84,10 @@ mod tests {
 
     #[test]
     fn test_cname_empty() {
-        let options = CnameData {
-            cname: "".to_string(),
-        };
+        let options =
+            CnameData {
+                cname: "".to_string(),
+            };
 
         let output = cname(&options);
         assert_eq!(output, "\nwww.");

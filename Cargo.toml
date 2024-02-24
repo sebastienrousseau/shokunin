@@ -20,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.23"
+version = "0.0.24"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -46,26 +46,30 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.4.18"
+clap = "4.5.1"
 comrak = "0.21.0"
 dtt = "0.0.5"
+env_logger = "0.11.2"
+lazy_static = "1.4.0"
 log = {version="0.4.20", features = ["std"] }
 minify-html = "0.15.0"
-openssl = { version = "0.10.63", features = ["vendored"] }
+# openssl = { version = "0.10.64", features = ["vendored"] }
 quick-xml = "0.31.0"
-regex = "1.10.2"
-reqwest = { version = "0.11.23", features = ["blocking", "json"] }
+regex = "1.10.3"
+reqwest = { version = "0.11.24", features = ["blocking", "json"] }
 rlg = "0.0.2"
-serde = { version = "1.0.196", features = ["derive"] }
-serde_json = "1.0.111"
-serde_yaml = "0.9.30"
-tempfile = "3.9.0"
-toml = "0.8.8"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+tempfile = "3.10.0"
+toml = "0.8.10"
 yaml-rust = "0.4.5"
 vrd = "0.0.5"
+printpdf = "0.7.0"
+pulldown-cmark = "0.10.0"
+uuid = { version = "1.7.0", features = ["v4"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.13"
+assert_cmd = "2.0.14"
 criterion = "0.5.1"
 
 [lib]

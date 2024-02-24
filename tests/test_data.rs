@@ -9,9 +9,10 @@ mod tests {
     #[test]
     fn test_cname_data_default() {
         let cname_data = CnameData::default();
-        let expected_cname_data = CnameData {
-            cname: String::default(),
-        };
+        let expected_cname_data =
+            CnameData {
+                cname: String::default(),
+            };
         assert_eq!(cname_data, expected_cname_data);
     }
 
@@ -40,7 +41,10 @@ mod tests {
 
     #[test]
     fn test_file_data_new() {
-        let file_data = FileData::new("file.txt".to_string(), "Content".to_string());
+        let file_data = FileData::new(
+            "file.txt".to_string(),
+            "Content".to_string(),
+        );
         assert_eq!(file_data.name, "file.txt");
         assert_eq!(file_data.content, "Content");
     }
@@ -59,7 +63,8 @@ mod tests {
 
     #[test]
     fn test_icon_data_new() {
-        let icon_data = IconData::new("icon.png".to_string(), "32x32".to_string());
+        let icon_data =
+            IconData::new("icon.png".to_string(), "32x32".to_string());
         assert_eq!(icon_data.src, "icon.png");
         assert_eq!(icon_data.sizes, "32x32");
     }
@@ -110,7 +115,11 @@ mod tests {
 
     #[test]
     fn test_sitemap_data_new() {
-        let sitemap_data = SiteMapData::new("example.com".to_string(), "2023-01-01".to_string(), "daily".to_string());
+        let sitemap_data = SiteMapData::new(
+            "example.com".to_string(),
+            "2023-01-01".to_string(),
+            "daily".to_string(),
+        );
         assert_eq!(sitemap_data.loc, "example.com");
         assert_eq!(sitemap_data.lastmod, "2023-01-01");
         assert_eq!(sitemap_data.changefreq, "daily");
@@ -119,9 +128,10 @@ mod tests {
     #[test]
     fn test_txt_data_default() {
         let txt_data = TxtData::default();
-        let expected_txt_data = TxtData {
-            permalink: String::default(),
-        };
+        let expected_txt_data =
+            TxtData {
+                permalink: String::default(),
+            };
         assert_eq!(txt_data, expected_txt_data);
     }
 

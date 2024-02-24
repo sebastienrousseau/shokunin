@@ -1,9 +1,28 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::models::data::{FileData, TagsData, PageData};
+use crate::models::data::{FileData, PageData, TagsData};
 use crate::utilities::directory::to_title_case;
-use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
+use std::{
+    collections::HashMap,
+    fs,
+    io::{self, Read, Write},
+    path::Path,
+};
+
+/// Sanitize tag to remove special characters.
+///
+/// # Arguments
+///
+/// * `tag` - A reference to the tag string to be sanitized.
+///
+/// # Returns
+///
+/// A sanitized tag string with special characters removed.
+///
+fn sanitize_tag(tag: &str) -> String {
+    tag.chars().filter(|c| c.is_alphanumeric()).collect()
+}
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
 ///
@@ -16,7 +35,7 @@ use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 ///
 /// A `HashMap` mapping each tag to a vector of `HashMap`s containing associated data like title, description, etc.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
 /// use ssg::models::data::FileData;
@@ -30,8 +49,14 @@ use std::{io::{Read, Write}, collections::HashMap, path::Path, fs};
 /// let result = generate_tags(&file, &metadata);
 /// ```
 ///
-pub fn generate_tags(file: &FileData, metadata: &HashMap<String, String>) -> HashMap<String, Vec<HashMap<String, String>>> {
-    let mut keywords_data_map: HashMap<String, Vec<HashMap<String, String>>> = HashMap::new();
+pub fn generate_tags(
+    file: &FileData,
+    metadata: &HashMap<String, String>,
+) -> HashMap<String, Vec<HashMap<String, String>>> {
+    let mut keywords_data_map: HashMap<
+        String,
+        Vec<HashMap<String, String>>,
+    > = HashMap::new();
     let file_content = &file.content;
 
     // Extract target tags from metadata if available.
@@ -50,46 +75,29 @@ pub fn generate_tags(file: &FileData, metadata: &HashMap<String, String>) -> Has
     }
 
     for tag in &target_tags {
-        if file_content.contains(tag) {
+        let sanitized_tag = sanitize_tag(tag);
+        if file_content.contains(&sanitized_tag) {
             let mut tags_data = HashMap::new();
 
-            // Extract title from metadata.
-            let title = metadata.get("title").cloned().unwrap_or_else(|| {
-                println!("Failed to extract title for tag: {}", tag);
-                String::new()
-            });
-            tags_data.insert("title".to_string(), title);
+            // Extract metadata for the tag
+            let metadata_keys = [
+                "title",
+                "date",
+                "description",
+                "permalink",
+                "keywords",
+            ];
+            for key in &metadata_keys {
+                if let Some(value) = metadata.get(*key) {
+                    tags_data.insert((*key).to_string(), value.clone());
+                }
+            }
 
-            let dates = metadata.get("date").cloned().unwrap_or_else(|| {
-                println!("Failed to extract date for tag: {}", tag);
-                String::new()
-            });
-            tags_data.insert("date".to_string(), dates);
-
-            // Extract description from metadata.
-            let description = metadata.get("description").cloned().unwrap_or_else(|| {
-                println!("Failed to extract description for tag: {}", tag);
-                String::new()
-            });
-            tags_data.insert("description".to_string(), description);
-
-            // Extract permalink from metadata.
-            let permalink = metadata.get("permalink").cloned().unwrap_or_else(|| {
-                println!("Failed to extract permalink for tag: {}", tag);
-                String::new()
-            });
-            tags_data.insert("permalink".to_string(), permalink);
-
-            // Extract keywords from metadata.
-            let keywords = metadata.get("keywords").cloned().unwrap_or_else(|| {
-                println!("Failed to extract keywords for tag: {}", tag);
-                String::new()
-            });
-            tags_data.insert("keywords".to_string(), keywords);
-
-
-            // Insert or update the entry in keywords_data_map.
-            keywords_data_map.entry(tag.to_string()).or_default().push(tags_data);
+            // Insert or update the entry in keywords_data_map
+            keywords_data_map
+                .entry(sanitized_tag.to_string())
+                .or_default()
+                .push(tags_data);
         }
     }
     keywords_data_map
@@ -125,9 +133,12 @@ pub fn create_tags_data(
     metadata: &HashMap<String, String>,
 ) -> TagsData {
     let dates = metadata.get("date").cloned().unwrap_or_default();
-    let descriptions = metadata.get("description").cloned().unwrap_or_default();
-    let keywords = metadata.get("keywords").cloned().unwrap_or_default();
-    let permalinks = metadata.get("permalink").cloned().unwrap_or_default();
+    let descriptions =
+        metadata.get("description").cloned().unwrap_or_default();
+    let keywords =
+        metadata.get("keywords").cloned().unwrap_or_default();
+    let permalinks =
+        metadata.get("permalink").cloned().unwrap_or_default();
     let titles = metadata.get("title").cloned().unwrap_or_default();
 
     TagsData {
@@ -138,7 +149,6 @@ pub fn create_tags_data(
         keywords,
     }
 }
-
 
 /// Generates the HTML content for displaying tags and their associated pages.
 ///
@@ -190,8 +200,9 @@ pub fn create_tags_data(
 /// let html_content = generate_tags_html(&global_tags_data);
 /// ```
 ///
-pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> String {
-
+pub fn generate_tags_html(
+    global_tags_data: &HashMap<String, Vec<PageData>>,
+) -> String {
     let mut html_content = String::new();
 
     // Create a sorted Vec of keys
@@ -199,27 +210,38 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
     keys.sort();
 
     // First, calculate the total number of posts
-    let total_posts: usize = global_tags_data.values().map(|pages| pages.len()).sum();
+    let total_posts: usize =
+        global_tags_data.values().map(|pages| pages.len()).sum();
 
     // Add an h2 element for the total number of posts
-    html_content.push_str(&format!("<h2 class=\"featured-tags\" id=\"h2-featured-tags\" tabindex=\"0\">Featured Tags ({})</h2>", total_posts));
+    html_content.push_str(&format!(
+        "<h2 class=\"featured-tags\" id=\"h2-featured-tags\" tabindex=\"0\">Featured Tags ({})</h2>",
+        total_posts
+    ));
 
     // Existing loop code for each tag
     for key in keys {
         let tag = key;
         let pages = &global_tags_data[key];
         let count = pages.len();
-        html_content.push_str(&format!("<h3 class=\"{}\" id=\"h3-{}\" tabindex=\"0\">{} ({} Posts)</h3>\n<ul>", tag.replace(' ', "-"), tag.replace(' ', "-"), to_title_case(tag), count));
+        html_content.push_str(&format!(
+            "<h3 class=\"{}\" id=\"h3-{}\" tabindex=\"0\">{} ({} Posts)</h3>\n<ul>",
+            tag.replace(' ', "-"),
+            tag.replace(' ', "-"),
+            to_title_case(tag),
+            count
+        ));
         for page in pages.iter() {
-            html_content.push_str(&format!("<li>{}: <a href=\"{}\">{}</a> - <strong>{}</strong></li>\n", page.date, page.permalink, page.title, page.description));
+            html_content.push_str(&format!(
+                "<li>{}: <a href=\"{}\">{}</a> - <strong>{}</strong></li>\n",
+                page.date, page.permalink, page.title, page.description
+            ));
         }
         html_content.push_str("</ul>\n");
     }
 
     html_content
-
 }
-
 
 /// Writes the given HTML content into an existing `index.html` file, replacing a placeholder.
 ///
@@ -234,7 +256,7 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
 ///
 /// # Returns
 ///
-/// Returns an `std::io::Result<()>` which is `Ok` if the operation was successful.
+/// Returns an `io::Result<()>` which is `Ok` if the operation was successful.
 /// Any IO error that occurs will be propagated in the `Err` variant of the result.
 ///
 /// # Examples
@@ -248,8 +270,10 @@ pub fn generate_tags_html(global_tags_data: &HashMap<String, Vec<PageData>>) -> 
 /// write_tags_html_to_file(html_content, &output_path);
 /// ```
 ///
-pub fn write_tags_html_to_file(html_content: &str, output_path: &Path) -> std::io::Result<()> {
-
+pub fn write_tags_html_to_file(
+    html_content: &str,
+    output_path: &Path,
+) -> io::Result<()> {
     // Define the file path for the output
     let file_path = output_path.join("tags/index.html");
 

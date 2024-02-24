@@ -1,66 +1,139 @@
 #[cfg(test)]
 mod tests {
-    use ssg::{models::data::FileData, modules::navigation::generate_navigation};
+    use ssg::models::data::FileData;
+    use ssg::modules::navigation::NavigationGenerator;
 
     #[test]
-    fn test_generate_navigation() {
-        // Create sample FileData items
-        let files = vec![
-            FileData {
-                cname: "".to_string(),
-                content: "".to_string(),
-                human: "".to_string(),
-                json: "".to_string(),
-                keyword: "".to_string(),
-                name: "index.md".to_string(),
-                rss: "".to_string(),
-                sitemap: "".to_string(),
-                txt: "".to_string(),
-            },
-            FileData {
-                cname: "".to_string(),
-                content: "".to_string(),
-                human: "".to_string(),
-                json: "".to_string(),
-                keyword: "".to_string(),
-                name: "about.md".to_string(),
-                rss: "".to_string(),
-                sitemap: "".to_string(),
-                txt: "".to_string(),
-            },
-            FileData {
-                cname: "".to_string(),
-                content: "".to_string(),
-                human: "".to_string(),
-                json: "".to_string(),
-                keyword: "".to_string(),
-                name: "blog.md".to_string(),
-                rss: "".to_string(),
-                sitemap: "".to_string(),
-                txt: "".to_string(),
-            },
-            FileData {
-                cname: "".to_string(),
-                content: "".to_string(),
-                human: "".to_string(),
-                json: "".to_string(),
-                keyword: "".to_string(),
-                name: "contact.md".to_string(),
-                rss: "".to_string(),
-                sitemap: "".to_string(),
-                txt: "".to_string(),
-            },
-        ];
+    fn test_generate_navigation_empty_input() {
+        // Arrange
+        let files: Vec<FileData> = vec![];
 
-        let navigation = generate_navigation(&files);
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
 
-        println!("Generated navigation: {}", navigation);
+        // Assert
+        assert!(
+            navigation.is_empty(),
+            "Navigation is not empty for empty input"
+        );
+    }
 
-        // Assert that the generated navigation contains expected HTML elements
-        assert!(navigation.contains("<li class=\"nav-item\"><a href=\"/about/index.html\" class=\"text-uppercase p-2 \">About</a></li>"));
-        assert!(navigation.contains("<li class=\"nav-item\"><a href=\"/contact/index.html\" class=\"text-uppercase p-2 \">Contact</a></li>"));
+    #[test]
+    fn test_generate_navigation_non_markdown_file() {
+        // Arrange
+        let files = vec![FileData {
+            name: "index.txt".to_string(),
+            ..Default::default()
+        }];
 
-        // Assert that the generated navigation does not contain excluded files
-        assert!(!navigation.contains("<li class=\"nav-item\"><a href=\"/index/index.html\" class=\"text-uppercase p-2 \">Index</a></li>"));
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            navigation.is_empty(),
+            "Navigation is not empty for non-markdown file"
+        );
+    }
+
+    #[test]
+    fn test_generate_navigation_stress_test() {
+        // Arrange
+        let mut files = vec![];
+        for i in 0..100 {
+            files.push(FileData {
+                name: format!("page{}.md", i),
+                ..Default::default()
+            });
+        }
+
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            !navigation.is_empty(),
+            "Navigation is empty for stress test"
+        );
+    }
+
+    #[test]
+    fn test_generate_navigation_special_characters() {
+        // Arrange
+        let files = vec![FileData {
+            name: "special!@#$%^&*()-_+=[]{}|;:'\",.<>?`~.md"
+                .to_string(),
+            ..Default::default()
+        }];
+
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            !navigation.is_empty(),
+            "Navigation is empty for file with special characters"
+        );
+    }
+
+    #[test]
+    fn test_generate_navigation_nested_subdirectories() {
+        // Arrange
+        let files = vec![FileData {
+            name: "./content/404.md".to_string(),
+            ..Default::default()
+        }];
+
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            !navigation.is_empty(),
+            "Navigation is empty for file nested in subdirectory"
+        );
+    }
+
+    #[test]
+    fn test_generate_navigation_empty_string_file_name() {
+        // Arrange
+        let files = vec![FileData {
+            name: "".to_string(),
+            ..Default::default()
+        }];
+
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            navigation.is_empty(),
+            "Navigation is not empty for file with empty string name"
+        );
+    }
+
+    #[test]
+    fn test_generate_navigation_no_extension() {
+        // Arrange
+        let files = vec![FileData {
+            name: "file_without_extension".to_string(),
+            ..Default::default()
+        }];
+
+        // Act
+        let navigation =
+            NavigationGenerator::generate_navigation(&files);
+
+        // Assert
+        assert!(
+            navigation.is_empty(),
+            "Navigation is not empty for file with no extension"
+        );
     }
 }

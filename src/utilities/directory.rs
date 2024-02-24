@@ -9,7 +9,6 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-
 /// Ensures a directory exists, creating it if necessary.
 ///
 /// This function takes a reference to a `Path` object for a directory and a
@@ -43,10 +42,9 @@ use std::{
 pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
     if dir.exists() {
         if !dir.is_dir() {
-            return Err(format!(
-                "❌ Error: {} is not a directory.",
-                name
-            ));
+            return Err(
+                format!("❌ Error: {} is not a directory.", name)
+            );
         }
     } else {
         match fs::create_dir_all(dir) {
@@ -103,7 +101,6 @@ pub fn move_output_directory(
 
     Ok(())
 }
-
 
 /// Finds all HTML files in a directory.
 ///
@@ -214,8 +211,6 @@ pub fn create_directory(
     Ok(())
 }
 
-
-
 /// Converts a string to title case.
 ///
 /// This function takes a reference to a string and returns a new string with
@@ -265,9 +260,16 @@ pub fn format_header_with_id_class(
     let text_only = re.replace_all(header_str, "");
     let re = Regex::new(r"^<(\w+)").unwrap();
     let captures = re.captures(header_str);
-    let header_type = captures.map_or("", |cap| cap.get(1).map_or("", |m| m.as_str())).to_lowercase();
-    let first_word = text_only.split(|c: char| !c.is_alphanumeric()).next().unwrap_or("").to_lowercase();
-
+    let header_type = captures
+        .map_or("", |cap| cap.get(1).map_or("", |m| m.as_str()))
+        .to_lowercase();
+    let first_word =
+        text_only
+            .split(|c: char| !c.is_alphanumeric())
+            .next()
+            .unwrap_or("")
+            .to_lowercase();
+    let aria_label = to_title_case(first_word.as_str());
     for c in header_str.chars() {
         if !in_header_tag {
             formatted_header_str.push(c);
@@ -275,12 +277,12 @@ pub fn format_header_with_id_class(
                 in_header_tag = true;
             }
         } else {
-
             if !id_attribute_added && (c == ' ' || c == '>') {
                 formatted_header_str.push_str(&format!(
-                    " id=\"{}-{}\" tabindex=\"0\" {}",
+                    " id=\"{}-{}\" tabindex=\"0\" aria-label=\"{} Heading\" {}",
                     header_type,
-                    id_regex.replace_all(&first_word, "-"),
+                    first_word,
+                    id_regex.replace_all(&aria_label, "-"),
                     if header_type == "h1" {
                         "itemprop=\"headline\""
                     } else {
@@ -293,11 +295,12 @@ pub fn format_header_with_id_class(
             }
 
             if !class_attribute_added && c == '>' {
-                let class_value = format!("{}", id_regex.replace_all(&first_word, "-"));
-                formatted_header_str.push_str(&format!(
-                    " class=\"{}\"",
-                    class_value
-                ));
+                let class_value = format!(
+                    "{}",
+                    id_regex.replace_all(&first_word, "-")
+                );
+                formatted_header_str
+                    .push_str(&format!(" class=\"{}\"", class_value));
                 class_attribute_added = true;
             }
             formatted_header_str.push(c);
@@ -309,8 +312,6 @@ pub fn format_header_with_id_class(
 
     formatted_header_str
 }
-
-
 
 /// Extracts the front matter from the given content.
 ///
@@ -494,7 +495,6 @@ pub fn update_class_attributes(
 ///
 /// * An `Option` of the truncated path as a string. If the path was not truncated, `None` is returned.
 pub fn truncate(path: &Path, length: usize) -> Option<String> {
-
     // Checks if the length is 0. If it is, returns `None`.
     if length == 0 {
         return None;
@@ -506,7 +506,6 @@ pub fn truncate(path: &Path, length: usize) -> Option<String> {
     // Iterates over the components of the path in reverse order.
     let mut count = 0;
     while let Some(component) = path.components().next_back() {
-
         // Adds the component to the truncated path.
         truncated.push(component);
         count += 1;

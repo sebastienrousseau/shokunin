@@ -1,14 +1,14 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::utilities::backup::backup_file;
+use crate::utilities::directory::find_html_files;
 use minify_html::{minify, Cfg};
 use std::{
     fs::{self, File},
     io::{self, Write},
     path::Path,
 };
-use crate::utilities::directory::find_html_files;
-use crate::utilities::backup::backup_file;
 
 /// Minifies HTML files in the output directory.
 ///

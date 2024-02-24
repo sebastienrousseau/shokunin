@@ -6,7 +6,10 @@ mod tests {
     #[test]
     fn test_extract_keywords_with_valid_keywords() {
         let mut metadata = HashMap::new();
-        metadata.insert("keywords".to_string(), "rust,programming,testing".to_string());
+        metadata.insert(
+            "keywords".to_string(),
+            "rust,programming,testing".to_string(),
+        );
 
         let keywords = extract_keywords(&metadata);
 
@@ -25,7 +28,10 @@ mod tests {
     #[test]
     fn test_extract_keywords_with_whitespace() {
         let mut metadata = HashMap::new();
-        metadata.insert("keywords".to_string(), "  rust ,  programming  ,  testing  ".to_string());
+        metadata.insert(
+            "keywords".to_string(),
+            "  rust ,  programming  ,  testing  ".to_string(),
+        );
 
         let keywords = extract_keywords(&metadata);
 

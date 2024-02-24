@@ -4,27 +4,24 @@ mod tests {
     use comrak::ComrakOptions;
     use quick_xml::Writer;
     use regex::Regex;
-    use
-        ssg::utilities::{directory::{
-            cleanup_directory,
-            create_comrak_options,
-            create_directory,
-            directory,
-            extract_front_matter,
-            find_html_files,
-            format_header_with_id_class,
-            move_output_directory,
-            to_title_case,
-            update_class_attributes,
-        },
+    use ssg::utilities::{
         backup::backup_file,
+        directory::{
+            cleanup_directory, create_comrak_options, create_directory,
+            directory, extract_front_matter, find_html_files,
+            format_header_with_id_class, move_output_directory,
+            to_title_case, update_class_attributes,
+        },
         element::write_element,
-        minification::{minify_html_files, minify_html,write_minified_html}};
+        minification::{
+            minify_html, minify_html_files, write_minified_html,
+        },
+    };
     use std::{
         error::Error,
         fs::{self, File},
-        io::{Cursor, self, Read, Write},
-        path::{Path, PathBuf}
+        io::{self, Cursor, Read, Write},
+        path::{Path, PathBuf},
     };
     use tempfile::tempdir;
 
@@ -340,7 +337,7 @@ mod tests {
 
         Ok(())
     }
-    
+
     #[test]
     fn test_write_element() -> Result<(), Box<dyn std::error::Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -429,27 +426,27 @@ mod tests {
         let test_cases = vec![
             (
                 "<h1>This is a test</h1>",
-                "<h1 id=\"h1-this\" tabindex=\"0\" itemprop=\"headline\" class=\"this\">This is a test</h1>"
+                "<h1 id=\"h1-this\" tabindex=\"0\" aria-label=\"-his Heading\" itemprop=\"headline\" class=\"this\">This is a test</h1>"
             ),
             (
                 "<h2>Another Test</h2>",
-                "<h2 id=\"h2-another\" tabindex=\"0\" itemprop=\"name\" class=\"another\">Another Test</h2>"
+                "<h2 id=\"h2-another\" tabindex=\"0\" aria-label=\"-nother Heading\" itemprop=\"name\" class=\"another\">Another Test</h2>"
             ),
             (
                 "<h3>Test with special characters!@#$%^&*</h3>",
-                "<h3 id=\"h3-test\" tabindex=\"0\" itemprop=\"name\" class=\"test\">Test with special characters!@#$%^&*</h3>"
+                "<h3 id=\"h3-test\" tabindex=\"0\" aria-label=\"-est Heading\" itemprop=\"name\" class=\"test\">Test with special characters!@#$%^&*</h3>"
             ),
             (
                 "<h1>Test with multiple     spaces</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test with multiple     spaces</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" aria-label=\"-est Heading\" itemprop=\"headline\" class=\"test\">Test with multiple     spaces</h1>"
             ),
             (
                 "<h1>Test_with_underscores</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test_with_underscores</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" aria-label=\"-est Heading\" itemprop=\"headline\" class=\"test\">Test_with_underscores</h1>"
             ),
             (
                 "<h1>Test-with-dashes</h1>",
-                "<h1 id=\"h1-test\" tabindex=\"0\" itemprop=\"headline\" class=\"test\">Test-with-dashes</h1>"
+                "<h1 id=\"h1-test\" tabindex=\"0\" aria-label=\"-est Heading\" itemprop=\"headline\" class=\"test\">Test-with-dashes</h1>"
             ),
         ];
 
