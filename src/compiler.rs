@@ -58,23 +58,6 @@ pub fn compile(
         HashMap::new();
 
     // Process source files and store results in 'compiled_files' vector
-    /// Represents a vector of compiled file data.
-    ///
-    /// Each `FileData` contains information about a source file, including its metadata and generated content.
-    /// This vector is populated by iterating over the `source_files` and applying the necessary transformations
-    /// and generation processes to each file.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// let compiled_files: Vec<FileData> = source_files
-    ///     .into_iter()
-    ///     .map(|file| {
-    ///         // Perform necessary operations on the file
-    ///     })
-    ///     .collect();
-    /// ```
-    let compiled_files: Vec<FileData>;
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
@@ -123,10 +106,12 @@ pub fn compile(
                 }
             };
 
+            // Determine the filename without the extension
             let filename_without_extension = Path::new(&file.name)
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .unwrap_or(&file.name);
+                // println!("File Name: {}", filename_without_extension);
 
                 if let Err(err) = generate_pdf(PdfGenerationParams {
                     plain_title: &plain_title,
