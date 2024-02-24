@@ -1,15 +1,10 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::utilities::directory::{
+use crate::{modules::{markdown::convert_markdown_to_html, postprocessor::post_process_html}, utilities::directory::{
     create_comrak_options, extract_front_matter,
     format_header_with_id_class, update_class_attributes,
-};
-use crate::modules::postprocessor::post_process_html;
-use comrak::{markdown_to_html, ComrakOptions};
-
-
-
+}};
 use regex::Regex;
 use std::error::Error;
 
@@ -186,23 +181,4 @@ pub fn preprocess_content(
         .collect();
     // println!("{}", processed_content.join("\n"));
     Ok(processed_content.join("\n"))
-}
-
-/// Converts Markdown content to HTML using the Comrak library.
-///
-/// # Arguments
-///
-/// * `markdown_content` - A string containing the Markdown content to be converted.
-/// * `options` - A reference to `ComrakOptions` which specifies the parsing options for the Comrak library.
-///
-/// # Returns
-///
-/// A `String` containing the converted HTML content.
-///
-pub fn convert_markdown_to_html(
-    markdown_content: &str,
-    options: &ComrakOptions,
-) -> Result<String, Box<dyn Error>> {
-    let html_content = markdown_to_html(markdown_content, options);
-    Ok(html_content.to_string())
 }
