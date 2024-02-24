@@ -1,12 +1,15 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::utilities::directory::extract_front_matter;
 use crate::modules::preprocessor::preprocess_content;
+use crate::utilities::directory::extract_front_matter;
 use pulldown_cmark::{Parser, Event, Tag};
 use pulldown_cmark::TagEnd;
 use regex::Regex;
 use std::error::Error;
+
+/// Type alias for the result of the `generate_plain_text` function
+type PlainTextResult = Result<(String, String, String, String, String, String), Box<dyn Error>>;
 
 /// Generate a plain text representation of the Markdown content.
 ///
@@ -16,11 +19,14 @@ use std::error::Error;
 /// # Arguments
 ///
 /// * `content` - A string slice containing the Markdown content.
+/// * `title` - A string slice containing the title of the Markdown content.
+/// * `description` - A string slice containing the description of the Markdown content.
+/// * `author` - A string slice containing the author of the Markdown content.
 ///
 /// # Returns
 ///
-/// A `Result` containing a `String` representing the generated plain text if successful,
-/// or a `Box<dyn Error>` if an error occurs during processing.
+/// A `Result` containing a tuple `(String, String, String)` representing the generated plain text,
+/// title, and description if successful, or a `Box<dyn Error>` if an error occurs during processing.
 ///
 /// # Errors
 ///
@@ -32,11 +38,24 @@ use std::error::Error;
 /// use ssg::modules::plaintext::generate_plain_text;
 ///
 /// let content = "## Hello, *world*!";
-/// let plain_text = generate_plain_text(content).unwrap();
+/// let (plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords) = generate_plain_text(content, "Title", "Description", "Author", "Creator", "Keywords").unwrap();
 ///
 /// assert_eq!(plain_text, "Hello, world !");
+/// assert_eq!(plain_title, "Title");
+/// assert_eq!(plain_description, "Description");
+/// assert_eq!(plain_author, "Author");
+/// assert_eq!(plain_creator, "Creator");
+/// assert_eq!(plain_keywords, "Keywords");
 /// ```
-pub fn generate_plain_text(content: &str) -> Result<String, Box<dyn Error>> {
+
+pub fn generate_plain_text(
+    content: &str,
+    title: &str,
+    description: &str,
+    author: &str,
+    creator: &str,
+    keywords: &str,
+) -> PlainTextResult {
     // Regex patterns for class, and image tags
     let class_regex = Regex::new(r#"\.class\s*=\s*"\s*[^"]*"\s*"#)?;
     let img_regex = Regex::new(r"(<img[^>]*?)(/?>)")?;
@@ -51,6 +70,8 @@ pub fn generate_plain_text(content: &str) -> Result<String, Box<dyn Error>> {
     let no_markdown_links = link_ref_regex.replace_all(&processed_content, "$1");
 
     let mut plain_text = String::new();
+    // let plain_title = title.to_string();
+    // let plain_description = description.to_string();
     let parser = Parser::new(&no_markdown_links);
 
     let mut last_was_text = false;
@@ -116,5 +137,19 @@ pub fn generate_plain_text(content: &str) -> Result<String, Box<dyn Error>> {
         }
     }
     let plain_text = plain_text.trim();
-    Ok(plain_text.to_string())
+    let plain_title = title.trim();
+    let plain_description = description.trim();
+    let plain_author = author.trim();
+    let plain_creator = creator.trim();
+    let plain_keywords = keywords.trim();
+    Ok(
+        (
+            plain_text.to_string(),
+            plain_title.to_string(),
+            plain_description.to_string(),
+            plain_author.to_string(),
+            plain_creator.to_string(),
+            plain_keywords.to_string(),
+        )
+    )
 }

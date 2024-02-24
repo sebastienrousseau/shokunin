@@ -9,13 +9,20 @@ mod tests {
         let content = "**Bold** and *italics*";
         
         // When generating plain text
-        let result = generate_plain_text(content);
+        let result = generate_plain_text(
+            content,
+            "Title",
+            "Description",
+            "Author",
+            "Creator",
+            "Keywords",
+        );
         
         // Assert that the result is successful
         assert!(result.is_ok());
         
         // Retrieve the generated plain text
-        let plain_text = result.unwrap();
+        let (plain_text, _, _, _, _, _) = result.unwrap();
         
         // Assert that the generated plain text is correct
         assert_eq!(plain_text, "Bold and italics");
@@ -28,13 +35,20 @@ mod tests {
         let content = "Some text with an image <img src=\"example.jpg\" />";
         
         // When generating plain text
-        let result = generate_plain_text(content);
+        let result = generate_plain_text(
+            content,
+            "Title",
+            "Description",
+            "Author",
+            "Creator",
+            "Keywords",
+        );
         
         // Assert that the result is successful
         assert!(result.is_ok());
         
         // Retrieve the generated plain text
-        let plain_text = result.unwrap();
+        let (plain_text, _, _, _, _, _) = result.unwrap();
         
         // Assert that the generated plain text is correct
         assert_eq!(plain_text, "Some text with an image");
@@ -52,13 +66,20 @@ This is a paragraph.
 This is another paragraph.";
         
         // When generating plain text
-        let result = generate_plain_text(content);
+        let result = generate_plain_text(
+            content,
+            "Title",
+            "Description",
+            "Author",
+            "Creator",
+            "Keywords",
+        );
         
         // Assert that the result is successful
         assert!(result.is_ok());
         
         // Retrieve the generated plain text
-        let plain_text = result.unwrap();
+        let (plain_text, _, _, _, _,_) = result.unwrap();
         
         // Assert that the generated plain text is correct
         assert_eq!(plain_text, "Header 1\nThis is a paragraph.\nThis is another paragraph.");
@@ -74,13 +95,20 @@ This is another paragraph.";
             [1]: https://example.com";
         
         // When generating plain text
-        let result = generate_plain_text(content);
+        let result = generate_plain_text(
+            content,
+            "Title",
+            "Description",
+            "Author",
+            "Creator",
+            "Keywords",
+        );
         
         // Assert that the result is successful
         assert!(result.is_ok());
         
         // Retrieve the generated plain text
-        let plain_text = result.unwrap();
+        let (plain_text, _, _, _, _, _) = result.unwrap();
         
         // Assert that the generated plain text is correct
         assert_eq!(plain_text, "Some text link.\n        [1]: https://example.com");

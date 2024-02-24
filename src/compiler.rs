@@ -8,18 +8,7 @@ use crate::{
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
     models::data::{FileData, PageData, RssData},
     modules::{
-        cname::create_cname_data,
-        html::generate_html,
-        human::create_human_data,
-        json::{cname, human, sitemap, txt},
-        manifest::create_manifest_data,
-        metadata::extract_and_prepare_metadata,
-        navigation::NavigationGenerator,
-        plaintext::generate_plain_text,
-        rss::generate_rss,
-        sitemap::create_site_map_data,
-        tags::*,
-        txt::create_txt_data,
+        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, pdf::PdfGenerationParams, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
     },
     utilities::{
         file::add,
@@ -95,21 +84,39 @@ pub fn compile(
             });
 
             // Generate PDF
-            let text_content = generate_plain_text(
+            let (plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords) = match generate_plain_text(
                 &file.content,
-            )
-            .unwrap_or_else(|err| {
-                let description =
-                    format!("Error generating Plain Text: {:?}", err);
-                macro_log_info!(
-                    &ERROR,
-                    "compiler.rs - Line 107",
-                    &description,
-                    &LogFormat::CLF
-                );
-                String::from("Fallback Plain Text content")
-            });
-            // print!("Text Content: {:?}", text_content);
+                &macro_metadata_option!(metadata, "title"),
+                &macro_metadata_option!(metadata, "description"),
+                &macro_metadata_option!(metadata, "author"),
+                &macro_metadata_option!(metadata, "generator"),
+                &keywords.join(", "),
+            ) {
+                Ok((plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords)) => (plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords),
+                Err(err) => {
+                    let description = format!("Error generating Plain Text: {:?}", err);
+                    macro_log_info!(
+                        &ERROR,
+                        "compiler.rs - Line 107",
+                        &description,
+                        &LogFormat::CLF
+                    );
+                    // Provide fallback values
+                    (String::from("Fallback Plain Text content"), String::new(), String::new(), String::new(), String::new(), String::new())
+                }
+            };
+            // println!("Text Content: {:?}", plain_text);
+            // println!("Title: {:?}", plain_title);
+            // println!("Description: {:?}", plain_description);
+            // println!("Author: {:?}", plain_author);
+            // println!("Creator: {:?}", plain_creator);
+            // print!("Keywords: {:?}", plain_keywords);
+
+
+
+
+
+            // print!("Text Content: {:?}", plain_text);
 
             let filename_without_extension = Path::new(&file.name)
                     .file_stem()
@@ -117,8 +124,17 @@ pub fn compile(
                     .unwrap_or(&file.name);
                 // println!("File Name: {}", filename_without_extension);
 
-            if let Err(err) = generate_pdf(&text_content, "pdfs", filename_without_extension) {
-                let description = format!("Error generating PDF: {:?}", err);
+                if let Err(err) = generate_pdf(PdfGenerationParams {
+                    plain_title: &plain_title,
+                    plain_description: &plain_description,
+                    plain_text: &plain_text,
+                    plain_author: &plain_author,
+                    plain_creator: &plain_creator,
+                    plain_keywords: &plain_keywords,
+                    output_dir: "pdfs",
+                    filename: filename_without_extension,
+                }) {
+                    let description = format!("Error generating PDF: {:?}", err);
                 macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
                 // Handle the error here, for example, return early or log it
             }
