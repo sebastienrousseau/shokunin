@@ -58,6 +58,23 @@ pub fn compile(
         HashMap::new();
 
     // Process source files and store results in 'compiled_files' vector
+    /// Represents a vector of compiled file data.
+    ///
+    /// Each `FileData` contains information about a source file, including its metadata and generated content.
+    /// This vector is populated by iterating over the `source_files` and applying the necessary transformations
+    /// and generation processes to each file.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let compiled_files: Vec<FileData> = source_files
+    ///     .into_iter()
+    ///     .map(|file| {
+    ///         // Perform necessary operations on the file
+    ///     })
+    ///     .collect();
+    /// ```
+    let compiled_files: Vec<FileData>;
     let compiled_files: Vec<FileData> = source_files
         .into_iter()
         .map(|file| {
@@ -105,24 +122,11 @@ pub fn compile(
                     (String::from("Fallback Plain Text content"), String::new(), String::new(), String::new(), String::new(), String::new())
                 }
             };
-            // println!("Text Content: {:?}", plain_text);
-            // println!("Title: {:?}", plain_title);
-            // println!("Description: {:?}", plain_description);
-            // println!("Author: {:?}", plain_author);
-            // println!("Creator: {:?}", plain_creator);
-            // print!("Keywords: {:?}", plain_keywords);
-
-
-
-
-
-            // print!("Text Content: {:?}", plain_text);
 
             let filename_without_extension = Path::new(&file.name)
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .unwrap_or(&file.name);
-                // println!("File Name: {}", filename_without_extension);
 
                 if let Err(err) = generate_pdf(PdfGenerationParams {
                     plain_title: &plain_title,
@@ -131,7 +135,7 @@ pub fn compile(
                     plain_author: &plain_author,
                     plain_creator: &plain_creator,
                     plain_keywords: &plain_keywords,
-                    output_dir: "pdfs",
+                    output_dir: "./docs/pdfs",
                     filename: filename_without_extension,
                 }) {
                     let description = format!("Error generating PDF: {:?}", err);
