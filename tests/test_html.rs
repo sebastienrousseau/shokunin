@@ -2,9 +2,10 @@
 mod tests {
     use regex::Regex;
     use ssg::{
-        modules::html::{generate_html, post_process_html},
+        modules::html::generate_html,
         utilities::directory::format_header_with_id_class,
     };
+    use ssg::modules::postprocessor::post_process_html;
 
     #[test]
     fn test_generate_html_with_front_matter() {
@@ -172,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_post_process_html_with_invalid_input() {
-        let html = "<p>Hello</p>";
+        let html = "<p>Hello</p>\n";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
         let result =

@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::utilities::directory::extract_front_matter;
 use crate::modules::preprocessor::preprocess_content;
 use pulldown_cmark::{Parser, Event, Tag};

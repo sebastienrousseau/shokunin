@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use crate::utilities::directory::update_class_attributes;
 use regex::Regex;
 use std::error::Error;

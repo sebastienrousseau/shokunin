@@ -37,6 +37,9 @@ pub mod plaintext;
 /// The `preprocessor` module contains functions for preprocessing content.
 pub mod preprocessor;
 
+/// the `postprocessor` module contains functions for postprocessing content.
+pub mod postprocessor;
+
 /// The `pdf` module contains functions for generating PDFs.
 pub mod pdf;
 
