@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_post_process_html_with_invalid_input() {
-        let html = "<p>Hello</p>\n";
+        let html = "<p>Hello</p>";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
         let result =

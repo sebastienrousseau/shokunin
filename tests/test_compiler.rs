@@ -30,25 +30,26 @@ description: My Description
     }
 
     #[test]
-    fn test_generate_html() {
-        let content = "## Hello, world!\n\nThis is a test.";
-        let title = "My Page";
-        let description = "This is a test page";
-        let html_result =
-            generate_html(content, title, description, None);
+fn test_generate_html() {
+    let content = "## Hello, world!\n\nThis is a test.";
+    let title = "My Page";
+    let description = "This is a test page";
+    let html_result =
+        generate_html(content, title, description, None);
 
-        match html_result {
-            Ok(html) => {
-                assert_eq!(
-                    html,
-                    "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" aria-label=\"Hello Heading\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n"
-                );
-            }
-            Err(err) => {
-                panic!("HTML generation failed with error: {:?}", err);
-            }
+    match html_result {
+        Ok(html) => {
+            assert_eq!(
+                html,
+                "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" aria-label=\"Hello Heading\" itemprop=\"name\" class=\"hello\">Hello, world!</h2><p>This is a test.</p>"
+            );
+        }
+        Err(err) => {
+            panic!("HTML generation failed with error: {:?}", err);
         }
     }
+}
+
 
     #[test]
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {

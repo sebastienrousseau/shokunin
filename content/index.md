@@ -108,8 +108,9 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ## Overview
 
-Kaishi is a minimalist and modern [Shokunin static website generator ⧉][0]
+**Kaishi** is a minimalist and modern [Shokunin static website generator ⧉][0]
 starter template designed for professionals who value simplicity and elegance.
+
 With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
 solution for those looking to showcase their work and services online. Built on
 a responsive framework, this template is ideal for professionals without coding

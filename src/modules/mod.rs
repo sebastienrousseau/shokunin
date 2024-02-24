@@ -31,6 +31,12 @@ pub mod metadata;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
 
+/// The `plaintext` module contains functions for generating plaintext.
+pub mod plaintext;
+
+/// The `preprocessor` module contains functions for preprocessing content.
+pub mod preprocessor;
+
 /// The `pdf` module contains functions for generating PDFs.
 pub mod pdf;
 

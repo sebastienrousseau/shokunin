@@ -11,7 +11,7 @@ use crate::utilities::directory::{
 use comrak::{markdown_to_html, ComrakOptions};
 
 
-use pulldown_cmark::{Event, Parser, Tag};
+
 use regex::{Captures, Regex};
 use std::error::Error;
 
@@ -39,7 +39,7 @@ use std::error::Error;
 /// let html = generate_html(content, title, description, None);
 /// let html_str = html.unwrap_or_else(|e| panic!("Error: {:?}", e));
 ///
-/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" aria-label=\"Hello Heading\" itemprop=\"name\" class=\"hello\">Hello, world!</h2>\n<p>This is a test.</p>\n");
+/// assert_eq!(html_str, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page</h1><p>This is a test page</p><h2 id=\"h2-hello\" tabindex=\"0\" aria-label=\"Hello Heading\" itemprop=\"name\" class=\"hello\">Hello, world!</h2><p>This is a test.</p>");
 /// ```
 pub fn generate_html(
     content: &str,
@@ -105,57 +105,6 @@ fn process_headers(
         }
     }
     html_string
-}
-
-/// Generate a plain text representation of the Markdown content.
-///
-pub fn generate_plain_text(
-    content: &str,
-) -> Result<String, Box<dyn Error>> {
-    // Regex patterns for class, and image tags
-    let class_regex = Regex::new(r#"\.class\s*=\s*"\s*[^"]*"\s*"#)?;
-    let img_regex = Regex::new(r"(<img[^>]*?)(/?>)")?;
-    let link_ref_regex = Regex::new(r"\[([^\]]+)\]\[\d+\]")?;
-
-    // Extract front matter from content
-    let markdown_content = extract_front_matter(content);
-    // Preprocess content to update class attributes and image tags
-    let processed_content =
-        preprocess_content(markdown_content, &class_regex, &img_regex)?;
-
-    // Further preprocess to remove Markdown link references.
-    let no_markdown_links = link_ref_regex.replace_all(&processed_content, "$1");
-
-    let mut plain_text = String::new();
-    let parser = Parser::new(&no_markdown_links);
-
-    let mut last_was_text = false;
-    let mut need_extra_line_break = false;
-
-    for event in parser {
-        match event {
-            Event::Text(text) => {
-                if need_extra_line_break && !text.trim().is_empty() {
-                    plain_text.push('\n');
-                    need_extra_line_break = false;
-                }
-                if last_was_text && !text.trim().is_empty() {
-                    plain_text.push('\n');
-                }
-                plain_text.push_str(text.trim_end());
-                last_was_text = true;
-            }
-            Event::Start(tag) => {
-                if tag == Tag::Paragraph && last_was_text {
-                    need_extra_line_break = true;
-                    plain_text.push('\n');
-                }
-                last_was_text = false;
-            },
-            _ => {}
-        }
-    }
-    Ok(plain_text)
 }
 
 /// Generate header HTML string based on title
@@ -236,7 +185,7 @@ pub fn preprocess_content(
             update_class_attributes(line, class_regex, img_regex)
         })
         .collect();
-
+    // println!("{}", processed_content.join("\n"));
     Ok(processed_content.join("\n"))
 }
 
@@ -366,7 +315,7 @@ pub fn post_process_html(
                 .to_string();
 
         processed_html.push_str(&processed_line);
-        processed_html.push('\n');
+        // processed_html.push('\n');
     }
 
     Ok(processed_html)
