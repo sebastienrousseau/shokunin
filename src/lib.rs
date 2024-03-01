@@ -41,24 +41,24 @@
 //! The CLI is straightforward. Below are examples to guide you:
 //!
 //! ```shell
-//! # Create a new site named mysite
-//! ssg  --new=mysite --content=content --template=template --output=output --serve=public
+//! # Create a new site named docs
+//! ssg  --new=docs --content=content --template=template --output=output --serve=public
 //! ```
 //!
 //! or
 //!
 //! ```shell
 //! # Alternative shorter command
-//! ssg  -n=mysite -c=content -t=template -o=output -s=public
+//! ssg  -n=docs -c=content -t=template -o=output -s=public
 //! ```
 //!
 //! **Arguments Explained:**
 //!
-//! - `-n`, `--new`: Name of the new website. (e.g., `--new=MyBlog`)
-//! - `-c`, `--content`: Directory containing website content. (e.g., `--content=./content`)
-//! - `-t`, `--template`: Directory containing website templates. (e.g., `--template=./templates`)
-//! - `-o`, `--output`: Directory where generated website files will be saved temporarily. (e.g., `--output=./build`)
-//! - `-s`, `--serve`: (Optional) Directory from which the website will be served. (e.g., `--serve=./public`)
+//! - `-n`, `--new`: Name of the new site to be created. (e.g., `--new=docs`). Defaults to `docs` which allows you to publish your site to GitHub Pages.
+//! - `-c`, `--content`: Directory containing the website content. (e.g., `--content=content`)
+//! - `-t`, `--template`: Directory containing website templates. (e.g., `--template=templates`)
+//! - `-o`, `--output`: Directory where generated website files will be saved temporarily. (e.g., `--output=build`)
+//! - `-s`, `--serve`: (Optional) Directory from which the website will be served. (e.g., `--serve=public`)
 //!
 //! ### In your project
 //!
