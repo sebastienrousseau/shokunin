@@ -78,8 +78,6 @@ Shokunin Static Site Generator (SSG) feature highlights include:
     - [Installation](#installation)
     - [Requirements](#requirements)
     - [Platform support](#platform-support)
-      - [Tier 1 platforms](#tier-1-platforms)
-      - [Tier 2 platforms](#tier-2-platforms)
     - [Documentation](#documentation)
   - [Usage](#usage)
     - [Command Line Interface (CLI)](#command-line-interface-cli)
@@ -131,36 +129,6 @@ Rust.
 Shokunin Static Site Generator (SSG) is supported and tested on the following
 platforms and architectures as part of our [CI/CD pipeline][11].
 
-This list is based on the [Rust Platform Support][17] list.
-
-#### Tier 1 platforms
-
-Rust Tier 1 targets are officially supported and guaranteed to work.
-
-| | Operating System | Target | Description |
-| --- | --- | --- | --- |
-| ✅ | Linux   | aarch64-unknown-linux-gnu | 64-bit Linux systems on ARM architecture |
-| ✅ | Linux   | i686-unknown-linux-gnu | 32-bit Linux (kernel 3.2+, glibc 2.17+) |
-| ✅ | Linux   | x86_64-unknown-linux-gnu | 64-bit Linux (kernel 2.6.32+, glibc 2.11+) |
-| ✅ | macOS   | x86_64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
-| ✅ | Windows | i686-pc-windows-gnu | 32-bit Windows (7 or later) |
-| ✅ | Windows | i686-pc-windows-msvc | 32-bit Windows (7 or later) |
-| ✅ | Windows | x86_64-pc-windows-gnu | 64-bit Windows (7 or later) |
-| ✅ | Windows | x86_64-pc-windows-msvc | 64-bit Windows (7 or later) |
-
-#### Tier 2 platforms
-
-Rust Tier 2 targets are supported for building, but not necessarily running.
-
-| | Operating System | Target | Description |
-| --- | --- | --- | --- |
-| ✅ | Linux   | aarch64-unknown-linux-musl | 64-bit Linux systems on ARM architecture |
-| ✅ | Linux   | arm-unknown-linux-gnueabi | ARMv6 Linux (kernel 3.2, glibc 2.17) |
-| ✅ | Linux   | arm-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
-| ✅ | Linux   | armv7-unknown-linux-gnueabihf | ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17) |
-| ✅ | macOS   | aarch64-apple-darwin | 64-bit macOS (10.7 Lion or later) |
-| ✅ | Windows | aarch64-pc-windows-msvc | 64-bit Windows (7 or later) |
-
 The [GitHub Actions][11] shows the platforms in which the Shokunin Static Site
 Generator (SSG) library tests are run.
 
@@ -180,16 +148,16 @@ Here’s the first command you can enter in your Terminal window to run Shokunin
 Static Site Generator (SSG):
 
 ```shell
-ssg  --new=mysite --content=content --template=template --output=output --serve=public
+ssg  --new=docs --content=content --template=template --output=output --serve=public
 ```
 
 or
 
 ```shell
-ssg  -n=mysite -c=content -t=template -o=output -s=public
+ssg  -n=docs -c=content -t=template -o=output -s=public
 ```
 
-This command will create a new website with the name `mysite` in the current
+This command will create a new website with the name `docs` in the current
 directory. It will use the `content` directory to gather the website content
 and the `template` directory to generate the website files. It will serve the
 website directly from the `mysite` directory.
@@ -212,7 +180,7 @@ following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-shokunin = "0.0.24"
+shokunin = "0.0.25"
 ```
 
 Add the following to your `main.rs` file:
@@ -330,6 +298,6 @@ of useful suggestions on how to improve this project.
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.24-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.25-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

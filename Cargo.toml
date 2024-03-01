@@ -20,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.24"
+version = "0.0.25"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -51,16 +51,16 @@ comrak = "0.21.0"
 dtt = "0.0.5"
 env_logger = "0.11.2"
 lazy_static = "1.4.0"
-log = {version="0.4.20", features = ["std"] }
+log = {version="0.4.21", features = ["std"] }
 minify-html = "0.15.0"
-openssl = { version = "0.10.64", features = ["vendored"] }
+# openssl = { version = "0.10.64", features = ["vendored"] }
 quick-xml = "0.31.0"
 regex = "1.10.3"
 reqwest = { version = "0.11.24", features = ["blocking", "json"] }
 rlg = "0.0.2"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-tempfile = "3.10.0"
+tempfile = "3.10.1"
 toml = "0.8.10"
 yaml-rust = "0.4.5"
 vrd = "0.0.5"
@@ -96,16 +96,16 @@ rpath = false
 strip = false
 
 [profile.release]
-codegen-units = 1        # Compile crates one after another so the compiler can optimize better
-debug = false            # Disable debug information
-debug-assertions = false # Disable debug assertions
-incremental = false      # Disable incremental compilation
-lto = true               # Enables link to optimizations
-opt-level = "s"          # Optimize for binary size
-overflow-checks = false  # Disable overflow checks
-panic = "abort"          # Strip expensive panic clean-up logic
-rpath = false            # Disable rpath
-strip = "symbols"        # Automatically strip symbols from the binary.
+codegen-units = 1
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = "s"
+overflow-checks = false
+panic = "abort"
+rpath = false
+strip = "symbols"
 
 [profile.test]
 codegen-units = 256

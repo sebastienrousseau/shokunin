@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.24-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.25-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -41,24 +41,24 @@
 //! The CLI is straightforward. Below are examples to guide you:
 //!
 //! ```shell
-//! # Create a new site named mysite
-//! ssg  --new=mysite --content=content --template=template --output=output --serve=public
+//! # Create a new site named docs
+//! ssg  --new=docs --content=content --template=template --output=output --serve=public
 //! ```
 //!
 //! or
 //!
 //! ```shell
 //! # Alternative shorter command
-//! ssg  -n=mysite -c=content -t=template -o=output -s=public
+//! ssg  -n=docs -c=content -t=template -o=output -s=public
 //! ```
 //!
 //! **Arguments Explained:**
 //!
-//! - `-n`, `--new`: Name of the new website. (e.g., `--new=MyBlog`)
-//! - `-c`, `--content`: Directory containing website content. (e.g., `--content=./content`)
-//! - `-t`, `--template`: Directory containing website templates. (e.g., `--template=./templates`)
-//! - `-o`, `--output`: Directory where generated website files will be saved temporarily. (e.g., `--output=./build`)
-//! - `-s`, `--serve`: (Optional) Directory from which the website will be served. (e.g., `--serve=./public`)
+//! - `-n`, `--new`: Name of the new site to be created. (e.g., `--new=docs`). Defaults to `docs` which allows you to publish your site to GitHub Pages.
+//! - `-c`, `--content`: Directory containing the website content. (e.g., `--content=content`)
+//! - `-t`, `--template`: Directory containing website templates. (e.g., `--template=templates`)
+//! - `-o`, `--output`: Directory where generated website files will be saved temporarily. (e.g., `--output=build`)
+//! - `-s`, `--serve`: (Optional) Directory from which the website will be served. (e.g., `--serve=public`)
 //!
 //! ### In your project
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.24"
+//! shokunin = "0.0.25"
 //! ```
 //!
 //! And in your `main.rs`:

@@ -111,8 +111,12 @@ pub fn compile(
                     .file_stem()
                     .and_then(|stem| stem.to_str())
                     .unwrap_or(&file.name);
-                // println!("File Name: {}", filename_without_extension);
-
+                let common_path = build_dir_path.to_str().unwrap();
+                let pdf_path = if filename_without_extension == "index" {
+                    format!("{}/", common_path)
+                } else {
+                    format!("{}/{}/", common_path, filename_without_extension)
+                };
                 if let Err(err) = generate_pdf(PdfGenerationParams {
                     plain_title: &plain_title,
                     plain_description: &plain_description,
@@ -120,10 +124,10 @@ pub fn compile(
                     plain_author: &plain_author,
                     plain_creator: &plain_creator,
                     plain_keywords: &plain_keywords,
-                    output_dir: "./docs/pdfs",
+                    output_dir: &pdf_path,
                     filename: filename_without_extension,
                 }) {
-                    let description = format!("Error generating PDF: {:?}", err);
+                let description = format!("Error generating PDF: {:?}", err);
                 macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
                 // Handle the error here, for example, return early or log it
             }
@@ -337,8 +341,8 @@ pub fn compile(
 
     // Write compiled files to output directory
     let cli_description = format!(
-        "<Notice>: Successfully generated, compiled, and minified all HTML files to the `{:?}` directory",
-        build_dir_path.display()
+        "<Notice>: Successfully generated, compiled, and minified all HTML and PDF files to the `{:?}` directory",
+        site_path.display()
     );
 
     // Log the generated files information to a log file (shokunin.log)
@@ -350,7 +354,7 @@ pub fn compile(
     );
 
     // Print the generated files to the console
-    println!("{} ", cli_description);
+    // println!("{} ", cli_description);
 
     // Iterate over compiled files and write pages to output directory
     for file in &compiled_files {

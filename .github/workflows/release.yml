@@ -27,106 +27,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          # List of targets:
-          # https://doc.rust-lang.org/nightly/rustc/platform-support.html
-
-          # Tier 1 platforms 🏆
-          - aarch64-unknown-linux-gnu # 64-bit Linux systems on ARM architecture
-          - i686-pc-windows-gnu # 32-bit Windows (i686-pc-windows-gnu)
-          - i686-pc-windows-msvc # 32-bit Windows (i686-pc-windows-msvc)
-          - i686-unknown-linux-gnu # 32-bit Linux (kernel 3.2+, glibc 2.17+)
-          - x86_64-apple-darwin # 64-bit macOS (10.7 Lion or later)
-          - x86_64-pc-windows-gnu # 64-bit Windows (x86_64-pc-windows-gnu)
-          - x86_64-pc-windows-msvc # 64-bit Windows (x86_64-pc-windows-msvc)
-          - x86_64-unknown-linux-gnu # 64-bit Linux (kernel 2.6.32+, glibc 2.11+)
-
-          # Tier 2 platforms 🥈
-          - aarch64-apple-darwin # 64-bit macOS on Apple Silicon
-          - aarch64-pc-windows-msvc # 64-bit Windows (aarch64-pc-windows-msvc)
-          - aarch64-unknown-linux-musl # 64-bit Linux systems on ARM architecture
-          - arm-unknown-linux-gnueabi # ARMv6 Linux (kernel 3.2, glibc 2.17)
-          - arm-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
-          - armv7-unknown-linux-gnueabihf # ARMv7 Linux, hardfloat (kernel 3.2, glibc 2.17)
-          - powerpc-unknown-linux-gnu # PowerPC Linux (kernel 3.2, glibc 2.17)
-          - powerpc64-unknown-linux-gnu # PowerPC64 Linux (kernel 3.2, glibc 2.17)
-          - powerpc64le-unknown-linux-gnu # PowerPC64le Linux (kernel 3.2, glibc 2.17)
-          - riscv64gc-unknown-linux-gnu # RISC-V Linux (kernel 3.2, glibc 2.17)
-          - s390x-unknown-linux-gnu # s390x Linux (kernel 3.2, glibc 2.17)
-          - x86_64-unknown-freebsd # 64-bit FreeBSD on x86-64
-          - x86_64-unknown-linux-musl # 64-bit Linux (kernel 2.6.32+, musl libc)
-          # - x86_64-unknown-netbsd # 64-bit NetBSD on x86-64
-
         include:
-          # Tier 1 platforms 🏆
-          - target: aarch64-unknown-linux-gnu
+          - build: linux
             os: ubuntu-latest
-            cross: true
-          - target: i686-pc-windows-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: i686-pc-windows-msvc
-            os: windows-latest
-            cross: true
-          - target: i686-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: x86_64-apple-darwin
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+          - build: macos
             os: macos-latest
-            cross: true
-          - target: x86_64-pc-windows-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            cross: true
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-
-          # Tier 2 platforms 🥈
-          - target: aarch64-apple-darwin
+            arch: x86_64
+            target: x86_64-apple-darwin
+          - build: macos
             os: macos-latest
-            cross: true
-          - target: aarch64-pc-windows-msvc
+            arch: aarch64
+            target: aarch64-apple-darwin
+          - build: windows
             os: windows-latest
-            cross: true
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            cross: true
-          - target: arm-unknown-linux-gnueabi
-            os: ubuntu-latest
-            cross: true
-          - target: arm-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            cross: true
-          - target: armv7-unknown-linux-gnueabihf
-            os: ubuntu-latest
-            cross: true
-          - target: powerpc-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: powerpc64-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: powerpc64le-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: riscv64gc-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: s390x-unknown-linux-gnu
-            os: ubuntu-latest
-            cross: true
-          - target: x86_64-unknown-freebsd
-            os: ubuntu-latest
-            cross: true
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            cross: true
-          # - target: x86_64-unknown-netbsd
-          #   os: ubuntu-latest
-          #   cross: true
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
 
@@ -282,7 +199,7 @@ jobs:
           VERSION: ${{ env.VERSION }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Shokunin 職人 Static Site Generator 🦀 v${{ env.VERSION }}
+          release_name: v${{ env.VERSION }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
           draft: true
           prerelease: false
