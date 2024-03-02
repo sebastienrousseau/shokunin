@@ -1,4 +1,24 @@
-# Example sites
+# Shokunin Static Site Generator (SSG)
+
+The fastest Rust-based Static Site Generator (SSG) for building professional
+websites and blogs.
+
+<!-- markdownlint-disable MD033 MD041 -->
+
+<img
+  align="right"
+  alt="Logo of the Shokunin Static Site Generator"
+  height="261"
+  src="https://kura.pro/shokunin/images/logos/shokunin.svg"
+  title="Logo of the Shokunin Static Site Generator"
+  width="261"
+  />
+
+<!-- markdownlint-enable MD033 MD041 -->
+
+*Part of the [Mini Functions][0] family of Rust libraries.*
+
+## Example sites
 
 Shokunin empowers building fast, customizable sites through flexible templating.
 
@@ -16,20 +36,23 @@ generate optimized static assets.
 Browse the source code for a deeper dive into
 their implementations.
 
-| Website | Source Code|
-|:---|:---:|
-| [https://akande.co/][00] | [Àkàndé Voice Assistant Website][A] |
-| [https://audioanalyser.co/][01] | [Audio Analyser Website][B] |
-| [https://bankingonquantum.com/][02] | [Banking on Quantum Website][C] |
-| [https://bankstatementparser.com/][03] | [Bank Statement Parser Website][D] |
-| [https://dttlib.com/][04] | [DttLib Website][E] |
-| [https://hshlib.one/][05] | [HshLib Website][F] |
-| [https://kaishi.one/][06] | [Kaishi Website][G] |
-| [https://kyberlib.com/][07] | [KyberLib Website][H] |
-| [https://l90s.com/][08] | [L90s Website][I] |
-| [https://pain001.com/][09] | [Pain001 Website][J] |
-| [https://sebastienrousseau.com/][10] | [Sébastien Rousseau Website][K] |
-| [https://shokunin.one/][11] | [Shokunin Website][L] |
+| # | Website | Source Code|
+|:---|:---|:---:|
+| 01 | [https://akande.co/][00] | [Àkàndé Voice Assistant Website][A] |
+| 02 | [https://audioanalyser.co/][01] | [Audio Analyser Website][B] |
+| 03 | [https://bankingonquantum.com/][02] | [Banking on Quantum Website][C] |
+| 04 | [https://bankstatementparser.com/][03] | [Bank Statement Parser Website][D] |
+| 05 | [https://dttlib.com/][04] | [DttLib Website][E] |
+| 06 | [https://hshlib.one/][05] | [HshLib Website][F] |
+| 07 | [https://kaishi.one/][06] | [Kaishi Website][G] |
+| 08 | [https://kyberlib.com/][07] | [KyberLib Website][H] |
+| 09 | [https://l90s.com/][08] | [L90s Website][I] |
+| 10 | [https://pain001.com/][09] | [Pain001 Website][J] |
+| 11 | [https://sebastienrousseau.com/][10] | [Sébastien Rousseau Website][K] |
+| 12 | [https://shokunin.one/][11] | [Shokunin Website][L] |
+
+
+[0]: https://minifunctions.com/ "The Rust Mini Functions"
 
 [00]: https://akande.co/
 [01]: https://audioanalyser.co/
