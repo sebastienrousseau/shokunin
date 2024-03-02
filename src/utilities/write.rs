@@ -223,19 +223,17 @@ fn print_section_headers(
 ) -> Result<(), Box<dyn Error>> {
     let mut section_headers = Vec::<String>::new(); // Collect section headers
 
-    for entry in read_dir(dir_path)? {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if let Some(file_name) =
-                path.file_name().and_then(|s| s.to_str())
-            {
-                let header = if path.is_dir() {
-                    file_name.to_uppercase()
-                } else {
-                    format!("  - {}", file_name)
-                };
-                section_headers.push(header);
-            }
+    for entry in (read_dir(dir_path)?).flatten() {
+        let path = entry.path();
+        if let Some(file_name) =
+            path.file_name().and_then(|s| s.to_str())
+        {
+            let header = if path.is_dir() {
+                file_name.to_uppercase()
+            } else {
+                format!("  - {}", file_name)
+            };
+            section_headers.push(header);
         }
     }
 
