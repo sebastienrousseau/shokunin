@@ -2328,7 +2328,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "assert_cmd",
  "clap 4.5.1",
