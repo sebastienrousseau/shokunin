@@ -57,16 +57,25 @@ templates to help you create high quality websites with ease.
 Shokunin Static Site Generator (SSG) feature highlights include:
 
 - Blazing fast and flexible static site generator written in Rust
-- Built-in support for [GitHub Flavoured Markdown][12] (GFM).
-- Built-in support for Google Analytics and Bing Analytics.
-- Compatible with various HTML themes and Premium templates.
-- Generates Atom and RSS feeds for your blog posts.
-- Generates minified versions for optimal performance and SEO.
-- Includes a built-in Rust development server for local development and testing.
-- Supports multiple content formats, including Markdown, YAML, JSON, TOML, XML,
-  etc.
-- Built-in support for sitemap generation, robots.txt generation, canonical
-  name (CNAME) records and custom 404 pages.
+- Built-in support for [GitHub Flavoured Markdown][12] (GFM)
+- Built-in support for Google Analytics and Bing Analytics
+- Experimental support for PDF generation
+- Compatible with various HTML themes and premium templates
+- Generates Atom and RSS feeds for your blog posts automatically
+- Generates minified HTML for optimal performance and SEO
+- Includes a built-in Rust development server for local testing
+- Supports multiple content formats:
+  - Markdown
+  - YAML
+  - JSON
+  - TOML
+  - XML
+- Built-in generation for:
+  - Sitemaps
+  - robots.txt
+  - Canonical name (CNAME) records
+  - Custom 404 pages
+- Comprehensive documentation
 
 ## Table of Contents
 
@@ -142,10 +151,7 @@ You can find our documentation on [docs.rs][9], [lib.rs][10] and [crates.io][8].
 ### Command Line Interface (CLI)
 
 The Shokunin Static Site Generator (SSG) library runs in a Terminal window and
-can be used to generate a static website.
-
-Here’s the first command you can enter in your Terminal window to run Shokunin
-Static Site Generator (SSG):
+can be used to easily generate a static website. To get started, run:
 
 ```shell
 ssg  --new=docs --content=content --template=template --output=output --serve=public
@@ -157,21 +163,24 @@ or
 ssg  -n=docs -c=content -t=template -o=output -s=public
 ```
 
-This command will create a new website with the name `docs` in the current
-directory. It will use the `content` directory to gather the website content
-and the `template` directory to generate the website files. It will serve the
-website directly from the `mysite` directory.
+This creates a new website in a directory called `docs` using the markdown content from the `content` directory and the HTML templates from the `template` directory. The static and compiled HTML files and artefacts are then generated in a `docs` folder.
+
+Shokunin is ideal for hosting your site on GitHub Pages. Simply commit and push the `docs` folder to your main branch, and set the GitHub Pages publishing source to point to that folder.
+
+During development, you can use the `--serve` or `--s` option to start a local development server to preview content changes.
+
+With Shokunin's GFM and theme support, you can focus on writing markdown content while the SSG handles delivering a fast, SEO-friendly site.
 
 #### Arguments
 
-- `-n`, `--new`: The name of the new website. (required)
-- `-c`, `--content`: The directory containing the website content. (required)
-- `-t`, `--template`: The directory containing the website templates.
+- `-n`, `--new`: The name of the folder for your new website. (required)
+- `-c`, `--content`: The directory containing the website markdown content. (required)
+- `-t`, `--template`: The directory containing the HTML website templates.
   (required)
 - `-o`, `--output`: The directory where the generated website files will be
   saved temporarily. (required)
 - `-s`, `--serve`: Run the development server. (optional). The directory from
-  which the website will be served.
+  which the website will be served. (optional)
 
 ### In your project
 
@@ -290,7 +299,6 @@ of useful suggestions on how to improve this project.
 [14]: https://www.rust-lang.org/learn/get-started "Rust"
 [15]: https://codecov.io/github/sebastienrousseau/shokunin?branch=main "Codecov"
 [16]: https://www.rust-lang.org/policies/code-of-conduct "Rust's Code of Conduct"
-[17]: https://forge.rust-lang.org/release/platform-support.html "Rust Platform Support"
 
 [banner]: https://kura.pro/shokunin/images/titles/title-shokunin.svg "Banner of the Shokunin Static Site Generator"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt 'Codecov'
