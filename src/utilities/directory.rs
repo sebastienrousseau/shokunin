@@ -165,10 +165,7 @@ pub fn cleanup_directory(
             continue;
         }
 
-        println!(
-            "\n❯ Cleaning up `{}` directory...",
-            directory.display()
-        );
+        println!("\n❯ Cleaning up directories");
 
         fs::remove_dir_all(directory)?;
 
@@ -201,11 +198,7 @@ pub fn create_directory(
             continue;
         }
 
-        println!("❯ Creating `{}` directory...", directory.display());
-
         fs::create_dir(directory)?;
-
-        println!("  Done.\n");
     }
 
     Ok(())
