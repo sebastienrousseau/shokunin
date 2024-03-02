@@ -20,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.25"
+version = "0.0.26"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -67,7 +67,8 @@ printpdf = "0.7.0"
 pulldown-cmark = "0.10.0"
 uuid = { version = "1.7.0", features = ["v4"] }
 
-[target.'cfg(unix)'.dependencies]
+# Unix platforms use OpenSSL for now to provide SSL functionality
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 openssl = { version = "0.10.64", features = ["vendored"] }
 
 [dev-dependencies]
