@@ -46,7 +46,7 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.5.1"
+clap = "4.5.2"
 comrak = "0.21.0"
 dtt = "0.0.5"
 env_logger = "0.11.2"
