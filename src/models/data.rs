@@ -212,6 +212,41 @@ impl SiteMapData {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+/// Options for the `news_sitemap` function
+pub struct NewsSiteMapData {
+    /// A string representing the loc
+    pub loc: String,
+    /// A string representing the publication date
+    pub publication_date: String,
+    /// A string representing the title
+    pub title: String,
+    /// A string representing the news publication name
+    pub news_publication_name: String,
+    /// A string representing the access
+    pub access: String,
+}
+
+impl NewsSiteMapData {
+    /// Creates a new `NewsSiteMapData` struct with the given loc, publication_date, title, news_publication_name, and access.
+    pub fn new(
+        loc: String,
+        publication_date: String,
+        title: String,
+        news_publication_name: String,
+        access: String,
+    ) -> Self {
+        NewsSiteMapData {
+            loc,
+            publication_date,
+            title,
+            news_publication_name,
+            access,
+        }
+    }
+}
+
+
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]

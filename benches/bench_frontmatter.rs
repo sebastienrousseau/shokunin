@@ -1,4 +1,4 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
@@ -21,16 +21,15 @@ use ssg::modules::frontmatter::{extract, parse_yaml_document};
 /// use criterion::{criterion_group, criterion_main, Criterion};
 /// use shokunin_static_site_generator::ssg::modules::frontmatter::bench_extract;
 ///
-/// fn main() {
-///     let mut group = criterion_group::CriterionGroup::new();
-///     group.bench_function("extract", |b| bench_extract(b));
-///     criterion_main(group);
-/// }
+/// let mut group = criterion_group::CriterionGroup::new();
+/// group.bench_function("extract", |b| bench_extract(b));
+/// criterion_main(group);
 /// ```
 ///
 /// # Panics
 ///
 /// This function does not panic.
+#[allow(dead_code)]
 pub(crate) fn bench_extract(c: &mut Criterion) {
     let content = r#"
     ---
@@ -55,11 +54,9 @@ pub(crate) fn bench_extract(c: &mut Criterion) {
     // use criterion::{criterion_group, criterion_main, Criterion};
     // use shokunin_static_site_generator::ssg::modules::frontmatter::bench_extract;
     //
-    // fn main() {
-    //     let mut group = criterion_group::CriterionGroup::new();
-    //     group.bench_function("extract", |b| bench_extract(b));
-    //     criterion_main(group);
-    // }
+    // let mut group = criterion_group::CriterionGroup::new();
+    // group.bench_function("extract", |b| bench_extract(b));
+    // criterion_main(group);
     // ```
     //
     // # Panics
@@ -87,16 +84,15 @@ pub(crate) fn bench_extract(c: &mut Criterion) {
 /// use criterion::{criterion_group, criterion_main, Criterion};
 /// use shokunin_static_site_generator::ssg::modules::frontmatter::bench_parse_yaml_document;
 ///
-/// fn main() {
-///     let mut group = criterion_group::CriterionGroup::new();
-///     group.bench_function("parse_yaml_document", |b| bench_parse_yaml_document(b));
-///     criterion_main(group);
-/// }
+/// let mut group = criterion_group::CriterionGroup::new();
+/// group.bench_function("parse_yaml_document", |b| bench_parse_yaml_document(b));
+/// criterion_main(group);
 /// ```
 ///
 /// # Panics
 ///
 /// This function does not panic.
+#[allow(dead_code)]
 pub(crate) fn bench_parse_yaml_document(c: &mut Criterion) {
     let content = r#"
     title: "Test"

@@ -1,4 +1,4 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::path::Path;
@@ -9,6 +9,7 @@ use ssg::models::data::{
 };
 use ssg::modules::json::{cname, human, manifest, sitemap, txt};
 
+#[allow(dead_code)]
 pub(crate) fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
         name: String::from("Test Name"),

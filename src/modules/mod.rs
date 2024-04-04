@@ -34,6 +34,9 @@ pub mod metadata;
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
 
+/// The `newssitemap` module generates the newssitemap content.
+pub mod newssitemap;
+
 /// The `plaintext` module contains functions for generating plaintext.
 pub mod plaintext;
 

@@ -24,8 +24,8 @@
 //!
 //! ```
 //! use ssg::macro_log_info;
-//! use rlg::LogLevel;
-//! use rlg::LogFormat;
+//! use rlg::log_level::LogLevel;
+//! use rlg::log_format::LogFormat;
 //!
 //! let level = LogLevel::INFO;
 //! let component = "TestComponent";

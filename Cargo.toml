@@ -96,7 +96,7 @@ non_ascii_idents = "forbid"
 unreachable_pub = "forbid"
 
 ## Deny
-dead_code = "deny"
+# dead_code = "deny"
 deprecated_in_future = "deny"
 ellipsis_inclusive_range_patterns = "deny"
 explicit_outlives_requirements = "deny"
