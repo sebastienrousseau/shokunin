@@ -1,13 +1,11 @@
 // Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-extern crate criterion;
-
 use criterion::{black_box, Criterion};
 use ssg::utilities::directory::directory;
 use tempfile::TempDir;
 
-pub fn bench_utilities(c: &mut Criterion) {
+pub(crate) fn bench_utilities(c: &mut Criterion) {
     let tempdir = TempDir::new().unwrap();
     let dir = tempdir.path().join("test_dir");
 

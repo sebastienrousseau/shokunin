@@ -1,7 +1,6 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-extern crate regex;
 use std::{
     fs::{self},
     io::{self},

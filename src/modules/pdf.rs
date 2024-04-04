@@ -59,7 +59,7 @@ pub struct PdfGenerationParams<'a> {
 /// and `Err` contains error information if PDF generation fails.
 ///
 pub fn generate_pdf(
-    params: PdfGenerationParams,
+    params: PdfGenerationParams<'_>,
 ) -> Result<(), Box<dyn Error>> {
     let PdfGenerationParams {
         plain_title,

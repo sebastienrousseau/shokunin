@@ -76,7 +76,7 @@ pub fn post_process_html(
 
         processed_line =
             img_regex
-                .replace_all(&processed_line, |caps: &Captures| {
+                .replace_all(&processed_line, |caps: &Captures<'_>| {
                     let img_tag_start = &caps[1];
                     let img_tag_end = &caps[2];
 

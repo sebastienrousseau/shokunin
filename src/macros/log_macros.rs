@@ -62,8 +62,11 @@ macro_rules! macro_log_info {
     ($level:expr, $component:expr, $description:expr, $format:expr) => {{
         // Import necessary modules
         use dtt::DateTime; // Date and time module
-        use rlg::{Log, LogFormat}; // Log module
-        use vrd::Random; // Random number generator module
+        use rlg::{
+            log::Log,
+            log_format::LogFormat,
+        }; // Logging module and log format module
+        use vrd::random::Random; // Random number generator module
 
         // Get the current date and time in ISO 8601 format.
         let date = DateTime::new(); // Create a new DateTime instance

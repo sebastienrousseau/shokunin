@@ -1,8 +1,6 @@
 // Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-extern crate criterion;
-
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
@@ -11,7 +9,7 @@ use ssg::models::data::{
 };
 use ssg::modules::json::{cname, human, manifest, sitemap, txt};
 
-pub fn bench_json(c: &mut Criterion) {
+pub(crate) fn bench_json(c: &mut Criterion) {
     let manifest_data = ManifestData {
         name: String::from("Test Name"),
         short_name: String::from("Test Short Name"),

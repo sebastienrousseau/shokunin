@@ -1,7 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use rlg::LogLevel::ERROR;
+use rlg::log_level::LogLevel::ERROR;
 
 use crate::{
     macro_cleanup_directories, macro_create_directories,

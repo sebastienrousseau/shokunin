@@ -1,7 +1,6 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-extern crate regex;
 use regex::Regex;
 use std::{
     error::Error,
@@ -219,7 +218,7 @@ pub fn create_directory(
 ///
 pub fn to_title_case(s: &str) -> String {
     let re = Regex::new(r"(\b)(\w)(\w*)").unwrap();
-    let result = re.replace_all(s, |caps: &regex::Captures| {
+    let result = re.replace_all(s, |caps: &regex::Captures<'_>| {
         format!("{}{}{}", &caps[1], caps[2].to_uppercase(), &caps[3])
     });
     result.to_string()

@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.26-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.27-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.26"
+//! shokunin = "0.0.27"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -103,10 +103,6 @@
 //! [2]: https://www.rust-lang.org/ "Rust"
 //! [3]: https://shokunin.one/contribute/index.html "Contribute to Shokunin"
 
-#![forbid(unsafe_code)]
-#![forbid(unreachable_pub)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -115,15 +111,11 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use crate::loggers::init_logger;
-use crate::utilities::serve::start;
-use crate::utilities::uuid::generate_unique_string;
+use crate::{loggers::init_logger, utilities::{serve::start, uuid::generate_unique_string}};
 use compiler::compile;
 use dtt::DateTime;
-use rlg::{macro_log, LogFormat, LogLevel};
-use std::fs::File;
-use std::io::Write;
-use std::{error::Error, path::Path};
+use rlg::{macro_log, log_format::LogFormat, log_level::LogLevel};
+use std::{error::Error, fs::File, io::Write, path::Path};
 use term::cli::print_banner;
 
 /// The `cli` module contains functions for the command-line interface.
