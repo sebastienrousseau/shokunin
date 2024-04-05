@@ -10,7 +10,7 @@ mod tests {
             vec![
                 ("description".to_string(), "A blog about Rust programming.".to_string()),
             ],
-            "<meta name=\"description\" content=\"A blog about Rust programming.\">\n<meta name=\"keywords\" content=\"Rust, programming\">",
+            "<meta name=\"description\" content=\"A blog about Rust programming.\">",
         ),
         (
             vec![],

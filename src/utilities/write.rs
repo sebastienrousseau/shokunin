@@ -21,7 +21,7 @@ use std::time::Instant;
 const OTHER_FILES: [&str; 2] = ["main.js", "sw.js"];
 
 /// Constants for index file names.
-const INDEX_FILES: [&str; 7] =
+const INDEX_FILES: [&str; 8] =
     [
         "CNAME",
         "humans.txt",
@@ -30,6 +30,7 @@ const INDEX_FILES: [&str; 7] =
         "robots.txt",
         "rss.xml",
         "sitemap.xml",
+        "news-sitemap.xml",
     ];
 
 /// Writes the files to the build directory.
@@ -181,6 +182,7 @@ fn get_file_paths(file: &FileData) -> Vec<(&'static str, &str)> {
         ("robots.txt", &file.txt),
         ("rss.xml", &file.rss),
         ("sitemap.xml", &file.sitemap),
+        ("news-sitemap.xml", &file.sitemap_news),
     ]
 }
 
@@ -203,6 +205,7 @@ fn get_file_content(file: &FileData, file_name: &str) -> String {
         "robots.txt" => file.txt.clone(),
         "rss.xml" => file.rss.clone(),
         "sitemap.xml" => file.sitemap.clone(),
+        "news-sitemap.xml" => file.sitemap_news.clone(),
         _ => String::new(),
     }
 }

@@ -34,6 +34,7 @@ mod tests {
             name: String::default(),
             rss: String::default(),
             sitemap: String::default(),
+            sitemap_news: String::default(),
             txt: String::default(),
         };
         assert_eq!(file_data, expected_file_data);

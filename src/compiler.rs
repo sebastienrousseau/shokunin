@@ -8,7 +8,7 @@ use crate::{
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
     models::data::{FileData, PageData, RssData},
     modules::{
-        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, pdf::PdfGenerationParams, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
+        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, news_sitemap, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, pdf::PdfGenerationParams, newssitemap::create_news_site_map_data, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
     },
     utilities::{
         file::add,
@@ -277,6 +277,9 @@ pub fn compile(
             // Initialize a structure to store sitemap-related information, using values from the metadata.
             let sitemap_options = create_site_map_data(&metadata);
 
+            // Initialize a structure to store news sitemap-related information, using values from the metadata.
+            let newssitemap_options = create_news_site_map_data(&metadata);
+
             let tags_data = generate_tags(&file, &metadata);
             // println!("Tags: {:?}", tags_data);
 
@@ -318,6 +321,7 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(sitemap_options, site_path);
+            let newsitemap_data =  news_sitemap(newssitemap_options);
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
@@ -334,6 +338,7 @@ pub fn compile(
                 name: file.name,
                 rss: rss_data,
                 sitemap: sitemap_data,
+                sitemap_news: newsitemap_data,
                 txt: txt_data,
             }
         })

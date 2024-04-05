@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::models::data::NewsSiteMapData; // Import the NewsSiteMapData model from the local crate.
-use regex::Regex;
-use std::collections::HashMap; // Standard library import for using HashMap. // Ensure the regex crate is imported for regular expression functionality.
+use regex::Regex; // Import the Regex type from the regex crate.
+use std::collections::HashMap; // Import the HashMap type from the standard library.
 
 /// Generates `NewsSiteMapData` from metadata.
 ///
@@ -16,17 +16,19 @@ pub fn create_news_site_map_data(
     metadata: &HashMap<String, String>,
 ) -> NewsSiteMapData {
     // Convert the last build date from metadata to the desired format.
-    let publication_date = convert_date_format(
-        metadata.get("publication_date").unwrap_or(&"".to_string()),
+    let news_publication_date = convert_date_format(
+        metadata.get("news_publication_date").unwrap_or(&"".to_string()),
     );
 
     // Construct and return NewsSiteMapData with converted and extracted metadata values.
     NewsSiteMapData {
-        publication_date,
-        title: metadata.get("title").unwrap_or(&"".to_string()).to_string(),
+        news_genres: metadata.get("news_genres").unwrap_or(&"".to_string()).to_string(),
+        news_keywords: metadata.get("news_keywords").unwrap_or(&"".to_string()).to_string(),
+        news_language: metadata.get("news_language").unwrap_or(&"".to_string()).to_string(),
+        news_loc: metadata.get("news_loc").unwrap_or(&"".to_string()).to_string(),
+        news_publication_date,
         news_publication_name: metadata.get("news_publication_name").unwrap_or(&"".to_string()).to_string(),
-        access: metadata.get("access").unwrap_or(&"".to_string()).to_string(),
-        loc: metadata.get("loc").unwrap_or(&"".to_string()).to_string(),
+        news_title: metadata.get("news_title").unwrap_or(&"".to_string()).to_string(),
     }
 }
 
