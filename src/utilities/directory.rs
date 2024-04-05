@@ -79,7 +79,7 @@ pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
 pub fn move_output_directory(
     site_name: &str,
     out_dir: &Path,
-) -> std::io::Result<()> {
+) -> io::Result<()> {
     println!("❯ Moving output directory...");
 
     let public_dir = Path::new("public");

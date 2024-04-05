@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::macro_render_layout;
-use reqwest;
 use std::{
     collections::HashMap,
     fs::{self, File},

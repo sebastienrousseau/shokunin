@@ -164,14 +164,14 @@ pub fn handle_connection(
             (
                 "HTTP/1.1 200 OK\r\n",
                 content_type,
-                std::fs::read_to_string(&canonical_requested_path)
+                fs::read_to_string(&canonical_requested_path)
                     .unwrap_or_default(),
             )
         } else {
             (
                 "HTTP/1.1 404 NOT FOUND\r\n",
                 "text/html",
-                std::fs::read_to_string(
+                fs::read_to_string(
                     canonical_document_root.join("404/index.html"),
                 )
                 .unwrap_or_else(|_| String::from("File not found")),
