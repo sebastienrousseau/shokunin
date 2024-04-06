@@ -12,28 +12,32 @@ mod tests {
         // Create a default instance of ManifestData
         let options = ManifestData::default();
 
-        // Define the expected result as a raw string with consistent indentation
-        let expected_result = r#"{
-"background_color": "",
-"description": "",
-"display": "",
-"icons": [],
-"name": "",
-"orientation": "",
-"scope": "",
-"short_name": "",
-"start_url": "",
-"theme_color": ""
-}"#;
-
         // Generate the result using the manifest function
         let result = manifest(&options);
 
-        // Parse both JSON strings into `serde_json::Value` and compare those
+        // Define the expected result as a raw string with consistent indentation
+        let expected_result = r#"{
+        "background_color": "",
+        "description": "",
+        "display": "",
+        "icons": [],
+        "name": "",
+        "orientation": "",
+        "scope": "",
+        "short_name": "",
+        "start_url": "",
+        "theme_color": ""
+    }"#;
+
+        // Parse the generated JSON string into a `serde_json::Value`
+        let result_value: Value =
+            serde_json::from_str(result.as_ref().unwrap()).unwrap();
+
+        // Parse the expected JSON string into a `serde_json::Value`
         let expected_result_value: Value =
             serde_json::from_str(expected_result).unwrap();
-        let result_value: Value =
-            serde_json::from_str(&result).unwrap();
+
+        // Assert that the deserialized result matches the expected result
         assert_eq!(result_value, expected_result_value);
     }
 
@@ -48,7 +52,14 @@ mod tests {
             ..Default::default()
         };
 
-        // Define the expected result using the json! macro
+        // Generate the result using the manifest function
+        let result = manifest(&options);
+
+        // Parse the generated JSON string into a `serde_json::Value`
+        let result_value: Value =
+            serde_json::from_str(result.as_ref().unwrap()).unwrap();
+
+        // Define the expected result as a JSON value using the json! macro
         let expected_result = json!({
             "background_color": "",
             "description": "",
@@ -62,14 +73,8 @@ mod tests {
             "theme_color": "#ffffff"
         });
 
-        // Generate the result using the manifest function
-        let result = manifest(&options);
-
         // Assert that the deserialized result matches the expected result
-        assert_eq!(
-            serde_json::from_str::<Value>(&result).unwrap(),
-            expected_result
-        );
+        assert_eq!(result_value, expected_result);
     }
 
     #[test]
@@ -84,10 +89,9 @@ mod tests {
 
     #[test]
     fn test_cname_empty() {
-        let options =
-            CnameData {
-                cname: "".to_string(),
-            };
+        let options = CnameData {
+            cname: "".to_string(),
+        };
 
         let output = cname(&options);
         assert_eq!(output, "\nwww.");

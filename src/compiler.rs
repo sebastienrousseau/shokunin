@@ -8,7 +8,7 @@ use crate::{
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
     models::data::{FileData, PageData, RssData},
     modules::{
-        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, news_sitemap, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, pdf::PdfGenerationParams, newssitemap::create_news_site_map_data, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
+        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, news_sitemap, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, newssitemap::create_news_site_map_data, pdf::PdfGenerationParams, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
     },
     utilities::{
         file::add,
