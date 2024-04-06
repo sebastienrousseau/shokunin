@@ -116,10 +116,10 @@ use compiler::compile;
 use dtt::DateTime;
 use rlg::{macro_log, log_format::LogFormat, log_level::LogLevel};
 use std::{error::Error, fs::File, io::Write, path::Path};
-use term::cli::print_banner;
+use cmd::cli::print_banner;
 
-/// The `cli` module contains functions for the command-line interface.
-pub mod term;
+/// The `cmd` module contains functions for the command-line interface.
+pub mod cmd;
 
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
@@ -185,8 +185,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
-    let matches = term::cli::build()?;
-    term::process::args(&matches)?;
+    let matches = cmd::cli::build()?;
+    cmd::process::args(&matches)?;
 
     // Generate a log entry for the arguments
     let args_log = macro_log!(
