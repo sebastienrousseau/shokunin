@@ -278,10 +278,9 @@ pub fn compile(
             let sitemap_options = create_site_map_data(&metadata);
 
             // Initialize a structure to store news sitemap-related information, using values from the metadata.
-            let newssitemap_options = create_news_site_map_data(&metadata);
+            let news_sitemap_options = create_news_site_map_data(&metadata);
 
             let tags_data = generate_tags(&file, &metadata);
-            // println!("Tags: {:?}", tags_data);
 
             // Update the global tags data
             for (tag, pages_data) in tags_data.iter() {
@@ -321,13 +320,12 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(sitemap_options, site_path);
-            let newsitemap_data =  news_sitemap(newssitemap_options);
+            let news_sitemap_data =  news_sitemap(news_sitemap_options);
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
                     String::new()
                 });
-
             // Return FileData
             FileData {
                 cname: cname_data,
@@ -338,7 +336,7 @@ pub fn compile(
                 name: file.name,
                 rss: rss_data,
                 sitemap: sitemap_data,
-                sitemap_news: newsitemap_data,
+                sitemap_news: news_sitemap_data,
                 txt: txt_data,
             }
         })

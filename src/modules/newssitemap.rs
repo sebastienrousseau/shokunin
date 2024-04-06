@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::models::data::NewsSiteMapData; // Import the NewsSiteMapData model from the local crate.
-use regex::Regex; // Import the Regex type from the regex crate.
 use std::collections::HashMap; // Import the HashMap type from the standard library.
 
 /// Generates `NewsSiteMapData` from metadata.
@@ -23,58 +22,55 @@ pub fn create_news_site_map_data(
     // Construct and return NewsSiteMapData with converted and extracted metadata values.
     NewsSiteMapData {
         news_genres: metadata.get("news_genres").unwrap_or(&"".to_string()).to_string(),
-        news_keywords: metadata.get("news_keywords").unwrap_or(&"".to_string()).to_string(),
-        news_language: metadata.get("news_language").unwrap_or(&"".to_string()).to_string(),
-        news_loc: metadata.get("news_loc").unwrap_or(&"".to_string()).to_string(),
+        news_keywords: metadata.get("news_keywords").cloned().unwrap_or_default(),
+        news_language: metadata.get("news_language").cloned().unwrap_or_default(),
+        news_loc: metadata.get("news_loc").cloned().unwrap_or_default(),
         news_publication_date,
-        news_publication_name: metadata.get("news_publication_name").unwrap_or(&"".to_string()).to_string(),
-        news_title: metadata.get("news_title").unwrap_or(&"".to_string()).to_string(),
+        news_publication_name: metadata.get("news_publication_name").cloned().unwrap_or_default(),
+        news_title: metadata.get("news_title").cloned().unwrap_or_default(),
     }
 }
 
-/// Converts date strings from various formats to "YYYY-MM-DD".
-///
-/// Supports conversion from "DD MMM YYYY" format and checks if input is already in target format.
+/// Converts date strings from "Tue, 20 Feb 2024 15:15:15 GMT" format to "2024-02-20T15:15:15+00:00" format.
 ///
 /// # Arguments
 /// * `input` - A string slice representing the input date.
 ///
 /// # Returns
-/// A string representing the date in "YYYY-MM-DD" format, or the original input if conversion is not applicable.
+/// A string representing the date in "YYYY-MM-DDTHH:MM:SS+00:00" format, or the original input if conversion is not applicable.
 fn convert_date_format(input: &str) -> String {
-    // Define a regex to identify dates in the "DD MMM YYYY" format.
-    let re = Regex::new(r"\d{2} \w{3} \d{4}").unwrap();
+    // Split the input string by whitespace to extract date components.
+    let parts: Vec<&str> = input.split_whitespace().collect();
 
-    // Check if input matches the expected date format.
-    if let Some(date_match) = re.find(input) {
-        let date_str = date_match.as_str();
-        let parts: Vec<&str> = date_str.split_whitespace().collect();
+    // Check if the input date string has the correct number of components.
+    if parts.len() == 6 {
+        let day = parts[1];
+        let month = match parts[2] {
+            "Jan" => "01",
+            "Feb" => "02",
+            "Mar" => "03",
+            "Apr" => "04",
+            "May" => "05",
+            "Jun" => "06",
+            "Jul" => "07",
+            "Aug" => "08",
+            "Sep" => "09",
+            "Oct" => "10",
+            "Nov" => "11",
+            "Dec" => "12",
+            _ => return input.to_string(), // Return original input for unrecognized months.
+        };
+        let year = parts[3];
+        let time = parts[4];
 
-        // Proceed with conversion if input format matches.
-        if parts.len() == 3 {
-            let day = parts[0];
-            let month = match parts[1] {
-                "Jan" => "01",
-                "Feb" => "02",
-                "Mar" => "03",
-                "Apr" => "04",
-                "May" => "05",
-                "Jun" => "06",
-                "Jul" => "07",
-                "Aug" => "08",
-                "Sep" => "09",
-                "Oct" => "10",
-                "Nov" => "11",
-                "Dec" => "12",
-                _ => return input.to_string(), // Return original input for unrecognized months.
-            };
-            let year = parts[2];
+        // Assemble the converted date string.
+        let converted_date = format!("{}-{}-{}T{}", year, month, day, time);
 
-            // Return the formatted date string.
-            return format!("{}-{}-{}", year, month, day);
-        }
+        // Append the timezone information.
+        let timezone = "+00:00";
+        return format!("{}{}", converted_date, timezone);
     }
 
-    // Return the original input if it's already in the correct format or doesn't match "DD MMM YYYY".
+    // Return the original input if it's not in the expected format.
     input.to_string()
 }

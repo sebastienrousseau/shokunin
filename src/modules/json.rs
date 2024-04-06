@@ -2,8 +2,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 
 use std::{
-    fs,
-    path::{Path, PathBuf},
+    fs, path::{Path, PathBuf}
 };
 use serde_json::{json, Map};
 use crate::models::data::NewsVisitOptions;
