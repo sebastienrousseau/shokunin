@@ -148,7 +148,7 @@ pub fn handle_connection(
         );
         return Ok(());
     }
-
+    // println!("Requested file: {}", requested_file);
     let (status_line, content_type, contents) =
         if canonical_requested_path.exists() {
             let content_type = match requested_path
@@ -168,13 +168,16 @@ pub fn handle_connection(
                     .unwrap_or_default(),
             )
         } else {
+            eprintln!("File not found: {}", requested_file);
             (
                 "HTTP/1.1 404 NOT FOUND\r\n",
                 "text/html",
-                fs::read_to_string(
+                match fs::read_to_string(
                     canonical_document_root.join("404/index.html"),
-                )
-                .unwrap_or_else(|_| String::from("File not found")),
+                ) {
+                    Ok(contents) => contents,
+                    Err(_) => String::from("File not found"),
+                },
             )
         };
 
