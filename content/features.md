@@ -54,17 +54,6 @@ news_publication_date: "Tue, 20 Feb 2024 15:15:15 GMT" ## The publication date o
 news_publication_name: "Kaishi" ## The news publication name of the site.
 news_title: "Features" ## The title of the page. (max 64 characters)
 
-
-# News - The News SiteMap front matter (YAML).
-news_access: "Subscription" ## The access of the site.
-news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
-news_keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (comma separated, max 10 keywords)
-news_language: "en" ## The language of the site. (default: en)
-news_loc: "https://kaishi.one" ## The loc of the site.
-news_publication_date: "Tue, 20 Feb 2024 15:15:15 GMT" ## The publication date of the site.
-news_publication_name: "Kaishi" ## The news publication name of the site.
-news_title: "Features" ## The title of the page. (max 64 characters)
-
 # RSS - The RSS feed front matter (YAML).
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"

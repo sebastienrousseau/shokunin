@@ -2,7 +2,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 
 use crate::models::data::{
-    CnameData, HumansData, ManifestData, NewsSiteMapData, NewsVisitOptions, SiteMapData, TxtData
+    CnameData, HumansData, ManifestData, NewsData, NewsVisitOptions, SiteMapData, TxtData
 };
 use serde_json::{json, Map};
 use std::{
@@ -152,22 +152,22 @@ pub fn manifest(
     serde_json::to_string_pretty(&json_map)
 }
 
-/// Generates a news sitemap for a web app based on the provided `NewsSiteMapData` options.
+/// Generates a news sitemap for a web app based on the provided `NewsData` options.
 ///
 /// # Arguments
 ///
-/// * `options` - The `NewsSiteMapData` object containing the news sitemap data.
+/// * `options` - The `NewsData` object containing the news sitemap data.
 ///
 /// # Returns
 ///
 /// A string containing the news sitemap XML.
-pub fn news_sitemap(options: NewsSiteMapData) -> String {
+pub fn news_sitemap(options: NewsData) -> String {
     let mut urls = vec![];
     if let Err(e) = news_visit_dirs(&options, &mut urls) {
         eprintln!("Error generating news sitemap: {}", e);
     }
     format!(
-        r#"<?xml version='1.0' encoding='UTF-8'?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd http://www.google.com/schemas/sitemap-news/0.9 http://www.google.com/schemas/sitemap-news/0.9/sitemap-news.xsd">{}</urlset>"#,
+        r#"<?xml version='1.0' encoding='UTF-8'?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">{}</urlset>"#,
         urls.join("\n")
     )
 }
@@ -217,26 +217,28 @@ fn visit_dirs(
 
 /// Recursively visits directories to generate news sitemap entries.
 fn news_visit_dirs(
-    options: &NewsSiteMapData,
+    options: &NewsData,
     urls: &mut Vec<String>,
 ) -> io::Result<()> {
     let base_url = &options.news_loc;
     let news_publication_name = &options.news_publication_name;
     let news_language = &options.news_language;
+    let news_image_loc = &options.news_image_loc;
     let news_genres = &options.news_genres;
     let news_publication_date = &options.news_publication_date;
     let news_title = &options.news_title;
     let news_keywords = &options.news_keywords;
 
     urls.push(format!(
-        r#"<url><loc>{}</loc><news:news><news:publication><news:name>{}</news:name><news:language>{}</news:language></news:publication><news:genres>{}</news:genres><news:publication_date>{}</news:publication_date><news:title>{}</news:title><news:keywords>{}</news:keywords></news:news></url>"#,
+        r#"<url><loc>{}</loc><news:news><news:publication><news:name>{}</news:name><news:language>{}</news:language></news:publication><news:genres>{}</news:genres><news:publication_date>{}</news:publication_date><news:title>{}</news:title><news:keywords>{}</news:keywords></news:news><image:image><image:loc>{}</image:loc></image:image></url>"#,
         base_url,
         news_publication_name,
         news_language,
         news_genres,
         news_publication_date,
         news_title,
-        news_keywords
+        news_keywords,
+        news_image_loc,
     ));
 
     Ok(())

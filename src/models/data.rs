@@ -217,45 +217,34 @@ impl SiteMapData {
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 /// Options for the `news_sitemap` function
-pub struct NewsSiteMapData {
-    /// A string representing the genres (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
+pub struct NewsData {
+    /// A string representing the news genres (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
     pub news_genres: String,
-    /// A string representing the keywords
+    /// A string representing the news keywords
     pub news_keywords: String,
-    /// A string representing the language
+    /// A string representing the news language
     pub news_language: String,
-    /// A string representing the loc
+    /// A string representing the news image location
+    pub news_image_loc: String,
+    /// A string representing the news location
     pub news_loc: String,
-    /// A string representing the news publication name
+    /// A string representing the news publication date
     pub news_publication_date: String,
-    /// A string representing the publication date
+    /// A string representing the news publication name
     pub news_publication_name: String,
-    /// A string representing the title
+    /// A string representing the news title
     pub news_title: String,
 }
 
-impl NewsSiteMapData {
-    /// Creates a new `NewsSiteMapData` struct with the given values for
-    /// news_loc, news_publication_name, news_publication_date, news_title,
-    /// news_keywords, and news_language.
-    pub fn new(
-        news_genres: String,
-        news_keywords: String,
-        news_language: String,
-        news_loc: String,
-        news_publication_date: String,
-        news_publication_name: String,
-        news_title: String,
-    ) -> Self {
-        NewsSiteMapData {
-            news_genres,
-            news_keywords,
-            news_language,
-            news_loc,
-            news_publication_date,
-            news_publication_name,
-            news_title,
-        }
+/// Implementation of the `NewsData` struct.
+impl NewsData {
+    /// Creates a new `NewsData` struct with default values for all fields.
+    pub fn new(data: NewsData) -> Self {
+        data
+    }
+    /// Creates a new `NewsData` struct with the given values.
+    pub fn create_default() -> Self {
+        Default::default()
     }
 }
 
