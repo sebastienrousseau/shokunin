@@ -16,7 +16,7 @@
 
 // Import the required libraries and modules.
 use ssg::compiler::compile;
-use ssg::utilities::serve::start;
+use ssg::server::serve::start;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

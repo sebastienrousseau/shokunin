@@ -111,12 +111,15 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use crate::{loggers::init_logger, utilities::{serve::start, uuid::generate_unique_string}};
+use crate::{
+    loggers::init_logger, server::serve::start,
+    utilities::uuid::generate_unique_string,
+};
+use cmd::cli::print_banner;
 use compiler::compile;
 use dtt::DateTime;
-use rlg::{macro_log, log_format::LogFormat, log_level::LogLevel};
+use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use std::{error::Error, fs::File, io::Write, path::Path};
-use cmd::cli::print_banner;
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -135,6 +138,9 @@ pub mod models;
 
 /// The `modules` module contains the application modules.
 pub mod modules;
+
+/// The `server` module contains the development server.
+pub mod server;
 
 /// The `utilities` module contains utility functions.
 pub mod utilities;
@@ -171,15 +177,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     print_banner();
 
     // Generate a log entry for the banner
-    let banner_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Banner printed successfully",
-            &LogFormat::CLF
-        );
+    let banner_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        "Banner printed successfully",
+        &LogFormat::CLF
+    );
 
     // Write the log to both the console and the file
     writeln!(log_file, "{}", banner_log)?;
@@ -208,15 +213,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     }
 
     // Generate a log entry for the server
-    let server_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Server started successfully",
-            &LogFormat::CLF
-        );
+    let server_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        "Server started successfully",
+        &LogFormat::CLF
+    );
 
     // Write the log to both the console and the file
     writeln!(log_file, "{}", server_log)?;
@@ -231,15 +235,14 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     compile(build_path, content_path, site_path, template_path)?;
 
     // Generate a log entry for the compilation
-    let compile_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Site compiled successfully",
-            &LogFormat::CLF
-        );
+    let compile_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        "Site compiled successfully",
+        &LogFormat::CLF
+    );
 
     // Write the log to both the console and the file
     writeln!(log_file, "{}", compile_log)?;

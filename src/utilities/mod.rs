@@ -19,9 +19,6 @@ pub mod file;
 /// The `minification` module contains functions for minifying HTML files.
 pub mod minification;
 
-/// The `serve` module contains functions for the development server.
-pub mod serve;
-
 /// The `template` module renders the HTML content using the pre-defined
 /// template.
 pub mod template;
