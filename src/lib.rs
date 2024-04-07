@@ -127,6 +127,13 @@ pub mod cmd;
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
 
+/// The `lang` module contains the language translation functions.
+pub mod lang;
+
+
+/// The `languages` module contains the language translation functions.
+pub mod languages;
+
 /// The `loggers` module contains the loggers for the library.
 pub mod loggers;
 

@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
