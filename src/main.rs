@@ -7,10 +7,13 @@
 //!
 //! If an error occurs while running the `run()` function, the function prints an error message
 //! to standard error and exits the program with a non-zero status code.
+
+use ssg::languages::translate;
+
 fn main() {
     if let Err(err) = ssg::run() {
         eprintln!("{}", err);
-        eprintln!("\nPlease run `ssg --help` for more information.\n");
+        eprintln!("{}", translate("en", "main_logger_msg"));
         std::process::exit(1);
     }
 }
