@@ -44,7 +44,10 @@ lazy_static::lazy_static! {
     pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         [
             ("Hello", "Bonjour"),
-            ("main_logger_msg", "\nVeuillez lancer `ssg --help` pour plus d'informations.\n")
+            ("main_logger_msg", "\nVeuillez lancer `ssg --help` pour plus d'informations.\n"),
+            ("lib_banner_log_msg", "Bannière imprimée avec succès"),
+            ("lib_args_log_msg", "Arguments traités avec succès"),
+            ("lib_server_log_msg", "Serveur démarré avec succès"),
             // Add more translations here
         ].iter().cloned().collect();
 }
