@@ -72,7 +72,7 @@
 //! And in your `main.rs`:
 //!
 //! ```rust
-//! use ssg::compiler::compile;
+//! use ssg::compiler::service::compile;
 //! use std::path::Path;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -112,12 +112,12 @@
 #![crate_type = "lib"]
 
 use crate::{
+    compiler::service::compile,
     languages::translate,
     loggers::init_logger, server::serve::start,
     utilities::uuid::generate_unique_string,
 };
 use cmd::cli::print_banner;
-use compiler::compile;
 use dtt::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use std::{error::Error, fs::File, io::Write, path::Path};

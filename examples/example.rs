@@ -15,7 +15,7 @@
 //! function to generate the website.
 
 // Import the required libraries and modules.
-use ssg::compiler::compile;
+use ssg::compiler::service::compile;
 use ssg::server::serve::start;
 use std::path::Path;
 
