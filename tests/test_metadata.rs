@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use ssg::models::data::MetaTagGroups;
-    use ssg::modules::metadata::extract_and_prepare_metadata;
+    use ssg::metadata::service::extract_and_prepare_metadata;
     use ssg::modules::metatags::{
         generate_apple_meta_tags, generate_ms_meta_tags,
         generate_og_meta_tags, generate_primary_meta_tags,

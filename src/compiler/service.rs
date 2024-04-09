@@ -8,13 +8,14 @@ use crate::{
     macro_cleanup_directories, macro_create_directories,
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
     models::data::{FileData, PageData, RssData},
+    metadata::service::extract_and_prepare_metadata,
     modules::{
         cname::create_cname_data,
         html::generate_html,
         human::create_human_data,
         json::{cname, human, news_sitemap, sitemap, txt},
         manifest::create_manifest_data,
-        metadata::extract_and_prepare_metadata,
+
         navigation::NavigationGenerator,
         news_sitemap::create_news_site_map_data,
         pdf::PdfGenerationParams,

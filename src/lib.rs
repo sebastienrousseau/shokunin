@@ -142,6 +142,9 @@ pub mod loggers;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
 
+/// The `metadata` module contains the metadata functions.
+pub mod metadata;
+
 /// The `models` module contains the structs.
 pub mod models;
 
