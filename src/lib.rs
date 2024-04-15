@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.27"
+//! shokunin = "0.0.28"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -112,8 +112,7 @@
 #![crate_type = "lib"]
 
 use crate::{
-    compiler::service::compile,
-    languages::translate,
+    compiler::service::compile, languages::translate,
     loggers::init_logger, server::serve::start,
     utilities::uuid::generate_unique_string,
 };
@@ -121,7 +120,6 @@ use cmd::cli::print_banner;
 use dtt::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use std::{error::Error, fs::File, io::Write, path::Path};
-
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -131,7 +129,6 @@ pub mod compiler;
 
 /// The `lang` module contains the language translation functions.
 pub mod lang;
-
 
 /// The `languages` module contains the language translation functions.
 pub mod languages;
