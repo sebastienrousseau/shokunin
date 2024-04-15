@@ -1,7 +1,10 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
     use clap::{Arg, Command};
-    use ssg::term::process::args;
+    use ssg::cmd::process::args;
 
     #[test]
     fn test_args_required_args_missing() {

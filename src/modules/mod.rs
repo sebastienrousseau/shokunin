@@ -28,11 +28,11 @@ pub mod markdown;
 /// The `metatags` module contains functions for generating meta tags.
 pub mod metatags;
 
-/// The `metadata` module contains functions for extracting metadata.
-pub mod metadata;
-
 /// The `navigation` module generates the navigation menu.
 pub mod navigation;
+
+/// The `newssitemap` module generates the newssitemap content.
+pub mod news_sitemap;
 
 /// The `plaintext` module contains functions for generating plaintext.
 pub mod plaintext;

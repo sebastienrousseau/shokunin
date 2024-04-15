@@ -41,15 +41,25 @@ short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
 tags: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The tags of the site. (max 160 characters)
 theme-color: "143, 250, 113" ## The theme color of the site.
-title: "Features" ## The title of the page. (max 64 characters)
+title: "Posts" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
+
+# News - The News SiteMap front matter (YAML).
+news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
+news_keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (comma separated, max 10 keywords)
+news_language: "en" ## The language of the site. (default: en)
+news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
+news_loc: "https://kaishi.one" ## The loc of the site.
+news_publication_date: "Tue, 20 Feb 2024 15:15:15 GMT" ## The publication date of the site.
+news_publication_name: "Kaishi" ## The news publication name of the site.
+news_title: "Posts" ## The title of the page. (max 64 characters)
 
 # RSS - The RSS feed front matter (YAML).
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.26)"
+generator: "Shokunin SSG (version 0.0.27)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml

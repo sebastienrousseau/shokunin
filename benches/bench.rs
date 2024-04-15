@@ -1,9 +1,9 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! This crate is responsible for benchmarking various components of the application.
+
 #![allow(missing_docs)]
-extern crate criterion;
 use criterion::Criterion;
 
 /// This is a module for benchmarking file operations.

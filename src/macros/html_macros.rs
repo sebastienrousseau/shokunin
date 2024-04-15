@@ -100,8 +100,9 @@ macro_rules! macro_write_element {
             BytesEnd, BytesStart, BytesText, Event,
         };
         use std::borrow::Cow;
+        use std::error::Error;
 
-        let result: Result<(), Box<dyn std::error::Error>> = (|| -> Result<(), Box<dyn std::error::Error>> {
+        let result: Result<(), Box<dyn Error>> = (|| -> Result<(), Box<dyn Error>> {
             if !$value.is_empty() {
                 let element_start = BytesStart::new($name);
                 $writer.write_event(Event::Start(element_start.clone()))?;

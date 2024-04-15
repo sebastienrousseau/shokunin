@@ -128,7 +128,8 @@
 #[macro_export]
 macro_rules! macro_check_directory {
     ($_dir:expr, $_name:expr) => {{
-        let directory: &std::path::Path = $_dir;
+        use std::path::Path;
+        let directory: &Path = $_dir;
         let name = $_name;
         if directory.exists() {
             if !directory.is_dir() {

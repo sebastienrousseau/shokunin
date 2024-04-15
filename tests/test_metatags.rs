@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
     use regex::Regex;
@@ -6,39 +9,36 @@ mod tests {
     // Test general functionality of the generate_metatags function
     #[test]
     fn test_generate_metatags_general() {
-        let test_cases = vec![
-            (
-                vec![
-                    ("description".to_string(), "A blog about Rust programming.".to_string()),
-                    ("keywords".to_string(), "Rust, programming".to_string()),
-                ],
-                "<meta name=\"description\" content=\"A blog about Rust programming.\">\n<meta name=\"keywords\" content=\"Rust, programming\">",
-            ),
-            (
-                vec![],
-                "",
-            ),
-            (
-                vec![("description".to_string(), "My site description".to_string())],
-                "<meta name=\"description\" content=\"My site description\">",
-            ),
-            (
-                vec![
-                    ("description".to_string(), "My site description".to_string()),
-                    ("keywords".to_string(), "rust,web,ssg".to_string()),
-                    ("author".to_string(), "John Doe".to_string()),
-                ],
-                "<meta name=\"description\" content=\"My site description\">\n<meta name=\"keywords\" content=\"rust,web,ssg\">\n<meta name=\"author\" content=\"John Doe\">",
-            ),
-            (
-                vec![
-                    ("description".to_string(), "My site description".to_string()),
-                    ("keywords".to_string(), "rust,web,ssg rust,web,ssg".to_string()),
-                    ("author".to_string(), "John Doe".to_string()),
-                ],
-                "<meta name=\"description\" content=\"My site description\">\n<meta name=\"keywords\" content=\"rust,web,ssg rust,web,ssg\">\n<meta name=\"author\" content=\"John Doe\">",
-            ),
-        ];
+        let test_cases = [(
+            vec![
+                ("description".to_string(), "A blog about Rust programming.".to_string()),
+            ],
+            "<meta name=\"description\" content=\"A blog about Rust programming.\">",
+        ),
+        (
+            vec![],
+            "",
+        ),
+        (
+            vec![("description".to_string(), "My site description".to_string())],
+            "<meta name=\"description\" content=\"My site description\">",
+        ),
+        (
+            vec![
+                ("description".to_string(), "My site description".to_string()),
+                ("keywords".to_string(), "rust,web,ssg".to_string()),
+                ("author".to_string(), "John Doe".to_string()),
+            ],
+            "<meta name=\"description\" content=\"My site description\">\n<meta name=\"keywords\" content=\"rust,web,ssg\">\n<meta name=\"author\" content=\"John Doe\">",
+        ),
+        (
+            vec![
+                ("description".to_string(), "My site description".to_string()),
+                ("keywords".to_string(), "rust,web,ssg rust,web,ssg".to_string()),
+                ("author".to_string(), "John Doe".to_string()),
+            ],
+            "<meta name=\"description\" content=\"My site description\">\n<meta name=\"keywords\" content=\"rust,web,ssg rust,web,ssg\">\n<meta name=\"author\" content=\"John Doe\">",
+        )];
 
         for (input_metadata, expected_output) in test_cases.iter() {
             let result = generate_metatags(input_metadata);

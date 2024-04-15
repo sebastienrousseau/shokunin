@@ -1,33 +1,121 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 
+use crate::models::data::{
+    CnameData, HumansData, ManifestData, NewsData, NewsVisitOptions, SiteMapData, TxtData
+};
 use serde_json::{json, Map};
 use std::{
-    fs,
+    fs, io,
     path::{Path, PathBuf},
 };
 
-use crate::models::data::{
-    CnameData, HumansData, ManifestData, SiteMapData, TxtData,
-};
+/// Generates a CNAME file for a web app based on the provided `CnameData` options.
+///
+/// # Arguments
+///
+/// * `options` - The `CnameData` object containing the CNAME value.
+///
+/// # Returns
+///
+/// A string containing the CNAME file content.
+///
+/// # Example
+///
+/// ```
+/// use ssg::models::data::CnameData;
+/// use ssg::modules::json::cname;
+///
+/// let options = CnameData {
+///     cname: "example.com".to_string(),
+/// };
+///
+/// let cname_content = cname(&options);
+/// assert_eq!(cname_content, "example.com\nwww.example.com");
+/// ```
+pub fn cname(options: &CnameData) -> String {
+    let cname_value = &options.cname;
+    let full_domain = format!("www.{}", cname_value);
+    format!("{}\n{}", cname_value, full_domain)
+}
 
-/// ## Function: `manifest` - Generate a JSON manifest for a web app
+/// Generates a humans.txt for a web app based on the provided `HumansData` options.
 ///
-/// The `ManifestData` object contains the following fields:
+/// # Arguments
 ///
-/// * `background_color`: The background color of the web app.
-/// * `description`: The description of the web app.
-/// * `display`: The display mode of the web app.
-/// * `icons`: A list of icons for the web app.
-/// * `name`: The name of the web app.
-/// * `orientation`: The orientation of the web app.
-/// * `scope`: The scope of the web app.
-/// * `short_name`: The short name of the web app.
-/// * `start_url`: The start URL of the web app.
-/// * `theme_color`: The theme color of the web app.
+/// * `options` - The `HumansData` object containing the human-readable data.
 ///
-/// Returns a JSON string containing the manifest.
-pub fn manifest(options: &ManifestData) -> String {
+/// # Returns
+///
+/// A string containing the humans.txt file content.
+pub fn human(options: &HumansData) -> String {
+    let mut s = String::from("/* TEAM */\n");
+
+    if !options.author.is_empty() {
+        s.push_str(&format!("    Name: {}\n", options.author));
+    }
+    if !options.author_website.is_empty() {
+        s.push_str(&format!(
+            "    Website: {}\n",
+            options.author_website
+        ));
+    }
+    if !options.author_twitter.is_empty() {
+        s.push_str(&format!(
+            "    Twitter: {}\n",
+            options.author_twitter
+        ));
+    }
+    if !options.author_location.is_empty() {
+        s.push_str(&format!(
+            "    Location: {}\n",
+            options.author_location
+        ));
+    }
+    s.push_str("\n/* THANKS */\n");
+    if !options.thanks.is_empty() {
+        s.push_str(&format!("    Thanks: {}\n", options.thanks));
+    }
+    s.push_str("\n/* SITE */\n");
+    if !options.site_last_updated.is_empty() {
+        s.push_str(&format!(
+            "    Last update: {}\n",
+            options.site_last_updated
+        ));
+    }
+    if !options.site_standards.is_empty() {
+        s.push_str(&format!(
+            "    Standards: {}\n",
+            options.site_standards
+        ));
+    }
+    if !options.site_components.is_empty() {
+        s.push_str(&format!(
+            "    Components: {}\n",
+            options.site_components
+        ));
+    }
+    if !options.site_software.is_empty() {
+        s.push_str(&format!(
+            "    Software: {}\n",
+            options.site_software
+        ));
+    }
+    s
+}
+
+/// Generates a JSON manifest for a web app based on the provided `ManifestData` options.
+///
+/// # Arguments
+///
+/// * `options` - The `ManifestData` object containing the manifest data.
+///
+/// # Returns
+///
+/// A JSON string containing the manifest.
+pub fn manifest(
+    options: &ManifestData,
+) -> Result<String, serde_json::Error> {
     let mut json_map = Map::new();
     json_map.insert(
         "background_color".to_string(),
@@ -61,149 +149,38 @@ pub fn manifest(options: &ManifestData) -> String {
     json_map
         .insert("theme_color".to_string(), json!(options.theme_color));
 
-    serde_json::to_string_pretty(&json_map).unwrap()
+    serde_json::to_string_pretty(&json_map)
 }
 
-/// ## Function: `txt` - Generate a robots.txt for a web app
+/// Generates a news sitemap for a web app based on the provided `NewsData` options.
 ///
-/// The `TxtData` object contains the following fields:
+/// # Arguments
 ///
-/// * `permalink`: The permalink of the web app.
+/// * `options` - The `NewsData` object containing the news sitemap data.
 ///
-/// Returns a string containing the robots.txt file.
-pub fn txt(options: &TxtData) -> String {
-    let permalink = options.permalink.clone();
-    let url = format!("{}/sitemap.xml", permalink);
-    "User-agent: *\nSitemap: {{url}}".replace("{{url}}", &url)
-}
-
-/// ## Function: `cname` - Generate a CNAME for a web app
+/// # Returns
 ///
-/// The `CnameData` object contains the following fields:
-///
-/// * `cname`: The CNAME value of the web app.
-///
-/// Returns a string containing the CNAME file.
-pub fn cname(options: &CnameData) -> String {
-    let cname_value = options.cname.clone();
-    let full_domain = format!("www.{}", cname_value);
-    let base_domain = cname_value;
-    format!("{}\n{}", base_domain, full_domain)
-}
-
-/// ## Function: `human` - Generate a humans.txt for a web app
-///
-/// The `HumansData` object contains the following fields:
-///
-/// * `author_location`: The location of the author.
-/// * `author_twitter`: The Twitter handle of the author.
-/// * `author_website`: The website of the author.
-/// * `author`: The author of the web app.
-/// * `site_components`: The components that the web app uses.
-/// * `site_last_updated`: The date on which the web app was last updated.
-/// * `site_software`: The software that the web app uses.
-/// * `site_standards`: The standards that the web app follows.
-/// * `thanks`: A list of people or organizations to thank for their contributions to the web app.
-///
-/// Returns a string containing the humans.txt file.
-pub fn human(options: &HumansData) -> String {
-    let mut s = String::from("/* TEAM */\n");
-
-    if !options.author.is_empty() {
-        s.push_str(&format!("	Name: {}\n", options.author));
-    }
-    if !options.author_website.is_empty() {
-        s.push_str(&format!("	Website: {}\n", options.author_website));
-    }
-    if !options.author_twitter.is_empty() {
-        s.push_str(&format!("	Twitter: {}\n", options.author_twitter));
-    }
-    if !options.author_location.is_empty() {
-        s.push_str(&format!("	Location: {}\n", options.author_location));
-    }
-    s.push_str("\n/* THANKS */\n");
-    if !options.thanks.is_empty() {
-        s.push_str(&format!("	Thanks: {}\n", options.thanks));
-    }
-    s.push_str("\n/* SITE */\n");
-    if !options.site_last_updated.is_empty() {
-        s.push_str(
-            &format!("	Last update: {}\n", options.site_last_updated)
-        );
-    }
-    if !options.site_standards.is_empty() {
-        s.push_str(&format!("	Standards: {}\n", options.site_standards));
-    }
-    if !options.site_components.is_empty() {
-        s.push_str(
-            &format!("	Components: {}\n", options.site_components)
-        );
-    }
-    if !options.site_software.is_empty() {
-        s.push_str(&format!("	Software: {}\n", options.site_software));
-    }
-    s
-}
-
-/// ## Function: `sitemap` - Generate a sitemap for a web app
-///
-/// The `SiteMapData` object contains the following fields:
-///
-/// * `changefreq`: The change frequency of the web app.
-/// * `lastmod`: The last modified date of the web app.
-/// * `loc`: The base URL of the web app.
-///
-/// The `dir` parameter is the directory containing the web app.
-///
-/// Returns a string containing the sitemap.xml file.
-pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
-    let lastmod = options.lastmod.clone();
-    let changefreq = options.changefreq.clone();
-    let base_url = options.loc.clone();
-    let base_dir = PathBuf::from(dir);
+/// A string containing the news sitemap XML.
+pub fn news_sitemap(options: NewsData) -> String {
     let mut urls = vec![];
-
-    visit_dirs(
-        &base_dir,
-        &base_dir,
-        &base_url,
-        &changefreq,
-        &lastmod,
-        &mut urls,
-    )
-    .unwrap();
-
-    let urls_str = urls.join("\n");
-
+    if let Err(e) = news_visit_dirs(&options, &mut urls) {
+        eprintln!("Error generating news sitemap: {}", e);
+    }
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">{}</urlset>"#,
-        urls_str.replace("'\n'", "").replace("    ", "")
+        r#"<?xml version='1.0' encoding='UTF-8'?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">{}</urlset>"#,
+        urls.join("\n")
     )
 }
 
-/// ## Function: `visit_dirs` - Recursively visit all directories in a tree and add the URLs of all index.html files to the `urls` vector.
-///
-/// The `base_dir` parameter is the root directory of the tree.
-///
-/// The `dir` parameter is the current directory being visited.
-///
-/// The `base_url` parameter is the base URL of the website.
-///
-/// The `changefreq` parameter is the change frequency of the website.
-///
-/// The `lastmod` parameter is the last modified date of the website.
-///
-/// The `urls` parameter is a vector of URLs that will be populated by the function.
-///
-/// Returns a `std::io::Result` value.
-pub fn visit_dirs(
+/// Recursively visits all directories in a tree and adds the URLs of all index.html files to the `urls` vector.
+fn visit_dirs(
     base_dir: &Path,
     dir: &Path,
     base_url: &str,
     changefreq: &str,
     lastmod: &str,
     urls: &mut Vec<String>,
-) -> std::io::Result<()> {
+) -> io::Result<()> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -213,19 +190,128 @@ pub fn visit_dirs(
                     base_dir, &path, base_url, changefreq, lastmod,
                     urls,
                 )?;
-            } else if path.file_name().unwrap() == "index.html" {
-                let url = path
-                    .strip_prefix(base_dir)
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .replace("'\\'", "/");
-                urls.push(format!(
-                    r#"<url><changefreq>{}</changefreq><lastmod>{}</lastmod><loc>{}/{}</loc></url>"#,
-                    changefreq, lastmod, base_url, url
-                ));
+            } else if path.file_name().unwrap_or_default()
+                == "index.html"
+            {
+                match path.strip_prefix(base_dir) {
+                    Ok(stripped_path) => {
+                        if let Some(url) = stripped_path.to_str() {
+                            urls.push(format!(
+                                r#"<url><changefreq>{}</changefreq><lastmod>{}</lastmod><loc>{}/{}</loc></url>"#,
+                                changefreq, lastmod, base_url, url
+                            ));
+                        }
+                    }
+                    Err(err) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            err,
+                        ))
+                    }
+                }
             }
         }
     }
     Ok(())
+}
+
+/// Recursively visits directories to generate news sitemap entries.
+fn news_visit_dirs(
+    options: &NewsData,
+    urls: &mut Vec<String>,
+) -> io::Result<()> {
+    let base_url = &options.news_loc;
+    let news_publication_name = &options.news_publication_name;
+    let news_language = &options.news_language;
+    let news_image_loc = &options.news_image_loc;
+    let news_genres = &options.news_genres;
+    let news_publication_date = &options.news_publication_date;
+    let news_title = &options.news_title;
+    let news_keywords = &options.news_keywords;
+
+    urls.push(format!(
+        r#"<url><loc>{}</loc><news:news><news:publication><news:name>{}</news:name><news:language>{}</news:language></news:publication><news:genres>{}</news:genres><news:publication_date>{}</news:publication_date><news:title>{}</news:title><news:keywords>{}</news:keywords></news:news><image:image><image:loc>{}</image:loc></image:image></url>"#,
+        base_url,
+        news_publication_name,
+        news_language,
+        news_genres,
+        news_publication_date,
+        news_title,
+        news_keywords,
+        news_image_loc,
+    ));
+
+    Ok(())
+}
+
+/// Generates a single news sitemap entry for all directories recursively visited.
+///
+/// The `options` parameter contains the necessary fields for each sitemap entry.
+///
+/// Returns a string containing the news sitemap XML.
+pub fn generate_news_sitemap_entry(options: &NewsVisitOptions<'_>) -> String {
+    format!(
+        r#"<url>
+            <loc>{}</loc>
+            <lastmod>{}</lastmod>
+            <news:news>
+                <news:publication>
+                    <news:name>{}</news:name>
+                    <news:language>{}</news:language>
+                </news:publication>
+                <news:publication_date>{}</news:publication_date>
+                <news:title>{}</news:title>
+            </news:news>
+        </url>"#,
+        options.base_url,
+        options.news_publication_date,
+        options.news_publication_name,
+        options.news_language,
+        options.news_publication_date,
+        options.news_title,
+    )
+}
+
+/// Generates a sitemap for a web app based on the provided `SiteMapData` options.
+///
+/// # Arguments
+///
+/// * `options` - The `SiteMapData` object containing the sitemap data.
+/// * `dir` - The directory containing the web app.
+///
+/// # Returns
+///
+/// A string containing the sitemap.xml file.
+pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
+    let base_dir = PathBuf::from(dir);
+    let mut urls = vec![];
+    if let Err(e) = visit_dirs(
+        &base_dir,
+        &base_dir,
+        &options.loc,
+        &options.changefreq,
+        &options.lastmod,
+        &mut urls,
+    ) {
+        eprintln!("Error generating sitemap: {}", e);
+    }
+
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">{}</urlset>"#,
+        urls.join("\n")
+    )
+}
+
+/// Generates a robots.txt for a web app based on the provided `TxtData` options.
+///
+/// # Arguments
+///
+/// * `options` - The `TxtData` object containing the robots.txt data.
+///
+/// # Returns
+///
+/// A string containing the robots.txt file.
+pub fn txt(options: &TxtData) -> String {
+    let url = format!("{}/sitemap.xml", options.permalink);
+    format!("User-agent: *\nSitemap: {}", url)
 }

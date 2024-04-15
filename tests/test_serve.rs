@@ -1,6 +1,9 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::serve::start;
+    use ssg::server::serve::start;
     use std::fs::File;
     use std::io::{Read, Write};
     use std::net::TcpStream;

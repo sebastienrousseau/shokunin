@@ -1,4 +1,4 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! This is a main function for a simple static site generator (ssg) example.
@@ -15,8 +15,8 @@
 //! function to generate the website.
 
 // Import the required libraries and modules.
-use ssg::compiler::compile;
-use ssg::utilities::serve::start;
+use ssg::compiler::service::compile;
+use ssg::server::serve::start;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

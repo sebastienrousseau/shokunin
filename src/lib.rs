@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.26-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.27-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,13 +66,13 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.26"
+//! shokunin = "0.0.27"
 //! ```
 //!
 //! And in your `main.rs`:
 //!
 //! ```rust
-//! use ssg::compiler::compile;
+//! use ssg::compiler::service::compile;
 //! use std::path::Path;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -103,10 +103,6 @@
 //! [2]: https://www.rust-lang.org/ "Rust"
 //! [3]: https://shokunin.one/contribute/index.html "Contribute to Shokunin"
 
-#![forbid(unsafe_code)]
-#![forbid(unreachable_pub)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -115,22 +111,30 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-use crate::loggers::init_logger;
-use crate::utilities::serve::start;
-use crate::utilities::uuid::generate_unique_string;
-use compiler::compile;
+use crate::{
+    compiler::service::compile,
+    languages::translate,
+    loggers::init_logger, server::serve::start,
+    utilities::uuid::generate_unique_string,
+};
+use cmd::cli::print_banner;
 use dtt::DateTime;
-use rlg::{macro_log, LogFormat, LogLevel};
-use std::fs::File;
-use std::io::Write;
-use std::{error::Error, path::Path};
-use term::cli::print_banner;
+use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
+use std::{error::Error, fs::File, io::Write, path::Path};
 
-/// The `cli` module contains functions for the command-line interface.
-pub mod term;
+
+/// The `cmd` module contains functions for the command-line interface.
+pub mod cmd;
 
 /// The `compiler` module contains functions for the compilation process.
 pub mod compiler;
+
+/// The `lang` module contains the language translation functions.
+pub mod lang;
+
+
+/// The `languages` module contains the language translation functions.
+pub mod languages;
 
 /// The `loggers` module contains the loggers for the library.
 pub mod loggers;
@@ -138,11 +142,17 @@ pub mod loggers;
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
 
+/// The `metadata` module contains the metadata functions.
+pub mod metadata;
+
 /// The `models` module contains the structs.
 pub mod models;
 
 /// The `modules` module contains the application modules.
 pub mod modules;
+
+/// The `server` module contains the development server.
+pub mod server;
 
 /// The `utilities` module contains utility functions.
 pub mod utilities;
@@ -179,22 +189,21 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     print_banner();
 
     // Generate a log entry for the banner
-    let banner_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Banner printed successfully",
-            &LogFormat::CLF
-        );
+    let banner_log = macro_log!(
+        &generate_unique_string(),
+        &iso,
+        &LogLevel::INFO,
+        "process",
+        &translate("en", "lib_banner_log_msg"),
+        &LogFormat::CLF
+    );
 
     // Write the log to both the console and the file
     writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
-    let matches = term::cli::build()?;
-    term::process::args(&matches)?;
+    let matches = cmd::cli::build()?;
+    cmd::process::args(&matches)?;
 
     // Generate a log entry for the arguments
     let args_log = macro_log!(
@@ -202,7 +211,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         &iso,
         &LogLevel::INFO,
         "process",
-        "Arguments processed successfully",
+        &translate("en", "lib_args_log_msg"),
         &LogFormat::CLF
     );
 
@@ -210,24 +219,23 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     writeln!(log_file, "{}", args_log)?;
 
     if let Some(site_name) = matches.get_one::<String>("new") {
-        // Start the server using the specified server address and site name.
-        // If an error occurs, propagate it up the call stack.
-        macro_serve!("127.0.0.1:8000", site_name);
-    }
-
-    // Generate a log entry for the server
-    let server_log =
-        macro_log!(
+        // Generate a log entry for the server
+        let server_log = macro_log!(
             &generate_unique_string(),
             &iso,
             &LogLevel::INFO,
             "process",
-            "Server started successfully",
+            &translate("en", "lib_server_log_msg"),
             &LogFormat::CLF
         );
 
-    // Write the log to both the console and the file
-    writeln!(log_file, "{}", server_log)?;
+        // Write the log to both the console and the file
+        writeln!(log_file, "{}", server_log)?;
+
+        // Start the server using the specified server address and site name.
+        // If an error occurs, propagate it up the call stack.
+        macro_serve!("127.0.0.1:8000", site_name);
+    }
 
     // Set the build, content, site and template paths for the compile function.
     let build_path = Path::new("public");
@@ -237,20 +245,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Call the compile function with the above parameters to compile the site.
     compile(build_path, content_path, site_path, template_path)?;
-
-    // Generate a log entry for the compilation
-    let compile_log =
-        macro_log!(
-            &generate_unique_string(),
-            &iso,
-            &LogLevel::INFO,
-            "process",
-            "Site compiled successfully",
-            &LogFormat::CLF
-        );
-
-    // Write the log to both the console and the file
-    writeln!(log_file, "{}", compile_log)?;
 
     Ok(())
 }

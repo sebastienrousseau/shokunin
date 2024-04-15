@@ -1,11 +1,11 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! Application logging functionality
-use std::io::Write;
 
+use std::io::Write;
 use env_logger::Env;
-use rlg::LogLevel;
+use rlg::log_level::LogLevel;
 
 /// Initializes the logging system.
 ///
@@ -18,7 +18,7 @@ use rlg::LogLevel;
 /// # Examples
 ///
 /// ```
-/// use rlg::LogLevel;
+/// use rlg::log_level::LogLevel;
 /// use ssg::loggers::init_logger;
 ///
 /// // Initialize the logging system with a default log level of `info`

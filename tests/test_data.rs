@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
 
@@ -34,6 +37,7 @@ mod tests {
             name: String::default(),
             rss: String::default(),
             sitemap: String::default(),
+            sitemap_news: String::default(),
             txt: String::default(),
         };
         assert_eq!(file_data, expected_file_data);

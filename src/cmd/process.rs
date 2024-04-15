@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::macro_check_directory;
-use crate::{compile, macro_get_args};
+use crate::{compiler::service::compile, macro_get_args};
 use clap::ArgMatches;
 use std::path::Path;
 

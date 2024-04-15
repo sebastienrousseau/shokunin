@@ -1,3 +1,6 @@
+// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #[cfg(test)]
 mod tests {
 
@@ -85,12 +88,12 @@ mod tests {
     }
 
     #[test]
-    fn test_move_output_directory() -> std::io::Result<()> {
+    fn test_move_output_directory() -> io::Result<()> {
         // Setup: Create a dummy output directory and a dummy file inside it.
         let out_dir = Path::new("temp_out_dir");
         let dummy_file = out_dir.join("dummy_file.txt");
         fs::create_dir_all(out_dir)?;
-        fs::File::create(dummy_file)?;
+        File::create(dummy_file)?;
 
         // Call the function to test.
         let site_name = "My Test Site";
@@ -116,12 +119,12 @@ mod tests {
     }
 
     #[test]
-    fn test_minify_html_files() -> std::io::Result<()> {
+    fn test_minify_html_files() -> io::Result<()> {
         // Setup: Create a dummy output directory and a dummy HTML file inside it.
         let out_dir = Path::new("tests/test_output");
         let dummy_file = out_dir.join("dummy_file.html");
         fs::create_dir_all(out_dir)?;
-        let mut file = fs::File::create(&dummy_file)?;
+        let mut file = File::create(&dummy_file)?;
         file.write_all(
             b"<html>\n<body>\nHello, World!\n</body>\n</html>",
         )?;
@@ -151,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_html_files() -> std::io::Result<()> {
+    fn test_find_html_files() -> io::Result<()> {
         // Setup: Create a directory with a few .html files and a subdirectory
         // with a few more .html files.
         let dir = Path::new("temp_dir");
@@ -216,10 +219,10 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_backup_file() -> std::io::Result<()> {
+    fn test_backup_file() -> io::Result<()> {
         // Setup: Create a dummy file.
         let file_path = Path::new("temp_file.txt");
-        let mut file = fs::File::create(file_path)?;
+        let mut file = File::create(file_path)?;
         file.write_all(b"Some text for the dummy file")?;
 
         // Call the function to test.
@@ -240,7 +243,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_write_minified_html() -> std::io::Result<()> {
+    fn test_write_minified_html() -> io::Result<()> {
         // Setup: Define a dummy file path and minified HTML.
         let file_path = Path::new("temp_minified_html_file.html");
         let minified_html = "<!DOCTYPE html><html><head><title>Test</title></head><body><p>Hello, World!</p></body></html>";
@@ -252,7 +255,7 @@ mod tests {
         assert!(file_path.exists(), "The file was not created.");
 
         // Check that the file contains the expected minified HTML.
-        let mut file = fs::File::open(file_path)?;
+        let mut file = File::open(file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         assert_eq!(
@@ -272,12 +275,12 @@ mod tests {
         let dir1 = Path::new("temp_dir1");
         let dummy_file1 = dir1.join("dummy_file1.txt");
         fs::create_dir_all(dir1)?;
-        fs::File::create(dummy_file1)?;
+        File::create(dummy_file1)?;
 
         let dir2 = Path::new("temp_dir2");
         let dummy_file2 = dir2.join("dummy_file2.txt");
         fs::create_dir_all(dir2)?;
-        fs::File::create(dummy_file2)?;
+        File::create(dummy_file2)?;
 
         let directories: Vec<&Path> = vec![dir1, dir2];
 
@@ -339,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_element() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_write_element() -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
         let value = "value";
@@ -355,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_write_element_empty_value(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
         let value = "";
@@ -371,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_write_element_special_chars(
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
         let value = "<>&\"'";

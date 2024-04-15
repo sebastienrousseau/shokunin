@@ -1,12 +1,25 @@
-// Copyright © 2024-2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-
-extern crate criterion;
 
 use criterion::{black_box, Criterion};
 use ssg::modules::metatags::generate_metatags;
 
-pub fn bench_metatags(c: &mut Criterion) {
+/**
+ * This function is used to benchmark the performance of generating metatags.
+ * It takes a reference to a mutable `Criterion` instance and generates metatags based on the provided `meta` vector.
+ * The `meta` vector contains tuples of tag names and their corresponding content.
+ * The function then asserts that the generated metatags contain the expected content for each tag.
+ *
+ * # Arguments
+ *
+ * * `c` - A mutable reference to a `Criterion` instance.
+ *
+ * # Returns
+ *
+ * This function does not return any value. It is a benchmarking function and its purpose is to measure the performance of generating metatags.
+ */
+#[allow(dead_code)]
+pub(crate) fn bench_metatags(c: &mut Criterion) {
     let meta = vec![
         ("description".to_owned(), "My web page".to_owned()),
         ("author".to_owned(), "John Doe".to_owned()),

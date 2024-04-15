@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::macro_render_layout;
-use reqwest;
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -104,7 +103,7 @@ pub fn render_template(
 /// If the function encounters an error, it returns `Err(error)`, where `error` is a string describing the error that occurred.
 ///
 pub fn render_page(
-    options: &PageOptions,
+    options: &PageOptions<'_>,
     template_path: &String,
     layout: &String,
 ) -> Result<String, String> {

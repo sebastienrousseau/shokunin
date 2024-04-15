@@ -1,14 +1,29 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use rlg::LogLevel::ERROR;
+use rlg::log_level::LogLevel::ERROR;
 
+use crate::modules::pdf::generate_pdf;
 use crate::{
     macro_cleanup_directories, macro_create_directories,
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
     models::data::{FileData, PageData, RssData},
+    metadata::service::extract_and_prepare_metadata,
     modules::{
-        cname::create_cname_data, html::generate_html, human::create_human_data, json::{cname, human, sitemap, txt}, manifest::create_manifest_data, metadata::extract_and_prepare_metadata, navigation::NavigationGenerator, pdf::PdfGenerationParams, plaintext::generate_plain_text, rss::generate_rss, sitemap::create_site_map_data, tags::*, txt::create_txt_data
+        cname::create_cname_data,
+        html::generate_html,
+        human::create_human_data,
+        json::{cname, human, news_sitemap, sitemap, txt},
+        manifest::create_manifest_data,
+
+        navigation::NavigationGenerator,
+        news_sitemap::create_news_site_map_data,
+        pdf::PdfGenerationParams,
+        plaintext::generate_plain_text,
+        rss::generate_rss,
+        sitemap::create_site_map_data,
+        tags::*,
+        txt::create_txt_data,
     },
     utilities::{
         file::add,
@@ -16,7 +31,6 @@ use crate::{
         write::write_files_to_build_directory,
     },
 };
-use crate::modules::pdf::generate_pdf;
 use std::{collections::HashMap, error::Error, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -84,7 +98,14 @@ pub fn compile(
             });
 
             // Generate PDF
-            let (plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords) = match generate_plain_text(
+            let (
+                plain_text,
+                plain_title,
+                plain_description,
+                plain_author,
+                plain_creator,
+                plain_keywords,
+            ) = match generate_plain_text(
                 &file.content,
                 &macro_metadata_option!(metadata, "title"),
                 &macro_metadata_option!(metadata, "description"),
@@ -92,9 +113,26 @@ pub fn compile(
                 &macro_metadata_option!(metadata, "generator"),
                 &keywords.join(", "),
             ) {
-                Ok((plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords)) => (plain_text, plain_title, plain_description, plain_author, plain_creator, plain_keywords),
+                Ok((
+                    plain_text,
+                    plain_title,
+                    plain_description,
+                    plain_author,
+                    plain_creator,
+                    plain_keywords,
+                )) => (
+                    plain_text,
+                    plain_title,
+                    plain_description,
+                    plain_author,
+                    plain_creator,
+                    plain_keywords,
+                ),
                 Err(err) => {
-                    let description = format!("Error generating Plain Text: {:?}", err);
+                    let description = format!(
+                        "Error generating Plain Text: {:?}",
+                        err
+                    );
                     macro_log_info!(
                         &ERROR,
                         "compiler.rs - Line 107",
@@ -102,36 +140,51 @@ pub fn compile(
                         &LogFormat::CLF
                     );
                     // Provide fallback values
-                    (String::from("Fallback Plain Text content"), String::new(), String::new(), String::new(), String::new(), String::new())
+                    (
+                        String::from("Fallback Plain Text content"),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                    )
                 }
             };
 
             // Determine the filename without the extension
             let filename_without_extension = Path::new(&file.name)
-                    .file_stem()
-                    .and_then(|stem| stem.to_str())
-                    .unwrap_or(&file.name);
-                let common_path = build_dir_path.to_str().unwrap();
-                let pdf_path = if filename_without_extension == "index" {
-                    format!("{}/", common_path)
-                } else {
-                    format!("{}/{}/", common_path, filename_without_extension)
-                };
-                if let Err(err) = generate_pdf(PdfGenerationParams {
-                    plain_title: &plain_title,
-                    plain_description: &plain_description,
-                    plain_text: &plain_text,
-                    plain_author: &plain_author,
-                    plain_creator: &plain_creator,
-                    plain_keywords: &plain_keywords,
-                    output_dir: &pdf_path,
-                    filename: filename_without_extension,
-                }) {
-                let description = format!("Error generating PDF: {:?}", err);
-                macro_log_info!(&ERROR, "compiler.rs - Line 81", &description, &LogFormat::CLF);
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .unwrap_or(&file.name);
+            let common_path = build_dir_path.to_str().unwrap();
+            let pdf_path = if filename_without_extension == "index" {
+                format!("{}/", common_path)
+            } else {
+                format!(
+                    "{}/{}/",
+                    common_path, filename_without_extension
+                )
+            };
+            if let Err(err) = generate_pdf(PdfGenerationParams {
+                plain_title: &plain_title,
+                plain_description: &plain_description,
+                plain_text: &plain_text,
+                plain_author: &plain_author,
+                plain_creator: &plain_creator,
+                plain_keywords: &plain_keywords,
+                output_dir: &pdf_path,
+                filename: filename_without_extension,
+            }) {
+                let description =
+                    format!("Error generating PDF: {:?}", err);
+                macro_log_info!(
+                    &ERROR,
+                    "compiler.rs - Line 81",
+                    &description,
+                    &LogFormat::CLF
+                );
                 // Handle the error here, for example, return early or log it
             }
-
 
             // Create page options
             let mut page_options = PageOptions::new();
@@ -277,8 +330,11 @@ pub fn compile(
             // Initialize a structure to store sitemap-related information, using values from the metadata.
             let sitemap_options = create_site_map_data(&metadata);
 
+            // Initialize a structure to store news sitemap-related information, using values from the metadata.
+            let news_sitemap_options =
+                create_news_site_map_data(&metadata);
+
             let tags_data = generate_tags(&file, &metadata);
-            // println!("Tags: {:?}", tags_data);
 
             // Update the global tags data
             for (tag, pages_data) in tags_data.iter() {
@@ -318,12 +374,12 @@ pub fn compile(
             let cname_data = cname(&cname_options);
             let human_data = human(&human_options);
             let sitemap_data = sitemap(sitemap_options, site_path);
+            let news_sitemap_data = news_sitemap(news_sitemap_options);
             let json_data = serde_json::to_string(&json)
                 .unwrap_or_else(|e| {
                     eprintln!("Error serializing JSON: {}", e);
                     String::new()
                 });
-
             // Return FileData
             FileData {
                 cname: cname_data,
@@ -334,6 +390,7 @@ pub fn compile(
                 name: file.name,
                 rss: rss_data,
                 sitemap: sitemap_data,
+                sitemap_news: news_sitemap_data,
                 txt: txt_data,
             }
         })
