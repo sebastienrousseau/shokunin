@@ -43,9 +43,6 @@ pub mod preprocessor;
 /// the `postprocessor` module contains functions for postprocessing content.
 pub mod postprocessor;
 
-/// The `pdf` module contains functions for generating PDFs.
-pub mod pdf;
-
 /// The `rss` module contains functions for generating RSS feeds.
 pub mod rss;
 

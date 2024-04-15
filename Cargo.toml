@@ -20,7 +20,7 @@ name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.71.1"
-version = "0.0.27"
+version = "0.0.28"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -51,9 +51,9 @@ comrak = "0.22.0"
 dtt = "0.0.5"
 env_logger = "0.11.3"
 lazy_static = "1.4.0"
-log = {version="0.4.21", features = ["std"] }
+log = { version = "0.4.21", features = ["std"] }
 minify-html = "0.15.0"
-printpdf = "0.7.0"
+pdf_composer = "0.2.61"
 pulldown-cmark = "0.10.2"
 quick-xml = "0.31.0"
 regex = "1.10.4"
