@@ -54,7 +54,6 @@ lazy_static = "1.4.0"
 log = {version="0.4.21", features = ["std"] }
 minify-html = "0.15.0"
 pdf_composer = "0.2.6"
-printpdf = "0.7.0"
 pulldown-cmark = "0.10.2"
 quick-xml = "0.31.0"
 regex = "1.10.4"
