@@ -53,7 +53,7 @@ env_logger = "0.11.3"
 lazy_static = "1.4.0"
 log = { version = "0.4.21", features = ["std"] }
 minify-html = "0.15.0"
-pdf_composer = "0.2.61"
+pdf_composer = "0.2.70"
 pulldown-cmark = "0.10.3"
 quick-xml = "0.31.0"
 regex = "1.10.4"

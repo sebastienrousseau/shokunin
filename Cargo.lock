@@ -1071,6 +1071,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dialoguer"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "658bce805d770f407bc62102fca7c2c64ceef2fbcb2b8bd19d2765ce093980de"
+dependencies = [
+ "console",
+ "shell-words",
+ "tempfile",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1291,6 +1304,12 @@ name = "fastrand"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "658bd65b1cf4c852a3cc96f18a8ce7b5640f6b703f905c7d74532294c2a63984"
+
+[[package]]
+name = "figlet-rs"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4742a071cd9694fc86f9fa1a08fa3e53d40cc899d7ee532295da2d085639fbc5"
 
 [[package]]
 name = "flate2"
@@ -2405,9 +2424,9 @@ checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
 
 [[package]]
 name = "pdf_composer"
-version = "0.2.61"
+version = "0.2.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa4a2c81773d83f66540abd1ce4fd989691a2671dfb04195a8dba3f6424691e1"
+checksum = "27d2dde1b9fc2e2700cc4bfe00315344fdf8c8394867de2fcc51c503ac3a7bbe"
 dependencies = [
  "async-std",
  "chromiumoxide",
@@ -2419,7 +2438,7 @@ dependencies = [
  "rayon",
  "regex",
  "serde",
- "serde_yaml",
+ "serde_yml",
  "url-escape",
 ]
 
@@ -2955,6 +2974,17 @@ dependencies = [
 
 [[package]]
 name = "rlg"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6ccf670238310d5c31a52fed1a3314620d037a64f1e5fbdc71b2c50909134dc"
+dependencies = [
+ "dtt",
+ "tokio",
+ "vrd 0.0.4",
+]
+
+[[package]]
+name = "rlg"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e02c717e23f67b23032a4acb01cf63534d6259938d592e6d2451c02f09fc368"
@@ -3142,16 +3172,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_yaml"
-version = "0.9.34+deprecated"
+name = "serde_yml"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
+checksum = "196c3750ff0411738366b0d9534ca55fc74d04a3d4284a450039de950bd11938"
 dependencies = [
+ "dtt",
+ "env_logger",
+ "figlet-rs",
  "indexmap 2.2.6",
  "itoa",
+ "log",
+ "openssl",
+ "rlg 0.0.3",
  "ryu",
  "serde",
  "unsafe-libyaml",
+ "uuid",
+ "xtasks",
 ]
 
 [[package]]
@@ -3275,7 +3313,7 @@ dependencies = [
  "quick-xml",
  "regex",
  "reqwest 0.12.4",
- "rlg",
+ "rlg 0.0.3",
  "serde",
  "serde_json",
  "tempfile",
@@ -3800,6 +3838,15 @@ checksum = "65dd7eed29412da847b0f78bcec0ac98588165988a8cfe41d4ea1d429f8ccfff"
 
 [[package]]
 name = "vrd"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a81b8b5b404f3d7afa1b8142a6bc980c20cd68556c634c3db517871aa0402521"
+dependencies = [
+ "rand",
+]
+
+[[package]]
+name = "vrd"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee1067b8d17481f5be71b59d11c329e955ffe36348907e0a4a41b619682bb4af"
@@ -3816,7 +3863,7 @@ checksum = "36c5adc67f8ec8758d0564f48a3a760ceecc6e5375bc5b8d26fc55873cac48de"
 dependencies = [
  "dtt",
  "rand",
- "rlg",
+ "rlg 0.0.3",
  "serde",
  "serde-big-array",
  "serde_json",
@@ -4208,10 +4255,30 @@ dependencies = [
  "anyhow",
  "clap 3.2.25",
  "derive_builder",
- "dialoguer",
+ "dialoguer 0.10.4",
  "duct",
  "fs_extra",
  "glob",
+]
+
+[[package]]
+name = "xtasks"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "940db5674e301470e6cd91098b2c68a1fad751a1623575d1133f7456146e6d2f"
+dependencies = [
+ "anyhow",
+ "clap 4.5.4",
+ "derive_builder",
+ "dialoguer 0.11.0",
+ "dtt",
+ "duct",
+ "fs_extra",
+ "glob",
+ "rlg 0.0.2",
+ "serde",
+ "serde_json",
+ "vrd 0.0.5",
 ]
 
 [[package]]
