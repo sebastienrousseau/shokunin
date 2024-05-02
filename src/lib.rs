@@ -119,7 +119,7 @@ use crate::{
 use cmd::cli::print_banner;
 use dtt::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use std::{error::Error, fs::File, io::Write, path::Path};
+use std::{error::Error, fs::File, io::{self, Write}, path::Path};
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -171,16 +171,17 @@ pub mod utilities;
 /// If any errors occur during the process (e.g. an invalid argument is
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
+/// Run the static site generator command-line tool.
 pub fn run() -> Result<(), Box<dyn Error>> {
     // Initialize the logger using the `env_logger` crate
     init_logger(None)?;
 
-    // Define date and time
+    // Get the current date and time
     let date = DateTime::new();
     let iso = date.iso_8601;
 
-    // Open the log file for appending
-    let mut log_file = File::create("./ssg.log")?;
+    // Open or create the log file
+    let mut log_file = create_log_file("./ssg.log")?;
 
     // Print the CLI banner and welcome message
     print_banner();
@@ -245,3 +246,15 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+/// Create a log file at the specified path.
+fn create_log_file(file_path: &str) -> Result<File, io::Error> {
+    File::create(file_path)
+}
+
+// Log an event with a timestamp and message to the specified log file.
+// fn log_event(log_file: &mut File, timestamp: &str, message: &str) -> Result<(), io::Error> {
+//     writeln!(log_file, "[{}] {}", timestamp, message)?;
+//     log_file.flush()?;
+//     Ok(())
+// }

@@ -104,7 +104,6 @@ trivial_bounds = "allow"
 unsafe_code = "allow"
 
 ## Forbid
-# missing_docs = "warn"
 missing_debug_implementations = "forbid"
 non_ascii_idents = "forbid"
 unreachable_pub = "forbid"
@@ -114,7 +113,7 @@ dead_code = "deny"
 deprecated_in_future = "deny"
 ellipsis_inclusive_range_patterns = "deny"
 explicit_outlives_requirements = "deny"
-future_incompatible = "deny"
+future_incompatible = { level = "deny", priority = -1 }
 keyword_idents = "deny"
 macro_use_extern_crate = "deny"
 meta_variable_misuse = "deny"
