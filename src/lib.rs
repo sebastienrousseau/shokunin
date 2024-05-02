@@ -102,7 +102,6 @@
 //! [1]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
 //! [2]: https://www.rust-lang.org/ "Rust"
 //! [3]: https://shokunin.one/contribute/index.html "Contribute to Shokunin"
-
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -110,7 +109,6 @@
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
-
 use crate::{
     compiler::service::compile, languages::translate,
     loggers::init_logger, server::serve::start,
@@ -119,7 +117,12 @@ use crate::{
 use cmd::cli::print_banner;
 use dtt::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use std::{error::Error, fs::File, io::{self, Write}, path::Path};
+use std::{
+    error::Error,
+    fs::File,
+    io::{self, Write},
+    path::Path,
+};
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -251,10 +254,3 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 fn create_log_file(file_path: &str) -> Result<File, io::Error> {
     File::create(file_path)
 }
-
-// Log an event with a timestamp and message to the specified log file.
-// fn log_event(log_file: &mut File, timestamp: &str, message: &str) -> Result<(), io::Error> {
-//     writeln!(log_file, "[{}] {}", timestamp, message)?;
-//     log_file.flush()?;
-//     Ok(())
-// }

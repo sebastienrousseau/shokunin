@@ -120,12 +120,12 @@ meta_variable_misuse = "deny"
 missing_fragment_specifier = "deny"
 noop_method_call = "deny"
 pointer_structural_match = "deny"
-rust_2018_idioms = "deny"
-rust_2021_compatibility = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+rust_2021_compatibility = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
-unused = "deny"
 unused_features = "deny"
 unused_import_braces = "deny"
 unused_labels = "deny"
