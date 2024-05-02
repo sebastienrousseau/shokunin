@@ -1004,6 +1004,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "322ef0094744e63628e6f0eb2295517f79276a5b342a4c2ff3042566ca181d4e"
 
 [[package]]
+name = "dialoguer"
+version = "0.10.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59c6f2989294b9a498d3ad5491a79c6deb604617378e1cdc4bfc1c1361fe2f87"
+dependencies = [
+ "console",
+ "shell-words",
+ "tempfile",
+ "zeroize",
+]
+
+[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2297,6 +2309,7 @@ name = "pdf_composer"
 version = "0.2.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15070b5a9468a6bf6d41bff639b2996507764b2713f0022b85020a576ed174ab"
+
 dependencies = [
  "async-std",
  "chromiumoxide",
@@ -2844,6 +2857,17 @@ dependencies = [
 
 [[package]]
 name = "rlg"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6ccf670238310d5c31a52fed1a3314620d037a64f1e5fbdc71b2c50909134dc"
+dependencies = [
+ "dtt",
+ "tokio",
+ "vrd 0.0.4",
+]
+
+[[package]]
+name = "rlg"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e02c717e23f67b23032a4acb01cf63534d6259938d592e6d2451c02f09fc368"
@@ -2974,6 +2998,7 @@ name = "serde"
 version = "1.0.200"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddc6f9cc94d67c0e21aaf7eda3a010fd3af78ebf6e096aa6e2e13c79749cce4f"
+
 dependencies = [
  "serde_derive",
 ]
@@ -2992,6 +3017,7 @@ name = "serde_derive"
 version = "1.0.200"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "856f046b9400cee3c8c94ed572ecdb752444c24528c035cd35882aad6f492bcb"
+
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3035,6 +3061,7 @@ name = "serde_yml"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b48f444c502b161ee70dafc567a48336c0a05139e586758dc40ef528d511d235"
+
 dependencies = [
  "dtt",
  "env_logger",
@@ -3665,6 +3692,15 @@ checksum = "65dd7eed29412da847b0f78bcec0ac98588165988a8cfe41d4ea1d429f8ccfff"
 
 [[package]]
 name = "vrd"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a81b8b5b404f3d7afa1b8142a6bc980c20cd68556c634c3db517871aa0402521"
+dependencies = [
+ "rand",
+]
+
+[[package]]
+name = "vrd"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee1067b8d17481f5be71b59d11c329e955ffe36348907e0a4a41b619682bb4af"
@@ -3681,7 +3717,7 @@ checksum = "36c5adc67f8ec8758d0564f48a3a760ceecc6e5375bc5b8d26fc55873cac48de"
 dependencies = [
  "dtt",
  "rand",
- "rlg",
+ "rlg 0.0.3",
  "serde",
  "serde-big-array",
  "serde_json",
