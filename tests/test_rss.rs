@@ -77,8 +77,9 @@ mod tests {
 
             let rss_str = rss_result.unwrap();
             assert!(rss_str.contains("<title>My RSS Feed</title>"));
-            assert!(rss_str
-                .contains("<link>https://example.com</link>"));
+            assert!(
+                rss_str.contains("<link>https://example.com</link>")
+            );
             assert!(rss_str.contains("<description>A description of my RSS feed.</description>"));
         }
     }

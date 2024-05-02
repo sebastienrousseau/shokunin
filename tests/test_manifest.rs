@@ -35,7 +35,8 @@ pub fn create_manifest_data(
             .unwrap_or_default(),
         orientation: "portrait-primary".to_string(),
         scope: "/".to_string(),
-        theme_color: metadata.get("theme-color")
+        theme_color: metadata
+            .get("theme-color")
             .map(|color| format!("rgb({})", color))
             .unwrap_or_default(),
     }

@@ -23,9 +23,11 @@ pub fn generate_rss(
     let mut writer = Writer::new(Vec::new());
 
     // Write the XML declaration.
-    writer.write_event(Event::Decl(
-        BytesDecl::new("1.0", Some("utf-8"), None)
-    ))?;
+    writer.write_event(Event::Decl(BytesDecl::new(
+        "1.0",
+        Some("utf-8"),
+        None,
+    )))?;
 
     // Start the `rss` element.
     let mut rss_start = BytesStart::new("rss");
@@ -128,9 +130,10 @@ pub fn write_atom_link_element<W: std::io::Write>(
     options: &RssData,
 ) -> Result<(), Box<dyn Error>> {
     let mut atom_link_start = BytesStart::new("atom:link");
-    atom_link_start.push_attribute(
-        ("href", options.atom_link.to_string().as_str())
-    );
+    atom_link_start.push_attribute((
+        "href",
+        options.atom_link.to_string().as_str(),
+    ));
     atom_link_start.push_attribute(("rel", "self"));
     atom_link_start.push_attribute(("type", "application/rss+xml"));
     writer.write_event(Event::Empty(atom_link_start))?;

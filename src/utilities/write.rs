@@ -21,17 +21,16 @@ use std::time::Instant;
 const OTHER_FILES: [&str; 2] = ["main.js", "sw.js"];
 
 /// Constants for index file names.
-const INDEX_FILES: [&str; 8] =
-    [
-        "CNAME",
-        "humans.txt",
-        "index.html",
-        "manifest.json",
-        "robots.txt",
-        "rss.xml",
-        "sitemap.xml",
-        "news-sitemap.xml",
-    ];
+const INDEX_FILES: [&str; 8] = [
+    "CNAME",
+    "humans.txt",
+    "index.html",
+    "manifest.json",
+    "robots.txt",
+    "rss.xml",
+    "sitemap.xml",
+    "news-sitemap.xml",
+];
 
 /// Writes the files to the build directory.
 ///
@@ -245,10 +244,7 @@ fn print_section_headers(
     let file_name =
         dir_path.file_name().and_then(|s| s.to_str()).unwrap_or("");
     let duration = start_time.elapsed();
-    println!(
-        "\n❯ Generating the `{}` directory content.\n",
-        file_name,
-    );
+    println!("\n❯ Generating the `{}` directory content.\n", file_name,);
     for header in section_headers {
         println!("{}", header);
     }

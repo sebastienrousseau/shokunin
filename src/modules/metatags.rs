@@ -18,16 +18,15 @@ type MetaDataMap = HashMap<String, String>;
 pub fn generate_custom_meta_tags(
     mapping: &[(String, Option<String>)],
 ) -> String {
-    let filtered_mapping: Vec<(String, String)> =
-        mapping
-            .iter()
-            .filter_map(|(key, value)| {
-                value
-                    .as_ref()
-                    .map(|val| (key.clone(), val.clone()))
-                    .filter(|(_, val)| !val.is_empty())
-            })
-            .collect();
+    let filtered_mapping: Vec<(String, String)> = mapping
+        .iter()
+        .filter_map(|(key, value)| {
+            value
+                .as_ref()
+                .map(|val| (key.clone(), val.clone()))
+                .filter(|(_, val)| !val.is_empty())
+        })
+        .collect();
     generate_metatags(&filtered_mapping)
 }
 
@@ -59,10 +58,8 @@ pub fn load_metatags(
 ) -> String {
     let mut result = String::new();
     for &name in tag_names {
-        let value = metadata
-            .get(name)
-            .cloned()
-            .unwrap_or_else(String::new);
+        let value =
+            metadata.get(name).cloned().unwrap_or_else(String::new);
         result.push_str(
             &MetaTag::new(name.to_string(), value).generate(),
         );

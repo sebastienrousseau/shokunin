@@ -3,9 +3,9 @@
 
 //! Application logging functionality
 
-use std::io::Write;
 use env_logger::Env;
 use rlg::log_level::LogLevel;
+use std::io::Write;
 
 /// Initializes the logging system.
 ///

@@ -357,8 +357,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_element_empty_value(
-    ) -> Result<(), Box<dyn Error>> {
+    fn test_write_element_empty_value() -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
         let value = "";
@@ -373,8 +372,8 @@ mod tests {
     }
 
     #[test]
-    fn test_write_element_special_chars(
-    ) -> Result<(), Box<dyn Error>> {
+    fn test_write_element_special_chars() -> Result<(), Box<dyn Error>>
+    {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
         let value = "<>&\"'";

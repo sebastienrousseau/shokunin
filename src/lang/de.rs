@@ -28,7 +28,9 @@
 /// assert_eq!(translated, "Hallo");
 /// ```
 pub(crate) fn translate(text: &str) -> String {
-    T.get(text).map(|s| s.to_string()).unwrap_or_else(|| text.to_string())
+    T.get(text)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| text.to_string())
 }
 
 lazy_static::lazy_static! {

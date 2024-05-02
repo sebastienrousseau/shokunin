@@ -37,9 +37,9 @@ pub fn extract(content: &str) -> HashMap<String, String> {
         extract_front_matter_str(content, "+++\n", "\n+++\n")
     {
         if let Ok(toml_value) = front_matter_str.parse::<TomlValue>() {
-            front_matter.extend(
-                parse_toml_table(toml_value.as_table().unwrap())
-            );
+            front_matter.extend(parse_toml_table(
+                toml_value.as_table().unwrap(),
+            ));
         }
     } else if let Some(front_matter_str) =
         extract_json_object_str(content)
@@ -168,9 +168,9 @@ pub fn parse_toml_table(
 ) -> HashMap<String, String> {
     toml_table
         .iter()
-        .filter_map(
-            |(k, v)| v.as_str().map(|s| (k.to_string(), s.to_string()))
-        )
+        .filter_map(|(k, v)| {
+            v.as_str().map(|s| (k.to_string(), s.to_string()))
+        })
         .collect()
 }
 /// ## Function: `extract_json_object_str` - Extracts a JSON object from a string of content

@@ -215,7 +215,9 @@ impl SiteMapData {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 /// Options for the `news_sitemap` function
 pub struct NewsData {
     /// A string representing the news genres (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
@@ -248,9 +250,10 @@ impl NewsData {
     }
 }
 
-
 /// Options for the `news_visit` function
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
+)]
 pub struct NewsVisitOptions<'a> {
     /// A string representing the base URL of the news website
     pub base_url: &'a str,
@@ -267,7 +270,6 @@ pub struct NewsVisitOptions<'a> {
     /// A string representing the news title
     pub news_title: &'a str,
 }
-
 
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,

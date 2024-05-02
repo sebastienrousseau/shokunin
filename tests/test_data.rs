@@ -12,10 +12,9 @@ mod tests {
     #[test]
     fn test_cname_data_default() {
         let cname_data = CnameData::default();
-        let expected_cname_data =
-            CnameData {
-                cname: String::default(),
-            };
+        let expected_cname_data = CnameData {
+            cname: String::default(),
+        };
         assert_eq!(cname_data, expected_cname_data);
     }
 
@@ -132,10 +131,9 @@ mod tests {
     #[test]
     fn test_txt_data_default() {
         let txt_data = TxtData::default();
-        let expected_txt_data =
-            TxtData {
-                permalink: String::default(),
-            };
+        let expected_txt_data = TxtData {
+            permalink: String::default(),
+        };
         assert_eq!(txt_data, expected_txt_data);
     }
 
