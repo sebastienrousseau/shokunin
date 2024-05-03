@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.27-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.29-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.28"
+//! shokunin = "0.0.29"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -102,7 +102,6 @@
 //! [1]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
 //! [2]: https://www.rust-lang.org/ "Rust"
 //! [3]: https://shokunin.one/contribute/index.html "Contribute to Shokunin"
-
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -110,7 +109,6 @@
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
-
 use crate::{
     compiler::service::compile, languages::translate,
     loggers::init_logger, server::serve::start,
@@ -119,7 +117,12 @@ use crate::{
 use cmd::cli::print_banner;
 use dtt::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use std::{error::Error, fs::File, io::Write, path::Path};
+use std::{
+    error::Error,
+    fs::File,
+    io::{self, Write},
+    path::Path,
+};
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -171,16 +174,17 @@ pub mod utilities;
 /// If any errors occur during the process (e.g. an invalid argument is
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
+/// Run the static site generator command-line tool.
 pub fn run() -> Result<(), Box<dyn Error>> {
     // Initialize the logger using the `env_logger` crate
     init_logger(None)?;
 
-    // Define date and time
+    // Get the current date and time
     let date = DateTime::new();
     let iso = date.iso_8601;
 
-    // Open the log file for appending
-    let mut log_file = File::create("./ssg.log")?;
+    // Open or create the log file
+    let mut log_file = create_log_file("./ssg.log")?;
 
     // Print the CLI banner and welcome message
     print_banner();
@@ -244,4 +248,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     compile(build_path, content_path, site_path, template_path)?;
 
     Ok(())
+}
+
+/// Create a log file at the specified path.
+fn create_log_file(file_path: &str) -> Result<File, io::Error> {
+    File::create(file_path)
 }

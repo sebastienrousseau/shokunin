@@ -10,7 +10,7 @@
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator (SSG) v0.0.27 🦀
+# Shokunin Static Site Generator (SSG) v0.0.29 🦀
 
 The fastest Rust-based Static Site Generator (SSG) for building professional
 websites and blogs.

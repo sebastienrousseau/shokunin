@@ -3,13 +3,16 @@
 
 use crate::modules::preprocessor::preprocess_content;
 use crate::utilities::directory::extract_front_matter;
-use pulldown_cmark::{Parser, Event, Tag};
 use pulldown_cmark::TagEnd;
+use pulldown_cmark::{Event, Parser, Tag};
 use regex::Regex;
 use std::error::Error;
 
 /// Type alias for the result of the `generate_plain_text` function
-type PlainTextResult = Result<(String, String, String, String, String, String), Box<dyn Error>>;
+type PlainTextResult = Result<
+    (String, String, String, String, String, String),
+    Box<dyn Error>,
+>;
 
 /// Generate a plain text representation of the Markdown content.
 ///
@@ -64,10 +67,12 @@ pub fn generate_plain_text(
     // Extract front matter from content
     let markdown_content = extract_front_matter(content);
     // Preprocess content to update class attributes and image tags
-    let processed_content = preprocess_content(markdown_content, &class_regex, &img_regex)?;
+    let processed_content =
+        preprocess_content(markdown_content, &class_regex, &img_regex)?;
 
     // Further preprocess to remove Markdown link references.
-    let no_markdown_links = link_ref_regex.replace_all(&processed_content, "$1");
+    let no_markdown_links =
+        link_ref_regex.replace_all(&processed_content, "$1");
 
     let mut plain_text = String::new();
     // let plain_title = title.to_string();
@@ -142,14 +147,12 @@ pub fn generate_plain_text(
     let plain_author = author.trim();
     let plain_creator = creator.trim();
     let plain_keywords = keywords.trim();
-    Ok(
-        (
-            plain_text.to_string(),
-            plain_title.to_string(),
-            plain_description.to_string(),
-            plain_author.to_string(),
-            plain_creator.to_string(),
-            plain_keywords.to_string(),
-        )
-    )
+    Ok((
+        plain_text.to_string(),
+        plain_title.to_string(),
+        plain_description.to_string(),
+        plain_author.to_string(),
+        plain_creator.to_string(),
+        plain_keywords.to_string(),
+    ))
 }

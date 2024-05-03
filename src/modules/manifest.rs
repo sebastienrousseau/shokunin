@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::{
-    macro_metadata_option, models::data::{IconData, ManifestData}
+    macro_metadata_option,
+    models::data::{IconData, ManifestData},
 };
 use std::collections::HashMap;
 
@@ -15,7 +16,9 @@ use std::collections::HashMap;
 /// # Returns
 ///
 /// A `ManifestData` object.
-pub fn create_manifest_data(metadata: &HashMap<String, String>) -> ManifestData {
+pub fn create_manifest_data(
+    metadata: &HashMap<String, String>,
+) -> ManifestData {
     ManifestData {
         name: metadata
             .get("name")

@@ -56,7 +56,7 @@ impl FileNameComponents {
 }
 
 /// Struct responsible for generating navigation HTML.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct NavigationGenerator;
 
 impl NavigationGenerator {

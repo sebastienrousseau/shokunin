@@ -2,7 +2,8 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 
 use crate::models::data::{
-    CnameData, HumansData, ManifestData, NewsData, NewsVisitOptions, SiteMapData, TxtData
+    CnameData, HumansData, ManifestData, NewsData, NewsVisitOptions,
+    SiteMapData, TxtData,
 };
 use serde_json::{json, Map};
 use std::{
@@ -249,7 +250,9 @@ fn news_visit_dirs(
 /// The `options` parameter contains the necessary fields for each sitemap entry.
 ///
 /// Returns a string containing the news sitemap XML.
-pub fn generate_news_sitemap_entry(options: &NewsVisitOptions<'_>) -> String {
+pub fn generate_news_sitemap_entry(
+    options: &NewsVisitOptions<'_>,
+) -> String {
     format!(
         r#"<url>
             <loc>{}</loc>

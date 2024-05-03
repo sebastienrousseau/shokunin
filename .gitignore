@@ -14,3 +14,4 @@ Icon?
 shokunin.log
 src/.DS_Store
 tarpaulin-report.html
+Cargo.lock

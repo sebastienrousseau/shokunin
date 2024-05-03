@@ -14,7 +14,7 @@ use tempfile::TempDir;
  * * `c` - A reference to a `Criterion` object, which is used to define and run benchmarks.
  */
 #[allow(dead_code)]
- pub(crate) fn bench_utilities(c: &mut Criterion) {
+pub(crate) fn bench_utilities(c: &mut Criterion) {
     // Creates a temporary directory and gets its path.
     let tempdir = TempDir::new().unwrap();
     let dir = tempdir.path().join("test_dir");
@@ -23,7 +23,8 @@ use tempfile::TempDir;
     c.bench_function("create directory", |b| {
         b.iter(|| {
             // Creates a directory with the given path and name.
-            let result = directory(black_box(&dir), black_box("test_dir"));
+            let result =
+                directory(black_box(&dir), black_box("test_dir"));
             // Asserts that the result is Ok, indicating that the directory was created successfully.
             assert!(result.is_ok());
         })

@@ -134,9 +134,9 @@ impl CommandExecutor {
             return Err(CommandError::EmptyCommand);
         }
         // Execute the command and handle any errors
-        self.command.output().map_err(
-            |err| CommandError::ExecutionFailed(err.to_string())
-        )
+        self.command.output().map_err(|err| {
+            CommandError::ExecutionFailed(err.to_string())
+        })
     }
 }
 

@@ -41,9 +41,10 @@ use std::{
 pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
     if dir.exists() {
         if !dir.is_dir() {
-            return Err(
-                format!("❌ Error: {} is not a directory.", name)
-            );
+            return Err(format!(
+                "❌ Error: {} is not a directory.",
+                name
+            ));
         }
     } else {
         match fs::create_dir_all(dir) {
@@ -255,12 +256,11 @@ pub fn format_header_with_id_class(
     let header_type = captures
         .map_or("", |cap| cap.get(1).map_or("", |m| m.as_str()))
         .to_lowercase();
-    let first_word =
-        text_only
-            .split(|c: char| !c.is_alphanumeric())
-            .next()
-            .unwrap_or("")
-            .to_lowercase();
+    let first_word = text_only
+        .split(|c: char| !c.is_alphanumeric())
+        .next()
+        .unwrap_or("")
+        .to_lowercase();
     let aria_label = to_title_case(first_word.as_str());
     for c in header_str.chars() {
         if !in_header_tag {

@@ -40,10 +40,9 @@ pub(crate) fn bench_json(c: &mut Criterion) {
         site_software: String::from("Test Software"),
     };
 
-    let cname_data =
-        CnameData {
-            cname: String::from("test.com"),
-        };
+    let cname_data = CnameData {
+        cname: String::from("test.com"),
+    };
 
     let sitemap_data = SiteMapData {
         changefreq: String::from("always"),
@@ -68,8 +67,8 @@ pub(crate) fn bench_json(c: &mut Criterion) {
     });
 
     c.bench_function("sitemap", |b| {
-        b.iter(
-            || sitemap(black_box(sitemap_data.clone()), black_box(dir))
-        )
+        b.iter(|| {
+            sitemap(black_box(sitemap_data.clone()), black_box(dir))
+        })
     });
 }

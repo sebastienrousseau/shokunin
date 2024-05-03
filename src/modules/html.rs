@@ -7,8 +7,8 @@ use crate::{
         postprocessor::post_process_html,
     },
     utilities::directory::{
-        extract_front_matter,
-        format_header_with_id_class, update_class_attributes,
+        extract_front_matter, format_header_with_id_class,
+        update_class_attributes,
     },
 };
 use regex::Regex;
@@ -28,7 +28,9 @@ impl std::fmt::Display for HtmlGenerationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             Self::EmptyTitle => write!(f, "Title cannot be empty."),
-            Self::EmptyDescription => write!(f, "Description cannot be empty."),
+            Self::EmptyDescription => {
+                write!(f, "Description cannot be empty.")
+            }
             Self::RegexCompilationError(ref err) => {
                 write!(f, "Regex compilation error: {}", err)
             }
@@ -98,8 +100,10 @@ pub fn generate_html(
         preprocess_content(markdown_content, &class_regex, &img_regex)?;
 
     // Convert Markdown to HTML
-    let markdown_html =
-        convert_markdown_to_html(&processed_content, &Default::default());
+    let markdown_html = convert_markdown_to_html(
+        &processed_content,
+        &Default::default(),
+    );
 
     // Unwrap the Result to get the String
     let markdown_html = markdown_html.unwrap();
@@ -107,7 +111,7 @@ pub fn generate_html(
     // Post-process HTML content
     let processed_html =
         post_process_html(&markdown_html, &class_regex, &img_regex);
-    
+
     // Unwrap the Result to get the String
     let processed_html = processed_html.unwrap();
 
@@ -117,7 +121,8 @@ pub fn generate_html(
 
     // Process headers in HTML
     let header_tags = vec!["h1", "h2", "h3", "h4", "h5", "h6"];
-    let html_string = process_headers(&processed_html, &header_tags, &id_regex);
+    let html_string =
+        process_headers(&processed_html, &header_tags, &id_regex);
 
     // Construct the final HTML with JSON content if available
     let json_html = json_content.map_or_else(
@@ -174,12 +179,14 @@ fn process_headers(
 ) -> String {
     let mut html_string = html.to_string();
     for tag in header_tags {
-        let re = Regex::new(&format!("<{}>([^<]+)</{}>", tag, tag)).unwrap();
+        let re =
+            Regex::new(&format!("<{}>([^<]+)</{}>", tag, tag)).unwrap();
         let mut replacements: Vec<(String, String)> = Vec::new();
 
         for cap in re.captures_iter(&html_string) {
             let original = cap[0].to_string();
-            let replacement = format_header_with_id_class(&original, &re);
+            let replacement =
+                format_header_with_id_class(&original, &re);
             replacements.push((original, replacement));
         }
 

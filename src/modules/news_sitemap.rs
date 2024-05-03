@@ -16,19 +16,39 @@ pub fn create_news_site_map_data(
 ) -> NewsData {
     // Convert the last build date from metadata to the desired format.
     let news_publication_date = convert_date_format(
-        metadata.get("news_publication_date").unwrap_or(&"".to_string()),
+        metadata
+            .get("news_publication_date")
+            .unwrap_or(&"".to_string()),
     );
 
     // Construct and return NewsData with converted and extracted metadata values.
     NewsData {
-        news_genres: metadata.get("news_genres").unwrap_or(&"".to_string()).to_string(),
-        news_image_loc: metadata.get("news_image_loc").cloned().unwrap_or_default(),
-        news_keywords: metadata.get("news_keywords").cloned().unwrap_or_default(),
-        news_language: metadata.get("news_language").cloned().unwrap_or_default(),
+        news_genres: metadata
+            .get("news_genres")
+            .unwrap_or(&"".to_string())
+            .to_string(),
+        news_image_loc: metadata
+            .get("news_image_loc")
+            .cloned()
+            .unwrap_or_default(),
+        news_keywords: metadata
+            .get("news_keywords")
+            .cloned()
+            .unwrap_or_default(),
+        news_language: metadata
+            .get("news_language")
+            .cloned()
+            .unwrap_or_default(),
         news_loc: metadata.get("news_loc").cloned().unwrap_or_default(),
         news_publication_date,
-        news_publication_name: metadata.get("news_publication_name").cloned().unwrap_or_default(),
-        news_title: metadata.get("news_title").cloned().unwrap_or_default(),
+        news_publication_name: metadata
+            .get("news_publication_name")
+            .cloned()
+            .unwrap_or_default(),
+        news_title: metadata
+            .get("news_title")
+            .cloned()
+            .unwrap_or_default(),
     }
 }
 
@@ -65,7 +85,8 @@ fn convert_date_format(input: &str) -> String {
         let time = parts[4];
 
         // Assemble the converted date string.
-        let converted_date = format!("{}-{}-{}T{}", year, month, day, time);
+        let converted_date =
+            format!("{}-{}-{}T{}", year, month, day, time);
 
         // Append the timezone information.
         let timezone = "+00:00";

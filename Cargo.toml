@@ -19,8 +19,8 @@ license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.71.1"
-version = "0.0.28"
+rust-version = "1.60.0"
+version = "0.0.29"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -34,11 +34,7 @@ include = [
     "/src/**",
     "/template/**",
     "/tests/**",
-    "/xtask/**",
 ]
-
-[workspace]
-members = ["xtask"]
 
 [[bench]]
 name = "bench"
@@ -47,19 +43,19 @@ path = "benches/bench.rs"
 
 [dependencies]
 clap = "4.5.4"
-comrak = "0.22.0"
+comrak = "0.23.0"
 dtt = "0.0.5"
 env_logger = "0.11.3"
 lazy_static = "1.4.0"
 log = { version = "0.4.21", features = ["std"] }
 minify-html = "0.15.0"
-pdf_composer = "0.2.70"
+pdf_composer = "0.2.71"
 pulldown-cmark = "0.10.3"
 quick-xml = "0.31.0"
 regex = "1.10.4"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 rlg = "0.0.3"
-serde = { version = "1.0.199", features = ["derive"] }
+serde = { version = "1.0.200", features = ["derive"] }
 serde_json = "1.0.116"
 tempfile = "3.10.1"
 toml = "0.8.12"
@@ -84,35 +80,52 @@ path = "src/lib.rs"
 default = []
 
 [package.metadata.docs.rs]
-all-features = true
+targets = ["x86_64-unknown-linux-gnu"]
+rustdoc-args = ["--generate-link-to-definition"]
 
 # Linting config
 [lints.rust]
 
+## Warn
+# box_pointers = "warn"
+missing_copy_implementations = "warn"
+missing_docs = "warn"
+unstable_features = "warn"
+# unused_crate_dependencies = "warn"
+unused_extern_crates = "warn"
+# unused_results = "warn"
+
+## Allow
+bare_trait_objects = "allow"
+elided_lifetimes_in_paths = "allow"
+non_camel_case_types = "allow"
+non_upper_case_globals = "allow"
+trivial_bounds = "allow"
+unsafe_code = "allow"
+
 ## Forbid
 missing_debug_implementations = "forbid"
-missing_docs = "warn"
 non_ascii_idents = "forbid"
 unreachable_pub = "forbid"
 
 ## Deny
-# dead_code = "deny"
+dead_code = "deny"
 deprecated_in_future = "deny"
 ellipsis_inclusive_range_patterns = "deny"
 explicit_outlives_requirements = "deny"
-future_incompatible = "deny"
+future_incompatible = { level = "deny", priority = -1 }
 keyword_idents = "deny"
 macro_use_extern_crate = "deny"
 meta_variable_misuse = "deny"
 missing_fragment_specifier = "deny"
 noop_method_call = "deny"
 pointer_structural_match = "deny"
-rust_2018_idioms = "deny"
-rust_2021_compatibility = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+rust_2021_compatibility = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
-unused = "deny"
 unused_features = "deny"
 unused_import_braces = "deny"
 unused_labels = "deny"
@@ -120,6 +133,9 @@ unused_lifetimes = "deny"
 unused_macro_rules = "deny"
 unused_qualifications = "deny"
 variant_size_differences = "deny"
+
+[package.metadata.clippy]
+warn-lints = ["clippy::all", "clippy::pedantic", "clippy::cargo", "clippy::nursery"]
 
 [profile.dev]
 codegen-units = 256

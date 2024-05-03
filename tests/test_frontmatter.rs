@@ -16,14 +16,13 @@ mod tests {
     fn test_extract_with_valid_content() {
         let content = "---\ntitle: Hello World\nauthor: John Doe\n---\nHello, world!";
         let result = extract(content);
-        let expected: HashMap<String, String> =
-            [
-                ("title".to_string(), "Hello World".to_string()),
-                ("author".to_string(), "John Doe".to_string()),
-            ]
-            .iter()
-            .cloned()
-            .collect();
+        let expected: HashMap<String, String> = [
+            ("title".to_string(), "Hello World".to_string()),
+            ("author".to_string(), "John Doe".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
         assert_eq!(result, expected);
     }
 
@@ -55,14 +54,13 @@ mod tests {
     fn test_extract_with_toml_frontmatter() {
         let content = "+++\ntitle = \"Hello World\"\nauthor = \"John Doe\"\n+++\nHello, world!";
         let result = extract(content);
-        let expected: HashMap<String, String> =
-            [
-                ("title".to_string(), "Hello World".to_string()),
-                ("author".to_string(), "John Doe".to_string()),
-            ]
-            .iter()
-            .cloned()
-            .collect();
+        let expected: HashMap<String, String> = [
+            ("title".to_string(), "Hello World".to_string()),
+            ("author".to_string(), "John Doe".to_string()),
+        ]
+        .iter()
+        .cloned()
+        .collect();
         assert_eq!(result, expected);
     }
 
@@ -135,13 +133,12 @@ mod tests {
         let docs = YamlLoader::load_from_str(yaml_str).unwrap();
         let yaml_hash = docs[0].as_hash().unwrap();
         let result = parse_yaml_hash(yaml_hash);
-        let expected: HashMap<String, String> =
-            vec![
-                ("name".to_owned(), "John Doe".to_owned()),
-                ("email".to_owned(), "john.doe@example.com".to_owned()),
-            ]
-            .into_iter()
-            .collect();
+        let expected: HashMap<String, String> = vec![
+            ("name".to_owned(), "John Doe".to_owned()),
+            ("email".to_owned(), "john.doe@example.com".to_owned()),
+        ]
+        .into_iter()
+        .collect();
         assert_eq!(result, expected);
     }
 
