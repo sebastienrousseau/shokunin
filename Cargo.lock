@@ -3167,7 +3167,7 @@ dependencies = [
  "tempfile",
  "toml",
  "uuid",
- "vrd 0.0.6",
+ "vrd 0.0.7",
  "yaml-rust",
 ]
 
@@ -3675,10 +3675,11 @@ dependencies = [
 
 [[package]]
 name = "vrd"
-version = "0.0.6"
+version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36c5adc67f8ec8758d0564f48a3a760ceecc6e5375bc5b8d26fc55873cac48de"
+checksum = "08fd4c00822f48600521b6dfa7ed8103e9f38c720e198ff4db0400c925414c80"
 dependencies = [
+ "bitflags 2.5.0",
  "dtt",
  "rand",
  "rlg",
