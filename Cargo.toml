@@ -60,7 +60,7 @@ serde_json = "1.0.116"
 tempfile = "3.10.1"
 toml = "0.8.12"
 uuid = { version = "1.8.0", features = ["v4"] }
-vrd = "0.0.6"
+vrd = "0.0.7"
 yaml-rust = "0.4.5"
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
