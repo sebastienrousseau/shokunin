@@ -3187,7 +3187,7 @@ dependencies = [
  "clap",
  "comrak",
  "criterion",
- "dtt 0.0.5",
+ "dtt 0.0.6",
  "env_logger",
  "lazy_static",
  "log",
