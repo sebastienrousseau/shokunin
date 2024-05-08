@@ -1058,6 +1058,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "dtt"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21191da49ce48aa9200e9ac040032d680b3b71a158fbecaa1a99282821c3c251"
+dependencies = [
+ "regex",
+ "serde",
+ "time",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1548,6 +1559,17 @@ dependencies = [
  "libc",
  "match_cfg",
  "winapi",
+]
+
+[[package]]
+name = "hostname"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9c7c7c8ac16c798734b8a24560c1362120597c40d5e1459f09498f8f6c8f2ba"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "windows",
 ]
 
 [[package]]
@@ -2848,11 +2870,26 @@ version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e02c717e23f67b23032a4acb01cf63534d6259938d592e6d2451c02f09fc368"
 dependencies = [
- "dtt",
- "hostname",
+ "dtt 0.0.5",
+ "hostname 0.3.1",
  "serde_json",
  "tokio",
  "vrd 0.0.5",
+]
+
+[[package]]
+name = "rlg"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa9550dfcf50ac8601b165168e8825d66e45db390f7740a3d45c640946c4a971"
+dependencies = [
+ "dtt 0.0.6",
+ "hostname 0.4.0",
+ "serde",
+ "serde_json",
+ "tokio",
+ "version_check",
+ "vrd 0.0.7",
 ]
 
 [[package]]
@@ -3036,7 +3073,7 @@ version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b48f444c502b161ee70dafc567a48336c0a05139e586758dc40ef528d511d235"
 dependencies = [
- "dtt",
+ "dtt 0.0.5",
  "env_logger",
  "figlet-rs",
  "indexmap",
@@ -3044,7 +3081,7 @@ dependencies = [
  "libyml",
  "log",
  "openssl",
- "rlg",
+ "rlg 0.0.3",
  "ryu",
  "serde",
  "uuid",
@@ -3150,7 +3187,7 @@ dependencies = [
  "clap",
  "comrak",
  "criterion",
- "dtt",
+ "dtt 0.0.5",
  "env_logger",
  "lazy_static",
  "log",
@@ -3161,7 +3198,7 @@ dependencies = [
  "quick-xml",
  "regex",
  "reqwest 0.12.4",
- "rlg",
+ "rlg 0.0.4",
  "serde",
  "serde_json",
  "tempfile",
@@ -3680,9 +3717,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08fd4c00822f48600521b6dfa7ed8103e9f38c720e198ff4db0400c925414c80"
 dependencies = [
  "bitflags 2.5.0",
- "dtt",
+ "dtt 0.0.5",
  "rand",
- "rlg",
+ "rlg 0.0.3",
  "serde",
  "serde-big-array",
  "serde_json",
@@ -3854,6 +3891,16 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windows"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48a53791691ab099e5e2ad123536d0fff50652600abaf43bbf952894110d0be"
+dependencies = [
+ "windows-core",
+ "windows-targets 0.52.5",
+]
 
 [[package]]
 name = "windows-core"
