@@ -2468,7 +2468,7 @@ dependencies = [
  "base64 0.21.7",
  "indexmap",
  "line-wrap",
- "quick-xml",
+ "quick-xml 0.31.0",
  "serde",
  "time",
 ]
@@ -2630,6 +2630,15 @@ name = "quick-xml"
 version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f24d770aeca0eacb81ac29dfbc55ebcc09312fdd1f8bbecdc7e4a84e000e3b4"
 dependencies = [
  "memchr",
 ]
@@ -3185,7 +3194,7 @@ dependencies = [
  "openssl",
  "pdf_composer",
  "pulldown-cmark",
- "quick-xml",
+ "quick-xml 0.34.0",
  "regex",
  "reqwest 0.12.4",
  "rlg 0.0.4",
