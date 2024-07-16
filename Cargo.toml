@@ -46,7 +46,7 @@ clap = "4.5.9"
 comrak = "0.24.1"
 dtt = "0.0.6"
 env_logger = "0.11.3"
-lazy_static = "1.4.0"
+lazy_static = "1.5.0"
 log = { version = "0.4.21", features = ["std"] }
 minify-html = "0.15.0"
 pdf_composer = "0.2.71"
