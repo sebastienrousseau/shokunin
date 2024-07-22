@@ -65,7 +65,7 @@ yaml-rust = "0.4.5"
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.66", features = ["vendored"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.14"
