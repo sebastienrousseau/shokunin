@@ -45,7 +45,7 @@ path = "benches/bench.rs"
 clap = "4.5.11"
 comrak = "0.24.1"
 dtt = "0.0.6"
-env_logger = "0.11.4"
+env_logger = "0.11.5"
 lazy_static = "1.5.0"
 log = { version = "0.4.22", features = ["std"] }
 minify-html = "0.15.0"
