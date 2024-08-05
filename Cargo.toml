@@ -52,7 +52,7 @@ minify-html = "0.15.0"
 pdf_composer = "0.2.71"
 pulldown-cmark = "0.11.0"
 quick-xml = "0.36.1"
-regex = "1.10.4"
+regex = "1.10.6"
 reqwest = { version = "0.12.5", features = ["blocking", "json"] }
 rlg = "0.0.4"
 serde = { version = "1.0.204", features = ["derive"] }
