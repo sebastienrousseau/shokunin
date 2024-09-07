@@ -50,7 +50,7 @@ lazy_static = "1.5.0"
 log = { version = "0.4.22", features = ["std"] }
 minify-html = "0.15.0"
 pdf_composer = "0.2.71"
-pulldown-cmark = "0.12.0"
+pulldown-cmark = "0.12.1"
 quick-xml = "0.36.1"
 regex = "1.10.6"
 reqwest = { version = "0.12.7", features = ["blocking", "json"] }
