@@ -26,13 +26,13 @@ use std::path::Path;
 /// # Arguments
 ///
 /// * `matches` - A reference to an ArgMatches object containing the
-///   command-line arguments passed to the tool. This is created by the `clap` 
+///   command-line arguments passed to the tool. This is created by the `clap`
 ///   crate.
 ///
 /// # Returns
 ///
 /// * A Result indicating success or failure.
-///   - Ok() if the project was created successfully and the output files were 
+///   - Ok() if the project was created successfully and the output files were
 ///   written to the output directory.
 ///   - Err(anyhow::Error) if the project could not be created or the output
 ///   files
