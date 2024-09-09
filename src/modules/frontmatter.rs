@@ -4,7 +4,7 @@
 use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
 use toml::Value as TomlValue;
-use yaml_rust::YamlLoader;
+use yaml_rust2::YamlLoader;
 
 /// ## Function: `extract` - Extracts front matter from a string of content
 ///
@@ -115,7 +115,7 @@ pub fn extract_front_matter_str<'a>(
 ///
 pub fn parse_yaml_document(
     front_matter_str: &str,
-) -> Result<yaml_rust::Yaml, yaml_rust::ScanError> {
+) -> Result<yaml_rust2::Yaml, yaml_rust2::ScanError> {
     YamlLoader::load_from_str(front_matter_str)
         .map(|docs| docs.into_iter().next().unwrap())
 }
@@ -135,7 +135,7 @@ pub fn parse_yaml_document(
 /// If the YAML hash is not valid, an error is returned.
 ///
 pub fn parse_yaml_hash(
-    yaml_hash: &yaml_rust::yaml::Hash,
+    yaml_hash: &yaml_rust2::yaml::Hash,
 ) -> HashMap<String, String> {
     let mut entries: Vec<_> = yaml_hash
         .iter()

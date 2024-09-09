@@ -10,7 +10,7 @@ mod tests {
         parse_json_object, parse_toml_table, parse_yaml_document,
         parse_yaml_hash,
     };
-    use yaml_rust::YamlLoader;
+    use yaml_rust2::YamlLoader;
 
     #[test]
     fn test_extract_with_valid_content() {

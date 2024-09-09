@@ -59,7 +59,7 @@ serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.12"
 toml = "0.8"
-yaml-rust = "0.4.4"
+yaml-rust2 = "0.8.1"
 uuid = { version = "1.10", features = ["v4"] }
 vrd = "0.0.8"
 
@@ -67,9 +67,14 @@ vrd = "0.0.8"
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 openssl = { version = "0.10.66", features = ["vendored"] }
 
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9" # Check the Rust version used to compile the package.
+
 [dev-dependencies]
-assert_cmd = "2.0.16"
-criterion = "0.5.1"
+# Dev dependencies are only used for testing and development.
+assert_cmd = "2.0"
+criterion = "0.5"
 
 [lib]
 crate-type = ["lib"]
