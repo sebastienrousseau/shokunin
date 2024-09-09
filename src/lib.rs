@@ -10,7 +10,7 @@
 //! *Part of the [Mini Functions][0] family of Rust libraries.*
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.29-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
+//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.30-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
 //! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
 //! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
 //!
@@ -66,7 +66,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! shokunin = "0.0.29"
+//! shokunin = "0.0.30"
 //! ```
 //!
 //! And in your `main.rs`:
@@ -109,20 +109,23 @@
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
+use anyhow::Result;
 use crate::{
     compiler::service::compile, languages::translate,
     loggers::init_logger, server::serve::start,
     utilities::uuid::generate_unique_string,
 };
 use cmd::cli::print_banner;
-use dtt::DateTime;
+use dtt::datetime::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use std::{
     error::Error,
     fs::File,
-    io::{self, Write},
     path::Path,
 };
+use std::io;
+use std::io::Write;
+
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;
@@ -181,7 +184,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
     // Get the current date and time
     let date = DateTime::new();
-    let iso = date.iso_8601;
+    // let iso = DateTime::new();
 
     // Open or create the log file
     let mut log_file = create_log_file("./ssg.log")?;
@@ -192,7 +195,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // Generate a log entry for the banner
     let banner_log = macro_log!(
         &generate_unique_string(),
-        &iso,
+        &date.to_string(),
         &LogLevel::INFO,
         "process",
         &translate("en", "lib_banner_log_msg"),
@@ -209,7 +212,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     // Generate a log entry for the arguments
     let args_log = macro_log!(
         &generate_unique_string(),
-        &iso,
+        &date.to_string(),
         &LogLevel::INFO,
         "process",
         &translate("en", "lib_args_log_msg"),
@@ -223,7 +226,7 @@ pub fn run() -> Result<(), Box<dyn Error>> {
         // Generate a log entry for the server
         let server_log = macro_log!(
             &generate_unique_string(),
-            &iso,
+            &date.to_string(),
             &LogLevel::INFO,
             "process",
             &translate("en", "lib_server_log_msg"),

@@ -381,7 +381,7 @@ pub fn extract_front_matter(content: &str) -> &str {
 /// # Returns
 ///
 /// * `ComrakOptions` - A `comrak::ComrakOptions` instance with non-standard Markdown features enabled.
-pub fn create_comrak_options() -> comrak::ComrakOptions {
+pub fn create_comrak_options() -> comrak::ComrakOptions<'static> {
     let mut options = comrak::ComrakOptions::default();
 
     // Enable non-standard Markdown features:

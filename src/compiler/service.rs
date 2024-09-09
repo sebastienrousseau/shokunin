@@ -1,10 +1,10 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use pdf_composer::{
-    FontsStandard, PDFComposer, PDFDocInfoEntry, PDFVersion,
-    PaperOrientation, PaperSize,
-};
+// use pdf_composer::{
+//     FontsStandard, PDFComposer, PDFDocInfoEntry, PDFVersion,
+//     PaperOrientation, PaperSize,
+// };
 use rlg::log_level::LogLevel::ERROR;
 
 // use crate::modules::pdf::generate_pdf;
@@ -39,7 +39,7 @@ use std::{
     collections::HashMap,
     error::Error,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -107,40 +107,40 @@ pub fn compile(
             });
 
             // Determine the filename without the extension
-            let filename_without_extension = Path::new(&file.name)
-                .file_stem()
-                .and_then(|stem| stem.to_str())
-                .unwrap_or(&file.name);
-            let common_path = build_dir_path.to_str().unwrap();
+            // let filename_without_extension = Path::new(&file.name)
+            //     .file_stem()
+            //     .and_then(|stem| stem.to_str())
+            //     .unwrap_or(&file.name);
+            // let common_path = build_dir_path.to_str().unwrap();
 
-            let mut pdf_source_paths: Vec<PathBuf> = Vec::new();
-            let source_for_pdf =
-                Path::new(content_path).join(&file.name);
-            pdf_source_paths.push(source_for_pdf);
-            let mut pdf_instance = PDFComposer::new();
-            pdf_instance.set_pdf_version(PDFVersion::V1_7);
-            pdf_instance.set_paper_size(PaperSize::A5);
-            pdf_instance.set_orientation(PaperOrientation::Landscape);
-            pdf_instance.set_margins("20");
-            pdf_instance.set_font(FontsStandard::TimesRoman);
-            pdf_instance.add_source_files(pdf_source_paths);
-            let author_entry = PDFDocInfoEntry {
-                doc_info_entry: "Author",
-                yaml_entry: "author",
-            };
-            let generator_entry = PDFDocInfoEntry {
-                doc_info_entry: "generator",
-                yaml_entry: "generator",
-            };
-            pdf_instance.set_doc_info_entry(author_entry);
-            pdf_instance.set_doc_info_entry(generator_entry);
-            let pdf_destination =
-                Path::new(common_path).join(filename_without_extension);
-            pdf_instance.set_output_directory(
-                pdf_destination.to_str().unwrap(),
-            );
+            // let mut pdf_source_paths: Vec<PathBuf> = Vec::new();
+            // let source_for_pdf =
+            //     Path::new(content_path).join(&file.name);
+            // pdf_source_paths.push(source_for_pdf);
+            // let mut pdf_instance = PDFComposer::new();
+            // pdf_instance.set_pdf_version(PDFVersion::V1_7);
+            // pdf_instance.set_paper_size(PaperSize::A5);
+            // pdf_instance.set_orientation(PaperOrientation::Landscape);
+            // pdf_instance.set_margins("20");
+            // pdf_instance.set_font(FontsStandard::TimesRoman);
+            // pdf_instance.add_source_files(pdf_source_paths);
+            // let author_entry = PDFDocInfoEntry {
+            //     doc_info_entry: "Author",
+            //     yaml_entry: "author",
+            // };
+            // let generator_entry = PDFDocInfoEntry {
+            //     doc_info_entry: "generator",
+            //     yaml_entry: "generator",
+            // };
+            // pdf_instance.set_doc_info_entry(author_entry);
+            // pdf_instance.set_doc_info_entry(generator_entry);
+            // let pdf_destination =
+            //     Path::new(common_path).join(filename_without_extension);
+            // pdf_instance.set_output_directory(
+            //     pdf_destination.to_str().unwrap(),
+            // );
 
-            pdf_instance.generate_pdfs();
+            // pdf_instance.generate_pdfs();
 
             // Create page options
             let mut page_options = PageOptions::new();

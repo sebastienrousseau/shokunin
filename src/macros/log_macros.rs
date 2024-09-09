@@ -61,7 +61,7 @@
 macro_rules! macro_log_info {
     ($level:expr, $component:expr, $description:expr, $format:expr) => {{
         // Import necessary modules
-        use dtt::DateTime; // Date and time module
+        use dtt::datetime::DateTime; // Date and time module
         use rlg::{
             log::Log,
             log_format::LogFormat,
@@ -70,7 +70,6 @@ macro_rules! macro_log_info {
 
         // Get the current date and time in ISO 8601 format.
         let date = DateTime::new(); // Create a new DateTime instance
-        let iso = date.iso_8601; // Get ISO 8601 formatted date and time
 
         // Create a new random number generator
         let mut rng = Random::default(); // Default random number generator
@@ -79,7 +78,7 @@ macro_rules! macro_log_info {
         // Create a new log instance
         let log = Log::new(
             &session_id, // Session ID
-            &iso, // ISO 8601 formatted date and time
+            &date.to_string(), // Date and time
             $level, // Log level
             $component, // Component name
             $description, // Log description

@@ -19,8 +19,8 @@ license = "MIT OR Apache-2.0"
 name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.60.0"
-version = "0.0.29"
+rust-version = "1.56.0"
+version = "0.0.30"
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -42,26 +42,26 @@ harness = false
 path = "benches/bench.rs"
 
 [dependencies]
-clap = "4.5.16"
-comrak = "0.24.1"
-dtt = "0.0.6"
-env_logger = "0.11.5"
-lazy_static = "1.5.0"
-log = { version = "0.4.22", features = ["std"] }
-minify-html = "0.15.0"
-pdf_composer = "0.2.71"
-pulldown-cmark = "0.12.1"
-quick-xml = "0.36.1"
-regex = "1.10.6"
-reqwest = { version = "0.12.7", features = ["blocking", "json"] }
-rlg = "0.0.4"
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.128"
-tempfile = "3.12.0"
-toml = "0.8.19"
-uuid = { version = "1.10.0", features = ["v4"] }
-vrd = "0.0.7"
-yaml-rust = "0.4.5"
+anyhow = "1.0"
+clap = "4.5"
+comrak = "0.28"
+dtt = "0.0.8"
+env_logger = "0.11"
+lazy_static = "1.5"
+log = { version = "0.4", features = ["std"] }
+minify-html = "0.15"
+pulldown-cmark = "0.12"
+quick-xml = "0.36"
+regex = "1.10"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+rlg = "0.0.6"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.12"
+toml = "0.8"
+yaml-rust = "0.4.4"
+uuid = { version = "1.10", features = ["v4"] }
+vrd = "0.0.8"
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
@@ -77,23 +77,33 @@ name = "ssg"
 path = "src/lib.rs"
 
 [features]
+# No default features
 default = []
+bench = []
 
 [package.metadata.docs.rs]
+# Specify arguments for rustdoc to enhance documentation quality.
+rustdoc-args = [
+    "--generate-link-to-definition",
+    "--cfg", "docsrs",
+    "--document-private-items",
+]
+# Build docs with all crate features enabled to cover the entire API.
+all-features = true
+# Target platform for the docs, ensuring compatibility with common Linux servers.
 targets = ["x86_64-unknown-linux-gnu"]
-rustdoc-args = ["--generate-link-to-definition"]
 
 # Linting config
 [lints.rust]
 
 ## Warn
-# box_pointers = "warn"
+box_pointers = "warn"
 missing_copy_implementations = "warn"
 missing_docs = "warn"
 unstable_features = "warn"
 # unused_crate_dependencies = "warn"
 unused_extern_crates = "warn"
-# unused_results = "warn"
+unused_results = "warn"
 
 ## Allow
 bare_trait_objects = "allow"
@@ -114,18 +124,17 @@ deprecated_in_future = "deny"
 ellipsis_inclusive_range_patterns = "deny"
 explicit_outlives_requirements = "deny"
 future_incompatible = { level = "deny", priority = -1 }
-keyword_idents = "deny"
+keyword_idents = { level = "deny", priority = -1 }
 macro_use_extern_crate = "deny"
 meta_variable_misuse = "deny"
 missing_fragment_specifier = "deny"
 noop_method_call = "deny"
-pointer_structural_match = "deny"
 rust_2018_idioms = { level = "deny", priority = -1 }
 rust_2021_compatibility = { level = "deny", priority = -1 }
-unused = { level = "deny", priority = -1 }
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
+unused = { level = "deny", priority = -1 }
 unused_features = "deny"
 unused_import_braces = "deny"
 unused_labels = "deny"
@@ -134,8 +143,14 @@ unused_macro_rules = "deny"
 unused_qualifications = "deny"
 variant_size_differences = "deny"
 
+
 [package.metadata.clippy]
-warn-lints = ["clippy::all", "clippy::pedantic", "clippy::cargo", "clippy::nursery"]
+warn-lints = [
+    "clippy::all",
+    "clippy::pedantic",
+    "clippy::cargo",
+    "clippy::nursery",
+]
 
 [profile.dev]
 codegen-units = 256
