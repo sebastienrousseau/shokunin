@@ -109,23 +109,18 @@
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
-use anyhow::Result;
 use crate::{
     compiler::service::compile, languages::translate,
     loggers::init_logger, server::serve::start,
     utilities::uuid::generate_unique_string,
 };
+use anyhow::Result;
 use cmd::cli::print_banner;
 use dtt::datetime::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use std::{
-    error::Error,
-    fs::File,
-    path::Path,
-};
 use std::io;
 use std::io::Write;
-
+use std::{error::Error, fs::File, path::Path};
 
 /// The `cmd` module contains functions for the command-line interface.
 pub mod cmd;

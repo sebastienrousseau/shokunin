@@ -35,12 +35,7 @@ use crate::{
         write::write_files_to_build_directory,
     },
 };
-use std::{
-    collections::HashMap,
-    error::Error,
-    fs,
-    path::Path,
-};
+use std::{collections::HashMap, error::Error, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
