@@ -12,28 +12,30 @@ use std::path::Path;
 /// command-line tool (ssg) and compiles the project.
 ///
 /// - This function parses the `content` directory where the markdown files for
-/// your website are stored and the `output` directory where the compiled site
-/// will be created from the `matches` object.
+///   your website are stored and the `output` directory where the compiled
+///   site will be created from the `matches` object.
 ///
 /// - It then, validates that these directories exist, or creates them on the
-/// fly if they do not. If either directory cannot be found or created, an
-/// error is returned.
+///   fly if they do not. If either directory cannot be found or created, an
+///   error is returned.
 ///
 /// - Finally, it calls the `compile` function to create the new project using
-/// the markdown files in the "content" directory, and returns an error if the
-/// compilation process fails.
+///   the markdown files in the "content" directory, and returns an error if
+///   the compilation process fails.
 ///
 /// # Arguments
 ///
-/// * `matches` - A reference to an ArgMatches object containing the command-
-/// line arguments passed to the tool. This is created by the `clap` crate.
+/// * `matches` - A reference to an ArgMatches object containing the
+///   command-line arguments passed to the tool. This is created by the `clap` 
+///   crate.
 ///
 /// # Returns
 ///
 /// * A Result indicating success or failure.
-/// - Ok() if the project was created successfully and the output files were
-/// written to the output directory.
-/// - Err(anyhow::Error) if the project could not be created or the output files
+///   - Ok() if the project was created successfully and the output files were 
+///   written to the output directory.
+///   - Err(anyhow::Error) if the project could not be created or the output
+///   files
 /// could not be written to the output directory.
 ///
 pub fn args(matches: &ArgMatches) -> Result<(), String> {

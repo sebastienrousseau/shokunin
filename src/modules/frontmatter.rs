@@ -111,7 +111,7 @@ pub fn extract_front_matter_str<'a>(
 /// ### Returns
 ///
 /// A `Yaml` object representing the front matter string. If the front
-/// matter string is not valid YAML, an error is returned.
+///   matter string is not valid YAML, an error is returned.
 ///
 pub fn parse_yaml_document(
     front_matter_str: &str,

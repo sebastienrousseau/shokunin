@@ -29,8 +29,8 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// # Returns
 ///
 /// * `Result<ArgMatches, Error>` - A struct containing the parsed
-/// command-line arguments and their values, or an error if the
-/// arguments could not be parsed.
+///   command-line arguments and their values, or an error if the arguments
+///   could not be parsed.
 ///
 /// # Examples
 ///
