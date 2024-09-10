@@ -270,7 +270,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_cleanup_directory_success() -> Result<(), Box<dyn Error>> {
         // Setup: Create some dummy directories with dummy files in them.
         let dir1 = Path::new("temp_dir1");
@@ -296,7 +295,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_cleanup_directory_ignore_nonexistent(
     ) -> Result<(), Box<dyn Error>> {
         // Setup: Use a path that doesn't exist.
@@ -315,7 +313,6 @@ mod tests {
         Ok(())
     }
     #[test]
-    #[allow(box_pointers)]
     fn test_create_directory() -> Result<(), Box<dyn Error>> {
         // Setup: Define some directories to test with.
         let dir1 = Path::new("tests/temp_dir1");
@@ -345,7 +342,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_write_element() -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
@@ -361,7 +357,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_write_element_empty_value() -> Result<(), Box<dyn Error>> {
         let mut writer = Writer::new(Cursor::new(Vec::new()));
         let name = "element";
@@ -377,7 +372,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_write_element_special_chars() -> Result<(), Box<dyn Error>>
     {
         let mut writer = Writer::new(Cursor::new(Vec::new()));

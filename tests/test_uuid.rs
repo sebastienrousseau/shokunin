@@ -46,7 +46,6 @@ mod tests {
 
     /// Tests the concurrency and thread safety of generating unique strings.
     #[test]
-    #[allow(box_pointers)]
     fn test_generate_unique_string_concurrency() {
         const NUM_THREADS: usize = 8;
         const NUM_GENERATIONS_PER_THREAD: usize = 1000;

@@ -161,7 +161,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_post_process_html_with_invalid_regex() {
         let html = "<p>Hello</p>";
         // Use a malformed regex pattern that will fail during compilation
