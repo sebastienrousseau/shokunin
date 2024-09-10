@@ -65,7 +65,7 @@ mod tests {
 
         // Test generating an RSS feed with some custom options
         #[test]
-         // Suppress box-pointers lint for this test
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_custom_options() {
             let mut options = RssData::new();
             options.title = "My RSS Feed".to_string();
@@ -93,7 +93,7 @@ mod tests {
 
         // Test macro_write_element function
         #[test]
-         // Suppress box-pointers lint for this test
+        // Suppress box-pointers lint for this test
         fn test_macro_write_element(
         ) -> Result<(), Box<dyn std::error::Error>> {
             let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -111,7 +111,7 @@ mod tests {
 
         // Test generating an RSS feed
         #[test]
-         // Suppress box-pointers lint for this test
+        // Suppress box-pointers lint for this test
         fn test_generate_rss() {
             let options = RssData::new();
             let rss_str = generate_rss(&options);
@@ -120,7 +120,7 @@ mod tests {
 
         // Test generating an RSS feed with empty title
         #[test]
-         // Suppress box-pointers lint for this test
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_empty_title() {
             let mut options = RssData::new();
             options.title = "".to_string();
@@ -143,7 +143,7 @@ mod tests {
 
         // Test generating an RSS feed with invalid URL
         #[test]
-         // Suppress box-pointers lint for this test
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_invalid_url() {
             let mut options = RssData::new();
             options.link = "invalid-url".to_string();
