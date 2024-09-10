@@ -4,7 +4,7 @@
 // Import necessary modules and types
 #[cfg(test)]
 mod tests {
-    use ssg::models::data::{
+    use ssg_core::models::data::{
         CnameData, FileData, HumanData, HumansData, IconData,
         ManifestData, MetaTag, NewsData, NewsVisitOptions, RssData,
         SiteMapData, TxtData,

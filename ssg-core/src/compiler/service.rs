@@ -5,6 +5,8 @@
 //     FontsStandard, PDFComposer, PDFDocInfoEntry, PDFVersion,
 //     PaperOrientation, PaperSize,
 // };
+
+use anyhow::{Result, Context};
 use rlg::log_level::LogLevel::ERROR;
 
 // use crate::modules::pdf::generate_pdf;
@@ -35,7 +37,7 @@ use crate::{
         write::write_files_to_build_directory,
     },
 };
-use std::{collections::HashMap, error::Error, fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
@@ -61,26 +63,23 @@ pub fn compile(
     content_path: &Path,   // The path to the content directory
     site_path: &Path,      // The path to the site directory
     template_path: &Path,  // The path to the template directory
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     // Create build and site directories
-    macro_create_directories!(build_dir_path, site_path)?;
+    macro_create_directories!(build_dir_path, site_path).context("Failed to create directories")?;
 
     // Read files in the source directory
-    let source_files = add(content_path)?;
+    let source_files = add(content_path).context("Failed to read source files")?;
 
     // Generate navigation bar HTML
-    let navigation =
-        NavigationGenerator::generate_navigation(&source_files);
+    let navigation = NavigationGenerator::generate_navigation(&source_files);
 
-    let mut global_tags_data: HashMap<String, Vec<PageData>> =
-        HashMap::new();
+    let mut global_tags_data: HashMap<String, Vec<PageData>> = HashMap::new();
 
     // Process source files and store results in 'compiled_files' vector
-    let compiled_files: Vec<FileData> = source_files
+    let compiled_files: Result<Vec<FileData>> = source_files
         .into_iter()
-        .map(|file| {
-            let (metadata, keywords, all_meta_tags) =
-                extract_and_prepare_metadata(&file.content);
+        .map(|file| -> Result<FileData> {
+            let (metadata, keywords, all_meta_tags) = extract_and_prepare_metadata(&file.content);
 
             // Generate HTML
             let html_content = generate_html(
@@ -88,18 +87,7 @@ pub fn compile(
                 &macro_metadata_option!(metadata, "title"),
                 &macro_metadata_option!(metadata, "description"),
                 Some(&macro_metadata_option!(metadata, "content")),
-            )
-            .unwrap_or_else(|err| {
-                let description =
-                    format!("Error generating HTML: {:?}", err);
-                macro_log_info!(
-                    &ERROR,
-                    "compiler.rs - Line 81",
-                    &description,
-                    &LogFormat::CLF
-                );
-                String::from("Fallback HTML content")
-            });
+            ).context("Failed to generate HTML")?;
 
             // Determine the filename without the extension
             // let filename_without_extension = Path::new(&file.name)
@@ -332,7 +320,7 @@ pub fn compile(
                     String::new()
                 });
             // Return FileData
-            FileData {
+            Ok(FileData {
                 cname: cname_data,
                 content,
                 keyword: keywords.join(", "),
@@ -343,7 +331,7 @@ pub fn compile(
                 sitemap: sitemap_data,
                 sitemap_news: news_sitemap_data,
                 txt: txt_data,
-            }
+            })
         })
         .collect();
 
@@ -365,7 +353,7 @@ pub fn compile(
     // println!("{} ", cli_description);
 
     // Iterate over compiled files and write pages to output directory
-    for file in &compiled_files {
+    for file in &compiled_files? {
         write_files_to_build_directory(
             build_dir_path,
             file,
@@ -377,10 +365,10 @@ pub fn compile(
     write_tags_html_to_file(&tags_html_content, build_dir_path)?;
 
     // Cleanup site directory
-    macro_cleanup_directories!(site_path);
+    macro_cleanup_directories!(site_path).context("Failed to clean up site directory")?;
 
     // Move build content to site directory and remove build directory
-    fs::rename(build_dir_path, site_path)?;
+    fs::rename(build_dir_path, site_path).context("Failed to rename build directory")?;
 
     Ok(())
 }

@@ -6,7 +6,7 @@ mod tests {
     use std::io::Cursor;
 
     use quick_xml::{escape::escape, Writer};
-    use ssg::{
+    use ssg_core::{
         macro_write_element, models::data::RssData,
         modules::rss::generate_rss,
     };
@@ -47,6 +47,7 @@ mod tests {
 
         // Test generating an RSS feed with default options
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_generate_rss_with_default_options() {
             let options = RssData::new();
             let rss_result = generate_rss(&options);
@@ -65,21 +66,19 @@ mod tests {
 
         // Test generating an RSS feed with some custom options
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_generate_rss_with_custom_options() {
             let mut options = RssData::new();
             options.title = "My RSS Feed".to_string();
             options.link = "https://example.com".to_string();
-            options.description =
-                "A description of my RSS feed.".to_string();
+            options.description = "A description of my RSS feed.".to_string();
 
             let rss_result = generate_rss(&options);
             assert!(rss_result.is_ok());
 
             let rss_str = rss_result.unwrap();
             assert!(rss_str.contains("<title>My RSS Feed</title>"));
-            assert!(
-                rss_str.contains("<link>https://example.com</link>")
-            );
+            assert!(rss_str.contains("<link>https://example.com</link>"));
             assert!(rss_str.contains("<description>A description of my RSS feed.</description>"));
         }
     }
@@ -92,6 +91,7 @@ mod tests {
 
         // Test macro_write_element function
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_macro_write_element(
         ) -> Result<(), Box<dyn std::error::Error>> {
             let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -109,6 +109,7 @@ mod tests {
 
         // Test generating an RSS feed
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_generate_rss() {
             let options = RssData::new();
             let rss_str = generate_rss(&options);
@@ -117,6 +118,7 @@ mod tests {
 
         // Test generating an RSS feed with empty title
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_generate_rss_with_empty_title() {
             let mut options = RssData::new();
             options.title = "".to_string();
@@ -139,6 +141,7 @@ mod tests {
 
         // Test generating an RSS feed with invalid URL
         #[test]
+        #[allow(box_pointers)] // Suppress box-pointers lint for this test
         fn test_generate_rss_with_invalid_url() {
             let mut options = RssData::new();
             options.link = "invalid-url".to_string();

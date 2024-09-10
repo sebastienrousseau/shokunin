@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg::utilities::directory::directory;
+use ssg_core::utilities::directory::directory;
 use tempfile::TempDir;
 
 /**
@@ -20,7 +20,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
     let dir = tempdir.path().join("test_dir");
 
     // Benchmarks the creation of a directory.
-    c.bench_function("create directory", |b| {
+    let _ = c.bench_function("create directory", |b| {
         b.iter(|| {
             // Creates a directory with the given path and name.
             let result =
@@ -31,7 +31,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
     });
 
     // Benchmarks checking if a directory exists.
-    c.bench_function("check if directory exists", |b| {
+    let _ = c.bench_function("check if directory exists", |b| {
         b.iter(|| {
             // Checks if the directory exists.
             let result = dir.exists();
@@ -41,7 +41,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
     });
 
     // Benchmarks checking if a directory is a directory.
-    c.bench_function("check if directory is a directory", |b| {
+    let _ = c.bench_function("check if directory is a directory", |b| {
         b.iter(|| {
             // Checks if the directory is a directory.
             let result = dir.is_dir();
@@ -51,7 +51,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
     });
 
     // Benchmarks checking if a non-existent directory does not exist.
-    c.bench_function(
+    let _ = c.bench_function(
         "check if non-existent directory does not exist",
         |b| {
             let non_existent_dir = tempdir.path().join("non-existent");

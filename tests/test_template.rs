@@ -3,18 +3,18 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::template::{
+    use ssg_core::utilities::template::{
         render_page, render_template, PageOptions,
     };
-    use std::{collections::HashMap, error::Error};
+    use std::collections::HashMap;
 
     #[test]
-    fn test_render_template() -> Result<(), Box<dyn Error>> {
+    fn test_render_template() -> Result<(), anyhow::Error> {
         let template = "<html><head><title>{{title}}</title></head><body>{{content}}</body></html>";
         let mut context = HashMap::new();
-        context.insert("title", "My Title");
-        context.insert("content", "My Content");
-        let result = render_template(template, &context)?;
+        let _ = context.insert("title", "My Title");
+        let _ = context.insert("content", "My Content");
+        let result = render_template(template, &context).map_err(|e| anyhow::Error::msg(e.to_string()))?;
         assert_eq!(
             result,
             "<html><head><title>My Title</title></head><body>My Content</body></html>"
@@ -26,7 +26,7 @@ mod tests {
     fn test_render_template_unresolved_tags() {
         let template = "<html><head><title>{{title}}</title></head><body>{{content}}</body></html>";
         let mut context = HashMap::new();
-        context.insert("title", "My Title");
+        let _ = context.insert("title", "My Title");
         let result = render_template(template, &context);
         assert_eq!(
             result,
@@ -35,7 +35,7 @@ mod tests {
     }
 
     #[test]
-    fn test_render_page() -> Result<(), Box<dyn Error>> {
+    fn test_render_page() -> Result<(), anyhow::Error> {
         // Prepare the test data
         let mut options = PageOptions::new();
         options.set("author", "John Doe");
@@ -93,7 +93,7 @@ mod tests {
         let tempdir = tempfile::tempdir()
             .expect("Could not create temporary directory");
         let template_file_path = tempdir.path().join("template.html");
-        std::fs::copy("template/template.html", template_file_path)
+        let _ = std::fs::copy("template/template.html", template_file_path)
             .expect("Could not copy template file");
 
         // Call the render_page function

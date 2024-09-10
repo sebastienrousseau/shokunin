@@ -4,10 +4,10 @@
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use ssg::models::data::{
+use ssg_core::models::data::{
     CnameData, HumansData, ManifestData, SiteMapData, TxtData,
 };
-use ssg::modules::json::{cname, human, manifest, sitemap, txt};
+use ssg_core::modules::json::{cname, human, manifest, sitemap, txt};
 
 #[allow(dead_code)]
 pub(crate) fn bench_json(c: &mut Criterion) {
@@ -52,21 +52,21 @@ pub(crate) fn bench_json(c: &mut Criterion) {
 
     let dir = Path::new("./");
 
-    c.bench_function("manifest", |b| {
+    let _ = c.bench_function("manifest", |b| {
         b.iter(|| manifest(black_box(&manifest_data)))
     });
 
-    c.bench_function("txt", |b| b.iter(|| txt(black_box(&txt_data))));
+    let _ = c.bench_function("txt", |b| b.iter(|| txt(black_box(&txt_data))));
 
-    c.bench_function("cname", |b| {
+    let _ = c.bench_function("cname", |b| {
         b.iter(|| cname(black_box(&cname_data)))
     });
 
-    c.bench_function("humans_data", |b| {
+    let _ = c.bench_function("humans_data", |b| {
         b.iter(|| human(black_box(&humans_data)))
     });
 
-    c.bench_function("sitemap", |b| {
+    let _ = c.bench_function("sitemap", |b| {
         b.iter(|| {
             sitemap(black_box(sitemap_data.clone()), black_box(dir))
         })

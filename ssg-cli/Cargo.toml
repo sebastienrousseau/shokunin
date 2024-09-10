@@ -1,0 +1,61 @@
+# Cargo.toml - Configuration file for the SSG CLI (Shokunin Static Site Generator Command-Line Interface)
+# Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[package]
+# The name of the crate, used by Cargo to identify the project.
+name = "ssg-cli"
+
+# The version of the crate, following semantic versioning (MAJOR.MINOR.PATCH).
+version = "0.0.1"
+
+# The Rust edition being used. The 2021 edition includes several language improvements.
+edition = "2021"
+
+# Authors contributing to the project.
+authors = ["Shokunin Contributors"]
+
+# A short description of the project. This is displayed on package registries like crates.io.
+description = "Command Line Interface for the SSG Static Site Generator"
+
+# The licensing terms under which the project is distributed. In this case, it can be licensed under either MIT or Apache-2.0.
+license = "MIT OR Apache-2.0"
+
+# The repository where the source code for the project is hosted. This is useful for developers who wish to contribute or report issues.
+repository = "https://github.com/yourusername/ssg"
+
+# The path to the README file for the project. Cargo will include this file in the package.
+readme = "README.md"
+
+[dependencies]
+# Dependencies required for building and running the project.
+
+# The core SSG library, which this CLI wraps and interacts with.
+# It is assumed that the `ssg` crate is located one directory level above the `ssg-cli` crate.
+# The version ensures compatibility between the CLI and the core SSG project.
+ssg-core = { path = "../ssg-core", version = "0.0.1" }
+
+# clap is used for parsing command-line arguments.
+# The `derive` feature allows using custom derive macros to reduce boilerplate code when defining CLI structures.
+clap = { version = "4.5", features = ["derive"] }
+
+# anyhow provides simple error handling, allowing the use of `Result<T, anyhow::Error>` for better error propagation.
+anyhow = "1.0"
+
+# log provides a logging facade, allowing the CLI to log messages at various severity levels (e.g., info, debug, error).
+log = "0.4"
+
+# env_logger is used to initialize the logging system and manage log output based on environment variables.
+env_logger = "0.11"
+
+# tempfile is used to create temporary files and directories, which can be useful for storing intermediate data.
+tempfile = "3.12"
+
+[[bin]]
+# Specifies a binary target for the project. This defines the executable produced by Cargo.
+
+# The name of the binary. Running `cargo run --bin ssg` will execute the binary.
+name = "ssg"
+
+# The path to the main source file for the binary. This tells Cargo where to find the entry point of the program.
+path = "src/main.rs"

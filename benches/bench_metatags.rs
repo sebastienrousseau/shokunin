@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg::modules::metatags::generate_metatags;
+use ssg_core::modules::metatags::generate_metatags;
 
 /**
  * This function is used to benchmark the performance of generating metatags.
@@ -30,7 +30,7 @@ pub(crate) fn bench_metatags(c: &mut Criterion) {
         ("robots".to_owned(), "noindex, nofollow".to_owned()),
     ];
 
-    c.bench_function("generate metatags", |b| {
+    let _ = c.bench_function("generate metatags", |b| {
         b.iter(|| {
             let result = generate_metatags(black_box(&meta));
             assert!(result.contains("<meta name=\"description\" content=\"My web page\">"));

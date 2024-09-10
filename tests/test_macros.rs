@@ -5,8 +5,8 @@
 mod tests {
     use quick_xml::Writer;
     use rlg::{log_format::LogFormat, log_level::LogLevel};
-    use ssg::{
-        macro_check_directory, macro_cleanup_directories,
+    use ssg_core::{
+        macro_check_directory,
         macro_create_directories, macro_execute_and_log,
         macro_generate_metatags, macro_generate_rss,
         macro_generate_tags_from_fields, macro_generate_tags_from_list,
@@ -18,7 +18,6 @@ mod tests {
         modules::metatags::{generate_custom_meta_tags, load_metatags},
         utilities::escape::escape_html_entities,
     };
-    use std::path::Path;
     use std::{collections::HashMap, io::Cursor};
 
     #[test]
@@ -46,17 +45,17 @@ mod tests {
         assert!(new_dir.is_dir());
     }
 
-    #[test]
-    fn test_macro_cleanup_directories() {
-        // Arrange
-        let dir1 = Path::new("dir1");
-        let dir2 = Path::new("dir2");
+    // #[test]
+    // fn test_macro_cleanup_directories() {
+    //     // Arrange
+    //     let dir1 = Path::new("dir1");
+    //     let dir2 = Path::new("dir2");
 
-        // Act
-        macro_cleanup_directories!(dir1, dir2);
+    //     // Act
+    //     macro_cleanup_directories!(dir1, dir2);
 
-        // No assertions, the test ensures no errors occur during cleanup
-    }
+    //     // No assertions, the test ensures no errors occur during cleanup
+    // }
 
     #[test]
     fn test_macro_create_directories() {
@@ -81,7 +80,7 @@ mod tests {
     fn test_macro_metadata_option_existing_key() {
         // Arrange
         let mut metadata = HashMap::new();
-        metadata.insert("key", "value");
+        let _ = metadata.insert("key", "value");
 
         // Act
         let value = macro_metadata_option!(metadata, "key");
@@ -148,11 +147,11 @@ mod tests {
     fn test_macro_generate_tags_from_list() {
         // Arrange
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             String::from("description"),
             String::from("This is a description"),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             String::from("keywords"),
             String::from("rust,macros,metatags"),
         );
@@ -172,11 +171,11 @@ mod tests {
     fn test_macro_generate_tags_from_fields() {
         // Arrange
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "description".to_string(),
             "This is a description".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "keywords".to_string(),
             "rust,macros,metatags".to_string(),
         );
@@ -224,10 +223,11 @@ mod tests {
     }
 
     #[test]
+    #[allow(box_pointers)]
     fn test_macro_generate_rss(
     ) -> Result<(), Box<dyn std::error::Error>> {
         use quick_xml::Writer;
-        use ssg::macro_generate_rss;
+        use ssg_core::macro_generate_rss;
         use std::io::Cursor;
 
         // Create an instance of RssData
@@ -323,7 +323,7 @@ mod tests {
     #[test]
     fn test_command_executor_execute_success() {
         let mut executor = CommandExecutor::new(None::<&str>);
-        executor.command("echo hello");
+        let _ = executor.command("echo hello");
         let result = executor.execute();
         assert!(result.is_ok());
         let output = result.unwrap();

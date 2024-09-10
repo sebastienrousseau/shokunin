@@ -2839,10 +2839,50 @@ dependencies = [
  "rlg 0.0.6",
  "serde",
  "serde_json",
+ "ssg-cli",
+ "ssg-core",
  "tempfile",
  "toml",
  "uuid",
  "version_check",
+ "vrd 0.0.8",
+ "yaml-rust2",
+]
+
+[[package]]
+name = "ssg-cli"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "log",
+ "ssg-core",
+ "tempfile",
+]
+
+[[package]]
+name = "ssg-core"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "comrak",
+ "dtt 0.0.8",
+ "env_logger",
+ "lazy_static",
+ "log",
+ "minify-html",
+ "pulldown-cmark",
+ "quick-xml 0.36.1",
+ "regex",
+ "reqwest",
+ "rlg 0.0.6",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "uuid",
  "vrd 0.0.8",
  "yaml-rust2",
 ]

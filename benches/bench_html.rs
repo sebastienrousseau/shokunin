@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg::modules::html::generate_html;
+use ssg_core::modules::html::generate_html;
 
 /// Benchmarks the generation of HTML content.
 ///
@@ -50,7 +50,7 @@ pub(crate) fn bench_generate_html(c: &mut Criterion) {
     // # Returns
     //
     // This function does not return a value. It sets up a benchmark and measures the time taken to generate HTML.
-    c.bench_function("generate_html", |b| {
+    let _ = c.bench_function("generate_html", |b| {
         b.iter(|| {
             let html = generate_html(
                 black_box(content),

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg::modules::frontmatter::{extract, parse_yaml_document};
+use ssg_core::modules::frontmatter::{extract, parse_yaml_document};
 
 /// Benchmarks the extraction of frontmatter from a content string.
 ///
@@ -62,7 +62,7 @@ pub(crate) fn bench_extract(c: &mut Criterion) {
     // # Panics
     //
     // This function does not panic.
-    c.bench_function("extract", |b| {
+    let _ = c.bench_function("extract", |b| {
         b.iter(|| extract(black_box(content)))
     });
 }
@@ -125,7 +125,7 @@ pub(crate) fn bench_parse_yaml_document(c: &mut Criterion) {
     // # Panics
     //
     // This function does not panic.
-    c.bench_function("parse_yaml_document", |b| {
+    let _ = c.bench_function("parse_yaml_document", |b| {
         b.iter(|| parse_yaml_document(black_box(content)))
     });
 }

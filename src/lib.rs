@@ -72,7 +72,7 @@
 //! And in your `main.rs`:
 //!
 //! ```rust
-//! use ssg::compiler::service::compile;
+//! use ssg_core::compiler::service::compile;
 //! use std::path::Path;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -109,51 +109,27 @@
 )]
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
-use crate::{
-    compiler::service::compile, languages::translate,
-    loggers::init_logger, server::serve::start,
+
+// Re-export ssg-core
+pub use ssg_core;
+
+// Re-export ssg-cli
+pub use ssg_cli;
+
+use anyhow::Result;
+use ssg_core::{
+    compiler::service::compile,
+    languages::translate,
+    loggers::init_logger,
+    server::serve::start,
     utilities::uuid::generate_unique_string,
 };
-use anyhow::Result;
-use cmd::cli::print_banner;
+use ssg_core::macro_serve;
+use ssg_cli::cli::print_banner;
 use dtt::datetime::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use std::io;
 use std::io::Write;
-use std::{error::Error, fs::File, path::Path};
-
-/// The `cmd` module contains functions for the command-line interface.
-pub mod cmd;
-
-/// The `compiler` module contains functions for the compilation process.
-pub mod compiler;
-
-/// The `lang` module contains the language translation functions.
-pub mod lang;
-
-/// The `languages` module contains the language translation functions.
-pub mod languages;
-
-/// The `loggers` module contains the loggers for the library.
-pub mod loggers;
-
-/// The `macros` module contains functions for generating macros.
-pub mod macros;
-
-/// The `metadata` module contains the metadata functions.
-pub mod metadata;
-
-/// The `models` module contains the structs.
-pub mod models;
-
-/// The `modules` module contains the application modules.
-pub mod modules;
-
-/// The `server` module contains the development server.
-pub mod server;
-
-/// The `utilities` module contains utility functions.
-pub mod utilities;
+use std::{fs::File, path::Path};
 
 #[allow(non_camel_case_types)]
 
@@ -173,7 +149,7 @@ pub mod utilities;
 /// passed), an error message is printed and returned. Otherwise,
 /// `Ok(())` is returned.
 /// Run the static site generator command-line tool.
-pub fn run() -> Result<(), Box<dyn Error>> {
+pub fn run() -> Result<()> {
     // Initialize the logger using the `env_logger` crate
     init_logger(None)?;
 
@@ -201,8 +177,8 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
-    let matches = cmd::cli::build()?;
-    cmd::process::args(&matches)?;
+    let matches = ssg_cli::cli::build()?;
+    ssg_cli::process::args(&matches)?;
 
     // Generate a log entry for the arguments
     let args_log = macro_log!(
@@ -249,6 +225,6 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 }
 
 /// Create a log file at the specified path.
-fn create_log_file(file_path: &str) -> Result<File, io::Error> {
-    File::create(file_path)
+fn create_log_file(file_path: &str) -> Result<File> {
+    Ok(File::create(file_path)?)
 }

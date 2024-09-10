@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::file::add;
+    use ssg_core::utilities::file::add;
     use std::{fs::File, io::Write, path::Path};
 
     #[test]

@@ -3,11 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::server::serve::start;
-    use std::fs::File;
-    use std::io::{Read, Write};
-    use std::net::TcpStream;
-    use std::thread;
+    use ssg_core::server::serve::start;
+    use std::{fs::File, io::{Read, Write}, net::TcpStream, thread};
     use tempfile::TempDir;
 
     #[test]
@@ -22,7 +19,7 @@ mod tests {
         let server_addr = "127.0.0.1:3000";
         let document_root =
             tmp_dir.path().to_str().unwrap().to_string();
-        thread::spawn(move || {
+        let _ = thread::spawn(move || {
             start(server_addr, &document_root).unwrap();
         });
 
@@ -37,7 +34,7 @@ mod tests {
 
         // Check the response.
         let mut buffer = Vec::new();
-        stream.read_to_end(&mut buffer).unwrap();
+        let _ = stream.read_to_end(&mut buffer).unwrap();
         let response = String::from_utf8(buffer).unwrap();
 
         assert!(response.contains("200 OK"));

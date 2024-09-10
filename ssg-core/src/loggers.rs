@@ -6,6 +6,7 @@
 use env_logger::Env;
 use rlg::log_level::LogLevel;
 use std::io::Write;
+use anyhow::Result;
 
 /// Initializes the logging system.
 ///
@@ -26,7 +27,7 @@ use std::io::Write;
 /// ```
 pub fn init_logger(
     default_log_level: Option<LogLevel>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let env = Env::default().default_filter_or(
         default_log_level.unwrap_or(LogLevel::INFO).to_string(),
     );

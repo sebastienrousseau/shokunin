@@ -8,7 +8,8 @@
 //! If an error occurs while running the `run()` function, the function prints an error message
 //! to standard error and exits the program with a non-zero status code.
 
-use ssg::{languages::translate, run};
+use ssg_core::languages::translate;
+use ssg::run;
 
 fn main() {
     match run() {

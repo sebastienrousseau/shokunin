@@ -1,0 +1,29 @@
+[package]
+name = "ssg-core"
+version = "0.0.1"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "Core functionality for the Shokunin Static Site Generator"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+anyhow = "1.0"
+clap = "4.5"
+comrak = "0.28"
+dtt = "0.0.8"
+env_logger = "0.11"
+lazy_static = "1.5"
+log = { version = "0.4", features = ["std"] }
+minify-html = "0.15"
+pulldown-cmark = "0.12"
+quick-xml = "0.36"
+regex = "1.10"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+rlg = "0.0.6"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.12"
+toml = "0.8"
+yaml-rust2 = "0.8.1"
+uuid = { version = "1.10", features = ["v4"] }
+vrd = "0.0.8"

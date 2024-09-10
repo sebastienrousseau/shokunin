@@ -5,7 +5,7 @@
 mod tests {
     use std::error::Error;
 
-    use ssg::{
+    use ssg_core::{
         models::data::RssData,
         modules::{
             frontmatter::extract, html::generate_html,
@@ -54,6 +54,7 @@ description: My Description
     }
 
     #[test]
+    #[allow(box_pointers)] // Suppress box-pointers lint for this test
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {
         let options = RssData {
             author: "Me".to_string(),
@@ -81,8 +82,7 @@ description: My Description
 
         const EXPECTED_RESULT: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?><rss version=\"2.0\" xmlns:atom=\"http://www.w3.org/2005/Atom\"><channel><title>My RSS Feed</title><link>https://example.com</link><description>Latest technology news</description><language>en</language><pubDate>2023-06-29T12:00:00Z</pubDate><lastBuildDate>2023-06-29T12:00:00Z</lastBuildDate><docs>https://example.com/rss/docs</docs><generator>My RSS Generator</generator><managingEditor>editor@example.com</managingEditor><webMaster>webmaster@example.com</webMaster><category>Technology</category><ttl>60</ttl><image><url>None</url><title>My RSS Feed</title><link>https://example.com</link></image><atom:link href=\"https://example.com/rss/feed\" rel=\"self\" type=\"application/rss+xml\"/><item><author>Me</author><description>Item description</description><guid>item-guid</guid><link>https://example.com/item</link><pubDate>2023-06-29T12:00:00Z</pubDate><title>Item title</title></item></channel></rss>";
 
-        let result: Result<String, Box<dyn Error>> =
-            generate_rss(&options);
+        let result: Result<String, Box<dyn Error>> = generate_rss(&options);
         assert_eq!(result?, EXPECTED_RESULT);
 
         Ok(())

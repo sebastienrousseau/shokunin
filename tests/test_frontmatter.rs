@@ -5,7 +5,7 @@
 mod tests {
     use std::collections::HashMap;
 
-    use ssg::modules::frontmatter::{
+    use ssg_core::modules::frontmatter::{
         extract, extract_front_matter_str, extract_json_object_str,
         parse_json_object, parse_toml_table, parse_yaml_document,
         parse_yaml_hash,
@@ -103,15 +103,15 @@ mod tests {
             foo: bar
             baz: qux
         "#;
-        let expected_output = yaml_rust::Yaml::Hash(
+        let expected_output = yaml_rust2::Yaml::Hash(
             vec![
                 (
-                    yaml_rust::Yaml::String("foo".to_string()),
-                    yaml_rust::Yaml::String("bar".to_string()),
+                    yaml_rust2::Yaml::String("foo".to_string()),
+                    yaml_rust2::Yaml::String("bar".to_string()),
                 ),
                 (
-                    yaml_rust::Yaml::String("baz".to_string()),
-                    yaml_rust::Yaml::String("qux".to_string()),
+                    yaml_rust2::Yaml::String("baz".to_string()),
+                    yaml_rust2::Yaml::String("qux".to_string()),
                 ),
             ]
             .into_iter()

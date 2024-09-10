@@ -15,11 +15,12 @@
 //! function to generate the website.
 
 // Import the required libraries and modules.
-use ssg::compiler::service::compile;
-use ssg::server::serve::start;
+use ssg_core::compiler::service::compile;
+use ssg_core::server::serve::start;
 use std::path::Path;
+use anyhow::Result;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     // Define the paths to the build, site, source and template directories.
 
     // The build directory.

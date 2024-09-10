@@ -3,13 +3,11 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::metadata::service::extract_and_prepare_metadata;
-    use ssg::models::data::MetaTagGroups;
-    use ssg::modules::metatags::{
+    use ssg_core::{metadata::service::extract_and_prepare_metadata, models::data::MetaTagGroups, modules::metatags::{
         generate_apple_meta_tags, generate_ms_meta_tags,
         generate_og_meta_tags, generate_primary_meta_tags,
         generate_twitter_meta_tags,
-    };
+    }};
     use std::collections::HashMap;
 
     #[test]
@@ -32,25 +30,25 @@ This is a blog about Rust programming.
 
         // Check extracted metadata
         let mut expected_metadata = HashMap::new();
-        expected_metadata
+        let _ = expected_metadata
             .insert("author".to_string(), "Jane Doe".to_string());
-        expected_metadata
+        let _ = expected_metadata
             .insert("category".to_string(), "Rust".to_string());
-        expected_metadata.insert(
+        let _ = expected_metadata.insert(
             "description".to_string(),
             "A blog about Rust programming.".to_string(),
         );
-        expected_metadata
+        let _ = expected_metadata
             .insert("layout".to_string(), "post".to_string());
-        expected_metadata.insert(
+        let _ = expected_metadata.insert(
             "permalink".to_string(),
             "https://example.com/blog/rust".to_string(),
         );
-        expected_metadata.insert(
+        let _ = expected_metadata.insert(
             "keywords".to_string(),
             "rust,programming".to_string(),
         );
-        expected_metadata
+        let _ = expected_metadata
             .insert("title".to_string(), "Rust".to_string());
         assert_eq!(metadata, expected_metadata);
 

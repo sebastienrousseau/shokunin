@@ -188,17 +188,10 @@ macro_rules! macro_check_directory {
 ///
 #[macro_export]
 macro_rules! macro_cleanup_directories {
-    ( $( $_dir:expr ),* ) => {
+    ($path:expr) => {
         {
-            use $crate::utilities::directory::cleanup_directory;
-            let directories: &[&Path] = &[ $( $_dir ),* ];
-            match cleanup_directory(directories) {
-                Ok(()) => (),
-                Err(err) => {
-                    log::error!("Cleanup failed: {:?}", err);
-                    panic!("Cleanup failed: {:?}", err);
-                },
-            }
+            use anyhow::Context;
+            std::fs::remove_dir_all($path).with_context(|| format!("Failed to clean up directory: {:?}", $path))
         }
     };
 }
@@ -250,16 +243,16 @@ macro_rules! macro_cleanup_directories {
 ///
 #[macro_export]
 macro_rules! macro_create_directories {
-    ( $( $_dir:expr ),* ) => {{
-        use $crate::utilities::directory::create_directory;
-        use std::path::Path;
-        let directories: Vec<&Path> = vec![ $( Path::new($_dir) ),* ];
-        match create_directory(&directories) {
-            Ok(_) => Ok(()),
-            Err(err) => {
-                log::error!("Failed to create directories: {:?}", err);
-                Err(err)
-            },
+    ($($path:expr),+) => {
+        {
+            use anyhow::{Result, Context};
+            (|| -> Result<()> {
+                $(
+                    std::fs::create_dir_all($path)
+                        .with_context(|| format!("Failed to create directory: {:?}", $path))?;
+                )+
+                Ok(())
+            })()
         }
-    }};
+    };
 }

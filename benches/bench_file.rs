@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg::utilities::file::add;
+use ssg_core::utilities::file::add;
 use std::path::PathBuf;
 
 /// Runs a benchmark that measures the performance of the `add` function.
@@ -13,13 +13,13 @@ use std::path::PathBuf;
 #[allow(dead_code)]
 pub(crate) fn bench_file(c: &mut Criterion) {
     let path = PathBuf::from("content");
-    c.bench_function("add function", |b| {
+    let _ = c.bench_function("add function", |b| {
         b.iter(|| {
             let result = add(&path);
             if let Err(e) = result {
                 eprintln!("Error: {}", e);
             } else {
-                black_box(result.unwrap());
+                let _ = black_box(result.unwrap());
             }
         })
     });

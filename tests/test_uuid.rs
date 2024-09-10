@@ -3,9 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::uuid::generate_unique_string;
-    use std::sync::{Arc, Mutex};
-    use std::thread;
+    use ssg_core::utilities::uuid::generate_unique_string;
+    use std::{sync::{Arc, Mutex}, thread};
     use uuid::Uuid;
 
     /// Tests the length of the generated unique string.
@@ -44,6 +43,7 @@ mod tests {
 
     /// Tests the concurrency and thread safety of generating unique strings.
     #[test]
+    #[allow(box_pointers)]
     fn test_generate_unique_string_concurrency() {
         const NUM_THREADS: usize = 8;
         const NUM_GENERATIONS_PER_THREAD: usize = 1000;

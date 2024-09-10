@@ -7,12 +7,12 @@ use crate::models::data::FileData;
 // Import the minify_html function.
 use crate::utilities::minification::minify_html;
 
-// Import the Error trait.
-use std::error::Error;
-
 // Import the fs module.
 use std::fs::{self, copy, read_dir};
 use std::path::Path;
+
+// Import the anyhow Result and Context types.
+use anyhow::{Result, Context};
 
 // Import the time module.
 use std::time::Instant;
@@ -47,7 +47,7 @@ pub fn write_files_to_build_directory(
     build_dir_path: &Path,
     file: &FileData,
     template_path: &Path,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let start_time = Instant::now();
     let file_name = match (
         Path::new(&file.name).extension().and_then(|s| s.to_str()),
@@ -72,7 +72,7 @@ pub fn write_files_to_build_directory(
                 file_name,
                 &get_file_content(file, file_name),
                 index_html_minified,
-            )?;
+            ).context("Failed to write file")?;
         }
 
         for file_name in &OTHER_FILES {
@@ -117,7 +117,7 @@ fn write_file(
     file_name: &str,
     content: &str,
     minify: bool,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let file_path = dir_path.join(file_name);
     fs::write(&file_path, content)?;
 
@@ -137,7 +137,7 @@ fn write_file(
 /// # Errors
 ///
 /// Returns an error if minification fails or writing to the file fails.
-fn minify_file(file_path: &Path) -> Result<(), Box<dyn Error>> {
+fn minify_file(file_path: &Path) -> Result<()> {
     let minified_content = minify_html(file_path)?;
     fs::write(file_path, minified_content)?;
     Ok(())
@@ -158,7 +158,7 @@ fn copy_template_file(
     template_path: &Path,
     dest_dir: &Path,
     file_name: &str,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let dest_path = dest_dir.join(file_name);
     copy(template_path.join(file_name), dest_path)?;
 
@@ -222,7 +222,7 @@ fn get_file_content(file: &FileData, file_name: &str) -> String {
 fn print_section_headers(
     dir_path: &Path,
     start_time: Instant,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     let mut section_headers = Vec::<String>::new(); // Collect section headers
 
     for entry in (read_dir(dir_path)?).flatten() {
