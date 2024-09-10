@@ -148,7 +148,6 @@ mod tests {
     // }
 
     #[test]
-    #[allow(box_pointers)] // Suppress box-pointers lint for this test
     fn test_post_process_html_with_missing_alt_and_title() {
         let html = r#"<img src="image.jpg">"#;
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
@@ -177,7 +176,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)] // Suppress box-pointers lint for this test
     fn test_post_process_html_with_empty_input() {
         let html = "";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
@@ -189,7 +187,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)] // Suppress box-pointers lint for this test
     fn test_post_process_html_with_invalid_input() {
         let html = "<p>Hello</p>\n";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();

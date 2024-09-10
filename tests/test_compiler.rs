@@ -54,7 +54,6 @@ description: My Description
     }
 
     #[test]
-    #[allow(box_pointers)] // Suppress box-pointers lint for this test
     fn test_generate_rss() -> Result<(), Box<dyn Error>> {
         let options = RssData {
             author: "Me".to_string(),
