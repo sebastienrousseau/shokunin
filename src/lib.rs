@@ -117,17 +117,15 @@ pub use ssg_core;
 pub use ssg_cli;
 
 use anyhow::Result;
-use ssg_core::{
-    compiler::service::compile,
-    languages::translate,
-    loggers::init_logger,
-    server::serve::start,
-    utilities::uuid::generate_unique_string,
-};
-use ssg_core::macro_serve;
-use ssg_cli::cli::print_banner;
 use dtt::datetime::DateTime;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
+use ssg_cli::cli::print_banner;
+use ssg_core::macro_serve;
+use ssg_core::{
+    compiler::service::compile, languages::translate,
+    loggers::init_logger, server::serve::start,
+    utilities::uuid::generate_unique_string,
+};
 use std::io::Write;
 use std::{fs::File, path::Path};
 

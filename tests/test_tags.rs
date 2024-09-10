@@ -50,7 +50,8 @@ pub fn generate_tags(
             ];
             for key in &metadata_keys {
                 if let Some(value) = metadata.get(*key) {
-                    let _ = tags_data.insert((*key).to_string(), value.clone());
+                    let _ = tags_data
+                        .insert((*key).to_string(), value.clone());
                 }
             }
 
@@ -181,8 +182,10 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("tags".to_string(), "tag1, tag2".to_string());
-        let _ = metadata.insert("title".to_string(), "Test Page".to_string());
+        let _ = metadata
+            .insert("tags".to_string(), "tag1, tag2".to_string());
+        let _ = metadata
+            .insert("title".to_string(), "Test Page".to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -215,7 +218,8 @@ mod tests {
     #[test]
     fn test_create_tags_data_with_metadata() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("date".to_string(), "2021-09-04".to_string());
+        let _ = metadata
+            .insert("date".to_string(), "2021-09-04".to_string());
         let _ = metadata.insert(
             "description".to_string(),
             "A sample description".to_string(),
@@ -287,7 +291,8 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("tags".to_string(), "tag1,tag2".to_string());
+        let _ = metadata
+            .insert("tags".to_string(), "tag1,tag2".to_string());
         // Insert very long values for metadata
         let _ = metadata.insert(
             "title".to_string(),
@@ -329,7 +334,8 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("tags".to_string(), special_tag.to_string());
+        let _ = metadata
+            .insert("tags".to_string(), special_tag.to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 

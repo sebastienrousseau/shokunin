@@ -15,10 +15,10 @@
 //! function to generate the website.
 
 // Import the required libraries and modules.
+use anyhow::Result;
 use ssg_core::compiler::service::compile;
 use ssg_core::server::serve::start;
 use std::path::Path;
-use anyhow::Result;
 
 fn main() -> Result<()> {
     // Define the paths to the build, site, source and template directories.

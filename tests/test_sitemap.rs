@@ -3,14 +3,18 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::{models::data::SiteMapData, modules::sitemap::create_site_map_data};
+    use ssg_core::{
+        models::data::SiteMapData,
+        modules::sitemap::create_site_map_data,
+    };
     use std::collections::HashMap;
 
     /// Tests the creation of SiteMapData with all expected fields provided.
     #[test]
     fn create_site_map_data_with_complete_metadata() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("changefreq".to_string(), "daily".to_string());
+        let _ = metadata
+            .insert("changefreq".to_string(), "daily".to_string());
         let _ = metadata.insert(
             "last_build_date".to_string(),
             "2024-02-20".to_string(),
@@ -43,7 +47,8 @@ mod tests {
     #[test]
     fn create_site_map_data_with_only_changefreq() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("changefreq".to_string(), "daily".to_string());
+        let _ = metadata
+            .insert("changefreq".to_string(), "daily".to_string());
 
         let site_map_data = create_site_map_data(&metadata);
 
@@ -56,7 +61,8 @@ mod tests {
     #[test]
     fn serialize_and_deserialize_site_map_data() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("changefreq".to_string(), "daily".to_string());
+        let _ = metadata
+            .insert("changefreq".to_string(), "daily".to_string());
         let _ = metadata.insert(
             "last_build_date".to_string(),
             "2023-01-01".to_string(),

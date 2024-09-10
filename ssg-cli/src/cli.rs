@@ -1,8 +1,8 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use clap::{Command, Arg, ArgMatches};
 use anyhow::Result;
+use clap::{Arg, ArgMatches, Command};
 use log::debug;
 
 /// # Function: `build`
@@ -122,7 +122,8 @@ pub fn build() -> Result<ArgMatches> {
 pub fn print_banner() {
     // Define the title and description
     let title = "Shokunin (ssg) 🦀 v0.0.30";
-    let description = "A Fast and Flexible Static Site Generator written in Rust";
+    let description =
+        "A Fast and Flexible Static Site Generator written in Rust";
 
     // Determine the box width based on the longest string
     let width = title.len().max(description.len()) + 4;

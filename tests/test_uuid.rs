@@ -4,7 +4,10 @@
 #[cfg(test)]
 mod tests {
     use ssg_core::utilities::uuid::generate_unique_string;
-    use std::{sync::{Arc, Mutex}, thread};
+    use std::{
+        sync::{Arc, Mutex},
+        thread,
+    };
     use uuid::Uuid;
 
     /// Tests the length of the generated unique string.

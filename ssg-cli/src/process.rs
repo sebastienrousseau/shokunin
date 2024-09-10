@@ -2,11 +2,11 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use clap::ArgMatches;
-use std::path::Path;
-use log::{info, debug};
+use log::{debug, info};
 use ssg_core::compiler::service::compile;
+use std::path::Path;
 
 /// # Function: `args`
 ///
@@ -85,7 +85,8 @@ pub fn args(matches: &ArgMatches) -> Result<()> {
 ///
 /// - Returns an error if the argument is missing or if there is an issue retrieving it.
 fn get_arg(matches: &ArgMatches, name: &str) -> Result<String> {
-    matches.get_one::<String>(name)
+    matches
+        .get_one::<String>(name)
         .cloned()
         .ok_or_else(|| anyhow!("Argument '{}' not provided", name))
 }
@@ -110,8 +111,9 @@ fn get_arg(matches: &ArgMatches, name: &str) -> Result<String> {
 /// - Returns an error if the directory does not exist and cannot be created.
 fn check_directory(path: &Path, name: &str) -> Result<()> {
     if !path.exists() {
-        std::fs::create_dir_all(path)
-            .map_err(|e| anyhow!("Failed to create {} directory: {}", name, e))?;
+        std::fs::create_dir_all(path).map_err(|e| {
+            anyhow!("Failed to create {} directory: {}", name, e)
+        })?;
     }
     Ok(())
 }

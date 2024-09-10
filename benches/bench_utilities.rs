@@ -41,14 +41,15 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
     });
 
     // Benchmarks checking if a directory is a directory.
-    let _ = c.bench_function("check if directory is a directory", |b| {
-        b.iter(|| {
-            // Checks if the directory is a directory.
-            let result = dir.is_dir();
-            // Asserts that the result is true, indicating that the directory is a directory.
-            assert!(result);
-        })
-    });
+    let _ =
+        c.bench_function("check if directory is a directory", |b| {
+            b.iter(|| {
+                // Checks if the directory is a directory.
+                let result = dir.is_dir();
+                // Asserts that the result is true, indicating that the directory is a directory.
+                assert!(result);
+            })
+        });
 
     // Benchmarks checking if a non-existent directory does not exist.
     let _ = c.bench_function(

@@ -21,7 +21,8 @@ mod tests {
             "author_website".to_string(),
             "https://example.com".to_string(),
         );
-        let _ = metadata.insert("author".to_string(), "John Doe".to_string());
+        let _ = metadata
+            .insert("author".to_string(), "John Doe".to_string());
         let _ = metadata.insert(
             "site_components".to_string(),
             "Components".to_string(),

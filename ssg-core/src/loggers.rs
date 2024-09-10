@@ -3,10 +3,10 @@
 
 //! Application logging functionality
 
+use anyhow::Result;
 use env_logger::Env;
 use rlg::log_level::LogLevel;
 use std::io::Write;
-use anyhow::Result;
 
 /// Initializes the logging system.
 ///
@@ -25,9 +25,7 @@ use anyhow::Result;
 /// // Initialize the logging system with a default log level of `info`
 /// init_logger(Some(LogLevel::INFO)).unwrap();
 /// ```
-pub fn init_logger(
-    default_log_level: Option<LogLevel>,
-) -> Result<()> {
+pub fn init_logger(default_log_level: Option<LogLevel>) -> Result<()> {
     let env = Env::default().default_filter_or(
         default_log_level.unwrap_or(LogLevel::INFO).to_string(),
     );

@@ -71,14 +71,17 @@ mod tests {
             let mut options = RssData::new();
             options.title = "My RSS Feed".to_string();
             options.link = "https://example.com".to_string();
-            options.description = "A description of my RSS feed.".to_string();
+            options.description =
+                "A description of my RSS feed.".to_string();
 
             let rss_result = generate_rss(&options);
             assert!(rss_result.is_ok());
 
             let rss_str = rss_result.unwrap();
             assert!(rss_str.contains("<title>My RSS Feed</title>"));
-            assert!(rss_str.contains("<link>https://example.com</link>"));
+            assert!(
+                rss_str.contains("<link>https://example.com</link>")
+            );
             assert!(rss_str.contains("<description>A description of my RSS feed.</description>"));
         }
     }

@@ -56,7 +56,9 @@ pub(crate) fn bench_json(c: &mut Criterion) {
         b.iter(|| manifest(black_box(&manifest_data)))
     });
 
-    let _ = c.bench_function("txt", |b| b.iter(|| txt(black_box(&txt_data))));
+    let _ = c.bench_function("txt", |b| {
+        b.iter(|| txt(black_box(&txt_data)))
+    });
 
     let _ = c.bench_function("cname", |b| {
         b.iter(|| cname(black_box(&cname_data)))

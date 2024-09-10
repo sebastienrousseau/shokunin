@@ -4,7 +4,13 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
-    use ssg_core::{modules::{html::{generate_html, HtmlGenerationError}, postprocessor::post_process_html}, utilities::directory::format_header_with_id_class};
+    use ssg_core::{
+        modules::{
+            html::{generate_html, HtmlGenerationError},
+            postprocessor::post_process_html,
+        },
+        utilities::directory::format_header_with_id_class,
+    };
 
     #[test]
     fn test_generate_html_with_front_matter() {
@@ -147,7 +153,8 @@ mod tests {
         let html = r#"<img src="image.jpg">"#;
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"(.*<img[^>]*)(/>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         // Expect no change as both alt and title are missing
         assert_eq!(result.trim(), r#"<img src="image.jpg">"#);
@@ -176,7 +183,8 @@ mod tests {
         let html = "";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         assert_eq!(result, "");
     }
@@ -187,7 +195,8 @@ mod tests {
         let html = "<p>Hello</p>\n";
         let class_regex = Regex::new(r#"class="[^"]*""#).unwrap();
         let img_regex = Regex::new(r#"<img[^>]*?(/?>)"#).unwrap();
-        let result = post_process_html(html, &class_regex, &img_regex).unwrap();
+        let result =
+            post_process_html(html, &class_regex, &img_regex).unwrap();
 
         assert_eq!(result, html);
     }

@@ -14,7 +14,8 @@ mod tests {
         let mut context = HashMap::new();
         let _ = context.insert("title", "My Title");
         let _ = context.insert("content", "My Content");
-        let result = render_template(template, &context).map_err(|e| anyhow::Error::msg(e.to_string()))?;
+        let result = render_template(template, &context)
+            .map_err(|e| anyhow::Error::msg(e.to_string()))?;
         assert_eq!(
             result,
             "<html><head><title>My Title</title></head><body>My Content</body></html>"
@@ -93,8 +94,9 @@ mod tests {
         let tempdir = tempfile::tempdir()
             .expect("Could not create temporary directory");
         let template_file_path = tempdir.path().join("template.html");
-        let _ = std::fs::copy("template/template.html", template_file_path)
-            .expect("Could not copy template file");
+        let _ =
+            std::fs::copy("template/template.html", template_file_path)
+                .expect("Could not copy template file");
 
         // Call the render_page function
         let result = render_page(&options, &template_path, &layout);

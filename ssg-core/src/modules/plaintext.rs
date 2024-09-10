@@ -1,15 +1,16 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use anyhow::{Error, Result}; // Ensure anyhow::Error and Result are imported
 use crate::modules::preprocessor::preprocess_content;
 use crate::utilities::directory::extract_front_matter;
+use anyhow::{Error, Result}; // Ensure anyhow::Error and Result are imported
 use pulldown_cmark::TagEnd;
 use pulldown_cmark::{Event, Parser, Tag};
 use regex::Regex;
 
 /// Type alias for the result of the `generate_plain_text` function
-type PlainTextResult = Result<(String, String, String, String, String, String), Error>;
+type PlainTextResult =
+    Result<(String, String, String, String, String, String), Error>;
 
 pub fn generate_plain_text(
     content: &str,
@@ -28,11 +29,13 @@ pub fn generate_plain_text(
     let markdown_content = extract_front_matter(content);
 
     // Preprocess content to update class attributes and image tags
-    let processed_content = preprocess_content(markdown_content, &class_regex, &img_regex)
-        .map_err(|e| anyhow::Error::msg(e.to_string()))?;  // Convert error to a string for compatibility
+    let processed_content =
+        preprocess_content(markdown_content, &class_regex, &img_regex)
+            .map_err(|e| anyhow::Error::msg(e.to_string()))?; // Convert error to a string for compatibility
 
     // Further preprocess to remove Markdown link references.
-    let no_markdown_links = link_ref_regex.replace_all(&processed_content, "$1");
+    let no_markdown_links =
+        link_ref_regex.replace_all(&processed_content, "$1");
 
     let mut plain_text = String::new();
     let parser = Parser::new(&no_markdown_links);
@@ -114,4 +117,3 @@ pub fn generate_plain_text(
         plain_keywords.to_string(),
     ))
 }
-

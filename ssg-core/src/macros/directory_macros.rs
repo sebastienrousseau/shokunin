@@ -188,12 +188,12 @@ macro_rules! macro_check_directory {
 ///
 #[macro_export]
 macro_rules! macro_cleanup_directories {
-    ($path:expr) => {
-        {
-            use anyhow::Context;
-            std::fs::remove_dir_all($path).with_context(|| format!("Failed to clean up directory: {:?}", $path))
-        }
-    };
+    ($path:expr) => {{
+        use anyhow::Context;
+        std::fs::remove_dir_all($path).with_context(|| {
+            format!("Failed to clean up directory: {:?}", $path)
+        })
+    }};
 }
 
 /// # `macro_create_directories` Macro

@@ -6,13 +6,13 @@ mod tests {
     use quick_xml::Writer;
     use rlg::{log_format::LogFormat, log_level::LogLevel};
     use ssg_core::{
-        macro_check_directory,
-        macro_create_directories, macro_execute_and_log,
-        macro_generate_metatags, macro_generate_rss,
-        macro_generate_tags_from_fields, macro_generate_tags_from_list,
-        macro_log_complete, macro_log_error, macro_log_info,
-        macro_log_start, macro_metadata_option,
-        macro_set_rss_data_fields, macro_write_element,
+        macro_check_directory, macro_create_directories,
+        macro_execute_and_log, macro_generate_metatags,
+        macro_generate_rss, macro_generate_tags_from_fields,
+        macro_generate_tags_from_list, macro_log_complete,
+        macro_log_error, macro_log_info, macro_log_start,
+        macro_metadata_option, macro_set_rss_data_fields,
+        macro_write_element,
         macros::shell_macros::CommandExecutor,
         models::data::RssData,
         modules::metatags::{generate_custom_meta_tags, load_metatags},

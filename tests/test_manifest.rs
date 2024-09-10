@@ -51,13 +51,16 @@ mod tests {
     #[test]
     fn test_create_manifest_data_with_valid_metadata() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("name".to_string(), "My Web App".to_string());
-        let _ = metadata.insert("short_name".to_string(), "App".to_string());
+        let _ = metadata
+            .insert("name".to_string(), "My Web App".to_string());
+        let _ = metadata
+            .insert("short_name".to_string(), "App".to_string());
         let _ = metadata.insert(
             "description".to_string(),
             "A cool web app".to_string(),
         );
-        let _ = metadata.insert("icon".to_string(), "app-icon.svg".to_string());
+        let _ = metadata
+            .insert("icon".to_string(), "app-icon.svg".to_string());
         let _ = metadata
             .insert("theme-color".to_string(), "#00aabb".to_string());
 

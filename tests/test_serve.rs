@@ -4,7 +4,12 @@
 #[cfg(test)]
 mod tests {
     use ssg_core::server::serve::start;
-    use std::{fs::File, io::{Read, Write}, net::TcpStream, thread};
+    use std::{
+        fs::File,
+        io::{Read, Write},
+        net::TcpStream,
+        thread,
+    };
     use tempfile::TempDir;
 
     #[test]

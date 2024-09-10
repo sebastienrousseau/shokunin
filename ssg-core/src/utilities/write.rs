@@ -12,7 +12,7 @@ use std::fs::{self, copy, read_dir};
 use std::path::Path;
 
 // Import the anyhow Result and Context types.
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 
 // Import the time module.
 use std::time::Instant;
@@ -72,7 +72,8 @@ pub fn write_files_to_build_directory(
                 file_name,
                 &get_file_content(file, file_name),
                 index_html_minified,
-            ).context("Failed to write file")?;
+            )
+            .context("Failed to write file")?;
         }
 
         for file_name in &OTHER_FILES {

@@ -3,11 +3,15 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::{metadata::service::extract_and_prepare_metadata, models::data::MetaTagGroups, modules::metatags::{
-        generate_apple_meta_tags, generate_ms_meta_tags,
-        generate_og_meta_tags, generate_primary_meta_tags,
-        generate_twitter_meta_tags,
-    }};
+    use ssg_core::{
+        metadata::service::extract_and_prepare_metadata,
+        models::data::MetaTagGroups,
+        modules::metatags::{
+            generate_apple_meta_tags, generate_ms_meta_tags,
+            generate_og_meta_tags, generate_primary_meta_tags,
+            generate_twitter_meta_tags,
+        },
+    };
     use std::collections::HashMap;
 
     #[test]

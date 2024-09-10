@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::Result;
+use log::info;
 use ssg_cli::cli::{build, print_banner};
 use ssg_cli::process::args;
-use log::info;
 
 /// # Function: `main`
 ///
