@@ -223,7 +223,6 @@ mod tests {
     }
 
     #[test]
-    #[allow(box_pointers)]
     fn test_macro_generate_rss(
     ) -> Result<(), Box<dyn std::error::Error>> {
         use quick_xml::Writer;
