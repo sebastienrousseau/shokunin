@@ -10,9 +10,7 @@ use std::{
 };
 /// Ensures a directory exists, creating it if necessary.
 ///
-/// This function takes a reference to a `Path` object for a directory and a
-/// human-readable name for the directory, and creates the directory if it
-/// does not already exist.
+/// This function takes a reference to a `Path` object for a directory and a human-readable name for the directory, and creates the directory if it does not already exist.
 ///
 /// # Arguments
 ///
@@ -62,9 +60,7 @@ pub fn directory(dir: &Path, name: &str) -> Result<String, String> {
 
 /// Moves the output directory to the public directory.
 ///
-/// This function takes a reference to a `Path` object for the output directory
-/// and a string for the site name, and moves the output directory to the
-/// public directory.
+/// This function takes a reference to a `Path` object for the output directory and a string for the site name, and moves the output directory to the public directory.
 ///
 /// # Arguments
 ///
@@ -104,9 +100,7 @@ pub fn move_output_directory(
 
 /// Finds all HTML files in a directory.
 ///
-/// This function takes a reference to a `Path` object for a directory and
-/// returns a vector of `PathBuf` objects for all HTML files in the directory
-/// and its subdirectories.
+/// This function takes a reference to a `Path` object for a directory and returns a vector of `PathBuf` objects for all HTML files in the directory and its subdirectories.
 ///
 /// # Arguments
 ///
@@ -227,8 +221,7 @@ pub fn to_title_case(s: &str) -> String {
 
 /// Formats a header string with an ID and class attribute.
 ///
-/// This function takes a reference to a string containing the header and a
-/// reference to a `Regex` object
+/// This function takes a reference to a string containing the header and a reference to a `Regex` object
 ///
 /// # Arguments
 ///
@@ -307,8 +300,7 @@ pub fn format_header_with_id_class(
 
 /// Extracts the front matter from the given content.
 ///
-/// This function takes a reference to a string containing the content of a
-/// page and returns a string containing the content without the front matter.
+/// This function takes a reference to a string containing the content of a page and returns a string containing the content without the front matter.
 ///
 /// # Arguments
 ///
@@ -317,13 +309,9 @@ pub fn format_header_with_id_class(
 /// # Returns
 ///
 /// * `&str` - A string containing the content without the front matter.
-///  - If the content does not contain front matter, the original content is
-/// returned.
-/// - If the content contains front matter, the content without the front
-/// matter is returned.
-/// - If the content contains front matter but the front matter is invalid,
-/// an empty string is returned, regardless of whether the content contains
-/// additional content or not.
+///  - If the content does not contain front matter, the original content is returned.
+/// - If the content contains front matter, the content without the front matter is returned.
+/// - If the content contains front matter but the front matter is invalid, an empty string is returned, regardless of whether the content contains additional content or not.
 pub fn extract_front_matter(content: &str) -> &str {
     if content.starts_with("---\n") {
         if let Some(end_pos) = content.find("\n---\n") {
@@ -348,9 +336,7 @@ pub fn extract_front_matter(content: &str) -> &str {
     }
 }
 
-/// Creates and returns an instance of `comrak::ComrakOptions` with non-
-/// standard Markdown features enabled. This allows for a greater variety of
-/// elements in the markdown syntax.
+/// Creates and returns an instance of `comrak::ComrakOptions` with non- standard Markdown features enabled. This allows for a greater variety of elements in the markdown syntax.
 ///
 /// # Returns
 ///
@@ -432,27 +418,21 @@ pub fn create_comrak_options() -> comrak::ComrakOptions<'static> {
 }
 
 /// Updates the 'class' attributes within the provided HTML line.
-/// If `.class=&quot;` is found within the line, it extracts the class value
-/// using `class_regex` and replaces it in the correct place using `img_regex`.
+/// If `.class=&quot;` is found within the line, it extracts the class value using `class_regex` and replaces it in the correct place using `img_regex`.
 ///
 /// # Arguments
 ///
-/// * `line` - A reference to a string containing an HTML line that potentially
-/// contains class attributes.
+/// * `line` - A reference to a string containing an HTML line that potentially contains class attributes.
 ///
-/// * `class_regex` - A reference to a `Regex` object used to extract the class
-/// attribute value.
+/// * `class_regex` - A reference to a `Regex` object used to extract the class attribute value.
 ///
-/// * `img_regex` - A reference to a `Regex` object used to identify where the
-/// class attribute should be replaced.
+/// * `img_regex` - A reference to a `Regex` object used to identify where the class attribute should be replaced.
 ///
 /// # Returns
 ///
 /// * `String` - The updated HTML line.
-///  - If the line contains `.class=&quot;`, the returned string will be the
-/// updated line where the class attribute value is correctly placed.
-///  - If the line does not contain `.class=&quot;`, the original line is
-///    returned.
+///  - If the line contains `.class=&quot;`, the returned string will be the updated line where the class attribute value is correctly placed.
+///  - If the line does not contain `.class=&quot;`, the original line is returned.
 ///
 pub fn update_class_attributes(
     line: &str,

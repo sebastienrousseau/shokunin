@@ -8,13 +8,9 @@ use std::path::Path;
 
 /// ## Function: `start` - Start a web server to serve the public directory.
 ///
-/// This function takes a string for the server address and a string for
-/// the document root, and then creates a TCP listener that listens at
-/// the server address.
+/// This function takes a string for the server address and a string for the document root, and then creates a TCP listener that listens at the server address.
 ///
-/// It then iterates over the incoming connections on the listener, and
-/// handles each connection by passing it to the handle_connection
-/// function.
+/// It then iterates over the incoming connections on the listener, and handles each connection by passing it to the handle_connection function.
 ///
 /// # Arguments
 ///
@@ -29,14 +25,10 @@ use std::path::Path;
 ///
 /// # Errors
 ///
-/// * If the server fails to bind to the address, it will return an
-/// error.
-/// * If the server fails to accept a connection, it will return an
-/// error.
-/// * If the server fails to read data from a connection, it will
-/// return an error.
-/// * If the server fails to write data to a connection, it will
-/// return an error.
+/// * If the server fails to bind to the address, it will return an error.
+/// * If the server fails to accept a connection, it will return an error.
+/// * If the server fails to read data from a connection, it will return an error.
+/// * If the server fails to write data to a connection, it will return an error.
 ///
 pub fn start(
     server_address: &str,
@@ -64,8 +56,7 @@ pub fn start(
 
 /// ## Function: `handle_connection` - Handle a single connection.
 ///
-/// This function takes a TcpStream object and a string for the document
-/// root, and handles a single connection.
+/// This function takes a TcpStream object and a string for the document root, and handles a single connection.
 ///
 /// # Arguments
 ///

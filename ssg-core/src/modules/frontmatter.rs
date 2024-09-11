@@ -8,9 +8,7 @@ use yaml_rust2::YamlLoader;
 
 /// ## Function: `extract` - Extracts front matter from a string of content
 ///
-/// This function extracts front matter from a string of content. It
-/// supports YAML, TOML, and JSON front matter. It returns a `HashMap`
-/// of the front matter key-value pairs.
+/// This function extracts front matter from a string of content. It supports YAML, TOML, and JSON front matter. It returns a `HashMap` of the front matter key-value pairs.
 ///
 /// ### Arguments
 ///
@@ -19,8 +17,7 @@ use yaml_rust2::YamlLoader;
 ///
 /// ### Returns
 ///
-/// A `HashMap` of the front matter key-value pairs. If no front matter
-/// is found, an empty `HashMap` is returned.
+/// A `HashMap` of the front matter key-value pairs. If no front matter is found, an empty `HashMap` is returned.
 ///
 ///
 pub fn extract(content: &str) -> HashMap<String, String> {
@@ -71,9 +68,7 @@ pub fn extract(content: &str) -> HashMap<String, String> {
 
 /// ## Function: `extract_front_matter_str` - Extracts front matter from a string of content
 ///
-/// This function extracts front matter from a string of content. It
-/// supports YAML, TOML, and JSON front matter. It returns a `HashMap`
-/// of the front matter key-value pairs.
+/// This function extracts front matter from a string of content. It supports YAML, TOML, and JSON front matter. It returns a `HashMap` of the front matter key-value pairs.
 ///
 /// ### Arguments
 ///
@@ -84,8 +79,7 @@ pub fn extract(content: &str) -> HashMap<String, String> {
 ///
 /// ### Returns
 ///
-/// A `HashMap` of the front matter key-value pairs. If no front matter
-/// is found, an empty `HashMap` is returned.
+/// A `HashMap` of the front matter key-value pairs. If no front matter is found, an empty `HashMap` is returned.
 ///
 pub fn extract_front_matter_str<'a>(
     content: &'a str,
@@ -110,8 +104,7 @@ pub fn extract_front_matter_str<'a>(
 ///
 /// ### Returns
 ///
-/// A `Yaml` object representing the front matter string. If the front
-///   matter string is not valid YAML, an error is returned.
+/// A `Yaml` object representing the front matter string. If the frontmatter string is not valid YAML, an error is returned.
 ///
 pub fn parse_yaml_document(
     front_matter_str: &str,
@@ -183,8 +176,7 @@ pub fn parse_toml_table(
 ///
 /// ### Returns
 ///
-/// A `&str` representing the JSON object. If no JSON object is found,
-/// `None` is returned.
+/// A `&str` representing the JSON object. If no JSON object is found, `None` is returned.
 ///
 pub fn extract_json_object_str(content: &str) -> Option<&str> {
     if content.starts_with('{') {
@@ -206,8 +198,7 @@ pub fn extract_json_object_str(content: &str) -> Option<&str> {
 /// ### Returns
 ///
 /// A `HashMap` of key-value pairs representing the JSON object.
-/// If the JSON object is not valid, an error is returned. If the JSON
-/// object is not a string, an empty string is returned.
+/// If the JSON object is not valid, an error is returned. If the JSON object is not a string, an empty string is returned.
 ///
 pub fn parse_json_object(
     json_object: &Map<String, JsonValue>,
