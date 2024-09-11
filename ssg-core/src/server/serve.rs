@@ -71,8 +71,7 @@ pub fn start(
 ///
 /// # Errors
 ///
-/// * If the server fails to read data from a connection, it will
-/// return an error.
+/// * If the server fails to read data from a connection, it will return an error.
 ///
 pub fn handle_connection(
     mut stream: TcpStream,

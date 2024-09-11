@@ -116,8 +116,7 @@ pub fn parse_yaml_document(
 ///
 /// ### Arguments
 ///
-/// * `yaml_hash` - The YAML hash to parse into a `HashMap` of key-value
-/// pairs
+/// * `yaml_hash` - The YAML hash to parse into a `HashMap` of key-value pairs
 ///
 /// ### Returns
 ///
@@ -145,8 +144,7 @@ pub fn parse_yaml_hash(
 ///
 /// ### Arguments
 ///
-/// * `toml_table` - The TOML table to parse into a `HashMap` of key-
-/// value pairs.
+/// * `toml_table` - The TOML table to parse into a `HashMap` of key-value pairs.
 ///
 /// ### Returns
 ///
