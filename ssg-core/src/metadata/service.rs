@@ -32,8 +32,8 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust
-/// use ssg::models::data::FileData;
-/// use ssg::metadata::service::extract_and_prepare_metadata;
+/// use ssg_core::models::data::FileData;
+/// use ssg_core::metadata::service::extract_and_prepare_metadata;
 ///
 /// let file_content = "---\n\n# Front Matter (YAML)\n\nauthor: \"Jane Doe\"\ncategory: \"Rust\"\ndescription: \"A blog about Rust programming.\"\nlayout: \"post\"\npermalink: \"https://example.com/blog/rust\"\ntags: \"rust,programming\"\ntitle: \"Rust\"\n\n---\n\n# Content\n\nThis is a blog about Rust programming.\n";
 ///

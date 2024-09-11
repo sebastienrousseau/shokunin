@@ -12,7 +12,7 @@
 //!
 //! ```rust
 //! use clap::{Arg, ArgMatches, Command, Error};
-//! use ssg::macro_get_args;
+//! use ssg_core::macro_get_args;
 //!
 //! fn test() -> Result<(), Box<dyn std::error::Error>> {
 //!     let matches = Command::new("test_app")
@@ -50,7 +50,7 @@
 //!
 //! ```rust
 //! use std::collections::HashMap;
-//! use ssg::macro_metadata_option;
+//! use ssg_core::macro_metadata_option;
 //!
 //! let mut metadata = HashMap::new();
 //! metadata.insert("key", "value");
@@ -121,7 +121,7 @@
 ///
 /// ```rust
 /// use clap::{Arg, ArgMatches, Command, Error};
-/// use ssg::macro_get_args;
+/// use ssg_core::macro_get_args;
 ///
 /// fn test() -> Result<(), Box<dyn std::error::Error>> {
 ///     let matches = Command::new("test_app")
@@ -174,7 +174,7 @@ macro_rules! macro_get_args {
 ///
 /// ```rust
 /// use std::collections::HashMap;
-/// use ssg::macro_metadata_option;
+/// use ssg_core::macro_metadata_option;
 ///
 /// let mut metadata = HashMap::new();
 /// metadata.insert("key", "value");
@@ -198,7 +198,7 @@ macro_rules! macro_get_args {
 /// ## Example
 ///
 /// ```rust
-/// use ssg::macro_metadata_option;
+/// use ssg_core::macro_metadata_option;
 /// use std::collections::HashMap;
 ///
 /// let mut metadata = HashMap::new();

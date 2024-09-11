@@ -1,8 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, Command};
 use log::debug;
 
 /// # Function: `build`
@@ -31,7 +30,8 @@ use log::debug;
 /// ```
 /// use ssg_cli::cli::build;
 ///
-/// let cmd = build().unwrap();
+/// let cmd = build();
+///
 /// ```
 ///
 /// # Errors
@@ -41,58 +41,58 @@ use log::debug;
 /// # Logging
 ///
 /// Debug messages are logged to indicate the progress of the CLI building process.
-pub fn build() -> Result<ArgMatches> {
+pub fn build() -> Command {
     debug!("Building CLI command");
-
-    let cmd = Command::new("Shokunin Static Site Generator")
+    Command::new("Shokunin Static Site Generator")
         .author("Sebastien Rousseau")
         .about("A fast and flexible static site generator written in Rust.")
-        .bin_name("ssg")
+        .bin_name("ssg_cli")
         .version("0.0.30")
         .arg(
             Arg::new("new")
                 .help("Create a new project.")
                 .long("new")
                 .short('n')
-                .value_name("NEW"),
+                .value_name("NEW")
+                .required(false),
         )
         .arg(
             Arg::new("content")
                 .help("Location of the content directory.")
                 .long("content")
                 .short('c')
-                .value_name("CONTENT"),
+                .value_name("CONTENT")
+                .required(false),
         )
         .arg(
             Arg::new("output")
                 .help("Location of the output directory.")
                 .long("output")
                 .short('o')
-                .value_name("OUTPUT"),
+                .value_name("OUTPUT")
+                .required(false),
         )
         .arg(
             Arg::new("template")
                 .help("Location of the template directory.")
                 .long("template")
                 .short('t')
-                .value_name("TEMPLATE"),
+                .value_name("TEMPLATE")
+                .required(false),
         )
         .arg(
             Arg::new("serve")
                 .help("Serve the public directory on a local web server.")
                 .long("serve")
                 .short('s')
-                .value_name("SERVE"),
+                .value_name("SERVE")
+                .required(false),
         )
         .after_help(
             "\x1b[1;4mDocumentation:\x1b[0m\n\n  https://shokunin.one\n\n\
              \x1b[1;4mLicense:\x1b[0m\n  The project is licensed under the terms of \
              both the MIT license and the Apache License (Version 2.0).",
         )
-        .get_matches();
-
-    debug!("CLI command built successfully");
-    Ok(cmd)
 }
 
 /// # Function: `print_banner`

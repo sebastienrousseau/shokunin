@@ -20,7 +20,7 @@ use std::io::Write;
 ///
 /// ```
 /// use rlg::log_level::LogLevel;
-/// use ssg::loggers::init_logger;
+/// use ssg_core::loggers::init_logger;
 ///
 /// // Initialize the logging system with a default log level of `info`
 /// init_logger(Some(LogLevel::INFO)).unwrap();

@@ -38,8 +38,8 @@ fn sanitize_tag(tag: &str) -> String {
 /// # Examples
 ///
 /// ```rust
-/// use ssg::models::data::FileData;
-/// use ssg::modules::tags::generate_tags;
+/// use ssg_core::models::data::FileData;
+/// use ssg_core::modules::tags::generate_tags;
 /// use std::collections::HashMap;
 ///
 /// let file = FileData { content: "This is a test".to_string(), ..Default::default() };
@@ -121,7 +121,7 @@ pub fn generate_tags(
 ///
 /// ```rust
 /// use std::collections::HashMap;
-/// use ssg::modules::tags::create_tags_data;
+/// use ssg_core::modules::tags::create_tags_data;
 ///
 /// let mut metadata = HashMap::new();
 /// metadata.insert("date".to_string(), "2021-09-04".to_string());
@@ -169,8 +169,8 @@ pub fn create_tags_data(
 ///
 /// ```rust
 /// use std::collections::HashMap;
-/// use ssg::models::data::PageData;
-/// use ssg::modules::tags::generate_tags_html;
+/// use ssg_core::models::data::PageData;
+/// use ssg_core::modules::tags::generate_tags_html;
 ///
 /// let mut global_tags_data = HashMap::new();
 /// global_tags_data.insert(
@@ -263,7 +263,7 @@ pub fn generate_tags_html(
 ///
 /// ```rust
 /// use std::path::Path;
-/// use ssg::modules::tags::write_tags_html_to_file;
+/// use ssg_core::modules::tags::write_tags_html_to_file;
 ///
 /// let html_content = "<h1>Hello World</h1>";
 /// let output_path = Path::new("/path/to/output");

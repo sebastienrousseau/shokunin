@@ -24,8 +24,8 @@ use std::{
 /// # Example
 ///
 /// ```
-/// use ssg::models::data::CnameData;
-/// use ssg::modules::json::cname;
+/// use ssg_core::models::data::CnameData;
+/// use ssg_core::modules::json::cname;
 ///
 /// let options = CnameData {
 ///     cname: "example.com".to_string(),

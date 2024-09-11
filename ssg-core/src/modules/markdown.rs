@@ -22,7 +22,7 @@ use std::error::Error;
 /// # Examples
 ///
 /// ```rust
-/// use ssg::modules::markdown::convert_markdown_to_html;
+/// use ssg_core::modules::markdown::convert_markdown_to_html;
 /// use comrak::ComrakOptions;
 ///
 /// let markdown_content = "# Hello, world!";

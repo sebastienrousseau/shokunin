@@ -23,7 +23,7 @@
 //! # Example
 //!
 //! ```
-//! use ssg::macro_log_info;
+//! use ssg_core::macro_log_info;
 //! use rlg::log_level::LogLevel;
 //! use rlg::log_format::LogFormat;
 //!

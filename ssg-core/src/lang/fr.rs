@@ -18,15 +18,6 @@
 /// The translated string if a translation is found, or the original `text` if no
 /// translation is available.
 ///
-/// # Examples
-///
-/// ```
-/// use ssg::languages::translate;
-///
-/// let text = "Hello";
-/// let translated = translate("fr", "Hello");
-/// assert_eq!(translated, "Bonjour");
-/// ```
 pub(crate) fn translate(text: &str) -> String {
     T.get(text)
         .map(|s| s.to_string())

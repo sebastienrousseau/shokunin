@@ -7,7 +7,7 @@
 /// # Examples
 ///
 /// ```
-/// use ssg::utilities::escape::escape_html_entities;
+/// use ssg_core::utilities::escape::escape_html_entities;
 ///
 /// let input = "Hello, <world>!";
 /// let expected = "Hello, &lt;world&gt;!";

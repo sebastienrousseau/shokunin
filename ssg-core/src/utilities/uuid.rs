@@ -15,7 +15,7 @@ use uuid::Uuid;
 /// # Examples
 ///
 /// ```
-/// use ssg::utilities::uuid::generate_unique_string;
+/// use ssg_core::utilities::uuid::generate_unique_string;
 ///
 /// let unique_string = generate_unique_string();
 /// println!("Unique string: {}", unique_string);

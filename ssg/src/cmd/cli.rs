@@ -35,7 +35,7 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// # Examples
 ///
 /// ```
-/// use ssg::cmd::cli::build;
+/// use ssg_core::cmd::cli::build;
 /// let cmd = build().unwrap();
 ///
 /// ```
@@ -103,7 +103,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// # Examples
 ///
 /// ```
-/// use ssg::cmd::cli::print_banner;
+/// use ssg_core::cmd::cli::print_banner;
 ///
 /// print_banner();
 /// ```

@@ -27,3 +27,18 @@ pub mod cli;
 ///
 /// See [`process.rs`](./process.rs) for more details.
 pub mod process;
+
+pub use cli::{build, print_banner};
+pub use process::args;
+
+/// Run the SSG CLI
+pub fn run() -> anyhow::Result<()> {
+    env_logger::init();
+
+    print_banner();
+
+    let matches = build().get_matches();
+    args(&matches)?;
+
+    Ok(())
+}

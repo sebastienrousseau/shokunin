@@ -3,26 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
 [package]
+# Metadata about the package.
+authors.workspace = true # Authors are defined in the workspace.
+build = "build.rs" # The build script is defined in the workspace.
+edition.workspace = true # The edition is defined in the workspace.
+exclude.workspace = true # Files to exclude are defined in the workspace.
+homepage.workspace = true # The homepage URL is defined in the workspace.
+license.workspace = true # The license is defined in the workspace.
+repository.workspace = true # The repository URL is defined in the workspace.
+rust-version.workspace = true # The Rust version is defined in the workspace.
+# version.workspace = true # The version is defined in the workspace.
+
 # The name of the crate, used by Cargo to identify the project.
 name = "ssg-cli"
 
-# The version of the crate, following semantic versioning (MAJOR.MINOR.PATCH).
-version = "0.0.1"
-
-# The Rust edition being used. The 2021 edition includes several language improvements.
-edition = "2021"
-
-# Authors contributing to the project.
-authors = ["Shokunin Contributors"]
+version =  "0.0.1"
 
 # A short description of the project. This is displayed on package registries like crates.io.
 description = "Command Line Interface for the SSG Static Site Generator"
-
-# The licensing terms under which the project is distributed. In this case, it can be licensed under either MIT or Apache-2.0.
-license = "MIT OR Apache-2.0"
-
-# The repository where the source code for the project is hosted. This is useful for developers who wish to contribute or report issues.
-repository = "https://github.com/yourusername/ssg"
 
 # The path to the README file for the project. Cargo will include this file in the package.
 readme = "README.md"
@@ -51,11 +49,16 @@ env_logger = "0.11"
 # tempfile is used to create temporary files and directories, which can be useful for storing intermediate data.
 tempfile = "3.12"
 
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9" # Check the Rust version used to compile the package.
+
+# The library file that contains the main logic for the binary.
+[lib]
+name = "ssg_cli"
+path = "src/lib.rs"
+
+# The main file that contains the entry point for the binary.
 [[bin]]
-# Specifies a binary target for the project. This defines the executable produced by Cargo.
-
-# The name of the binary. Running `cargo run --bin ssg` will execute the binary.
-name = "ssg"
-
-# The path to the main source file for the binary. This tells Cargo where to find the entry point of the program.
+name = "ssg_cli"
 path = "src/main.rs"

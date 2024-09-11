@@ -2,7 +2,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::info;
 use ssg_cli::cli::{build, print_banner};
 use ssg_cli::process::args;
@@ -53,10 +53,10 @@ fn main() -> Result<()> {
     info!("Starting SSG CLI");
 
     // Build the CLI and parse the command-line arguments.
-    let matches = build()?;
+    let matches = build().get_matches();
 
     // Process the parsed arguments.
-    args(&matches)?;
+    args(&matches).context("Failed to process arguments")?;
 
     // Log the successful completion of the SSG CLI process.
     info!("SSG CLI completed successfully");

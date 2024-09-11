@@ -175,7 +175,7 @@ pub fn run() -> Result<()> {
     writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
-    let matches = ssg_cli::cli::build()?;
+    let matches = ssg_cli::cli::build().get_matches();
     ssg_cli::process::args(&matches)?;
 
     // Generate a log entry for the arguments

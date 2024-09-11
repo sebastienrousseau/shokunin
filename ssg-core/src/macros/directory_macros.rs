@@ -11,7 +11,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use ssg::macro_check_directory;
+//! use ssg_core::macro_check_directory;
 //! use std::path::Path;
 //!
 //! let path = Path::new("logs");
@@ -37,7 +37,7 @@
 //!
 //! ```rust
 //! use std::path::Path;
-//! use ssg::macro_check_directory;
+//! use ssg_core::macro_check_directory;
 //!
 //! let path = Path::new("logs");
 //! macro_check_directory!(path, "logs");
@@ -56,16 +56,6 @@
 //!
 //! Creates multiple directories at once.
 //!
-//! ## Usage
-//!
-//! ```rust
-//! use ssg::{macro_create_directories, macro_cleanup_directories};
-//! use std::path::Path;
-//!
-//! macro_create_directories!("logs", "logs1", "logs2");
-//! macro_cleanup_directories!(Path::new("./logs"), Path::new("./logs1"), Path::new("./logs2"));
-//! ```
-//!
 //! ## Arguments
 //!
 //! * `...` - Variable number of directory paths, each specified as an expression (`expr`).
@@ -74,20 +64,6 @@
 //!
 //! The `macro_create_directories` macro creates multiple directories at once.
 //!
-//! ## Example
-//!
-//! ```rust
-//! use ssg::{macro_create_directories, macro_cleanup_directories};
-//! use std::path::Path;
-//!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let test = Path::new("logs");
-//!     let test2  = Path::new("logs1");
-//!     macro_create_directories!(test, test2)?;
-//!     macro_cleanup_directories!(test, test2);
-//!     Ok(())
-//! }
-//! ```
 //!
 //! # Note
 //!
@@ -102,7 +78,7 @@
 /// ## Usage
 ///
 /// ```rust
-/// use ssg::macro_check_directory;
+/// use ssg_core::macro_check_directory;
 /// use std::path::Path;
 ///
 /// let path = Path::new("logs");
@@ -163,7 +139,7 @@ macro_rules! macro_check_directory {
 ///
 /// ```rust
 /// use std::path::Path;
-/// use ssg::macro_check_directory;
+/// use ssg_core::macro_check_directory;
 ///
 /// let path = Path::new("logs");
 /// macro_check_directory!(path, "logs");
@@ -200,15 +176,6 @@ macro_rules! macro_cleanup_directories {
 ///
 /// Create multiple directories at once.
 ///
-/// ## Usage
-///
-/// ```rust
-/// use ssg::{macro_create_directories, macro_cleanup_directories};
-/// use std::path::Path;
-/// macro_create_directories!("logs", "logs1", "logs2");
-/// macro_cleanup_directories!(Path::new("./logs"), Path::new("./logs1"), Path::new("./logs2"));
-/// ```
-///
 /// ## Arguments
 ///
 /// * `...` - Variable number of directory paths, each specified as an expression (`expr`).
@@ -220,21 +187,6 @@ macro_rules! macro_cleanup_directories {
 /// The directories are specified as expressions and separated by commas. For example, `macro_create_directories!("logs", "logs1", "logs2")` will attempt to create the `logs`, `logs1`, and `logs2`.
 ///
 /// The macro internally creates a slice of the directory paths and passes it to the `create_directory` function. If any error occurs during the directory creation, the macro returns an `Err` value, indicating the first encountered error. Otherwise, it returns `Ok(())`.
-///
-/// ## Example
-///
-/// ```rust
-/// use ssg::{macro_create_directories, macro_cleanup_directories};
-/// use std::path::Path;
-///
-/// fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let test = Path::new("logs");
-///     let test2  = Path::new("logs1");
-///     macro_create_directories!(test, test2)?;
-///     macro_cleanup_directories!(test, test2);
-///     Ok(())
-/// }
-/// ```
 ///
 /// # See Also
 ///

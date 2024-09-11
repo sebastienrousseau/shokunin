@@ -28,7 +28,7 @@ use std::{
 /// # Example
 ///
 /// ```
-/// use ssg::utilities::directory::directory;
+/// use ssg_core::utilities::directory::directory;
 /// use std::path::Path;
 /// use std::fs;
 ///

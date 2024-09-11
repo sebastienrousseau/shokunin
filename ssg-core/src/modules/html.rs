@@ -62,7 +62,7 @@ impl From<regex::Error> for HtmlGenerationError {
 /// # Examples
 ///
 /// ```rust
-/// use ssg::modules::html::generate_html;
+/// use ssg_core::modules::html::generate_html;
 ///
 /// let content = "## Hello, world!\n\nThis is a test.";
 /// let title = "My Page";
@@ -149,7 +149,7 @@ pub fn generate_html(
 ///
 /// ```rust
 /// use regex::Regex;
-/// use ssg::modules::html::preprocess_content;
+/// use ssg_core::modules::html::preprocess_content;
 ///
 /// let content = "<div class=\"some-class\">...</div>";
 /// let class_regex = Regex::new(r#".class="([^"]+)""#).unwrap();
@@ -212,7 +212,7 @@ fn process_headers(
 ///
 /// ```rust
 /// use regex::Regex;
-/// use ssg::modules::html::generate_page_header;
+/// use ssg_core::modules::html::generate_page_header;
 /// let id_regex = Regex::new(r"[^a-zA-Z0-9]+").unwrap();
 /// let header_html = generate_page_header("My Page Title", &id_regex);
 /// assert_eq!(header_html, "<h1 id=\"h1-my\" tabindex=\"0\" aria-label=\"My Heading\" itemprop=\"headline\" class=\"my\">My Page Title</h1>");

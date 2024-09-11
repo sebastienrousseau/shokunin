@@ -2859,6 +2859,7 @@ dependencies = [
  "log",
  "ssg-core",
  "tempfile",
+ "version_check",
 ]
 
 [[package]]
@@ -2883,6 +2884,7 @@ dependencies = [
  "tempfile",
  "toml",
  "uuid",
+ "version_check",
  "vrd 0.0.8",
  "yaml-rust2",
 ]

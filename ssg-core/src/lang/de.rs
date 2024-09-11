@@ -21,7 +21,7 @@
 /// # Examples
 ///
 /// ```
-/// use ssg::languages::translate;
+/// use ssg_core::languages::translate;
 ///
 /// let text = "Hello";
 /// let translated = translate("de", "Hello");

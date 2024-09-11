@@ -5,7 +5,7 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use log::{debug, info};
-use ssg_core::compiler::service::compile;
+use ssg_core::compile;
 use std::path::Path;
 
 /// # Function: `args`
@@ -38,19 +38,16 @@ use std::path::Path;
 pub fn args(matches: &ArgMatches) -> Result<()> {
     debug!("Processing command-line arguments");
 
-    // Parse the required directory arguments from the CLI
     let content_dir = get_arg(matches, "content")?;
     let output_dir = get_arg(matches, "output")?;
     let site_dir = get_arg(matches, "new")?;
     let template_dir = get_arg(matches, "template")?;
 
-    // Convert the directory strings into Path objects
     let content_path = Path::new(&content_dir);
     let build_path = Path::new(&output_dir);
     let site_path = Path::new(&site_dir);
     let template_path = Path::new(&template_dir);
 
-    // Ensure that the required directories exist or are created
     check_directory(content_path, "content")?;
     check_directory(build_path, "output")?;
     check_directory(site_path, "new")?;
@@ -58,7 +55,6 @@ pub fn args(matches: &ArgMatches) -> Result<()> {
 
     info!("Compiling project");
 
-    // Compile the project using the specified directories
     compile(build_path, content_path, site_path, template_path)
         .map_err(|e| anyhow!("Failed to compile project: {}", e))?;
 

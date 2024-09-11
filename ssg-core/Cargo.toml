@@ -27,3 +27,8 @@ toml = "0.8"
 yaml-rust2 = "0.8.1"
 uuid = { version = "1.10", features = ["v4"] }
 vrd = "0.0.8"
+
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9" # Check the Rust version used to compile the package.
+

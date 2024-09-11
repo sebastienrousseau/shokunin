@@ -16,8 +16,8 @@
 //! # Examples
 //!
 //! ```
-//! use ssg::{macro_execute_and_log, macro_log_start, macro_log_complete, macro_log_error};
-//! use ssg::macros::shell_macros::CommandError;
+//! use ssg_core::{macro_execute_and_log, macro_log_start, macro_log_complete, macro_log_error};
+//! use ssg_core::macros::shell_macros::CommandError;
 //! use std::error::Error;
 //!
 //! fn main() -> Result<(), Box<dyn Error>> {
@@ -160,8 +160,8 @@ impl CommandExecutor {
 /// # Example
 ///
 /// ```
-/// use ssg::{macro_execute_and_log, macro_log_start, macro_log_complete, macro_log_error};
-/// use ssg::macros::shell_macros::CommandError;
+/// use ssg_core::{macro_execute_and_log, macro_log_start, macro_log_complete, macro_log_error};
+/// use ssg_core::macros::shell_macros::CommandError;
 /// use std::error::Error;
 ///
 /// fn main() -> Result<(), Box<dyn Error>> {
