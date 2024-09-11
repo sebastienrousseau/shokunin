@@ -340,8 +340,7 @@ pub fn extract_front_matter(content: &str) -> &str {
 ///
 /// # Returns
 ///
-/// * `comrak::ComrakOptions` - A customized ComrakOptions object with specific
-/// features enabled.
+/// * `comrak::ComrakOptions` - A customized ComrakOptions object with specific features enabled.
 ///
 /// # Features
 ///

@@ -187,8 +187,7 @@ pub fn extract_json_object_str(content: &str) -> Option<&str> {
 ///
 /// ### Arguments
 ///
-/// * `json_object` - The JSON object to parse into a `HashMap` of key-
-/// value pairs.
+/// * `json_object` - The JSON object to parse into a `HashMap` of key-value pairs.
 ///
 /// ### Returns
 ///
