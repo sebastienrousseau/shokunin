@@ -12,8 +12,7 @@ use yaml_rust2::YamlLoader;
 ///
 /// ### Arguments
 ///
-/// * `content` - The string of content to extract front matter from
-/// (e.g. a Markdown file)
+/// * `content` - The string of content to extract front matter from (e.g. a Markdown file)
 ///
 /// ### Returns
 ///
@@ -72,8 +71,7 @@ pub fn extract(content: &str) -> HashMap<String, String> {
 ///
 /// ### Arguments
 ///
-/// * `content` - The string of content to extract front matter from
-/// (e.g. a Markdown file)
+/// * `content` - The string of content to extract front matter from (e.g. a Markdown file)
 /// * `start_delim` - The start delimiter of the front matter
 /// * `end_delim` - The end delimiter of the front matter
 ///
@@ -99,8 +97,7 @@ pub fn extract_front_matter_str<'a>(
 ///
 /// ### Arguments
 ///
-/// * `front_matter_str` - The string of front matter to parse into a
-/// `Yaml` object
+/// * `front_matter_str` - The string of front matter to parse into a `Yaml` object
 ///
 /// ### Returns
 ///
