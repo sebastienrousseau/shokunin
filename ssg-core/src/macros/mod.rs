@@ -7,9 +7,6 @@ pub mod custom_macros;
 /// The `directory_macros` module contains macros related to directory operations.
 pub mod directory_macros;
 
-/// The `html_macros` module contains macros related to HTML generation.
-pub mod html_macros;
-
 /// The `log_macros` module contains macros related to log messages.
 pub mod log_macros;
 

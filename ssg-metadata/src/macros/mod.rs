@@ -28,8 +28,8 @@
 //! # Example
 //!
 //! ```
-//! use ssg_core::macro_generate_metatags;
-//! use ssg_core::utilities::escape::escape_html_entities;
+//! use ssg_metadata::macro_generate_metatags;
+//! use ssg_metadata::escape::escape_html_entities;
 //!
 //! let metatags = macro_generate_metatags!("description", "This is a description", "keywords", "rust,macros,metatags");
 //! ```
@@ -39,8 +39,8 @@
 /// ## Usage
 ///
 /// ```rust
-/// use ssg_core::macro_generate_metatags;
-/// use ssg_core::utilities::escape::escape_html_entities;
+/// use ssg_metadata::macro_generate_metatags;
+/// use ssg_metadata::escape::escape_html_entities;
 ///
 /// let metatags = macro_generate_metatags!("description", "This is a description", "keywords", "rust,macros,metatags");
 /// ```
@@ -60,13 +60,13 @@
 // #[macro_export]
 // macro_rules! macro_generate_metatags {
 //     ($($key:literal, $value:expr),* $(,)?) => {
-//         $crate::modules::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
+//         $crate::metatags::generate_metatags(&[ $(($key.to_owned(), $value.to_string())),* ])
 //     };
 // }
 #[macro_export]
 macro_rules! macro_generate_metatags {
     ($($key:literal, $value:expr),* $(,)?) => {
-        $crate::modules::metatags::generate_metatags(&[ $(($key.to_owned(), escape_html_entities($value))),* ])
+        $crate::metatags::generate_metatags(&[ $(($key.to_owned(), escape_html_entities($value))),* ])
     };
 }
 
@@ -75,7 +75,7 @@ macro_rules! macro_generate_metatags {
 /// ## Usage
 ///
 /// ```rust
-/// use ssg_core::macro_write_element;
+/// use ssg_metadata::macro_write_element;
 /// use std::io::Write;
 /// use quick_xml::Writer;
 ///
@@ -126,8 +126,8 @@ macro_rules! macro_write_element {
 /// ## Usage
 ///
 /// ```
-/// use ssg_core::macro_generate_tags_from_list;
-/// use ssg_core::modules::metatags::load_metatags;
+/// use ssg_metadata::macro_generate_tags_from_list;
+/// use ssg_metadata::metatags::load_metatags;
 /// use std::collections::HashMap;
 ///
 /// // Create a new metadata hashmap
@@ -166,8 +166,8 @@ macro_rules! macro_generate_tags_from_list {
 /// ## Usage
 ///
 /// ```
-/// use ssg_core::macro_generate_tags_from_fields;
-/// use ssg_core::modules::metatags::generate_custom_meta_tags;
+/// use ssg_metadata::macro_generate_tags_from_fields;
+/// use ssg_metadata::metatags::generate_custom_meta_tags;
 /// use std::collections::HashMap;
 ///
 /// // Create a new metadata hashmap

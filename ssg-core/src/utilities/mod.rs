@@ -7,9 +7,6 @@ pub mod backup;
 /// The `directory` module contains functions for creating directories.
 pub mod directory;
 
-/// The `escape` module contains functions for escaping special characters.
-pub mod escape;
-
 /// The `element` module contains functions for writing XML files.
 pub mod element;
 

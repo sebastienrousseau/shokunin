@@ -1,13 +1,13 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::macro_write_element;
 use crate::models::data::RssData;
 use quick_xml::{
     escape::escape,
     events::{BytesDecl, BytesEnd, BytesStart, Event},
     Writer,
 };
+use ssg_metadata::macro_write_element;
 use std::error::Error;
 
 /// Generates an RSS feed from the given `RssData` struct.

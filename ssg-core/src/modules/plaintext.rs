@@ -3,7 +3,7 @@
 
 use crate::modules::preprocessor::preprocess_content;
 use crate::utilities::directory::extract_front_matter;
-use anyhow::{Error, Result}; // Ensure anyhow::Error and Result are imported
+use anyhow::{Error, Result};
 use pulldown_cmark::TagEnd;
 use pulldown_cmark::{Event, Parser, Tag};
 use regex::Regex;
@@ -12,6 +12,61 @@ use regex::Regex;
 type PlainTextResult =
     Result<(String, String, String, String, String, String), Error>;
 
+/// Generates plain text content from Markdown input and associated metadata.
+///
+/// This function takes Markdown content and associated metadata (title, description, etc.),
+/// processes the Markdown to remove formatting, and returns plain text versions of the
+/// content and metadata.
+///
+/// # Arguments
+///
+/// * `content` - A string slice containing the Markdown content to be processed.
+/// * `title` - A string slice containing the title of the content.
+/// * `description` - A string slice containing a description of the content.
+/// * `author` - A string slice containing the author's name.
+/// * `creator` - A string slice containing the creator's name (if different from author).
+/// * `keywords` - A string slice containing keywords associated with the content.
+///
+/// # Returns
+///
+/// Returns a `Result` containing a tuple of six `String`s:
+/// 1. The plain text content derived from the Markdown input.
+/// 2. The plain text title.
+/// 3. The plain text description.
+/// 4. The plain text author name.
+/// 5. The plain text creator name.
+/// 6. The plain text keywords.
+///
+/// If an error occurs during processing, an `Error` is returned.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Regular expression compilation fails.
+/// - Content preprocessing fails.
+///
+/// # Example
+///
+/// ```
+/// use ssg_core::modules::plaintext::generate_plain_text;
+///
+/// let markdown = "# Hello, world!\n\nThis is **bold** text.";
+/// let result = generate_plain_text(
+///     markdown,
+///     "My Page",
+///     "A simple page",
+///     "John Doe",
+///     "Jane Doe",
+///     "example, markdown"
+/// );
+///
+/// assert!(result.is_ok());
+/// if let Ok((content, title, description, author, creator, keywords)) = result {
+///     assert_eq!(content, "Hello, world! This is bold text.");
+///     assert_eq!(title, "My Page");
+///     // ... other assertions ...
+/// }
+/// ```
 pub fn generate_plain_text(
     content: &str,
     title: &str,
@@ -47,53 +102,49 @@ pub fn generate_plain_text(
         match event {
             Event::Text(text) => {
                 if need_extra_line_break && !text.trim().is_empty() {
-                    plain_text.push('\n');
+                    plain_text.push(' ');
                     need_extra_line_break = false;
                 }
                 if last_was_text && !text.trim().is_empty() {
-                    plain_text.push('\n');
+                    plain_text.push(' ');
                 }
-                plain_text.push_str(text.trim_end());
+                plain_text.push_str(text.trim());
                 last_was_text = true;
             }
             Event::Start(tag) => {
                 if tag == Tag::Paragraph && last_was_text {
                     need_extra_line_break = true;
-                    plain_text.push('\n');
-                }
-                if tag == Tag::Emphasis {
-                    plain_text.push(' ');
-                }
-                if tag == Tag::Strong {
-                    plain_text.push_str("");
                 }
                 match tag {
-                    Tag::Heading { .. } => {
-                        plain_text.push(' ');
+                    Tag::Heading { .. } | Tag::Paragraph => {
+                        if !plain_text.is_empty()
+                            && !plain_text.ends_with(' ')
+                        {
+                            plain_text.push(' ');
+                        }
                     }
-                    Tag::Link { .. } => {
-                        plain_text.push(' ');
+                    Tag::Emphasis | Tag::Strong | Tag::Link { .. } => {
+                        if !plain_text.ends_with(' ') {
+                            plain_text.push(' ');
+                        }
                     }
                     _ => {}
                 }
                 last_was_text = false;
             }
             Event::End(tag) => {
-                if tag == Tag::Paragraph.into() {
-                    plain_text.push('\n');
-                }
-                if tag == Tag::Emphasis.into() {
-                    plain_text.push(' ');
-                }
-                if tag == Tag::Strong.into() {
-                    plain_text.push_str("");
-                }
                 match tag {
-                    TagEnd::Heading { .. } => {
-                        plain_text.push('\n');
+                    TagEnd::Heading { .. } | TagEnd::Paragraph => {
+                        if !plain_text.ends_with(' ') {
+                            plain_text.push(' ');
+                        }
                     }
-                    TagEnd::Link { .. } => {
-                        plain_text.push(' ');
+                    TagEnd::Emphasis
+                    | TagEnd::Strong
+                    | TagEnd::Link => {
+                        if !plain_text.ends_with(' ') {
+                            plain_text.push(' ');
+                        }
                     }
                     _ => {}
                 }

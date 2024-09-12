@@ -1,19 +1,12 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// use pdf_composer::{
-//     FontsStandard, PDFComposer, PDFDocInfoEntry, PDFVersion,
-//     PaperOrientation, PaperSize,
-// };
-
 use anyhow::{Context, Result};
 use rlg::log_level::LogLevel::ERROR;
 
-// use crate::modules::pdf::generate_pdf;
 use crate::{
     macro_cleanup_directories, macro_create_directories,
     macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
-    metadata::service::extract_and_prepare_metadata,
     models::data::{FileData, PageData, RssData},
     modules::{
         cname::create_cname_data,
@@ -21,11 +14,8 @@ use crate::{
         human::create_human_data,
         json::{cname, human, news_sitemap, sitemap, txt},
         manifest::create_manifest_data,
-
         navigation::NavigationGenerator,
         news_sitemap::create_news_site_map_data,
-        // pdf::PdfGenerationParams,
-        // plaintext::generate_plain_text,
         rss::generate_rss,
         sitemap::create_site_map_data,
         tags::*,
@@ -37,6 +27,7 @@ use crate::{
         write::write_files_to_build_directory,
     },
 };
+use ssg_metadata::extract_and_prepare_metadata;
 use std::{collections::HashMap, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -84,7 +75,9 @@ pub fn compile(
         .into_iter()
         .map(|file| -> Result<FileData> {
             let (metadata, keywords, all_meta_tags) =
-                extract_and_prepare_metadata(&file.content);
+                extract_and_prepare_metadata(&file.content).context(
+                    "Failed to extract and prepare metadata",
+                )?;
 
             // Generate HTML
             let html_content = generate_html(
