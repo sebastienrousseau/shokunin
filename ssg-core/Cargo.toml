@@ -29,6 +29,7 @@ uuid = { version = "1.10", features = ["v4"] }
 vrd = "0.0.8"
 
 ssg-metadata = { path = "../ssg-metadata", version = "0.0.1" }
+ssg-html = { path = "../ssg-html", version = "0.0.1" }
 
 [build-dependencies]
 # Dependencies for build scripts.

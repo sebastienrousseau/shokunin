@@ -3,6 +3,7 @@
 
 use anyhow::{Context, Result};
 use rlg::log_level::LogLevel::ERROR;
+use ssg_html::{generate_html, HtmlConfig};
 
 use crate::{
     macro_cleanup_directories, macro_create_directories,
@@ -10,7 +11,6 @@ use crate::{
     models::data::{FileData, PageData, RssData},
     modules::{
         cname::create_cname_data,
-        html::generate_html,
         human::create_human_data,
         json::{cname, human, news_sitemap, sitemap, txt},
         manifest::create_manifest_data,
@@ -79,14 +79,17 @@ pub fn compile(
                     "Failed to extract and prepare metadata",
                 )?;
 
+            // Create HtmlConfig instance
+            let config = HtmlConfig {
+                enable_syntax_highlighting: true, // You can make this configurable if needed
+                minify_output: false, // Set to true if you want minified output
+                add_aria_attributes: true,
+                generate_structured_data: true,
+            };
+
             // Generate HTML
-            let html_content = generate_html(
-                &file.content,
-                &macro_metadata_option!(metadata, "title"),
-                &macro_metadata_option!(metadata, "description"),
-                Some(&macro_metadata_option!(metadata, "content")),
-            )
-            .context("Failed to generate HTML")?;
+            let html_content = generate_html(&file.content, &config)
+                .context("Failed to generate HTML")?;
 
             // Determine the filename without the extension
             // let filename_without_extension = Path::new(&file.name)
