@@ -138,3 +138,36 @@ pub fn print_banner() {
     println!("│{: ^1$}│", description, width - 2);
     println!("└{}┘\n", horizontal_line);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::ArgMatches;
+
+    /// Helper function to simulate argument input
+    fn get_matches(args: Vec<&str>) -> ArgMatches {
+        build().get_matches_from(args)
+    }
+
+    /// Test: Ensure the --new flag works correctly with a required value.
+    #[test]
+    fn test_new_flag() {
+        let matches = get_matches(vec!["app", "--new", "my_project"]);
+        assert!(matches.contains_id("new"));
+        assert_eq!(
+            matches.get_one::<String>("new").unwrap(),
+            "my_project"
+        );
+    }
+
+    /// Test: Missing arguments should not panic.
+    #[test]
+    fn test_missing_args() {
+        let matches = get_matches(vec!["app"]);
+        assert!(!matches.contains_id("new"));
+        assert!(!matches.contains_id("content"));
+        assert!(!matches.contains_id("output"));
+        assert!(!matches.contains_id("template"));
+        assert!(!matches.contains_id("serve"));
+    }
+}

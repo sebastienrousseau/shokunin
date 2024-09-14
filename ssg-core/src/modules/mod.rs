@@ -10,9 +10,6 @@ pub mod frontmatter;
 /// The `human` module contains functions for generating human-readable
 pub mod human;
 
-/// The `html` module contains functions for generating HTML.
-pub mod html;
-
 /// The `json` module generates the JSON content.
 pub mod json;
 

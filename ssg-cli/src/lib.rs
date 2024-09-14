@@ -109,3 +109,29 @@ pub fn run() -> anyhow::Result<()> {
     args(&matches)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod integration_tests {
+    use std::process::Command;
+
+    /// Test: Ensure the CLI displays the banner correctly at startup.
+    #[test]
+    fn test_banner_display() {
+        let output = Command::new("cargo")
+            .arg("run")
+            .output()
+            .expect("Failed to execute command");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        println!("{}", stdout); // For debugging purposes
+
+        // Adjust the expected content to match the actual banner output
+        assert!(
+            stdout.contains("Shokunin (ssg) 🦀 v0.0.30"),
+            "Banner did not print expected text"
+        );
+        assert!(stdout.contains(
+            "A Fast and Flexible Static Site Generator written in Rust"
+        ));
+    }
+}
