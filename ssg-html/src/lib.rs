@@ -1,38 +1,62 @@
+// src/lib.rs
+
 //! # ssg-html
 //!
-//! `ssg-html` is a specialized HTML generation library designed for static site generators.
-//! It provides optimized Markdown to HTML conversion, SEO tools, accessibility enhancements,
-//! and performance optimizations.
+//! `ssg-html` is a library for processing and generating HTML content,
+//! particularly useful for static site generators. It provides utilities
+//! for handling Markdown front matter, formatting HTML headers with IDs
+//! and classes, and other HTML-related tasks.
 //!
 //! ## Features
 //!
-//! - Markdown to HTML conversion with custom extensions
-//! - Advanced header processing with automatic ID and class generation
-//! - SEO optimization including meta tag and structured data generation
-//! - Accessibility enhancements with ARIA attribute injection and WCAG validation
-//! - Performance optimizations including HTML minification and async generation
+//! - Extract front matter from Markdown content
+//! - Format HTML headers with automatically generated IDs and classes
+//! - Error handling using custom error types
 //!
 //! ## Usage
 //!
+//! Add this to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! ssg-html = "0.1.0"
+//! ```
+//!
+//! Then, you can use the library in your Rust code:
+//!
 //! ```rust
-//! use ssg_html::{generate_html, HtmlConfig};
+//! use ssg_html::utils::{extract_front_matter, format_header_with_id_class};
 //!
-//! let markdown = "# Hello, world!\n\nThis is a test.";
-//! let config = HtmlConfig::default();
+//! fn main() -> ssg_html::error::Result<()> {
+//!     let content = "---\ntitle: My Page\n---\n# Hello, world!\n\nThis is a test.";
+//!     let content_without_front_matter = extract_front_matter(content)?;
+//!     println!("Content: {}", content_without_front_matter);
 //!
-//! match generate_html(markdown, &config) {
-//!     Ok(html) => println!("{}", html),
-//!     Err(e) => eprintln!("Error: {}", e),
+//!     let header = "<h2>Hello, World!</h2>";
+//!     let formatted_header = format_header_with_id_class(header)?;
+//!     println!("Formatted header: {}", formatted_header);
+//!
+//!     Ok(())
 //! }
 //! ```
 
-//! HTML generation functionality optimized for static site generators
+/// The `accessibility` module contains functions for improving accessibility.
+pub mod accessibility;
 
-mod accessibility;
-mod generator;
-mod performance;
-mod seo;
-mod utils;
+/// The `error` module contains error types for HTML generation.
+pub mod error;
+
+/// The `generator` module contains functions for generating HTML content.
+pub mod generator;
+
+/// The `performance` module contains functions for optimizing performance.
+pub mod performance;
+
+/// The `seo` module contains functions for optimizing SEO.
+pub mod seo;
+
+/// The `utils` module contains utility functions.
+pub mod utils;
 
 pub use accessibility::{add_aria_attributes, validate_wcag};
 pub use generator::generate_html;
