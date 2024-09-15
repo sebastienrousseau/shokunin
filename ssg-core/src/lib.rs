@@ -42,9 +42,6 @@ pub mod models;
 /// Various modules for specific functionalities (e.g., HTML generation, RSS feeds)
 pub mod modules;
 
-/// Built-in server for local testing and development
-pub mod server;
-
 /// Utility functions and helpers
 pub mod utilities;
 
@@ -52,5 +49,5 @@ pub mod utilities;
 pub use compiler::service::compile;
 pub use languages::translate;
 pub use loggers::init_logger;
-pub use server::serve::start;
+pub use ssg_server::Server;
 pub use utilities::uuid::generate_unique_string;

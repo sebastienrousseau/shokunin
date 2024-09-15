@@ -123,9 +123,9 @@ use ssg_cli::cli::print_banner;
 use ssg_core::macro_serve;
 use ssg_core::{
     compiler::service::compile, languages::translate,
-    loggers::init_logger, server::serve::start,
-    utilities::uuid::generate_unique_string,
+    loggers::init_logger, utilities::uuid::generate_unique_string,
 };
+use ssg_server::Server;
 use std::{fs::File, io::Write, path::Path};
 
 #[allow(non_camel_case_types)]

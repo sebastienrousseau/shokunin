@@ -57,10 +57,16 @@ pub enum FrontmatterError {
 /// let frontmatter = extract(yaml_content).unwrap();
 /// assert_eq!(frontmatter.get("title"), Some(&"My Post".to_string()));
 /// ```
-pub fn extract(content: &str) -> Result<HashMap<String, String>, FrontmatterError> {
-    if let Some(yaml) = extract_delimited_frontmatter(content, "---\n", "\n---\n") {
+pub fn extract(
+    content: &str,
+) -> Result<HashMap<String, String>, FrontmatterError> {
+    if let Some(yaml) =
+        extract_delimited_frontmatter(content, "---\n", "\n---\n")
+    {
         parse_yaml_frontmatter(yaml)
-    } else if let Some(toml) = extract_delimited_frontmatter(content, "+++\n", "\n+++\n") {
+    } else if let Some(toml) =
+        extract_delimited_frontmatter(content, "+++\n", "\n+++\n")
+    {
         parse_toml_frontmatter(toml)
     } else if let Some(json) = extract_json_frontmatter(content) {
         parse_json_frontmatter(json)
@@ -70,7 +76,11 @@ pub fn extract(content: &str) -> Result<HashMap<String, String>, FrontmatterErro
 }
 
 /// Extracts frontmatter enclosed by delimiters.
-fn extract_delimited_frontmatter<'a>(content: &'a str, start_delim: &str, end_delim: &str) -> Option<&'a str> {
+fn extract_delimited_frontmatter<'a>(
+    content: &'a str,
+    start_delim: &str,
+    end_delim: &str,
+) -> Option<&'a str> {
     content.strip_prefix(start_delim)?.split(end_delim).next()
 }
 
@@ -98,19 +108,29 @@ fn extract_json_frontmatter(content: &str) -> Option<&str> {
 }
 
 /// Parses YAML frontmatter.
-fn parse_yaml_frontmatter(yaml: &str) -> Result<HashMap<String, String>, FrontmatterError> {
+fn parse_yaml_frontmatter(
+    yaml: &str,
+) -> Result<HashMap<String, String>, FrontmatterError> {
     let yaml_value: YamlValue = serde_yml::from_str(yaml)?;
     Ok(parse_yaml_value(&yaml_value))
 }
 
 /// Parses TOML frontmatter.
-fn parse_toml_frontmatter(toml: &str) -> Result<HashMap<String, String>, FrontmatterError> {
+fn parse_toml_frontmatter(
+    toml: &str,
+) -> Result<HashMap<String, String>, FrontmatterError> {
     let toml_value: TomlValue = toml.parse()?;
-    Ok(parse_toml_table(toml_value.as_table().ok_or(FrontmatterError::InvalidFormat)?))
+    Ok(parse_toml_table(
+        toml_value
+            .as_table()
+            .ok_or(FrontmatterError::InvalidFormat)?,
+    ))
 }
 
 /// Parses JSON frontmatter.
-fn parse_json_frontmatter(json: &str) -> Result<HashMap<String, String>, FrontmatterError> {
+fn parse_json_frontmatter(
+    json: &str,
+) -> Result<HashMap<String, String>, FrontmatterError> {
     let json_value: JsonValue = serde_json::from_str(json)?;
     parse_json_value(&json_value)
 }
@@ -120,7 +140,9 @@ fn parse_yaml_value(yaml_value: &YamlValue) -> HashMap<String, String> {
     let mut result = HashMap::new();
     if let YamlValue::Mapping(mapping) = yaml_value {
         for (key, value) in mapping {
-            if let (YamlValue::String(k), YamlValue::String(v)) = (key, value) {
+            if let (YamlValue::String(k), YamlValue::String(v)) =
+                (key, value)
+            {
                 result.insert(k.clone(), v.clone());
             }
         }
@@ -129,7 +151,9 @@ fn parse_yaml_value(yaml_value: &YamlValue) -> HashMap<String, String> {
 }
 
 /// Converts a TOML table to a HashMap.
-fn parse_toml_table(toml_table: &toml::Table) -> HashMap<String, String> {
+fn parse_toml_table(
+    toml_table: &toml::Table,
+) -> HashMap<String, String> {
     toml_table
         .iter()
         .filter_map(|(k, v)| {
@@ -139,7 +163,9 @@ fn parse_toml_table(toml_table: &toml::Table) -> HashMap<String, String> {
 }
 
 /// Converts a JSON value to a HashMap.
-fn parse_json_value(json_value: &JsonValue) -> Result<HashMap<String, String>, FrontmatterError> {
+fn parse_json_value(
+    json_value: &JsonValue,
+) -> Result<HashMap<String, String>, FrontmatterError> {
     match json_value {
         JsonValue::Object(obj) => Ok(parse_json_object(obj)),
         _ => Err(FrontmatterError::InvalidFormat),
@@ -147,16 +173,21 @@ fn parse_json_value(json_value: &JsonValue) -> Result<HashMap<String, String>, F
 }
 
 /// Converts a JSON object to a HashMap.
-fn parse_json_object(json_object: &Map<String, JsonValue>) -> HashMap<String, String> {
+fn parse_json_object(
+    json_object: &Map<String, JsonValue>,
+) -> HashMap<String, String> {
     json_object
         .iter()
         .filter_map(|(k, v)| {
-            Some((k.to_string(), match v {
-                JsonValue::String(s) => s.to_string(),
-                JsonValue::Number(n) => n.to_string(),
-                JsonValue::Bool(b) => b.to_string(),
-                _ => return None,
-            }))
+            Some((
+                k.to_string(),
+                match v {
+                    JsonValue::String(s) => s.to_string(),
+                    JsonValue::Number(n) => n.to_string(),
+                    JsonValue::Bool(b) => b.to_string(),
+                    _ => return None,
+                },
+            ))
         })
         .collect()
 }
@@ -204,7 +235,10 @@ date = "2023-05-20"
         let result = extract(content).unwrap();
         assert_eq!(result.get("title"), Some(&"Test Post".to_string()));
         assert_eq!(result.get("date"), Some(&"2023-05-20".to_string()));
-        assert_eq!(result.get("content"), Some(&"Actual content here".to_string()));
+        assert_eq!(
+            result.get("content"),
+            Some(&"Actual content here".to_string())
+        );
     }
 
     #[test]

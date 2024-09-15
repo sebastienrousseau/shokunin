@@ -285,6 +285,7 @@ macro_rules! macro_render_layout {
 #[macro_export]
 macro_rules! macro_serve {
     ($server_address:expr, $document_root:expr) => {
-        start($server_address, $document_root).unwrap();
+        let server = Server::new($server_address, $document_root);
+        server.start().unwrap();
     };
 }
