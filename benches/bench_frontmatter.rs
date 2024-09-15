@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg_core::modules::frontmatter::{extract, parse_yaml_document};
+use ssg_frontmatter::{extract, parse_yaml_document};
 
 /// Benchmarks the extraction of frontmatter from a content string.
 ///
@@ -19,7 +19,7 @@ use ssg_core::modules::frontmatter::{extract, parse_yaml_document};
 ///
 /// ```rust
 /// use criterion::{criterion_group, criterion_main, Criterion};
-/// use shokunin_static_site_generator::ssg::modules::frontmatter::bench_extract;
+/// use ssg_frontmatter::frontmatter::bench_extract;
 ///
 /// let mut group = criterion_group::CriterionGroup::new();
 /// group.bench_function("extract", |b| bench_extract(b));
@@ -52,7 +52,7 @@ pub(crate) fn bench_extract(c: &mut Criterion) {
     //
     // ```rust
     // use criterion::{criterion_group, criterion_main, Criterion};
-    // use shokunin_static_site_generator::ssg::modules::frontmatter::bench_extract;
+    // use ssg_frontmatter::bench_extract;
     //
     // let mut group = criterion_group::CriterionGroup::new();
     // group.bench_function("extract", |b| bench_extract(b));

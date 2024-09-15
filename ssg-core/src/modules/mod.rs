@@ -4,9 +4,6 @@
 /// The `cname` module generates the CNAME content.
 pub mod cname;
 
-/// The `frontmatter` module extracts the front matter from files.
-pub mod frontmatter;
-
 /// The `human` module contains functions for generating human-readable
 pub mod human;
 

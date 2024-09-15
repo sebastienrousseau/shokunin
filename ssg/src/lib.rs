@@ -126,8 +126,7 @@ use ssg_core::{
     loggers::init_logger, server::serve::start,
     utilities::uuid::generate_unique_string,
 };
-use std::io::Write;
-use std::{fs::File, path::Path};
+use std::{fs::File, io::Write, path::Path};
 
 #[allow(non_camel_case_types)]
 

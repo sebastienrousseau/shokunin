@@ -1,5 +1,5 @@
 [workspace]
-members = ["ssg", "ssg-cli", "ssg-core", "ssg-metadata"]
+members = ["ssg", "ssg-cli", "ssg-core", "ssg-frontmatter", "ssg-metadata"]
 resolver = "2"
 
 [workspace.package]

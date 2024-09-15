@@ -3057,6 +3057,7 @@ dependencies = [
  "serde_json",
  "ssg-cli",
  "ssg-core",
+ "ssg-frontmatter",
  "ssg-html",
  "tempfile",
  "toml",
@@ -3106,6 +3107,17 @@ dependencies = [
  "version_check",
  "vrd 0.0.8",
  "yaml-rust2",
+]
+
+[[package]]
+name = "ssg-frontmatter"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_yml",
+ "thiserror",
+ "toml",
 ]
 
 [[package]]
