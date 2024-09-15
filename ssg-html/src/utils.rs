@@ -4,19 +4,23 @@
 //! extracting front matter from Markdown content and formatting HTML headers.
 
 use crate::error::{HtmlError, Result};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use regex::Regex;
 
-lazy_static! {
-    static ref FRONT_MATTER_REGEX: Regex =
-        Regex::new(r"(?m)^\-{3}\s*\n.*?\n\-{3}\s*\n")
-            .expect("Failed to compile FRONT_MATTER_REGEX");
-    static ref HEADER_REGEX: Regex =
-        Regex::new(r"<(h[1-6])>(.+?)</h[1-6]>")
-            .expect("Failed to compile HEADER_REGEX");
-    static ref CONSECUTIVE_HYPHENS_REGEX: Regex = Regex::new(r"-{2,}")
-        .expect("Failed to compile CONSECUTIVE_HYPHENS_REGEX");
-}
+static FRONT_MATTER_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?ms)^---\s*\n(.*?)\n---\s*\n")
+        .expect("Failed to compile FRONT_MATTER_REGEX")
+});
+
+static HEADER_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"<(h[1-6])>(.+?)</h[1-6]>")
+        .expect("Failed to compile HEADER_REGEX")
+});
+
+static CONSECUTIVE_HYPHENS_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"-{2,}")
+        .expect("Failed to compile CONSECUTIVE_HYPHENS_REGEX")
+});
 
 /// Extracts front matter from Markdown content.
 ///
@@ -45,20 +49,26 @@ lazy_static! {
 /// assert_eq!(result, "# Hello, world!\n\nThis is a test.");
 /// ```
 pub fn extract_front_matter(content: &str) -> Result<String> {
-    if !content.starts_with("---") {
-        return Err(HtmlError::InvalidFrontMatterFormat(
-            "Front matter must start with '---'".to_string(),
-        ));
-    }
-
-    let captures =
-        FRONT_MATTER_REGEX.captures(content).ok_or_else(|| {
-            HtmlError::InvalidFrontMatterFormat(
+    // Check if content starts with front matter indicators
+    if content.starts_with("---") {
+        // Capture the front matter block using the regex
+        if let Some(captures) = FRONT_MATTER_REGEX.captures(content) {
+            // Remove the front matter and return the rest of the content
+            let remaining_content =
+                &content[captures.get(0).unwrap().end()..];
+            Ok(remaining_content.trim().to_string())
+        } else {
+            // Invalid front matter format
+            Err(HtmlError::InvalidFrontMatterFormat(
                 "Invalid front matter format".to_string(),
-            )
-        })?;
-
-    Ok(content[captures.get(0).unwrap().end()..].trim().to_string())
+            ))
+        }
+    } else {
+        // If there's no front matter at all, return an error
+        Err(HtmlError::InvalidFrontMatterFormat(
+            "No front matter found".to_string(),
+        ))
+    }
 }
 
 /// Formats a header with an ID and class.

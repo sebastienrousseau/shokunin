@@ -88,6 +88,7 @@ pub fn compile(
             };
 
             // Generate HTML
+            // print!("Generating HTML from Markdown: {}", file.content);
             let html_content = generate_html(&file.content, &config)
                 .context("Failed to generate HTML")?;
 
@@ -339,7 +340,7 @@ pub fn compile(
 
     // Write compiled files to output directory
     let cli_description = format!(
-        "<Notice>: Successfully generated, compiled, and minified all HTML and PDF files to the `{:?}` directory",
+        "<Notice>: Successfully generated, compiled, and minified all HTML to the `{:?}` directory",
         site_path.display()
     );
 

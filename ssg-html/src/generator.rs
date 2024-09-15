@@ -1,3 +1,4 @@
+use crate::extract_front_matter;
 use crate::Result;
 use comrak::{markdown_to_html, ComrakOptions};
 
@@ -57,6 +58,10 @@ pub fn generate_html(
 pub fn markdown_to_html_with_extensions(
     markdown: &str,
 ) -> Result<String> {
+    // Extract front matter from the Markdown content
+    let content_without_front_matter =
+        extract_front_matter(markdown).unwrap_or(markdown.to_string());
+
     let mut options = ComrakOptions::default();
     options.extension.strikethrough = true;
     options.extension.table = true;
@@ -69,13 +74,14 @@ pub fn markdown_to_html_with_extensions(
     options.render.unsafe_ = true; // Allow unsafe HTML rendering for better debugging
 
     // Debug print to ensure options are correctly set
-    println!("{:?}", options);
+    // println!("{:?}", options);
 
     // Render the Markdown to HTML
-    let html_output = markdown_to_html(markdown, &options);
+    let html_output =
+        markdown_to_html(&content_without_front_matter, &options);
 
     // Print the generated HTML to debug the issue
-    println!("{}", html_output);
+    // println!("{}", html_output);
 
     Ok(html_output)
 }
