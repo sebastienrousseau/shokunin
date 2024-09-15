@@ -36,6 +36,7 @@ ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
 ssg-core = { path = "../ssg-core", version = "0.0.1" }
 ssg-frontmatter = { path = "../ssg-frontmatter", version = "0.0.1" }
 ssg-html = { path = "../ssg-html", version = "0.0.1" }
+ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
 ssg-markdown = { path = "../ssg-markdown", version = "0.0.1" }
 ssg-metadata = { path = "../ssg-metadata", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }

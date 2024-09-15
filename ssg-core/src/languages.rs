@@ -1,9 +1,9 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::lang::de;
-use crate::lang::en;
-use crate::lang::fr;
+use ssg_i18n::lang::de;
+use ssg_i18n::lang::en;
+use ssg_i18n::lang::fr;
 
 /// A vector containing all supported languages and their names.
 ///

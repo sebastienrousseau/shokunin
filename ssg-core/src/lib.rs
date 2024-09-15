@@ -24,12 +24,6 @@
 /// Compiler module for processing and generating static site content
 pub mod compiler;
 
-/// Language-specific functionality and translations
-pub mod lang;
-
-/// Multi-language support and translation functions
-pub mod languages;
-
 /// Logging and diagnostic utilities
 pub mod loggers;
 
@@ -47,7 +41,6 @@ pub mod utilities;
 
 // Re-export commonly used items for easier access
 pub use compiler::service::compile;
-pub use languages::translate;
 pub use loggers::init_logger;
 pub use ssg_server::Server;
 pub use utilities::uuid::generate_unique_string;

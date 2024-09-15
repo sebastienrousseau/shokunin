@@ -122,9 +122,10 @@ use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use ssg_cli::cli::print_banner;
 use ssg_core::macro_serve;
 use ssg_core::{
-    compiler::service::compile, languages::translate,
-    loggers::init_logger, utilities::uuid::generate_unique_string,
+    compiler::service::compile, loggers::init_logger,
+    utilities::uuid::generate_unique_string,
 };
+use ssg_i18n::languages::en::translate;
 use ssg_server::Server;
 use std::{fs::File, io::Write, path::Path};
 
@@ -166,7 +167,7 @@ pub fn run() -> Result<()> {
         &date.to_string(),
         &LogLevel::INFO,
         "process",
-        &translate("en", "lib_banner_log_msg"),
+        &translate("lib_banner_log_msg").unwrap(),
         &LogFormat::CLF
     );
 
@@ -183,7 +184,7 @@ pub fn run() -> Result<()> {
         &date.to_string(),
         &LogLevel::INFO,
         "process",
-        &translate("en", "lib_args_log_msg"),
+        &translate("lib_args_log_msg").unwrap(),
         &LogFormat::CLF
     );
 
@@ -197,7 +198,7 @@ pub fn run() -> Result<()> {
             &date.to_string(),
             &LogLevel::INFO,
             "process",
-            &translate("en", "lib_server_log_msg"),
+            &translate("lib_server_log_msg").unwrap(),
             &LogFormat::CLF
         );
 

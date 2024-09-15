@@ -3065,6 +3065,7 @@ dependencies = [
  "ssg-core",
  "ssg-frontmatter",
  "ssg-html",
+ "ssg-i18n",
  "ssg-markdown",
  "ssg-metadata",
  "ssg-server",
@@ -3148,6 +3149,25 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "ssg-i18n"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "criterion",
+ "env_logger",
+ "lazy_static",
+ "log",
+ "predicates",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "version_check",
 ]
 
 [[package]]
