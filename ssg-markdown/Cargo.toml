@@ -1,0 +1,53 @@
+# Cargo.toml - Configuration file for the SSG Markdown (Shokunin Static Site Generator Markdown)
+# Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[package]
+# Metadata about the package.
+authors.workspace = true
+build = "build.rs"
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# The name of the crate, used by Cargo to identify the project.
+name = "ssg-markdown"
+version = "0.0.1"
+
+# A short description of the project. This is displayed on package registries like crates.io.
+description = "A Markdown processing and conversion library for the Shokunin Static Site Generator"
+
+# The path to the README file for the project. Cargo will include this file in the package.
+readme = "README.md"
+
+[dependencies]
+# Dependencies required for building and running the project.
+comrak = "0.28"
+thiserror = "1.0"
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+env_logger = "0.11"
+syntect = "5.2"
+
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9" # Check the Rust version used to compile the package.
+
+[lib]
+name = "ssg_markdown"
+path = "src/lib.rs"
+
+[dev-dependencies]
+tempfile = "3.12"
+assert_fs = "1.1"
+predicates = "3.1"
+criterion = "0.5"
+
+[[bench]]
+name = "markdown_benchmark"
+harness = false

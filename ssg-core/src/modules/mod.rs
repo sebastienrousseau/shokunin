@@ -16,9 +16,6 @@ pub mod json;
 /// The `manifest` module generates the manifest file.
 pub mod manifest;
 
-/// The `markdown` module contains functions for converting Markdown to HTML.
-pub mod markdown;
-
 // The `metatags` module contains functions for generating meta tags.
 // pub mod metatags;
 
