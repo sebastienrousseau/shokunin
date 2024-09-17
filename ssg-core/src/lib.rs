@@ -43,4 +43,5 @@ pub mod utilities;
 pub use compiler::service::compile;
 pub use loggers::init_logger;
 pub use ssg_server::Server;
+pub use ssg_template;
 pub use utilities::uuid::generate_unique_string;

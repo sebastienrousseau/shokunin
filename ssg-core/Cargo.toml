@@ -32,6 +32,7 @@ ssg-metadata = { path = "../ssg-metadata", version = "0.0.1" }
 ssg-html = { path = "../ssg-html", version = "0.0.1" }
 ssg-rss = { path = "../ssg-rss", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }
+ssg-template = { path = "../ssg-template", version = "0.0.1" }
 
 [build-dependencies]
 # Dependencies for build scripts.

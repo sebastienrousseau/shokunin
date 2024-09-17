@@ -3086,6 +3086,7 @@ dependencies = [
  "ssg-metadata",
  "ssg-rss",
  "ssg-server",
+ "ssg-template",
  "tempfile",
  "toml",
  "uuid",
@@ -3130,6 +3131,7 @@ dependencies = [
  "ssg-metadata",
  "ssg-rss",
  "ssg-server",
+ "ssg-template",
  "tempfile",
  "toml",
  "uuid",
@@ -3250,6 +3252,18 @@ dependencies = [
  "tempfile",
  "thiserror",
  "version_check",
+]
+
+[[package]]
+name = "ssg-template"
+version = "0.0.1"
+dependencies = [
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]

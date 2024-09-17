@@ -1,8 +1,8 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use anyhow::{Context, Result};
-use rlg::log_level::LogLevel::ERROR;
+use anyhow::{Context as AnyhowContext, Result};
+use rlg::log_level::LogLevel;
 use ssg_html::{generate_html, HtmlConfig};
 use ssg_rss::{
     generate_rss, macro_set_rss_data_fields, models::data::RssData,
@@ -23,13 +23,10 @@ use crate::{
         tags::*,
         txt::create_txt_data,
     },
-    utilities::{
-        file::add,
-        template::{render_page, PageOptions},
-        write::write_files_to_build_directory,
-    },
+    utilities::{file::add, write::write_files_to_build_directory},
 };
 use ssg_metadata::extract_and_prepare_metadata;
+use ssg_template::{Context as TemplateContext, Engine, PageOptions};
 use std::{collections::HashMap, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and
@@ -50,12 +47,12 @@ use std::{collections::HashMap, fs, path::Path};
 /// # Returns
 ///
 /// Returns `Ok(())` if the compilation is successful, otherwise returns an error
-/// wrapped in a `Box<dyn Error>`.
+/// wrapped in a `anyhow::Error`.
 pub fn compile(
-    build_dir_path: &Path, // The path to the temp directory
-    content_path: &Path,   // The path to the content directory
-    site_path: &Path,      // The path to the site directory
-    template_path: &Path,  // The path to the template directory
+    build_dir_path: &Path,
+    content_path: &Path,
+    site_path: &Path,
+    template_path: &Path,
 ) -> Result<()> {
     // Create build and site directories
     macro_create_directories!(build_dir_path, site_path)
@@ -72,277 +69,21 @@ pub fn compile(
     let mut global_tags_data: HashMap<String, Vec<PageData>> =
         HashMap::new();
 
+    // Initialize the templating engine
+    let engine = Engine::new(template_path.to_str().unwrap());
+
     // Process source files and store results in 'compiled_files' vector
     let compiled_files: Result<Vec<FileData>> = source_files
         .into_iter()
-        .map(|file| -> Result<FileData> {
-            let (metadata, keywords, all_meta_tags) =
-                extract_and_prepare_metadata(&file.content).context(
-                    "Failed to extract and prepare metadata",
-                )?;
-
-            // Create HtmlConfig instance
-            let config = HtmlConfig {
-                enable_syntax_highlighting: true, // You can make this configurable if needed
-                minify_output: false, // Set to true if you want minified output
-                add_aria_attributes: true,
-                generate_structured_data: true,
-            };
-
-            // Generate HTML
-            // print!("Generating HTML from Markdown: {}", file.content);
-            let html_content = generate_html(&file.content, &config)
-                .context("Failed to generate HTML")?;
-
-            // Determine the filename without the extension
-            // let filename_without_extension = Path::new(&file.name)
-            //     .file_stem()
-            //     .and_then(|stem| stem.to_str())
-            //     .unwrap_or(&file.name);
-            // let common_path = build_dir_path.to_str().unwrap();
-
-            // let mut pdf_source_paths: Vec<PathBuf> = Vec::new();
-            // let source_for_pdf =
-            //     Path::new(content_path).join(&file.name);
-            // pdf_source_paths.push(source_for_pdf);
-            // let mut pdf_instance = PDFComposer::new();
-            // pdf_instance.set_pdf_version(PDFVersion::V1_7);
-            // pdf_instance.set_paper_size(PaperSize::A5);
-            // pdf_instance.set_orientation(PaperOrientation::Landscape);
-            // pdf_instance.set_margins("20");
-            // pdf_instance.set_font(FontsStandard::TimesRoman);
-            // pdf_instance.add_source_files(pdf_source_paths);
-            // let author_entry = PDFDocInfoEntry {
-            //     doc_info_entry: "Author",
-            //     yaml_entry: "author",
-            // };
-            // let generator_entry = PDFDocInfoEntry {
-            //     doc_info_entry: "generator",
-            //     yaml_entry: "generator",
-            // };
-            // pdf_instance.set_doc_info_entry(author_entry);
-            // pdf_instance.set_doc_info_entry(generator_entry);
-            // let pdf_destination =
-            //     Path::new(common_path).join(filename_without_extension);
-            // pdf_instance.set_output_directory(
-            //     pdf_destination.to_str().unwrap(),
-            // );
-
-            // pdf_instance.generate_pdfs();
-
-            // Create page options
-            let mut page_options = PageOptions::new();
-            for (key, value) in metadata.iter() {
-                page_options.set(key, value);
-            }
-
-            // Set various meta tags
-            page_options.set("apple", &all_meta_tags.apple);
-            page_options.set("content", &html_content);
-            page_options.set("microsoft", &all_meta_tags.ms);
-            page_options.set("navigation", &navigation);
-            page_options.set("opengraph", &all_meta_tags.og);
-            page_options.set("primary", &all_meta_tags.primary);
-            page_options.set("twitter", &all_meta_tags.twitter);
-
-            // Render page content
-            let content = render_page(
-                &page_options,
-                &template_path.to_str().unwrap().to_string(),
-                &metadata.get("layout").cloned().unwrap_or_default(),
+        .map(|file| {
+            process_file(
+                &file,
+                &engine,
+                template_path,
+                &navigation,
+                &mut global_tags_data,
+                site_path,
             )
-            .unwrap();
-
-            // Generate RSS data
-            let mut rss_data = RssData::new();
-
-            // Set fields using the helper macro
-            macro_set_rss_data_fields!(
-                rss_data,
-                atom_link,
-                macro_metadata_option!(metadata, "atom_link")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                author,
-                macro_metadata_option!(metadata, "author")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                category,
-                macro_metadata_option!(metadata, "category")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                copyright,
-                macro_metadata_option!(metadata, "copyright")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                description,
-                macro_metadata_option!(metadata, "description")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                docs,
-                macro_metadata_option!(metadata, "docs")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                generator,
-                macro_metadata_option!(metadata, "generator")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                image,
-                macro_metadata_option!(metadata, "image")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                item_guid,
-                macro_metadata_option!(metadata, "item_guid")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                item_description,
-                macro_metadata_option!(metadata, "item_description")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                item_link,
-                macro_metadata_option!(metadata, "item_link")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                item_pub_date,
-                macro_metadata_option!(metadata, "item_pub_date")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                item_title,
-                macro_metadata_option!(metadata, "item_title")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                language,
-                macro_metadata_option!(metadata, "language")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                last_build_date,
-                macro_metadata_option!(metadata, "last_build_date")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                link,
-                macro_metadata_option!(metadata, "permalink")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                managing_editor,
-                macro_metadata_option!(metadata, "managing_editor")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                pub_date,
-                macro_metadata_option!(metadata, "pub_date")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                title,
-                macro_metadata_option!(metadata, "title")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                ttl,
-                macro_metadata_option!(metadata, "ttl")
-            );
-            macro_set_rss_data_fields!(
-                rss_data,
-                webmaster,
-                macro_metadata_option!(metadata, "webmaster")
-            );
-
-            // Generate RSS
-            let rss = generate_rss(&rss_data);
-            print!("RSS: {:?}", rss);
-            let rss_data = rss.unwrap();
-
-            // Generate a manifest data structure by extracting relevant information from the metadata.
-            let json = create_manifest_data(&metadata);
-
-            // Create a structure to hold CNAME-related options, populated with values from the metadata.
-            let cname_options = create_cname_data(&metadata);
-
-            // Generate a structure for human-readable data, filling it with values from the metadata.
-            let human_options = create_human_data(&metadata);
-
-            // Initialize a structure to store sitemap-related information, using values from the metadata.
-            let sitemap_options = create_site_map_data(&metadata);
-
-            // Initialize a structure to store news sitemap-related information, using values from the metadata.
-            let news_sitemap_options =
-                create_news_site_map_data(&metadata);
-
-            let tags_data = generate_tags(&file, &metadata);
-
-            // Update the global tags data
-            for (tag, pages_data) in tags_data.iter() {
-                let page_info: Vec<PageData> = pages_data
-                    .iter()
-                    .map(|page_data| PageData {
-                        title: page_data
-                            .get("title")
-                            .cloned()
-                            .unwrap_or_default(),
-                        description: page_data
-                            .get("description")
-                            .cloned()
-                            .unwrap_or_default(),
-                        permalink: page_data
-                            .get("permalink")
-                            .cloned()
-                            .unwrap_or_default(),
-                        date: page_data
-                            .get("date")
-                            .cloned()
-                            .unwrap_or_default(),
-                    })
-                    .collect();
-
-                global_tags_data
-                    .entry(tag.clone())
-                    .or_default()
-                    .extend(page_info);
-            }
-
-            // Generate a TxtData structure, filling it with values extracted from the metadata.
-            let txt_options = create_txt_data(&metadata);
-
-            // Generate the data for the various files
-            let txt_data = txt(&txt_options);
-            let cname_data = cname(&cname_options);
-            let human_data = human(&human_options);
-            let sitemap_data = sitemap(sitemap_options, site_path);
-            let news_sitemap_data = news_sitemap(news_sitemap_options);
-            let json_data = serde_json::to_string(&json)
-                .unwrap_or_else(|e| {
-                    eprintln!("Error serializing JSON: {}", e);
-                    String::new()
-                });
-            // Return FileData
-            Ok(FileData {
-                cname: cname_data,
-                content,
-                keyword: keywords.join(", "),
-                human: human_data,
-                json: json_data,
-                name: file.name,
-                rss: rss_data,
-                sitemap: sitemap_data,
-                sitemap_news: news_sitemap_data,
-                txt: txt_data,
-            })
         })
         .collect();
 
@@ -354,14 +95,11 @@ pub fn compile(
 
     // Log the generated files information to a log file (shokunin.log)
     macro_log_info!(
-        &ERROR,
-        "compiler.rs - Line 280",
+        &LogLevel::ERROR,
+        "compiler.rs",
         &cli_description,
         &LogFormat::CLF
     );
-
-    // Print the generated files to the console
-    // println!("{} ", cli_description);
 
     // Iterate over compiled files and write pages to output directory
     for file in &compiled_files? {
@@ -384,4 +122,244 @@ pub fn compile(
         .context("Failed to rename build directory")?;
 
     Ok(())
+}
+
+/// Processes a single file, generating all necessary data and content.
+fn process_file(
+    file: &FileData,
+    engine: &Engine,
+    _template_path: &Path,
+    navigation: &str,
+    global_tags_data: &mut HashMap<String, Vec<PageData>>,
+    site_path: &Path,
+) -> Result<FileData> {
+    let (metadata, keywords, all_meta_tags) =
+        extract_and_prepare_metadata(&file.content)
+            .context("Failed to extract and prepare metadata")?;
+
+    // Create HtmlConfig instance
+    let config = HtmlConfig {
+        enable_syntax_highlighting: true,
+        minify_output: false,
+        add_aria_attributes: true,
+        generate_structured_data: true,
+    };
+
+    // Generate HTML
+    let html_content = generate_html(&file.content, &config)
+        .context("Failed to generate HTML")?;
+
+    // Create page options
+    let mut page_options = PageOptions::new();
+    for (key, value) in metadata.iter() {
+        page_options.set(key, value);
+    }
+
+    // Set various meta tags
+    page_options.set("apple", &all_meta_tags.apple);
+    page_options.set("content", &html_content);
+    page_options.set("microsoft", &all_meta_tags.ms);
+    page_options.set("navigation", navigation);
+    page_options.set("opengraph", &all_meta_tags.og);
+    page_options.set("primary", &all_meta_tags.primary);
+    page_options.set("twitter", &all_meta_tags.twitter);
+
+    // Convert PageOptions to TemplateContext
+    let mut context = TemplateContext::new();
+    for (key, value) in page_options.elements.iter() {
+        context.set(key, value);
+    }
+
+    // Render page content
+    let content = engine.render_page(
+        &context,
+        metadata.get("layout").cloned().unwrap_or_default().as_str(),
+    )?;
+
+    // Generate RSS data
+    let mut rss_data = RssData::new();
+
+    // Set fields using the helper macro
+    macro_set_rss_data_fields!(
+        rss_data,
+        atom_link,
+        macro_metadata_option!(metadata, "atom_link")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        author,
+        macro_metadata_option!(metadata, "author")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        category,
+        macro_metadata_option!(metadata, "category")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        copyright,
+        macro_metadata_option!(metadata, "copyright")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        description,
+        macro_metadata_option!(metadata, "description")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        docs,
+        macro_metadata_option!(metadata, "docs")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        generator,
+        macro_metadata_option!(metadata, "generator")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        image,
+        macro_metadata_option!(metadata, "image")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        item_guid,
+        macro_metadata_option!(metadata, "item_guid")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        item_description,
+        macro_metadata_option!(metadata, "item_description")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        item_link,
+        macro_metadata_option!(metadata, "item_link")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        item_pub_date,
+        macro_metadata_option!(metadata, "item_pub_date")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        item_title,
+        macro_metadata_option!(metadata, "item_title")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        language,
+        macro_metadata_option!(metadata, "language")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        last_build_date,
+        macro_metadata_option!(metadata, "last_build_date")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        link,
+        macro_metadata_option!(metadata, "permalink")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        managing_editor,
+        macro_metadata_option!(metadata, "managing_editor")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        pub_date,
+        macro_metadata_option!(metadata, "pub_date")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        title,
+        macro_metadata_option!(metadata, "title")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        ttl,
+        macro_metadata_option!(metadata, "ttl")
+    );
+    macro_set_rss_data_fields!(
+        rss_data,
+        webmaster,
+        macro_metadata_option!(metadata, "webmaster")
+    );
+
+    // Generate RSS
+    let rss = generate_rss(&rss_data)?;
+
+    // Generate various data structures
+    let json = create_manifest_data(&metadata);
+    let cname_options = create_cname_data(&metadata);
+    let human_options = create_human_data(&metadata);
+    let sitemap_options = create_site_map_data(&metadata);
+    let news_sitemap_options = create_news_site_map_data(&metadata);
+    let tags_data = generate_tags(file, &metadata);
+
+    // Update the global tags data
+    update_global_tags_data(global_tags_data, &tags_data);
+
+    // Generate a TxtData structure
+    let txt_options = create_txt_data(&metadata);
+
+    // Generate the data for the various files
+    let txt_data = txt(&txt_options);
+    let cname_data = cname(&cname_options);
+    let human_data = human(&human_options);
+    let sitemap_data = sitemap(sitemap_options, site_path);
+    let news_sitemap_data = news_sitemap(news_sitemap_options);
+    let json_data = serde_json::to_string(&json).unwrap_or_else(|e| {
+        eprintln!("Error serializing JSON: {}", e);
+        String::new()
+    });
+
+    // Return FileData
+    Ok(FileData {
+        cname: cname_data,
+        content,
+        keyword: keywords.join(", "),
+        human: human_data,
+        json: json_data,
+        name: file.name.clone(),
+        rss,
+        sitemap: sitemap_data,
+        sitemap_news: news_sitemap_data,
+        txt: txt_data,
+    })
+}
+
+/// Updates the global tags data with new tag information.
+fn update_global_tags_data(
+    global_tags_data: &mut HashMap<String, Vec<PageData>>,
+    tags_data: &HashMap<String, Vec<HashMap<String, String>>>,
+) {
+    for (tag, pages_data) in tags_data {
+        let page_info: Vec<PageData> = pages_data
+            .iter()
+            .map(|page_data| PageData {
+                title: page_data
+                    .get("title")
+                    .cloned()
+                    .unwrap_or_default(),
+                description: page_data
+                    .get("description")
+                    .cloned()
+                    .unwrap_or_default(),
+                permalink: page_data
+                    .get("permalink")
+                    .cloned()
+                    .unwrap_or_default(),
+                date: page_data
+                    .get("date")
+                    .cloned()
+                    .unwrap_or_default(),
+            })
+            .collect();
+
+        global_tags_data
+            .entry(tag.clone())
+            .or_default()
+            .extend(page_info);
+    }
 }

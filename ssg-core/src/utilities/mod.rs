@@ -13,10 +13,6 @@ pub mod element;
 /// The `file` module handles file reading and writing operations.
 pub mod file;
 
-/// The `template` module renders the HTML content using the pre-defined
-/// template.
-pub mod template;
-
 /// The `write` module contains functions for writing files.
 pub mod write;
 
