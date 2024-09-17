@@ -45,7 +45,6 @@ title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title 
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
-
 # News - The News SiteMap front matter (YAML).
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
@@ -72,7 +71,7 @@ managing_editor: jane.doe@kaishi.one (Jane Doe)
 pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
-webmaster: jane.doe@kaishi.one
+webmaster: jane.doe@kaishi.one (Jane Doe)
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.

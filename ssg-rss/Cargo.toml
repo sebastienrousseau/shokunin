@@ -1,0 +1,41 @@
+# Cargo.toml - Configuration file for the SSG RSS (Shokunin Static Site Generator RSS)
+# Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[package]
+# Metadata about the package.
+authors.workspace = true
+build = "build.rs"
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# The name of the crate, used by Cargo to identify the project.
+name = "ssg-rss"
+version = "0.0.1"
+
+# A short description of the project. This is displayed on package registries like crates.io.
+description = "RSS feed generation for the Shokunin Static Site Generator"
+
+# The path to the README file for the project. Cargo will include this file in the package.
+readme = "README.md"
+
+[dependencies]
+# Dependencies required for building and running the project.
+quick-xml = "0.36"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+
+[build-dependencies]
+# Dependencies for build scripts.
+version_check = "0.9" # Check the Rust version used to compile the package.
+
+[lib]
+name = "ssg_rss"
+path = "src/lib.rs"
+
+[dev-dependencies]
+pretty_assertions = "1.0"

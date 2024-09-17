@@ -4,11 +4,14 @@
 use anyhow::{Context, Result};
 use rlg::log_level::LogLevel::ERROR;
 use ssg_html::{generate_html, HtmlConfig};
+use ssg_rss::{
+    generate_rss, macro_set_rss_data_fields, models::data::RssData,
+};
 
 use crate::{
     macro_cleanup_directories, macro_create_directories,
-    macro_log_info, macro_metadata_option, macro_set_rss_data_fields,
-    models::data::{FileData, PageData, RssData},
+    macro_log_info, macro_metadata_option,
+    models::data::{FileData, PageData},
     modules::{
         cname::create_cname_data,
         human::create_human_data,
@@ -16,7 +19,6 @@ use crate::{
         manifest::create_manifest_data,
         navigation::NavigationGenerator,
         news_sitemap::create_news_site_map_data,
-        rss::generate_rss,
         sitemap::create_site_map_data,
         tags::*,
         txt::create_txt_data,
@@ -255,9 +257,15 @@ pub fn compile(
                 ttl,
                 macro_metadata_option!(metadata, "ttl")
             );
+            macro_set_rss_data_fields!(
+                rss_data,
+                webmaster,
+                macro_metadata_option!(metadata, "webmaster")
+            );
 
             // Generate RSS
             let rss = generate_rss(&rss_data);
+            print!("RSS: {:?}", rss);
             let rss_data = rss.unwrap();
 
             // Generate a manifest data structure by extracting relevant information from the metadata.

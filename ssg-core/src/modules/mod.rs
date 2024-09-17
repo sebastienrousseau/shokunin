@@ -34,9 +34,6 @@ pub mod preprocessor;
 /// the `postprocessor` module contains functions for postprocessing content.
 pub mod postprocessor;
 
-/// The `rss` module contains functions for generating RSS feeds.
-pub mod rss;
-
 /// The `sitemap` module generates the sitemap content.
 pub mod sitemap;
 

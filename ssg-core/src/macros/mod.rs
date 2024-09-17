@@ -10,8 +10,5 @@ pub mod directory_macros;
 /// The `log_macros` module contains macros related to log messages.
 pub mod log_macros;
 
-/// The `rss_macros` module contains macros related to RSS feed generation.
-pub mod rss_macros;
-
 /// The `shell_macros` module contains macros related to executing shell commands.
 pub mod shell_macros;
