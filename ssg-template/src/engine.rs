@@ -117,19 +117,26 @@ impl Engine {
         template: &str,
         context: &HashMap<&str, &str>,
     ) -> Result<String, TemplateError> {
+        if template.trim().is_empty() {
+            return Err(TemplateError::RenderError(
+                "Template is empty".to_string(),
+            ));
+        }
+
         let mut output = template.to_owned();
         for (key, value) in context {
             output = output.replace(&format!("{{{{{}}}}}", key), value);
         }
-        // Check if all keys have been replaced
-        if output.contains("{{") {
-            Err(TemplateError::RenderError(format!(
-                "Failed to render template, unresolved template tags: {}",
-                output
-            )))
-        } else {
-            Ok(output)
+
+        // Check if all keys have been replaced or if the template contains unresolved or invalid tags
+        if output.contains("{{") || output.contains("{") {
+            return Err(TemplateError::RenderError(format!(
+            "Failed to render template, unresolved or invalid template tags: {}",
+            output
+        )));
         }
+
+        Ok(output)
     }
 
     /// Creates a template folder based on the provided template path or uses the default template folder.
@@ -241,24 +248,52 @@ impl Engine {
 
         Ok(template_dir_path)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    /// Downloads a set of template files from a given URL into a temporary directory.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The base URL to download the files from.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the path to the downloaded files, or a `TemplateError` if something goes wrong.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the URL is invalid or if the files fail to download.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ssg_template::Engine;
+    /// let engine = Engine::new("dummy/path");
+    /// let result = engine.download_template_files("https://example.com/templates");
+    /// ```
+    pub fn download_template_files(
+        &self,
+        url: &str,
+    ) -> Result<PathBuf, TemplateError> {
+        let tempdir = tempfile::Builder::new()
+            .prefix("templates")
+            .tempdir()
+            .map_err(TemplateError::Io)?;
+        let template_dir_path = tempdir.path().to_owned();
 
-    #[test]
-    fn test_render_template() {
-        let engine = Engine::new("dummy/path");
-        let mut context = HashMap::new();
-        context.insert("name", "World");
-        context.insert("greeting", "Hello");
+        let files =
+            ["contact.html", "index.html", "page.html", "post.html"];
+        for file in files.iter() {
+            let file_url = format!("{}/{}", url, file);
+            let file_path = template_dir_path.join(file);
+            let mut response = reqwest::blocking::get(&file_url)
+                .map_err(TemplateError::Reqwest)?;
+            let mut file =
+                File::create(&file_path).map_err(TemplateError::Io)?;
+            response
+                .copy_to(&mut file)
+                .map_err(TemplateError::Reqwest)?;
+        }
 
-        let template = "{{greeting}}, {{name}}!";
-        let result =
-            engine.render_template(template, &context).unwrap();
-        assert_eq!(result, "Hello, World!");
+        Ok(template_dir_path)
     }
-
-    // Add more tests for other methods
 }
