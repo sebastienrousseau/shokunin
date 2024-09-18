@@ -3086,6 +3086,7 @@ dependencies = [
  "ssg-metadata",
  "ssg-rss",
  "ssg-server",
+ "ssg-sitemap",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3131,6 +3132,7 @@ dependencies = [
  "ssg-metadata",
  "ssg-rss",
  "ssg-server",
+ "ssg-sitemap",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3252,6 +3254,21 @@ dependencies = [
  "tempfile",
  "thiserror",
  "version_check",
+]
+
+[[package]]
+name = "ssg-sitemap"
+version = "0.0.1"
+dependencies = [
+ "assert_fs",
+ "dtt 0.0.8",
+ "predicates",
+ "pretty_assertions",
+ "regex",
+ "thiserror",
+ "url",
+ "version_check",
+ "xml-rs",
 ]
 
 [[package]]
@@ -4200,6 +4217,12 @@ name = "xdg"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213b7324336b53d2414b2db8537e56544d981803139155afa84f76eeebb7a546"
+
+[[package]]
+name = "xml-rs"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af4e2e2f7cba5a093896c1e150fbfe177d1883e7448200efb81d40b9d339ef26"
 
 [[package]]
 name = "yaml-rust"

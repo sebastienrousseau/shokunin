@@ -3,9 +3,10 @@
 
 use crate::models::data::{
     CnameData, HumansData, ManifestData, NewsData, NewsVisitOptions,
-    SiteMapData, TxtData,
+    TxtData,
 };
 use serde_json::{json, Map};
+use ssg_sitemap::SiteMapData;
 use std::{
     fs, io,
     path::{Path, PathBuf},

@@ -34,9 +34,6 @@ pub mod preprocessor;
 /// the `postprocessor` module contains functions for postprocessing content.
 pub mod postprocessor;
 
-/// The `sitemap` module generates the sitemap content.
-pub mod sitemap;
-
 /// The `tags` module contains functions for generating a tags page.
 pub mod tags;
 

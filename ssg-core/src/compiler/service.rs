@@ -7,6 +7,7 @@ use ssg_html::{generate_html, HtmlConfig};
 use ssg_rss::{
     generate_rss, macro_set_rss_data_fields, models::data::RssData,
 };
+use ssg_sitemap::create_site_map_data;
 
 use crate::{
     macro_cleanup_directories, macro_create_directories,
@@ -19,7 +20,6 @@ use crate::{
         manifest::create_manifest_data,
         navigation::NavigationGenerator,
         news_sitemap::create_news_site_map_data,
-        sitemap::create_site_map_data,
         tags::*,
         txt::create_txt_data,
     },

@@ -190,34 +190,6 @@ impl ManifestData {
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
-/// Options for the `sitemap` function
-pub struct SiteMapData {
-    /// A string representing the changefreq
-    pub changefreq: String,
-    /// A string representing the lastmod
-    pub lastmod: String,
-    /// A string representing the local
-    pub loc: String,
-}
-
-impl SiteMapData {
-    /// Creates a new `SiteMapData` struct with the given loc, lastmod, and changefreq.
-    pub fn new(
-        loc: String,
-        lastmod: String,
-        changefreq: String,
-    ) -> Self {
-        SiteMapData {
-            changefreq,
-            lastmod,
-            loc,
-        }
-    }
-}
-
-#[derive(
-    Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
-)]
 /// Options for the `news_sitemap` function
 pub struct NewsData {
     /// A string representing the news genres (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
