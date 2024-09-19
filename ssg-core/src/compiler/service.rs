@@ -167,7 +167,7 @@ fn process_file(
     // Convert PageOptions to TemplateContext
     let mut context = TemplateContext::new();
     for (key, value) in page_options.elements.iter() {
-        context.set(key, value);
+        context.set(key.to_string(), value.to_string());
     }
 
     // Render page content

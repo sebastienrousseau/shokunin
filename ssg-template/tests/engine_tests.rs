@@ -14,8 +14,8 @@ mod tests {
         fn test_engine_render_template() {
             let engine = Engine::new("dummy/path");
             let mut context = HashMap::new();
-            context.insert("name", "World");
-            context.insert("greeting", "Hello");
+            context.insert("name".to_string(), "World".to_string());
+            context.insert("greeting".to_string(), "Hello".to_string());
 
             let template = "{{greeting}}, {{name}}!";
             let result =
@@ -27,7 +27,7 @@ mod tests {
         #[test]
         fn test_engine_render_template_unresolved_tags() {
             let engine = Engine::new("dummy/path");
-            let context = HashMap::new();
+            let context: HashMap<String, String> = HashMap::new();
 
             let template = "{{greeting}}, {{name}}!";
             let result = engine.render_template(template, &context);
@@ -41,7 +41,7 @@ mod tests {
         #[test]
         fn test_engine_render_empty_template() {
             let engine = Engine::new("dummy/path");
-            let context = HashMap::new();
+            let context: HashMap<String, String> = HashMap::new();
 
             let template = "";
             let result = engine.render_template(template, &context);
@@ -56,7 +56,7 @@ mod tests {
         #[test]
         fn test_engine_render_empty_context() {
             let engine = Engine::new("dummy/path");
-            let context = HashMap::new();
+            let context: HashMap<String, String> = HashMap::new();
 
             let template = "{{greeting}}, {{name}}!";
             let result = engine.render_template(template, &context);
@@ -71,8 +71,11 @@ mod tests {
         fn test_engine_render_special_characters_in_context() {
             let engine = Engine::new("dummy/path");
             let mut context = HashMap::new();
-            context.insert("name", "<script>alert('XSS')</script>");
-            context.insert("greeting", "&");
+            context.insert(
+                "name".to_string(),
+                "<script>alert('XSS')</script>".to_string(),
+            );
+            context.insert("greeting".to_string(), "&".to_string());
 
             let template = "{{greeting}} {{name}}";
             let result =
@@ -91,7 +94,7 @@ mod tests {
                 (0..1000).map(|i| format!("value{}", i)).collect();
 
             for i in 0..1000 {
-                context.insert(keys[i].as_str(), values[i].as_str());
+                context.insert(keys[i].clone(), values[i].clone());
             }
 
             let mut template = String::new();
@@ -184,15 +187,15 @@ mod file_operations_tests {
             file,
             "<html><body>{{{{greeting}}}}, {{{{name}}}}</body></html>"
         )
-        .unwrap(); // Correct the placeholder format
+        .unwrap();
 
         // Initialize engine with the temporary directory
         let engine = Engine::new(temp_dir.path().to_str().unwrap());
 
         // Prepare the context
         let mut elements = HashMap::new();
-        elements.insert("greeting", "Hello");
-        elements.insert("name", "World");
+        elements.insert("greeting".to_string(), "Hello".to_string());
+        elements.insert("name".to_string(), "World".to_string());
         let context = Context { elements };
 
         // Render the page with the mock layout
@@ -200,8 +203,8 @@ mod file_operations_tests {
         assert!(result.is_ok());
 
         // Trim the result and expected output to avoid newline mismatches
-        let binding = result.unwrap();
-        let rendered_output = binding.trim();
+        let unwrapped_result = result.unwrap();
+        let rendered_output = unwrapped_result.trim();
         let expected_output = "<html><body>Hello, World</body></html>";
 
         assert_eq!(rendered_output, expected_output);
@@ -239,7 +242,7 @@ mod context_edge_cases_tests {
     #[test]
     fn test_render_template_empty_context() {
         let engine = Engine::new("dummy/path");
-        let context = HashMap::new();
+        let context: HashMap<String, String> = HashMap::new();
 
         let template = "{{greeting}}, {{name}}!";
         let result = engine.render_template(template, &context);
@@ -251,8 +254,11 @@ mod context_edge_cases_tests {
     fn test_render_template_special_characters() {
         let engine = Engine::new("dummy/path");
         let mut context = HashMap::new();
-        context.insert("name", "<script>alert('XSS')</script>");
-        context.insert("greeting", "&");
+        context.insert(
+            "name".to_string(),
+            "<script>alert('XSS')</script>".to_string(),
+        );
+        context.insert("greeting".to_string(), "&".to_string());
 
         let template = "{{greeting}} {{name}}";
         let result =
@@ -272,8 +278,8 @@ mod additional_tests {
     fn test_engine_render_template_invalid_format() {
         let engine = Engine::new("dummy/path");
         let mut context = HashMap::new();
-        context.insert("name", "World");
-        context.insert("greeting", "Hello");
+        context.insert("name".to_string(), "World".to_string());
+        context.insert("greeting".to_string(), "Hello".to_string());
 
         // Invalid format: single curly braces instead of double
         let template = "{greeting}, {name}!";
@@ -296,8 +302,8 @@ mod additional_tests {
 
         // Prepare the context
         let mut elements = HashMap::new();
-        elements.insert("greeting", "Hello");
-        elements.insert("name", "World");
+        elements.insert("greeting".to_string(), "Hello".to_string());
+        elements.insert("name".to_string(), "World".to_string());
         let context = Context { elements };
 
         // Render the page with the empty layout
@@ -317,8 +323,8 @@ mod additional_tests {
         let engine = Engine::new("/restricted/directory");
 
         let mut elements = HashMap::new();
-        elements.insert("greeting", "Hello");
-        elements.insert("name", "World");
+        elements.insert("greeting".to_string(), "Hello".to_string());
+        elements.insert("name".to_string(), "World".to_string());
         let context = Context { elements };
 
         let result = engine.render_page(&context, "layout");
@@ -351,32 +357,32 @@ mod additional_tests {
         let engine = Engine::new("templates/");
         let template = "Hello, {{name}}!";
         let mut invalid_context = HashMap::new();
-        invalid_context.insert("name", "World"); // Valid
-        invalid_context.insert("number", "42"); // Invalid if expecting specific types
+        invalid_context.insert("name".to_string(), "World".to_string()); // Valid
+        invalid_context.insert("number".to_string(), "42".to_string()); // Invalid if expecting specific types
 
         let result = engine.render_template(template, &invalid_context);
         assert!(result.is_ok());
     }
 
-    /// Test render_template error handling with invalid template syntax
+    /// Test render_template error handling with invalid template syntax.
     #[test]
     fn test_render_template_invalid_template_syntax() {
         let engine = Engine::new("templates/");
         let invalid_template = "Hello, {{name"; // Missing closing braces
         let mut context = HashMap::new();
-        context.insert("name", "World");
+        context.insert("name".to_string(), "World".to_string());
 
         let result = engine.render_template(invalid_template, &context);
         assert!(matches!(result, Err(TemplateError::RenderError(_))));
     }
 
-    /// Test large template rendering
+    /// Test large template rendering.
     #[test]
     fn test_render_large_template() {
         let engine = Engine::new("templates/");
         let large_template = "Hello, {{name}}".repeat(1000); // Large template with repetitive pattern
         let mut context = HashMap::new();
-        context.insert("name", "World");
+        context.insert("name".to_string(), "World".to_string());
 
         let result = engine.render_template(&large_template, &context);
         assert!(result.is_ok());
@@ -396,13 +402,13 @@ mod additional_tests {
         assert_eq!(options.get("key3"), None); // Ensure invalid key does not exist
     }
 
-    /// Test empty template rendering
+    /// Test empty template rendering.
     #[test]
     fn test_render_template_empty_template() {
         let engine = Engine::new("templates/");
         let empty_template = ""; // Empty template
         let mut context = HashMap::new();
-        context.insert("name", "World");
+        context.insert("name".to_string(), "World".to_string());
 
         let result = engine.render_template(empty_template, &context);
         assert!(matches!(result, Err(TemplateError::RenderError(_))));

@@ -82,7 +82,7 @@ impl Engine {
     ///
     /// let engine = Engine::new("path/to/templates");
     /// let mut context = Context::new();
-    /// context.set("title", "My Page");
+    /// context.set("title".to_string(), "My Page".to_string());
     ///
     /// match engine.render_page(&context, "default") {
     ///     Ok(rendered) => println!("Rendered page: {}", rendered),
@@ -115,7 +115,7 @@ impl Engine {
     pub fn render_template(
         &self,
         template: &str,
-        context: &HashMap<&str, &str>,
+        context: &HashMap<String, String>,
     ) -> Result<String, TemplateError> {
         if template.trim().is_empty() {
             return Err(TemplateError::RenderError(
@@ -131,9 +131,9 @@ impl Engine {
         // Check if all keys have been replaced or if the template contains unresolved or invalid tags
         if output.contains("{{") || output.contains("{") {
             return Err(TemplateError::RenderError(format!(
-            "Failed to render template, unresolved or invalid template tags: {}",
-            output
-        )));
+                "Failed to render template, unresolved or invalid template tags: {}",
+                output
+            )));
         }
 
         Ok(output)

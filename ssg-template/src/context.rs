@@ -5,12 +5,12 @@ use std::collections::HashMap;
 /// `Context` holds key-value pairs that can be used to populate
 /// placeholders in a template during the rendering process.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
-pub struct Context<'a> {
+pub struct Context {
     /// The internal storage for context key-value pairs.
-    pub elements: HashMap<&'a str, &'a str>,
+    pub elements: HashMap<String, String>,
 }
 
-impl<'a> Context<'a> {
+impl Context {
     /// Creates a new, empty `Context`.
     ///
     /// # Examples
@@ -21,7 +21,7 @@ impl<'a> Context<'a> {
     /// let context = Context::new();
     /// assert!(context.elements.is_empty());
     /// ```
-    pub fn new() -> Context<'a> {
+    pub fn new() -> Context {
         Context {
             elements: HashMap::new(),
         }
@@ -42,10 +42,11 @@ impl<'a> Context<'a> {
     /// use ssg_template::Context;
     ///
     /// let mut context = Context::new();
-    /// context.set("name", "Alice");
-    /// assert_eq!(context.get("name"), Some(&"Alice"));
+    /// context.set("name".to_string(), "Alice".to_string()); // Corrected to use String
+    /// assert_eq!(context.get("name"), Some(&"Alice".to_string()));
     /// ```
-    pub fn set(&mut self, key: &'a str, value: &'a str) {
+    ///
+    pub fn set(&mut self, key: String, value: String) {
         self.elements.insert(key, value);
     }
 
@@ -66,30 +67,35 @@ impl<'a> Context<'a> {
     /// use ssg_template::Context;
     ///
     /// let mut context = Context::new();
-    /// context.set("name", "Bob");
-    /// assert_eq!(context.get("name"), Some(&"Bob"));
+    /// context.set("name".to_string(), "Bob".to_string());
+    /// assert_eq!(context.get("name"), Some(&"Bob".to_string()));
     /// assert_eq!(context.get("age"), None);
     /// ```
-    pub fn get(&self, key: &'a str) -> Option<&&'a str> {
+    pub fn get(&self, key: &str) -> Option<&String> {
         self.elements.get(key)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_context_operations() {
-        let mut context = Context::new();
-        assert!(context.elements.is_empty());
-
-        context.set("name", "Charlie");
-        assert_eq!(context.get("name"), Some(&"Charlie"));
-
-        context.set("name", "David");
-        assert_eq!(context.get("name"), Some(&"David"));
-
-        assert_eq!(context.get("age"), None);
+    /// Removes a key-value pair from the context.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The key to remove.
+    ///
+    /// # Returns
+    ///
+    /// The value associated with the key, or `None` if the key didn't exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_template::Context;
+    ///
+    /// let mut context = Context::new();
+    /// context.set("name".to_string(), "Alice".to_string());
+    /// assert_eq!(context.remove("name"), Some("Alice".to_string()));
+    /// assert_eq!(context.get("name"), None);
+    /// ```
+    pub fn remove(&mut self, key: &str) -> Option<String> {
+        self.elements.remove(key)
     }
 }
