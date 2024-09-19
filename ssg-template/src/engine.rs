@@ -107,18 +107,24 @@ impl Engine {
             ));
         }
 
+        // Detect and flag single curly braces as invalid
+        if template.contains('{') && !template.contains("{{") {
+            return Err(TemplateError::RenderError(
+                "Invalid template format: single curly braces detected"
+                    .to_string(),
+            ));
+        }
+
         let mut output = template.to_owned();
         for (key, value) in context {
             output = output.replace(&format!("{{{{{}}}}}", key), value);
         }
 
-        // Detect any unresolved template tags and handle them
+        // Check for any unresolved template tags (double curly braces)
         if output.contains("{{") {
-            let unresolved =
-                output.match_indices("{{").collect::<Vec<_>>();
             return Err(TemplateError::RenderError(format!(
-                "Unresolved template tags found: {:?}",
-                unresolved
+                "Failed to render template, unresolved or invalid template tags: {}",
+                output
             )));
         }
 
