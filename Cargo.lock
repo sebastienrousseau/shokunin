@@ -3281,6 +3281,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+ "version_check",
 ]
 
 [[package]]
