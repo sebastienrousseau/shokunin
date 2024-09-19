@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use tempfile::tempdir;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 /// ## Struct: `PageOptions` - Options for rendering a page template
@@ -13,29 +14,25 @@ use std::time::Duration;
 /// This struct contains the options for rendering a page template.
 /// These options are used to construct a context `HashMap` that is
 /// passed to the `render_template` function.
-///
-/// # Arguments
-///
-/// * `elements` - A `HashMap` containing the elements of the page.
-///
 pub struct PageOptions<'a> {
     /// Elements of the page
     pub elements: HashMap<&'a str, &'a str>,
 }
 
 impl<'a> PageOptions<'a> {
-    /// ## Function: `new` - Create a new `PageOptions`
+    /// Creates a new `PageOptions` instance.
     pub fn new() -> PageOptions<'a> {
         PageOptions {
             elements: HashMap::new(),
         }
     }
-    /// ## Function: `set` - Set a page option
+
+    /// Sets a page option in the `elements` map.
     pub fn set(&mut self, key: &'a str, value: &'a str) {
         self.elements.insert(key, value);
     }
 
-    /// ## Function: `get` - Get a page option
+    /// Retrieves a page option from the `elements` map.
     pub fn get(&self, key: &'a str) -> Option<&&'a str> {
         self.elements.get(key)
     }
@@ -51,18 +48,8 @@ impl Engine {
     /// Creates a new `Engine` instance.
     ///
     /// # Arguments
-    ///
-    /// * `template_path` - A string slice that holds the path to the template directory.
-    /// * `cache_ttl` - The time-to-live for cached rendered templates.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use ssg_template::Engine;
-    /// use std::time::Duration;
-    ///
-    /// let engine = Engine::new("path/to/templates", Duration::from_secs(300));
-    /// ```
+    /// * `template_path` - The path to the template directory.
+    /// * `cache_ttl` - Time-to-live for cached rendered templates.
     pub fn new(template_path: &str, cache_ttl: Duration) -> Self {
         Self {
             template_path: template_path.to_string(),
@@ -73,29 +60,11 @@ impl Engine {
     /// Renders a page using the specified layout and context, with caching.
     ///
     /// # Arguments
-    ///
-    /// * `context` - A reference to a `Context` object containing the rendering context.
-    /// * `layout` - A string slice specifying the layout to use.
+    /// * `context` - The rendering context.
+    /// * `layout` - The layout to use for rendering.
     ///
     /// # Returns
-    ///
-    /// A `Result` containing the rendered page as a `String`, or a `TemplateError` if rendering fails.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use ssg_template::{Engine, Context};
-    /// use std::time::Duration;
-    ///
-    /// let mut engine = Engine::new("path/to/templates", Duration::from_secs(300));
-    /// let mut context = Context::new();
-    /// context.set("title".to_string(), "My Page".to_string());
-    ///
-    /// match engine.render_page(&context, "default") {
-    ///     Ok(rendered) => println!("Rendered page: {}", rendered),
-    ///     Err(e) => eprintln!("Rendering error: {}", e),
-    /// }
-    /// ```
+    /// A `Result` containing the rendered page or a `TemplateError`.
     pub fn render_page(
         &mut self,
         context: &Context,
@@ -122,13 +91,11 @@ impl Engine {
     /// Renders a template string with the given context.
     ///
     /// # Arguments
-    ///
-    /// * `template` - A string slice that holds the template to render.
-    /// * `context` - A reference to a `HashMap` containing the context for rendering.
+    /// * `template` - The template string.
+    /// * `context` - The context for rendering.
     ///
     /// # Returns
-    ///
-    /// A `Result` containing the rendered string, or a `TemplateError` if rendering fails.
+    /// A `Result` containing the rendered string or a `TemplateError`.
     pub fn render_template(
         &self,
         template: &str,
@@ -145,39 +112,26 @@ impl Engine {
             output = output.replace(&format!("{{{{{}}}}}", key), value);
         }
 
-        // Check if all keys have been replaced or if the template contains unresolved or invalid tags
-        if output.contains("{{") || output.contains("{") {
+        // Detect any unresolved template tags and handle them
+        if output.contains("{{") {
+            let unresolved =
+                output.match_indices("{{").collect::<Vec<_>>();
             return Err(TemplateError::RenderError(format!(
-                "Failed to render template, unresolved or invalid template tags: {}",
-                output
+                "Unresolved template tags found: {:?}",
+                unresolved
             )));
         }
 
         Ok(output)
     }
 
-    /// Creates a template folder based on the provided template path or uses the default template folder.
+    /// Creates or uses an existing template folder.
     ///
     /// # Arguments
-    ///
-    /// * `template_path` - An optional string slice containing the path to the template folder.
+    /// * `template_path` - An optional path to the template folder.
     ///
     /// # Returns
-    ///
-    /// A `Result` containing the path to the template folder as a `String`, or a `TemplateError` if an error occurs.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ssg_template::Engine;
-    /// use std::time::Duration;
-    ///
-    /// let engine = Engine::new("path/to/templates", Duration::from_secs(60));
-    /// match engine.create_template_folder(Some("custom/templates")) {
-    ///     Ok(path) => println!("Template folder created at: {}", path),
-    ///     Err(e) => eprintln!("Error creating template folder: {}", e),
-    /// }
-    /// ```
+    /// A `Result` containing the template folder path or a `TemplateError`.
     pub fn create_template_folder(
         &self,
         template_path: Option<&str>,
@@ -186,19 +140,12 @@ impl Engine {
             std::env::current_dir().map_err(TemplateError::Io)?;
 
         let template_dir_path = match template_path {
-            Some(path)
-                if path.starts_with("http://")
-                    || path.starts_with("https://") =>
-            {
+            Some(path) if is_url(path) => {
                 self.download_files_from_url(path)?
             }
             Some(path) => {
                 let local_path = current_dir.join(path);
                 if local_path.exists() && local_path.is_dir() {
-                    println!(
-                        "Using local template directory: {}",
-                        path
-                    );
                     local_path
                 } else {
                     return Err(TemplateError::Io(
@@ -221,99 +168,63 @@ impl Engine {
         Ok(template_dir_path.to_str().unwrap().to_string())
     }
 
-    /// Downloads template files from a URL and saves them to a temporary directory.
+    /// Helper function to download files from a URL and save to a directory.
     ///
     /// # Arguments
-    ///
-    /// * `url` - A string slice containing the URL to download template files from.
+    /// * `url` - The URL to download files from.
     ///
     /// # Returns
-    ///
-    /// A `Result` containing the path to the temporary directory as a `PathBuf`,
-    /// or a `TemplateError` if an error occurs during the download process.
+    /// A `Result` containing the path to the directory or a `TemplateError`.
     fn download_files_from_url(
         &self,
         url: &str,
     ) -> Result<PathBuf, TemplateError> {
-        let tempdir = tempfile::tempdir().map_err(TemplateError::Io)?;
-        let template_dir_path = tempdir.path().to_owned();
-        println!(
-            "Creating temporary directory for template: {:?}",
-            template_dir_path
-        );
+        let template_dir_path =
+            tempdir().map_err(TemplateError::Io)?.into_path();
 
         let files = [
             "contact.html",
             "index.html",
-            "main.js",
             "page.html",
             "post.html",
+            "main.js",
             "sw.js",
         ];
 
         for file in files.iter() {
-            let file_url = format!("{}/{}", url, file);
-            let file_path = template_dir_path.join(file);
-            let mut response = reqwest::blocking::get(&file_url)
-                .map_err(TemplateError::Reqwest)?;
-            let mut file =
-                File::create(&file_path).map_err(TemplateError::Io)?;
-            response
-                .copy_to(&mut file)
-                .map_err(TemplateError::Reqwest)?;
-            println!("Downloaded template file to: {:?}", file_path);
+            self.download_file(url, file, &template_dir_path)?;
         }
 
         Ok(template_dir_path)
     }
 
-    /// Downloads a set of template files from a given URL into a temporary directory.
+    /// Downloads a single file from a URL to the given directory.
     ///
     /// # Arguments
-    ///
-    /// * `url` - The base URL to download the files from.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the path to the downloaded files, or a `TemplateError` if something goes wrong.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if the URL is invalid or if the files fail to download.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use ssg_template::Engine;
-    /// use std::time::Duration;
-    ///
-    /// let engine = Engine::new("dummy/path",Duration::from_secs(60));
-    /// let result = engine.download_template_files("https://example.com/templates");
-    /// ```
-    pub fn download_template_files(
+    /// * `url` - The base URL.
+    /// * `file` - The file to download.
+    /// * `dir` - The directory to save the file.
+    pub fn download_file(
         &self,
         url: &str,
-    ) -> Result<PathBuf, TemplateError> {
-        let tempdir = tempfile::Builder::new()
-            .prefix("templates")
-            .tempdir()
-            .map_err(TemplateError::Io)?;
-        let template_dir_path = tempdir.path().to_owned();
+        file: &str,
+        dir: &Path,
+    ) -> Result<(), TemplateError> {
+        let file_url = format!("{}/{}", url, file);
+        let file_path = dir.join(file);
+        let mut response = reqwest::blocking::get(&file_url)
+            .map_err(TemplateError::Reqwest)?;
+        let mut file =
+            File::create(&file_path).map_err(TemplateError::Io)?;
+        response
+            .copy_to(&mut file)
+            .map_err(TemplateError::Reqwest)?;
 
-        let files =
-            ["contact.html", "index.html", "page.html", "post.html"];
-        for file in files.iter() {
-            let file_url = format!("{}/{}", url, file);
-            let file_path = template_dir_path.join(file);
-            let mut response = reqwest::blocking::get(&file_url)
-                .map_err(TemplateError::Reqwest)?;
-            let mut file =
-                File::create(&file_path).map_err(TemplateError::Io)?;
-            response
-                .copy_to(&mut file)
-                .map_err(TemplateError::Reqwest)?;
-        }
-
-        Ok(template_dir_path)
+        Ok(())
     }
+}
+
+/// Utility function to check if a given path is a URL.
+fn is_url(path: &str) -> bool {
+    path.starts_with("http://") || path.starts_with("https://")
 }

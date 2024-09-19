@@ -94,7 +94,6 @@ fn write_elements<W: std::io::Write>(
     write_element(writer, "generator", &options.generator)?;
     write_element(writer, "managingEditor", &options.managing_editor)?;
     write_element(writer, "webMaster", &options.webmaster)?;
-    println!("webMaster: {}", options.webmaster);
     write_element(writer, "category", &options.category)?;
     write_element(writer, "ttl", &options.ttl)?;
     Ok(())

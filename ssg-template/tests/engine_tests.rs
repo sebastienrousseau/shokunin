@@ -129,10 +129,13 @@ mod tests {
         use tempfile::tempdir;
 
         #[test]
-        fn test_engine_download_template_files() {
+        fn test_engine_download_file() {
             let engine = create_engine();
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/templates";
-            let result = engine.download_template_files(url);
+            let file = "index.html"; // Example file to download
+            let temp_dir = tempfile::tempdir().unwrap(); // Create a temporary directory
+            let result =
+                engine.download_file(url, file, temp_dir.path()); // Pass all three arguments
             assert!(result.is_ok());
         }
 
