@@ -12,6 +12,7 @@
 #![allow(missing_docs)]
 
 use ssg_template::{Context, Engine, TemplateError};
+use std::time::Duration;
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -106,7 +107,10 @@ fn demonstrates_template_rendering_example() -> Result<(), TemplateError>
     );
 
     // Step 4: Initialize the Engine with the base directory where the template is located
-    let engine = Engine::new(base_template_path.to_str().unwrap()); // Provide the dynamic base directory
+    let mut engine = Engine::new(
+        base_template_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    ); // Provide the dynamic base directory
 
     // Step 5: Render the template by specifying the filename without the extension (just "index")
     let rendered_template = engine.render_page(&context, "index")?;
@@ -136,7 +140,10 @@ fn demonstrates_error_handling_example() -> Result<(), TemplateError> {
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     match engine.render_page(&context, "invalid") {
         // Pass only "invalid", not "invalid.html"
@@ -181,7 +188,10 @@ fn demonstrates_template_with_loop_example() -> Result<(), TemplateError>
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     let rendered_template = engine.render_page(&context, "items")?;
     println!("Rendered Template with Loop: ✅ \n{}", rendered_template);
@@ -222,7 +232,10 @@ fn demonstrates_template_with_conditionals_example(
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     let rendered_template =
         engine.render_page(&context, "conditional")?;
@@ -262,7 +275,10 @@ fn demonstrates_nested_context_example() -> Result<(), TemplateError> {
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     let rendered_template =
         engine.render_page(&context, "user_profile")?; // Pass only "user_profile", not "user_profile.html"
@@ -313,7 +329,10 @@ fn demonstrates_template_with_partials_example(
     "#;
     main_template_file.write_all(main_template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the header and footer templates separately and inject the results into the main template
     let rendered_header = engine.render_page(&context, "header")?;
@@ -375,7 +394,10 @@ fn demonstrates_template_with_inheritance_example(
     context.set("footer".to_string(), "Footer Content".to_string());
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the 'about' content separately
     let about_content = fs::read_to_string(about_path)?;
@@ -439,7 +461,10 @@ fn demonstrates_multiple_templates_example() -> Result<(), TemplateError>
         .set("email".to_string(), "contact@example.com".to_string());
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the home and contact pages independently
     let rendered_home = engine.render_page(&context_home, "home")?;
@@ -480,7 +505,10 @@ fn demonstrates_large_context_example() -> Result<(), TemplateError> {
     template_file.write_all(template_content.as_bytes())?;
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the template with the large context
     let rendered_template =
@@ -524,7 +552,10 @@ fn demonstrates_dynamic_content_example() -> Result<(), TemplateError> {
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the template with the dynamic content
     let rendered_template =
@@ -558,7 +589,10 @@ fn demonstrates_template_caching_example() -> Result<(), TemplateError>
     template_file.write_all(template_content.as_bytes())?;
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Create a context for rendering
     let mut context = Context::new();
@@ -611,7 +645,10 @@ fn demonstrates_template_debugging_example() -> Result<(), TemplateError>
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Try to render the template and catch any missing context variables
     match engine.render_page(&context, "debug_template") {
@@ -660,7 +697,10 @@ fn demonstrates_form_template_example() -> Result<(), TemplateError> {
     context.set("email".to_string(), "john@example.com".to_string());
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the form template
     let rendered_template =
@@ -680,7 +720,10 @@ fn demonstrates_custom_error_handling_example(
         .set("title".to_string(), "Custom Error Example".to_string());
 
     // Try to render a non-existent template to trigger a custom error
-    let engine = Engine::new("path/to/nonexistent/templates");
+    let mut engine = Engine::new(
+        "path/to/nonexistent/templates",
+        Duration::from_secs(60),
+    );
 
     match engine.render_page(&context, "nonexistent_template") {
         Ok(rendered) => println!("Unexpected success: \n{}", rendered),
@@ -736,7 +779,10 @@ fn demonstrates_pagination_example() -> Result<(), TemplateError> {
     context.set("total_pages".to_string(), "3".to_string());
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the paginated template with the pre-processed posts
     let rendered_template =
@@ -781,7 +827,10 @@ fn demonstrates_internationalization_example(
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the template with the language-based greeting
     let rendered_template =
@@ -821,7 +870,10 @@ fn demonstrates_template_fragments_example() -> Result<(), TemplateError>
     "#;
     main_template_file.write_all(main_template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Load and render fragments
     let rendered_header =
@@ -883,7 +935,10 @@ fn demonstrates_markdown_to_html_example() -> Result<(), TemplateError>
     template_file.write_all(template_content.as_bytes())?;
 
     // Step 6: Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Step 7: Render the template with the manually converted markdown content
     let rendered_template =
@@ -923,7 +978,10 @@ fn demonstrates_template_versioning_example(
         if client_version == 1 { "v1" } else { "v2" };
 
     // Initialize the Engine with the template directory
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the appropriate version of the template
     let rendered_template =
@@ -964,7 +1022,10 @@ fn demonstrates_ajax_template_example() -> Result<(), TemplateError> {
     "#;
     template_file.write_all(template_content.as_bytes())?;
 
-    let engine = Engine::new(template_dir_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_dir_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Render the template meant for AJAX
     let rendered_template =

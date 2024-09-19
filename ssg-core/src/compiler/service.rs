@@ -8,6 +8,7 @@ use ssg_rss::{
     generate_rss, macro_set_rss_data_fields, models::data::RssData,
 };
 use ssg_sitemap::create_site_map_data;
+use std::time::Duration;
 
 use crate::{
     macro_cleanup_directories, macro_create_directories,
@@ -70,7 +71,10 @@ pub fn compile(
         HashMap::new();
 
     // Initialize the templating engine
-    let engine = Engine::new(template_path.to_str().unwrap());
+    let mut engine = Engine::new(
+        template_path.to_str().unwrap(),
+        Duration::from_secs(60),
+    );
 
     // Process source files and store results in 'compiled_files' vector
     let compiled_files: Result<Vec<FileData>> = source_files
@@ -78,7 +82,7 @@ pub fn compile(
         .map(|file| {
             process_file(
                 &file,
-                &engine,
+                &mut engine,
                 template_path,
                 &navigation,
                 &mut global_tags_data,
@@ -127,7 +131,7 @@ pub fn compile(
 /// Processes a single file, generating all necessary data and content.
 fn process_file(
     file: &FileData,
-    engine: &Engine,
+    engine: &mut Engine,
     _template_path: &Path,
     navigation: &str,
     global_tags_data: &mut HashMap<String, Vec<PageData>>,

@@ -21,6 +21,9 @@ pub mod engine;
 /// The `error` module contains the `TemplateError` enum, which represents errors that can occur during template processing.
 pub mod error;
 
+/// The `cache` module contains the `Cache` struct, which is used to cache rendered templates for improved performance.
+pub mod cache;
+
 pub use context::Context;
 pub use engine::{Engine, PageOptions};
 pub use error::TemplateError;

@@ -1,9 +1,11 @@
 // engine.rs
 
+use crate::cache::Cache;
 use crate::{Context, TemplateError};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 /// ## Struct: `PageOptions` - Options for rendering a page template
@@ -42,6 +44,7 @@ impl<'a> PageOptions<'a> {
 /// The main template rendering engine.
 pub struct Engine {
     template_path: String,
+    render_cache: Cache<String, String>,
 }
 
 impl Engine {
@@ -50,21 +53,24 @@ impl Engine {
     /// # Arguments
     ///
     /// * `template_path` - A string slice that holds the path to the template directory.
+    /// * `cache_ttl` - The time-to-live for cached rendered templates.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use ssg_template::Engine;
+    /// use std::time::Duration;
     ///
-    /// let engine = Engine::new("path/to/templates");
+    /// let engine = Engine::new("path/to/templates", Duration::from_secs(300));
     /// ```
-    pub fn new(template_path: &str) -> Self {
+    pub fn new(template_path: &str, cache_ttl: Duration) -> Self {
         Self {
             template_path: template_path.to_string(),
+            render_cache: Cache::new(cache_ttl),
         }
     }
 
-    /// Renders a page using the specified layout and context.
+    /// Renders a page using the specified layout and context, with caching.
     ///
     /// # Arguments
     ///
@@ -75,12 +81,13 @@ impl Engine {
     ///
     /// A `Result` containing the rendered page as a `String`, or a `TemplateError` if rendering fails.
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use ssg_template::{Engine, Context};
+    /// use std::time::Duration;
     ///
-    /// let engine = Engine::new("path/to/templates");
+    /// let mut engine = Engine::new("path/to/templates", Duration::from_secs(300));
     /// let mut context = Context::new();
     /// context.set("title".to_string(), "My Page".to_string());
     ///
@@ -90,16 +97,26 @@ impl Engine {
     /// }
     /// ```
     pub fn render_page(
-        &self,
+        &mut self,
         context: &Context,
         layout: &str,
     ) -> Result<String, TemplateError> {
+        let cache_key = format!("{}:{}", layout, context.hash());
+
+        if let Some(cached) = self.render_cache.get(&cache_key) {
+            return Ok(cached.to_string());
+        }
+
         let template_path = Path::new(&self.template_path)
             .join(format!("{}.html", layout));
         let template_content = fs::read_to_string(&template_path)
             .map_err(TemplateError::Io)?;
 
-        self.render_template(&template_content, &context.elements)
+        let rendered =
+            self.render_template(&template_content, &context.elements)?;
+        self.render_cache.insert(cache_key, rendered.clone());
+
+        Ok(rendered)
     }
 
     /// Renders a template string with the given context.
@@ -153,8 +170,9 @@ impl Engine {
     ///
     /// ```
     /// use ssg_template::Engine;
+    /// use std::time::Duration;
     ///
-    /// let engine = Engine::new("path/to/templates");
+    /// let engine = Engine::new("path/to/templates", Duration::from_secs(60));
     /// match engine.create_template_folder(Some("custom/templates")) {
     ///     Ok(path) => println!("Template folder created at: {}", path),
     ///     Err(e) => eprintln!("Error creating template folder: {}", e),
@@ -267,7 +285,9 @@ impl Engine {
     ///
     /// ```
     /// use ssg_template::Engine;
-    /// let engine = Engine::new("dummy/path");
+    /// use std::time::Duration;
+    ///
+    /// let engine = Engine::new("dummy/path",Duration::from_secs(60));
     /// let result = engine.download_template_files("https://example.com/templates");
     /// ```
     pub fn download_template_files(

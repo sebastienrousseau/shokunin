@@ -1,4 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 /// Represents the context for template rendering.
 ///
@@ -11,6 +13,22 @@ pub struct Context {
 }
 
 impl Context {
+    /// Computes a hash of the context.
+    ///
+    /// This method is used for caching purposes.
+    ///
+    /// # Returns
+    ///
+    /// A `u64` representing the hash of the context.
+    pub(crate) fn hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        for (key, value) in &self.elements {
+            key.hash(&mut hasher);
+            value.hash(&mut hasher);
+        }
+        hasher.finish()
+    }
+
     /// Creates a new, empty `Context`.
     ///
     /// # Examples

@@ -8,11 +8,13 @@ mod tests {
 
         use ssg_template::{Engine, TemplateError};
         use std::collections::HashMap;
+        use std::time::Duration;
 
         /// Test rendering a template with a valid context.
         #[test]
         fn test_engine_render_template() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let mut context = HashMap::new();
             context.insert("name".to_string(), "World".to_string());
             context.insert("greeting".to_string(), "Hello".to_string());
@@ -26,7 +28,8 @@ mod tests {
         /// Test rendering a template with unresolved tags.
         #[test]
         fn test_engine_render_template_unresolved_tags() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let context: HashMap<String, String> = HashMap::new();
 
             let template = "{{greeting}}, {{name}}!";
@@ -40,13 +43,12 @@ mod tests {
         /// Test rendering an empty template.
         #[test]
         fn test_engine_render_empty_template() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let context: HashMap<String, String> = HashMap::new();
 
             let template = "";
             let result = engine.render_template(template, &context);
-
-            // Check that the result is an error, specifically the "Template is empty" error
             assert!(
                 matches!(result, Err(TemplateError::RenderError(msg)) if msg == "Template is empty")
             );
@@ -55,7 +57,8 @@ mod tests {
         /// Test rendering a template with an empty context.
         #[test]
         fn test_engine_render_empty_context() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let context: HashMap<String, String> = HashMap::new();
 
             let template = "{{greeting}}, {{name}}!";
@@ -69,7 +72,8 @@ mod tests {
         /// Test rendering a template with special characters in the context.
         #[test]
         fn test_engine_render_special_characters_in_context() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let mut context = HashMap::new();
             context.insert(
                 "name".to_string(),
@@ -86,7 +90,8 @@ mod tests {
         /// Test rendering with a large context and template.
         #[test]
         fn test_engine_large_context() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let mut context = HashMap::new();
             let keys: Vec<String> =
                 (0..1000).map(|i| format!("key{}", i)).collect();
@@ -117,16 +122,17 @@ mod tests {
 
     /// Tests related to file operations, such as downloading templates.
     mod file_tests {
-        use ssg_template::{Context, Engine, TemplateError};
-
         use super::*;
+        use ssg_template::{Context, Engine, TemplateError};
+        use std::time::Duration;
 
         /// Test downloading template files from a URL.
         ///
         /// Note: This test may fail if there is no internet connection or the URL is unreachable.
         #[test]
         fn test_engine_download_template_files() {
-            let engine = Engine::new("dummy/path");
+            let engine =
+                Engine::new("dummy/path", Duration::from_secs(60));
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/templates";
             let result = engine.download_template_files(url);
             assert!(result.is_ok());
@@ -135,7 +141,8 @@ mod tests {
         /// Test rendering with an invalid template path.
         #[test]
         fn test_engine_invalid_template_path() {
-            let engine = Engine::new("invalid/path");
+            let mut engine =
+                Engine::new("invalid/path", Duration::from_secs(60));
             let context = Context {
                 elements: HashMap::new(),
             };
@@ -172,6 +179,7 @@ mod file_operations_tests {
     use std::collections::HashMap;
     use std::fs::File;
     use std::io::Write;
+    use std::time::Duration;
     use tempfile::tempdir;
 
     /// Test `render_page` with a valid template path.
@@ -190,7 +198,10 @@ mod file_operations_tests {
         .unwrap();
 
         // Initialize engine with the temporary directory
-        let engine = Engine::new(temp_dir.path().to_str().unwrap());
+        let mut engine = Engine::new(
+            temp_dir.path().to_str().unwrap(),
+            Duration::from_secs(60),
+        );
 
         // Prepare the context
         let mut elements = HashMap::new();
@@ -213,7 +224,8 @@ mod file_operations_tests {
     /// Test `render_page` with an invalid template path.
     #[test]
     fn test_render_page_invalid_path() {
-        let engine = Engine::new("invalid/path");
+        let mut engine =
+            Engine::new("invalid/path", Duration::from_secs(60));
         let context = Context {
             elements: HashMap::new(),
         };
@@ -224,7 +236,8 @@ mod file_operations_tests {
     /// Test `render_page` when the file is missing.
     #[test]
     fn test_render_page_missing_file() {
-        let engine = Engine::new("missing/path");
+        let mut engine =
+            Engine::new("missing/path", Duration::from_secs(60));
         let context = Context {
             elements: HashMap::new(),
         };
@@ -237,11 +250,12 @@ mod context_edge_cases_tests {
 
     use ssg_template::{Engine, TemplateError};
     use std::collections::HashMap;
+    use std::time::Duration;
 
     /// Test rendering a template with an empty context.
     #[test]
     fn test_render_template_empty_context() {
-        let engine = Engine::new("dummy/path");
+        let engine = Engine::new("dummy/path", Duration::from_secs(60));
         let context: HashMap<String, String> = HashMap::new();
 
         let template = "{{greeting}}, {{name}}!";
@@ -252,7 +266,7 @@ mod context_edge_cases_tests {
     /// Test rendering a template with special characters in the context.
     #[test]
     fn test_render_template_special_characters() {
-        let engine = Engine::new("dummy/path");
+        let engine = Engine::new("dummy/path", Duration::from_secs(60));
         let mut context = HashMap::new();
         context.insert(
             "name".to_string(),
@@ -270,13 +284,14 @@ mod context_edge_cases_tests {
 mod additional_tests {
 
     use ssg_template::{Context, Engine, PageOptions, TemplateError};
+    use std::time::Duration;
     use std::{collections::HashMap, fs::File};
     use tempfile::tempdir;
 
     /// Test rendering a template with an invalid format.
     #[test]
     fn test_engine_render_template_invalid_format() {
-        let engine = Engine::new("dummy/path");
+        let engine = Engine::new("dummy/path", Duration::from_secs(60));
         let mut context = HashMap::new();
         context.insert("name".to_string(), "World".to_string());
         context.insert("greeting".to_string(), "Hello".to_string());
@@ -298,7 +313,10 @@ mod additional_tests {
         File::create(&layout_path).unwrap();
 
         // Initialize engine with the temporary directory
-        let engine = Engine::new(temp_dir.path().to_str().unwrap());
+        let mut engine = Engine::new(
+            temp_dir.path().to_str().unwrap(),
+            Duration::from_secs(60),
+        );
 
         // Prepare the context
         let mut elements = HashMap::new();
@@ -320,7 +338,10 @@ mod additional_tests {
 
         // Create the layout file, but simulate a permission error by not allowing writes
         File::create(&layout_path).unwrap();
-        let engine = Engine::new("/restricted/directory");
+        let mut engine = Engine::new(
+            "/restricted/directory",
+            Duration::from_secs(60),
+        );
 
         let mut elements = HashMap::new();
         elements.insert("greeting".to_string(), "Hello".to_string());
@@ -354,7 +375,7 @@ mod additional_tests {
     /// Test rendering a template with an invalid context data type (e.g., integer values).
     #[test]
     fn test_render_template_invalid_context_data_type() {
-        let engine = Engine::new("templates/");
+        let engine = Engine::new("templates/", Duration::from_secs(60));
         let template = "Hello, {{name}}!";
         let mut invalid_context = HashMap::new();
         invalid_context.insert("name".to_string(), "World".to_string()); // Valid
@@ -367,7 +388,7 @@ mod additional_tests {
     /// Test render_template error handling with invalid template syntax.
     #[test]
     fn test_render_template_invalid_template_syntax() {
-        let engine = Engine::new("templates/");
+        let engine = Engine::new("templates/", Duration::from_secs(60));
         let invalid_template = "Hello, {{name"; // Missing closing braces
         let mut context = HashMap::new();
         context.insert("name".to_string(), "World".to_string());
@@ -379,7 +400,7 @@ mod additional_tests {
     /// Test large template rendering.
     #[test]
     fn test_render_large_template() {
-        let engine = Engine::new("templates/");
+        let engine = Engine::new("templates/", Duration::from_secs(60));
         let large_template = "Hello, {{name}}".repeat(1000); // Large template with repetitive pattern
         let mut context = HashMap::new();
         context.insert("name".to_string(), "World".to_string());
@@ -405,7 +426,7 @@ mod additional_tests {
     /// Test empty template rendering.
     #[test]
     fn test_render_template_empty_template() {
-        let engine = Engine::new("templates/");
+        let engine = Engine::new("templates/", Duration::from_secs(60));
         let empty_template = ""; // Empty template
         let mut context = HashMap::new();
         context.insert("name".to_string(), "World".to_string());

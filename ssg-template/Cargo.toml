@@ -33,7 +33,7 @@ regex = "1.5"
 
 # reqwest is a popular HTTP client for Rust, used for handling remote template fetching.
 # The `blocking` feature allows synchronous HTTP requests.
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
 
 # serde is used for serializing and deserializing data structures, including JSON.
 # The `derive` feature simplifies the process of creating serializable and deserializable structs.
