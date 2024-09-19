@@ -133,16 +133,6 @@ mod tests {
     mod file_tests {
         use super::*;
 
-        fn create_temp_file_with_content(
-            content: &str,
-        ) -> (File, String) {
-            let temp_dir = tempdir().unwrap();
-            let path = temp_dir.path().join("layout.html");
-            let mut file = File::create(&path).unwrap();
-            writeln!(file, "{}", content).unwrap();
-            (file, path.to_str().unwrap().to_string())
-        }
-
         #[test]
         fn test_engine_download_file() {
             let engine = create_engine();
@@ -168,20 +158,43 @@ mod tests {
 
         #[test]
         fn test_render_page_valid_path() {
-            let (_, layout_path) = create_temp_file_with_content("<html><body>{{{{greeting}}}}, {{{{name}}}}</body></html>");
+            let temp_dir = tempdir().unwrap(); // Create a temporary directory
+            let layout_path = temp_dir.path().join("layout.html"); // Define the layout file path within the temp directory
+
+            // Create the layout file and write content to it
+            let mut file = File::create(&layout_path)
+                .expect("Failed to create temp layout file");
+            writeln!(file, "<html><body>{{{{greeting}}}}, {{{{name}}}}</body></html>").expect("Failed to write content to layout file");
+
+            // Log the layout directory path for debugging
+            println!(
+                "Layout directory path: {}",
+                temp_dir.path().to_str().unwrap()
+            );
+
+            // Initialize the engine with the template directory path, not the full file path
             let mut engine = Engine::new(
-                layout_path.as_str(),
+                temp_dir.path().to_str().unwrap(),
                 Duration::from_secs(60),
             );
+
             let context = Context {
                 elements: create_basic_context(),
             };
 
-            let result = engine.render_page(&context, "layout");
-            assert!(result.is_ok());
+            let result = engine.render_page(&context, "layout"); // Only pass "layout" as the template name
+            assert!(
+                result.is_ok(),
+                "Failed to render page, result: {:?}",
+                result
+            );
+
+            let rendered_page = result.unwrap();
+            println!("Rendered page: {}", rendered_page.trim());
+
             assert_eq!(
-                result.unwrap().trim(),
-                "<html><body>Hello, World</html>"
+                rendered_page.trim(),
+                "<html><body>Hello, World</body></html>"
             );
         }
 
