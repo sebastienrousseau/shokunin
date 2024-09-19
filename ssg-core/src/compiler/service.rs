@@ -156,17 +156,17 @@ fn process_file(
     // Create page options
     let mut page_options = PageOptions::new();
     for (key, value) in metadata.iter() {
-        page_options.set(key, value);
+        page_options.set(key.to_string(), value.to_string());
     }
 
     // Set various meta tags
-    page_options.set("apple", &all_meta_tags.apple);
-    page_options.set("content", &html_content);
-    page_options.set("microsoft", &all_meta_tags.ms);
-    page_options.set("navigation", navigation);
-    page_options.set("opengraph", &all_meta_tags.og);
-    page_options.set("primary", &all_meta_tags.primary);
-    page_options.set("twitter", &all_meta_tags.twitter);
+    page_options.set("apple".to_string(), all_meta_tags.apple.clone());
+    page_options.set("content".to_string(), html_content);
+    page_options.set("microsoft".to_string(), all_meta_tags.ms.clone());
+    page_options.set("navigation".to_string(), navigation.to_owned());
+    page_options.set("opengraph".to_string(), all_meta_tags.og);
+    page_options.set("primary".to_string(), all_meta_tags.primary);
+    page_options.set("twitter".to_string(), all_meta_tags.twitter);
 
     // Convert PageOptions to TemplateContext
     let mut context = TemplateContext::new();

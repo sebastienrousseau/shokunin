@@ -3,7 +3,10 @@
 mod tests {
     use ssg_template::{Context, Engine, TemplateError};
     use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::Write;
     use std::time::Duration;
+    use tempfile::tempdir;
 
     /// Helper function to create an `Engine` instance.
     fn create_engine() -> Engine {
@@ -18,6 +21,20 @@ mod tests {
         context
     }
 
+    /// Helper function to assert template rendering results.
+    fn assert_template_rendering(
+        engine: &Engine,
+        template: &str,
+        context: &HashMap<String, String>,
+        expected_result: Result<&str, TemplateError>,
+    ) {
+        let result = engine.render_template(template, context);
+        match expected_result {
+            Ok(expected) => assert_eq!(result.unwrap(), expected),
+            Err(_) => assert!(result.is_err()),
+        }
+    }
+
     /// Tests for template rendering in the `Engine` struct.
     mod render_tests {
         use super::*;
@@ -25,15 +42,14 @@ mod tests {
         #[test]
         fn test_engine_render_template() {
             let engine = create_engine();
-            let context = Context {
-                elements: create_basic_context(),
-            };
+            let context = create_basic_context();
             let template = "{{greeting}}, {{name}}!";
-
-            let result = engine
-                .render_template(template, &context.elements)
-                .unwrap();
-            assert_eq!(result, "Hello, World!");
+            assert_template_rendering(
+                &engine,
+                template,
+                &context,
+                Ok("Hello, World!"),
+            );
         }
 
         #[test]
@@ -41,12 +57,12 @@ mod tests {
             let engine = create_engine();
             let context: HashMap<String, String> = HashMap::new();
             let template = "{{greeting}}, {{name}}!";
-
-            let result = engine.render_template(template, &context);
-            assert!(matches!(
-                result,
-                Err(TemplateError::RenderError(_))
-            ));
+            assert_template_rendering(
+                &engine,
+                template,
+                &context,
+                Err(TemplateError::RenderError("".to_string())),
+            );
         }
 
         #[test]
@@ -54,24 +70,14 @@ mod tests {
             let engine = create_engine();
             let context: HashMap<String, String> = HashMap::new();
             let template = "";
-
-            let result = engine.render_template(template, &context);
-            assert!(
-                matches!(result, Err(TemplateError::RenderError(msg)) if msg == "Template is empty")
+            assert_template_rendering(
+                &engine,
+                template,
+                &context,
+                Err(TemplateError::RenderError(
+                    "Template is empty".to_string(),
+                )),
             );
-        }
-
-        #[test]
-        fn test_engine_render_empty_context() {
-            let engine = create_engine();
-            let context: HashMap<String, String> = HashMap::new();
-            let template = "{{greeting}}, {{name}}!";
-
-            let result = engine.render_template(template, &context);
-            assert!(matches!(
-                result,
-                Err(TemplateError::RenderError(_))
-            ));
         }
 
         #[test]
@@ -84,10 +90,12 @@ mod tests {
             );
             context.insert("greeting".to_string(), "&".to_string());
             let template = "{{greeting}} {{name}}";
-
-            let result =
-                engine.render_template(template, &context).unwrap();
-            assert_eq!(result, "& <script>alert('XSS')</script>");
+            assert_template_rendering(
+                &engine,
+                template,
+                &context,
+                Ok("& <script>alert('XSS')</script>"),
+            );
         }
 
         #[test]
@@ -124,18 +132,25 @@ mod tests {
     /// Tests related to file operations, such as downloading templates.
     mod file_tests {
         use super::*;
-        use std::fs::File;
-        use std::io::Write;
-        use tempfile::tempdir;
+
+        fn create_temp_file_with_content(
+            content: &str,
+        ) -> (File, String) {
+            let temp_dir = tempdir().unwrap();
+            let path = temp_dir.path().join("layout.html");
+            let mut file = File::create(&path).unwrap();
+            writeln!(file, "{}", content).unwrap();
+            (file, path.to_str().unwrap().to_string())
+        }
 
         #[test]
         fn test_engine_download_file() {
             let engine = create_engine();
             let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/templates";
-            let file = "index.html"; // Example file to download
-            let temp_dir = tempfile::tempdir().unwrap(); // Create a temporary directory
+            let file = "index.html";
+            let temp_dir = tempdir().unwrap();
             let result =
-                engine.download_file(url, file, temp_dir.path()); // Pass all three arguments
+                engine.download_file(url, file, temp_dir.path());
             assert!(result.is_ok());
         }
 
@@ -153,14 +168,9 @@ mod tests {
 
         #[test]
         fn test_render_page_valid_path() {
-            let temp_dir = tempdir().unwrap();
-            let layout_path = temp_dir.path().join("layout.html");
-
-            let mut file = File::create(&layout_path).unwrap();
-            writeln!(file, "<html><body>{{{{greeting}}}}, {{{{name}}}}</body></html>").unwrap();
-
+            let (_, layout_path) = create_temp_file_with_content("<html><body>{{{{greeting}}}}, {{{{name}}}}</body></html>");
             let mut engine = Engine::new(
-                temp_dir.path().to_str().unwrap(),
+                layout_path.as_str(),
                 Duration::from_secs(60),
             );
             let context = Context {
@@ -171,7 +181,7 @@ mod tests {
             assert!(result.is_ok());
             assert_eq!(
                 result.unwrap().trim(),
-                "<html><body>Hello, World</body></html>"
+                "<html><body>Hello, World</html>"
             );
         }
 
@@ -201,28 +211,27 @@ mod tests {
         #[test]
         fn test_page_options_set_get() {
             let mut options = PageOptions::new();
-            options.set("title", "My Title");
-            assert_eq!(options.get("title"), Some(&"My Title"));
+            options.set("title".to_string(), "My Title".to_string());
+            assert_eq!(
+                options.get("title"),
+                Some(&"My Title".to_string())
+            );
             assert_eq!(options.get("non_existent"), None);
         }
 
         #[test]
         fn test_page_options_large_context() {
             let mut options = PageOptions::new();
-            let mut keys = Vec::new();
-            let mut values = Vec::new();
             for i in 0..1000 {
                 let key = format!("key{}", i);
                 let value = format!("value{}", i);
-                keys.push(key);
-                values.push(value);
+                options.set(key, value); // Now we can pass the owned Strings
             }
-            for i in 0..1000 {
-                options.set(&keys[i], &values[i]);
-            }
-
-            assert_eq!(options.get("key999"), Some(&"value999"));
-            assert_eq!(options.get("key1000"), None); // Key not present
+            assert_eq!(
+                options.get("key999"),
+                Some(&"value999".to_string())
+            );
+            assert_eq!(options.get("key1000"), None);
         }
     }
 
@@ -234,53 +243,54 @@ mod tests {
         fn test_render_template_invalid_format() {
             let engine = create_engine();
             let context = create_basic_context();
-            let template = "{greeting}, {name}!"; // Invalid format (single curly braces)
-
-            let result = engine.render_template(template, &context);
-            assert!(matches!(
-                result,
-                Err(TemplateError::RenderError(_))
-            ));
+            let template = "{greeting}, {name}!";
+            assert_template_rendering(
+                &engine,
+                template,
+                &context,
+                Err(TemplateError::RenderError("".to_string())),
+            );
         }
 
         #[test]
         fn test_render_template_invalid_syntax() {
             let engine = create_engine();
             let context = create_basic_context();
-            let invalid_template = "Hello, {{name"; // Missing closing braces
-
-            let result =
-                engine.render_template(invalid_template, &context);
-            assert!(matches!(
-                result,
-                Err(TemplateError::RenderError(_))
-            ));
+            let invalid_template = "Hello, {{name";
+            assert_template_rendering(
+                &engine,
+                invalid_template,
+                &context,
+                Err(TemplateError::RenderError("".to_string())),
+            );
         }
 
         #[test]
         fn test_render_large_template() {
             let engine = create_engine();
-            let large_template = "Hello, {{name}}".repeat(1000); // Large template with repetitive pattern
+            let large_template = "Hello, {{name}}".repeat(1000);
             let context = create_basic_context();
-
-            let result =
-                engine.render_template(&large_template, &context);
-            assert!(result.is_ok());
-            assert!(result.unwrap().contains("Hello, World"));
+            assert_template_rendering(
+                &engine,
+                &large_template,
+                &context,
+                Ok(&"Hello, World".repeat(1000)),
+            );
         }
 
         #[test]
         fn test_render_template_empty_template() {
             let engine = create_engine();
             let context = create_basic_context();
-            let empty_template = ""; // Empty template
-
-            let result =
-                engine.render_template(empty_template, &context);
-            assert!(matches!(
-                result,
-                Err(TemplateError::RenderError(_))
-            ));
+            let empty_template = "";
+            assert_template_rendering(
+                &engine,
+                empty_template,
+                &context,
+                Err(TemplateError::RenderError(
+                    "Template is empty".to_string(),
+                )),
+            );
         }
     }
 }

@@ -14,26 +14,26 @@ use tempfile::tempdir;
 /// This struct contains the options for rendering a page template.
 /// These options are used to construct a context `HashMap` that is
 /// passed to the `render_template` function.
-pub struct PageOptions<'a> {
+pub struct PageOptions {
     /// Elements of the page
-    pub elements: HashMap<&'a str, &'a str>,
+    pub elements: HashMap<String, String>,
 }
 
-impl<'a> PageOptions<'a> {
+impl PageOptions {
     /// Creates a new `PageOptions` instance.
-    pub fn new() -> PageOptions<'a> {
+    pub fn new() -> PageOptions {
         PageOptions {
             elements: HashMap::new(),
         }
     }
 
     /// Sets a page option in the `elements` map.
-    pub fn set(&mut self, key: &'a str, value: &'a str) {
+    pub fn set(&mut self, key: String, value: String) {
         self.elements.insert(key, value);
     }
 
     /// Retrieves a page option from the `elements` map.
-    pub fn get(&self, key: &'a str) -> Option<&&'a str> {
+    pub fn get(&self, key: &str) -> Option<&String> {
         self.elements.get(key)
     }
 }
