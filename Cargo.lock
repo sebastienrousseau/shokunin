@@ -3223,6 +3223,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "serde_yml",
  "tempfile",
  "thiserror",
  "time",

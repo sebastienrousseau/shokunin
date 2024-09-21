@@ -36,6 +36,7 @@ thiserror = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 time = "0.3"
 regex = "1.10"
+serde_yml = "0.0.12"
 quick-xml = "0.36"
 
 [build-dependencies]

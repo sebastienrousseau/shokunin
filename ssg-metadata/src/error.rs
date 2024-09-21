@@ -1,3 +1,4 @@
+use serde_yml::Error as SerdeYmlError;
 use thiserror::Error;
 
 /// Custom error types for the ssg-metadata library
@@ -25,7 +26,7 @@ pub enum MetadataError {
 
     /// YAML parsing error
     #[error("YAML parsing error: {0}")]
-    YamlError(#[from] yaml_rust2::ScanError),
+    YamlError(#[from] SerdeYmlError),
 
     /// JSON parsing error
     #[error("JSON parsing error: {0}")]

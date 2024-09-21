@@ -5,6 +5,8 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
+    use ssg_metadata::generate_metatags;
+    use ssg_metadata::MetaTagGroups;
     use std::collections::HashMap;
 
     /// Parses meta tags from an HTML string and returns a HashMap.
@@ -47,5 +49,100 @@ mod tests {
             metatags.is_empty(),
             "Empty meta tags should not be parsed"
         );
+    }
+
+    /// Test adding a custom primary meta tag.
+    #[test]
+    fn test_add_custom_primary_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags.add_custom_tag("custom-tag", "custom value");
+
+        assert!(meta_tags.primary.contains("custom-tag"));
+        assert!(meta_tags.primary.contains("custom value"));
+    }
+
+    /// Test adding a custom OpenGraph (og) meta tag.
+    #[test]
+    fn test_add_custom_og_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags.add_custom_tag("og:custom", "custom og value");
+
+        assert!(meta_tags.og.contains("og:custom"));
+        assert!(meta_tags.og.contains("custom og value"));
+    }
+
+    /// Test adding a custom Twitter meta tag.
+    #[test]
+    fn test_add_custom_twitter_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags
+            .add_custom_tag("twitter:custom", "custom twitter value");
+
+        assert!(meta_tags.twitter.contains("twitter:custom"));
+        assert!(meta_tags.twitter.contains("custom twitter value"));
+    }
+
+    /// Test adding a custom Apple meta tag.
+    #[test]
+    fn test_add_custom_apple_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags.add_custom_tag(
+            "apple-mobile-web-app-custom",
+            "custom apple value",
+        );
+
+        assert!(meta_tags
+            .apple
+            .contains("apple-mobile-web-app-custom"));
+        assert!(meta_tags.apple.contains("custom apple value"));
+    }
+
+    /// Test adding a custom Microsoft meta tag.
+    #[test]
+    fn test_add_custom_ms_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags
+            .add_custom_tag("msapplication-custom", "custom ms value");
+
+        assert!(meta_tags.ms.contains("msapplication-custom"));
+        assert!(meta_tags.ms.contains("custom ms value"));
+    }
+
+    /// Test adding multiple custom tags of different types.
+    #[test]
+    fn test_add_multiple_custom_tags() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags.add_custom_tag("custom-primary", "primary value");
+        meta_tags.add_custom_tag("og:custom", "og value");
+        meta_tags.add_custom_tag("twitter:custom", "twitter value");
+        meta_tags.add_custom_tag(
+            "apple-mobile-web-app-custom",
+            "apple value",
+        );
+        meta_tags.add_custom_tag("msapplication-custom", "ms value");
+
+        // Check primary meta tags
+        assert!(meta_tags.primary.contains("<meta name=\"custom-primary\" content=\"primary value\">"),
+        "Primary meta tag should contain 'custom-primary'");
+
+        // Check Open Graph (og) meta tags
+        assert!(
+            meta_tags.og.contains(
+                "<meta name=\"og:custom\" content=\"og value\">"
+            ),
+            "OG meta tag should contain 'og:custom'"
+        );
+
+        // Check Twitter meta tags
+        assert!(meta_tags.twitter.contains("<meta name=\"twitter:custom\" content=\"twitter value\">"),
+        "Twitter meta tag should contain 'twitter:custom'");
+
+        // Check Apple meta tags
+        assert!(meta_tags.apple.contains("<meta name=\"apple-mobile-web-app-custom\" content=\"apple value\">"),
+        "Apple meta tag should contain 'apple-mobile-web-app-custom'");
+
+        // Check Microsoft meta tags
+        assert!(meta_tags.ms.contains("<meta name=\"msapplication-custom\" content=\"ms value\">"),
+        "MS meta tag should contain 'msapplication-custom'");
     }
 }
