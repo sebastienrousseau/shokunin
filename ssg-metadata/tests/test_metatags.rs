@@ -5,7 +5,6 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
-    use ssg_metadata::generate_metatags;
     use ssg_metadata::MetaTagGroups;
     use std::collections::HashMap;
 
