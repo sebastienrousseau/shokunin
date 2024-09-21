@@ -1,9 +1,30 @@
 use crate::HtmlError;
 use crate::Result;
 use comrak::{markdown_to_html, ComrakOptions};
-use minify_html::minify;
-use minify_html::Cfg;
+use minify_html::{minify, Cfg};
 use std::{fs, path::Path};
+
+/// Returns a default `Cfg` for HTML minification.
+///
+/// This helper function creates a default configuration for minifying HTML
+/// with pre-set options for CSS, JS, and attributes.
+///
+/// # Returns
+/// A `Cfg` object containing the default minification settings.
+fn default_minify_cfg() -> Cfg {
+    let mut cfg = Cfg::new();
+    cfg.do_not_minify_doctype = true;
+    cfg.ensure_spec_compliant_unquoted_attribute_values = true;
+    cfg.keep_closing_tags = true;
+    cfg.keep_html_and_head_opening_tags = true;
+    cfg.keep_spaces_between_attributes = true;
+    cfg.keep_comments = false;
+    cfg.minify_css = true;
+    cfg.minify_js = true;
+    cfg.remove_bangs = true;
+    cfg.remove_processing_instructions = true;
+    cfg
+}
 
 /// Minifies a single HTML file.
 ///
@@ -22,28 +43,40 @@ use std::{fs, path::Path};
 ///     - `Err(HtmlError)` if the HTML file could not be minified.
 ///
 pub fn minify_html(file_path: &Path) -> Result<String> {
-    let mut cfg = Cfg::new();
-    cfg.do_not_minify_doctype = true;
-    cfg.ensure_spec_compliant_unquoted_attribute_values = true;
-    cfg.keep_closing_tags = true;
-    cfg.keep_html_and_head_opening_tags = true;
-    cfg.keep_spaces_between_attributes = true;
-    cfg.keep_comments = false;
-    cfg.minify_css = true;
-    cfg.minify_js = true;
-    cfg.remove_bangs = true;
-    cfg.remove_processing_instructions = true;
-
+    // Read the file content
     let file_content = fs::read(file_path)
         .map_err(|e| HtmlError::MinificationError(e.to_string()))?;
 
-    let minified_content = minify(&file_content, &cfg);
+    // Ensure that the content is valid UTF-8 before proceeding with minification
+    let content_str = String::from_utf8(file_content).map_err(|e| {
+        HtmlError::MinificationError(format!(
+            "Invalid UTF-8 sequence: {}",
+            e
+        ))
+    })?;
 
+    // Minify the valid UTF-8 content
+    let minified_content =
+        minify(content_str.as_bytes(), &default_minify_cfg());
+
+    // Convert the minified content back to a UTF-8 string
     String::from_utf8(minified_content)
         .map_err(|e| HtmlError::MinificationError(e.to_string()))
 }
 
-/// Asynchronously generate HTML
+/// Asynchronously generate HTML from Markdown.
+///
+/// This function converts a Markdown string into an HTML string using
+/// Comrak, a CommonMark-compliant Markdown parser and renderer.
+///
+/// # Arguments
+///
+/// * `markdown` - A reference to a Markdown string.
+///
+/// # Returns
+///
+/// * `Result<String, HtmlError>` - A result containing a string with the
+///   generated HTML.
 pub async fn async_generate_html(markdown: &str) -> Result<String> {
     let options = ComrakOptions::default();
     Ok(markdown_to_html(markdown, &options))
@@ -56,14 +89,19 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
+    /// Helper function to create an HTML file for testing.
+    fn create_html_file(file_path: &Path, content: &str) {
+        let mut file = File::create(file_path).unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+    }
+
     #[test]
     fn test_minify_html_basic() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.html");
         let html = "<html>  <body>    <p>Test</p>  </body>  </html>";
 
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(html.as_bytes()).unwrap();
+        create_html_file(&file_path, html);
 
         let result = minify_html(&file_path);
         assert!(result.is_ok());
@@ -79,8 +117,7 @@ mod tests {
         let file_path = dir.path().join("test_comments.html");
         let html = "<html>  <body>    <!-- This is a comment -->    <p>Test</p>  </body>  </html>";
 
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(html.as_bytes()).unwrap();
+        create_html_file(&file_path, html);
 
         let result = minify_html(&file_path);
         assert!(result.is_ok());
@@ -96,8 +133,7 @@ mod tests {
         let file_path = dir.path().join("test_css.html");
         let html = "<html><head><style>  body  {  color:  red;  }  </style></head><body><p>Test</p></body></html>";
 
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(html.as_bytes()).unwrap();
+        create_html_file(&file_path, html);
 
         let result = minify_html(&file_path);
         assert!(result.is_ok());
@@ -110,8 +146,7 @@ mod tests {
         let file_path = dir.path().join("test_js.html");
         let html = "<html><head><script>  function  test()  {  console.log('Hello');  }  </script></head><body><p>Test</p></body></html>";
 
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(html.as_bytes()).unwrap();
+        create_html_file(&file_path, html);
 
         let result = minify_html(&file_path);
         assert!(result.is_ok());
@@ -145,7 +180,12 @@ mod tests {
         file.write_all(&invalid_utf8).unwrap();
 
         let result = minify_html(&file_path);
-        assert!(result.is_err());
+
+        // Ensure the result is an error, as expected due to invalid UTF-8
+        assert!(
+            result.is_err(),
+            "Expected an error due to invalid UTF-8 sequence"
+        );
         assert!(matches!(
             result.unwrap_err(),
             HtmlError::MinificationError(_)
