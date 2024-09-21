@@ -127,7 +127,7 @@ mod context_tests {
         assert_eq!(context.get("key1000"), None);
     }
 
-    /// Test context behavior after mutation (ensuring immutability of previous states).
+    /// Test context behaviour after mutation (ensuring immutability of previous states).
     #[test]
     fn test_context_mutation_preserves_old_state() {
         let mut context = Context::new();

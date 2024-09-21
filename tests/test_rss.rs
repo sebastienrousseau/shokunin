@@ -137,7 +137,7 @@ mod tests {
 
     /// # Rss Element Writer Tests
     ///
-    /// These tests validate the behavior of individual RSS element writer functions.
+    /// These tests validate the behaviour of individual RSS element writer functions.
     mod rss_element_writer_tests {
         use super::*;
 

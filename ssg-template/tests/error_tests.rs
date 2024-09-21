@@ -1,6 +1,6 @@
 use ssg_template::TemplateError;
 
-/// Unit tests for TemplateError variants and their behavior.
+/// Unit tests for TemplateError variants and their behaviour.
 #[cfg(test)]
 mod template_error_tests {
     use super::*;

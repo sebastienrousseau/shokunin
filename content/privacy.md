@@ -131,7 +131,7 @@ Google Analytics is a web analytics service offered by Google that tracks and re
 
 ### Microsoft Clarity
 
-Microsoft Clarity is a user behavior analytics tool that helps us understand how users interact with our website. The data collected includes information such as mouse movements, clicks, and scrolls. For more information on the privacy practices of Microsoft, please visit the Microsoft Privacy Statement web page: [Microsoft Privacy Statement ⧉](https://privacy.microsoft.com/en-us/privacystatement)
+Microsoft Clarity is a user behaviour analytics tool that helps us understand how users interact with our website. The data collected includes information such as mouse movements, clicks, and scrolls. For more information on the privacy practices of Microsoft, please visit the Microsoft Privacy Statement web page: [Microsoft Privacy Statement ⧉](https://privacy.microsoft.com/en-us/privacystatement)
 
 ## Your Rights
 

@@ -9,8 +9,7 @@
 //! Simply run the example, and it will print the converted HTML to the console. You can customize
 //! the Markdown content and options to see how different configurations affect the output.
 
-use comrak::ComrakOptions;
-use ssg_markdown::process_markdown;
+use ssg_markdown::{process_markdown, MarkdownOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let markdown = r#"
@@ -27,11 +26,13 @@ This is a **bold** statement and this is *italic*.
 Check out [our website](https://example.com) for more information.
     "#;
 
-    let mut options = ComrakOptions::default();
-    options.extension.strikethrough = true;
-    options.extension.table = true;
-    options.extension.autolink = true;
+    // Initialize MarkdownOptions with default Comrak options
+    let mut options = MarkdownOptions::default();
+    options.comrak_options.extension.strikethrough = true; // Enable strikethrough
+    options.comrak_options.extension.table = true; // Enable tables
+    options.comrak_options.extension.autolink = true; // Enable automatic links
 
+    // Process the markdown content to HTML
     let html = process_markdown(markdown, &options)?;
     println!("Converted HTML:\n\n{}", html);
 

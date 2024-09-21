@@ -47,19 +47,19 @@ impl Metadata {
 pub fn extract_metadata(
     content: &str,
 ) -> Result<Metadata, MetadataError> {
-    println!("Extracting metadata from content:\n{}", content); // Debugging output
+    // println!("Extracting metadata from content:\n{}", content); // Debugging output
 
     if let Some(yaml_metadata) = extract_yaml_metadata(content) {
-        println!("Extracted YAML metadata: {:?}", yaml_metadata); // Debugging output
+        // println!("Extracted YAML metadata: {:?}", yaml_metadata); // Debugging output
         Ok(yaml_metadata)
     } else if let Some(toml_metadata) = extract_toml_metadata(content) {
-        println!("Extracted TOML metadata: {:?}", toml_metadata); // Debugging output
+        // println!("Extracted TOML metadata: {:?}", toml_metadata); // Debugging output
         Ok(toml_metadata)
     } else if let Some(json_metadata) = extract_json_metadata(content) {
-        println!("Extracted JSON metadata: {:?}", json_metadata); // Debugging output
+        // println!("Extracted JSON metadata: {:?}", json_metadata); // Debugging output
         Ok(json_metadata)
     } else {
-        println!("No valid front matter found."); // Debugging output
+        // println!("No valid front matter found."); // Debugging output
         Err(MetadataError::ExtractionError(
             "No valid front matter found.".to_string(),
         ))
@@ -72,7 +72,7 @@ fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
     let captures = re.captures(content)?;
 
     let yaml_str = captures.get(1)?.as_str().trim();
-    println!("Captured YAML content: {:?}", yaml_str); // Debugging output
+    // println!("Captured YAML content: {:?}", yaml_str); // Debugging output
 
     let docs = YamlLoader::load_from_str(yaml_str).ok()?;
 
@@ -91,7 +91,7 @@ fn extract_yaml_metadata(content: &str) -> Option<Metadata> {
         })
         .collect();
 
-    println!("Extracted YAML metadata map: {:?}", metadata); // Debugging output
+    // println!("Extracted YAML metadata map: {:?}", metadata); // Debugging output
 
     Some(Metadata::new(metadata))
 }

@@ -166,7 +166,7 @@ mod tests {
             html.contains("<h1>Unclosed header</h1>"),
             "Header not found"
         );
-        // Comrak does not automatically close bold tags; this is expected behavior
+        // Comrak does not automatically close bold tags; this is expected behaviour
         assert!(
             html.contains("<p>Some **unclosed bold</p>"),
             "Unclosed bold tag not properly handled"
