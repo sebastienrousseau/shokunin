@@ -1,244 +1,202 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
-// SPDX-License-Identifier: Apache-2.0 OR MIT
+use std::{collections::HashMap, fmt};
 
-use crate::macro_generate_tags_from_fields;
-use crate::models::{MetaTag, MetaTagGroups};
-use std::collections::HashMap;
-
-// Type alias for better readability
-type MetaDataMap = HashMap<String, String>;
-
-/// Generates HTML meta tags based on custom key-value mappings.
-///
-/// # Arguments
-/// * `mapping` - A slice of tuples, where each tuple contains a `String` key and an `Option<String>` value.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-pub fn generate_custom_meta_tags(
-    mapping: &[(String, Option<String>)],
-) -> String {
-    let filtered_mapping: Vec<(String, String)> = mapping
-        .iter()
-        .filter_map(|(key, value)| {
-            value
-                .as_ref()
-                .map(|val| (key.clone(), val.clone()))
-                .filter(|(_, val)| !val.is_empty())
-        })
-        .collect();
-    generate_metatags(&filtered_mapping)
+/// Holds collections of meta tags for different platforms and categories.
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+pub struct MetaTagGroups {
+    /// The `apple` meta tags.
+    pub apple: String,
+    /// The primary meta tags.
+    pub primary: String,
+    /// The `og` meta tags.
+    pub og: String,
+    /// The `ms` meta tags.
+    pub ms: String,
+    /// The `twitter` meta tags.
+    pub twitter: String,
 }
 
-/// Generates HTML meta tags based on the provided key-value pairs.
-///
-/// # Arguments
-/// * `meta` - A slice of key-value pairs represented as tuples of `String` objects.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-pub fn generate_metatags(meta: &[(String, String)]) -> String {
-    meta.iter()
-        .map(|(key, value)| format_meta_tag(key, value.trim()))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-/// Generates HTML meta tags based on a list of tag names and a metadata HashMap.
-///
-/// # Arguments
-/// * `tag_names` - A slice of tag names as `&str`.
-/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-pub fn load_metatags(
-    tag_names: &[&str],
-    metadata: &MetaDataMap,
-) -> String {
-    let mut result = String::new();
-    for &name in tag_names {
-        let value =
-            metadata.get(name).cloned().unwrap_or_else(String::new);
-        result.push_str(
-            &MetaTag::new(name.to_string(), value).generate(),
-        );
+impl MetaTagGroups {
+    /// Adds a custom meta tag to the appropriate group.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the meta tag.
+    /// * `content` - The content of the meta tag.
+    pub fn add_custom_tag(&mut self, name: &str, content: &str) {
+        if name.starts_with("apple") {
+            self.apple.push_str(&format_meta_tag(name, content));
+        } else if name.starts_with("og") {
+            self.og.push_str(&format_meta_tag(name, content));
+        } else if name.starts_with("ms") {
+            self.ms.push_str(&format_meta_tag(name, content));
+        } else if name.starts_with("twitter") {
+            self.twitter.push_str(&format_meta_tag(name, content));
+        } else {
+            self.primary.push_str(&format_meta_tag(name, content));
+        }
     }
-    result
 }
 
-/// Utility function to format a single meta tag into its HTML representation.
-///
-/// # Arguments
-/// * `key` - The name attribute of the meta tag.
-/// * `value` - The content attribute of the meta tag.
-///
-/// # Returns
-/// A `String` containing the HTML representation of the meta tag.
-pub fn format_meta_tag(key: &str, value: &str) -> String {
-    // Sanitize the value by replacing newline characters with spaces
-    let sanitized_value = value.replace('\n', " ");
-    format!("<meta name=\"{}\" content=\"{}\">", key, &sanitized_value)
+/// Implement `Display` for `MetaTagGroups`.
+impl fmt::Display for MetaTagGroups {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}\n{}\n{}\n{}\n{}",
+            self.apple, self.primary, self.og, self.ms, self.twitter
+        )
+    }
 }
 
-/// Generates HTML meta tags for Apple-specific settings.
+/// Generates HTML meta tags based on the provided metadata.
 ///
-/// # Arguments
-/// * `metadata` - A reference to a `HashMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-///
-pub fn generate_apple_meta_tags(metadata: &MetaDataMap) -> String {
-    macro_generate_tags_from_fields!(
-        tag_names,
-        metadata,
-        "apple_mobile_web_app_orientations" => apple_mobile_web_app_orientations,
-        "apple_touch_icon_sizes" => apple_touch_icon_sizes,
-        "apple-mobile-web-app-capable" => apple_mobile_web_app_capable,
-        "apple-mobile-web-app-status-bar-inset" => apple_mobile_web_app_status_bar_inset,
-        "apple-mobile-web-app-status-bar-style" => apple_mobile_web_app_status_bar_style,
-        "apple-mobile-web-app-title" => apple_mobile_web_app_title,
-        "apple-touch-fullscreen" => apple_touch_fullscreen
-    )
-}
-
-/// Generates HTML meta tags for primary settings like author, description, etc.
-///
-/// # Arguments
-/// * `metadata` - A reference to a `HashMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-///
-pub fn generate_primary_meta_tags(metadata: &MetaDataMap) -> String {
-    macro_generate_tags_from_fields!(
-        tag_names,
-        metadata,
-        "author" => author,
-        "description" => description,
-        "format-detection" => format_detection,
-        "generator" => generator,
-        "keywords" => keywords,
-        "language" => language,
-        "permalink" => permalink,
-        "rating" => rating,
-        "referrer" => referrer,
-        "revisit-after" => revisit_after,
-        "robots" => robots,
-        "theme-color" => theme_color,
-        "title" => title,
-        "viewport" => viewport
-    )
-}
-
-/// Generates HTML meta tags for Open Graph settings, primarily for social media.
-///
-/// This function expects the `metadata` HashMap to contain keys such as:
-///
-/// - "og:description": The description of the content.
-/// - "og:image": The URL of the image to use.
-/// - "og:image:alt": The alt text for the image.
-/// - "og:image:height": The height of the image.
-/// - "og:image:width": The width of the image.
-/// - "og:locale": The locale of the content.
-/// - "og:site_name": The name of the site.
-/// - "og:title": The title of the content.
-/// - "og:type": The type of content.
-/// - "og:url": The URL of the content.
-///
-/// # Arguments
-/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-///
-pub fn generate_og_meta_tags(metadata: &MetaDataMap) -> String {
-    macro_generate_tags_from_fields!(
-        tag_names,
-        metadata,
-        "og:description" => description,
-        "og:image" => image,
-        "og:image:alt" => image_alt,
-        "og:image:height" => image_height,
-        "og:image:width" => image_width,
-        "og:locale" => locale,
-        "og:site_name" => site_name,
-        "og:title" => title,
-        "og:type" => type,
-        "og:url" => url
-    )
-}
-
-/// Generates HTML meta tags for Microsoft-specific settings.
-///
-/// # Arguments
-/// * `metadata` - A reference to a `HashMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-///
-pub fn generate_ms_meta_tags(metadata: &MetaDataMap) -> String {
-    macro_generate_tags_from_fields!(
-        tag_names,
-        metadata,
-        "msapplication-navbutton-color" => msapplication_navbutton_color
-    )
-}
-
-/// Generates HTML meta tags for Twitter-specific settings.
-///
-/// This function expects the `metadata` HashMap to contain keys such as:
-/// - "twitter:card": The type of Twitter card to use.
-/// - "twitter:creator": The Twitter handle of the content creator.
-/// - "twitter:description": The description of the content.
-/// - "twitter:image": The URL of the image to use.
-/// - "twitter:image:alt": The alt text for the image.
-/// - "twitter:image:height": The height of the image.
-/// - "twitter:image:width": The width of the image.
-/// - "twitter:site": The Twitter handle of the site.
-/// - "twitter:title": The title of the content.
-/// - "twitter:url": The URL of the content.
-///
-/// # Arguments
-/// * `metadata` - A reference to a `MetaDataMap` containing metadata key-value pairs.
-///
-/// # Returns
-/// A `String` containing the HTML code for the meta tags.
-///
-pub fn generate_twitter_meta_tags(metadata: &MetaDataMap) -> String {
-    macro_generate_tags_from_fields!(
-        tag_names,
-        metadata,
-        "twitter:card" => twitter_card,
-        "twitter:creator" => twitter_creator,
-        "twitter:description" => twitter_description,
-        "twitter:image" => twitter_image,
-        "twitter:image:alt" => twitter_image_alt,
-        "twitter:image:height" => twitter_image_height,
-        "twitter:image:width" => twitter_image_width,
-        "twitter:site" => twitter_site,
-        "twitter:title" => twitter_title,
-        "twitter:url" => twitter_url
-    )
-}
-
-/// Generates meta tags for the given metadata.
+/// This function takes metadata from a `HashMap` and generates meta tags for various platforms (e.g., Apple, Open Graph, Twitter).
 ///
 /// # Arguments
 ///
-/// * `metadata` - The metadata extracted from the file.
+/// * `metadata` - A reference to a `HashMap` containing the metadata.
 ///
 /// # Returns
 ///
-/// Returns a tuple containing meta tags for Apple devices, primary information, Open Graph, Microsoft, and Twitter.
-///
-pub fn generate_all_meta_tags(metadata: &MetaDataMap) -> MetaTagGroups {
+/// A `MetaTagGroups` structure with meta tags grouped by platform.
+pub fn generate_metatags(
+    metadata: &HashMap<String, String>,
+) -> MetaTagGroups {
     MetaTagGroups {
         apple: generate_apple_meta_tags(metadata),
         primary: generate_primary_meta_tags(metadata),
         og: generate_og_meta_tags(metadata),
         ms: generate_ms_meta_tags(metadata),
         twitter: generate_twitter_meta_tags(metadata),
+    }
+}
+
+/// Generates meta tags for Apple devices.
+fn generate_apple_meta_tags(
+    metadata: &HashMap<String, String>,
+) -> String {
+    const APPLE_TAGS: [&str; 3] = [
+        "apple-mobile-web-app-capable",
+        "apple-mobile-web-app-status-bar-style",
+        "apple-mobile-web-app-title",
+    ];
+    generate_tags(metadata, &APPLE_TAGS)
+}
+
+/// Generates primary meta tags like `author`, `description`, and `keywords`.
+fn generate_primary_meta_tags(
+    metadata: &HashMap<String, String>,
+) -> String {
+    const PRIMARY_TAGS: [&str; 4] =
+        ["author", "description", "keywords", "viewport"];
+    generate_tags(metadata, &PRIMARY_TAGS)
+}
+
+/// Generates Open Graph (`og`) meta tags for social media.
+fn generate_og_meta_tags(metadata: &HashMap<String, String>) -> String {
+    const OG_TAGS: [&str; 5] = [
+        "og:title",
+        "og:description",
+        "og:image",
+        "og:url",
+        "og:type",
+    ];
+    generate_tags(metadata, &OG_TAGS)
+}
+
+/// Generates Microsoft-specific meta tags.
+fn generate_ms_meta_tags(metadata: &HashMap<String, String>) -> String {
+    const MS_TAGS: [&str; 2] =
+        ["msapplication-TileColor", "msapplication-TileImage"];
+    generate_tags(metadata, &MS_TAGS)
+}
+
+/// Generates Twitter meta tags for embedding rich media in tweets.
+fn generate_twitter_meta_tags(
+    metadata: &HashMap<String, String>,
+) -> String {
+    const TWITTER_TAGS: [&str; 5] = [
+        "twitter:card",
+        "twitter:site",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+    ];
+    generate_tags(metadata, &TWITTER_TAGS)
+}
+
+/// Generates meta tags based on the provided list of tag names.
+///
+/// # Arguments
+///
+/// * `metadata` - A reference to a `HashMap` containing the metadata.
+/// * `tags` - A reference to an array of tag names.
+///
+/// # Returns
+///
+/// A string containing the generated meta tags.
+fn generate_tags(
+    metadata: &HashMap<String, String>,
+    tags: &[&str],
+) -> String {
+    tags.iter()
+        .filter_map(|&tag| {
+            metadata.get(tag).map(|value| format_meta_tag(tag, value))
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Formats a single meta tag.
+///
+/// # Arguments
+///
+/// * `name` - The name of the meta tag (e.g., `author`, `description`).
+/// * `content` - The content of the meta tag.
+///
+/// # Returns
+///
+/// A formatted meta tag string.
+fn format_meta_tag(name: &str, content: &str) -> String {
+    format!(
+        "<meta name=\"{}\" content=\"{}\">",
+        name,
+        content.replace('"', "&quot;")
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_metatags() {
+        let mut metadata = HashMap::new();
+        metadata.insert("author".to_string(), "John Doe".to_string());
+        metadata.insert(
+            "description".to_string(),
+            "A test page".to_string(),
+        );
+        metadata
+            .insert("og:title".to_string(), "Test Title".to_string());
+
+        let meta_tags = generate_metatags(&metadata);
+
+        assert!(meta_tags.primary.contains("author"));
+        assert!(meta_tags.primary.contains("description"));
+        assert!(meta_tags.og.contains("og:title"));
+        assert!(meta_tags.apple.is_empty());
+        assert!(meta_tags.ms.is_empty());
+        assert!(meta_tags.twitter.is_empty());
+    }
+
+    #[test]
+    fn test_add_custom_tag() {
+        let mut meta_tags = MetaTagGroups::default();
+        meta_tags.add_custom_tag("custom-tag", "custom value");
+        meta_tags.add_custom_tag("og:custom", "custom og value");
+
+        assert!(meta_tags.primary.contains("custom-tag"));
+        assert!(meta_tags.og.contains("og:custom"));
     }
 }

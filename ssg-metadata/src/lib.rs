@@ -9,40 +9,31 @@
 //! - Process and validate metadata
 //! - Generate keywords based on metadata
 //! - Create meta tags for HTML documents
-//!
-//! ## Main Components
-//!
-//! - `extract_metadata`: Extracts metadata from content
-//! - `process_metadata`: Processes and validates extracted metadata
-//! - `extract_and_prepare_metadata`: Combines extraction, processing, and meta tag generation
+//! - Asynchronously extract metadata from files
 
-use anyhow::{Context, Result};
+/// The `error` module contains error types for metadata processing.
+pub mod error;
+/// The `metadata` module contains functions for extracting and processing metadata.
+pub mod metadata;
+/// The `metatags` module contains functions for generating meta tags.
+pub mod metatags;
+/// The `utils` module contains utility functions for metadata processing.
+pub mod utils;
+
+pub use error::MetadataError;
+pub use metadata::{extract_metadata, process_metadata, Metadata};
+pub use metatags::{generate_metatags, MetaTagGroups};
+pub use utils::{
+    async_extract_metadata_from_file, escape_html_entities,
+};
+
 use std::collections::HashMap;
 
-/// Functions for escaping special characters in metadata values
-pub mod escape;
-
-/// Functions for extracting front matter from content files
-pub mod extractor;
-
-/// Functions for processing and validating metadata
-pub mod processor;
-
-/// Data structures for representing metadata and related information
-pub mod models;
-
-/// Functions for generating keywords from metadata
-pub mod keywords;
-
-/// Functions for generating HTML meta tags
-pub mod metatags;
-
-/// Macros for common metadata operations
-pub mod macros;
-
-pub use extractor::extract_metadata;
-use models::MetaTagGroups;
-pub use processor::process_metadata;
+/// Type aliases for improving readability and reducing complexity
+type MetadataMap = HashMap<String, String>;
+type Keywords = Vec<String>;
+type MetadataResult =
+    Result<(MetadataMap, Keywords, MetaTagGroups), MetadataError>;
 
 /// Extracts metadata from the content, generates keywords based on the metadata,
 /// and prepares meta tag groups.
@@ -65,7 +56,7 @@ pub use processor::process_metadata;
 ///
 /// # Errors
 ///
-/// This function will return an error if metadata extraction fails.
+/// This function will return a `MetadataError` if metadata extraction or processing fails.
 ///
 /// # Example
 ///
@@ -82,14 +73,31 @@ pub use processor::process_metadata;
 /// let result = extract_and_prepare_metadata(content);
 /// assert!(result.is_ok());
 /// ```
-pub fn extract_and_prepare_metadata(
-    content: &str,
-) -> Result<(HashMap<String, String>, Vec<String>, MetaTagGroups)> {
-    let metadata = extract_metadata(content)
-        .context("Failed to extract metadata")?;
+pub fn extract_and_prepare_metadata(content: &str) -> MetadataResult {
+    let metadata = extract_metadata(content)?;
     let metadata_map = metadata.into_inner();
-    let keywords = keywords::extract_keywords(&metadata_map);
-    let all_meta_tags = metatags::generate_all_meta_tags(&metadata_map);
+    let keywords = extract_keywords(&metadata_map);
+    let all_meta_tags = generate_metatags(&metadata_map);
 
     Ok((metadata_map, keywords, all_meta_tags))
+}
+
+/// Extracts keywords from the metadata.
+///
+/// This function looks for a "keywords" key in the metadata and splits its value into a vector of strings.
+///
+/// # Arguments
+///
+/// * `metadata` - A reference to a HashMap containing the metadata.
+///
+/// # Returns
+///
+/// A vector of strings representing the keywords.
+pub fn extract_keywords(
+    metadata: &HashMap<String, String>,
+) -> Vec<String> {
+    metadata
+        .get("keywords")
+        .map(|k| k.split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_default()
 }

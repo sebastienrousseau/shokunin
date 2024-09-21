@@ -1,0 +1,21 @@
+[licenses]
+# List of allowed licenses for dependencies
+allow = ["MIT", "Apache-2.0", "Unicode-DFS-2016"]
+
+[bans]
+# Lint level for when multiple versions of the same crate are detected
+multiple-versions = "warn"
+
+# The graph highlighting used when creating dotgraphs for crates with multiple versions
+# Options: "lowest-version", "simplest-path", "all"
+highlight = "all"
+
+# Certain crates/versions that will be skipped when doing duplicate detection.
+skip = []
+
+# Similarly to `skip` allows you to skip certain crates during duplicate detection, unlike skip, it also includes the entire tree of transitive dependencies starting at the specified crate, up to a certain depth, which is by default infinite
+skip-tree = []
+
+[advisories]
+# List of advisory IDs to ignore
+ignore = []
