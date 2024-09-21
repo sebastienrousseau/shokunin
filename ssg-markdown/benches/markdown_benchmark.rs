@@ -1,56 +1,83 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
 
-#![allow(missing_docs)]
-
-//! # Markdown to HTML Benchmark
-//!
-//! This benchmark test uses the `ssg-markdown` crate to measure the performance of converting
-//! Markdown content into HTML. The `criterion` crate is used to handle the benchmarking process.
-//!
-//! ## Usage
-//!
-//! Run the benchmark to evaluate the performance of the Markdown conversion process
-//! by executing `cargo bench`.
-
 use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
+    black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
 };
 use ssg_markdown::{process_markdown, MarkdownOptions};
+use comrak::ComrakOptions;
 
-/// Benchmark the Markdown to HTML conversion process.
+/// Create a valid MarkdownOptions configuration
+fn create_valid_options(
+    syntax_highlighting: bool,
+    custom_blocks: bool,
+    enhanced_tables: bool,
+    enable_comrak_tables: bool,
+) -> MarkdownOptions<'static> {
+    let mut comrak_options = ComrakOptions::default();
+    comrak_options.extension.table = enable_comrak_tables;
+
+    MarkdownOptions::new()
+        .with_syntax_highlighting(syntax_highlighting)
+        .with_custom_blocks(custom_blocks)
+        .with_enhanced_tables(enhanced_tables)
+        .with_comrak_options(comrak_options)
+}
+
+/// Benchmark the Markdown to HTML conversion process with various configurations.
 fn markdown_benchmark(c: &mut Criterion) {
-    let markdown = r#"
+    let small_markdown = r#"
 # Welcome to SSG Markdown
-
 This is a **bold** statement and this is *italic*.
-
 ## Features
-
 - Easy to use
 - Extensible
 - Fast
-
 Check out [our website](https://example.com) for more information.
     "#;
 
-    // Create MarkdownOptions and set the necessary extensions
-    let mut options = MarkdownOptions::default();
-    options.comrak_options.extension.strikethrough = true;
-    options.comrak_options.extension.table = true;
-    options.comrak_options.extension.autolink = true;
+    let large_markdown = include_str!("../README.md");
 
-    c.bench_function("Markdown to HTML Conversion", |b| {
-        b.iter(|| {
-            let _html = process_markdown(
-                black_box(markdown),
-                black_box(&options), // Pass the updated MarkdownOptions
-            )
-            .unwrap();
-        })
-    });
+    let markdown_sizes = vec![
+        ("small", small_markdown),
+        ("large", large_markdown),
+    ];
+
+    let mut group = c.benchmark_group("Markdown to HTML Conversion");
+
+    for (size, markdown) in markdown_sizes.iter() {
+        group.throughput(Throughput::Bytes(markdown.len() as u64));
+
+        // Basic conversion (no enhanced tables)
+        let basic_options = create_valid_options(false, false, false, false);
+        group.bench_with_input(BenchmarkId::new("basic", size), markdown, |b, markdown| {
+            b.iter(|| {
+                let _ = process_markdown(black_box(markdown), black_box(&basic_options))
+                    .expect("Basic conversion should not fail");
+            });
+        });
+
+        // Full-featured conversion
+        let full_options = create_valid_options(true, true, true, true);
+        group.bench_with_input(BenchmarkId::new("full", size), markdown, |b, markdown| {
+            b.iter(|| {
+                let _ = process_markdown(black_box(markdown), black_box(&full_options))
+                    .expect("Full-featured conversion should not fail");
+            });
+        });
+
+        // Custom configuration
+        let custom_options = create_valid_options(true, false, true, true);
+        group.bench_with_input(BenchmarkId::new("custom", size), markdown, |b, markdown| {
+            b.iter(|| {
+                let _ = process_markdown(black_box(markdown), black_box(&custom_options))
+                    .expect("Custom conversion should not fail");
+            });
+        });
+    }
+
+    group.finish();
 }
 
-// Define the benchmark group and main function for Criterion.
 criterion_group!(benches, markdown_benchmark);
 criterion_main!(benches);
