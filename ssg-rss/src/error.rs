@@ -1,10 +1,10 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use thiserror::Error;
+use quick_xml;
 use std::io;
 use std::string::FromUtf8Error;
-use quick_xml;
+use thiserror::Error;
 
 /// Errors that can occur when generating RSS feeds.
 #[derive(Error, Debug)]
@@ -41,21 +41,27 @@ mod tests {
 
     #[test]
     fn test_xml_write_error() {
-        let xml_error = quick_xml::Error::Io(std::sync::Arc::new(io::Error::new(io::ErrorKind::Other, "XML error")));
+        let xml_error = quick_xml::Error::Io(std::sync::Arc::new(
+            io::Error::new(io::ErrorKind::Other, "XML error"),
+        ));
         let error = RssError::XmlWriteError(xml_error);
         assert!(error.to_string().starts_with("XML writing error:"));
     }
 
     #[test]
     fn test_utf8_error() {
-        let utf8_error = String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
+        let utf8_error =
+            String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
         let error = RssError::Utf8Error(utf8_error);
-        assert!(error.to_string().starts_with("UTF-8 conversion error:"));
+        assert!(error
+            .to_string()
+            .starts_with("UTF-8 conversion error:"));
     }
 
     #[test]
     fn test_io_error() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "File not found");
         let error = RssError::IoError(io_error);
         assert!(error.to_string().starts_with("I/O error:"));
     }
