@@ -14,24 +14,34 @@
 //! - Atom link support
 //! - Image element support
 //!
+//! ## Usage
+//!
+//! ```rust
+//! use ssg_rss::{RssData, generate_rss};
+//!
+//! let rss_data = RssData::new()
+//!     .title("My Blog")
+//!     .link("https://myblog.com")
+//!     .description("A blog about Rust programming");
+//!
+//! match generate_rss(&rss_data) {
+//!     Ok(rss_feed) => println!("{}", rss_feed),
+//!     Err(e) => eprintln!("Error generating RSS: {}", e),
+//! }
+//! ```
 
-///  The `error` module provides error types for the RSS library.
+/// The `data` module contains the main types and data structures used to generate RSS feeds.
+pub mod data;
+/// The `error` module contains error types used by the library.
 pub mod error;
-
-/// The `generator` module provides functions for generating RSS feeds.
+/// The `generator` module contains the main logic for generating RSS feeds.
 pub mod generator;
-
-/// The `macros` module provides macros for generating RSS elements.
+/// The `macros` module contains procedural macros used by the library.
 pub mod macros;
 
-/// The `models` module contains data structures for RSS elements and attributes.
-pub mod models;
-
-/// The `RssError` type represents errors that can occur when generating an RSS feed.
+pub use data::RssData;
 pub use error::RssError;
-
-/// The `RssData` struct represents the metadata for generating an RSS feed.
-pub use models::data::RssData;
-
-/// The `generate_rss` function generates an RSS feed from the given `RssData` struct.
 pub use generator::generate_rss;
+
+// Re-export main types for ease of use
+pub use error::Result;

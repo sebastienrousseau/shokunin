@@ -441,29 +441,29 @@ impl RssData {
     }
 
     /// Sets the value of a field.
-    pub fn set<T: Into<String>>(&mut self, key: &str, value: T) {
-        match key {
-            "atom_link" => self.atom_link = value.into(),
-            "author" => self.author = value.into(),
-            "category" => self.category = value.into(),
-            "copyright" => self.copyright = value.into(),
-            "description" => self.description = value.into(),
-            "docs" => self.docs = value.into(),
-            "generator" => self.generator = value.into(),
-            "image" => self.image = value.into(),
-            "item_guid" => self.item_guid = value.into(),
-            "item_description" => self.item_description = value.into(),
-            "item_link" => self.item_link = value.into(),
-            "item_pub_date" => self.item_pub_date = value.into(),
-            "item_title" => self.item_title = value.into(),
-            "language" => self.language = value.into(),
-            "last_build_date" => self.last_build_date = value.into(),
-            "link" => self.link = value.into(),
-            "managing_editor" => self.managing_editor = value.into(),
-            "pub_date" => self.pub_date = value.into(),
-            "title" => self.title = value.into(),
-            "ttl" => self.ttl = value.into(),
-            "webmaster" => self.webmaster = value.into(),
+    pub fn set(&mut self, field: &str, value: String) {
+        match field {
+            "atom_link" => self.atom_link = value,
+            "author" => self.author = value,
+            "category" => self.category = value,
+            "copyright" => self.copyright = value,
+            "description" => self.description = value,
+            "docs" => self.docs = value,
+            "generator" => self.generator = value,
+            "image" => self.image = value,
+            "item_guid" => self.item_guid = value,
+            "item_description" => self.item_description = value,
+            "item_link" => self.item_link = value,
+            "item_pub_date" => self.item_pub_date = value,
+            "item_title" => self.item_title = value,
+            "language" => self.language = value,
+            "last_build_date" => self.last_build_date = value,
+            "link" => self.link = value,
+            "managing_editor" => self.managing_editor = value,
+            "pub_date" => self.pub_date = value,
+            "title" => self.title = value,
+            "ttl" => self.ttl = value,
+            "webmaster" => self.webmaster = value,
             _ => (),
         }
     }

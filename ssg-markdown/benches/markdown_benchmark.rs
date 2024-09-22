@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
 
+#![allow(missing_docs)]
+
+use comrak::ComrakOptions;
 use criterion::{
-    black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
+    black_box, criterion_group, criterion_main, BenchmarkId, Criterion,
+    Throughput,
 };
 use ssg_markdown::{process_markdown, MarkdownOptions};
-use comrak::ComrakOptions;
 
 /// Create a valid MarkdownOptions configuration
 fn create_valid_options(
@@ -38,10 +41,8 @@ Check out [our website](https://example.com) for more information.
 
     let large_markdown = include_str!("../README.md");
 
-    let markdown_sizes = vec![
-        ("small", small_markdown),
-        ("large", large_markdown),
-    ];
+    let markdown_sizes =
+        [("small", small_markdown), ("large", large_markdown)];
 
     let mut group = c.benchmark_group("Markdown to HTML Conversion");
 
@@ -49,31 +50,54 @@ Check out [our website](https://example.com) for more information.
         group.throughput(Throughput::Bytes(markdown.len() as u64));
 
         // Basic conversion (no enhanced tables)
-        let basic_options = create_valid_options(false, false, false, false);
-        group.bench_with_input(BenchmarkId::new("basic", size), markdown, |b, markdown| {
-            b.iter(|| {
-                let _ = process_markdown(black_box(markdown), black_box(&basic_options))
+        let basic_options =
+            create_valid_options(false, false, false, false);
+        group.bench_with_input(
+            BenchmarkId::new("basic", size),
+            markdown,
+            |b, markdown| {
+                b.iter(|| {
+                    let _ = process_markdown(
+                        black_box(markdown),
+                        black_box(&basic_options),
+                    )
                     .expect("Basic conversion should not fail");
-            });
-        });
+                });
+            },
+        );
 
         // Full-featured conversion
         let full_options = create_valid_options(true, true, true, true);
-        group.bench_with_input(BenchmarkId::new("full", size), markdown, |b, markdown| {
-            b.iter(|| {
-                let _ = process_markdown(black_box(markdown), black_box(&full_options))
+        group.bench_with_input(
+            BenchmarkId::new("full", size),
+            markdown,
+            |b, markdown| {
+                b.iter(|| {
+                    let _ = process_markdown(
+                        black_box(markdown),
+                        black_box(&full_options),
+                    )
                     .expect("Full-featured conversion should not fail");
-            });
-        });
+                });
+            },
+        );
 
         // Custom configuration
-        let custom_options = create_valid_options(true, false, true, true);
-        group.bench_with_input(BenchmarkId::new("custom", size), markdown, |b, markdown| {
-            b.iter(|| {
-                let _ = process_markdown(black_box(markdown), black_box(&custom_options))
+        let custom_options =
+            create_valid_options(true, false, true, true);
+        group.bench_with_input(
+            BenchmarkId::new("custom", size),
+            markdown,
+            |b, markdown| {
+                b.iter(|| {
+                    let _ = process_markdown(
+                        black_box(markdown),
+                        black_box(&custom_options),
+                    )
                     .expect("Custom conversion should not fail");
-            });
-        });
+                });
+            },
+        );
     }
 
     group.finish();

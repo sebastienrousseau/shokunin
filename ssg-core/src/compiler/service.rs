@@ -4,9 +4,7 @@
 use anyhow::{Context as AnyhowContext, Result};
 use rlg::log_level::LogLevel;
 use ssg_html::{generate_html, HtmlConfig};
-use ssg_rss::{
-    generate_rss, macro_set_rss_data_fields, models::data::RssData,
-};
+use ssg_rss::{data::RssData, generate_rss, macro_set_rss_data_fields};
 use ssg_sitemap::create_site_map_data;
 use std::time::Duration;
 
@@ -186,108 +184,31 @@ fn process_file(
     // Set fields using the helper macro
     macro_set_rss_data_fields!(
         rss_data,
-        atom_link,
-        macro_metadata_option!(metadata, "atom_link")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        author,
-        macro_metadata_option!(metadata, "author")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        category,
-        macro_metadata_option!(metadata, "category")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        copyright,
-        macro_metadata_option!(metadata, "copyright")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        description,
-        macro_metadata_option!(metadata, "description")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        docs,
-        macro_metadata_option!(metadata, "docs")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        generator,
-        macro_metadata_option!(metadata, "generator")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        image,
-        macro_metadata_option!(metadata, "image")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        item_guid,
-        macro_metadata_option!(metadata, "item_guid")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        item_description,
-        macro_metadata_option!(metadata, "item_description")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        item_link,
-        macro_metadata_option!(metadata, "item_link")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        item_pub_date,
-        macro_metadata_option!(metadata, "item_pub_date")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        item_title,
-        macro_metadata_option!(metadata, "item_title")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        language,
-        macro_metadata_option!(metadata, "language")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        last_build_date,
-        macro_metadata_option!(metadata, "last_build_date")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        link,
-        macro_metadata_option!(metadata, "permalink")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        managing_editor,
-        macro_metadata_option!(metadata, "managing_editor")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        pub_date,
-        macro_metadata_option!(metadata, "pub_date")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        title,
-        macro_metadata_option!(metadata, "title")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        ttl,
-        macro_metadata_option!(metadata, "ttl")
-    );
-    macro_set_rss_data_fields!(
-        rss_data,
-        webmaster,
-        macro_metadata_option!(metadata, "webmaster")
+        atom_link = macro_metadata_option!(metadata, "atom_link"),
+        author = macro_metadata_option!(metadata, "author"),
+        category = macro_metadata_option!(metadata, "category"),
+        copyright = macro_metadata_option!(metadata, "copyright"),
+        description = macro_metadata_option!(metadata, "description"),
+        docs = macro_metadata_option!(metadata, "docs"),
+        generator = macro_metadata_option!(metadata, "generator"),
+        image = macro_metadata_option!(metadata, "image"),
+        item_guid = macro_metadata_option!(metadata, "item_guid"),
+        item_description =
+            macro_metadata_option!(metadata, "item_description"),
+        item_link = macro_metadata_option!(metadata, "item_link"),
+        item_pub_date =
+            macro_metadata_option!(metadata, "item_pub_date"),
+        item_title = macro_metadata_option!(metadata, "item_title"),
+        language = macro_metadata_option!(metadata, "language"),
+        last_build_date =
+            macro_metadata_option!(metadata, "last_build_date"),
+        link = macro_metadata_option!(metadata, "permalink"),
+        managing_editor =
+            macro_metadata_option!(metadata, "managing_editor"),
+        pub_date = macro_metadata_option!(metadata, "pub_date"),
+        title = macro_metadata_option!(metadata, "title"),
+        ttl = macro_metadata_option!(metadata, "ttl"),
+        webmaster = macro_metadata_option!(metadata, "webmaster")
     );
 
     // Generate RSS
