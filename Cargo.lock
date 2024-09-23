@@ -964,6 +964,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b42b6fa04a440b495c8b04d0e71b707c585f83cb9cb28cf8cd0d976c315e31b4"
 dependencies = [
  "powerfmt",
+ "serde",
 ]
 
 [[package]]
@@ -1066,6 +1067,23 @@ dependencies = [
  "regex",
  "serde",
  "time",
+]
+
+[[package]]
+name = "dtt"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a0f956d085fb3371b9ab70b662dc444d2ebc60e2963eed84f1fc3fb3f56549c"
+dependencies = [
+ "lazy_static",
+ "paste",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "thiserror",
+ "time",
+ "version_check",
 ]
 
 [[package]]
@@ -3251,7 +3269,7 @@ dependencies = [
  "clap",
  "comrak",
  "criterion",
- "dtt 0.0.6",
+ "dtt 0.0.8",
  "env_logger",
  "lazy_static",
  "log",
