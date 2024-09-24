@@ -25,6 +25,7 @@ readme = "README.md"
 
 [dependencies]
 # Dependencies required for building and running the project.
+dtt = "0.0.8"
 quick-xml = "0.36"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"

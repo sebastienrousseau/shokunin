@@ -3242,6 +3242,7 @@ dependencies = [
 name = "ssg-rss"
 version = "0.0.1"
 dependencies = [
+ "dtt 0.0.8",
  "pretty_assertions",
  "quick-xml 0.36.2",
  "serde",

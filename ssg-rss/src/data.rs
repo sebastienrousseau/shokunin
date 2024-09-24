@@ -1,6 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use dtt::datetime::DateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -80,6 +81,15 @@ impl RssData {
     /// Creates a new `RssData` instance with default values.
     pub fn new() -> Self {
         RssData::default()
+    }
+
+    /// Sorts the RSS items by their publication date in descending order.
+    pub fn sort_items_by_pub_date(&mut self) {
+        self.items.sort_by(|a, b| {
+            let date_a = DateTime::parse(&a.pub_date).ok();
+            let date_b = DateTime::parse(&b.pub_date).ok();
+            date_b.cmp(&date_a) // Sort in descending order (newest first)
+        });
     }
 
     /// Sets the value of a specified field and returns the `RssData` instance for method chaining.
@@ -782,5 +792,45 @@ mod tests {
         let errors = result.unwrap_err();
         assert_eq!(errors.len(), 1); // One error for the invalid item
         assert!(errors[0].contains("Errors in item 1")); // The second item (index 1) is invalid
+    }
+
+    // Additional test for sorting items by publication date
+    #[test]
+    fn test_sort_items_by_pub_date() {
+        let mut rss_data = RssData::new()
+            .title("Test RSS Feed")
+            .link("https://example.com")
+            .description("A test RSS feed");
+
+        let item1 = RssItem::new()
+            .title("Item 1")
+            .link("https://example.com/item1")
+            .description("First item")
+            .guid("guid1")
+            .pub_date("2024-03-20T12:00:00Z");
+
+        let item2 = RssItem::new()
+            .title("Item 2")
+            .link("https://example.com/item2")
+            .description("Second item")
+            .guid("guid2")
+            .pub_date("2024-03-22T12:00:00Z");
+
+        let item3 = RssItem::new()
+            .title("Item 3")
+            .link("https://example.com/item3")
+            .description("Third item")
+            .guid("guid3")
+            .pub_date("2024-03-21T12:00:00Z");
+
+        rss_data.add_item(item1);
+        rss_data.add_item(item2);
+        rss_data.add_item(item3);
+
+        rss_data.sort_items_by_pub_date();
+
+        assert_eq!(rss_data.items[0].title, "Item 2");
+        assert_eq!(rss_data.items[1].title, "Item 3");
+        assert_eq!(rss_data.items[2].title, "Item 1");
     }
 }
