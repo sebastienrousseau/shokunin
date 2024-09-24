@@ -72,6 +72,8 @@ pub struct RssItem {
     pub pub_date: String,
     /// The title of the RSS item.
     pub title: String,
+    /// The author of the RSS item.
+    pub author: String,
 }
 
 impl RssData {
@@ -306,6 +308,16 @@ impl RssData {
 
 impl RssItem {
     /// Creates a new `RssItem` with default values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rss::data::RssItem;
+    ///
+    /// let item = RssItem::new();
+    /// assert_eq!(item.title, "");
+    /// assert_eq!(item.description, "");
+    /// ```
     pub fn new() -> Self {
         RssItem::default()
     }
@@ -313,8 +325,22 @@ impl RssItem {
     /// Sets the value of a field and returns the `RssItem` instance for method chaining.
     ///
     /// # Arguments
+    ///
     /// * `key` - The field to set.
     /// * `value` - The value to assign to the field.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rss::data::RssItem;
+    ///
+    /// let item = RssItem::new()
+    ///     .set("title", "New Item")
+    ///     .set("description", "A new item in the feed");
+    ///
+    /// assert_eq!(item.title, "New Item");
+    /// assert_eq!(item.description, "A new item in the feed");
+    /// ```
     pub fn set<T: Into<String>>(mut self, key: &str, value: T) -> Self {
         let value = value.into();
         match key {
@@ -323,6 +349,7 @@ impl RssItem {
             "link" => self.link = value,
             "pub_date" => self.pub_date = value,
             "title" => self.title = value,
+            "author" => self.author = value,
             _ => eprintln!(
                 "Warning: Attempt to set unknown field '{}'",
                 key
@@ -356,9 +383,26 @@ impl RssItem {
         self.set("title", value)
     }
 
-    /// Validates the `RssItem` to ensure all required fields are set.
+    /// The `author` field setter method.
+    pub fn author<T: Into<String>>(self, value: T) -> Self {
+        self.set("author", value)
+    }
+
+    /// Validates the `RssItem` to ensure all required fields are set and valid.
     ///
-    /// Returns `Ok(())` if valid, otherwise returns a `Vec<String>` with error messages.
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rss::data::RssItem;
+    ///
+    /// let item = RssItem::new()
+    ///     .title("New Item")
+    ///     .link("https://example.com/item")
+    ///     .description("A new item")
+    ///     .guid("unique-id");
+    ///
+    /// assert!(item.validate().is_ok());
+    /// ```
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 

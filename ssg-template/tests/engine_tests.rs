@@ -136,7 +136,7 @@ mod tests {
         #[test]
         fn test_engine_download_file() {
             let engine = create_engine();
-            let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/templates";
+            let url = "https://raw.githubusercontent.com/sebastienrousseau/shokunin/main/template";
             let file = "index.html";
             let temp_dir = tempdir().unwrap();
             let result =
