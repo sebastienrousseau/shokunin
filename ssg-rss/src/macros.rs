@@ -291,6 +291,7 @@ macro_rules! macro_metadata_option {
 mod tests {
     use crate::RssData;
     use quick_xml::Writer;
+    use std::collections::HashMap;
     use std::io::Cursor;
 
     #[test]
@@ -321,8 +322,70 @@ mod tests {
         Ok(())
     }
 
+    /// Test generating an RSS feed using valid RSS data.
+    /// Ensures that the macro generates valid XML elements for required fields.
     #[test]
-    fn test_macro_set_rss_data_fields() {
+    fn test_macro_generate_rss_valid_data(
+    ) -> Result<(), quick_xml::Error> {
+        let options = RssData::new()
+            .title("Test RSS Feed")
+            .link("https://example.com")
+            .description("A test RSS feed");
+
+        let writer = Writer::new(Cursor::new(Vec::new()));
+        let result: Result<
+            Writer<Cursor<Vec<u8>>>,
+            Box<dyn std::error::Error>,
+        > = macro_generate_rss!(writer, options);
+
+        assert!(result.is_ok());
+        let writer = result.unwrap();
+        let content =
+            String::from_utf8(writer.into_inner().into_inner())
+                .unwrap();
+
+        assert!(content.contains(r#"<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">"#));
+        assert!(content.contains("<title>Test RSS Feed</title>"));
+        assert!(content.contains("<link>https://example.com</link>"));
+        assert!(content
+            .contains("<description>A test RSS feed</description>"));
+
+        Ok(())
+    }
+
+    /// Test generating an RSS feed with missing optional fields.
+    /// Ensures that the macro still generates valid RSS but excludes the missing fields.
+    #[test]
+    fn test_macro_generate_rss_missing_fields(
+    ) -> Result<(), quick_xml::Error> {
+        let options = RssData::new()
+            .title("Test RSS Feed")
+            .link("https://example.com");
+
+        let writer = Writer::new(Cursor::new(Vec::new()));
+        let result: Result<
+            Writer<Cursor<Vec<u8>>>,
+            Box<dyn std::error::Error>,
+        > = macro_generate_rss!(writer, options);
+
+        assert!(result.is_ok());
+        let writer = result.unwrap();
+        let content =
+            String::from_utf8(writer.into_inner().into_inner())
+                .unwrap();
+
+        assert!(content.contains("<title>Test RSS Feed</title>"));
+        assert!(content.contains("<link>https://example.com</link>"));
+        assert!(!content.contains("<description>")); // No description in this case
+
+        Ok(())
+    }
+
+    /// Test setting multiple fields on an `RssData` struct using the macro.
+    /// Ensures that all fields are set correctly and in order.
+    #[test]
+    fn test_macro_set_rss_data_fields(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut rss_data = RssData::new();
         macro_set_rss_data_fields!(
             rss_data,
@@ -334,5 +397,39 @@ mod tests {
         assert_eq!(rss_data.title, "My Blog");
         assert_eq!(rss_data.link, "https://example.com");
         assert_eq!(rss_data.description, "A blog about Rust");
+
+        Ok(())
+    }
+
+    /// Test metadata option macro when the key exists.
+    /// Ensures the correct value is returned for a given key.
+    #[test]
+    fn test_macro_metadata_option_existing_key() {
+        let mut metadata = HashMap::new();
+        metadata.insert("author".to_string(), "John Doe".to_string());
+
+        let value = macro_metadata_option!(metadata, "author");
+        assert_eq!(value, "John Doe");
+    }
+
+    /// Test metadata option macro when the key is missing.
+    /// Ensures that it returns an empty string or default value in case the key is not found.
+    #[test]
+    fn test_macro_metadata_option_missing_key() {
+        let mut metadata = HashMap::new();
+        metadata.insert("title".to_string(), "Rust Blog".to_string());
+
+        let value = macro_metadata_option!(metadata, "author"); // Key "author" does not exist
+        assert_eq!(value, ""); // Should return empty string by default
+    }
+
+    /// Test metadata option macro with an empty HashMap.
+    /// Ensures it handles an empty metadata collection gracefully.
+    #[test]
+    fn test_macro_metadata_option_empty_metadata() {
+        let metadata: HashMap<String, String> = HashMap::new();
+
+        let value = macro_metadata_option!(metadata, "nonexistent_key");
+        assert_eq!(value, "");
     }
 }
