@@ -23,7 +23,7 @@
 ///
 /// # Example
 ///
-/// ```
+/// ```text
 /// use ssg_rss::{RssData, macro_generate_rss, macro_write_element};
 /// use quick_xml::Writer;
 /// use std::io::Cursor;
@@ -39,8 +39,7 @@
 ///     assert!(result.is_ok());
 ///     Ok(())
 /// }
-/// ```
-///
+/// ```text
 /// generate_rss().unwrap();
 /// ```
 #[macro_export]

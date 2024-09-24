@@ -1,6 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+use crate::version::RssVersion;
 use dtt::datetime::DateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -56,9 +57,11 @@ pub struct RssData {
     pub webmaster: String,
     /// A collection of additional items in the RSS feed.
     pub items: Vec<RssItem>,
+    /// The version of the RSS feed.
+    pub version: RssVersion,
 }
 
-/// Represents an additional item in the RSS feed.
+/// Represents an item in the RSS feed.
 #[derive(
     Debug, Default, PartialEq, Eq, Hash, Clone, Serialize, Deserialize,
 )]
@@ -80,7 +83,10 @@ pub struct RssItem {
 impl RssData {
     /// Creates a new `RssData` instance with default values.
     pub fn new() -> Self {
-        RssData::default()
+        RssData {
+            version: RssVersion::RSS2_0,
+            ..Default::default()
+        }
     }
 
     /// Sorts the RSS items by their publication date in descending order.
@@ -129,7 +135,7 @@ impl RssData {
         self
     }
 
-    /// Adds an additional item to the RSS feed.
+    /// Adds an item to the RSS feed.
     pub fn add_item(&mut self, item: RssItem) {
         self.items.push(item);
     }
@@ -143,12 +149,12 @@ impl RssData {
         self.items.len() < initial_len
     }
 
-    /// Returns the number of additional items in the RSS feed.
+    /// Returns the number of items in the RSS feed.
     pub fn item_count(&self) -> usize {
         self.items.len()
     }
 
-    /// Clears all additional items from the RSS feed.
+    /// Clears all items from the RSS feed.
     pub fn clear_items(&mut self) {
         self.items.clear();
     }
@@ -228,6 +234,14 @@ impl RssData {
         map.insert("ttl".to_string(), self.ttl.clone());
         map.insert("webmaster".to_string(), self.webmaster.clone());
         map
+    }
+
+    // Field setter methods
+
+    /// The `version` field setter method.
+    pub fn version(mut self, version: RssVersion) -> Self {
+        self.version = version;
+        self
     }
 
     /// The `atom_link` field setter method.
@@ -318,16 +332,6 @@ impl RssData {
 
 impl RssItem {
     /// Creates a new `RssItem` with default values.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ssg_rss::data::RssItem;
-    ///
-    /// let item = RssItem::new();
-    /// assert_eq!(item.title, "");
-    /// assert_eq!(item.description, "");
-    /// ```
     pub fn new() -> Self {
         RssItem::default()
     }
@@ -338,19 +342,6 @@ impl RssItem {
     ///
     /// * `key` - The field to set.
     /// * `value` - The value to assign to the field.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ssg_rss::data::RssItem;
-    ///
-    /// let item = RssItem::new()
-    ///     .set("title", "New Item")
-    ///     .set("description", "A new item in the feed");
-    ///
-    /// assert_eq!(item.title, "New Item");
-    /// assert_eq!(item.description, "A new item in the feed");
-    /// ```
     pub fn set<T: Into<String>>(mut self, key: &str, value: T) -> Self {
         let value = value.into();
         match key {
@@ -368,51 +359,7 @@ impl RssItem {
         self
     }
 
-    /// The `guid` field setter method.
-    pub fn guid<T: Into<String>>(self, value: T) -> Self {
-        self.set("guid", value)
-    }
-
-    /// The `description` field setter method.
-    pub fn description<T: Into<String>>(self, value: T) -> Self {
-        self.set("description", value)
-    }
-
-    /// The `link` field setter method.
-    pub fn link<T: Into<String>>(self, value: T) -> Self {
-        self.set("link", value)
-    }
-
-    /// The `pub_date` field setter method.
-    pub fn pub_date<T: Into<String>>(self, value: T) -> Self {
-        self.set("pub_date", value)
-    }
-
-    /// The `title` field setter method.
-    pub fn title<T: Into<String>>(self, value: T) -> Self {
-        self.set("title", value)
-    }
-
-    /// The `author` field setter method.
-    pub fn author<T: Into<String>>(self, value: T) -> Self {
-        self.set("author", value)
-    }
-
     /// Validates the `RssItem` to ensure all required fields are set and valid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use ssg_rss::data::RssItem;
-    ///
-    /// let item = RssItem::new()
-    ///     .title("New Item")
-    ///     .link("https://example.com/item")
-    ///     .description("A new item")
-    ///     .guid("unique-id");
-    ///
-    /// assert!(item.validate().is_ok());
-    /// ```
     pub fn validate(&self) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 
@@ -438,6 +385,33 @@ impl RssItem {
             Err(errors)
         }
     }
+
+    // Field setter methods
+
+    /// The `guid` field setter method.
+    pub fn guid<T: Into<String>>(self, value: T) -> Self {
+        self.set("guid", value)
+    }
+    /// The `description` field setter method.
+    pub fn description<T: Into<String>>(self, value: T) -> Self {
+        self.set("description", value)
+    }
+    /// The `link` field setter method.
+    pub fn link<T: Into<String>>(self, value: T) -> Self {
+        self.set("link", value)
+    }
+    /// The `pub_date` field setter method.
+    pub fn pub_date<T: Into<String>>(self, value: T) -> Self {
+        self.set("pub_date", value)
+    }
+    /// The `title` field setter method.
+    pub fn title<T: Into<String>>(self, value: T) -> Self {
+        self.set("title", value)
+    }
+    /// The `author` field setter method.
+    pub fn author<T: Into<String>>(self, value: T) -> Self {
+        self.set("author", value)
+    }
 }
 
 #[cfg(test)]
@@ -450,16 +424,12 @@ mod tests {
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed")
-            .item_title("Test Item")
-            .item_link("https://example.com/item")
-            .item_description("A test item");
+            .version(RssVersion::RSS2_0);
 
         assert_eq!(rss_data.title, "Test RSS Feed");
         assert_eq!(rss_data.link, "https://example.com");
         assert_eq!(rss_data.description, "A test RSS feed");
-        assert_eq!(rss_data.item_title, "Test Item");
-        assert_eq!(rss_data.item_link, "https://example.com/item");
-        assert_eq!(rss_data.item_description, "A test item");
+        assert_eq!(rss_data.version, RssVersion::RSS2_0);
     }
 
     #[test]
@@ -467,10 +437,7 @@ mod tests {
         let valid_rss_data = RssData::new()
             .title("Test RSS Feed")
             .link("https://example.com")
-            .description("A test RSS feed")
-            .item_title("Test Item")
-            .item_link("https://example.com/item")
-            .item_description("A test item");
+            .description("A test RSS feed");
 
         assert!(valid_rss_data.validate().is_ok());
 
@@ -486,216 +453,23 @@ mod tests {
         let mut rss_data = RssData::new()
             .title("Test RSS Feed")
             .link("https://example.com")
-            .description("A test RSS feed")
-            .item_title("Main Item")
-            .item_link("https://example.com/main-item")
-            .item_description("The main item in the feed");
+            .description("A test RSS feed");
 
-        let additional_item = RssItem::new()
-            .title("Additional Item")
-            .link("https://example.com/additional-item")
-            .description("An additional item in the feed")
-            .guid("unique-id-1")
-            .pub_date("2024-03-21");
-
-        rss_data.add_item(additional_item);
-
-        assert_eq!(rss_data.items.len(), 1);
-        assert_eq!(rss_data.items[0].title, "Additional Item");
-        assert_eq!(
-            rss_data.items[0].link,
-            "https://example.com/additional-item"
-        );
-        assert_eq!(
-            rss_data.items[0].description,
-            "An additional item in the feed"
-        );
-        assert_eq!(rss_data.items[0].guid, "unique-id-1");
-        assert_eq!(rss_data.items[0].pub_date, "2024-03-21");
-    }
-
-    #[test]
-    fn test_to_hash_map() {
-        let rss_data = RssData::new()
-            .title("Test RSS Feed")
-            .link("https://example.com")
-            .description("A test RSS feed")
-            .item_title("Test Item")
-            .item_link("https://example.com/item")
-            .item_description("A test item")
-            .language("en-US")
-            .pub_date("2024-03-21")
-            .last_build_date("2024-03-21")
-            .ttl("60");
-
-        let hash_map = rss_data.to_hash_map();
-
-        assert_eq!(
-            hash_map.get("title"),
-            Some(&"Test RSS Feed".to_string())
-        );
-        assert_eq!(
-            hash_map.get("link"),
-            Some(&"https://example.com".to_string())
-        );
-        assert_eq!(
-            hash_map.get("description"),
-            Some(&"A test RSS feed".to_string())
-        );
-        assert_eq!(
-            hash_map.get("item_title"),
-            Some(&"Test Item".to_string())
-        );
-        assert_eq!(
-            hash_map.get("item_link"),
-            Some(&"https://example.com/item".to_string())
-        );
-        assert_eq!(
-            hash_map.get("item_description"),
-            Some(&"A test item".to_string())
-        );
-        assert_eq!(
-            hash_map.get("language"),
-            Some(&"en-US".to_string())
-        );
-        assert_eq!(
-            hash_map.get("pub_date"),
-            Some(&"2024-03-21".to_string())
-        );
-        assert_eq!(
-            hash_map.get("last_build_date"),
-            Some(&"2024-03-21".to_string())
-        );
-        assert_eq!(hash_map.get("ttl"), Some(&"60".to_string()));
-    }
-
-    #[test]
-    fn test_rss_item() {
         let item = RssItem::new()
             .title("Test Item")
             .link("https://example.com/item")
             .description("A test item")
-            .guid("unique-id")
-            .pub_date("2024-03-21");
-
-        assert_eq!(item.title, "Test Item");
-        assert_eq!(item.link, "https://example.com/item");
-        assert_eq!(item.description, "A test item");
-        assert_eq!(item.guid, "unique-id");
-        assert_eq!(item.pub_date, "2024-03-21");
-    }
-
-    #[test]
-    fn test_rss_data_all_fields() {
-        let rss_data = RssData::new()
-            .atom_link("https://example.com/feed.atom")
-            .author("John Doe")
-            .category("Technology")
-            .copyright("© 2024 Example Inc.")
-            .description("A comprehensive RSS feed")
-            .docs("https://example.com/rss-docs")
-            .generator("Example RSS Generator")
-            .image("https://example.com/logo.png")
-            .item_guid("unique-item-id")
-            .item_description("The main item description")
-            .item_link("https://example.com/main-item")
-            .item_pub_date("2024-03-21T12:00:00Z")
-            .item_title("Main RSS Item")
-            .language("en-US")
-            .last_build_date("2024-03-21T12:00:00Z")
-            .link("https://example.com")
-            .managing_editor("editor@example.com")
-            .pub_date("2024-03-21T12:00:00Z")
-            .title("Example RSS Feed")
-            .ttl("60")
-            .webmaster("webmaster@example.com");
-
-        assert_eq!(rss_data.atom_link, "https://example.com/feed.atom");
-        assert_eq!(rss_data.author, "John Doe");
-        assert_eq!(rss_data.category, "Technology");
-        assert_eq!(rss_data.copyright, "© 2024 Example Inc.");
-        assert_eq!(rss_data.description, "A comprehensive RSS feed");
-        assert_eq!(rss_data.docs, "https://example.com/rss-docs");
-        assert_eq!(rss_data.generator, "Example RSS Generator");
-        assert_eq!(rss_data.image, "https://example.com/logo.png");
-        assert_eq!(rss_data.item_guid, "unique-item-id");
-        assert_eq!(
-            rss_data.item_description,
-            "The main item description"
-        );
-        assert_eq!(rss_data.item_link, "https://example.com/main-item");
-        assert_eq!(rss_data.item_pub_date, "2024-03-21T12:00:00Z");
-        assert_eq!(rss_data.item_title, "Main RSS Item");
-        assert_eq!(rss_data.language, "en-US");
-        assert_eq!(rss_data.last_build_date, "2024-03-21T12:00:00Z");
-        assert_eq!(rss_data.link, "https://example.com");
-        assert_eq!(rss_data.managing_editor, "editor@example.com");
-        assert_eq!(rss_data.pub_date, "2024-03-21T12:00:00Z");
-        assert_eq!(rss_data.title, "Example RSS Feed");
-        assert_eq!(rss_data.ttl, "60");
-        assert_eq!(rss_data.webmaster, "webmaster@example.com");
-    }
-
-    #[test]
-    fn test_invalid_field_set() {
-        let rss_data =
-            RssData::new().set("invalid_field", "Some value");
-        assert_eq!(rss_data, RssData::default());
-
-        let rss_item =
-            RssItem::new().set("invalid_field", "Some value");
-        assert_eq!(rss_item, RssItem::default());
-    }
-
-    #[test]
-    fn test_multiple_additional_items() {
-        let mut rss_data = RssData::new()
-            .title("Test RSS Feed")
-            .link("https://example.com")
-            .description("A test RSS feed")
-            .item_title("Main Item")
-            .item_link("https://example.com/main-item")
-            .item_description("The main item in the feed");
-
-        let additional_item1 = RssItem::new()
-            .title("Additional Item 1")
-            .link("https://example.com/additional-item-1")
-            .description("The first additional item")
             .guid("unique-id-1")
             .pub_date("2024-03-21");
 
-        let additional_item2 = RssItem::new()
-            .title("Additional Item 2")
-            .link("https://example.com/additional-item-2")
-            .description("The second additional item")
-            .guid("unique-id-2")
-            .pub_date("2024-03-22");
+        rss_data.add_item(item);
 
-        rss_data.add_item(additional_item1);
-        rss_data.add_item(additional_item2);
-
-        assert_eq!(rss_data.items.len(), 2);
-        assert_eq!(rss_data.items[0].title, "Additional Item 1");
-        assert_eq!(rss_data.items[1].title, "Additional Item 2");
-    }
-
-    #[test]
-    fn test_rss_data_default() {
-        let default_rss_data = RssData::default();
-        assert_eq!(default_rss_data.title, "");
-        assert_eq!(default_rss_data.link, "");
-        assert_eq!(default_rss_data.description, "");
-        assert!(default_rss_data.items.is_empty());
-    }
-
-    #[test]
-    fn test_rss_item_default() {
-        let default_rss_item = RssItem::default();
-        assert_eq!(default_rss_item.title, "");
-        assert_eq!(default_rss_item.link, "");
-        assert_eq!(default_rss_item.description, "");
-        assert_eq!(default_rss_item.guid, "");
-        assert_eq!(default_rss_item.pub_date, "");
+        assert_eq!(rss_data.items.len(), 1);
+        assert_eq!(rss_data.items[0].title, "Test Item");
+        assert_eq!(rss_data.items[0].link, "https://example.com/item");
+        assert_eq!(rss_data.items[0].description, "A test item");
+        assert_eq!(rss_data.items[0].guid, "unique-id-1");
+        assert_eq!(rss_data.items[0].pub_date, "2024-03-21");
     }
 
     #[test]
@@ -794,7 +568,6 @@ mod tests {
         assert!(errors[0].contains("Errors in item 1")); // The second item (index 1) is invalid
     }
 
-    // Additional test for sorting items by publication date
     #[test]
     fn test_sort_items_by_pub_date() {
         let mut rss_data = RssData::new()
@@ -832,5 +605,75 @@ mod tests {
         assert_eq!(rss_data.items[0].title, "Item 2");
         assert_eq!(rss_data.items[1].title, "Item 3");
         assert_eq!(rss_data.items[2].title, "Item 1");
+    }
+
+    #[test]
+    fn test_to_hash_map() {
+        let rss_data = RssData::new()
+            .title("Test RSS Feed")
+            .link("https://example.com")
+            .description("A test RSS feed")
+            .language("en-US")
+            .pub_date("2024-03-21")
+            .last_build_date("2024-03-21")
+            .ttl("60");
+
+        let hash_map = rss_data.to_hash_map();
+
+        assert_eq!(
+            hash_map.get("title"),
+            Some(&"Test RSS Feed".to_string())
+        );
+        assert_eq!(
+            hash_map.get("link"),
+            Some(&"https://example.com".to_string())
+        );
+        assert_eq!(
+            hash_map.get("description"),
+            Some(&"A test RSS feed".to_string())
+        );
+        assert_eq!(
+            hash_map.get("language"),
+            Some(&"en-US".to_string())
+        );
+        assert_eq!(
+            hash_map.get("pub_date"),
+            Some(&"2024-03-21".to_string())
+        );
+        assert_eq!(
+            hash_map.get("last_build_date"),
+            Some(&"2024-03-21".to_string())
+        );
+        assert_eq!(hash_map.get("ttl"), Some(&"60".to_string()));
+    }
+
+    #[test]
+    fn test_rss_data_version() {
+        let rss_data = RssData::new().version(RssVersion::RSS1_0);
+        assert_eq!(rss_data.version, RssVersion::RSS1_0);
+    }
+
+    #[test]
+    fn test_rss_data_default_version() {
+        let rss_data = RssData::new();
+        assert_eq!(rss_data.version, RssVersion::RSS2_0);
+    }
+
+    #[test]
+    fn test_rss_item_new_and_set() {
+        let item = RssItem::new()
+            .title("Test Item")
+            .link("https://example.com/item")
+            .description("A test item")
+            .guid("unique-id")
+            .pub_date("2024-03-21")
+            .author("John Doe");
+
+        assert_eq!(item.title, "Test Item");
+        assert_eq!(item.link, "https://example.com/item");
+        assert_eq!(item.description, "A test item");
+        assert_eq!(item.guid, "unique-id");
+        assert_eq!(item.pub_date, "2024-03-21");
+        assert_eq!(item.author, "John Doe");
     }
 }

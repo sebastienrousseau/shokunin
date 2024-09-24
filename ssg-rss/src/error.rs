@@ -27,6 +27,12 @@ pub enum RssError {
 
     /// Error for invalid input data.
     InvalidInput,
+
+    /// Error parsing XML content.
+    XmlParseError(quick_xml::Error),
+
+    /// Error for unknown XML elements.
+    UnknownElement(String),
 }
 
 /// Custom implementation to avoid leaking sensitive information in error messages
@@ -46,6 +52,12 @@ impl fmt::Display for RssError {
             RssError::InvalidInput => {
                 write!(f, "Invalid input data provided")
             }
+            RssError::XmlParseError(_) => {
+                write!(f, "XML parsing error occurred")
+            }
+            RssError::UnknownElement(_) => {
+                write!(f, "Unknown XML element found")
+            }
         }
     }
 }
@@ -57,6 +69,8 @@ impl Error for RssError {
             RssError::Utf8Error(e) => Some(e),
             RssError::IoError(_) => None,
             RssError::MissingField(_) | RssError::InvalidInput => None,
+            RssError::XmlParseError(e) => Some(e),
+            RssError::UnknownElement(_) => None,
         }
     }
 }
@@ -73,6 +87,12 @@ impl Clone for RssError {
             }
             RssError::IoError(s) => RssError::IoError(s.clone()),
             RssError::InvalidInput => RssError::InvalidInput,
+            RssError::XmlParseError(e) => {
+                RssError::XmlParseError(e.clone())
+            }
+            RssError::UnknownElement(s) => {
+                RssError::UnknownElement(s.clone())
+            }
         }
     }
 }

@@ -3,12 +3,15 @@
 
 //! # ssg-rss
 //!
-//! `ssg-rss` is a Rust library for generating RSS feeds for the Shokunin Static Site Generator.
-//! It provides functionality to create RSS 2.0 feeds with support for various RSS elements and attributes.
+//! `ssg-rss` is a Rust library for generating, serializing, and deserializing RSS feeds.
+//! It supports multiple RSS versions and provides functionality to create and parse
+//! RSS feeds with various elements and attributes.
 //!
 //! ## Features
 //!
-//! - Generate RSS 2.0 feeds
+//! - Generate RSS feeds for versions 0.90, 0.91, 0.92, 1.0, and 2.0
+//! - Serialize RSS data to XML format
+//! - Deserialize XML content into RSS data structures
 //! - Support for standard RSS elements (title, link, description, etc.)
 //! - Support for optional elements (language, pubDate, category, etc.)
 //! - Atom link support
@@ -17,7 +20,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use ssg_rss::{RssData, generate_rss};
+//! use ssg_rss::{RssData, RssVersion, generate_rss, parse_rss};
 //!
 //! let rss_data = RssData::new()
 //!     .title("My Blog")
@@ -25,7 +28,15 @@
 //!     .description("A blog about Rust programming");
 //!
 //! match generate_rss(&rss_data) {
-//!     Ok(rss_feed) => println!("{}", rss_feed),
+//!     Ok(rss_feed) => {
+//!         println!("Generated RSS feed: {}", rss_feed);
+//!
+//!         // Parse the generated RSS feed
+//!         match parse_rss(&rss_feed) {
+//!             Ok(parsed_data) => println!("Parsed RSS data: {:?}", parsed_data),
+//!             Err(e) => eprintln!("Error parsing RSS: {}", e),
+//!         }
+//!     },
 //!     Err(e) => eprintln!("Error generating RSS: {}", e),
 //! }
 //! ```
@@ -38,10 +49,16 @@ pub mod error;
 pub mod generator;
 /// The `macros` module contains procedural macros used by the library.
 pub mod macros;
+/// The `parser` module contains the logic for parsing RSS feeds.
+pub mod parser;
+/// The `version` module contains definitions for different RSS versions.
+pub mod version;
 
 pub use data::RssData;
 pub use error::RssError;
 pub use generator::generate_rss;
+pub use parser::parse_rss;
+pub use version::RssVersion;
 
 // Re-export main types for ease of use
 pub use error::Result;
