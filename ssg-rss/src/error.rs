@@ -66,14 +66,18 @@ mod tests {
 
     #[test]
     fn test_utf8_error() {
-        let utf8_error = String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
+        let utf8_error =
+            String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
         let error = RssError::Utf8Error(utf8_error);
-        assert!(error.to_string().starts_with("UTF-8 conversion error:"));
+        assert!(error
+            .to_string()
+            .starts_with("UTF-8 conversion error:"));
     }
 
     #[test]
     fn test_io_error() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "File not found");
         let error = RssError::IoError(io_error);
         assert!(error.to_string().starts_with("I/O error:"));
     }
@@ -86,7 +90,8 @@ mod tests {
 
     #[test]
     fn test_error_source() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "File not found");
         let error = RssError::IoError(io_error);
         assert!(error.source().is_some());
     }
@@ -102,71 +107,90 @@ mod tests {
     #[test]
     fn test_missing_field_with_str() {
         let error = RssError::missing_field("description");
-        assert_eq!(error.to_string(), "Missing required field: description");
+        assert_eq!(
+            error.to_string(),
+            "Missing required field: description"
+        );
     }
 
     #[test]
     fn test_xml_write_error_details() {
-        let xml_error = quick_xml::Error::Io(std::sync::Arc::new(
-            io::Error::new(io::ErrorKind::PermissionDenied, "Permission denied"),
-        ));
+        let xml_error =
+            quick_xml::Error::Io(std::sync::Arc::new(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Permission denied",
+            )));
         let error = RssError::XmlWriteError(xml_error);
         assert!(error.to_string().contains("Permission denied"));
     }
 
     #[test]
     fn test_utf8_error_details() {
-        let utf8_error = String::from_utf8(vec![0xFF, 0xFF]).unwrap_err();
+        let utf8_error =
+            String::from_utf8(vec![0xFF, 0xFF]).unwrap_err();
         let error = RssError::Utf8Error(utf8_error);
         assert!(error.to_string().contains("invalid utf-8 sequence"));
     }
 
     #[test]
     fn test_io_error_details() {
-        let io_error = io::Error::new(io::ErrorKind::AddrInUse, "Address already in use");
+        let io_error = io::Error::new(
+            io::ErrorKind::AddrInUse,
+            "Address already in use",
+        );
         let error = RssError::IoError(io_error);
         assert!(error.to_string().contains("Address already in use"));
     }
 
     #[test]
     fn test_error_downcast() {
-        let error: Box<dyn Error> = Box::new(RssError::missing_field("category"));
+        let error: Box<dyn Error> =
+            Box::new(RssError::missing_field("category"));
         let downcast_result = error.downcast::<RssError>();
         assert!(downcast_result.is_ok());
     }
 
     #[test]
     fn test_error_chain() {
-        let io_error = io::Error::new(io::ErrorKind::Other, "Underlying IO error");
-        let xml_error = quick_xml::Error::Io(std::sync::Arc::new(io_error));
+        let io_error =
+            io::Error::new(io::ErrorKind::Other, "Underlying IO error");
+        let xml_error =
+            quick_xml::Error::Io(std::sync::Arc::new(io_error));
         let error = RssError::XmlWriteError(xml_error);
 
         let mut error_chain = error.source();
         assert!(error_chain.is_some());
         error_chain = error_chain.unwrap().source();
         assert!(error_chain.is_some());
-        assert_eq!(error_chain.unwrap().to_string(), "Underlying IO error");
+        assert_eq!(
+            error_chain.unwrap().to_string(),
+            "Underlying IO error"
+        );
     }
 
     #[test]
     fn test_from_quick_xml_error() {
-        let xml_error = quick_xml::Error::Io(std::sync::Arc::new(
-            io::Error::new(io::ErrorKind::UnexpectedEof, "Unexpected EOF"),
-        ));
+        let xml_error =
+            quick_xml::Error::Io(std::sync::Arc::new(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Unexpected EOF",
+            )));
         let error: RssError = xml_error.into();
         assert!(matches!(error, RssError::XmlWriteError(_)));
     }
 
     #[test]
     fn test_from_utf8_error() {
-        let utf8_error = String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
+        let utf8_error =
+            String::from_utf8(vec![0, 159, 146, 150]).unwrap_err();
         let error: RssError = utf8_error.into();
         assert!(matches!(error, RssError::Utf8Error(_)));
     }
 
     #[test]
     fn test_from_io_error() {
-        let io_error = io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "File not found");
         let error: RssError = io_error.into();
         assert!(matches!(error, RssError::IoError(_)));
     }
