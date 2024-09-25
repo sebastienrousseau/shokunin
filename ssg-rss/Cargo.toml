@@ -40,4 +40,4 @@ name = "ssg_rss"
 path = "src/lib.rs"
 
 [dev-dependencies]
-pretty_assertions = "1.0"
+pretty_assertions = "1.4"

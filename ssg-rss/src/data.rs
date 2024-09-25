@@ -81,10 +81,19 @@ pub struct RssItem {
 }
 
 impl RssData {
-    /// Creates a new `RssData` instance with default values.
-    pub fn new() -> Self {
+    /// Creates a new `RssData` instance with default values and a specified RSS version.
+    /// If no version is provided, the default is RSS 2.0.
+    ///
+    /// # Arguments
+    ///
+    /// * `version` - An optional `RssVersion` specifying the RSS version for the feed.
+    ///
+    /// # Returns
+    ///
+    /// A new `RssData` instance.
+    pub fn new(version: Option<RssVersion>) -> Self {
         RssData {
-            version: RssVersion::RSS2_0,
+            version: version.unwrap_or(RssVersion::RSS2_0), // Default to RSS 2.0 if not provided
             ..Default::default()
         }
     }
@@ -420,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_rss_data_new_and_set() {
-        let rss_data = RssData::new()
+        let rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed")
@@ -434,14 +443,14 @@ mod tests {
 
     #[test]
     fn test_rss_data_validate() {
-        let valid_rss_data = RssData::new()
+        let valid_rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
 
         assert!(valid_rss_data.validate().is_ok());
 
-        let invalid_rss_data = RssData::new()
+        let invalid_rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .description("A test RSS feed");
 
@@ -450,7 +459,7 @@ mod tests {
 
     #[test]
     fn test_add_item() {
-        let mut rss_data = RssData::new()
+        let mut rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -474,7 +483,7 @@ mod tests {
 
     #[test]
     fn test_remove_item() {
-        let mut rss_data = RssData::new()
+        let mut rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -506,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_clear_items() {
-        let mut rss_data = RssData::new()
+        let mut rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -543,7 +552,7 @@ mod tests {
 
     #[test]
     fn test_rss_data_validate_with_items() {
-        let mut rss_data = RssData::new()
+        let mut rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -570,7 +579,7 @@ mod tests {
 
     #[test]
     fn test_sort_items_by_pub_date() {
-        let mut rss_data = RssData::new()
+        let mut rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -609,7 +618,7 @@ mod tests {
 
     #[test]
     fn test_to_hash_map() {
-        let rss_data = RssData::new()
+        let rss_data = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed")
@@ -649,13 +658,13 @@ mod tests {
 
     #[test]
     fn test_rss_data_version() {
-        let rss_data = RssData::new().version(RssVersion::RSS1_0);
+        let rss_data = RssData::new(None).version(RssVersion::RSS1_0);
         assert_eq!(rss_data.version, RssVersion::RSS1_0);
     }
 
     #[test]
     fn test_rss_data_default_version() {
-        let rss_data = RssData::new();
+        let rss_data = RssData::new(None);
         assert_eq!(rss_data.version, RssVersion::RSS2_0);
     }
 

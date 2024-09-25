@@ -179,7 +179,7 @@ fn process_file(
     )?;
 
     // Generate RSS data
-    let mut rss_data = RssData::new();
+    let mut rss_data = RssData::new(None);
 
     // Set fields using the helper macro
     macro_set_rss_data_fields!(

@@ -191,7 +191,7 @@ macro_rules! macro_write_element {
 /// ```
 /// use ssg_rss::{RssData, macro_set_rss_data_fields};
 ///
-/// let mut rss_data = RssData::new();
+/// let mut rss_data = RssData::new(None);
 /// macro_set_rss_data_fields!(rss_data,
 ///     title = "My Blog",
 ///     link = "https://example.com",
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_macro_generate_rss() -> Result<(), quick_xml::Error> {
-        let options = RssData::new()
+        let options = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -326,7 +326,7 @@ mod tests {
     #[test]
     fn test_macro_generate_rss_valid_data(
     ) -> Result<(), quick_xml::Error> {
-        let options = RssData::new()
+        let options = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com")
             .description("A test RSS feed");
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn test_macro_generate_rss_missing_fields(
     ) -> Result<(), quick_xml::Error> {
-        let options = RssData::new()
+        let options = RssData::new(None)
             .title("Test RSS Feed")
             .link("https://example.com");
 
@@ -385,7 +385,7 @@ mod tests {
     #[test]
     fn test_macro_set_rss_data_fields(
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut rss_data = RssData::new();
+        let mut rss_data = RssData::new(None);
         macro_set_rss_data_fields!(
             rss_data,
             title = "My Blog",

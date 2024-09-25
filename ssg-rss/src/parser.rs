@@ -26,7 +26,7 @@ use std::str::FromStr;
 pub fn parse_rss(content: &str) -> Result<RssData> {
     let mut reader = Reader::from_str(content);
 
-    let mut rss_data = RssData::new();
+    let mut rss_data = RssData::new(None);
     let mut buf: Vec<u8> = Vec::new();
     let mut in_channel = false;
     let mut in_item = false;
