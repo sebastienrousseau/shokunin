@@ -64,6 +64,21 @@ fn write_element<W: std::io::Write>(
     Ok(())
 }
 
+/// Helper function to validate required fields.
+///
+/// This function checks if the given field is empty and returns an error if it is.
+///
+/// # Arguments
+///
+/// * `field` - The field value to check.
+/// * `field_name` - The name of the field (for error reporting).
+fn validate_field(field: &str, field_name: &str) -> Result<()> {
+    if field.is_empty() {
+        return Err(RssError::MissingField(field_name.to_string()));
+    }
+    Ok(())
+}
+
 /// Generates an RSS feed from the given `RssData` struct.
 ///
 /// This function creates a complete RSS feed in XML format based on the data contained in the provided `RssData`.
@@ -94,6 +109,11 @@ fn write_element<W: std::io::Write>(
 /// }
 /// ```
 pub fn generate_rss(options: &RssData) -> Result<String> {
+    // Validate required fields
+    validate_field(&options.title, "title")?;
+    validate_field(&options.link, "link")?;
+    validate_field(&options.description, "description")?;
+
     let mut writer = Writer::new(Cursor::new(Vec::new()));
 
     write_xml_declaration(&mut writer)?;

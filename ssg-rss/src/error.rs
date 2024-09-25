@@ -161,6 +161,7 @@ impl From<std::io::Error> for RssError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{data::RssItem, generate_rss, parse_rss, RssData};
     use std::io;
 
     #[test]
@@ -273,5 +274,92 @@ mod tests {
         let error = RssError::missing_field("title");
         let cloned_error = error.clone();
         assert_eq!(error.to_string(), cloned_error.to_string());
+    }
+
+    #[test]
+    fn test_unknown_element_error() {
+        let error = RssError::UnknownElement("unknown_tag".to_string());
+        assert_eq!(error.to_string(), "Unknown XML element found");
+    }
+
+    #[test]
+    fn test_rss_error_logging() {
+        let error = RssError::missing_field("link");
+        // In a real-world scenario, you would verify log output,
+        // but here we just ensure that `log` does not panic or expose sensitive data.
+        error.log();
+    }
+    #[test]
+    fn test_invalid_input_rss_error() {
+        let error = RssError::InvalidInput;
+        assert_eq!(error.to_string(), "Invalid input data provided");
+    }
+    #[test]
+    fn test_nested_error_propagation() {
+        let io_error =
+            io::Error::new(io::ErrorKind::NotFound, "File not found");
+        let quick_xml_error =
+            quick_xml::Error::Io(std::sync::Arc::new(io_error));
+        let rss_error = RssError::XmlWriteError(quick_xml_error);
+
+        assert!(rss_error.source().is_some());
+    }
+    #[test]
+    fn test_generate_rss_missing_field_error() {
+        let rss_data = RssData::new(None)
+            .title("") // Title is missing
+            .link("https://example.com")
+            .description("A feed with missing title");
+
+        let result = generate_rss(&rss_data);
+        assert!(result.is_err());
+
+        if let Err(RssError::MissingField(field)) = result {
+            assert_eq!(field, "title");
+        } else {
+            panic!("Expected a MissingField error");
+        }
+    }
+    #[test]
+    fn test_rss_round_trip() {
+        let mut rss_data = RssData::new(None)
+            .title("Round-Trip Feed")
+            .link("https://example.com")
+            .description("A feed for round-trip testing");
+
+        rss_data.add_item(
+            RssItem::new()
+                .title("Item 1")
+                .link("https://example.com/item1")
+                .description("Description for Item 1"),
+        );
+
+        // Generate RSS feed
+        let rss_feed = generate_rss(&rss_data)
+            .expect("Failed to generate RSS feed");
+
+        // Parse RSS feed back into RssData
+        let parsed_data =
+            parse_rss(&rss_feed).expect("Failed to parse RSS feed");
+
+        // Ensure the data remains the same after round-trip
+        assert_eq!(rss_data.title, parsed_data.title);
+        assert_eq!(rss_data.link, parsed_data.link);
+        assert_eq!(rss_data.items.len(), parsed_data.items.len());
+        assert_eq!(rss_data.items[0].title, parsed_data.items[0].title);
+    }
+    #[test]
+    fn test_generate_rss_long_title() {
+        let long_title = "a".repeat(10_000); // Create a long title
+        let rss_data = RssData::new(None)
+            .title(&long_title)
+            .link("https://example.com")
+            .description("A feed with a very long title");
+
+        let result = generate_rss(&rss_data);
+        assert!(result.is_ok());
+
+        let rss_feed = result.unwrap();
+        assert!(rss_feed.contains(&long_title));
     }
 }
