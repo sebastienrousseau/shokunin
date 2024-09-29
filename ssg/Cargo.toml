@@ -2,6 +2,7 @@
 name = "ssg"
 version.workspace = true
 authors.workspace = true
+build = "build.rs"
 edition.workspace = true
 description = "A Content-First Open Source Static Site Generator (SSG) written in Rust."
 license.workspace = true
@@ -24,11 +25,12 @@ quick-xml = "0.36"
 regex = "1.10"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 rlg = "0.0.6"
-serde = { version = "1.0.210", features = ["derive"] }
+rss-gen = "0.0.1"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.12"
 toml = "0.8"
-yaml-rust2 = "0.8.1"
+yaml-rust2 = "0.9"
 uuid = { version = "1.10", features = ["v4"] }
 vrd = "0.0.8"
 
@@ -39,7 +41,6 @@ ssg-html = { path = "../ssg-html", version = "0.0.1" }
 ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
 ssg-markdown = { path = "../ssg-markdown", version = "0.0.1" }
 ssg-metadata = { path = "../ssg-metadata", version = "0.0.1" }
-ssg-rss = { path = "../ssg-rss", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }
 ssg-sitemap = { path = "../ssg-sitemap", version = "0.0.1" }
 ssg-template = { path = "../ssg-template", version = "0.0.1" }

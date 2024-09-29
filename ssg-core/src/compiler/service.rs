@@ -3,8 +3,8 @@
 
 use anyhow::{Context as AnyhowContext, Result};
 use rlg::log_level::LogLevel;
+use rss_gen::{data::RssData, generate_rss, macro_set_rss_data_fields};
 use ssg_html::{generate_html, HtmlConfig};
-use ssg_rss::{data::RssData, generate_rss, macro_set_rss_data_fields};
 use ssg_sitemap::create_site_map_data;
 use std::time::Duration;
 
