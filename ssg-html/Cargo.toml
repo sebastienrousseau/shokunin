@@ -15,6 +15,7 @@ categories = ["web-programming", "text-processing"]
 comrak = "0.28"
 html-escape = "0.2.13"
 htmlescape = "0.3"
+mdx-gen = "0.0.1"
 minify-html = "0.15"
 once_cell = "1.19"
 regex = "1.10"

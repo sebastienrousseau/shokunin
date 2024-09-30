@@ -1,8 +1,9 @@
 use crate::extract_front_matter;
+use crate::HtmlError;
 use crate::Result;
-use comrak::{markdown_to_html, ComrakOptions};
+use mdx_gen::{process_markdown, ComrakOptions, MarkdownOptions};
 
-/// Generate HTML from Markdown content.
+/// Generate HTML from Markdown content using `mdx-gen`.
 ///
 /// This function takes Markdown content and a configuration object,
 /// converts the Markdown into HTML, and returns the resulting HTML string.
@@ -33,11 +34,11 @@ pub fn generate_html(
     markdown_to_html_with_extensions(markdown)
 }
 
-/// Convert Markdown to HTML with specified extensions.
+/// Convert Markdown to HTML with specified extensions using `mdx-gen`.
 ///
 /// This function applies a set of extensions to enhance the conversion
-/// process. These extensions include strikethrough, table support, autolinks,
-/// tasklists, and superscripts.
+/// process, such as syntax highlighting, enhanced table formatting,
+/// custom blocks, and more.
 ///
 /// # Arguments
 ///
@@ -58,32 +59,26 @@ pub fn generate_html(
 pub fn markdown_to_html_with_extensions(
     markdown: &str,
 ) -> Result<String> {
-    // Extract front matter from the Markdown content
     let content_without_front_matter =
         extract_front_matter(markdown).unwrap_or(markdown.to_string());
 
-    let mut options = ComrakOptions::default();
-    options.extension.strikethrough = true;
-    options.extension.table = true;
-    options.extension.autolink = true;
-    options.extension.tasklist = true;
-    options.extension.superscript = true;
+    let mut comrak_options = ComrakOptions::default();
+    comrak_options.extension.strikethrough = true;
+    comrak_options.extension.table = true;
+    comrak_options.extension.autolink = true;
+    comrak_options.extension.tasklist = true;
+    comrak_options.extension.superscript = true;
 
-    // Set render options to avoid wrapping everything in <pre><code>
-    options.render.github_pre_lang = false; // Ensures Comrak doesn't assume everything is code
-    options.render.unsafe_ = true; // Allow unsafe HTML rendering for better debugging
+    let options =
+        MarkdownOptions::default().with_comrak_options(comrak_options);
 
-    // Debug print to ensure options are correctly set
-    // println!("{:?}", options);
-
-    // Render the Markdown to HTML
-    let html_output =
-        markdown_to_html(&content_without_front_matter, &options);
-
-    // Print the generated HTML to debug the issue
-    // println!("{}", html_output);
-
-    Ok(html_output)
+    // Process the Markdown to HTML using `mdx-gen`
+    match process_markdown(&content_without_front_matter, &options) {
+        Ok(html_output) => Ok(html_output),
+        Err(err) => {
+            Err(HtmlError::MarkdownConversionError(err.to_string()))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -107,11 +102,10 @@ mod tests {
 
     /// Test conversion with Markdown extensions.
     ///
-    /// This test ensures that the Markdown extensions (e.g., strikethrough, tables, autolinks)
+    /// This test ensures that the Markdown extensions (e.g., custom blocks, enhanced tables, etc.)
     /// are correctly applied when converting Markdown to HTML.
     #[test]
     fn test_markdown_to_html_with_extensions() {
-        // Simplified input to focus on table rendering
         let markdown = r#"
 | Header 1 | Header 2 |
 | -------- | -------- |
@@ -121,16 +115,18 @@ mod tests {
         assert!(result.is_ok());
         let html = result.unwrap();
 
-        // Debug output
         println!("{}", html);
 
-        // Check if the table is rendered
-        assert!(html.contains("<table>"), "Table element not found");
+        // Update the test to look for the div wrapper and table classes
+        assert!(html.contains("<div class=\"table-responsive\"><table class=\"table\">"), "Table element not found");
         assert!(
             html.contains("<th>Header 1</th>"),
             "Table header not found"
         );
-        assert!(html.contains("<td>Row 1</td>"), "Table row not found");
+        assert!(
+            html.contains("<td class=\"text-left\">Row 1</td>"),
+            "Table row not found"
+        );
     }
 
     /// Test conversion of empty Markdown.
@@ -158,15 +154,12 @@ mod tests {
         assert!(result.is_ok());
         let html = result.unwrap();
 
-        // Debug output
         println!("{}", html);
 
-        // Modify the assertion to reflect Comrak's strict handling of unclosed tags
         assert!(
             html.contains("<h1>Unclosed header</h1>"),
             "Header not found"
         );
-        // Comrak does not automatically close bold tags; this is expected behaviour
         assert!(
             html.contains("<p>Some **unclosed bold</p>"),
             "Unclosed bold tag not properly handled"
@@ -179,7 +172,6 @@ mod tests {
     /// elements like lists, headers, code blocks, and links.
     #[test]
     fn test_generate_html_complex() {
-        // Ensure no leading indentation in the Markdown input.
         let markdown = r#"
 # Header
 
@@ -201,10 +193,9 @@ fn main() {
         assert!(result.is_ok());
         let html = result.unwrap();
 
-        // Print the generated HTML for debugging
-        println!("{}", html);
+        println!("{}", html); // Print the HTML for inspection
 
-        // Verify if Comrak processed the Markdown as expected
+        // Verify the header and subheader
         assert!(
             html.contains("<h1>Header</h1>"),
             "H1 Header not found"
@@ -213,6 +204,8 @@ fn main() {
             html.contains("<h2>Subheader</h2>"),
             "H2 Header not found"
         );
+
+        // Verify the inline code and link
         assert!(
             html.contains("<code>inline code</code>"),
             "Inline code not found"
@@ -222,10 +215,29 @@ fn main() {
             "Link not found"
         );
 
-        // Check for encoded special characters in code blocks
+        // Verify that the code block starts correctly
         assert!(
-            html.contains("&quot;Hello, world!&quot;"),
-            "Special characters not encoded in code block"
+            html.contains(r#"<code class="language-rust">"#),
+            "Rust code block not found"
         );
+
+        // Match each part of the highlighted syntax separately
+        // Check for `fn` keyword in a span with the correct style
+        assert!(
+            html.contains(r#"<span style="color:#b48ead;">fn </span>"#),
+            "`fn` keyword with syntax highlighting not found"
+        );
+
+        // Check for `main` in a span with the correct style
+        assert!(
+            html.contains(
+                r#"<span style="color:#8fa1b3;">main</span>"#
+            ),
+            "`main` function name with syntax highlighting not found"
+        );
+
+        // Check for `First item` and `Second item` in the ordered list
+        assert!(html.contains("First item"), "First item not found");
+        assert!(html.contains("Second item"), "Second item not found");
     }
 }
