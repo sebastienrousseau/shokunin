@@ -1,33 +1,48 @@
 //! # SSG Frontmatter
 //!
-//! This module provides functionality to extract and parse frontmatter from various file formats
-//! commonly used in static site generators. It supports YAML, TOML, and JSON frontmatter.
+//! `ssg-frontmatter` is a Rust library for parsing and serializing frontmatter in various formats, including YAML, TOML, and JSON.
+//! Frontmatter is commonly used in static site generators (SSG) to store metadata at the beginning of content files.
+//!
+//! This library provides functions to extract, parse, and convert frontmatter between different formats, making it easy to work with frontmatter data in Rust applications.
+//!
+//! ## Features
+//! - Extract frontmatter from content files.
+//! - Parse frontmatter into a structured format.
+//! - Convert frontmatter between YAML, TOML, and JSON formats.
+//!
+//! ## Example
+//! ```rust
+//! use ssg_frontmatter::{Format, Frontmatter, to_format};
+//!
+//! let mut frontmatter = Frontmatter::new();
+//! frontmatter.insert("title".to_string(), "My Post".into());
+//! frontmatter.insert("date".to_string(), "2023-05-20".into());
+//!
+//! let yaml = to_format(&frontmatter, Format::Yaml).unwrap();
+//! assert!(yaml.contains("title: My Post"));
+//! assert!(yaml.contains("date: '2023-05-20'"));
+//! ```
+//!
+//! ## Modules
+//! - `error`: Contains error types used throughout the library.
+//! - `extractor`: Provides functions for extracting raw frontmatter.
+//! - `parser`: Handles the parsing of frontmatter from raw strings.
+//! - `types`: Defines the core types such as `Frontmatter`, `Value`, and `Format`.
 
-use serde_json::{Map, Value as JsonValue};
-use serde_yml::Value as YamlValue;
-use std::collections::HashMap;
-use thiserror::Error;
-use toml::Value as TomlValue;
+/// The `error` module contains error types related to the frontmatter parsing process.
+pub mod error;
+/// The `extractor` module contains functions for extracting raw frontmatter from content.
+pub mod extractor;
+/// The `parser` module contains functions for parsing frontmatter into a structured format.
+pub mod parser;
+/// The `types` module contains types related to the frontmatter parsing process.
+pub mod types;
 
-/// Errors that can occur during frontmatter parsing.
-#[derive(Error, Debug)]
-pub enum FrontmatterError {
-    /// Error occurred while parsing YAML.
-    #[error("Failed to parse YAML: {0}")]
-    YamlParseError(#[from] serde_yml::Error),
-
-    /// Error occurred while parsing TOML.
-    #[error("Failed to parse TOML: {0}")]
-    TomlParseError(#[from] toml::de::Error),
-
-    /// Error occurred while parsing JSON.
-    #[error("Failed to parse JSON: {0}")]
-    JsonParseError(#[from] serde_json::Error),
-
-    /// The frontmatter format is invalid or unsupported.
-    #[error("Invalid frontmatter format")]
-    InvalidFormat,
-}
+use error::FrontmatterError;
+use extractor::{detect_format, extract_raw_frontmatter};
+use parser::{parse, to_string};
+// Re-export types for external access
+pub use types::{Format, Frontmatter, Value}; // Add `Frontmatter` and `Format` to the public interface
 
 /// Extracts frontmatter from a string of content.
 ///
@@ -40,13 +55,13 @@ pub enum FrontmatterError {
 ///
 /// # Returns
 ///
-/// * `Ok(HashMap<String, String>)` - A hashmap of key-value pairs from the frontmatter.
-/// * `Err(FrontmatterError)` - An error if parsing fails or the format is invalid.
+/// * `Ok((Frontmatter, &str))` - A tuple containing the parsed frontmatter and the remaining content.
+/// * `Err(FrontmatterError)` - An error if extraction or parsing fails.
 ///
 /// # Examples
 ///
 /// ```
-/// use ssg_frontmatter::extract;
+/// use ssg_frontmatter::{extract, Frontmatter};
 ///
 /// let yaml_content = r#"---
 /// title: My Post
@@ -54,197 +69,48 @@ pub enum FrontmatterError {
 /// ---
 /// Content here"#;
 ///
-/// let frontmatter = extract(yaml_content).unwrap();
-/// assert_eq!(frontmatter.get("title"), Some(&"My Post".to_string()));
+/// let (frontmatter, remaining_content) = extract(yaml_content).unwrap();
+/// assert_eq!(frontmatter.get("title").unwrap().as_str().unwrap(), "My Post");
+/// assert_eq!(remaining_content, "Content here");
 /// ```
 pub fn extract(
     content: &str,
-) -> Result<HashMap<String, String>, FrontmatterError> {
-    if let Some(yaml) =
-        extract_delimited_frontmatter(content, "---\n", "\n---\n")
-    {
-        parse_yaml_frontmatter(yaml)
-    } else if let Some(toml) =
-        extract_delimited_frontmatter(content, "+++\n", "\n+++\n")
-    {
-        parse_toml_frontmatter(toml)
-    } else if let Some(json) = extract_json_frontmatter(content) {
-        parse_json_frontmatter(json)
-    } else {
-        Err(FrontmatterError::InvalidFormat)
-    }
+) -> Result<(Frontmatter, &str), FrontmatterError> {
+    let (raw_frontmatter, remaining_content) =
+        extract_raw_frontmatter(content)?;
+    let format = detect_format(raw_frontmatter)?;
+    let frontmatter = parse(raw_frontmatter, format)?;
+    Ok((frontmatter, remaining_content))
 }
 
-/// Extracts frontmatter enclosed by delimiters.
-fn extract_delimited_frontmatter<'a>(
-    content: &'a str,
-    start_delim: &str,
-    end_delim: &str,
-) -> Option<&'a str> {
-    content.strip_prefix(start_delim)?.split(end_delim).next()
-}
-
-/// Extracts JSON frontmatter.
-fn extract_json_frontmatter(content: &str) -> Option<&str> {
-    let trimmed = content.trim_start();
-    if !trimmed.starts_with('{') {
-        return None;
-    }
-
-    let mut brace_count = 0;
-    for (idx, ch) in trimmed.char_indices() {
-        match ch {
-            '{' => brace_count += 1,
-            '}' => {
-                brace_count -= 1;
-                if brace_count == 0 {
-                    return Some(&trimmed[..=idx]);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
-/// Parses YAML frontmatter.
-fn parse_yaml_frontmatter(
-    yaml: &str,
-) -> Result<HashMap<String, String>, FrontmatterError> {
-    let yaml_value: YamlValue = serde_yml::from_str(yaml)?;
-    Ok(parse_yaml_value(&yaml_value))
-}
-
-/// Parses TOML frontmatter.
-fn parse_toml_frontmatter(
-    toml: &str,
-) -> Result<HashMap<String, String>, FrontmatterError> {
-    let toml_value: TomlValue = toml.parse()?;
-    Ok(parse_toml_table(
-        toml_value
-            .as_table()
-            .ok_or(FrontmatterError::InvalidFormat)?,
-    ))
-}
-
-/// Parses JSON frontmatter.
-fn parse_json_frontmatter(
-    json: &str,
-) -> Result<HashMap<String, String>, FrontmatterError> {
-    let json_value: JsonValue = serde_json::from_str(json)?;
-    parse_json_value(&json_value)
-}
-
-/// Converts a YAML value to a HashMap.
-fn parse_yaml_value(yaml_value: &YamlValue) -> HashMap<String, String> {
-    let mut result = HashMap::new();
-    if let YamlValue::Mapping(mapping) = yaml_value {
-        for (key, value) in mapping {
-            if let (YamlValue::String(k), YamlValue::String(v)) =
-                (key, value)
-            {
-                result.insert(k.clone(), v.clone());
-            }
-        }
-    }
-    result
-}
-
-/// Converts a TOML table to a HashMap.
-fn parse_toml_table(
-    toml_table: &toml::Table,
-) -> HashMap<String, String> {
-    toml_table
-        .iter()
-        .filter_map(|(k, v)| {
-            v.as_str().map(|s| (k.to_string(), s.to_string()))
-        })
-        .collect()
-}
-
-/// Converts a JSON value to a HashMap.
-fn parse_json_value(
-    json_value: &JsonValue,
-) -> Result<HashMap<String, String>, FrontmatterError> {
-    match json_value {
-        JsonValue::Object(obj) => Ok(parse_json_object(obj)),
-        _ => Err(FrontmatterError::InvalidFormat),
-    }
-}
-
-/// Converts a JSON object to a HashMap.
-fn parse_json_object(
-    json_object: &Map<String, JsonValue>,
-) -> HashMap<String, String> {
-    json_object
-        .iter()
-        .filter_map(|(k, v)| {
-            Some((
-                k.to_string(),
-                match v {
-                    JsonValue::String(s) => s.to_string(),
-                    JsonValue::Number(n) => n.to_string(),
-                    JsonValue::Bool(b) => b.to_string(),
-                    _ => return None,
-                },
-            ))
-        })
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_yaml_frontmatter() {
-        let content = r#"---
-title: Test Post
-date: 2023-05-20
----
-# Actual content here"#;
-
-        let result = extract(content).unwrap();
-        assert_eq!(result.get("title"), Some(&"Test Post".to_string()));
-        assert_eq!(result.get("date"), Some(&"2023-05-20".to_string()));
-    }
-
-    #[test]
-    fn test_extract_toml_frontmatter() {
-        let content = r#"+++
-title = "Test Post"
-date = "2023-05-20"
-+++
-# Actual content here"#;
-
-        let result = extract(content).unwrap();
-        assert_eq!(result.get("title"), Some(&"Test Post".to_string()));
-        assert_eq!(result.get("date"), Some(&"2023-05-20".to_string()));
-    }
-
-    #[test]
-    fn test_extract_json_frontmatter() {
-        let content = r#"
-{
-    "title": "Test Post",
-    "date": "2023-05-20",
-    "content": "Actual content here"
-}
-# Actual content here"#;
-
-        let result = extract(content).unwrap();
-        assert_eq!(result.get("title"), Some(&"Test Post".to_string()));
-        assert_eq!(result.get("date"), Some(&"2023-05-20".to_string()));
-        assert_eq!(
-            result.get("content"),
-            Some(&"Actual content here".to_string())
-        );
-    }
-
-    #[test]
-    fn test_invalid_frontmatter() {
-        let content = "No frontmatter here";
-        let result = extract(content);
-        assert!(matches!(result, Err(FrontmatterError::InvalidFormat)));
-    }
+/// Converts frontmatter to a specific format.
+///
+/// # Arguments
+///
+/// * `frontmatter` - The Frontmatter to convert.
+/// * `format` - The target Format to convert to.
+///
+/// # Returns
+///
+/// * `Ok(String)` - The frontmatter converted to the specified format.
+/// * `Err(FrontmatterError)` - An error if conversion fails.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_frontmatter::{Frontmatter, Format, to_format};
+///
+/// let mut frontmatter = Frontmatter::new();
+/// frontmatter.insert("title".to_string(), "My Post".into());
+/// frontmatter.insert("date".to_string(), "2023-05-20".into());
+///
+/// let yaml = to_format(&frontmatter, Format::Yaml).unwrap();
+/// assert!(yaml.contains("title: My Post"));
+/// assert!(yaml.contains("date: '2023-05-20'"));
+/// ```
+pub fn to_format(
+    frontmatter: &Frontmatter,
+    format: Format,
+) -> Result<String, FrontmatterError> {
+    to_string(frontmatter, format)
 }
