@@ -1052,6 +1052,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "frontmatter-gen"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3865bd4ae922d9af4838663243046da67cce17d87f978a31b7cd2115316e20c1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_yml",
+ "thiserror",
+ "tokio",
+ "toml",
+ "version_check",
+]
+
+[[package]]
 name = "fsevent-sys"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3091,7 +3106,6 @@ dependencies = [
  "serde_json",
  "ssg-cli",
  "ssg-core",
- "ssg-frontmatter",
  "ssg-html",
  "ssg-i18n",
  "ssg-metadata",
@@ -3153,22 +3167,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssg-frontmatter"
-version = "0.0.1"
-dependencies = [
- "serde",
- "serde_json",
- "serde_yml",
- "thiserror",
- "toml",
-]
-
-[[package]]
 name = "ssg-html"
 version = "0.0.1"
 dependencies = [
  "comrak",
  "criterion",
+ "frontmatter-gen",
  "html-escape",
  "htmlescape",
  "mdx-gen",
@@ -3178,7 +3182,6 @@ dependencies = [
  "scraper",
  "serde",
  "serde_json",
- "ssg-frontmatter",
  "tempfile",
  "thiserror",
  "tokio",

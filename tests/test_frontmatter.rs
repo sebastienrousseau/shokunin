@@ -5,7 +5,7 @@
 mod tests {
     use std::collections::HashMap;
 
-    use ssg_frontmatter::{
+    use frontmatter_gen::{
         extract, extract_front_matter_str, extract_json_object_str,
         parse_json_object, parse_toml_table, parse_yaml_document,
         parse_yaml_hash,
