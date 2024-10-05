@@ -1,7 +1,7 @@
 use serde_yml::Error as SerdeYmlError;
 use thiserror::Error;
 
-/// Custom error types for the ssg-metadata library
+/// Custom error types for the metadata-gen library
 #[derive(Error, Debug)]
 pub enum MetadataError {
     /// Error occurred while extracting metadata

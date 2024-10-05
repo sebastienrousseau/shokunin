@@ -4,8 +4,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_metadata::async_extract_metadata_from_file;
-    use ssg_metadata::utils::escape_html_entities;
+    use metadata_gen::async_extract_metadata_from_file;
+    use metadata_gen::utils::escape_html_entities;
 
     /// Test if string escaping works as expected.
     ///

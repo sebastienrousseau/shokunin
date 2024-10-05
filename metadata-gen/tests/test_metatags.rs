@@ -4,8 +4,8 @@
 
 #[cfg(test)]
 mod tests {
+    use metadata_gen::MetaTagGroups;
     use regex::Regex;
-    use ssg_metadata::MetaTagGroups;
     use std::collections::HashMap;
 
     /// Parses meta tags from an HTML string and returns a HashMap.

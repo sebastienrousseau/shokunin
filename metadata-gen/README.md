@@ -3,7 +3,7 @@
 alt="Shokunin logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin Static Site Generator Metadata (ssg-metadata)
+# Shokunin Static Site Generator Metadata (metadata-gen)
 
 A Rust-based library for handling metadata extraction and management in static site generators. The library provides tools for efficiently extracting meta tags, keywords, and managing SEO-related metadata in a static site context.
 
@@ -11,7 +11,7 @@ A Rust-based library for handling metadata extraction and management in static s
 
 ## Overview
 
-`ssg-metadata` is designed for developers working on static site generators (SSG) who need robust tools to extract and handle metadata such as meta tags, keywords, and SEO information from HTML content. It helps ensure that your static sites are SEO-optimized and provides utilities to streamline the metadata extraction process.
+`metadata-gen` is designed for developers working on static site generators (SSG) who need robust tools to extract and handle metadata such as meta tags, keywords, and SEO information from HTML content. It helps ensure that your static sites are SEO-optimized and provides utilities to streamline the metadata extraction process.
 
 ## Features
 
@@ -27,7 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg-metadata = "0.0.1"
+metadata-gen = "0.0.1"
 ```
 
 ## Usage
@@ -37,7 +37,7 @@ Here are some examples of how to use the library:
 ### Basic Usage
 
 ```rust
-use ssg_metadata::{extract_meta_tags, extract_keywords};
+use metadata_gen::{extract_meta_tags, extract_keywords};
 
 let html_content = "<html>...</html>";
 let meta_tags = extract_meta_tags(html_content);
@@ -50,7 +50,7 @@ println!("Keywords: {:?}", keywords);
 ### HTML Escape/Unescape Example
 
 ```rust
-use ssg_metadata::escape::{escape_html, unescape_html};
+use metadata_gen::escape::{escape_html, unescape_html};
 
 let escaped = escape_html("Hello <World>");
 let unescaped = unescape_html(&escaped);
@@ -69,7 +69,7 @@ println!("Unescaped: {}", unescaped);
 
 ## Documentation
 
-For full API documentation, please visit [docs.rs/ssg-metadata][9].
+For full API documentation, please visit [docs.rs/metadata-gen][9].
 
 ## Contributing
 
@@ -86,9 +86,9 @@ at your option.
 
 ## Acknowledgements
 
-Special thanks to all contributors who have helped build the `ssg-metadata` library.
+Special thanks to all contributors who have helped build the `metadata-gen` library.
 
-[9]: https://docs.rs/ssg-metadata
+[9]: https://docs.rs/metadata-gen
 [2]: https://opensource.org/licenses/MIT
 [8]: https://crates.io/crates/ssg-html
 [10]: https://lib.rs/crates/ssg-html

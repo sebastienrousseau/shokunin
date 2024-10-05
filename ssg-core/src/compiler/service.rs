@@ -24,7 +24,7 @@ use crate::{
     },
     utilities::{file::add, write::write_files_to_build_directory},
 };
-use ssg_metadata::extract_and_prepare_metadata;
+use metadata_gen::extract_and_prepare_metadata;
 use ssg_template::{Context as TemplateContext, Engine, PageOptions};
 use std::{collections::HashMap, fs, path::Path};
 

@@ -1,13 +1,13 @@
-//! Unit tests for the `error` module in the ssg-metadata library.
+//! Unit tests for the `error` module in the metadata-gen library.
 //!
 //! This module tests the various custom error types defined in `MetadataError`
 //! and their functionality.
 
 #[cfg(test)]
 mod tests {
+    use metadata_gen::error::MetadataError;
     use serde_json::Error as JsonError;
     use serde_yml::Error as YamlError;
-    use ssg_metadata::error::MetadataError;
     use std::io;
     use toml::de::Error as TomlError;
 

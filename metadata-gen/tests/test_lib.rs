@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ssg_metadata::{
+    use metadata_gen::{
         self, extract_and_prepare_metadata, MetadataError,
     };
 

@@ -4,8 +4,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_metadata::metadata::extract_metadata;
-    use ssg_metadata::MetadataError;
+    use metadata_gen::metadata::extract_metadata;
+    use metadata_gen::MetadataError;
 
     /// Test metadata extraction from a valid YAML source.
     ///

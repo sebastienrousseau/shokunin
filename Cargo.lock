@@ -1053,9 +1053,9 @@ dependencies = [
 
 [[package]]
 name = "frontmatter-gen"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3865bd4ae922d9af4838663243046da67cce17d87f978a31b7cd2115316e20c1"
+checksum = "4ca687f7d05be18198951f3599b904cfd1897a6a9e7c1dff2c2ae84df2c62a68"
 dependencies = [
  "serde",
  "serde_json",
@@ -1770,6 +1770,28 @@ name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "metadata-gen"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "assert_fs",
+ "dtt 0.0.8",
+ "predicates",
+ "quick-xml 0.36.2",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yml",
+ "tempfile",
+ "thiserror",
+ "time",
+ "tokio",
+ "toml",
+ "version_check",
+ "yaml-rust2",
+]
 
 [[package]]
 name = "mime"
@@ -3094,6 +3116,7 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+ "metadata-gen",
  "minify-html",
  "openssl",
  "pulldown-cmark",
@@ -3108,7 +3131,6 @@ dependencies = [
  "ssg-core",
  "ssg-html",
  "ssg-i18n",
- "ssg-metadata",
  "ssg-server",
  "ssg-sitemap",
  "ssg-template",
@@ -3144,6 +3166,7 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+ "metadata-gen",
  "minify-html",
  "pulldown-cmark",
  "quick-xml 0.36.2",
@@ -3154,7 +3177,6 @@ dependencies = [
  "serde",
  "serde_json",
  "ssg-html",
- "ssg-metadata",
  "ssg-server",
  "ssg-sitemap",
  "ssg-template",
@@ -3204,28 +3226,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "version_check",
-]
-
-[[package]]
-name = "ssg-metadata"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "assert_fs",
- "dtt 0.0.8",
- "predicates",
- "quick-xml 0.36.2",
- "regex",
- "serde",
- "serde_json",
- "serde_yml",
- "tempfile",
- "thiserror",
- "time",
- "tokio",
- "toml",
- "version_check",
- "yaml-rust2",
 ]
 
 [[package]]

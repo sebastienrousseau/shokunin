@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod integration_tests {
-    use ssg_metadata::error::MetadataError;
-    use ssg_metadata::metadata::extract_metadata;
-    use ssg_metadata::metatags::generate_metatags;
-    use ssg_metadata::utils::escape_html_entities;
+    use metadata_gen::error::MetadataError;
+    use metadata_gen::metadata::extract_metadata;
+    use metadata_gen::metatags::generate_metatags;
+    use metadata_gen::utils::escape_html_entities;
 
     /// Integration test: Metadata extraction and meta tag generation.
     ///
@@ -128,7 +128,7 @@ keywords: "async, test, metadata"
 
         // Test the async_extract_metadata_from_file function
         let result =
-            ssg_metadata::utils::async_extract_metadata_from_file(
+            metadata_gen::utils::async_extract_metadata_from_file(
                 file_path.to_str().unwrap(),
             )
             .await;

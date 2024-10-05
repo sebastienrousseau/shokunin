@@ -14,7 +14,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 # The name of the crate, used by Cargo to identify the project.
-name = "ssg-metadata"
+name = "metadata-gen"
 version = "0.0.1"
 
 # A short description of the project. This is displayed on package registries like crates.io.
@@ -44,7 +44,7 @@ quick-xml = "0.36"
 version_check = "0.9" # Check the Rust version used to compile the package.
 
 [lib]
-name = "ssg_metadata"
+name = "metadata_gen"
 path = "src/lib.rs"
 
 [dev-dependencies]

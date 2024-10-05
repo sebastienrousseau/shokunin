@@ -18,7 +18,7 @@ use tokio::io::AsyncReadExt;
 /// # Example
 ///
 /// ```
-/// use ssg_metadata::escape_html_entities;
+/// use metadata_gen::escape_html_entities;
 ///
 /// let input = "Hello, <world>!";
 /// let expected = "Hello, &lt;world&gt;!";

@@ -13,7 +13,7 @@ categories = ["web-programming", "text-processing"]
 
 [dependencies]
 comrak = "0.28"
-frontmatter-gen = "0.0.1"
+frontmatter-gen = "0.0.2"
 html-escape = "0.2.13"
 htmlescape = "0.3"
 mdx-gen = "0.0.1"

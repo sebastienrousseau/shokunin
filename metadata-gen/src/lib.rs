@@ -1,6 +1,6 @@
-//! # ssg-metadata
+//! # metadata-gen
 //!
-//! `ssg-metadata` is a library for extracting and processing metadata
+//! `metadata-gen` is a library for extracting and processing metadata
 //! for static site generators. It supports various formats including
 //! YAML, TOML, and JSON front matter in Markdown files.
 //!
@@ -61,7 +61,7 @@ type MetadataResult =
 /// # Example
 ///
 /// ```
-/// use ssg_metadata::extract_and_prepare_metadata;
+/// use metadata_gen::extract_and_prepare_metadata;
 ///
 /// let content = r#"---
 /// title: My Page
