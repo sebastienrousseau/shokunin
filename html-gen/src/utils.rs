@@ -42,7 +42,7 @@ static CONSECUTIVE_HYPHENS_REGEX: Lazy<Regex> = Lazy::new(|| {
 /// # Examples
 ///
 /// ```
-/// use ssg_html::utils::extract_front_matter;
+/// use html_gen::utils::extract_front_matter;
 ///
 /// let content = "---\ntitle: My Page\n---\n# Hello, world!\n\nThis is a test.";
 /// let result = extract_front_matter(content).unwrap();
@@ -91,7 +91,7 @@ pub fn extract_front_matter(content: &str) -> Result<String> {
 /// # Examples
 ///
 /// ```
-/// use ssg_html::utils::format_header_with_id_class;
+/// use html_gen::utils::format_header_with_id_class;
 ///
 /// let header = "<h2>Hello, World!</h2>";
 /// let result = format_header_with_id_class(header).unwrap();
@@ -139,7 +139,7 @@ pub fn format_header_with_id_class(header: &str) -> Result<String> {
 /// # Examples
 ///
 /// ```
-/// use ssg_html::utils::generate_table_of_contents;
+/// use html_gen::utils::generate_table_of_contents;
 ///
 /// let html = "<h1>Title</h1><p>Some content</p><h2>Subtitle</h2><p>More content</p>";
 /// let toc = generate_table_of_contents(html).unwrap();

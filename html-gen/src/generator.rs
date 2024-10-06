@@ -20,8 +20,8 @@ use mdx_gen::{process_markdown, ComrakOptions, MarkdownOptions};
 /// # Example
 ///
 /// ```rust
-/// use ssg_html::HtmlConfig;
-/// use ssg_html::generate_html;
+/// use html_gen::HtmlConfig;
+/// use html_gen::generate_html;
 /// let markdown = "# Hello, world!";
 /// let config = HtmlConfig::default();
 /// let html = generate_html(markdown, &config).unwrap();
@@ -51,7 +51,7 @@ pub fn generate_html(
 /// # Example
 ///
 /// ```rust
-/// use ssg_html::generator::markdown_to_html_with_extensions;
+/// use html_gen::generator::markdown_to_html_with_extensions;
 /// let markdown = "~~strikethrough~~";
 /// let html = markdown_to_html_with_extensions(markdown).unwrap();
 /// assert!(html.contains("<del>strikethrough</del>"));

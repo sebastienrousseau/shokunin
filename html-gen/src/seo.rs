@@ -29,7 +29,7 @@ use scraper::{Html, Selector};
 /// # Examples
 ///
 /// ```
-/// use ssg_html::seo::generate_meta_tags;
+/// use html_gen::seo::generate_meta_tags;
 ///
 /// let html = r#"<html><head><title>Test Page</title></head><body><p>This is a test page.</p></body></html>"#;
 /// let meta_tags = generate_meta_tags(html).unwrap();
@@ -101,7 +101,7 @@ pub fn generate_meta_tags(html: &str) -> Result<String> {
 /// # Examples
 ///
 /// ```
-/// use ssg_html::seo::generate_structured_data;
+/// use html_gen::seo::generate_structured_data;
 ///
 /// let html = r#"<html><head><title>Test Page</title></head><body><p>This is a test page.</p></body></html>"#;
 /// let structured_data = generate_structured_data(html).unwrap();

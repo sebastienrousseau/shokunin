@@ -3,7 +3,7 @@
 alt="Shokunin logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
-# Shokunin HTML Generator (ssg-html)
+# Shokunin HTML Generator (html-gen)
 
 A Rust-based HTML generation and optimization library for static site generators.
 
@@ -21,7 +21,7 @@ A Rust-based HTML generation and optimization library for static site generators
 
 ## Overview
 
-The `ssg-html` crate is a powerful and flexible HTML generation and optimization library designed specifically for static site generators. It provides a robust set of tools for converting Markdown to HTML, enhancing SEO, improving accessibility, and optimizing performance.
+The `html-gen` crate is a powerful and flexible HTML generation and optimization library designed specifically for static site generators. It provides a robust set of tools for converting Markdown to HTML, enhancing SEO, improving accessibility, and optimizing performance.
 
 ## Features
 
@@ -38,15 +38,15 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg-html = "0.1.0"
+html-gen = "0.1.0"
 ```
 
 ## Usage
 
-Here's a basic example of how to use `ssg-html`:
+Here's a basic example of how to use `html-gen`:
 
 ```rust
-use ssg_html::{generate_html, HtmlConfig};
+use html_gen::{generate_html, HtmlConfig};
 
 fn main() {
     let markdown = "# Hello, world!\n\nThis is a test.";
@@ -72,7 +72,7 @@ The `HtmlConfig` struct allows you to customize the HTML generation process:
 
 ## Documentation
 
-For full API documentation, please visit [docs.rs/ssg-html][9].
+For full API documentation, please visit [docs.rs/html-gen][9].
 
 ## Contributing
 
@@ -95,13 +95,13 @@ Special thanks to all the contributors who have helped shape the Shokunin Static
 [2]: https://opensource.org/licenses/MIT
 [4]: https://github.com/sebastienrousseau/shokunin/issues
 [5]: https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md
-[8]: https://crates.io/crates/ssg-html
-[9]: https://docs.rs/ssg-html
-[10]: https://lib.rs/crates/ssg-html
+[8]: https://crates.io/crates/html-gen
+[9]: https://docs.rs/html-gen
+[10]: https://lib.rs/crates/html-gen
 [14]: https://www.rust-lang.org
 
-[crates-badge]: https://img.shields.io/crates/v/ssg-html.svg?style=for-the-badge 'Crates.io badge'
-[docs-badge]: https://img.shields.io/docsrs/ssg-html.svg?style=for-the-badge 'Docs.rs badge'
+[crates-badge]: https://img.shields.io/crates/v/html-gen.svg?style=for-the-badge 'Crates.io badge'
+[docs-badge]: https://img.shields.io/docsrs/html-gen.svg?style=for-the-badge 'Docs.rs badge'
 [libs-badge]: https://img.shields.io/badge/lib.rs-v0.1.0-orange.svg?style=for-the-badge 'Lib.rs badge'
-[license-badge]: https://img.shields.io/crates/l/ssg-html.svg?style=for-the-badge 'License badge'
+[license-badge]: https://img.shields.io/crates/l/html-gen.svg?style=for-the-badge 'License badge'
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

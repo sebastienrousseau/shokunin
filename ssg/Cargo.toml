@@ -37,7 +37,7 @@ vrd = "0.0.8"
 
 ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
 ssg-core = { path = "../ssg-core", version = "0.0.1" }
-ssg-html = { path = "../ssg-html", version = "0.0.1" }
+html-gen = { path = "../html-gen", version = "0.0.1" }
 ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }
 ssg-sitemap = { path = "../ssg-sitemap", version = "0.0.1" }

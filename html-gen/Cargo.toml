@@ -1,12 +1,12 @@
 [package]
-name = "ssg-html"
+name = "html-gen"
 version = "0.0.1"
 edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "HTML generation and optimization for static site generators"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/ssg-html"
-documentation = "https://docs.rs/ssg-html"
+repository = "https://github.com/yourusername/html-gen"
+documentation = "https://docs.rs/html-gen"
 readme = "README.md"
 keywords = ["html", "markdown", "ssg", "static-site-generator"]
 categories = ["web-programming", "text-processing"]

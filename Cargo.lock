@@ -1326,6 +1326,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "html-gen"
+version = "0.0.1"
+dependencies = [
+ "comrak",
+ "criterion",
+ "frontmatter-gen",
+ "html-escape",
+ "htmlescape",
+ "mdx-gen",
+ "minify-html",
+ "once_cell",
+ "regex",
+ "scraper",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "html5ever"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3115,6 +3136,7 @@ dependencies = [
  "criterion",
  "dtt 0.0.8",
  "env_logger",
+ "html-gen",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3130,7 +3152,6 @@ dependencies = [
  "serde_json",
  "ssg-cli",
  "ssg-core",
- "ssg-html",
  "ssg-i18n",
  "ssg-server",
  "ssg-sitemap",
@@ -3165,6 +3186,7 @@ dependencies = [
  "comrak",
  "dtt 0.0.8",
  "env_logger",
+ "html-gen",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3177,7 +3199,6 @@ dependencies = [
  "rss-gen",
  "serde",
  "serde_json",
- "ssg-html",
  "ssg-server",
  "ssg-sitemap",
  "ssg-template",
@@ -3187,27 +3208,6 @@ dependencies = [
  "version_check",
  "vrd 0.0.8",
  "yaml-rust2",
-]
-
-[[package]]
-name = "ssg-html"
-version = "0.0.1"
-dependencies = [
- "comrak",
- "criterion",
- "frontmatter-gen",
- "html-escape",
- "htmlescape",
- "mdx-gen",
- "minify-html",
- "once_cell",
- "regex",
- "scraper",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
 ]
 
 [[package]]

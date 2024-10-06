@@ -1,8 +1,8 @@
 // src/lib.rs
 
-//! # ssg-html
+//! # html-gen
 //!
-//! `ssg-html` is a library for processing and generating HTML content,
+//! `html-gen` is a library for processing and generating HTML content,
 //! particularly useful for static site generators. It provides utilities
 //! for handling Markdown front matter, formatting HTML headers with IDs
 //! and classes, and other HTML-related tasks.
@@ -19,15 +19,15 @@
 //!
 //! ```toml
 //! [dependencies]
-//! ssg-html = "0.1.0"
+//! html-gen = "0.1.0"
 //! ```
 //!
 //! Then, you can use the library in your Rust code:
 //!
 //! ```rust
-//! use ssg_html::utils::{extract_front_matter, format_header_with_id_class};
+//! use html_gen::utils::{extract_front_matter, format_header_with_id_class};
 //!
-//! fn main() -> ssg_html::error::Result<()> {
+//! fn main() -> html_gen::error::Result<()> {
 //!     let content = "---\ntitle: My Page\n---\n# Hello, world!\n\nThis is a test.";
 //!     let content_without_front_matter = extract_front_matter(content)?;
 //!     println!("Content: {}", content_without_front_matter);

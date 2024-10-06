@@ -5,7 +5,7 @@
 use crate::models::data::FileData;
 
 // Import the minify_html function.
-use ssg_html::performance::minify_html;
+use html_gen::performance::minify_html;
 
 // Import the fs module.
 use std::fs::{self, copy, read_dir};
