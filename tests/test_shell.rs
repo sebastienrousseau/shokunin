@@ -4,8 +4,8 @@
 #[cfg(test)]
 mod tests {
     // Import necessary modules and types
-    use ssg::macros::shell_macros::CommandExecutor;
-    use ssg::{
+    use ssg_core::macros::shell_macros::CommandExecutor;
+    use ssg_core::{
         macro_execute_and_log, macro_log_complete, macro_log_error,
         macro_log_start,
     };
@@ -32,7 +32,7 @@ mod tests {
         // Create CommandExecutor
         let mut executor = CommandExecutor::new::<&str>(None);
         // Set command
-        executor.command("ls -l");
+        let _ = executor.command("ls -l");
         // Assert that command is set correctly
         assert_eq!(
             format!("{:?}", executor.command),
@@ -45,7 +45,7 @@ mod tests {
         // Create CommandExecutor
         let mut executor = CommandExecutor::new::<&str>(None);
         // Set command
-        executor.command("echo 'Hello, World!'");
+        let _ = executor.command("echo 'Hello, World!'");
         // Execute command
         let result = executor.execute();
         // Assert that command execution is successful
@@ -82,7 +82,7 @@ mod tests {
         // Create CommandExecutor
         let mut executor = CommandExecutor::new::<&str>(None);
         // Set command
-        executor.command("ls -l");
+        let _ = executor.command("ls -l");
         // Assert that command is set correctly
         assert_eq!(
             format!("{:?}", executor.command),

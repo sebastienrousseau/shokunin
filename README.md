@@ -189,14 +189,14 @@ following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-shokunin = "0.0.29"
+shokunin = "0.0.30"
 ```
 
 Add the following to your `main.rs` file:
 
 ```rust
 extern crate ssg;
-use ssg::*;
+use ssg_core::*;
 ```
 
 then you can use the Shokunin Static Site Generator (SSG) functions in your
@@ -218,7 +218,7 @@ The command will generate a static website based on the configuration details
 in the `examples` directory.
 
 ```shell
-use ssg::compiler::compile;
+use ssg_core::compiler::compile;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -306,6 +306,6 @@ of useful suggestions on how to improve this project.
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge 'Crates.io badge'
 [divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/ssg.svg?style=for-the-badge 'Docs.rs badge'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.29-orange.svg?style=for-the-badge 'Lib.rs badge'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.30-orange.svg?style=for-the-badge 'Lib.rs badge'
 [license-badge]: https://img.shields.io/crates/l/ssg.svg?style=for-the-badge 'License badge'
 [made-with-rust-badge]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust badge'

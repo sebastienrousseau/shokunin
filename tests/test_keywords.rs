@@ -3,13 +3,13 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::modules::keywords::extract_keywords;
+    use ssg_core::modules::keywords::extract_keywords;
     use std::collections::HashMap;
 
     #[test]
     fn test_extract_keywords_with_valid_keywords() {
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "keywords".to_string(),
             "rust,programming,testing".to_string(),
         );
@@ -31,7 +31,7 @@ mod tests {
     #[test]
     fn test_extract_keywords_with_whitespace() {
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "keywords".to_string(),
             "  rust ,  programming  ,  testing  ".to_string(),
         );

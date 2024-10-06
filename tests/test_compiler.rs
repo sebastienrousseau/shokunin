@@ -5,7 +5,7 @@
 mod tests {
     use std::error::Error;
 
-    use ssg::{
+    use ssg_core::{
         models::data::RssData,
         modules::{
             frontmatter::extract, html::generate_html,
