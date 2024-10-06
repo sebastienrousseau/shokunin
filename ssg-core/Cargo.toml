@@ -14,6 +14,7 @@ dtt = "0.0.8"
 env_logger = "0.11"
 lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
+metadata-gen = "0.0.1"
 minify-html = "0.15"
 pulldown-cmark = "0.12"
 quick-xml = "0.36"
@@ -29,7 +30,6 @@ yaml-rust2 = "0.9"
 uuid = { version = "1.10", features = ["v4"] }
 vrd = "0.0.8"
 
-metadata-gen = { path = "../metadata-gen", version = "0.0.1" }
 ssg-html = { path = "../ssg-html", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }
 ssg-sitemap = { path = "../ssg-sitemap", version = "0.0.1" }

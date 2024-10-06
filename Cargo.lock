@@ -1774,13 +1774,14 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 [[package]]
 name = "metadata-gen"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14e7f23aba494ae4bfdee627d49d17584391aba8f53ceb42cb58973a80125dc1"
 dependencies = [
  "anyhow",
- "assert_fs",
  "dtt 0.0.8",
- "predicates",
  "quick-xml 0.36.2",
  "regex",
+ "scraper",
  "serde",
  "serde_json",
  "serde_yml",
