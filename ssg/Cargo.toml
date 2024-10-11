@@ -14,9 +14,10 @@ exclude.workspace = true
 [dependencies]
 anyhow = "1.0"
 clap = "4.5"
-comrak = "0.28"
+comrak = "0.29"
 dtt = "0.0.8"
 env_logger = "0.11"
+html-generator = "0.0.1"
 lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
 metadata-gen = "0.0.1"
@@ -29,6 +30,7 @@ rlg = "0.0.6"
 rss-gen = "0.0.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sitemap-gen = "0.0.1"
 tempfile = "3.12"
 toml = "0.8"
 yaml-rust2 = "0.9"
@@ -37,10 +39,8 @@ vrd = "0.0.8"
 
 ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
 ssg-core = { path = "../ssg-core", version = "0.0.1" }
-html-gen = { path = "../html-gen", version = "0.0.1" }
 ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
 ssg-server = { path = "../ssg-server", version = "0.0.1" }
-ssg-sitemap = { path = "../ssg-sitemap", version = "0.0.1" }
 ssg-template = { path = "../ssg-template", version = "0.0.1" }
 
 # Unix platforms use OpenSSL for now to provide SSL functionality

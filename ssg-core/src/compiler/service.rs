@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::{Context as AnyhowContext, Result};
-use html_gen::{generate_html, HtmlConfig};
+use html_generator::{generate_html, HtmlConfig};
 use rlg::log_level::LogLevel;
 use rss_gen::{data::RssData, generate_rss, macro_set_rss_data_fields};
-use ssg_sitemap::create_site_map_data;
+use sitemap_gen::create_site_map_data;
 use std::time::Duration;
 
 use crate::{
@@ -232,7 +232,7 @@ fn process_file(
     let txt_data = txt(&txt_options);
     let cname_data = cname(&cname_options);
     let human_data = human(&human_options);
-    let sitemap_data = sitemap(sitemap_options, site_path);
+    let sitemap_data = sitemap(sitemap_options?, site_path);
     let news_sitemap_data = news_sitemap(news_sitemap_options);
     let json_data = serde_json::to_string(&json).unwrap_or_else(|e| {
         eprintln!("Error serializing JSON: {}", e);

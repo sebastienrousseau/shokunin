@@ -6,7 +6,7 @@ use crate::models::data::{
     TxtData,
 };
 use serde_json::{json, Map};
-use ssg_sitemap::SiteMapData;
+use sitemap_gen::SiteMapData;
 use std::{
     fs, io,
     path::{Path, PathBuf},
@@ -292,8 +292,8 @@ pub fn sitemap(options: SiteMapData, dir: &Path) -> String {
     if let Err(e) = visit_dirs(
         &base_dir,
         &base_dir,
-        &options.loc,
-        &options.changefreq,
+        options.loc.as_str(),
+        &options.changefreq.to_string(),
         &options.lastmod,
         &mut urls,
     ) {

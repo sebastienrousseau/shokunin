@@ -454,6 +454,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "comrak"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8c32ff8b21372fab0e9ecc4e42536055702dc5faa418362bffd1544f9d12637"
+dependencies = [
+ "caseless",
+ "clap",
+ "derive_builder",
+ "entities",
+ "memchr",
+ "once_cell",
+ "regex",
+ "shell-words",
+ "slug",
+ "syntect",
+ "typed-arena",
+ "unicode_categories",
+ "xdg",
+]
+
+[[package]]
 name = "config"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -471,6 +492,19 @@ dependencies = [
  "serde_json",
  "toml",
  "yaml-rust",
+]
+
+[[package]]
+name = "console"
+version = "0.15.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e1f83fc076bd6dd27517eacdf25fef6c4dfe5f1d7448bafaaf3a26f13b5e4eb"
+dependencies = [
+ "encode_unicode",
+ "lazy_static",
+ "libc",
+ "unicode-width",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -809,12 +843,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
-name = "diff"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
 name = "difflib"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -910,6 +938,12 @@ name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
+
+[[package]]
+name = "encode_unicode"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
 name = "encoding_rs"
@@ -1326,14 +1360,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "html-gen"
+name = "html-generator"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c4175259dd09b9a572073218f67a8d1a424d7d13922a422d73b49b204786ecf"
 dependencies = [
- "comrak",
- "criterion",
+ "comrak 0.28.0",
  "frontmatter-gen",
- "html-escape",
- "htmlescape",
+ "lazy_static",
  "mdx-gen",
  "minify-html",
  "once_cell",
@@ -1344,6 +1378,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "version_check",
 ]
 
 [[package]]
@@ -1359,12 +1394,6 @@ dependencies = [
  "quote",
  "syn 2.0.79",
 ]
-
-[[package]]
-name = "htmlescape"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9025058dae765dee5070ec375f591e2ba14638c63feff74f13805a72e523163"
 
 [[package]]
 name = "http"
@@ -1527,6 +1556,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "indicatif"
+version = "0.17.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "763a5a8f45087d6bcea4222e7b72c291a054edf80e4ef6efd2a4979878c7bea3"
+dependencies = [
+ "console",
+ "instant",
+ "number_prefix",
+ "portable-atomic",
+ "unicode-width",
+]
+
+[[package]]
 name = "inotify"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1544,6 +1586,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e05c02b5e89bff3b946cedeca278abc628fe811e604f027c45a8aa3cf793d0eb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "instant"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -1771,7 +1822,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eba95ca121d5154b8ec38928b5421207ce7354d9b924e04dc648589d09d9861c"
 dependencies = [
  "anyhow",
- "comrak",
+ "comrak 0.28.0",
  "env_logger",
  "html-escape",
  "lazy_static",
@@ -1975,6 +2026,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
+
+[[package]]
 name = "object"
 version = "0.36.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1985,9 +2042,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.19.0"
+version = "1.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 
 [[package]]
 name = "onig"
@@ -2366,6 +2423,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "portable-atomic"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc9c68a3f6da06753e9335d63e27f6b9754dd1920d941135b7ea8224f141adb2"
+
+[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2414,16 +2477,6 @@ checksum = "41b740d195ed3166cd147c8047ec98db0e22ec019eb8eeb76d343b795304fb13"
 dependencies = [
  "predicates-core",
  "termtree",
-]
-
-[[package]]
-name = "pretty_assertions"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
-dependencies = [
- "diff",
- "yansi",
 ]
 
 [[package]]
@@ -3085,6 +3138,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38b58827f4464d87d377d175e90bf58eb00fd8716ff0a62f80356b5e61555d0d"
 
 [[package]]
+name = "sitemap-gen"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fff9d5a3c04d8b3ea597323cd72107fb86825ffaa6a616d41b9bbe5650580610"
+dependencies = [
+ "clap",
+ "dtt 0.0.8",
+ "env_logger",
+ "html-generator",
+ "indicatif",
+ "lazy_static",
+ "log",
+ "regex",
+ "scraper",
+ "tempfile",
+ "thiserror",
+ "time",
+ "tokio",
+ "url",
+ "version_check",
+ "xml-rs",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3132,11 +3209,11 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
- "comrak",
+ "comrak 0.29.0",
  "criterion",
  "dtt 0.0.8",
  "env_logger",
- "html-gen",
+ "html-generator",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3150,11 +3227,11 @@ dependencies = [
  "rss-gen",
  "serde",
  "serde_json",
+ "sitemap-gen",
  "ssg-cli",
  "ssg-core",
  "ssg-i18n",
  "ssg-server",
- "ssg-sitemap",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3183,10 +3260,10 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
- "comrak",
+ "comrak 0.29.0",
  "dtt 0.0.8",
  "env_logger",
- "html-gen",
+ "html-generator",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3199,8 +3276,8 @@ dependencies = [
  "rss-gen",
  "serde",
  "serde_json",
+ "sitemap-gen",
  "ssg-server",
- "ssg-sitemap",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3244,21 +3321,6 @@ dependencies = [
  "tempfile",
  "thiserror",
  "version_check",
-]
-
-[[package]]
-name = "ssg-sitemap"
-version = "0.0.1"
-dependencies = [
- "assert_fs",
- "dtt 0.0.8",
- "predicates",
- "pretty_assertions",
- "regex",
- "thiserror",
- "url",
- "version_check",
- "xml-rs",
 ]
 
 [[package]]
@@ -4213,12 +4275,6 @@ dependencies = [
  "encoding_rs",
  "hashlink",
 ]
-
-[[package]]
-name = "yansi"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"
