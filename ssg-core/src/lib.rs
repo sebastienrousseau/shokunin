@@ -41,7 +41,7 @@ pub mod utilities;
 
 // Re-export commonly used items for easier access
 pub use compiler::service::compile;
+pub use http_handle::Server;
 pub use loggers::init_logger;
-pub use ssg_server::Server;
 pub use ssg_template;
 pub use utilities::uuid::generate_unique_string;

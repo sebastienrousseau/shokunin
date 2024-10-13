@@ -4,7 +4,10 @@
 use anyhow::{Context as AnyhowContext, Result};
 use html_generator::{generate_html, HtmlConfig};
 use rlg::log_level::LogLevel;
-use rss_gen::{data::RssData, generate_rss, macro_set_rss_data_fields};
+use rss_gen::{
+    data::{RssData, RssDataField, RssItem, RssItemField},
+    generate_rss, macro_set_rss_data_fields,
+};
 use sitemap_gen::create_site_map_data;
 use std::time::Duration;
 
@@ -31,10 +34,6 @@ use std::{collections::HashMap, fs, path::Path};
 /// Compiles files in a source directory, generates HTML pages from them, and
 /// writes the resulting pages to an output directory. Also generates an index
 /// page containing links to the generated pages.
-///
-/// This function takes paths to source, output, site, and template directories
-/// as arguments and performs the compilation process. It reads Markdown files,
-/// extracts metadata, generates HTML content, and writes resulting pages.
 ///
 /// # Arguments
 ///
@@ -178,41 +177,116 @@ fn process_file(
         metadata.get("layout").cloned().unwrap_or_default().as_str(),
     )?;
 
-    // Generate RSS data
+    // Generate RSS data for the main feed
     let mut rss_data = RssData::new(None);
 
-    // Set fields using the helper macro
+    // Set fields using the helper macro for feed-level metadata
     macro_set_rss_data_fields!(
         rss_data,
-        atom_link = macro_metadata_option!(metadata, "atom_link"),
-        author = macro_metadata_option!(metadata, "author"),
-        category = macro_metadata_option!(metadata, "category"),
-        copyright = macro_metadata_option!(metadata, "copyright"),
-        description = macro_metadata_option!(metadata, "description"),
-        docs = macro_metadata_option!(metadata, "docs"),
-        generator = macro_metadata_option!(metadata, "generator"),
-        image = macro_metadata_option!(metadata, "image"),
-        item_guid = macro_metadata_option!(metadata, "item_guid"),
-        item_description =
-            macro_metadata_option!(metadata, "item_description"),
-        item_link = macro_metadata_option!(metadata, "item_link"),
-        item_pub_date =
-            macro_metadata_option!(metadata, "item_pub_date"),
-        item_title = macro_metadata_option!(metadata, "item_title"),
-        language = macro_metadata_option!(metadata, "language"),
-        last_build_date =
+        AtomLink = macro_metadata_option!(metadata, "atom_link"),
+        Author = macro_metadata_option!(metadata, "author"),
+        Category = macro_metadata_option!(metadata, "category"),
+        Copyright = macro_metadata_option!(metadata, "copyright"),
+        Description = macro_metadata_option!(metadata, "description"),
+        Docs = macro_metadata_option!(metadata, "docs"),
+        Generator = macro_metadata_option!(metadata, "generator"),
+        ImageUrl = macro_metadata_option!(metadata, "image"),
+        Guid = macro_metadata_option!(metadata, "guid"),
+        Language = macro_metadata_option!(metadata, "language"),
+        LastBuildDate =
             macro_metadata_option!(metadata, "last_build_date"),
-        link = macro_metadata_option!(metadata, "permalink"),
-        managing_editor =
+        Link = macro_metadata_option!(metadata, "permalink"),
+        ManagingEditor =
             macro_metadata_option!(metadata, "managing_editor"),
-        pub_date = macro_metadata_option!(metadata, "pub_date"),
-        title = macro_metadata_option!(metadata, "title"),
-        ttl = macro_metadata_option!(metadata, "ttl"),
-        webmaster = macro_metadata_option!(metadata, "webmaster")
+        PubDate = macro_metadata_option!(metadata, "pub_date"),
+        Title = macro_metadata_option!(metadata, "title"),
+        Ttl = macro_metadata_option!(metadata, "ttl"),
+        Webmaster = macro_metadata_option!(metadata, "webmaster")
     );
 
-    // Generate RSS
+    // Handle RSS item data
+    if metadata.contains_key("item_title")
+        && metadata.contains_key("item_description")
+    {
+        let mut rss_item = RssItem::new();
+
+        rss_item = rss_item.set(
+            RssItemField::Title,
+            macro_metadata_option!(metadata, "item_title"),
+        );
+        rss_item = rss_item.set(
+            RssItemField::Link,
+            macro_metadata_option!(metadata, "item_link"),
+        );
+        rss_item = rss_item.set(
+            RssItemField::Description,
+            macro_metadata_option!(metadata, "item_description"),
+        );
+
+        if metadata.contains_key("item_guid") {
+            rss_item = rss_item.set(
+                RssItemField::Guid,
+                macro_metadata_option!(metadata, "item_guid"),
+            );
+        }
+
+        if metadata.contains_key("item_pub_date") {
+            rss_item = rss_item.set(
+                RssItemField::PubDate,
+                macro_metadata_option!(metadata, "item_pub_date"),
+            );
+        }
+
+        // Only add the RSS item if it contains valid title, link, and description
+        if !rss_item.title.is_empty()
+            && !rss_item.link.is_empty()
+            && !rss_item.description.is_empty()
+        {
+            rss_data.add_item(rss_item);
+        }
+    }
+
+    // Ensure managingEditor and webMaster have real names in the format "email (Real Name)"
+    let managing_editor =
+        macro_metadata_option!(metadata, "managing_editor");
+    if !managing_editor.contains('(') {
+        rss_data = rss_data.set(
+            RssDataField::ManagingEditor,
+            format!("{} (Default Name)", managing_editor),
+        );
+    }
+
+    let web_master = macro_metadata_option!(metadata, "webmaster");
+    if !web_master.contains('(') {
+        rss_data = rss_data.set(
+            RssDataField::Webmaster,
+            format!("{} (Default Name)", web_master),
+        );
+    }
+
+    // Validate image format - if it’s not JPEG or PNG, use a default image
+    let image_url = macro_metadata_option!(metadata, "image");
+    if !(image_url.ends_with(".jpg")
+        || image_url.ends_with(".jpeg")
+        || image_url.ends_with(".png")
+        || image_url.ends_with(".gif")
+        || image_url.ends_with(".webp"))
+    {
+        rss_data = rss_data.set(
+            RssDataField::ImageUrl,
+            image_url.clone(),
+        );
+    }
+
+    // Fix atom:link href value to ensure it matches the actual RSS location
+    rss_data = rss_data.set(
+        RssDataField::AtomLink,
+        format!("{}/rss.xml", image_url),
+    );
+
+    // Generate RSS XML
     let rss = generate_rss(&rss_data)?;
+    // println!("{}", &rss);
 
     // Generate various data structures
     let json = create_manifest_data(&metadata);

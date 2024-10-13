@@ -18,6 +18,7 @@ comrak = "0.29"
 dtt = "0.0.8"
 env_logger = "0.11"
 html-generator = "0.0.1"
+http-handle = "0.0.2"
 lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
 metadata-gen = "0.0.1"
@@ -27,7 +28,7 @@ quick-xml = "0.36"
 regex = "1.10"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 rlg = "0.0.6"
-rss-gen = "0.0.1"
+rss-gen = "0.0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sitemap-gen = "0.0.1"
@@ -40,7 +41,6 @@ vrd = "0.0.8"
 ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
 ssg-core = { path = "../ssg-core", version = "0.0.1" }
 ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
-ssg-server = { path = "../ssg-server", version = "0.0.1" }
 ssg-template = { path = "../ssg-template", version = "0.0.1" }
 
 # Unix platforms use OpenSSL for now to provide SSL functionality

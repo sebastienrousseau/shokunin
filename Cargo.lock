@@ -1430,6 +1430,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-handle"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9146e09a9aace92963ea15b9f1b6fa0610bf704a96d053ecc9b49be301d8a091"
+dependencies = [
+ "anyhow",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "version_check",
+]
+
+[[package]]
 name = "httparse"
 version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2543,6 +2557,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7649a7b4df05aed9ea7ec6f628c67c9953a43869b8bc50929569b2999d443fe"
 dependencies = [
  "memchr",
+ "serde",
 ]
 
 [[package]]
@@ -2814,9 +2829,9 @@ dependencies = [
 
 [[package]]
 name = "rss-gen"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "932ae19f1822802d06482ea03d1135e2bc31425fccb77b0777344658235d7ad7"
+checksum = "fa718fa3f543095671f28da7ebd2c2befea3d9800743eaa5cd3277966b923735"
 dependencies = [
  "dtt 0.0.8",
  "log",
@@ -3214,6 +3229,7 @@ dependencies = [
  "dtt 0.0.8",
  "env_logger",
  "html-generator",
+ "http-handle",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3231,7 +3247,6 @@ dependencies = [
  "ssg-cli",
  "ssg-core",
  "ssg-i18n",
- "ssg-server",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3264,6 +3279,7 @@ dependencies = [
  "dtt 0.0.8",
  "env_logger",
  "html-generator",
+ "http-handle",
  "lazy_static",
  "log",
  "metadata-gen",
@@ -3277,7 +3293,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sitemap-gen",
- "ssg-server",
  "ssg-template",
  "tempfile",
  "toml",
@@ -3299,23 +3314,6 @@ dependencies = [
  "log",
  "predicates",
  "regex",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "version_check",
-]
-
-[[package]]
-name = "ssg-server"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "assert_fs",
- "criterion",
- "env_logger",
- "log",
- "predicates",
  "serde",
  "serde_json",
  "tempfile",

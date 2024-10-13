@@ -118,6 +118,7 @@ pub use ssg_cli;
 
 use anyhow::Result;
 use dtt::datetime::DateTime;
+use http_handle::Server;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use ssg_cli::cli::print_banner;
 use ssg_core::macro_serve;
@@ -126,7 +127,6 @@ use ssg_core::{
     utilities::uuid::generate_unique_string,
 };
 use ssg_i18n::languages::en::translate;
-use ssg_server::Server;
 use std::{fs::File, io::Write, path::Path};
 
 #[allow(non_camel_case_types)]
