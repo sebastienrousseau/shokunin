@@ -5,7 +5,7 @@ use anyhow::{Context as AnyhowContext, Result};
 use html_generator::{generate_html, HtmlConfig};
 use rlg::log_level::LogLevel;
 use rss_gen::{
-    data::{RssData, RssDataField, RssItem, RssItemField},
+    data::{RssData, RssItem},
     generate_rss, macro_set_rss_data_fields,
 };
 use sitemap_gen::create_site_map_data;
@@ -177,10 +177,10 @@ fn process_file(
         metadata.get("layout").cloned().unwrap_or_default().as_str(),
     )?;
 
-    // Generate RSS data for the main feed
+    // Generate RSS data
     let mut rss_data = RssData::new(None);
 
-    // Set fields using the helper macro for feed-level metadata
+    // Set fields using the helper macro
     macro_set_rss_data_fields!(
         rss_data,
         AtomLink = macro_metadata_option!(metadata, "atom_link"),
@@ -190,8 +190,8 @@ fn process_file(
         Description = macro_metadata_option!(metadata, "description"),
         Docs = macro_metadata_option!(metadata, "docs"),
         Generator = macro_metadata_option!(metadata, "generator"),
-        ImageUrl = macro_metadata_option!(metadata, "image"),
-        Guid = macro_metadata_option!(metadata, "guid"),
+        ImageTitle = macro_metadata_option!(metadata, "image_title"),
+        ImageUrl = macro_metadata_option!(metadata, "image_url"),
         Language = macro_metadata_option!(metadata, "language"),
         LastBuildDate =
             macro_metadata_option!(metadata, "last_build_date"),
@@ -204,89 +204,19 @@ fn process_file(
         Webmaster = macro_metadata_option!(metadata, "webmaster")
     );
 
-    // Handle RSS item data
-    if metadata.contains_key("item_title")
-        && metadata.contains_key("item_description")
-    {
-        let mut rss_item = RssItem::new();
+    let item = RssItem::new()
+        .guid(macro_metadata_option!(metadata, "item_guid"))
+        .description(macro_metadata_option!(
+            metadata,
+            "item_description"
+        ))
+        .link(macro_metadata_option!(metadata, "item_link"))
+        .pub_date(macro_metadata_option!(metadata, "item_pub_date"))
+        .title(macro_metadata_option!(metadata, "item_title"));
+    rss_data.add_item(item);
 
-        rss_item = rss_item.set(
-            RssItemField::Title,
-            macro_metadata_option!(metadata, "item_title"),
-        );
-        rss_item = rss_item.set(
-            RssItemField::Link,
-            macro_metadata_option!(metadata, "item_link"),
-        );
-        rss_item = rss_item.set(
-            RssItemField::Description,
-            macro_metadata_option!(metadata, "item_description"),
-        );
-
-        if metadata.contains_key("item_guid") {
-            rss_item = rss_item.set(
-                RssItemField::Guid,
-                macro_metadata_option!(metadata, "item_guid"),
-            );
-        }
-
-        if metadata.contains_key("item_pub_date") {
-            rss_item = rss_item.set(
-                RssItemField::PubDate,
-                macro_metadata_option!(metadata, "item_pub_date"),
-            );
-        }
-
-        // Only add the RSS item if it contains valid title, link, and description
-        if !rss_item.title.is_empty()
-            && !rss_item.link.is_empty()
-            && !rss_item.description.is_empty()
-        {
-            rss_data.add_item(rss_item);
-        }
-    }
-
-    // Ensure managingEditor and webMaster have real names in the format "email (Real Name)"
-    let managing_editor =
-        macro_metadata_option!(metadata, "managing_editor");
-    if !managing_editor.contains('(') {
-        rss_data = rss_data.set(
-            RssDataField::ManagingEditor,
-            format!("{} (Default Name)", managing_editor),
-        );
-    }
-
-    let web_master = macro_metadata_option!(metadata, "webmaster");
-    if !web_master.contains('(') {
-        rss_data = rss_data.set(
-            RssDataField::Webmaster,
-            format!("{} (Default Name)", web_master),
-        );
-    }
-
-    // Validate image format - if it’s not JPEG or PNG, use a default image
-    let image_url = macro_metadata_option!(metadata, "image");
-    if !(image_url.ends_with(".jpg")
-        || image_url.ends_with(".jpeg")
-        || image_url.ends_with(".png")
-        || image_url.ends_with(".gif")
-        || image_url.ends_with(".webp"))
-    {
-        rss_data = rss_data.set(
-            RssDataField::ImageUrl,
-            image_url.clone(),
-        );
-    }
-
-    // Fix atom:link href value to ensure it matches the actual RSS location
-    rss_data = rss_data.set(
-        RssDataField::AtomLink,
-        format!("{}/rss.xml", image_url),
-    );
-
-    // Generate RSS XML
+    // Generate RSS
     let rss = generate_rss(&rss_data)?;
-    // println!("{}", &rss);
 
     // Generate various data structures
     let json = create_manifest_data(&metadata);

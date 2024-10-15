@@ -23,7 +23,7 @@ quick-xml = "0.36"
 regex = "1.10"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 rlg = "0.0.6"
-rss-gen = "0.0.2"
+rss-gen = "0.0.3"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
 sitemap-gen = "0.0.1"
