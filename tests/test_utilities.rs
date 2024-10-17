@@ -7,7 +7,7 @@ mod tests {
     use comrak::ComrakOptions;
     use quick_xml::Writer;
     use regex::Regex;
-    use ssg::utilities::{
+    use ssg_core::utilities::{
         backup::backup_file,
         directory::{
             cleanup_directory, create_comrak_options, create_directory,
@@ -93,7 +93,7 @@ mod tests {
         let out_dir = Path::new("temp_out_dir");
         let dummy_file = out_dir.join("dummy_file.txt");
         fs::create_dir_all(out_dir)?;
-        File::create(dummy_file)?;
+        let _ = File::create(dummy_file)?;
 
         // Call the function to test.
         let site_name = "My Test Site";
@@ -257,7 +257,7 @@ mod tests {
         // Check that the file contains the expected minified HTML.
         let mut file = File::open(file_path)?;
         let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        let _ = file.read_to_string(&mut contents)?;
         assert_eq!(
             contents, minified_html,
             "The file does not contain the expected minified HTML."
@@ -275,12 +275,12 @@ mod tests {
         let dir1 = Path::new("temp_dir1");
         let dummy_file1 = dir1.join("dummy_file1.txt");
         fs::create_dir_all(dir1)?;
-        File::create(dummy_file1)?;
+        let _ = File::create(dummy_file1)?;
 
         let dir2 = Path::new("temp_dir2");
         let dummy_file2 = dir2.join("dummy_file2.txt");
         fs::create_dir_all(dir2)?;
-        File::create(dummy_file2)?;
+        let _ = File::create(dummy_file2)?;
 
         let directories: Vec<&Path> = vec![dir1, dir2];
 
