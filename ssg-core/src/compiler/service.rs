@@ -28,7 +28,7 @@ use crate::{
     utilities::{file::add, write::write_files_to_build_directory},
 };
 use metadata_gen::extract_and_prepare_metadata;
-use ssg_template::{Context as TemplateContext, Engine, PageOptions};
+use staticweaver::{Context as TemplateContext, Engine, PageOptions};
 use std::{collections::HashMap, fs, path::Path};
 
 /// Compiles files in a source directory, generates HTML pages from them, and

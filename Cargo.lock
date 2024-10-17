@@ -3247,7 +3247,7 @@ dependencies = [
  "ssg-cli",
  "ssg-core",
  "ssg-i18n",
- "ssg-template",
+ "staticweaver",
  "tempfile",
  "toml",
  "uuid",
@@ -3293,7 +3293,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sitemap-gen",
- "ssg-template",
+ "staticweaver",
  "tempfile",
  "toml",
  "uuid",
@@ -3322,9 +3322,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssg-template"
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
+
+[[package]]
+name = "staticweaver"
 version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffe8ba80aa11ee0ce9ddbfa60331612ea499486c802979368b89f17a4a31a168"
 dependencies = [
+ "fnv",
  "regex",
  "reqwest",
  "serde",
@@ -3333,12 +3342,6 @@ dependencies = [
  "thiserror",
  "version_check",
 ]
-
-[[package]]
-name = "stable_deref_trait"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "string_cache"

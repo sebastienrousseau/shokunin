@@ -43,5 +43,5 @@ pub mod utilities;
 pub use compiler::service::compile;
 pub use http_handle::Server;
 pub use loggers::init_logger;
-pub use ssg_template;
+pub use staticweaver;
 pub use utilities::uuid::generate_unique_string;
