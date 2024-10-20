@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::modules::txt::create_txt_data;
+    use ssg_core::modules::txt::create_txt_data;
     use std::collections::HashMap;
 
     /// Test for creating TxtData with a valid permalink.
@@ -11,7 +11,7 @@ mod tests {
     fn test_create_txt_data_with_permalink() {
         // Arrange
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "permalink".to_string(),
             "https://example.com".to_string(),
         );
@@ -41,11 +41,11 @@ mod tests {
     fn test_create_txt_data_with_invalid_utf8_metadata() {
         // Arrange
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "permalink".to_string(),
             "https://example.com".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "title".to_string(),
             "Invalid UTF-8: \u{FFFD}".to_string(),
         );

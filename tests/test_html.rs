@@ -4,10 +4,11 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
-    use ssg::modules::html::HtmlGenerationError;
-    use ssg::modules::postprocessor::post_process_html;
-    use ssg::{
-        modules::html::generate_html,
+    use ssg_core::{
+        modules::{
+            html::{generate_html, HtmlGenerationError},
+            postprocessor::post_process_html,
+        },
         utilities::directory::format_header_with_id_class,
     };
 

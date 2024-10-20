@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::models::data::FileData;
-    use ssg::modules::navigation::NavigationGenerator;
+    use ssg_core::models::data::FileData;
+    use ssg_core::modules::navigation::NavigationGenerator;
 
     #[test]
     fn test_generate_navigation_empty_input() {

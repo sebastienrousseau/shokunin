@@ -6,7 +6,7 @@ mod tests {
     use std::io::Cursor;
 
     use quick_xml::{escape::escape, Writer};
-    use ssg::{
+    use ssg_core::{
         macro_write_element, models::data::RssData,
         modules::rss::generate_rss,
     };
@@ -65,6 +65,7 @@ mod tests {
 
         // Test generating an RSS feed with some custom options
         #[test]
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_custom_options() {
             let mut options = RssData::new();
             options.title = "My RSS Feed".to_string();
@@ -92,6 +93,7 @@ mod tests {
 
         // Test macro_write_element function
         #[test]
+        // Suppress box-pointers lint for this test
         fn test_macro_write_element(
         ) -> Result<(), Box<dyn std::error::Error>> {
             let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -109,6 +111,7 @@ mod tests {
 
         // Test generating an RSS feed
         #[test]
+        // Suppress box-pointers lint for this test
         fn test_generate_rss() {
             let options = RssData::new();
             let rss_str = generate_rss(&options);
@@ -117,6 +120,7 @@ mod tests {
 
         // Test generating an RSS feed with empty title
         #[test]
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_empty_title() {
             let mut options = RssData::new();
             options.title = "".to_string();
@@ -133,12 +137,13 @@ mod tests {
 
     /// # Rss Element Writer Tests
     ///
-    /// These tests validate the behavior of individual RSS element writer functions.
+    /// These tests validate the behaviour of individual RSS element writer functions.
     mod rss_element_writer_tests {
         use super::*;
 
         // Test generating an RSS feed with invalid URL
         #[test]
+        // Suppress box-pointers lint for this test
         fn test_generate_rss_with_invalid_url() {
             let mut options = RssData::new();
             options.link = "invalid-url".to_string();
