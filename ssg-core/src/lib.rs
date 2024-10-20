@@ -27,6 +27,9 @@ pub mod compiler;
 /// Logging and diagnostic utilities
 pub mod loggers;
 
+/// Locales module for language-specific translations and templates
+pub mod locales;
+
 /// Macro definitions for common operations
 pub mod macros;
 
@@ -43,5 +46,4 @@ pub mod utilities;
 pub use compiler::service::compile;
 pub use http_handle::Server;
 pub use loggers::init_logger;
-pub use staticweaver;
 pub use utilities::uuid::generate_unique_string;

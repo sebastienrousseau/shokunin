@@ -8,8 +8,8 @@
 //! If an error occurs while running the `run()` function, the function prints an error message
 //! to standard error and exits the program with a non-zero status code.
 
+use langweave::translate;
 use ssg::run;
-use ssg_i18n::translate;
 
 fn main() {
     // Select language dynamically, e.g., from an environment variable or command-line argument

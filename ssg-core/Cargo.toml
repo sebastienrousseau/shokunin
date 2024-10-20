@@ -14,6 +14,7 @@ dtt = "0.0.8"
 env_logger = "0.11"
 html-generator = "0.0.1"
 http-handle = "0.0.2"
+langweave = "0.0.1"
 lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
 metadata-gen = "0.0.1"
@@ -37,4 +38,3 @@ vrd = "0.0.8"
 [build-dependencies]
 # Dependencies for build scripts.
 version_check = "0.9" # Check the Rust version used to compile the package.
-

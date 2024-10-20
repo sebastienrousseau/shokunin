@@ -19,6 +19,7 @@ dtt = "0.0.8"
 env_logger = "0.11"
 html-generator = "0.0.1"
 http-handle = "0.0.2"
+langweave = "0.0.1"
 lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
 metadata-gen = "0.0.1"
@@ -36,16 +37,15 @@ staticweaver ="0.0.1"
 tempfile = "3.12"
 toml = "0.8"
 yaml-rust2 = "0.9"
-uuid = { version = "1.10", features = ["v4"] }
+uuid = { version = "1.11", features = ["v4"] }
 vrd = "0.0.8"
 
 ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
 ssg-core = { path = "../ssg-core", version = "0.0.1" }
-ssg-i18n = { path = "../ssg-i18n", version = "0.0.1" }
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.66", features = ["vendored"] }
+openssl = { version = "0.10.68", features = ["vendored"] }
 
 [build-dependencies]
 # Dependencies for build scripts.

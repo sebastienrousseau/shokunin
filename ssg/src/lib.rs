@@ -110,6 +110,9 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
+// Correct the import path for the translate function
+use ssg_core::locales::en::translate;
+
 // Re-export ssg-core
 pub use ssg_core;
 
@@ -126,7 +129,6 @@ use ssg_core::{
     compiler::service::compile, loggers::init_logger,
     utilities::uuid::generate_unique_string,
 };
-use ssg_i18n::languages::en::translate;
 use std::{fs::File, io::Write, path::Path};
 
 #[allow(non_camel_case_types)]
@@ -184,7 +186,8 @@ pub fn run() -> Result<()> {
         &date.to_string(),
         &LogLevel::INFO,
         "process",
-        &translate("lib_args_log_msg").unwrap(),
+        &translate("lib_banner_log_msg")
+            .unwrap_or("Default banner log message".to_string()),
         &LogFormat::CLF
     );
 

@@ -1,4 +1,4 @@
-use crate::I18nError;
+use langweave::error::I18nError;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
@@ -27,14 +27,6 @@ lazy_static! {
 /// The translated string if a translation is found, or the original `text` if no
 /// translation is available.
 ///
-/// # Examples
-///
-/// ```
-/// use ssg_i18n::languages::en::translate;
-///
-/// assert_eq!(translate("Hello").unwrap(), "Hello");
-/// assert_eq!(translate("Untranslated").unwrap_or("Untranslated".to_string()), "Untranslated");
-/// ```
 pub fn translate(key: &str) -> Result<String, I18nError> {
     if let Some(&translation) = TRANSLATIONS.get(key) {
         Ok(translation.to_string())
