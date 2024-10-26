@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
-    use ssg_core::{
+    use staticrux::{
         modules::{
             html::{generate_html, HtmlGenerationError},
             postprocessor::post_process_html,

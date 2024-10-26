@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg_core::modules::metatags::generate_metatags;
+use staticrux::modules::metatags::generate_metatags;
 
 /**
  * This function is used to benchmark the performance of generating metatags.

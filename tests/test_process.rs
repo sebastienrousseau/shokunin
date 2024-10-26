@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     // use clap::{Arg, Command};
-    // use ssg_cli::process::args;
+    // use nucleusflow::process::args;
 
     // #[test]
     // fn test_args_required_args_missing() {

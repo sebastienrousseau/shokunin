@@ -1,7 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use ssg_core::{
+use staticrux::{
     macro_metadata_option,
     models::data::{IconData, ManifestData},
 };
@@ -44,7 +44,7 @@ pub fn create_manifest_data(
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::modules::manifest::create_manifest_data;
+    use staticrux::modules::manifest::create_manifest_data;
     use std::collections::HashMap;
 
     /// Test case for creating `ManifestData` with valid metadata.

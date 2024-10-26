@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::server::serve::start;
+    use staticrux::server::serve::start;
     use std::{
         fs::File,
         io::{Read, Write},

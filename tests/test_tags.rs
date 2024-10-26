@@ -8,7 +8,7 @@ use std::{
     path::Path,
 };
 
-use ssg_core::models::data::{FileData, PageData, TagsData};
+use staticrux::models::data::{FileData, PageData, TagsData};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
 pub fn generate_tags(

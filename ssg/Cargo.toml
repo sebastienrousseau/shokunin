@@ -40,8 +40,8 @@ yaml-rust2 = "0.9"
 uuid = { version = "1.11", features = ["v4"] }
 vrd = "0.0.8"
 
-ssg-cli = { path = "../ssg-cli", version = "0.0.1" }
-ssg-core = { path = "../ssg-core", version = "0.0.1" }
+nucleusflow = { path = "../nucleusflow", version = "0.0.1" }
+staticrux = { path = "../staticrux", version = "0.0.1" }
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]

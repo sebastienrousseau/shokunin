@@ -72,7 +72,7 @@
 //! And in your `main.rs`:
 //!
 //! ```rust
-//! use ssg_core::compiler::service::compile;
+//! use staticrux::compiler::service::compile;
 //! use std::path::Path;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -111,23 +111,22 @@
 #![crate_type = "lib"]
 
 // Correct the import path for the translate function
-use ssg_core::locales::en::translate;
+use staticrux::locales::en::translate;
 
-// Re-export ssg-core
-pub use ssg_core;
+// Re-export staticrux
+pub use staticrux;
 
-// Re-export ssg-cli
-pub use ssg_cli;
+// Re-export nucleusflow
+pub use nucleusflow;
 
 use anyhow::Result;
 use dtt::datetime::DateTime;
 use http_handle::Server;
+use nucleusflow::cli::print_banner;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use ssg_cli::cli::print_banner;
-use ssg_core::macro_serve;
-use ssg_core::{
-    compiler::service::compile, loggers::init_logger,
-    utilities::uuid::generate_unique_string,
+use staticrux::macro_serve;
+use staticrux::{
+    compiler::service::compile, utilities::uuid::generate_unique_string,
 };
 use std::{fs::File, io::Write, path::Path};
 
@@ -150,12 +149,8 @@ use std::{fs::File, io::Write, path::Path};
 /// `Ok(())` is returned.
 /// Run the static site generator command-line tool.
 pub fn run() -> Result<()> {
-    // Initialize the logger using the `env_logger` crate
-    init_logger(None)?;
-
     // Get the current date and time
     let date = DateTime::new();
-    // let iso = DateTime::new();
 
     // Open or create the log file
     let mut log_file = create_log_file("./ssg.log")?;
@@ -177,8 +172,8 @@ pub fn run() -> Result<()> {
     writeln!(log_file, "{}", banner_log)?;
 
     // Build the CLI and parse the arguments
-    let matches = ssg_cli::cli::build().get_matches();
-    ssg_cli::process::args(&matches)?;
+    let matches = nucleusflow::cli::build().get_matches();
+    nucleusflow::process::args(&matches)?;
 
     // Generate a log entry for the arguments
     let args_log = macro_log!(

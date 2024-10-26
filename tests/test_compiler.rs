@@ -5,7 +5,7 @@
 mod tests {
     use std::error::Error;
 
-    use ssg_core::{
+    use staticrux::{
         models::data::RssData,
         modules::{
             frontmatter::extract, html::generate_html,

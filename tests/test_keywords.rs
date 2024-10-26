@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::modules::keywords::extract_keywords;
+    use staticrux::modules::keywords::extract_keywords;
     use std::collections::HashMap;
 
     #[test]

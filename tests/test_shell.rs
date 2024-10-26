@@ -4,8 +4,8 @@
 #[cfg(test)]
 mod tests {
     // Import necessary modules and types
-    use ssg_core::macros::shell_macros::CommandExecutor;
-    use ssg_core::{
+    use staticrux::macros::shell_macros::CommandExecutor;
+    use staticrux::{
         macro_execute_and_log, macro_log_complete, macro_log_error,
         macro_log_start,
     };

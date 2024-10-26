@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::modules::txt::create_txt_data;
+    use staticrux::modules::robots::create_txt_data;
     use std::collections::HashMap;
 
     /// Test for creating TxtData with a valid permalink.

@@ -1232,6 +1232,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "handlebars"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce25b617d1375ef96eeb920ae717e3da34a02fc979fe632c75128350f9e1f74a"
+dependencies = [
+ "log",
+ "pest",
+ "pest_derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1987,6 +2001,25 @@ dependencies = [
  "mio 0.8.11",
  "walkdir",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "nucleusflow"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "clap",
+ "criterion",
+ "env_logger",
+ "handlebars",
+ "log",
+ "pulldown-cmark",
+ "serde",
+ "serde_json",
+ "staticrux",
+ "thiserror",
+ "toml",
+ "version_check",
 ]
 
 [[package]]
@@ -2976,9 +3009,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.210"
+version = "1.0.213"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
+checksum = "3ea7893ff5e2466df8d720bb615088341b295f849602c6956047f8f80f0e9bc1"
 dependencies = [
  "serde_derive",
 ]
@@ -2994,9 +3027,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.210"
+version = "1.0.213"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "243902eda00fad750862fc144cea25caca5e20d615af0a81bee94ca738f1df1f"
+checksum = "7e85ad2009c50b58e87caa8cd6dac16bdf511bbfb7af6c33df902396aa480fa5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3196,6 +3229,7 @@ dependencies = [
  "log",
  "metadata-gen",
  "minify-html",
+ "nucleusflow",
  "openssl",
  "pulldown-cmark",
  "quick-xml 0.36.2",
@@ -3206,8 +3240,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sitemap-gen",
- "ssg-cli",
- "ssg-core",
+ "staticrux",
  "staticweaver",
  "tempfile",
  "toml",
@@ -3218,20 +3251,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssg-cli"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "clap",
- "env_logger",
- "log",
- "ssg-core",
- "tempfile",
- "version_check",
-]
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "ssg-core"
+name = "staticrux"
 version = "0.0.1"
 dependencies = [
  "anyhow",
@@ -3257,18 +3283,15 @@ dependencies = [
  "sitemap-gen",
  "staticweaver",
  "tempfile",
+ "thiserror",
+ "time",
  "toml",
+ "url",
  "uuid",
  "version_check",
  "vrd 0.0.8",
  "yaml-rust2",
 ]
-
-[[package]]
-name = "stable_deref_trait"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "staticweaver"

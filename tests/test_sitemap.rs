@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::{
+    use staticrux::{
         models::data::SiteMapData,
         modules::sitemap::create_site_map_data,
     };

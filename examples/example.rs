@@ -16,8 +16,8 @@
 
 // Import the required libraries and modules.
 use anyhow::Result;
-use ssg_core::compiler::service::compile;
-use ssg_core::server::serve::start;
+use staticrux::compiler::service::compile;
+use staticrux::server::serve::start;
 use std::path::Path;
 
 fn main() -> Result<()> {

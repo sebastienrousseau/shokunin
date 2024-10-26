@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg_core::modules::html::generate_html;
+use staticrux::modules::html::generate_html;
 
 /// Benchmarks the generation of HTML content.
 ///

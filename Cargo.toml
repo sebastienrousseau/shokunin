@@ -1,5 +1,5 @@
 [workspace]
-members = ["ssg", "ssg-cli", "ssg-core"]
+members = ["ssg", "nucleusflow", "staticrux"]
 resolver = "2"
 
 [workspace.package]

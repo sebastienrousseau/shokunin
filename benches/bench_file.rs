@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use ssg_core::utilities::file::add;
+use staticrux::utilities::file::add;
 use std::path::PathBuf;
 
 /// Runs a benchmark that measures the performance of the `add` function.

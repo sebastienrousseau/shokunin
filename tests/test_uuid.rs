@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg_core::utilities::uuid::generate_unique_string;
+    use staticrux::utilities::uuid::generate_unique_string;
     use std::{
         sync::{Arc, Mutex},
         thread,

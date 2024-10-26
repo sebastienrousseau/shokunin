@@ -115,6 +115,17 @@ site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
 site_software: "Shokunin, Rust" ## The software of the site.
 
+# Security - The Security front matter (YAML).
+security_contact: "mailto:jane.doe@kaishi.one" ## The contact of the page.
+security_expires: "Tue, 20 Feb 2024 15:15:15 GMT" ## The expires of the page.
+# Optional fields:
+security_acknowledgments: "Thanks to the Rust team for their amazing work on Shokunin." ## The acknowledgments of the page.
+security_languages: "en" ## The preferred languages of the page.
+security_canonical: "https://kaishi.one" ## The canonical of the page.
+security_policy: "https://kaishi.one/policy" ## The policy of the page.
+security_hiring: "https://kaishi.one/hiring" ## The hiring of the page.
+security_encryption: "https://kaishi.one/encryption" ## The encryption of the page.
+
 ---
 
 ## Overview

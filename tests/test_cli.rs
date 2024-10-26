@@ -3,7 +3,7 @@
 
 // #[cfg(test)]
 // mod tests {
-//     use ssg_core::cli::build;
+//     use staticrux::cli::build;
 
 //     #[test]
 //     // Test that the arguments for the build CLI are correctly set

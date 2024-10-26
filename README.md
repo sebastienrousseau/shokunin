@@ -196,7 +196,7 @@ Add the following to your `main.rs` file:
 
 ```rust
 extern crate ssg;
-use ssg_core::*;
+use staticrux::*;
 ```
 
 then you can use the Shokunin Static Site Generator (SSG) functions in your
@@ -218,7 +218,7 @@ The command will generate a static website based on the configuration details
 in the `examples` directory.
 
 ```shell
-use ssg_core::compiler::compile;
+use staticrux::compiler::compile;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
