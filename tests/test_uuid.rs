@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::utilities::uuid::generate_unique_string;
+    use staticdatagen::utilities::uuid::generate_unique_string;
     use std::{
         sync::{Arc, Mutex},
         thread,

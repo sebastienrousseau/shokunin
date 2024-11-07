@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::languages::{
+    use staticdatagen::languages::{
         get_lang, get_lang_code, get_lang_from_accept, get_langs,
         translate,
     };

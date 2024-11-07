@@ -72,7 +72,7 @@
 //! And in your `main.rs`:
 //!
 //! ```rust
-//! use staticrux::compiler::service::compile;
+//! use staticdatagen::compiler::service::compile;
 //! use std::path::Path;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -111,10 +111,10 @@
 #![crate_type = "lib"]
 
 // Correct the import path for the translate function
-use staticrux::locales::en::translate;
+use staticdatagen::locales::en::translate;
 
-// Re-export staticrux
-pub use staticrux;
+// Re-export staticdatagen
+pub use staticdatagen;
 
 // Re-export nucleusflow
 pub use nucleusflow;
@@ -124,8 +124,8 @@ use dtt::datetime::DateTime;
 use http_handle::Server;
 use nucleusflow::cli::print_banner;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use staticrux::macro_serve;
-use staticrux::{
+use staticdatagen::macro_serve;
+use staticdatagen::{
     compiler::service::compile, utilities::uuid::generate_unique_string,
 };
 use std::{fs::File, io::Write, path::Path};
@@ -173,7 +173,6 @@ pub fn run() -> Result<()> {
 
     // Build the CLI and parse the arguments
     let matches = nucleusflow::cli::build().get_matches();
-    nucleusflow::process::args(&matches)?;
 
     // Generate a log entry for the arguments
     let args_log = macro_log!(

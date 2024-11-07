@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::modules::cname::create_cname_data;
+    use staticdatagen::modules::cname::create_cname_data;
     use std::collections::HashMap;
 
     #[test]

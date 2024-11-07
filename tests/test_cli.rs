@@ -3,7 +3,7 @@
 
 // #[cfg(test)]
 // mod tests {
-//     use staticrux::cli::build;
+//     use staticdatagen::cli::build;
 
 //     #[test]
 //     // Test that the arguments for the build CLI are correctly set

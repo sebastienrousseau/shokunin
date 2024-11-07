@@ -4,10 +4,10 @@
 use std::path::Path;
 
 use criterion::{black_box, Criterion};
-use staticrux::models::data::{
+use staticdatagen::models::data::{
     CnameData, HumansData, ManifestData, SiteMapData, TxtData,
 };
-use staticrux::modules::json::{cname, human, manifest, sitemap, txt};
+use staticdatagen::modules::json::{cname, human, manifest, sitemap, txt};
 
 #[allow(dead_code)]
 pub(crate) fn bench_json(c: &mut Criterion) {

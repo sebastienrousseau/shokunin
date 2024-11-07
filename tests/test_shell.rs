@@ -4,8 +4,8 @@
 #[cfg(test)]
 mod tests {
     // Import necessary modules and types
-    use staticrux::macros::shell_macros::CommandExecutor;
-    use staticrux::{
+    use staticdatagen::macros::shell_macros::CommandExecutor;
+    use staticdatagen::{
         macro_execute_and_log, macro_log_complete, macro_log_error,
         macro_log_start,
     };

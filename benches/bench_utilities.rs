@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use criterion::{black_box, Criterion};
-use staticrux::utilities::directory::directory;
+use staticdatagen::utilities::directory::directory;
 use tempfile::TempDir;
 
 /**

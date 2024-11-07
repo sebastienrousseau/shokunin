@@ -35,7 +35,7 @@ use clap::{Arg, ArgMatches, Command, Error};
 /// # Examples
 ///
 /// ```
-/// use staticrux::cmd::cli::build;
+/// use staticdatagen::cmd::cli::build;
 /// let cmd = build().unwrap();
 ///
 /// ```
@@ -103,7 +103,7 @@ pub fn build() -> Result<ArgMatches, Error> {
 /// # Examples
 ///
 /// ```
-/// use staticrux::cmd::cli::print_banner;
+/// use staticdatagen::cmd::cli::print_banner;
 ///
 /// print_banner();
 /// ```

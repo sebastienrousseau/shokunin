@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::modules::plaintext::generate_plain_text;
+    use staticdatagen::modules::plaintext::generate_plain_text;
 
     // Test for generating plain text with bold and italics
     #[test]

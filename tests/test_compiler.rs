@@ -5,7 +5,7 @@
 mod tests {
     use std::error::Error;
 
-    use staticrux::{
+    use staticdatagen::{
         models::data::RssData,
         modules::{
             frontmatter::extract, html::generate_html,

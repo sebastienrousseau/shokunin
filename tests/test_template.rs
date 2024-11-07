@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::utilities::template::{
+    use staticdatagen::utilities::template::{
         render_page, render_template, PageOptions,
     };
     use std::collections::HashMap;

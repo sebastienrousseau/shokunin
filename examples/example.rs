@@ -16,8 +16,8 @@
 
 // Import the required libraries and modules.
 use anyhow::Result;
-use staticrux::compiler::service::compile;
-use staticrux::server::serve::start;
+use staticdatagen::compiler::service::compile;
+use staticdatagen::server::serve::start;
 use std::path::Path;
 
 fn main() -> Result<()> {

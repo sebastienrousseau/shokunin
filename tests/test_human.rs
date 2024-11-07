@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::modules::human::create_human_data;
+    use staticdatagen::modules::human::create_human_data;
     use std::collections::HashMap;
 
     #[test]

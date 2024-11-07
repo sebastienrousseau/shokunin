@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use regex::Regex;
-    use staticrux::modules::metatags::generate_metatags;
+    use staticdatagen::modules::metatags::generate_metatags;
 
     // Test general functionality of the generate_metatags function
     #[test]

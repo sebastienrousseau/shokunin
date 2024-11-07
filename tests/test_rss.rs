@@ -6,7 +6,7 @@ mod tests {
     use std::io::Cursor;
 
     use quick_xml::{escape::escape, Writer};
-    use staticrux::{
+    use staticdatagen::{
         macro_write_element, models::data::RssData,
         modules::rss::generate_rss,
     };

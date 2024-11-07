@@ -7,7 +7,7 @@ mod tests {
     use comrak::ComrakOptions;
     use quick_xml::Writer;
     use regex::Regex;
-    use staticrux::utilities::{
+    use staticdatagen::utilities::{
         backup::backup_file,
         directory::{
             cleanup_directory, create_comrak_options, create_directory,

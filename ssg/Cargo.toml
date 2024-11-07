@@ -24,28 +24,27 @@ lazy_static = "1.5"
 log = { version = "0.4", features = ["std"] }
 metadata-gen = "0.0.1"
 minify-html = "0.15"
+nucleusflow = "0.0.1"
 pulldown-cmark = "0.12"
-quick-xml = "0.36"
-regex = "1.10"
+quick-xml = "0.37"
+regex = "1.11"
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 rlg = "0.0.6"
 rss-gen = "0.0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sitemap-gen = "0.0.1"
+staticdatagen = "0.0.1"
 staticweaver ="0.0.1"
-tempfile = "3.12"
+tempfile = "3.13"
 toml = "0.8"
-yaml-rust2 = "0.9"
 uuid = { version = "1.11", features = ["v4"] }
 vrd = "0.0.8"
-
-nucleusflow = { path = "../nucleusflow", version = "0.0.1" }
-staticrux = { path = "../staticrux", version = "0.0.1" }
+yaml-rust2 = "0.9"
 
 # Unix platforms use OpenSSL for now to provide SSL functionality
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.68", features = ["vendored"] }
+openssl = { version = "0.10", features = ["vendored"] }
 
 [build-dependencies]
 # Dependencies for build scripts.

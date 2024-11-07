@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::utilities::file::add;
+    use staticdatagen::utilities::file::add;
     use std::{fs::File, io::Write, path::Path};
 
     #[test]

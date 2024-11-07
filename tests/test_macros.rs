@@ -5,7 +5,7 @@
 mod tests {
     use quick_xml::Writer;
     use rlg::{log_format::LogFormat, log_level::LogLevel};
-    use staticrux::{
+    use staticdatagen::{
         macro_check_directory, macro_create_directories,
         macro_execute_and_log, macro_generate_metatags,
         macro_generate_rss, macro_generate_tags_from_fields,
@@ -226,7 +226,7 @@ mod tests {
     fn test_macro_generate_rss(
     ) -> Result<(), Box<dyn std::error::Error>> {
         use quick_xml::Writer;
-        use staticrux::macro_generate_rss;
+        use staticdatagen::macro_generate_rss;
         use std::io::Cursor;
 
         // Create an instance of RssData

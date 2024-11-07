@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::server::serve::start;
+    use staticdatagen::server::serve::start;
     use std::{
         fs::File,
         io::{Read, Write},

@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::modules::keywords::extract_keywords;
+    use staticdatagen::modules::keywords::extract_keywords;
     use std::collections::HashMap;
 
     #[test]

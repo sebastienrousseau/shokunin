@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::models::data::FileData;
-    use staticrux::modules::navigation::NavigationGenerator;
+    use staticdatagen::models::data::FileData;
+    use staticdatagen::modules::navigation::NavigationGenerator;
 
     #[test]
     fn test_generate_navigation_empty_input() {

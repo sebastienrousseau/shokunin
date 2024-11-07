@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::{
+    use staticdatagen::{
         models::data::SiteMapData,
         modules::sitemap::create_site_map_data,
     };

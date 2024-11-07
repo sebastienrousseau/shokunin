@@ -4,7 +4,7 @@
 use anyhow::{anyhow, Result};
 use clap::ArgMatches;
 use log::{debug, info};
-use staticrux::compiler::service::compile;
+use staticdatagen::compiler::service::compile;
 use std::path::Path;
 
 /// # Function: `args`

@@ -4,7 +4,7 @@
 // Import necessary modules and types
 #[cfg(test)]
 mod tests {
-    use staticrux::models::data::{
+    use staticdatagen::models::data::{
         CnameData, FileData, HumanData, HumansData, IconData,
         ManifestData, MetaTag, NewsData, NewsVisitOptions, RssData,
         SiteMapData, TxtData,

@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use staticrux::{
+    use staticdatagen::{
         metadata::service::extract_and_prepare_metadata,
         models::data::MetaTagGroups,
         modules::metatags::{
