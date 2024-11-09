@@ -187,10 +187,14 @@ mod tests {
             .arg(arg!(--"template" <TEMPLATE> "Template directory"))
             .get_matches_from(vec![
                 "test",
-                "--content", "content",
-                "--output", "output",
-                "--new", "new_site",
-                "--template", "template",
+                "--content",
+                "content",
+                "--output",
+                "output",
+                "--new",
+                "new_site",
+                "--template",
+                "template",
             ])
     }
 
@@ -207,7 +211,10 @@ mod tests {
             .arg(arg!(--"config" <CONFIG> "Config file"))
             .get_matches_from(vec!["test"]);
         let result = get_argument(&matches, "config");
-        assert!(matches!(result, Err(ProcessError::MissingArgument(_))));
+        assert!(matches!(
+            result,
+            Err(ProcessError::MissingArgument(_))
+        ));
     }
 
     #[test]
@@ -232,34 +239,34 @@ mod tests {
     }
 
     #[test]
-fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a temporary directory for test isolation
-    let temp_dir = tempdir()?;
-    let content_dir = temp_dir.path().join("content");
-    let output_dir = temp_dir.path().join("output");
-    let site_dir = temp_dir.path().join("new_site");
-    let template_dir = temp_dir.path().join("template");
+    fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
+        // Create a temporary directory for test isolation
+        let temp_dir = tempdir()?;
+        let content_dir = temp_dir.path().join("content");
+        let output_dir = temp_dir.path().join("output");
+        let site_dir = temp_dir.path().join("new_site");
+        let template_dir = temp_dir.path().join("template");
 
-    // Ensure each directory can be created as required by args function logic
-    assert!(
-        ensure_directory(&content_dir, "content").is_ok(),
-        "Failed to ensure 'content' directory"
-    );
-    assert!(
-        ensure_directory(&output_dir, "output").is_ok(),
-        "Failed to ensure 'output' directory"
-    );
-    assert!(
-        ensure_directory(&site_dir, "project").is_ok(),
-        "Failed to ensure 'project' directory"
-    );
-    assert!(
-        ensure_directory(&template_dir, "template").is_ok(),
-        "Failed to ensure 'template' directory"
-    );
+        // Ensure each directory can be created as required by args function logic
+        assert!(
+            ensure_directory(&content_dir, "content").is_ok(),
+            "Failed to ensure 'content' directory"
+        );
+        assert!(
+            ensure_directory(&output_dir, "output").is_ok(),
+            "Failed to ensure 'output' directory"
+        );
+        assert!(
+            ensure_directory(&site_dir, "project").is_ok(),
+            "Failed to ensure 'project' directory"
+        );
+        assert!(
+            ensure_directory(&template_dir, "template").is_ok(),
+            "Failed to ensure 'template' directory"
+        );
 
-    Ok(())
-}
+        Ok(())
+    }
 
     #[test]
     fn test_args_missing_argument() {
@@ -268,13 +275,20 @@ fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
             .arg(arg!(--"output" <OUTPUT> "Output directory"))
             .get_matches_from(vec!["test", "--content", "content"]);
         let result = args(&matches);
-        assert!(matches!(result, Err(ProcessError::MissingArgument(_))));
+        assert!(matches!(
+            result,
+            Err(ProcessError::MissingArgument(_))
+        ));
     }
 
     #[test]
     fn test_process_error_display() {
-        let error = ProcessError::MissingArgument("content".to_string());
-        assert_eq!(error.to_string(), "Required argument missing: content");
+        let error =
+            ProcessError::MissingArgument("content".to_string());
+        assert_eq!(
+            error.to_string(),
+            "Required argument missing: content"
+        );
 
         let error = ProcessError::DirectoryCreation {
             dir_type: "content".to_string(),
@@ -285,7 +299,12 @@ fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
             "Failed to create content directory at '/invalid/path'"
         );
 
-        let error = ProcessError::CompilationError("Failed to compile".to_string());
-        assert_eq!(error.to_string(), "Compilation error: Failed to compile");
+        let error = ProcessError::CompilationError(
+            "Failed to compile".to_string(),
+        );
+        assert_eq!(
+            error.to_string(),
+            "Compilation error: Failed to compile"
+        );
     }
 }
