@@ -9,19 +9,32 @@ mod tests {
     };
     use std::collections::HashMap;
 
+    /// Helper function to create metadata with given optional values.
+    fn setup_metadata(
+        changefreq: Option<&str>,
+        lastmod: Option<&str>,
+        loc: Option<&str>,
+    ) -> HashMap<String, String> {
+        let mut metadata = HashMap::new();
+        if let Some(cf) = changefreq {
+            metadata.insert("changefreq".to_string(), cf.to_string());
+        }
+        if let Some(lm) = lastmod {
+            metadata.insert("last_build_date".to_string(), lm.to_string());
+        }
+        if let Some(location) = loc {
+            metadata.insert("permalink".to_string(), location.to_string());
+        }
+        metadata
+    }
+
     /// Tests the creation of SiteMapData with all expected fields provided.
     #[test]
     fn create_site_map_data_with_complete_metadata() {
-        let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("changefreq".to_string(), "daily".to_string());
-        let _ = metadata.insert(
-            "last_build_date".to_string(),
-            "2024-02-20".to_string(),
-        );
-        let _ = metadata.insert(
-            "permalink".to_string(),
-            "https://example.com".to_string(),
+        let metadata = setup_metadata(
+            Some("daily"),
+            Some("2024-02-20"),
+            Some("https://example.com"),
         );
 
         let site_map_data = create_site_map_data(&metadata);
@@ -34,7 +47,7 @@ mod tests {
     /// Verifies that missing metadata fields result in default SiteMapData values.
     #[test]
     fn create_site_map_data_with_incomplete_metadata() {
-        let metadata = HashMap::new(); // Empty metadata
+        let metadata = setup_metadata(None, None, None); // Empty metadata
 
         let site_map_data = create_site_map_data(&metadata);
 
@@ -46,9 +59,7 @@ mod tests {
     /// Checks handling of metadata when only the changefreq is provided.
     #[test]
     fn create_site_map_data_with_only_changefreq() {
-        let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("changefreq".to_string(), "daily".to_string());
+        let metadata = setup_metadata(Some("daily"), None, None);
 
         let site_map_data = create_site_map_data(&metadata);
 
@@ -60,24 +71,17 @@ mod tests {
     /// Tests serialization and deserialization of SiteMapData for data integrity.
     #[test]
     fn serialize_and_deserialize_site_map_data() {
-        let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("changefreq".to_string(), "daily".to_string());
-        let _ = metadata.insert(
-            "last_build_date".to_string(),
-            "2023-01-01".to_string(),
-        );
-        let _ = metadata.insert(
-            "permalink".to_string(),
-            "https://example.com".to_string(),
+        let metadata = setup_metadata(
+            Some("daily"),
+            Some("2023-01-01"),
+            Some("https://example.com"),
         );
 
         let original = create_site_map_data(&metadata);
         let serialized = serde_json::to_string(&original)
             .expect("Serialization failed");
-        let deserialized: SiteMapData =
-            serde_json::from_str(&serialized)
-                .expect("Deserialization failed");
+        let deserialized: SiteMapData = serde_json::from_str(&serialized)
+            .expect("Deserialization failed");
 
         assert_eq!(original.changefreq, deserialized.changefreq);
         assert_eq!(original.lastmod, deserialized.lastmod);
