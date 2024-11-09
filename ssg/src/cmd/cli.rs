@@ -16,14 +16,20 @@
 //!
 //! ## Usage Example
 //!
+//! ## Example Usage
 //! ```rust,no_run
-//! use ssg::cmd::cli::{build, ShokuninConfig};
-//! use anyhow::Result;
+//! use ssg::cmd::cli::build;
+//! use ssg::cmd::cli::ShokuninConfig;
 //!
-//! fn main() -> Result<()> {
+//! fn main() -> anyhow::Result<()> {
+//!     // Initialize the CLI with arguments from `build()`
 //!     let matches = build().get_matches();
-//!     let config = ShokuninConfig::from_matches(&matches)?;
-//!     println!("Project initialised: {}", config.site_name);
+//!
+//!     // Use the matches to configure and run your application
+//!     if let Some(config) = ShokuninConfig::from_matches(&matches)?.serve_dir {
+//!         println!("Configuration loaded: {:?}", config);
+//!         // Continue with application logic...
+//!     }
 //!     Ok(())
 //! }
 //! ```
@@ -420,6 +426,12 @@ mod tests {
     use std::env;
     use std::{fs, io::Write};
     use tempfile::TempDir;
+
+    #[test]
+    fn test_cli_structure() {
+        // Verify that the CLI structure is set up correctly and all required arguments exist
+        build().debug_assert();
+    }
 
     /// Creates a temporary directory for testing
     fn setup_temp_dir() -> TempDir {

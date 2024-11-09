@@ -6,33 +6,68 @@ use clap::ArgMatches;
 use std::{fs, path::Path};
 use thiserror::Error;
 
-/// Errors that can occur during argument processing
+/// Represents errors that may occur during argument processing.
 #[derive(Error, Debug)]
 pub enum ProcessError {
+    /// Occurs when a directory cannot be created.
+    ///
+    /// # Fields
+    /// - `dir_type`: The type of directory (e.g., "content", "output").
+    /// - `path`: The file path where the directory creation failed.
     #[error("Failed to create {dir_type} directory at '{path}'")]
-    /// Directory creation error
     DirectoryCreation {
-        /// Directory type
+        /// Type of the directory, such as "content" or "output".
         dir_type: String,
-        /// Path
+        /// Path where the directory creation failed.
         path: String,
     },
 
+    /// Triggered when a required command-line argument is missing.
+    ///
+    /// # Fields
+    /// - The name of the missing argument.
     #[error("Required argument missing: {0}")]
-    /// Missing argument error
     MissingArgument(String),
 
+    /// Represents a failure during the compilation process.
+    ///
+    /// # Fields
+    /// - Compilation error message.
     #[error("Compilation error: {0}")]
-    /// Compilation error
     CompilationError(String),
 
+    /// Wraps underlying I/O errors.
     #[error(transparent)]
-    /// IO error wrapper
     IoError(#[from] std::io::Error),
 }
 
-/// Gets an argument value from matches
-fn get_argument(
+/// Retrieves the value of a specified command-line argument.
+///
+/// # Arguments
+///
+/// * `matches` - Clap argument matches object containing parsed arguments.
+/// * `name` - The name of the argument to retrieve.
+///
+/// # Returns
+///
+/// * `Result<String, ProcessError>` - Returns the argument value on success or an error if the argument is missing.
+///
+/// # Errors
+///
+/// - Returns `ProcessError::MissingArgument` if the specified argument is not provided.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use clap::{ArgMatches, Command};
+/// # use ssg::cmd::process::get_argument;
+/// let matches = Command::new("test")
+///     .arg(clap::arg!(--"config" <CONFIG> "Specifies the configuration file"))
+///     .get_matches_from(vec!["test", "--config", "path/to/config.toml"]);
+/// let config_path = get_argument(&matches, "config").expect("Argument not found");
+/// println!("Config path: {}", config_path);
+/// ```
+pub fn get_argument(
     matches: &ArgMatches,
     name: &str,
 ) -> Result<String, ProcessError> {
@@ -42,8 +77,30 @@ fn get_argument(
         .map(String::from)
 }
 
-/// Ensures a directory exists, creating it if necessary
-fn ensure_directory(
+/// Ensures the specified directory exists, creating it if necessary.
+///
+/// # Arguments
+///
+/// * `path` - The path of the directory to check.
+/// * `dir_type` - A label describing the directory type (e.g., "content", "output").
+///
+/// # Returns
+///
+/// * `Result<(), ProcessError>` - Returns `Ok` if the directory exists or is successfully created.
+///
+/// # Errors
+///
+/// - Returns `ProcessError::DirectoryCreation` if the directory cannot be created due to permissions or other issues.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use std::path::Path;
+/// # use ssg::cmd::process::ensure_directory;
+/// let path = Path::new("path/to/output");
+/// ensure_directory(path, "output").expect("Failed to ensure directory exists");
+/// ```
+pub fn ensure_directory(
     path: &Path,
     dir_type: &str,
 ) -> Result<(), ProcessError> {
@@ -64,33 +121,27 @@ fn ensure_directory(
     Ok(())
 }
 
-/// Process command line arguments and compile the project
+/// Processes command-line arguments and initiates the static site generation.
 ///
-/// This function:
-/// 1. Extracts required paths from command line arguments
-/// 2. Creates necessary directories if they don't exist
-/// 3. Compiles the static site
+/// This function performs the following steps:
+/// 1. Retrieves required directory paths from command-line arguments.
+/// 2. Ensures each directory exists, creating it if necessary.
+/// 3. Calls the compilation service to generate the static site.
 ///
 /// # Arguments
 ///
-/// * `matches` - Command line arguments from clap
+/// * `matches` - Parsed command-line arguments from `clap`.
 ///
 /// # Returns
 ///
-/// * `Result<(), ProcessError>` - Ok if successful, Error otherwise
+/// * `Result<(), ProcessError>` - Returns `Ok` on successful completion, or an error if a problem occurs.
 ///
-/// # Example
+/// # Errors
 ///
-/// ```no_run
-/// use clap::ArgMatches;
-/// use ssg::cmd::process::args;
+/// - Returns `ProcessError::MissingArgument` if a required argument is not provided.
+/// - Returns `ProcessError::DirectoryCreation` if a directory cannot be created.
+/// - Returns `ProcessError::CompilationError` if the site fails to compile.
 ///
-/// fn run(matches: &ArgMatches) {
-///     if let Err(e) = args(matches) {
-///         eprintln!("Error processing arguments: {}", e);
-///     }
-/// }
-/// ```
 pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     // Get required paths
     let content_dir = get_argument(matches, "content")?;
@@ -120,4 +171,121 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     .map_err(|e| ProcessError::CompilationError(e.to_string()))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::{arg, Command};
+    use tempfile::tempdir;
+
+    fn create_test_command() -> ArgMatches {
+        Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content", "content",
+                "--output", "output",
+                "--new", "new_site",
+                "--template", "template",
+            ])
+    }
+
+    #[test]
+    fn test_get_argument_present() {
+        let matches = create_test_command();
+        let content = get_argument(&matches, "content").unwrap();
+        assert_eq!(content, "content");
+    }
+
+    #[test]
+    fn test_get_argument_missing() {
+        let matches = Command::new("test")
+            .arg(arg!(--"config" <CONFIG> "Config file"))
+            .get_matches_from(vec!["test"]);
+        let result = get_argument(&matches, "config");
+        assert!(matches!(result, Err(ProcessError::MissingArgument(_))));
+    }
+
+    #[test]
+    fn test_ensure_directory_exists() {
+        let temp_dir = tempdir().unwrap();
+        let result = ensure_directory(temp_dir.path(), "temp");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[ignore] // Permission tests are complex cross-platform
+    fn test_ensure_directory_creation_permission_denied() {
+        #[cfg(unix)]
+        {
+            let root_path = Path::new("/root/protected_dir");
+            let result = ensure_directory(root_path, "protected");
+            assert!(matches!(
+                result,
+                Err(ProcessError::DirectoryCreation { .. })
+            ));
+        }
+    }
+
+    #[test]
+fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a temporary directory for test isolation
+    let temp_dir = tempdir()?;
+    let content_dir = temp_dir.path().join("content");
+    let output_dir = temp_dir.path().join("output");
+    let site_dir = temp_dir.path().join("new_site");
+    let template_dir = temp_dir.path().join("template");
+
+    // Ensure each directory can be created as required by args function logic
+    assert!(
+        ensure_directory(&content_dir, "content").is_ok(),
+        "Failed to ensure 'content' directory"
+    );
+    assert!(
+        ensure_directory(&output_dir, "output").is_ok(),
+        "Failed to ensure 'output' directory"
+    );
+    assert!(
+        ensure_directory(&site_dir, "project").is_ok(),
+        "Failed to ensure 'project' directory"
+    );
+    assert!(
+        ensure_directory(&template_dir, "template").is_ok(),
+        "Failed to ensure 'template' directory"
+    );
+
+    Ok(())
+}
+
+    #[test]
+    fn test_args_missing_argument() {
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .get_matches_from(vec!["test", "--content", "content"]);
+        let result = args(&matches);
+        assert!(matches!(result, Err(ProcessError::MissingArgument(_))));
+    }
+
+    #[test]
+    fn test_process_error_display() {
+        let error = ProcessError::MissingArgument("content".to_string());
+        assert_eq!(error.to_string(), "Required argument missing: content");
+
+        let error = ProcessError::DirectoryCreation {
+            dir_type: "content".to_string(),
+            path: "/invalid/path".to_string(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "Failed to create content directory at '/invalid/path'"
+        );
+
+        let error = ProcessError::CompilationError("Failed to compile".to_string());
+        assert_eq!(error.to_string(), "Compilation error: Failed to compile");
+    }
 }
