@@ -1,107 +1,31 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Shokunin Static Site Generator (SSG)
+//! # Shokunin Static Site Generator
 //!
-//! [![Shokunin Static Site Generator Logo](https://kura.pro/shokunin/images/banners/banner-shokunin.svg)](https://shokunin.one "Shokunin - A Fast and Flexible Static Site Generator written in Rust")
-//!
-//! ## A Content-First Open Source Static Site Generator (SSG) written in [Rust][2].
-//!
-//! *Part of the [Mini Functions][0] family of Rust libraries.*
-//!
-//! [![Crates.io](https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/ssg "Crates.io")
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.30-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/ssg "Lib.rs")
-//! [![License](https://img.shields.io/crates/l/ssg.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](https://opensource.org/license/apache-2-0/ "MIT or Apache License, Version 2.0")
-//! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org "Rust")
-//!
-//! ## Overview
-//!
-//! Discover Shokunin: The high-performance, Rust-backed Static Site Generator (SSG) that puts content at the forefront of your web experience.
+//! A high-performance, secure static site generator written in Rust that puts content first.
+//! This library provides functionality for generating static websites from markdown content
+//! and templates, with built-in development server capabilities.
 //!
 //! ## Features
 //!
-//! Shokunin Static Site Generator (SSG) has several notable features, including but not limited to:
+//! * Content-focused static site generation
+//! * Built-in development server
+//! * Secure file handling
+//! * Comprehensive logging
+//! * Template support
 //!
-//! - **Speed and Flexibility:** Built in Rust, offering optimal performance.
-//! - **Built-in Supports:**
-//!     - GitHub Flavoured Markdown (GFM) for intuitive content creation.
-//!     - Integrated support for Google Analytics and Bing Analytics.
-//!     - Automated sitemap generation, robots.txt, canonical name (CNAME) records, and custom 404 pages.
-//! - **Compatibility:** Extensive support for various HTML themes and Premium templates.
-//! - **Advanced Features:**
-//!     - Atom and RSS feeds for blog posts, offering greater discoverability.
-//!     - Minified HTML, CSS, and JavaScript files for better performance and SEO.
-//! - **Development Server:** Comes with a Rust-based local development server for easier debugging and testing.
-//! - **Format Support:** Comprehensive format support including Markdown, YAML, JSON, TOML, XML, etc.
+//! ## Example
 //!
-//! ## Usage
+//! ```rust,no_run
+//! use ssg::run;
 //!
-//! ### Command Line Interface (CLI)
-//!
-//! The CLI is straightforward. Below are examples to guide you:
-//!
-//! ```shell
-//! # Create a new site named docs
-//! ssg  --new=docs --content=content --template=template --output=output --serve=public
-//! ```
-//!
-//! or
-//!
-//! ```shell
-//! # Alternative shorter command
-//! ssg  -n=docs -c=content -t=template -o=output -s=public
-//! ```
-//!
-//! **Arguments Explained:**
-//!
-//! - `-n`, `--new`: Name of the new site to be created. (e.g., `--new=docs`). Defaults to `docs` which allows you to publish your site to GitHub Pages.
-//! - `-c`, `--content`: Directory containing the website content. (e.g., `--content=content`)
-//! - `-t`, `--template`: Directory containing website templates. (e.g., `--template=templates`)
-//! - `-o`, `--output`: Directory where generated website files will be saved temporarily. (e.g., `--output=build`)
-//! - `-s`, `--serve`: (Optional) Directory from which the website will be served. (e.g., `--serve=public`)
-//!
-//! ### In your project
-//!
-//! To incorporate Shokunin Static Site Generator (SSG) in your Rust project, add the following to your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! shokunin = "0.0.30"
-//! ```
-//!
-//! And in your `main.rs`:
-//!
-//! ```rust
-//! use staticdatagen::compiler::service::compile;
-//! use std::path::Path;
-//!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Uncomment and replace these paths with your directory paths
-//!     // let build_path = Path::new("your_build_directory");
-//!     // let site_path = Path::new("your_site_directory");
-//!     // let content_path = Path::new("your_content_directory");
-//!     // let template_path = Path::new("your_template_directory");
-//!
-//!     // compile(build_path, content_path, site_path, template_path)?;
-//!
+//! fn main() -> anyhow::Result<()> {
+//!     run()?;
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ## Contributing
-//! We welcome contributions! Please see [CONTRIBUTING.md][3] for details on how to contribute.
-//!
-//! ## License
-//!
-//! This project is dual-licensed under the terms of both the MIT license and the Apache License (Version 2.0).
-//!
-//! - [Apache License, Version 2.0](https://opensource.org/license/apache-2-0/ "Apache License, Version 2.0")
-//! - [MIT license](http://opensource.org/licenses/MIT "MIT license")
-//!
-//! [0]: https://minifunctions.com/ "MiniFunctions"
-//! [1]: https://github.github.com/gfm/ "GitHub Flavoured Markdown"
-//! [2]: https://www.rust-lang.org/ "Rust"
-//! [3]: https://shokunin.one/contribute/index.html "Contribute to Shokunin"
+
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -110,55 +34,111 @@
 #![crate_name = "ssg"]
 #![crate_type = "lib"]
 
-// Correct the import path for the translate function
-use staticdatagen::locales::en::translate;
+// Standard library imports
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::{Path, PathBuf},
+};
 
-// Re-export staticdatagen
-pub use staticdatagen;
-
-// Re-export nucleusflow
-pub use nucleusflow;
-
-use anyhow::Result;
+// Third-party imports
+use anyhow::{Context, Result};
 use dtt::datetime::DateTime;
 use http_handle::Server;
-use nucleusflow::cli::print_banner;
 use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
-use staticdatagen::macro_serve;
 use staticdatagen::{
-    compiler::service::compile, utilities::uuid::generate_unique_string,
+    compiler::service::compile, locales::en::translate, macro_serve,
+    utilities::uuid::generate_unique_string,
 };
-use std::{fs::File, io::Write, path::Path};
 
-#[allow(non_camel_case_types)]
+/// Module declarations
+pub mod cmd;
 
-/// ## Function: `run` - Runs the static site generator command-line tool.
+/// Re-exports
+pub use staticdatagen;
+
+/// Main entry point for the static site generator.
 ///
-/// This function prints a banner containing the title and description of the tool,
-/// and then processes any command-line arguments passed to it. If no
-/// arguments are passed, it prints a welcome message and instructions
-/// on how to use the tool.
+/// This function orchestrates the entire site generation process:
 ///
-/// The function uses the `build` function from the `cli` module to
-/// create the command-line interface for the tool. It then processes
-/// any arguments passed to it using the `parser` function from the
-/// `args` module.
+/// 1. Sets up logging infrastructure
+/// 2. Displays the CLI banner
+/// 3. Processes command-line arguments
+/// 4. Creates necessary directories
+/// 5. Compiles the static site
+/// 6. Optionally starts a development server
 ///
-/// If any errors occur during the process (e.g. an invalid argument is
-/// passed), an error message is printed and returned. Otherwise,
-/// `Ok(())` is returned.
-/// Run the static site generator command-line tool.
+/// # Errors
+///
+/// Returns an error if:
+/// - Required arguments are missing
+/// - File system operations fail
+/// - Site compilation fails
+/// - Server startup fails
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use ssg::run;
+///
+/// fn main() -> anyhow::Result<()> {
+///     run()?;
+///     Ok(())
+/// }
+/// ```
 pub fn run() -> Result<()> {
-    // Get the current date and time
+    // Initialize logging
     let date = DateTime::new();
+    let mut log_file = create_log_file("./ssg.log")
+        .context("Failed to create log file")?;
 
-    // Open or create the log file
-    let mut log_file = create_log_file("./ssg.log")?;
+    // Display banner and log initialization
+    cmd::cli::print_banner();
+    log_initialization(&mut log_file, &date)?;
 
-    // Print the CLI banner and welcome message
-    print_banner();
+    // Parse command-line arguments
+    let matches = cmd::cli::build().get_matches();
+    log_arguments(&mut log_file, &date)?;
 
-    // Generate a log entry for the banner
+    // Extract and validate paths
+    let paths = extract_paths(&matches)?;
+    create_directories(&paths)?;
+
+    // Compile the site
+    compile(&paths.build, &paths.content, &paths.site, &paths.template)
+        .context("Failed to compile site")?;
+
+    // Handle server if requested
+    if let Some(serve_dir) = matches.get_one::<PathBuf>("serve") {
+        handle_server(&mut log_file, &date, &paths, serve_dir)?;
+    }
+
+    Ok(())
+}
+
+/// Structure holding all necessary paths for site generation
+#[derive(Debug)]
+struct Paths {
+    site: PathBuf,
+    content: PathBuf,
+    build: PathBuf,
+    template: PathBuf,
+}
+
+/// Creates a log file at the specified path
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be created
+fn create_log_file(file_path: &str) -> Result<File> {
+    File::create(file_path).context("Failed to create log file")
+}
+
+/// Logs initialization information
+fn log_initialization(
+    log_file: &mut File,
+    date: &DateTime,
+) -> Result<()> {
     let banner_log = macro_log!(
         &generate_unique_string(),
         &date.to_string(),
@@ -167,59 +147,194 @@ pub fn run() -> Result<()> {
         &translate("lib_banner_log_msg").unwrap(),
         &LogFormat::CLF
     );
+    writeln!(log_file, "{}", banner_log)
+        .context("Failed to write banner log")
+}
 
-    // Write the log to both the console and the file
-    writeln!(log_file, "{}", banner_log)?;
-
-    // Build the CLI and parse the arguments
-    let matches = nucleusflow::cli::build().get_matches();
-
-    // Generate a log entry for the arguments
+/// Logs argument information
+fn log_arguments(log_file: &mut File, date: &DateTime) -> Result<()> {
     let args_log = macro_log!(
         &generate_unique_string(),
         &date.to_string(),
         &LogLevel::INFO,
         "process",
-        &translate("lib_banner_log_msg")
-            .unwrap_or("Default banner log message".to_string()),
+        &translate("lib_banner_log_msg").unwrap_or_else(|_| {
+            "Default banner log message".to_string()
+        }),
         &LogFormat::CLF
     );
+    writeln!(log_file, "{}", args_log)
+        .context("Failed to write arguments log")
+}
 
-    // Write the log to both the console and the file
-    writeln!(log_file, "{}", args_log)?;
+/// Extracts and validates paths from command-line arguments
+///
+/// # Errors
+///
+/// Returns an error if required paths are missing or invalid.
+fn extract_paths(matches: &clap::ArgMatches) -> Result<Paths> {
+    let site_name = matches
+        .get_one::<String>("new")
+        .context("Project name not specified")?;
 
-    if let Some(site_name) = matches.get_one::<String>("new") {
-        // Generate a log entry for the server
-        let server_log = macro_log!(
-            &generate_unique_string(),
-            &date.to_string(),
-            &LogLevel::INFO,
-            "process",
-            &translate("lib_server_log_msg").unwrap(),
-            &LogFormat::CLF
-        );
+    let content_dir = matches
+        .get_one::<PathBuf>("content")
+        .context("Content directory not specified")?;
 
-        // Write the log to both the console and the file
-        writeln!(log_file, "{}", server_log)?;
+    let output_dir = matches
+        .get_one::<PathBuf>("output")
+        .context("Output directory not specified")?;
 
-        // Start the server using the specified server address and site name.
-        // If an error occurs, propagate it up the call stack.
-        macro_serve!("127.0.0.1:8000", site_name);
-    }
+    let template_dir = matches
+        .get_one::<PathBuf>("template")
+        .context("Template directory not specified")?;
 
-    // Set the build, content, site and template paths for the compile function.
-    let build_path = Path::new("public");
-    let content_path = Path::new("content");
-    let site_path = Path::new("site");
-    let template_path = Path::new("templates");
+    Ok(Paths {
+        site: PathBuf::from(site_name), // Convert site_name String to PathBuf here
+        content: content_dir.clone(),
+        build: output_dir.clone(),
+        template: template_dir.clone(),
+    })
+}
 
-    // Call the compile function with the above parameters to compile the site.
-    compile(build_path, content_path, site_path, template_path)?;
-
+/// Creates all necessary directories for the static site generator.
+///
+/// # Errors
+///
+/// Returns an error if directory creation fails.
+fn create_directories(paths: &Paths) -> Result<()> {
+    fs::create_dir_all(&paths.content)
+        .context("Failed to create content directory")?;
+    fs::create_dir_all(&paths.build)
+        .context("Failed to create build directory")?;
+    fs::create_dir_all(&paths.site)
+        .context("Failed to create site directory")?;
+    fs::create_dir_all(&paths.template)
+        .context("Failed to create template directory")?;
     Ok(())
 }
 
-/// Create a log file at the specified path.
-fn create_log_file(file_path: &str) -> Result<File> {
-    Ok(File::create(file_path)?)
+/// Handles the development server setup and startup.
+///
+/// # Arguments
+///
+/// * `log_file` - Reference to the log file for logging messages.
+/// * `date` - The current date and time for logging.
+/// * `paths` - Struct holding all paths for the site.
+/// * `serve_dir` - PathBuf reference to the directory for serving files.
+///
+/// # Errors
+///
+/// Returns an error if the server setup or startup fails.
+fn handle_server(
+    log_file: &mut File,
+    date: &DateTime,
+    paths: &Paths,
+    serve_dir: &PathBuf,
+) -> Result<()> {
+    // Log server initialization
+    let server_log = macro_log!(
+        &generate_unique_string(),
+        &date.to_string(),
+        &LogLevel::INFO,
+        "process",
+        &translate("lib_server_log_msg").unwrap(),
+        &LogFormat::CLF
+    );
+    writeln!(log_file, "{}", server_log)?;
+
+    fs::create_dir_all(serve_dir)
+        .context("Failed to create serve directory")?;
+
+    println!("Setting up server...");
+    println!("Source: {}", paths.site.display());
+    println!("Serving from: {}", serve_dir.display());
+
+    if serve_dir != &paths.site {
+        verify_and_copy_files(&paths.site, serve_dir)?;
+    }
+
+    println!("\nStarting server at http://127.0.0.1:8000");
+    println!("Serving content from: {}", serve_dir.display());
+
+    macro_serve!("127.0.0.1:8000", serve_dir.to_str().unwrap());
+    Ok(())
+}
+
+/// Verifies the source directory and copies files to the destination directory.
+///
+/// # Arguments
+///
+/// * `src` - Path reference to the source directory.
+/// * `dst` - Path reference to the destination directory.
+///
+/// # Errors
+///
+/// Returns an error if the directory does not exist or copying fails.
+fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
+    if !src.exists() {
+        anyhow::bail!(
+            "Source directory does not exist: {}",
+            src.display()
+        );
+    }
+
+    copy_dir_all(src, dst)?;
+
+    // Verify destination has content
+    if !dst.exists() || dst.read_dir()?.next().is_none() {
+        anyhow::bail!(
+            "Destination directory is empty or does not exist: {}",
+            dst.display()
+        );
+    }
+
+    list_directory_contents(dst)?;
+    Ok(())
+}
+
+/// Recursively copies all files and directories from the source to the destination.
+///
+/// # Arguments
+///
+/// * `src` - Path reference to the source directory.
+/// * `dst` - Path reference to the destination directory.
+///
+/// # Errors
+///
+/// Returns an error if file or directory copying fails.
+fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_all(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
+/// Lists the contents of the directory recursively, useful for debugging and verification.
+///
+/// # Arguments
+///
+/// * `dir` - Path reference to the directory to list.
+///
+/// # Errors
+///
+/// Returns an error if directory reading fails.
+fn list_directory_contents(dir: &Path) -> Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            list_directory_contents(&path)?;
+        }
+    }
+    Ok(())
 }

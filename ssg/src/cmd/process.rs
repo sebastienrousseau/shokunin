@@ -1,67 +1,123 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use crate::macro_check_directory;
-use crate::{compiler::service::compile, macro_get_args};
+use anyhow::Result;
 use clap::ArgMatches;
-use std::path::Path;
+use std::{fs, path::Path};
+use thiserror::Error;
 
-/// ## Function: args - returns a Result indicating success or failure
+/// Errors that can occur during argument processing
+#[derive(Error, Debug)]
+pub enum ProcessError {
+    #[error("Failed to create {dir_type} directory at '{path}'")]
+    /// Directory creation error
+    DirectoryCreation {
+        /// Directory type
+        dir_type: String,
+        /// Path
+        path: String,
+    },
+
+    #[error("Required argument missing: {0}")]
+    /// Missing argument error
+    MissingArgument(String),
+
+    #[error("Compilation error: {0}")]
+    /// Compilation error
+    CompilationError(String),
+
+    #[error(transparent)]
+    /// IO error wrapper
+    IoError(#[from] std::io::Error),
+}
+
+/// Gets an argument value from matches
+fn get_argument(
+    matches: &ArgMatches,
+    name: &str,
+) -> Result<String, ProcessError> {
+    matches
+        .get_one::<String>(name)
+        .ok_or_else(|| ProcessError::MissingArgument(name.to_string()))
+        .map(String::from)
+}
+
+/// Ensures a directory exists, creating it if necessary
+fn ensure_directory(
+    path: &Path,
+    dir_type: &str,
+) -> Result<(), ProcessError> {
+    if !path.exists() {
+        fs::create_dir_all(path).map_err(|e| {
+            // Convert the IO error to our custom error type
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                ProcessError::DirectoryCreation {
+                    dir_type: dir_type.to_string(),
+                    path: path.display().to_string(),
+                }
+            } else {
+                ProcessError::IoError(e)
+            }
+        })?;
+        println!("Created {} directory: {}", dir_type, path.display());
+    }
+    Ok(())
+}
+
+/// Process command line arguments and compile the project
 ///
-/// Parses the command-line arguments passed by the static site generator
-/// command-line tool (ssg) and compiles the project.
-///
-/// - This function parses the `content` directory where the markdown files for
-///   your website are stored and the `output` directory where the compiled
-///   site will be created from the `matches` object.
-///
-/// - It then, validates that these directories exist, or creates them on the
-///   fly if they do not. If either directory cannot be found or created, an
-///   error is returned.
-///
-/// - Finally, it calls the `compile` function to create the new project using
-///   the markdown files in the "content" directory, and returns an error if
-///   the compilation process fails.
+/// This function:
+/// 1. Extracts required paths from command line arguments
+/// 2. Creates necessary directories if they don't exist
+/// 3. Compiles the static site
 ///
 /// # Arguments
 ///
-/// * `matches` - A reference to an ArgMatches object containing the
-///   command-line arguments passed to the tool. This is created by the `clap`
-///   crate.
+/// * `matches` - Command line arguments from clap
 ///
 /// # Returns
 ///
-/// * A Result indicating success or failure.
-///   - Ok() if the project was created successfully and the output files were
-///   written to the output directory.
-///   - Err(anyhow::Error) if the project could not be created or the output
-///   files
-/// could not be written to the output directory.
+/// * `Result<(), ProcessError>` - Ok if successful, Error otherwise
 ///
-pub fn args(matches: &ArgMatches) -> Result<(), String> {
-    // Set the content elements of the new project
-    let content_dir = macro_get_args!(matches, "content");
-    let output_dir = macro_get_args!(matches, "output");
-    let site_dir = macro_get_args!(matches, "new");
-    let template_dir = macro_get_args!(matches, "template");
+/// # Example
+///
+/// ```no_run
+/// use clap::ArgMatches;
+/// use ssg::cmd::process::args;
+///
+/// fn run(matches: &ArgMatches) {
+///     if let Err(e) = args(matches) {
+///         eprintln!("Error processing arguments: {}", e);
+///     }
+/// }
+/// ```
+pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
+    // Get required paths
+    let content_dir = get_argument(matches, "content")?;
+    let output_dir = get_argument(matches, "output")?;
+    let site_dir = get_argument(matches, "new")?;
+    let template_dir = get_argument(matches, "template")?;
 
-    // Create Path objects for the content and output directories
+    // Create Path objects
     let content_path = Path::new(&content_dir);
     let build_path = Path::new(&output_dir);
     let site_path = Path::new(&site_dir);
     let template_path = Path::new(&template_dir);
 
-    // Ensure the build, content, site and template directories exist
-    macro_check_directory!(content_path, "content");
-    macro_check_directory!(build_path, "output");
-    macro_check_directory!(site_path, "new");
-    macro_check_directory!(template_path, "template");
+    // Ensure directories exist
+    ensure_directory(content_path, "content")?;
+    ensure_directory(build_path, "output")?;
+    ensure_directory(site_path, "project")?;
+    ensure_directory(template_path, "template")?;
 
-    // Create the new project
-    let compilation_result =
-        compile(build_path, content_path, site_path, template_path);
-    match compilation_result {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("❌ Error: {}", e)),
-    }
+    // Compile the site
+    staticdatagen::compiler::service::compile(
+        build_path,
+        content_path,
+        site_path,
+        template_path,
+    )
+    .map_err(|e| ProcessError::CompilationError(e.to_string()))?;
+
+    Ok(())
 }
