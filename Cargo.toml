@@ -1,21 +1,29 @@
-[package]
-authors = ["Shokunin Contributors"]
-build = "build.rs"
-description = """
-A Content-First Open Source Static Site Generator (SSG) written in Rust.
-"""
-documentation = "https://shokunin.one/documentation/index.html"
-edition = "2021"
-exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
-homepage = "https://shokunin.one"
-keywords = ["cli", "generator", "site", "ssg", "static"]
-license = "MIT OR Apache-2.0"
-name = "ssg"
-readme = "README.md"
-repository = "https://github.com/sebastienrousseau/shokunin"
-rust-version = "1.56.0"
-version = "0.0.30"
+# -----------------------------------------------------------------------------
+# Shokunin - A lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
+# -----------------------------------------------------------------------------
 
+[package]
+# General project metadata
+name = "ssg"                            # The name of the library
+version = "0.0.30"                      # The version of the library
+authors = ["Shokunin Contributors"]     # The authors of the library
+edition = "2021"                        # The edition of the library
+rust-version = "1.56.0"                 # Minimum supported Rust version
+license = "MIT OR Apache-2.0"           # Dual licensing strategy
+description = """
+A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
+"""
+homepage = "https://shokunin.one"       # The project's homepage
+documentation = "https://shokunin.one/documentation/index.html" # Doc URL
+repository = "https://github.com/sebastienrousseau/shokunin"
+readme = "README.md"                    # The README file
+build = "build.rs"                      # The build script
+
+# -----------------------------------------------------------------------------
+# Crate Configuration
+# -----------------------------------------------------------------------------
+
+# Crates.io categories
 categories = [
     "command-line-utilities",
     "parsing",
@@ -23,6 +31,18 @@ categories = [
     "web-programming",
 ]
 
+# Keywords for easier discoverability on Crates.io
+keywords = ["cli", "generator", "site", "ssg", "static"]
+
+# Excluding unnecessary files from the package
+exclude = [
+    "/.git/*",                          # Exclude version control files
+    "/.github/*",                       # Exclude GitHub workflows
+    "/.gitignore",                      # Ignore Git ignore file
+    "/.vscode/*"                        # Ignore VSCode settings
+]
+
+# Including necessary files in the package
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -38,58 +58,207 @@ include = [
     "/tests/**",
 ]
 
+
+# -----------------------------------------------------------------------------
+# Library Information
+# -----------------------------------------------------------------------------
+
+# The library file that contains the main logic for the binary.
+[lib]
+name = "ssg"                            # Internal name of the library
+path = "src/lib.rs"                     # Path to the library entry point
+
+# The main file that contains the entry point for the binary.
+[[bin]]
+name = "ssg"                            # Name of the binary
+path = "src/main.rs"                    # Path to the binary entry point
+
+# -----------------------------------------------------------------------------
+# Features
+# -----------------------------------------------------------------------------
+[features]
+# Optional features that can be enabled or disabled.
+default = []                            # No default features enabled
+async = []                              # Placeholder for future asynchronous feature support
+cli = []                                # Enable command-line interface support
+
+# -----------------------------------------------------------------------------
+# Build Dependencies
+# -----------------------------------------------------------------------------
+[build-dependencies]
+# Dependencies for the build script, used for pre-compilation tasks.
+version_check = "0.9"                   # Ensures that a compatible Rust version is used
+
+# -----------------------------------------------------------------------------
+# Development Dependencies
+# -----------------------------------------------------------------------------
+[dev-dependencies]
+assert_cmd = "2.0"                      # Test command-line applications
+# Dependencies required for testing and development.
+criterion = "0.5"                       # Benchmarking library to test performance
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
 [dependencies]
+# Required dependencies for building and running the project.
 anyhow = "1.0.93"
 clap = { version = "4.5.20", features = ["derive", "cargo", "env"] }
-comrak = "0.29.0"
 dtt = "0.0.8"
-env_logger = "0.11.5"
-html-generator = "0.0.1"
 http-handle = "0.0.2"
 langweave = "0.0.1"
-lazy_static = "1.5"
 log = { version = "0.4.22", features = ["std"] }
-metadata-gen = "0.0.1"
-minify-html = "0.15.0"
-nucleusflow = "0.0.1"
-path-clean = "1.0.1"
-pulldown-cmark = "0.12.2"
-quick-xml = "0.37.0"
 rayon = "1.10.0"
-regex = "1.11.1"
-reqwest = { version = "0.12.9", features = ["blocking", "json"] }
 rlg = "0.0.6"
-rss-gen = "0.0.3"
 serde = { version = "1.0.214", features = ["derive"] }
 serde_json = "1.0.132"
-sitemap-gen = "0.0.1"
 staticdatagen = "0.0.1"
-staticweaver = "0.0.1"
 tempfile = "3.14.0"
 thiserror = "2.0.2"
 toml = "0.8.19"
 url = "2.5.3"
 uuid = { version = "1.11.0", features = ["v4"] }
-vrd = "0.0.8"
-yaml-rust2 = "0.9.0"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
-[build-dependencies]
-# Dependency for checking Rust version in build scripts.
-version_check = "0.9"
+# -----------------------------------------------------------------------------
+# Criterion Benchmark
+# -----------------------------------------------------------------------------
+[[bench]]
+# Benchmarking configuration for performance testing.
+name = "bench"                              # Name of the benchmark
+harness = false                             # Disable the default benchmark harness (used by Criterion)
 
-[dev-dependencies]
-# Development dependencies for testing and benchmarking.
-assert_cmd = "2.0"
-criterion = "0.5"
+# -----------------------------------------------------------------------------
+# Documentation Configuration
+# -----------------------------------------------------------------------------
+[package.metadata.docs.rs]
+# Settings for building and hosting documentation on docs.rs.
+all-features = true                         # Build documentation with all features enabled
+rustdoc-args = ["--cfg", "docsrs"]          # Arguments passed to `rustdoc` when building the documentation
+targets = ["x86_64-unknown-linux-gnu"]      # Default target platform for the docs
 
-[lib]
-name = "ssg"
-path = "src/lib.rs"
+# -----------------------------------------------------------------------------
+# Linting Configuration
+# -----------------------------------------------------------------------------
+[lints.rust]
+# Linting rules for the project.
 
-[[bin]]
-name = "ssg"
-path = "src/main.rs"
+## Warnings
+missing_copy_implementations = "warn"       # Warn if types can implement `Copy` but don’t
+missing_docs = "warn"                       # Warn if public items lack documentation
+unstable_features = "warn"                  # Warn on the usage of unstable features
+unused_extern_crates = "warn"               # Warn about unused external crates
+unused_results = "warn"                     # Warn if a result type is unused (e.g., errors ignored)
+
+## Allowances
+bare_trait_objects = "allow"                # Allow bare trait objects (e.g., `Box<dyn Trait>`)
+elided_lifetimes_in_paths = "allow"         # Allow lifetimes to be elided in paths
+non_camel_case_types = "allow"              # Allow non-camel-case types
+non_upper_case_globals = "allow"            # Allow non-uppercase global variables
+trivial_bounds = "allow"                    # Allow trivial bounds in trait definitions
+unsafe_code = "allow"                       # Allow the usage of unsafe code blocks
+
+## Forbidden
+missing_debug_implementations = "forbid"    # Forbid missing `Debug` implementations
+non_ascii_idents = "forbid"                 # Forbid non-ASCII identifiers
+unreachable_pub = "forbid"                  # Forbid unreachable `pub` items
+
+## Denials
+dead_code = "deny"                          # Deny unused, dead code in the project
+deprecated_in_future = "deny"               # Deny code that will be deprecated in the future
+ellipsis_inclusive_range_patterns = "deny"  # Deny usage of inclusive ranges in match patterns (`...`)
+explicit_outlives_requirements = "deny"     # Deny unnecessary lifetime outlives requirements
+future_incompatible = { level = "deny", priority = -1 } # Handle future compatibility issues
+keyword_idents = { level = "deny", priority = -1 }      # Deny usage of keywords as identifiers
+macro_use_extern_crate = "deny"             # Deny macro use of `extern crate`
+meta_variable_misuse = "deny"               # Deny misuse of meta variables in macros
+missing_fragment_specifier = "deny"         # Deny missing fragment specifiers in macros
+noop_method_call = "deny"                   # Deny method calls that have no effect
+rust_2018_idioms = { level = "deny", priority = -1 }    # Enforce Rust 2018 idioms
+rust_2021_compatibility = { level = "deny", priority = -1 } # Enforce Rust 2021 compatibility
+single_use_lifetimes = "deny"               # Deny lifetimes that are used only once
+trivial_casts = "deny"                      # Deny trivial casts (e.g., `as` when unnecessary)
+trivial_numeric_casts = "deny"              # Deny trivial numeric casts (e.g., `i32` to `i64`)
+unused = { level = "deny", priority = -1 }  # Deny unused code, variables, etc.
+unused_features = "deny"                    # Deny unused features
+unused_import_braces = "deny"               # Deny unnecessary braces around imports
+unused_labels = "deny"                      # Deny unused labels in loops
+unused_lifetimes = "deny"                   # Deny unused lifetimes
+unused_macro_rules = "deny"                 # Deny unused macros
+unused_qualifications = "deny"              # Deny unnecessary type qualifications
+variant_size_differences = "deny"           # Deny enum variants with significant size differences
+
+# -----------------------------------------------------------------------------
+# Clippy Configuration
+# -----------------------------------------------------------------------------
+[package.metadata.clippy]
+# Clippy lint configuration for enhanced code analysis.
+warn-lints = [
+    "clippy::all",                           # Enable all common Clippy lints
+    "clippy::pedantic",                      # Enable pedantic lints for stricter checking
+    "clippy::cargo",                         # Enable lints specific to cargo
+    "clippy::nursery",                       # Enable experimental lints from Clippy’s nursery
+    "clippy::complexity",                    # Warn on code complexity and suggest improvements
+    "clippy::correctness",                   # Ensure code correctness, flagging potential issues
+    "clippy::perf",                          # Lints that catch performance issues
+    "clippy::style",                         # Suggest stylistic improvements
+    "clippy::suspicious",                    # Detect suspicious code patterns
+    "clippy::module_name_repetitions",       # Avoid repeating module names in the crate name
+]
+
+# Customize Clippy to allow certain less critical lints.
+allow-lints = [
+    "clippy::module_inception",              # Allow modules with the same name as their parents
+    "clippy::too_many_arguments",            # Allow functions with more than 7 arguments if justified
+    "clippy::missing_docs_in_private_items", # Skip requiring documentation for private items
+]
+
+# Enforce specific warnings and errors more strictly.
+deny-lints = [
+    "clippy::unwrap_used",                   # Deny the use of unwrap to ensure error handling
+    "clippy::expect_used",                   # Deny the use of expect to avoid improper error handling
+]
+
+# -----------------------------------------------------------------------------
+# Profiles
+# -----------------------------------------------------------------------------
+[profile.dev]
+# Development profile configuration for fast builds and debugging.
+codegen-units = 256                         # Increase codegen units for faster compilation
+debug = true                                # Enable debugging symbols
+debug-assertions = true                     # Enable debug assertions
+incremental = true                          # Enable incremental compilation
+lto = false                                 # Disable link-time optimization for development
+opt-level = 0                               # No optimizations in development
+overflow-checks = true                      # Enable overflow checks for arithmetic operations
+panic = 'unwind'                            # Enable unwinding for panics (useful in development)
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in development builds
+
+[profile.release]
+# Release profile configuration for optimized builds.
+codegen-units = 1                           # Reduce codegen units for better performance
+debug = false                               # Disable debug symbols in release builds
+debug-assertions = false                    # Disable debug assertions
+incremental = false                         # Disable incremental compilation for optimal binary size
+lto = true                                  # Enable link-time optimization for smaller and faster binaries
+opt-level = "z"                             # Optimize for binary size
+overflow-checks = false                     # Disable overflow checks for performance
+panic = "abort"                             # Use abort on panic for minimal overhead
+rpath = false                               # Disable rpath generation
+strip = "symbols"                           # Strip symbols for smaller binary size
+
+[profile.test]
+# Test profile configuration for debugging and development.
+codegen-units = 256                         # Increase codegen units for faster test builds
+debug = true                                # Enable debugging symbols for test builds
+debug-assertions = true                     # Enable debug assertions for tests
+incremental = true                          # Enable incremental compilation for tests
+lto = false                                 # Disable link-time optimization during testing
+opt-level = 0                               # No optimizations in test builds
+overflow-checks = true                      # Enable overflow checks for tests
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in test builds

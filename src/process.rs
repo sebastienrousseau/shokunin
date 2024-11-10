@@ -225,20 +225,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Permission tests are complex cross-platform
-    fn test_ensure_directory_creation_permission_denied() {
-        #[cfg(unix)]
-        {
-            let root_path = Path::new("/root/protected_dir");
-            let result = ensure_directory(root_path, "protected");
-            assert!(matches!(
-                result,
-                Err(ProcessError::DirectoryCreation { .. })
-            ));
-        }
-    }
-
-    #[test]
     fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
         // Create a temporary directory for test isolation
         let temp_dir = tempdir()?;

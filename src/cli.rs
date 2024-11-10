@@ -745,7 +745,7 @@ mod tests {
     /// Test path normalization
     fn test_path_normalization() {
         let temp_dir = setup_temp_dir();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
+        env::set_current_dir(temp_dir.path()).unwrap();
 
         let result =
             validate_path(Path::new("content"), "test").unwrap();

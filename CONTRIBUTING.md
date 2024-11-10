@@ -1,6 +1,6 @@
-# Contributing to `shokunin`
+# Contributing to `Shokunin Static Site Generator (SSG)`
 
-Welcome! We're thrilled that you're interested in contributing to the `shokunin` library. Whether you're looking to evangelize, submit feedback, or contribute code, we appreciate your involvement in making `shokunin` a better tool for everyone. Here's how you can get started.
+Welcome! We're thrilled that you're interested in contributing to the `Shokunin Static Site Generator (SSG)` library. Whether you're looking to evangelize, submit feedback, or contribute code, we appreciate your involvement in making `Shokunin Static Site Generator (SSG)` a better tool for everyone. Here's how you can get started.
 
 ## Evangelize
 

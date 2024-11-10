@@ -1,48 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Shokunin Static Site Generator
-//!
-//! A high-performance, secure static site generator written in Rust that prioritises content delivery. This library transforms markdown content and templates into static websites whilst providing development server capabilities.
-//!
-//! ## Core Features
-//!
-//! * Content-First Architecture: Optimised for efficient content management and delivery
-//! * Development Server: Built-in server for rapid local testing and development
-//! * Security-Focused: Comprehensive file handling with robust security measures
-//! * Advanced Logging: Detailed logging system for effective debugging and monitoring
-//! * Template Engine: Flexible template system for maintaining consistent site styling
-//!
-//! ## Library Structure
-//!
-//! The library is organised into these primary components:
-//!
-//! 1. Site Generation: Core functionality for building static sites
-//! 2. Development Server: Local testing and preview capabilities
-//! 3. File Management: Secure file operations and directory handling
-//! 4. Logging System: Comprehensive activity tracking and debugging
-//!
-//! ## Example Usage
-//!
-//! ```rust,no_run
-//! use ssg::run;
-//!
-//! fn main() -> anyhow::Result<()> {
-//!     run()?;
-//!     Ok(())
-//! }
-//! ```
-//!
-//! ## Error Handling
-//!
-//! The library employs Rust's robust error handling with custom error types and comprehensive error messages. All operations return `Result` types with detailed context for debugging.
-//!
-//! ## Security Measures
-//!
-//! * Path Validation: All file paths undergo thorough validation
-//! * Resource Limits: Configurable limits prevent resource exhaustion
-//! * Input Sanitisation: Comprehensive validation of all user inputs
-
+#![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
     html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
@@ -554,7 +513,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
             if src_path.is_dir() {
                 copy_dir_all(&src_path, &dst_path)?;
             } else {
-                fs::copy(&src_path, &dst_path)?;
+                _ = fs::copy(&src_path, &dst_path)?;
             }
             Ok(())
         })?;
@@ -653,10 +612,14 @@ mod tests {
     fn test_create_directories_success() -> Result<()> {
         let temp_dir = tempdir()?;
         let paths = Paths {
-            site: temp_dir.path().join("site"),
-            content: temp_dir.path().join("content"),
-            build: temp_dir.path().join("build"),
-            template: temp_dir.path().join("template"),
+            site: temp_dir.path().join("examples/example.com/public"),
+            content: temp_dir
+                .path()
+                .join("examples/example.com/content"),
+            build: temp_dir.path().join("examples/example.com/build"),
+            template: temp_dir
+                .path()
+                .join("examples/example.com/templates"),
         };
 
         create_directories(&paths)?;
@@ -687,7 +650,7 @@ mod tests {
         let dst_dir = tempdir()?;
 
         let src_file = src_dir.path().join("test_file.txt");
-        File::create(&src_file)?;
+        _ = File::create(&src_file)?;
 
         let result = copy_dir_all(src_dir.path(), dst_dir.path());
         assert!(result.is_ok());
@@ -708,7 +671,7 @@ mod tests {
         let dst_dir = tempdir()?;
 
         let src_file = src_dir.path().join("test_file.txt");
-        File::create(&src_file)?;
+        _ = File::create(&src_file)?;
 
         verify_and_copy_files(src_dir.path(), dst_dir.path())?;
         assert!(dst_dir.path().join("test_file.txt").exists());
@@ -768,7 +731,7 @@ mod tests {
         let sub_dir = temp_dir.path().join("subdir");
         fs::create_dir(&sub_dir)?;
         let temp_file = sub_dir.join("test_file.txt");
-        File::create(&temp_file)?;
+        _ = File::create(&temp_file)?;
 
         let result = list_directory_contents(temp_dir.path());
         assert!(result.is_ok());
@@ -818,7 +781,7 @@ mod tests {
         fs::create_dir(&nested_dir)?;
 
         let nested_file = nested_dir.join("nested_file.txt");
-        File::create(&nested_file)?;
+        _ = File::create(&nested_file)?;
 
         copy_dir_all(src_dir.path(), dst_dir.path())?;
         assert!(dst_dir
