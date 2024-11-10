@@ -335,4 +335,74 @@ mod tests {
         assert!(matches!(error, ProcessError::IoError(_)));
         assert_eq!(error.to_string(), "File not found");
     }
+
+    #[test]
+    fn test_ensure_directory_permission_denied() {
+        use std::fs::Permissions;
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = tempdir().unwrap();
+        let protected_path = temp_dir.path().join("protected_dir");
+
+        // Create the directory and make it read-only
+        fs::create_dir(&protected_path).unwrap();
+        fs::set_permissions(
+            &protected_path,
+            Permissions::from_mode(0o400),
+        )
+        .unwrap();
+
+        // Attempt to create a subdirectory inside the protected directory to trigger a permission error
+        let sub_dir = protected_path.join("sub_dir");
+        let result = ensure_directory(&sub_dir, "sub_directory");
+
+        // Check that the permission-denied error was triggered
+        assert!(matches!(
+            result,
+            Err(ProcessError::DirectoryCreation { .. })
+        ));
+
+        // Reset permissions for cleanup
+        fs::set_permissions(
+            &protected_path,
+            Permissions::from_mode(0o700),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_args_all_required_arguments(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let content_dir = temp_dir.path().join("content");
+        let output_dir = temp_dir.path().join("output");
+        let site_dir = temp_dir.path().join("new_site");
+        let template_dir = temp_dir.path().join("template");
+
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                content_dir.to_str().unwrap(),
+                "--output",
+                output_dir.to_str().unwrap(),
+                "--new",
+                site_dir.to_str().unwrap(),
+                "--template",
+                template_dir.to_str().unwrap(),
+            ]);
+
+        // Since `compile` is shadowed, it will use the mock compile function
+        let result = args(&matches);
+        assert!(
+            matches!(result, Err(ProcessError::CompilationError(_))),
+            "Expected CompilationError from args"
+        );
+
+        Ok(())
+    }
 }
