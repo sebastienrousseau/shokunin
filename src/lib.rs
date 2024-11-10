@@ -555,8 +555,10 @@ fn list_directory_contents(dir: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use anyhow::Result;
-    use std::fs::{self, File};
-    use std::path::PathBuf;
+    use std::{
+        fs::{self, File},
+        path::PathBuf,
+    };
     use tempfile::tempdir;
 
     #[test]
@@ -847,6 +849,93 @@ mod tests {
 
         collect_files_recursive(temp_dir.path(), &mut files)?;
         assert!(files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_print_banner() {
+        // Simply call the function to ensure it runs without errors.
+        cli::print_banner();
+        // Since this is a print statement, we're only verifying that it doesn't panic.
+        // If you need to check output, consider capturing stdout.
+    }
+
+    #[test]
+    fn test_create_directories_with_unsafe_path() {
+        // Intentionally create a path with ".." to simulate an unsafe path
+        let unsafe_path = PathBuf::from("../unsafe_path");
+
+        let paths = Paths {
+            site: unsafe_path.clone(),
+            content: unsafe_path.clone(),
+            build: unsafe_path.clone(),
+            template: unsafe_path.clone(),
+        };
+
+        let result = create_directories(&paths);
+
+        // Check that the result is an error due to unsafe paths
+        assert!(result.is_err());
+        if let Err(e) = result {
+            assert!(
+                e.to_string().contains("unsafe"),
+                "Error should indicate unsafe path"
+            );
+        }
+    }
+
+    #[test]
+    fn test_collect_files_recursive_with_nested_directories(
+    ) -> Result<()> {
+        let temp_dir = tempdir()?;
+        let nested_dir = temp_dir.path().join("nested_dir");
+        fs::create_dir(&nested_dir)?;
+
+        let nested_file = nested_dir.join("nested_file.txt");
+        _ = File::create(&nested_file)?;
+
+        let mut files = Vec::new();
+        collect_files_recursive(temp_dir.path(), &mut files)?;
+
+        assert!(files.contains(&nested_file));
+        assert_eq!(files.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_handle_server_start_message() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let log_file_path = temp_dir.path().join("server_log.log");
+        let mut log_file = File::create(&log_file_path)?;
+
+        let paths = Paths {
+            site: temp_dir.path().join("site"),
+            content: temp_dir.path().join("content"),
+            build: temp_dir.path().join("build"),
+            template: temp_dir.path().join("template"),
+        };
+
+        let serve_dir = temp_dir.path().join("serve");
+
+        // Check setup conditions before calling `handle_server`
+        fs::create_dir_all(&serve_dir)?;
+        assert!(
+            serve_dir.exists(),
+            "Expected serve directory to be created"
+        );
+
+        // Now, call `handle_server` and check for specific output or error
+        let result = handle_server(
+            &mut log_file,
+            &DateTime::new(),
+            &paths,
+            &serve_dir,
+        );
+        assert!(
+            result.is_err(),
+            "Expected handle_server to fail without valid setup"
+        );
 
         Ok(())
     }

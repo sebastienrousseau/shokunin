@@ -93,7 +93,6 @@ version_check = "0.9"                   # Ensures that a compatible Rust version
 # Development Dependencies
 # -----------------------------------------------------------------------------
 [dev-dependencies]
-assert_cmd = "2.0"                      # Test command-line applications
 # Dependencies required for testing and development.
 criterion = "0.5"                       # Benchmarking library to test performance
 
