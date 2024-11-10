@@ -313,16 +313,26 @@ fn create_directories(paths: &Paths) -> Result<()> {
     // Ensure each directory exists, with custom error messages for each.
     fs::create_dir_all(&paths.content)
         .with_context(|| format!("Failed to create or access content directory at path: {:?}", &paths.content))?;
-    fs::create_dir_all(&paths.build)
-        .with_context(|| format!("Failed to create or access build directory at path: {:?}", &paths.build))?;
-    fs::create_dir_all(&paths.site)
-        .with_context(|| format!("Failed to create or access site directory at path: {:?}", &paths.site))?;
+    fs::create_dir_all(&paths.build).with_context(|| {
+        format!(
+            "Failed to create or access build directory at path: {:?}",
+            &paths.build
+        )
+    })?;
+    fs::create_dir_all(&paths.site).with_context(|| {
+        format!(
+            "Failed to create or access site directory at path: {:?}",
+            &paths.site
+        )
+    })?;
     fs::create_dir_all(&paths.template)
         .with_context(|| format!("Failed to create or access template directory at path: {:?}", &paths.template))?;
 
     // Path safety check with additional context
-    if !is_safe_path(&paths.content)? || !is_safe_path(&paths.build)?
-        || !is_safe_path(&paths.site)? || !is_safe_path(&paths.template)?
+    if !is_safe_path(&paths.content)?
+        || !is_safe_path(&paths.build)?
+        || !is_safe_path(&paths.site)?
+        || !is_safe_path(&paths.template)?
     {
         anyhow::bail!("One or more paths are unsafe. Ensure paths do not contain '..' and are accessible.");
     }
@@ -406,8 +416,13 @@ fn handle_server(
 /// * Verification checks fail
 fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
     // Check if source path is safe
-    if !is_safe_path(src).with_context(|| format!("Source directory is unsafe or inaccessible: {:?}", src))? {
-        anyhow::bail!("Source directory is unsafe or inaccessible: {:?}", src);
+    if !is_safe_path(src).with_context(|| {
+        format!("Source directory is unsafe or inaccessible: {:?}", src)
+    })? {
+        anyhow::bail!(
+            "Source directory is unsafe or inaccessible: {:?}",
+            src
+        );
     }
     if !src.exists() {
         anyhow::bail!("Source directory does not exist: {:?}", src);
@@ -493,8 +508,14 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
     }
 
     match path.canonicalize() {
-        Ok(canonical) => Ok(!canonical.to_string_lossy().contains("..")),
-        Err(e) => Err(anyhow::anyhow!("Failed to canonicalize path {:?}: {}", path, e)),
+        Ok(canonical) => {
+            Ok(!canonical.to_string_lossy().contains(".."))
+        }
+        Err(e) => Err(anyhow::anyhow!(
+            "Failed to canonicalize path {:?}: {}",
+            path,
+            e
+        )),
     }
 }
 
