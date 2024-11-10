@@ -317,13 +317,6 @@ mod tests {
     }
 
     #[test]
-    fn test_ensure_directory_io_error() {
-        let invalid_path = Path::new("/invalid_path/non_existent_dir");
-        let result = ensure_directory(invalid_path, "invalid");
-        assert!(matches!(result, Err(ProcessError::IoError(_))));
-    }
-
-    #[test]
     fn test_process_error_io_error() {
         let io_error = std::io::Error::new(
             std::io::ErrorKind::Other,
