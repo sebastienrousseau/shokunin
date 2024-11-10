@@ -23,7 +23,7 @@ jobs:
           args: --all-features --no-fail-fast
         env:
           CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
           RUSTDOCFLAGS: '-Cpanic=abort'
 
       - name: Install grcov
@@ -33,10 +33,16 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o lcov.info
+          # Check if -Zprofile flag is supported by the nightly toolchain
+          if cargo rustc -- -Zprofile > /dev/null 2>&1; then
+            grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o lcov.info
+          else
+            echo "-Zprofile flag is not supported in this nightly version."
+            exit 1
+          fi
         env:
           CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
