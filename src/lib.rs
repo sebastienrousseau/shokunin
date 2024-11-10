@@ -70,7 +70,12 @@ use staticdatagen::{
 };
 
 /// Module declarations
-pub mod cmd;
+
+/// Process module for handling site generation
+pub mod process;
+
+/// CLI module for command-line interface
+pub mod cli;
 
 /// Re-exports
 pub use staticdatagen;
@@ -130,11 +135,11 @@ pub fn run() -> Result<()> {
         .context("Failed to create log file")?;
 
     // Display banner and log initialization
-    cmd::cli::print_banner();
+    cli::print_banner();
     log_initialization(&mut log_file, &date)?;
 
     // Parse command-line arguments
-    let matches = cmd::cli::build().get_matches();
+    let matches = cli::build().get_matches();
     log_arguments(&mut log_file, &date)?;
 
     // Extract and validate paths

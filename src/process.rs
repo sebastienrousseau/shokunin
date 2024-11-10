@@ -60,7 +60,7 @@ pub enum ProcessError {
 ///
 /// ```rust,no_run
 /// # use clap::{ArgMatches, Command};
-/// # use ssg::cmd::process::get_argument;
+/// # use ssg::process::get_argument;
 /// let matches = Command::new("test")
 ///     .arg(clap::arg!(--"config" <CONFIG> "Specifies the configuration file"))
 ///     .get_matches_from(vec!["test", "--config", "path/to/config.toml"]);
@@ -96,7 +96,7 @@ pub fn get_argument(
 ///
 /// ```rust,no_run
 /// # use std::path::Path;
-/// # use ssg::cmd::process::ensure_directory;
+/// # use ssg::process::ensure_directory;
 /// let path = Path::new("path/to/output");
 /// ensure_directory(path, "output").expect("Failed to ensure directory exists");
 /// ```

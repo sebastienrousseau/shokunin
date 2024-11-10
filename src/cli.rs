@@ -3,9 +3,7 @@
 
 //! # Command Line Interface Module
 //!
-//! This module provides a secure and robust command-line interface for the Shokunin
-//! Static Site Generator. It handles argument parsing, configuration management,
-//! and validation of user inputs.
+//! This module provides a secure and robust command-line interface for the Shokunin Static Site Generator. It handles argument parsing, configuration management, and validation of user inputs.
 //!
 //! ## Key Features
 //!
@@ -18,8 +16,8 @@
 //!
 //! ## Example Usage
 //! ```rust,no_run
-//! use ssg::cmd::cli::build;
-//! use ssg::cmd::cli::ShokuninConfig;
+//! use ssg::cli::build;
+//! use ssg::cli::ShokuninConfig;
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     // Initialize the CLI with arguments from `build()`
@@ -85,7 +83,7 @@ pub enum CliError {
 /// # Example
 ///
 /// ```rust,no_run
-/// use ssg::cmd::cli::ShokuninConfig;
+/// use ssg::cli::ShokuninConfig;
 /// use std::path::PathBuf;
 ///
 /// let config = ShokuninConfig {
@@ -154,7 +152,7 @@ impl ShokuninConfig {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use ssg::cmd::cli::{build, ShokuninConfig};
+    /// use ssg::cli::{build, ShokuninConfig};
     ///
     /// let matches = build().get_matches();
     /// let config = ShokuninConfig::from_matches(&matches).unwrap();
