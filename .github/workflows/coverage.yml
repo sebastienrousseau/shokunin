@@ -22,8 +22,8 @@ jobs:
         run: cargo tarpaulin --out Lcov --all-features --no-fail-fast
         env:
           CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
-          RUSTDOCFLAGS: '-Cpanic=abort'
+          RUSTFLAGS: '-Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off'
+          RUSTDOCFLAGS: ''
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
