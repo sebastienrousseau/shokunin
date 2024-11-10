@@ -590,3 +590,115 @@ fn list_directory_contents(dir: &Path) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    // Unit tests for lib.rs
+    use super::*;
+    use anyhow::Result;
+    use std::fs::{self, File};
+    use std::path::PathBuf;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_create_log_file_success() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let log_file_path = temp_dir.path().join("test.log");
+
+        let log_file =
+            create_log_file(log_file_path.to_str().unwrap())?;
+        assert!(log_file.metadata()?.is_file());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_log_file_failure() {
+        let invalid_path = "/invalid_path/test.log";
+        let result = create_log_file(invalid_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_log_initialization() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let log_file_path = temp_dir.path().join("init_log.log");
+        let mut log_file = File::create(&log_file_path)?;
+
+        let date = DateTime::new();
+        log_initialization(&mut log_file, &date)?;
+
+        let log_content = fs::read_to_string(log_file_path)?;
+        assert!(log_content.contains("process"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_log_arguments() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let log_file_path = temp_dir.path().join("args_log.log");
+        let mut log_file = File::create(&log_file_path)?;
+
+        let date = DateTime::new();
+        log_arguments(&mut log_file, &date)?;
+
+        let log_content = fs::read_to_string(log_file_path)?;
+        assert!(log_content.contains("process"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_directories_success() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let paths = Paths {
+            site: temp_dir.path().join("site"),
+            content: temp_dir.path().join("content"),
+            build: temp_dir.path().join("build"),
+            template: temp_dir.path().join("template"),
+        };
+
+        create_directories(&paths)?;
+        assert!(paths.site.exists());
+        assert!(paths.content.exists());
+        assert!(paths.build.exists());
+        assert!(paths.template.exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_directories_failure() {
+        let invalid_paths = Paths {
+            site: PathBuf::from("/invalid/site"),
+            content: PathBuf::from("/invalid/content"),
+            build: PathBuf::from("/invalid/build"),
+            template: PathBuf::from("/invalid/template"),
+        };
+
+        let result = create_directories(&invalid_paths);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_copy_dir_all() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        let src_file = src_dir.path().join("test_file.txt");
+        File::create(&src_file)?;
+
+        let result = copy_dir_all(src_dir.path(), dst_dir.path());
+        assert!(result.is_ok());
+        assert!(dst_dir.path().join("test_file.txt").exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_success() {
+        // Mock data for test
+        // Additional setup and teardown logic needed to simulate environment for `run()`
+    }
+}
