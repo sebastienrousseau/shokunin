@@ -1,16 +1,6 @@
-[workspace]
-members = ["ssg"]
-resolver = "2"
-
-[workspace.package]
+[package]
 authors = ["Shokunin Contributors"]
 build = "build.rs"
-categories = [
-    "command-line-utilities",
-    "parsing",
-    "template-engine",
-    "web-programming",
-]
 description = """
 A Content-First Open Source Static Site Generator (SSG) written in Rust.
 """
@@ -20,11 +10,19 @@ exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://shokunin.one"
 keywords = ["cli", "generator", "site", "ssg", "static"]
 license = "MIT OR Apache-2.0"
-# name = "ssg"
+name = "ssg"
 readme = "README.md"
 repository = "https://github.com/sebastienrousseau/shokunin"
 rust-version = "1.56.0"
 version = "0.0.30"
+
+categories = [
+    "command-line-utilities",
+    "parsing",
+    "template-engine",
+    "web-programming",
+]
+
 include = [
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
@@ -39,3 +37,59 @@ include = [
     "/template/**",
     "/tests/**",
 ]
+
+[dependencies]
+anyhow = "1.0.93"
+clap = { version = "4.5.20", features = ["derive", "cargo", "env"] }
+comrak = "0.29.0"
+dtt = "0.0.8"
+env_logger = "0.11.5"
+html-generator = "0.0.1"
+http-handle = "0.0.2"
+langweave = "0.0.1"
+lazy_static = "1.5"
+log = { version = "0.4.22", features = ["std"] }
+metadata-gen = "0.0.1"
+minify-html = "0.15.0"
+nucleusflow = "0.0.1"
+path-clean = "1.0.1"
+pulldown-cmark = "0.12.2"
+quick-xml = "0.37.0"
+rayon = "1.10.0"
+regex = "1.11.1"
+reqwest = { version = "0.12.9", features = ["blocking", "json"] }
+rlg = "0.0.6"
+rss-gen = "0.0.3"
+serde = { version = "1.0.214", features = ["derive"] }
+serde_json = "1.0.132"
+sitemap-gen = "0.0.1"
+staticdatagen = "0.0.1"
+staticweaver = "0.0.1"
+tempfile = "3.14.0"
+thiserror = "2.0.2"
+toml = "0.8.19"
+url = "2.5.3"
+uuid = { version = "1.11.0", features = ["v4"] }
+vrd = "0.0.8"
+yaml-rust2 = "0.9.0"
+
+# Platform-specific dependency for Unix with OpenSSL
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
+
+[build-dependencies]
+# Dependency for checking Rust version in build scripts.
+version_check = "0.9"
+
+[dev-dependencies]
+# Development dependencies for testing and benchmarking.
+assert_cmd = "2.0"
+criterion = "0.5"
+
+[lib]
+name = "ssg"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ssg"
+path = "src/main.rs"

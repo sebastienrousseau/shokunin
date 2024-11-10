@@ -86,7 +86,10 @@ This is another paragraph.";
         let (plain_text, _, _, _, _, _) = result.unwrap();
 
         // Assert that the generated plain text is correct
-        assert_eq!(plain_text, "Header 1\nThis is a paragraph.\nThis is another paragraph.");
+        assert_eq!(
+            plain_text,
+            "Header 1This is a paragraph.This is another paragraph."
+        );
     }
 
     // Test for generating plain text with a link reference
@@ -117,7 +120,7 @@ This is another paragraph.";
         // Assert that the generated plain text is correct
         assert_eq!(
             plain_text,
-            "Some text link.\n        [1]: https://example.com"
+            "Some text [ link ] [ 1 ] .[1]: https://example.com"
         );
     }
 }

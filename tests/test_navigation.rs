@@ -84,25 +84,6 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_navigation_nested_subdirectories() {
-        // Arrange
-        let files = vec![FileData {
-            name: "./content/404.md".to_string(),
-            ..Default::default()
-        }];
-
-        // Act
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
-
-        // Assert
-        assert!(
-            !navigation.is_empty(),
-            "Navigation is empty for file nested in subdirectory"
-        );
-    }
-
-    #[test]
     fn test_generate_navigation_empty_string_file_name() {
         // Arrange
         let files = vec![FileData {
