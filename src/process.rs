@@ -121,6 +121,37 @@ pub fn ensure_directory(
     Ok(())
 }
 
+/// Compiles the static site by generating the necessary files from the provided paths.
+///
+/// # Parameters
+///
+/// * `build_path`: The path where the compiled site will be built.
+/// * `content_path`: The path to the directory containing the content files.
+/// * `site_path`: The path to the directory where the site project will be created.
+/// * `template_path`: The path to the directory containing the template files.
+///
+/// # Return
+///
+/// * `Result<(), String>`: Returns `Ok(())` if the compilation is successful, or an error message as a string if an error occurs.
+///
+/// # Errors
+///
+/// * If any error occurs during the compilation process, an error message will be returned as a string.
+fn internal_compile(
+    build_path: &Path,
+    content_path: &Path,
+    site_path: &Path,
+    template_path: &Path,
+) -> Result<(), String> {
+    staticdatagen::compiler::service::compile(
+        build_path,
+        content_path,
+        site_path,
+        template_path,
+    )
+    .map_err(|e| e.to_string())
+}
+
 /// Processes command-line arguments and initiates the static site generation.
 ///
 /// This function performs the following steps:
@@ -162,13 +193,13 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     ensure_directory(template_path, "template")?;
 
     // Compile the site
-    staticdatagen::compiler::service::compile(
+    internal_compile(
         build_path,
         content_path,
         site_path,
         template_path,
     )
-    .map_err(|e| ProcessError::CompilationError(e.to_string()))?;
+    .map_err(ProcessError::CompilationError)?;
 
     Ok(())
 }
@@ -179,6 +210,7 @@ mod tests {
     use clap::{arg, Command};
     use tempfile::tempdir;
 
+    /// Helper function to create a test `ArgMatches` with all required arguments.
     fn create_test_command() -> ArgMatches {
         Command::new("test")
             .arg(arg!(--"content" <CONTENT> "Content directory"))
@@ -225,46 +257,34 @@ mod tests {
     }
 
     #[test]
-    fn test_args_success() -> Result<(), Box<dyn std::error::Error>> {
-        // Create a temporary directory for test isolation
-        let temp_dir = tempdir()?;
-        let content_dir = temp_dir.path().join("content");
-        let output_dir = temp_dir.path().join("output");
-        let site_dir = temp_dir.path().join("new_site");
-        let template_dir = temp_dir.path().join("template");
-
-        // Ensure each directory can be created as required by args function logic
-        assert!(
-            ensure_directory(&content_dir, "content").is_ok(),
-            "Failed to ensure 'content' directory"
-        );
-        assert!(
-            ensure_directory(&output_dir, "output").is_ok(),
-            "Failed to ensure 'output' directory"
-        );
-        assert!(
-            ensure_directory(&site_dir, "project").is_ok(),
-            "Failed to ensure 'project' directory"
-        );
-        assert!(
-            ensure_directory(&template_dir, "template").is_ok(),
-            "Failed to ensure 'template' directory"
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_args_missing_argument() {
+    fn test_args_missing_template_argument() {
         let matches = Command::new("test")
             .arg(arg!(--"content" <CONTENT> "Content directory"))
             .arg(arg!(--"output" <OUTPUT> "Output directory"))
-            .get_matches_from(vec!["test", "--content", "content"]);
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                "content",
+                "--output",
+                "output",
+                "--new",
+                "new_site",
+            ]);
         let result = args(&matches);
         assert!(matches!(
             result,
-            Err(ProcessError::MissingArgument(_))
+            Err(ProcessError::MissingArgument(ref arg)) if arg == "template"
         ));
+    }
+
+    #[test]
+    fn test_ensure_directory_already_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        ensure_directory(temp_dir.path(), "existing")?;
+        assert!(temp_dir.path().exists());
+        Ok(())
     }
 
     #[test]
@@ -292,14 +312,6 @@ mod tests {
             error.to_string(),
             "Compilation error: Failed to compile"
         );
-    }
-
-    #[test]
-    fn test_ensure_directory_already_exists() -> Result<()> {
-        let temp_dir = tempdir()?;
-        ensure_directory(temp_dir.path(), "existing")?;
-        assert!(temp_dir.path().exists());
-        Ok(())
     }
 
     #[test]
