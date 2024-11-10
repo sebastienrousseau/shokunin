@@ -9,40 +9,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust nightly
+      - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
-          components: llvm-tools-preview
+          toolchain: stable
           override: true
 
-      - name: Run tests with code coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --no-fail-fast
+      - name: Install Cargo Tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Run tests with coverage
+        run: cargo tarpaulin --out Lcov --all-features --no-fail-fast
         env:
           CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
+          RUSTFLAGS: '-Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
           RUSTDOCFLAGS: '-Cpanic=abort'
-
-      - name: Install grcov
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y grcov
-
-      - name: Generate coverage report
-        run: |
-          # Check if -Zprofile flag is supported by the nightly toolchain
-          if cargo rustc -- -Zprofile > /dev/null 2>&1; then
-            grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o lcov.info
-          else
-            echo "-Zprofile flag is not supported in this nightly version."
-            exit 1
-          fi
-        env:
-          CARGO_INCREMENTAL: '0'
-          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
