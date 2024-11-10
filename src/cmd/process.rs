@@ -307,4 +307,41 @@ mod tests {
             "Compilation error: Failed to compile"
         );
     }
+
+    #[test]
+    fn test_ensure_directory_already_exists() -> Result<()> {
+        let temp_dir = tempdir()?;
+        ensure_directory(temp_dir.path(), "existing")?;
+        assert!(temp_dir.path().exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_directory_io_error() {
+        let invalid_path = Path::new("/invalid_path/non_existent_dir");
+        let result = ensure_directory(invalid_path, "invalid");
+        assert!(matches!(result, Err(ProcessError::IoError(_))));
+    }
+
+    #[test]
+    fn test_process_error_io_error() {
+        let io_error = std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "an I/O error occurred",
+        );
+        let error: ProcessError = io_error.into();
+        assert!(matches!(error, ProcessError::IoError(_)));
+        assert_eq!(error.to_string(), "an I/O error occurred");
+    }
+
+    #[test]
+    fn test_process_error_io_error_format() {
+        let io_error = std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "File not found",
+        );
+        let error: ProcessError = io_error.into();
+        assert!(matches!(error, ProcessError::IoError(_)));
+        assert_eq!(error.to_string(), "File not found");
+    }
 }
