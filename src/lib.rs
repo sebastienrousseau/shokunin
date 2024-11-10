@@ -3,9 +3,7 @@
 
 //! # Shokunin Static Site Generator
 //!
-//! A high-performance, secure static site generator written in Rust that prioritises content delivery.
-//! This library transforms markdown content and templates into static websites whilst providing
-//! development server capabilities.
+//! A high-performance, secure static site generator written in Rust that prioritises content delivery. This library transforms markdown content and templates into static websites whilst providing development server capabilities.
 //!
 //! ## Core Features
 //!
@@ -37,9 +35,7 @@
 //!
 //! ## Error Handling
 //!
-//! The library employs Rust's robust error handling with custom error types and
-//! comprehensive error messages. All operations return `Result` types with
-//! detailed context for debugging.
+//! The library employs Rust's robust error handling with custom error types and comprehensive error messages. All operations return `Result` types with detailed context for debugging.
 //!
 //! ## Security Measures
 //!
@@ -593,7 +589,6 @@ fn list_directory_contents(dir: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    // Unit tests for lib.rs
     use super::*;
     use anyhow::Result;
     use std::fs::{self, File};
@@ -700,5 +695,191 @@ mod tests {
     fn test_run_success() {
         // Mock data for test
         // Additional setup and teardown logic needed to simulate environment for `run()`
+    }
+
+    #[test]
+    fn test_verify_and_copy_files_success() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        let src_file = src_dir.path().join("test_file.txt");
+        File::create(&src_file)?;
+
+        verify_and_copy_files(src_dir.path(), dst_dir.path())?;
+        assert!(dst_dir.path().join("test_file.txt").exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_and_copy_files_failure() {
+        let src_dir = PathBuf::from("/invalid/src");
+        let dst_dir = PathBuf::from("/invalid/dst");
+
+        let result = verify_and_copy_files(&src_dir, &dst_dir);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_handle_server_failure() {
+        let temp_dir = tempdir().unwrap();
+        let log_file_path = temp_dir.path().join("server_log.log");
+        let mut log_file = File::create(&log_file_path).unwrap();
+
+        let paths = Paths {
+            site: PathBuf::from("/invalid/site"),
+            content: PathBuf::from("/invalid/content"),
+            build: PathBuf::from("/invalid/build"),
+            template: PathBuf::from("/invalid/template"),
+        };
+
+        let serve_dir = temp_dir.path().join("serve");
+        let result = handle_server(
+            &mut log_file,
+            &DateTime::new(),
+            &paths,
+            &serve_dir,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_run_with_invalid_paths() {
+        // Mock invalid paths to trigger error handling in `run`
+        let _paths = Paths {
+            site: PathBuf::from("/invalid/site"),
+            content: PathBuf::from("/invalid/content"),
+            build: PathBuf::from("/invalid/build"),
+            template: PathBuf::from("/invalid/template"),
+        };
+
+        let result = run();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_list_directory_contents() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let sub_dir = temp_dir.path().join("subdir");
+        fs::create_dir(&sub_dir)?;
+        let temp_file = sub_dir.join("test_file.txt");
+        File::create(&temp_file)?;
+
+        let result = list_directory_contents(temp_dir.path());
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_safe_path_safe() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let safe_path = temp_dir.path().join("safe_path");
+        fs::create_dir(&safe_path)?;
+
+        assert!(is_safe_path(&safe_path)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_safe_path_unsafe() {
+        let unsafe_path = PathBuf::from("../unsafe_path");
+        let result = is_safe_path(&unsafe_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_directories_partial_failure() {
+        let temp_dir = tempdir().unwrap();
+        let valid_path = temp_dir.path().join("valid_dir");
+        let invalid_path = PathBuf::from("/invalid/path");
+
+        let paths = Paths {
+            site: valid_path,
+            content: invalid_path.clone(),
+            build: temp_dir.path().join("build"),
+            template: temp_dir.path().join("template"),
+        };
+
+        let result = create_directories(&paths);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_copy_dir_all_nested() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        let nested_dir = src_dir.path().join("nested_dir");
+        fs::create_dir(&nested_dir)?;
+
+        let nested_file = nested_dir.join("nested_file.txt");
+        File::create(&nested_file)?;
+
+        copy_dir_all(src_dir.path(), dst_dir.path())?;
+        assert!(dst_dir
+            .path()
+            .join("nested_dir/nested_file.txt")
+            .exists());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_and_copy_files_missing_source() {
+        let src_path = PathBuf::from("/non_existent_dir");
+        let dst_dir = tempdir().unwrap();
+
+        let result = verify_and_copy_files(&src_path, dst_dir.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_handle_server_missing_serve_dir() {
+        let temp_dir = tempdir().unwrap();
+        let log_file_path = temp_dir.path().join("server_log.log");
+        let mut log_file = File::create(&log_file_path).unwrap();
+
+        let paths = Paths {
+            site: temp_dir.path().join("site"),
+            content: temp_dir.path().join("content"),
+            build: temp_dir.path().join("build"),
+            template: temp_dir.path().join("template"),
+        };
+
+        let non_existent_serve_dir =
+            PathBuf::from("/non_existent_serve_dir");
+        let result = handle_server(
+            &mut log_file,
+            &DateTime::new(),
+            &paths,
+            &non_existent_serve_dir,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_log_initialization_write_failure() {
+        // Attempt to create a log file in a read-only directory (use an invalid path)
+        let invalid_path = PathBuf::from("/invalid/log_file.log");
+        let mut log_file =
+            File::create(&invalid_path).unwrap_or_else(|_| {
+                // Mock a File instance, handle permissions here
+                File::open("/dev/null").unwrap()
+            });
+
+        let result =
+            log_initialization(&mut log_file, &DateTime::new());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_collect_files_recursive_empty() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let mut files = Vec::new();
+
+        collect_files_recursive(temp_dir.path(), &mut files)?;
+        assert!(files.is_empty());
+
+        Ok(())
     }
 }
