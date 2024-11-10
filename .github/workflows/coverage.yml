@@ -1,61 +1,45 @@
 name: 📶 Coverage
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-env:
-  CARGO_TERM_COLOR: always
+on: [push]
 
 jobs:
-  coverage:
-    name: Code Coverage
+  lint:
     runs-on: ubuntu-latest
-    env:
-      CARGO_INCREMENTAL: "0"
-      RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-      RUSTDOCFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-
     steps:
-      # Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup Rust nightly
-      - name: Install Rust
+      - name: Install Rust nightly
         uses: actions-rs/toolchain@v1
-        id: toolchain
         with:
           toolchain: nightly
+          components: llvm-tools-preview
           override: true
 
-      # Configure cache for Cargo
-      - name: Cache Cargo registry, index
-        uses: actions/cache@v4
-        id: cache-cargo
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/bin
-            ~/.cargo/git
-          key: linux-${{ steps.toolchain.outputs.rustc_hash }}-rust-cov-${{ hashFiles('**/Cargo.lock') }}
-
-      # Run tests with all features
-      - name: Test (cargo test)
+      - name: Run tests with code coverage
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: "--workspace"
+          args: --all-features --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Cpanic=abort'
 
-      # Install grcov
-      - uses: actions-rs/grcov@v0.1
-        id: coverage
+      - name: Install grcov
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y grcov
 
-      # Upload to Codecov.io
-      - name: Upload to Codecov.io
+      - name: Generate coverage report
+        run: |
+          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o lcov.info
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ steps.coverage.outputs.report }}
+          file: lcov.info
