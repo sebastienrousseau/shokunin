@@ -16,8 +16,8 @@
 //!
 //! ## Example Usage
 //! ```rust,no_run
-//! use ssg::cli::build;
-//! use ssg::cli::ShokuninConfig;
+//! use ssg::cmd::build;
+//! use ssg::cmd::ShokuninConfig;
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     // Initialize the CLI with arguments from `build()`
@@ -83,7 +83,7 @@ pub enum CliError {
 /// # Example
 ///
 /// ```rust,no_run
-/// use ssg::cli::ShokuninConfig;
+/// use ssg::cmd::ShokuninConfig;
 /// use std::path::PathBuf;
 ///
 /// let config = ShokuninConfig {
@@ -152,7 +152,7 @@ impl ShokuninConfig {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use ssg::cli::{build, ShokuninConfig};
+    /// use ssg::cmd::{build, ShokuninConfig};
     ///
     /// let matches = build().get_matches();
     /// let config = ShokuninConfig::from_matches(&matches).unwrap();

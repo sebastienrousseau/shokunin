@@ -78,8 +78,8 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = []                            # No default features enabled
-async = []                              # Placeholder for future asynchronous feature support
+default = ["async", "tokio"]                     # No default features enabled
+async = ["tokio"]          # This enables tokio when the async feature is enabled
 cli = []                                # Enable command-line interface support
 
 # -----------------------------------------------------------------------------
@@ -113,8 +113,9 @@ serde = { version = "1.0.214", features = ["derive"] }
 serde_json = "1.0.132"
 staticdatagen = "0.0.1"
 tempfile = "3.14.0"
-thiserror = "2.0.2"
+thiserror = "2.0.3"
 toml = "0.8.19"
+tokio = { version = "1.41.1", features = ["full"], optional = true }
 url = "2.5.3"
 uuid = { version = "1.11.0", features = ["v4"] }
 

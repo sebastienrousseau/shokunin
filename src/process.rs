@@ -14,12 +14,17 @@ pub enum ProcessError {
     /// # Fields
     /// - `dir_type`: The type of directory (e.g., "content", "output").
     /// - `path`: The file path where the directory creation failed.
-    #[error("Failed to create {dir_type} directory at '{path}'")]
+    #[error(
+        "Failed to create {dir_type} directory at '{path}': {source}"
+    )]
     DirectoryCreation {
         /// Type of the directory, such as "content" or "output".
         dir_type: String,
         /// Path where the directory creation failed.
         path: String,
+        #[source]
+        /// The underlying IO error that occurred.
+        source: std::io::Error,
     },
 
     /// Triggered when a required command-line argument is missing.
@@ -111,6 +116,7 @@ pub fn ensure_directory(
                 ProcessError::DirectoryCreation {
                     dir_type: dir_type.to_string(),
                     path: path.display().to_string(),
+                    source: e,
                 }
             } else {
                 ProcessError::IoError(e)
@@ -299,10 +305,11 @@ mod tests {
         let error = ProcessError::DirectoryCreation {
             dir_type: "content".to_string(),
             path: "/invalid/path".to_string(),
+            source: std::io::Error::from_raw_os_error(13),
         };
         assert_eq!(
             error.to_string(),
-            "Failed to create content directory at '/invalid/path'"
+            "Failed to create content directory at '/invalid/path': Permission denied (os error 13)"
         );
 
         let error = ProcessError::CompilationError(
