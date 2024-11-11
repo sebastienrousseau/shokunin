@@ -836,22 +836,6 @@ pub fn collect_files_recursive(
 /// * `Ok(())` - If the copy operation succeeds
 /// * `Err` - If any part of the copy operation fails
 ///
-/// # Examples
-///
-/// ```rust
-/// use std::path::Path;
-/// use ssg::copy_dir_all;
-///
-/// fn main() -> anyhow::Result<()> {
-///     let src = Path::new("mysite");
-///     let dst = Path::new("public");
-///
-///     copy_dir_all(src, dst)?;
-///     println!("Directory copied successfully");
-///     Ok(())
-/// }
-/// ```
-///
 /// # Performance
 ///
 /// Uses rayon for parallel processing of files, significantly improving
