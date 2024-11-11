@@ -432,14 +432,32 @@ pub fn verify_file_safety(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Creates and initialises the log file system.
+/// Creates and initialises a log file for the static site generator.
 ///
-/// Establishes a new log file at the specified path with appropriate
-/// permissions and write capabilities.
+/// Establishes a new log file at the specified path with appropriate permissions
+/// and write capabilities. The log file is used to track the generation process
+/// and any errors that occur.
 ///
 /// # Arguments
 ///
 /// * `file_path` - The desired location for the log file
+///
+/// # Returns
+///
+/// * `Ok(File)` - A file handle for the created log file
+/// * `Err` - If the file cannot be created or permissions are insufficient
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::create_log_file;
+///
+/// fn main() -> anyhow::Result<()> {
+///     let log_file = create_log_file("./site_generation.log")?;
+///     println!("Log file created successfully");
+///     Ok(())
+/// }
+/// ```
 ///
 /// # Errors
 ///
@@ -447,27 +465,42 @@ pub fn verify_file_safety(path: &Path) -> Result<()> {
 /// * The specified path is invalid
 /// * File creation permissions are insufficient
 /// * The parent directory is not writable
-fn create_log_file(file_path: &str) -> Result<File> {
+pub fn create_log_file(file_path: &str) -> Result<File> {
     File::create(file_path).context("Failed to create log file")
 }
 
 /// Records system initialisation in the logging system.
 ///
 /// Creates a detailed log entry capturing the system's startup state,
-/// configuration, and initial conditions.
+/// including configuration and initial conditions. Uses the Common Log Format (CLF)
+/// for consistent logging.
 ///
 /// # Arguments
 ///
 /// * `log_file` - Active file handle for writing log entries
 /// * `date` - Current date and time for log timestamps
 ///
-/// # Errors
+/// # Returns
 ///
-/// Returns an error if:
-/// * Writing to the log file fails
-/// * Log message translation fails
-/// * File system errors occur
-fn log_initialization(
+/// * `Ok(())` - If the log entry is written successfully
+/// * `Err` - If writing fails or translation errors occur
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::{create_log_file, log_initialization};
+/// use dtt::datetime::DateTime;
+///
+/// fn main() -> anyhow::Result<()> {
+///     let mut log_file = create_log_file("./site.log")?;
+///     let date = DateTime::new();
+///
+///     log_initialization(&mut log_file, &date)?;
+///     println!("System initialisation logged");
+///     Ok(())
+/// }
+/// ```
+pub fn log_initialization(
     log_file: &mut File,
     date: &DateTime,
 ) -> Result<()> {
@@ -483,23 +516,40 @@ fn log_initialization(
         .context("Failed to write banner log")
 }
 
-/// Logs processed command-line arguments.
+/// Logs processed command-line arguments for debugging and auditing.
 ///
-/// Records all provided command-line arguments and their values
-/// for debugging and audit purposes.
+/// Records all provided command-line arguments and their values in the log file,
+/// providing a traceable record of site generation parameters.
 ///
 /// # Arguments
 ///
 /// * `log_file` - Active file handle for writing log entries
 /// * `date` - Current date and time for log timestamps
 ///
-/// # Errors
+/// # Returns
 ///
-/// Returns an error if:
-/// * Writing to the log file fails
-/// * Message translation fails
-/// * File system errors occur
-fn log_arguments(log_file: &mut File, date: &DateTime) -> Result<()> {
+/// * `Ok(())` - If arguments are logged successfully
+/// * `Err` - If writing fails or translation errors occur
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::{create_log_file, log_arguments};
+/// use dtt::datetime::DateTime;
+///
+/// fn main() -> anyhow::Result<()> {
+///     let mut log_file = create_log_file("./site.log")?;
+///     let date = DateTime::new();
+///     
+///     log_arguments(&mut log_file, &date)?;
+///     println!("Arguments logged successfully");
+///     Ok(())
+/// }
+/// ```
+pub fn log_arguments(
+    log_file: &mut File,
+    date: &DateTime,
+) -> Result<()> {
     let args_log = macro_log!(
         &generate_unique_string(),
         &date.to_string(),
@@ -559,12 +609,47 @@ fn extract_paths(matches: &clap::ArgMatches) -> Result<Paths> {
     })
 }
 
-/// Ensures the existence of required directories and checks if paths are safe.
+/// Creates and verifies required directories for site generation.
 ///
-/// # Errors
+/// Ensures all necessary directories exist and are safe to use, creating
+/// them if necessary. Also performs security checks on each directory.
 ///
-/// Returns a user-friendly error if any of the required directories are missing or inaccessible.
-fn create_directories(paths: &Paths) -> Result<()> {
+/// # Arguments
+///
+/// * `paths` - Reference to a Paths struct containing required directory paths
+///
+/// # Returns
+///
+/// * `Ok(())` - If all directories are created/verified successfully
+/// * `Err` - If any directory operation fails
+///
+/// # Examples
+///
+/// ```rust
+/// use std::path::PathBuf;
+/// use ssg::{Paths, create_directories};
+///
+/// fn main() -> anyhow::Result<()> {
+///     let paths = Paths {
+///         site: PathBuf::from("public"),
+///         content: PathBuf::from("content"),
+///         build: PathBuf::from("build"),
+///         template: PathBuf::from("templates"),
+///     };
+///
+///     create_directories(&paths)?;
+///     println!("All directories ready");
+///     Ok(())
+/// }
+/// ```
+///
+/// # Security
+///
+/// Performs the following security checks:
+/// * Path traversal prevention
+/// * Permission validation
+/// * Safe path verification
+pub fn create_directories(paths: &Paths) -> Result<()> {
     // Ensure each directory exists, with custom error messages for each.
     fs::create_dir_all(&paths.content)
         .with_context(|| format!("Failed to create or access content directory at path: {:?}", &paths.content))?;
@@ -600,8 +685,8 @@ fn create_directories(paths: &Paths) -> Result<()> {
 
 /// Configures and launches the development server.
 ///
-/// Sets up a local server for testing and previewing the generated
-/// site, including file copying and server configuration.
+/// Sets up a local server for testing and previewing the generated site.
+/// Handles file copying and server configuration for local development.
 ///
 /// # Arguments
 ///
@@ -610,14 +695,40 @@ fn create_directories(paths: &Paths) -> Result<()> {
 /// * `paths` - All required directory paths
 /// * `serve_dir` - Directory to serve content from
 ///
-/// # Errors
+/// # Returns
 ///
-/// Returns an error if:
-/// * Server configuration fails
-/// * Directory setup fails
-/// * File copying encounters errors
-/// * Server fails to start
-fn handle_server(
+/// * `Ok(())` - If server starts successfully
+/// * `Err` - If server configuration or startup fails
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use std::path::PathBuf;
+/// use ssg::{Paths, handle_server, create_log_file};
+/// use dtt::datetime::DateTime;
+///
+/// fn main() -> anyhow::Result<()> {
+///     let mut log_file = create_log_file("./server.log")?;
+///     let date = DateTime::new();
+///     let paths = Paths {
+///         site: PathBuf::from("public"),
+///         content: PathBuf::from("content"),
+///         build: PathBuf::from("build"),
+///         template: PathBuf::from("templates"),
+///     };
+///     let serve_dir = PathBuf::from("serve");
+///
+///     handle_server(&mut log_file, &date, &paths, &serve_dir)?;
+///     Ok(())
+/// }
+/// ```
+///
+/// # Server Configuration
+///
+/// * Default port: 8000
+/// * Host: 127.0.0.1 (localhost)
+/// * Serves static files from the specified directory
+pub fn handle_server(
     log_file: &mut File,
     date: &DateTime,
     paths: &Paths,
@@ -652,37 +763,47 @@ fn handle_server(
     Ok(())
 }
 
-/// Recursively collects all files within a given directory.
+/// Recursively collects all file paths within a directory.
 ///
-/// # Parameters
+/// Traverses a directory tree and compiles a list of all file paths found,
+/// excluding directories themselves.
 ///
-/// * `dir`: A reference to the directory to search for files.
-/// * `files`: A mutable vector to store the collected file paths.
+/// # Arguments
+///
+/// * `dir` - Reference to the directory to search
+/// * `files` - Mutable vector to store found file paths
 ///
 /// # Returns
 ///
-/// * `Result<()>`: Returns an error if any file system operations fail.
+/// * `Ok(())` - If the collection process succeeds
+/// * `Err` - If any file system operation fails
 ///
-/// # Example
+/// # Examples
 ///
 /// ```rust
+/// use std::path::{Path, PathBuf};
 /// use ssg::collect_files_recursive;
-/// use std::path::Path;
-/// use std::fs;
 ///
-/// fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// fn main() -> anyhow::Result<()> {
 ///     let mut files = Vec::new();
 ///     let dir_path = Path::new("content");
 ///
 ///     collect_files_recursive(dir_path, &mut files)?;
 ///
 ///     for file in files {
-///         println!("{}", file.display());
+///         println!("Found file: {}", file.display());
 ///     }
 ///
 ///     Ok(())
 /// }
 /// ```
+///
+/// # Note
+///
+/// This function:
+/// * Only collects file paths, not directory paths
+/// * Follows symbolic links (use with caution)
+/// * Maintains original path structure
 pub fn collect_files_recursive(
     dir: &Path,
     files: &mut Vec<PathBuf>,
@@ -700,31 +821,53 @@ pub fn collect_files_recursive(
     Ok(())
 }
 
-/// Performs recursive directory copying.
+/// Recursively copies a directory whilst maintaining structure and attributes.
 ///
-/// Copies entire directory structures whilst preserving
-/// file attributes and handling nested directories.
+/// Performs a deep copy of a directory tree, preserving file attributes and
+/// handling nested directories. Uses parallel processing for improved performance.
 ///
 /// # Arguments
 ///
 /// * `src` - Source directory path
 /// * `dst` - Destination directory path
 ///
-/// # Errors
+/// # Returns
 ///
-/// Returns an error if:
-/// * Directory creation fails
-/// * File copying fails
-/// * Permission issues occur
-/// * Resource limitations are reached
-fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+/// * `Ok(())` - If the copy operation succeeds
+/// * `Err` - If any part of the copy operation fails
+///
+/// # Examples
+///
+/// ```rust
+/// use std::path::Path;
+/// use ssg::copy_dir_all;
+///
+/// fn main() -> anyhow::Result<()> {
+///     let src = Path::new("mysite");
+///     let dst = Path::new("public");
+///
+///     copy_dir_all(src, dst)?;
+///     println!("Directory copied successfully");
+///     Ok(())
+/// }
+/// ```
+///
+/// # Performance
+///
+/// Uses rayon for parallel processing of files, significantly improving
+/// performance for directories with many files.
+///
+/// # Safety
+///
+/// * Verifies file safety before copying
+/// * Maintains original file permissions
+/// * Handles circular references
+pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
     fs::create_dir_all(dst)?;
 
-    // First read all entries
     let entries: Vec<_> =
         fs::read_dir(src)?.collect::<std::io::Result<Vec<_>>>()?;
 
-    // Now process them in parallel
     entries
         .into_par_iter()
         .try_for_each(|entry| -> Result<()> {
@@ -734,7 +877,6 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
             if src_path.is_dir() {
                 copy_dir_all(&src_path, &dst_path)?;
             } else {
-                // Verify file safety before copying
                 verify_file_safety(&src_path)?;
                 _ = fs::copy(&src_path, &dst_path)?;
             }
