@@ -8,7 +8,7 @@ use std::{
     path::Path,
 };
 
-use ssg::models::data::{FileData, PageData, TagsData};
+use staticdatagen::models::data::{FileData, PageData, TagsData};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
 pub fn generate_tags(
@@ -50,7 +50,8 @@ pub fn generate_tags(
             ];
             for key in &metadata_keys {
                 if let Some(value) = metadata.get(*key) {
-                    tags_data.insert((*key).to_string(), value.clone());
+                    let _ = tags_data
+                        .insert((*key).to_string(), value.clone());
                 }
             }
 
@@ -138,7 +139,7 @@ pub fn write_tags_html_to_file(
     // Read the existing HTML content from the file
     let mut file = fs::File::open(&file_path)?;
     let mut base_html = String::new();
-    file.read_to_string(&mut base_html)?;
+    let _ = file.read_to_string(&mut base_html)?;
 
     // Replace [[content]] with the generated HTML content
     base_html = base_html.replace("[[content]]", html_content);
@@ -181,8 +182,10 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        metadata.insert("tags".to_string(), "tag1, tag2".to_string());
-        metadata.insert("title".to_string(), "Test Page".to_string());
+        let _ = metadata
+            .insert("tags".to_string(), "tag1, tag2".to_string());
+        let _ = metadata
+            .insert("title".to_string(), "Test Page".to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -215,8 +218,9 @@ mod tests {
     #[test]
     fn test_create_tags_data_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("date".to_string(), "2021-09-04".to_string());
-        metadata.insert(
+        let _ = metadata
+            .insert("date".to_string(), "2021-09-04".to_string());
+        let _ = metadata.insert(
             "description".to_string(),
             "A sample description".to_string(),
         );
@@ -233,7 +237,7 @@ mod tests {
     #[test]
     fn test_generate_tags_html_with_data() {
         let mut global_tags_data = HashMap::new();
-        global_tags_data.insert(
+        let _ = global_tags_data.insert(
             "tag1".to_string(),
             vec![PageData {
                 date: "2022-09-01".to_string(),
@@ -272,7 +276,7 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        metadata.insert("tags".to_string(), "".to_string());
+        let _ = metadata.insert("tags".to_string(), "".to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -287,25 +291,26 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        metadata.insert("tags".to_string(), "tag1,tag2".to_string());
+        let _ = metadata
+            .insert("tags".to_string(), "tag1,tag2".to_string());
         // Insert very long values for metadata
-        metadata.insert(
+        let _ = metadata.insert(
             "title".to_string(),
             "a".repeat(1000), /* very long value */
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "date".to_string(),
             "a".repeat(1000), /* very long value */
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "description".to_string(),
             "a".repeat(1000), /* very long value */
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "permalink".to_string(),
             "a".repeat(1000), /* very long value */
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "keywords".to_string(),
             "a".repeat(1000), /* very long value */
         );
@@ -329,7 +334,8 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        metadata.insert("tags".to_string(), special_tag.to_string());
+        let _ = metadata
+            .insert("tags".to_string(), special_tag.to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -349,7 +355,7 @@ mod tests {
             ..Default::default()
         };
         // Join tags with commas to form a metadata string
-        metadata.insert("tags".to_string(), tags.join(", "));
+        let _ = metadata.insert("tags".to_string(), tags.join(", "));
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 

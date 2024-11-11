@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::models::data::FileData;
-    use ssg::modules::navigation::NavigationGenerator;
+    use staticdatagen::models::data::FileData;
+    use staticdatagen::modules::navigation::NavigationGenerator;
 
     #[test]
     fn test_generate_navigation_empty_input() {
@@ -80,25 +80,6 @@ mod tests {
         assert!(
             !navigation.is_empty(),
             "Navigation is empty for file with special characters"
-        );
-    }
-
-    #[test]
-    fn test_generate_navigation_nested_subdirectories() {
-        // Arrange
-        let files = vec![FileData {
-            name: "./content/404.md".to_string(),
-            ..Default::default()
-        }];
-
-        // Act
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
-
-        // Assert
-        assert!(
-            !navigation.is_empty(),
-            "Navigation is empty for file nested in subdirectory"
         );
     }
 

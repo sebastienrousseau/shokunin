@@ -5,7 +5,7 @@
 mod tests {
     // Import necessary dependencies
     use serde_json::{json, Value};
-    use ssg::{
+    use staticdatagen::{
         models::data::{CnameData, ManifestData, TxtData},
         modules::json::{cname, manifest, txt},
     };

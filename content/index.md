@@ -45,7 +45,6 @@ title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title 
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
-
 # News - The News SiteMap front matter (YAML).
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
@@ -61,7 +60,7 @@ news_title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The t
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.29)"
+generator: "Shokunin SSG (version 0.0.30)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -72,7 +71,7 @@ managing_editor: jane.doe@kaishi.one (Jane Doe)
 pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
-webmaster: jane.doe@kaishi.one
+webmaster: jane.doe@kaishi.one (Jane Doe)
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait" ## The Apple mobile web app orientations of the page.
@@ -115,6 +114,17 @@ site_last_updated: "2023-07-05" ## The last updated of the site.
 site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The standards of the site.
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
 site_software: "Shokunin, Rust" ## The software of the site.
+
+# Security - The Security front matter (YAML).
+security_contact: "mailto:jane.doe@kaishi.one" ## The contact of the page.
+security_expires: "Tue, 20 Feb 2024 15:15:15 GMT" ## The expires of the page.
+# Optional fields:
+security_acknowledgments: "Thanks to the Rust team for their amazing work on Shokunin." ## The acknowledgments of the page.
+security_languages: "en" ## The preferred languages of the page.
+security_canonical: "https://kaishi.one" ## The canonical of the page.
+security_policy: "https://kaishi.one/policy" ## The policy of the page.
+security_hiring: "https://kaishi.one/hiring" ## The hiring of the page.
+security_encryption: "https://kaishi.one/encryption" ## The encryption of the page.
 
 ---
 

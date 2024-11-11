@@ -3,9 +3,11 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::utilities::uuid::generate_unique_string;
-    use std::sync::{Arc, Mutex};
-    use std::thread;
+    use staticdatagen::utilities::uuid::generate_unique_string;
+    use std::{
+        sync::{Arc, Mutex},
+        thread,
+    };
     use uuid::Uuid;
 
     /// Tests the length of the generated unique string.

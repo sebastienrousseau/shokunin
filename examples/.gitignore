@@ -2,14 +2,12 @@
 *.profraw
 *.log
 /.vscode/
-/backup_dir/
 /docs/
 /examples/public/
 /mysite/
 /output/
 /pdfs/
 /public/
-/serve/
 /target/
 build
 Icon?

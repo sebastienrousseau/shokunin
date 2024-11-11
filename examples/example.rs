@@ -15,11 +15,12 @@
 //! function to generate the website.
 
 // Import the required libraries and modules.
-use ssg::compiler::service::compile;
-use ssg::server::serve::start;
+use anyhow::Result;
+use http_handle::Server;
+use staticdatagen::compiler::service::compile;
 use std::path::Path;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     // Define the paths to the build, site, source and template directories.
 
     // The build directory.
@@ -39,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The template directory.
     // This is where the HTML template files are located.
     // These templates are used to structure the content from the Markdown files.
-    let template_path = Path::new("template");
+    let template_path = Path::new("templates");
 
     // Call the compile function to generate the website.
     // The function takes the paths defined above as arguments and will
@@ -47,9 +48,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     compile(build_path, content_path, site_path, template_path)?;
 
     // Serve the generated website locally.
-    let server_addr = "127.0.0.1:3000";
     let example_root: String = site_path.to_str().unwrap().to_string();
-    start(server_addr, &example_root).unwrap();
+
+    // Create a new server with an address and document root
+    let server = Server::new("127.0.0.1:3000", example_root.as_str());
+
+    // Start the server
+    let _ = server.start();
 
     // If everything goes well, return Ok.
     Ok(())

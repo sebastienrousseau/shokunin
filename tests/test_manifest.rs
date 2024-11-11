@@ -1,7 +1,7 @@
 // Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use ssg::{
+use staticdatagen::{
     macro_metadata_option,
     models::data::{IconData, ManifestData},
 };
@@ -44,21 +44,24 @@ pub fn create_manifest_data(
 
 #[cfg(test)]
 mod tests {
-    use ssg::modules::manifest::create_manifest_data;
+    use staticdatagen::modules::manifest::create_manifest_data;
     use std::collections::HashMap;
 
     /// Test case for creating `ManifestData` with valid metadata.
     #[test]
     fn test_create_manifest_data_with_valid_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("name".to_string(), "My Web App".to_string());
-        metadata.insert("short_name".to_string(), "App".to_string());
-        metadata.insert(
+        let _ = metadata
+            .insert("name".to_string(), "My Web App".to_string());
+        let _ = metadata
+            .insert("short_name".to_string(), "App".to_string());
+        let _ = metadata.insert(
             "description".to_string(),
             "A cool web app".to_string(),
         );
-        metadata.insert("icon".to_string(), "app-icon.svg".to_string());
-        metadata
+        let _ = metadata
+            .insert("icon".to_string(), "app-icon.svg".to_string());
+        let _ = metadata
             .insert("theme-color".to_string(), "#00aabb".to_string());
 
         let manifest_data = create_manifest_data(&metadata);
@@ -108,7 +111,7 @@ mod tests {
     #[test]
     fn test_create_manifest_data_with_invalid_metadata_types() {
         let mut metadata = HashMap::new();
-        metadata.insert("name".to_string(), "".to_string()); // Invalid type for name
+        let _ = metadata.insert("name".to_string(), "".to_string()); // Invalid type for name
 
         let manifest_data = create_manifest_data(&metadata);
 

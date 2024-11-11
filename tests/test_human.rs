@@ -3,42 +3,43 @@
 
 #[cfg(test)]
 mod tests {
-    use ssg::modules::human::create_human_data;
+    use staticdatagen::modules::human::create_human_data;
     use std::collections::HashMap;
 
     #[test]
     fn test_create_human_data_with_all_fields() {
         let mut metadata = HashMap::new();
-        metadata.insert(
+        let _ = metadata.insert(
             "author_location".to_string(),
             "Location".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "author_twitter".to_string(),
             "@twitter_handle".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "author_website".to_string(),
             "https://example.com".to_string(),
         );
-        metadata.insert("author".to_string(), "John Doe".to_string());
-        metadata.insert(
+        let _ = metadata
+            .insert("author".to_string(), "John Doe".to_string());
+        let _ = metadata.insert(
             "site_components".to_string(),
             "Components".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "site_last_updated".to_string(),
             "2023-01-01".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "site_software".to_string(),
             "Software".to_string(),
         );
-        metadata.insert(
+        let _ = metadata.insert(
             "site_standards".to_string(),
             "Standards".to_string(),
         );
-        metadata
+        let _ = metadata
             .insert("thanks".to_string(), "Contributors".to_string());
 
         let human_data = create_human_data(&metadata);
