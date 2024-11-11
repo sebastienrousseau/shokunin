@@ -44,7 +44,7 @@ Shokunin is a lightning-fast static site generator (SSG) optimised for search en
 [08]: https://www.rust-lang.org/
 [09]: https://github.com/sebastienrousseau/shokunin
 
-[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/ssg/release.yml?branch=main&style=for-the-badge&logo=github
+[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/release.yml?branch=main&style=for-the-badge&logo=github
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt&logo=codecov
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
