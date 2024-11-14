@@ -102,7 +102,7 @@ criterion = "0.5"                       # Benchmarking library to test performan
 [dependencies]
 # Required dependencies for building and running the project.
 anyhow = "1.0.93"
-clap = { version = "4.5.20", features = ["derive", "cargo", "env"] }
+clap = { version = "4.5.21", features = ["derive", "cargo", "env"] }
 dtt = "0.0.8"
 http-handle = "0.0.2"
 langweave = "0.0.1"
