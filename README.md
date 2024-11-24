@@ -65,7 +65,7 @@ Add Shokunin to your Rust project:
 ```toml
 # Cargo.toml
 [dependencies]
-shokunin = "0.0.30"
+shokunin = "0.0.31"
 ```
 
 Basic implementation:
