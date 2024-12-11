@@ -115,7 +115,7 @@ staticdatagen = "0.0.1"
 tempfile = "3.14.0"
 thiserror = "2.0.6"
 toml = "0.8.19"
-tokio = { version = "1.41.1", features = ["full"], optional = true }
+tokio = { version = "1.42.0", features = ["full"], optional = true }
 url = "2.5.4"
 uuid = { version = "1.11.0", features = ["v4"] }
 
