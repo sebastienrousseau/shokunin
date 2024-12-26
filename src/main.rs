@@ -156,10 +156,14 @@ mod tests {
         env::set_var("LANGUAGE", "en");
 
         let result = mock_run_ok();
-        let translate_result = mock_translate_success("en", "main_logger_msg");
+        let translate_result =
+            mock_translate_success("en", "main_logger_msg");
 
         assert_eq!(result, Ok(()));
-        assert_eq!(translate_result, Ok("Success message in en".to_string()));
+        assert_eq!(
+            translate_result,
+            Ok("Success message in en".to_string())
+        );
 
         cleanup_env();
     }
@@ -171,10 +175,14 @@ mod tests {
         env::set_var("LANGUAGE", "en");
 
         let result = mock_run_ok();
-        let translate_result = mock_translate_failure("en", "main_logger_msg");
+        let translate_result =
+            mock_translate_failure("en", "main_logger_msg");
 
         assert_eq!(result, Ok(()));
-        assert_eq!(translate_result, Err("Translation error".to_string()));
+        assert_eq!(
+            translate_result,
+            Err("Translation error".to_string())
+        );
 
         cleanup_env();
     }
@@ -195,7 +203,8 @@ mod tests {
         initialize();
         cleanup_env();
 
-        let lang = env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
+        let lang =
+            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
         assert_eq!(lang, "en");
 
         cleanup_env();
@@ -228,10 +237,12 @@ mod tests {
         cleanup_env();
         let rt = Runtime::new().unwrap();
 
-        let futures: Vec<_> = (0..3).map(|i| async move {
-            let lang = format!("lang{}", i);
-            mock_translate_success(&lang, "main_logger_msg")
-        }).collect();
+        let futures: Vec<_> = (0..3)
+            .map(|i| async move {
+                let lang = format!("lang{}", i);
+                mock_translate_success(&lang, "main_logger_msg")
+            })
+            .collect();
 
         let results = rt.block_on(async {
             let mut results = vec![];
@@ -243,7 +254,10 @@ mod tests {
 
         for (i, result) in results.iter().enumerate() {
             assert!(result.is_ok());
-            assert_eq!(result.as_ref().unwrap(), &format!("Success message in lang{}", i));
+            assert_eq!(
+                result.as_ref().unwrap(),
+                &format!("Success message in lang{}", i)
+            );
         }
 
         cleanup_env();
@@ -263,7 +277,10 @@ mod tests {
             });
 
             assert!(result.is_ok());
-            assert_eq!(result.unwrap(), format!("Success message in {}", lang));
+            assert_eq!(
+                result.unwrap(),
+                format!("Success message in {}", lang)
+            );
         }
 
         cleanup_env();
@@ -284,7 +301,8 @@ mod tests {
         // Test removal and default
         cleanup_env();
         assert!(env::var("LANGUAGE").is_err());
-        let default_lang = env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
+        let default_lang =
+            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
         assert_eq!(default_lang, "en");
 
         cleanup_env();
@@ -297,21 +315,19 @@ mod tests {
 
         // Test empty string
         env::set_var("LANGUAGE", "");
-        assert_eq!(env::var("LANGUAGE").unwrap(), "");
+        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "");
 
         // Test overwriting
         env::set_var("LANGUAGE", "es");
-        assert_eq!(env::var("LANGUAGE").unwrap(), "es");
+        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "es");
         env::set_var("LANGUAGE", "fr");
-        assert_eq!(env::var("LANGUAGE").unwrap(), "fr");
+        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "fr");
 
         // Test removal and fallback
         cleanup_env();
-        assert!(env::var("LANGUAGE").is_err());
-        assert_eq!(
-            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string()),
-            "en"
-        );
+        let default_lang =
+            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
+        assert_eq!(default_lang, "en");
     }
 
     #[test]
@@ -340,104 +356,111 @@ mod tests {
         cleanup_env();
     }
 
-#[test]
-fn test_execute_main_logic_rapid_language_changes() {
-    initialize();
-    cleanup_env();
+    #[test]
+    fn test_execute_main_logic_rapid_language_changes() {
+        initialize();
+        cleanup_env();
 
-    let rt = Runtime::new().unwrap();
-    let languages = vec!["en", "fr", "es", "de", "it"];
+        let rt = Runtime::new().unwrap();
+        let languages = vec!["en", "fr", "es", "de", "it"];
 
-    for lang in languages {
-        env::set_var("LANGUAGE", lang);
-        let result = rt.block_on(async {
-            mock_translate_success(lang, "main_logger_msg")
+        for lang in languages {
+            env::set_var("LANGUAGE", lang);
+            let result = rt.block_on(async {
+                mock_translate_success(lang, "main_logger_msg")
+            });
+            assert!(result.is_ok());
+        }
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_environment_variable_case_sensitivity() {
+        initialize();
+        cleanup_env();
+
+        // Test different cases of the LANGUAGE variable
+        let variants = vec!["LANGUAGE", "language", "Language"];
+
+        for var_name in variants {
+            env::set_var(var_name, "en");
+            let value = env::var("LANGUAGE")
+                .unwrap_or_else(|_| "default".to_string());
+            if var_name == "LANGUAGE" {
+                assert_eq!(value, "en");
+            } else {
+                // On most systems, environment variables are case-sensitive
+                assert_eq!(value, "default");
+            }
+            env::remove_var(var_name);
+        }
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_execute_main_logic_concurrent_with_same_language() {
+        initialize();
+        cleanup_env();
+
+        let rt = Runtime::new().unwrap();
+        env::set_var("LANGUAGE", "en");
+
+        let futures: Vec<_> = (0..10)
+            .map(|_| async {
+                mock_translate_success("en", "main_logger_msg")
+            })
+            .collect();
+
+        let results = rt.block_on(async {
+            let mut results = vec![];
+            for future in futures {
+                results.push(future.await);
+            }
+            results
         });
-        assert!(result.is_ok());
+
+        for result in results {
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap(), "Success message in en");
+        }
+
+        cleanup_env();
     }
 
-    cleanup_env();
-}
+    /// Tests error propagation with multiple failure points
+    #[test]
+    fn test_execute_main_logic_cascading_errors() {
+        initialize();
+        cleanup_env();
 
-#[test]
-fn test_environment_variable_case_sensitivity() {
-    initialize();
-    cleanup_env();
+        let rt = Runtime::new().unwrap();
 
-    // Test different cases of the LANGUAGE variable
-    let variants = vec!["LANGUAGE", "language", "Language"];
+        // Test error from run
+        let run_error = rt.block_on(async {
+            match mock_run_err() {
+                Ok(_) => {
+                    mock_translate_success("en", "main_logger_msg")
+                }
+                Err(e) => Err(e),
+            }
+        });
+        assert!(run_error.is_err());
+        assert_eq!(run_error.unwrap_err(), "Site generation failed");
 
-    for var_name in variants {
-        env::set_var(var_name, "en");
-        let value = env::var("LANGUAGE").unwrap_or_else(|_| "default".to_string());
-        if var_name == "LANGUAGE" {
-            assert_eq!(value, "en");
-        } else {
-            // On most systems, environment variables are case-sensitive
-            assert_eq!(value, "default");
-        }
-        env::remove_var(var_name);
+        // Test error from translation
+        let translate_error = rt.block_on(async {
+            match mock_run_ok() {
+                Ok(_) => {
+                    mock_translate_failure("en", "main_logger_msg")
+                }
+                Err(e) => Err(e),
+            }
+        });
+        assert!(translate_error.is_err());
+        assert_eq!(translate_error.unwrap_err(), "Translation error");
+
+        cleanup_env();
     }
-
-    cleanup_env();
-}
-
-#[test]
-fn test_execute_main_logic_concurrent_with_same_language() {
-    initialize();
-    cleanup_env();
-
-    let rt = Runtime::new().unwrap();
-    env::set_var("LANGUAGE", "en");
-
-    let futures: Vec<_> = (0..10).map(|_| async {
-        mock_translate_success("en", "main_logger_msg")
-    }).collect();
-
-    let results = rt.block_on(async {
-        let mut results = vec![];
-        for future in futures {
-            results.push(future.await);
-        }
-        results
-    });
-
-    for result in results {
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "Success message in en");
-    }
-
-    cleanup_env();
-}
-
-/// Tests error propagation with multiple failure points
-#[test]
-fn test_execute_main_logic_cascading_errors() {
-    initialize();
-    cleanup_env();
-
-    let rt = Runtime::new().unwrap();
-
-    // Test error from run
-    let run_error = rt.block_on(async {
-        match mock_run_err() {
-            Ok(_) => mock_translate_success("en", "main_logger_msg"),
-            Err(e) => Err(e),
-        }
-    });
-    assert!(run_error.is_err());
-    assert_eq!(run_error.unwrap_err(), "Site generation failed");
-
-    // Test error from translation
-    let translate_error = rt.block_on(async {
-        match mock_run_ok() {
-            Ok(_) => mock_translate_failure("en", "main_logger_msg"),
-            Err(e) => Err(e),
-        }
-    });
-    assert!(translate_error.is_err());
-    assert_eq!(translate_error.unwrap_err(), "Translation error");
-
-    cleanup_env();
-}
 }
