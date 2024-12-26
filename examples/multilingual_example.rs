@@ -6,8 +6,8 @@
 //! This example demonstrates how to generate a multilingual static site
 //! with a language selector at the root of the `public` directory.
 
-use anyhow::Result;
 use anyhow::Context;
+use anyhow::Result;
 use http_handle::Server;
 use staticdatagen::compiler::service::compile;
 use std::fs::{self, write};
@@ -46,7 +46,8 @@ fn main() -> Result<()> {
     generate_language_selector(&public_root, &languages)?;
 
     // Serve the root public directory
-    let server = Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
+    let server =
+        Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
     println!("Serving site at http://127.0.0.1:3000");
     let _ = server.start();
 
@@ -54,22 +55,32 @@ fn main() -> Result<()> {
 }
 
 /// Generates a root `index.html` file using the `templates/selector.html` template
-fn generate_language_selector(public_root: &Path, languages: &[&str]) -> Result<()> {
+fn generate_language_selector(
+    public_root: &Path,
+    languages: &[&str],
+) -> Result<()> {
     // Read the selector.html template
     let template_path = Path::new("./examples/templates/selector.html");
-    let template = fs::read_to_string(&template_path).context("Failed to read selector.html template")?;
+    let template = fs::read_to_string(&template_path)
+        .context("Failed to read selector.html template")?;
 
     // Replace the placeholder with the language links
     let mut language_links = String::new();
     for lang in languages {
-        let link = format!("<li><a href=\"./{}/\">{}</a></li>\n", lang, lang.to_uppercase());
+        let link = format!(
+            "<li><a href=\"./{}/\">{}</a></li>\n",
+            lang,
+            lang.to_uppercase()
+        );
         language_links.push_str(&link);
     }
-    let output_html = template.replace("{{LANGUAGE_LINKS}}", &language_links);
+    let output_html =
+        template.replace("{{LANGUAGE_LINKS}}", &language_links);
 
     // Write the generated HTML to `public/index.html`
     let index_path = public_root.join("index.html");
-    write(index_path, output_html).context("Failed to write language selector index.html")?;
+    write(index_path, output_html)
+        .context("Failed to write language selector index.html")?;
     println!("    ✅ Generated language selector at root index.html using template");
 
     Ok(())

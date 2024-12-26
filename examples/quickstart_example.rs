@@ -63,7 +63,8 @@ impl SiteGenerator {
         let content_dir = fs::canonicalize(content_dir)?;
         let output_dir = fs::canonicalize(output_dir)?;
         let template_dir = fs::canonicalize(template_dir)?;
-        let site_dir = fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
+        let site_dir =
+            fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
 
         // Create configuration
         let config = ShokuninConfig::builder()
