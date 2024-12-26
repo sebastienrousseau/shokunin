@@ -19,7 +19,7 @@ fn main() -> Result<()> {
 
     // Root directory for public files
     let public_root = Path::new("./examples/public");
-    fs::create_dir_all(&public_root)?;
+    fs::create_dir_all(public_root)?;
 
     // Generate sites for all languages
     for lang in &languages {
@@ -43,7 +43,7 @@ fn main() -> Result<()> {
     }
 
     // Generate the root `index.html` with language links
-    generate_language_selector(&public_root, &languages)?;
+    generate_language_selector(public_root, &languages)?;
 
     // Serve the root public directory
     let server =
@@ -61,7 +61,7 @@ fn generate_language_selector(
 ) -> Result<()> {
     // Read the selector.html template
     let template_path = Path::new("./examples/templates/selector.html");
-    let template = fs::read_to_string(&template_path)
+    let template = fs::read_to_string(template_path)
         .context("Failed to read selector.html template")?;
 
     // Replace the placeholder with the language links
