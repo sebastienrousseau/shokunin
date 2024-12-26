@@ -25,6 +25,7 @@ use std::path::PathBuf;
 /// ```text
 /// add function      time: [10.123 µs 10.234 µs 10.345 µs]
 /// ```
+#[allow(dead_code)]
 pub(crate) fn bench_file(c: &mut Criterion) {
     let path = PathBuf::from("content");
     let _ = c.bench_function("add function", |b| {
@@ -32,8 +33,8 @@ pub(crate) fn bench_file(c: &mut Criterion) {
             let result = add(&path);
             match result {
                 Ok(data) => {
-                    // Ensure the result is not optimized away
-                    black_box(data);
+                    // Assign the black_box result to ignore it properly
+                    let _ = black_box(data);
                 }
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -45,7 +46,6 @@ pub(crate) fn bench_file(c: &mut Criterion) {
 
 #[cfg(test)]
 mod tests {
-    // Remove unused imports
     #[test]
     fn test_bench_setup() {
         let path = std::path::PathBuf::from("content");
