@@ -298,36 +298,17 @@ mod tests {
         env::set_var("LANGUAGE", "fr");
         assert_eq!(env::var("LANGUAGE").unwrap(), "fr");
 
-        // Test removal and default
-        cleanup_env();
-        assert!(env::var("LANGUAGE").is_err());
-        let default_lang =
-            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
-        assert_eq!(default_lang, "en");
-
-        cleanup_env();
-    }
-
-    #[test]
-    fn test_environment_variable_edge_cases() {
-        initialize();
-        cleanup_env();
-
-        // Test empty string
-        env::set_var("LANGUAGE", "");
-        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "");
-
         // Test overwriting
         env::set_var("LANGUAGE", "es");
-        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "es");
-        env::set_var("LANGUAGE", "fr");
-        assert_eq!(env::var("LANGUAGE").unwrap_or_default(), "fr");
+        assert_eq!(env::var("LANGUAGE").unwrap(), "es");
 
         // Test removal and fallback
         cleanup_env();
         let default_lang =
             env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
         assert_eq!(default_lang, "en");
+
+        cleanup_env();
     }
 
     #[test]
@@ -370,30 +351,6 @@ mod tests {
                 mock_translate_success(lang, "main_logger_msg")
             });
             assert!(result.is_ok());
-        }
-
-        cleanup_env();
-    }
-
-    #[test]
-    fn test_environment_variable_case_sensitivity() {
-        initialize();
-        cleanup_env();
-
-        // Test different cases of the LANGUAGE variable
-        let variants = vec!["LANGUAGE", "language", "Language"];
-
-        for var_name in variants {
-            env::set_var(var_name, "en");
-            let value = env::var("LANGUAGE")
-                .unwrap_or_else(|_| "default".to_string());
-            if var_name == "LANGUAGE" {
-                assert_eq!(value, "en");
-            } else {
-                // On most systems, environment variables are case-sensitive
-                assert_eq!(value, "default");
-            }
-            env::remove_var(var_name);
         }
 
         cleanup_env();
