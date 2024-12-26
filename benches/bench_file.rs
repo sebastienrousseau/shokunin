@@ -27,13 +27,17 @@ use std::path::PathBuf;
 /// ```
 pub(crate) fn bench_file(c: &mut Criterion) {
     let path = PathBuf::from("content");
-    c.bench_function("add function", |b| {
+    let _ = c.bench_function("add function", |b| {
         b.iter(|| {
             let result = add(&path);
-            if let Err(e) = result {
-                eprintln!("Error: {}", e);
-            } else {
-                black_box(result.unwrap());
+            match result {
+                Ok(data) => {
+                    // Ensure the result is not optimized away
+                    black_box(data);
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                }
             }
         })
     });
@@ -41,15 +45,11 @@ pub(crate) fn bench_file(c: &mut Criterion) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use criterion::black_box;
-    use std::path::PathBuf;
-
-    /// Tests the benchmark setup and basic functionality.
+    // Remove unused imports
     #[test]
     fn test_bench_setup() {
-        let path = PathBuf::from("content");
-        let result = add(&path);
+        let path = std::path::PathBuf::from("content");
+        let result = staticdatagen::utilities::file::add(&path);
         assert!(result.is_ok() || result.is_err());
     }
 }
