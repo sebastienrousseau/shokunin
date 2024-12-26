@@ -1,11 +1,11 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <img src="https://kura.pro/shokunin/images/logos/shokunin.svg"
-alt="NucleusFlow logo" height="66" align="right" />
+alt="Shokunin logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
 # `Shokunin Static Site Generator (SSG)`
 
-A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
+A modern, high-performance static site generator crafted in Rust, optimised for content-first development.
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -21,84 +21,67 @@ A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
 
 ## Overview
 
-Shokunin is a lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
+Shokunin is a lightning-fast static site generator (SSG) built with Rust, delivering exceptional performance while maintaining strict accessibility standards. It prioritises content management, search engine optimisation (SEO), and WCAG 2.1 Level AA compliance.
 
-## Features
+## Key Features
 
-- **⚡ Blazing Fast Performance**: Built in Rust for optimal speed and efficiency
-- **📱 SEO Optimised**: Built-in features for maximum search engine visibility
-- **🛠️ Multiple Content Formats**: Support for Markdown, YAML, JSON, and TOML
-- **📊 Analytics Ready**: Built-in support for Google Analytics and Bing Analytics
-- **🔄 Automated Feeds**: Automatic generation of Atom and RSS feeds
-- **🎨 Flexible Theming**: Compatible with custom HTML themes and templates
-- **📱 Development Server**: Built-in Rust server for local testing
+- **⚡ Exceptional Performance**: Leverages Rust's zero-cost abstractions for optimal speed
+- **📱 Advanced SEO**: Built-in optimisations for maximum search engine visibility
+- **🛠️ Versatile Content Support**: Seamlessly handles Markdown, YAML, JSON, and TOML
+- **📊 Analytics Integration**: Native support for Google Analytics and Bing Analytics
+- **🔄 Automated Feed Generation**: Auto-generates Atom and RSS feeds
+- **🎨 Customisable Themes**: Supports bespoke HTML themes and templates
+- **📱 Development Tools**: Integrated Rust server for local development
 
-### Accessibility Compliance
+### Accessibility Features
 
-Shokunin generates sites that meet Web Content Accessibility Guidelines (WCAG) standards:
+Shokunin automatically implements WCAG 2.1 Level AA standards through:
 
-- **WCAG 2.1 Level AA** compliance
-- Accessible Rich Internet Applications (ARIA) support
 - Semantic HTML structure
-- Keyboard navigation support
-- Screen reader compatibility
-- Sufficient color contrast
-- Responsive text scaling
-- Alternative text for images
-- Clear document structure
-- Focus management
-
-These accessibility features are automatically implemented in generated sites through:
-
-- Semantic HTML templates
 - ARIA landmark roles
-- Proper heading hierarchy
-- Skip navigation links
-- Form input labels
-- Keyboard focus indicators
-- Color contrast validation
+- Keyboard navigation support
+- Screen reader optimisation
+- Colour contrast compliance
+- Responsive text scaling
+- Alt text management
+- Clear document hierarchy
+- Focus state handling
 
-## Installation
+## Getting Started
 
-Add Shokunin to your Rust project:
+### Installation
+
+Add Shokunin to your `Cargo.toml`:
 
 ```toml
-# Cargo.toml
 [dependencies]
 shokunin = "0.0.31"
 ```
 
-Basic implementation:
-```rust,no_run
+### Basic Usage
+
+```rust
 use staticdatagen::compiler::service::compile;
-use std::fs;
-use std::path::Path;
-use std::error::Error;
+use std::{path::Path, error::Error};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Define the paths to the build, site, content, and template directories.
-    let build_path = Path::new("build");
-    let content_path = Path::new("content");
-    let site_path = Path::new("public");
-    let template_path = Path::new("templates");
+    // Define paths to existing directories
+    let build_dir = Path::new("./examples/build");        // For temporary build files
+    let content_dir = Path::new("./examples/content");    // Your markdown content
+    let public_dir = Path::new("./examples/public");      // Generated site output 
+    let template_dir = Path::new("./examples/templates"); // HTML templates
 
-    // Ensure the required directories exist.
-    fs::create_dir_all(build_path)?;
-    fs::create_dir_all(content_path)?;
-    fs::create_dir_all(site_path)?;
-    fs::create_dir_all(template_path)?;
+    // Generate the static site
+    compile(build_dir, content_dir, public_dir, template_dir)?;
 
-    // Call the compile function with the specified paths.
-    compile(build_path, content_path, site_path, template_path)?;
-
+    println!("✨ Site generated successfully!");
     Ok(())
 }
 ```
 
+### Command-Line Interface
 
-### Usage
-
-Create a new static site:
+Create a new site with the following command:
 
 ```bash
 ssg --new=docs \
@@ -108,32 +91,34 @@ ssg --new=docs \
     --serve=public
 ```
 
-Or use the short form:
+Or use the shorter form:
 
 ```bash
 ssg -n=docs -c=content -t=templates -o=output -s=public
 ```
 
-### Command-Line Options
+### CLI Options
 
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
-| `--new` | `-n` | New site directory name | Yes |
+| `--new` | `-n` | Project directory name | Yes |
 | `--content` | `-c` | Content directory path | Yes |
 | `--template` | `-t` | Template directory path | Yes |
 | `--output` | `-o` | Output directory path | Yes |
-| `--serve` | `-s` | Development server directory | No |
+| `--serve` | `-s` | Development server path | No |
 
 ## Documentation
 
-For full API documentation, please visit [https://docs.rs/crate/ssg/](https://docs.rs/crate/ssg/).
+For comprehensive API documentation, visit [docs.rs/crate/ssg/](https://docs.rs/crate/ssg/).
 
 ## Examples
 
-To explore more examples, clone the repository and run the following command:
+Explore example implementations:
 
 ```shell
-cargo run --example example_name
+git clone https://github.com/sebastienrousseau/shokunin.git
+cd shokunin
+cargo run --example basic_site
 ```
 
 ## Contributing

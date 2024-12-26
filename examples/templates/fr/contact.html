@@ -158,19 +158,96 @@
 
     <!-- Main content-->
     <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div class="text-start justify-content-between">{{content}}</div>
+      <div
+        class="h-100 p-5 text-light bg-dark align-items-md-stretch text-start justify-content-between rounded rounded-3"
+      >
+        <form action="{{form-id}}" method="POST">
+          <div class="row g-3">
+            <div class="row g-3">{{content}}</div>
+            <div class="col-12">
+              <label for="sender" class="form-label">Nom</label>
+              <input
+                type="text"
+                class="form-control"
+                id="sender"
+                autocomplete="nom"
+                placeholder=""
+                value=""
+                required=""
+              />
+              <div class="invalid-feedback">Un nom valide est requis.</div>
+            </div>
+            <div class="col-12">
+              <label for="email" class="form-label">Email</label>
+              <input
+                autocomplete="email"
+                name="email"
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder=""
+                required=""
+              />
+              <div class="invalid-feedback">
+                Une adresse email valide est requise.
+              </div>
+            </div>
+            <div class="col-12">
+              <label for="subject" class="form-label">Sujet</label><br />
+              <select
+                name="subject"
+                id="subject"
+                class="form-select"
+                required
+                aria-label="General Questions"
+              >
+                <option value="">Sélectionnez un sujet</option>
+                <option value="press">Demandes de publicité/presse</option>
+                <option value="business">Demandes commerciales</option>
+                <option value="feedback">Commentaires/Demande de fonctionnalités</option>
+                <option value="general">Questions générales</option>
+                <option value="product">Questions sur les produits</option>
+                <option value="support">Assistance produit</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="message" class="form-label">Message</label>
+              <textarea
+                cols="47"
+                rows="8"
+                class="form-control"
+                id="message"
+                name="message"
+                placeholder="Message"
+                required=""
+                style="height: 168px"
+              ></textarea>
+              <div class="invalid-feedback">Veuillez entrer votre message.</div>
+            </div>
+            <div class="col-12">
+              <button
+                title="Send Message"
+                type="submit"
+                class="btn btn-lg btn-success end-50"
+              >
+                Envoyer un message
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </main>
 
     <!-- Footer-->
     <footer id="footer" aria-label="footer" class="footer bg-dark text-white mt-auto fs-6 py-5">
-      <p class="mb-0 text-center">
-        <span class="px-2"><a href="/contact/index.html">Contact us</a></span>
-        <span class="px-2"><a href="/privacy/index.html">Privacy notice and cookies</a></span>
-        <span class="px-2"><a href="/terms/index.html">Terms of use</a></span>
-      </p>
-      <p class="mb-0 text-center py-2">
-        <span class="px-2">{{copyright}}</span>
-      </p>
+        <p class="mb-0 text-center">
+            <span class="px-2"><a href="/contact/index.html">Contactez-nous</a></span>
+            <span class="px-2"><a href="/privacy/index.html">Politique de confidentialité</a></span>
+            <span class="px-2"><a href="/terms/index.html">Conditions générales</a></span>
+        </p>
+        <p class="mb-0 text-center py-2">
+            <span class="px-2">{{copyright}}</span>
+        </p>
     </footer>
     <!-- # End Footer-->
     <script
@@ -178,7 +255,7 @@
       crossorigin="anonymous"
       integrity="sha512-ToL6UYWePxjhDQKNioSi4AyJ5KkRxY+F1+Fi7Jgh0Hp5Kk2/s8FD7zusJDdonfe5B00Qw+B8taXxF6CFLnqNCw=="
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js">
-    ></script>
+    </script>
     <script type="application/ld+json">
       {"@context":"http://schema.org/","@type":"BlogPosting","headline":"{{title}}","datePublished":"{{last_build_date}}","dateModified":"{{item_pub_date}}","description":"{{description}}","image":{"@type":"ImageObject","height":"2048","width":"2048","url":"{{logo}}"},"mainEntityOfPage":{"@type":"WebPage","@id":"{{id}}","name":"{{subtitle}}"},"author":"{{author}}","copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"inLanguage":"{{language}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
     </script>

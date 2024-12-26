@@ -45,13 +45,33 @@ impl SiteGenerator {
         let log_file = File::create("site_generation.log")
             .context("Failed to create log file")?;
 
-        // Create configuration first
+        // Ensure directories exist before configuration validation
+        let base_dir = PathBuf::from("examples");
+        let content_dir = base_dir.join("content");
+        let output_dir = base_dir.join("build");
+        let template_dir = base_dir.join("templates");
+        let site_dir = base_dir.join("public");
+
+        fs::create_dir_all(&content_dir)
+            .context("Failed to create content directory")?;
+        fs::create_dir_all(&output_dir)
+            .context("Failed to create output directory")?;
+        fs::create_dir_all(&template_dir)
+            .context("Failed to create template directory")?;
+
+        // Convert directories to absolute paths
+        let content_dir = fs::canonicalize(content_dir)?;
+        let output_dir = fs::canonicalize(output_dir)?;
+        let template_dir = fs::canonicalize(template_dir)?;
+        let site_dir = fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
+
+        // Create configuration
         let config = ShokuninConfig::builder()
             .site_name(site_name.to_string())
             .base_url(base_url.to_string())
-            .content_dir(PathBuf::from("examples/content"))
-            .output_dir(PathBuf::from("examples/build"))
-            .template_dir(PathBuf::from("examples/templates"))
+            .content_dir(content_dir.clone())
+            .output_dir(output_dir.clone())
+            .template_dir(template_dir.clone())
             .site_title("Basic Shokunin Site".to_string())
             .site_description(
                 "A basic static site built with Shokunin".to_string(),
@@ -60,12 +80,12 @@ impl SiteGenerator {
             .build()
             .context("Failed to build configuration")?;
 
-        // Initialize paths using the configuration
+        // Initialize paths
         let paths = Paths {
-            content: config.content_dir.clone(),
-            build: config.output_dir.clone(),
-            site: PathBuf::from("examples/public"),
-            template: config.template_dir.clone(),
+            content: content_dir,
+            build: output_dir,
+            site: site_dir,
+            template: template_dir,
         };
 
         Ok(Self {
@@ -77,12 +97,6 @@ impl SiteGenerator {
 
     /// Ensures all required directories exist and are accessible
     fn prepare_directories(&self) -> Result<()> {
-        // Log site configuration
-        self.log_message(
-            &format!("Configuring site: {}", self.config.site_name),
-            LogLevel::INFO,
-        )?;
-
         for (name, path) in [
             ("content", &self.config.content_dir),
             ("build", &self.config.output_dir),
@@ -92,10 +106,9 @@ impl SiteGenerator {
             fs::create_dir_all(path).with_context(|| {
                 format!("Failed to create {} directory", name)
             })?;
-
             self.log_message(
                 &format!(
-                    "Created {} directory at: {}",
+                    "Ensured {} directory at: {}",
                     name,
                     path.display()
                 ),

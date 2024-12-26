@@ -840,7 +840,7 @@ pub async fn handle_server(
 ///
 /// fn main() -> anyhow::Result<()> {
 ///     let mut files = Vec::new();
-///     let dir_path = Path::new("content");
+///     let dir_path = Path::new("./examples/content");
 ///
 ///     collect_files_recursive(dir_path, &mut files)?;
 ///
@@ -1007,6 +1007,7 @@ fn list_directory_contents(dir: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cmd::Cli;
     use anyhow::Result;
     use std::env;
     use std::{
@@ -1257,9 +1258,7 @@ mod tests {
     #[test]
     fn test_print_banner() {
         // Simply call the function to ensure it runs without errors.
-        cmd::print_banner();
-        // Since this is a print statement, we're only verifying that it doesn't panic.
-        // If you need to check output, consider capturing stdout.
+        Cli::print_banner();
     }
 
     #[test]
