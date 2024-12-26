@@ -464,23 +464,28 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
 ///
 /// # Examples
 ///
+/// Verifies the safety of a file.
+///
 /// ```rust
 /// use std::fs;
 /// use std::path::Path;
 /// use ssg::verify_file_safety;
+/// use tempfile::tempdir;
 ///
-/// fn main() -> anyhow::Result<()> {
-///     // Ensure the file exists for the test.
-///     let file_path = Path::new("content/index.md");
-///     fs::create_dir_all("content")?; // Create the parent directory
-///     fs::write(file_path, "Hello, world!")?; // Create a dummy file
+/// # fn main() -> anyhow::Result<()> {
+/// // Create temporary directory
+/// let temp_dir = tempdir()?;
+/// let file_path = temp_dir.path().join("index.md");
 ///
-///     // Perform the file safety verification.
-///     verify_file_safety(file_path)?;
+/// // Create test file
+/// fs::write(&file_path, "Hello, world!")?;
 ///
-///     println!("File passed safety checks");
-///     Ok(())
-/// }
+/// // Perform verification
+/// verify_file_safety(&file_path)?;
+///
+/// // Directory and file are automatically cleaned up
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Errors

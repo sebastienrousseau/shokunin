@@ -34,9 +34,12 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, error, info};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+    sync::Arc,
+};
 use thiserror::Error;
 use url::Url;
 
@@ -283,6 +286,16 @@ impl ShokuninConfig {
     }
 }
 
+impl FromStr for ShokuninConfig {
+    type Err = CliError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let config: ShokuninConfig = toml::from_str(s)?;
+        config.validate()?;
+        Ok(config)
+    }
+}
+
 /// Builder for `ShokuninConfig`.
 #[derive(Debug, Clone, Default)]
 pub struct ShokuninConfigBuilder {
@@ -387,42 +400,52 @@ fn validate_path_safety(
 ) -> Result<(), CliError> {
     println!("Validating path: {:?}", path);
 
-    // Check for invalid patterns
-    let invalid_patterns = ["..", "<", ">", "|", ":", "\"", "?", "*"];
-    if invalid_patterns
-        .iter()
-        .any(|&p| path.to_string_lossy().contains(p))
-    {
-        println!("Path contains invalid patterns.");
+    // Check for invalid characters and mixed separators
+    let path_str = path.to_string_lossy();
+
+    // Basic invalid characters
+    let invalid_chars = ["<", ">", "|", "\"", "?", "*"];
+    if invalid_chars.iter().any(|&c| path_str.contains(c)) {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
-            details: "Path contains invalid patterns".to_string(),
+            details: "Path contains invalid characters".to_string(),
         });
     }
 
-    // Allow both absolute and relative paths
-    if !path.is_absolute() && !path.exists() {
-        println!("Path is not valid (not absolute or does not exist).");
+    // Check for mixed/invalid path separators
+    if path_str.contains('\\') {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
-            details: "Path must be absolute or exist in the filesystem"
+            details: "Path contains backslashes".to_string(),
+        });
+    }
+
+    // Parent directory traversal check
+    if !path.is_absolute() && path_str.contains("..") {
+        return Err(CliError::InvalidPath {
+            field: field.to_string(),
+            details: "Path contains parent directory traversal"
                 .to_string(),
         });
     }
 
-    if path.is_symlink() {
-        println!("Path is a symlink.");
-        let resolved_path = fs::canonicalize(path).map_err(|e| {
+    // If path exists, check if it's a symlink
+    if path.exists() {
+        let metadata = fs::symlink_metadata(path).map_err(|e| {
             CliError::InvalidPath {
                 field: field.to_string(),
-                details: format!("Failed to resolve symlink: {}", e),
+                details: format!("Failed to get path metadata: {}", e),
             }
         })?;
-        println!("Resolved path: {:?}", resolved_path);
-        return validate_path_safety(&resolved_path, field);
+
+        if metadata.file_type().is_symlink() {
+            return Err(CliError::InvalidPath {
+                field: field.to_string(),
+                details: "Path is a symlink".to_string(),
+            });
+        }
     }
 
-    println!("Path validation passed.");
     Ok(())
 }
 
@@ -601,7 +624,7 @@ mod tests {
         Cli::print_banner();
 
         // Basic sanity check - verify the banner components are formatted correctly
-        assert!(line.len() > 0);
+        assert!(!line.is_empty());
         assert!(title.contains("Shokunin"));
         assert!(title.contains(version));
     }
@@ -641,40 +664,6 @@ mod tests {
     }
 
     #[test]
-    fn test_symlink_path_validation() {
-        let temp_dir = tempdir().unwrap();
-        let target = temp_dir.path().join("target");
-        let symlink = temp_dir.path().join("symlink");
-
-        // Write content to the target file
-        fs::write(&target, "content").unwrap();
-
-        // Create symlink and handle platform-specific behavior
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink(&target, &symlink).unwrap();
-        }
-        #[cfg(windows)]
-        {
-            std::os::windows::fs::symlink_file(&target, &symlink)
-                .unwrap();
-        }
-
-        // Verify the resolved path
-        let resolved_path = fs::canonicalize(&symlink).unwrap();
-        let normalized_target = fs::canonicalize(&target).unwrap();
-        println!("Resolved symlink path: {:?}", resolved_path);
-        println!("Normalized target path: {:?}", normalized_target);
-
-        assert_eq!(
-            resolved_path, normalized_target,
-            "Resolved path does not match the target path."
-        );
-
-        // Validate the symlink path
-        assert!(validate_path_safety(&symlink, "symlink").is_ok());
-    }
-    #[test]
     fn test_config_builder_empty_required_fields() {
         let config = ShokuninConfig::builder()
             .site_name("".to_string())
@@ -690,7 +679,41 @@ mod tests {
     #[test]
     fn test_path_with_separators() {
         let path = Path::new("path/to\\file");
-        assert!(validate_path_safety(&path, "test").is_err());
+        let result = validate_path_safety(path, "test");
+        assert!(result.is_err(), "Expected error for mixed separators");
+        assert!(matches!(
+            result,
+            Err(CliError::InvalidPath { field: _, details }) if details.contains("backslashes")
+        ));
+    }
+
+    #[test]
+    fn test_symlink_path_validation() {
+        let temp_dir = tempdir().unwrap();
+        let target = temp_dir.path().join("target");
+        let symlink = temp_dir.path().join("symlink");
+
+        // Create target and symlink
+        fs::write(&target, "content").unwrap();
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&target, &symlink).unwrap();
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_file(&target, &symlink).unwrap();
+
+        // Verify paths
+        let resolved_path = fs::canonicalize(&symlink).unwrap();
+        let normalized_target = fs::canonicalize(&target).unwrap();
+        println!("Resolved symlink path: {:?}", resolved_path);
+        println!("Normalized target path: {:?}", normalized_target);
+
+        // Validate symlink path - should fail as symlinks are not allowed
+        let result = validate_path_safety(&symlink, "symlink");
+        assert!(result.is_err(), "Expected error for symlink path");
+        assert!(matches!(
+            result,
+            Err(CliError::InvalidPath { field: _, details }) if details.contains("symlink")
+        ));
     }
     #[test]
     fn test_url_edge_cases() {
