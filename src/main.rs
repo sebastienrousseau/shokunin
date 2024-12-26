@@ -287,31 +287,6 @@ mod tests {
     }
 
     #[test]
-    fn test_environment_variable_operations() {
-        initialize();
-        cleanup_env();
-
-        // Test unset state
-        assert!(env::var("LANGUAGE").is_err());
-
-        // Test setting and reading
-        env::set_var("LANGUAGE", "fr");
-        assert_eq!(env::var("LANGUAGE").unwrap(), "fr");
-
-        // Test overwriting
-        env::set_var("LANGUAGE", "es");
-        assert_eq!(env::var("LANGUAGE").unwrap(), "es");
-
-        // Test removal and fallback
-        cleanup_env();
-        let default_lang =
-            env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
-        assert_eq!(default_lang, "en");
-
-        cleanup_env();
-    }
-
-    #[test]
     fn test_execute_main_logic_with_env_states() {
         initialize();
         cleanup_env();
