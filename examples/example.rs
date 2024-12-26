@@ -26,29 +26,34 @@ fn main() -> Result<()> {
     // The build directory.
     // This is where the generated website will be placed temporarily before
     // being moved to the site directory.
-    let build_path = Path::new("examples/build");
+    let build_dir = Path::new("./examples/build");
 
     // The site directory.
     // This is where the final generated website will be placed.
-    let site_path = Path::new("examples/public");
+    let site_dir = Path::new("./examples/public");
 
     // The content directory.
     // This is where the source content files are located (e.g., Markdown files).
     // These files will be converted into HTML files in the build process.
-    let content_path = Path::new("content");
+    let content_dir = Path::new("./examples/content");
 
     // The template directory.
     // This is where the HTML template files are located.
     // These templates are used to structure the content from the Markdown files.
-    let template_path = Path::new("templates");
+    let template_dir = Path::new("./examples/templates");
 
     // Call the compile function to generate the website.
     // The function takes the paths defined above as arguments and will
     // throw an error if anything goes wrong during the compilation process.
-    compile(build_path, content_path, site_path, template_path)?;
+    match compile(build_dir, content_dir, site_dir, template_dir) {
+        Ok(_) => println!("    ✅ Successfully compiled static site"),
+        Err(e) => println!("    ❌ Error compiling site: {:?}", e),
+    }
+
+    // compile(build_path, content_path, site_path, template_path)?;
 
     // Serve the generated website locally.
-    let example_root: String = site_path.to_str().unwrap().to_string();
+    let example_root: String = site_dir.to_str().unwrap().to_string();
 
     // Create a new server with an address and document root
     let server = Server::new("127.0.0.1:3000", example_root.as_str());

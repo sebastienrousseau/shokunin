@@ -3,7 +3,7 @@
 # Front Matter (YAML)
 
 author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 characters)
-banner_alt: "Green And Black Tiled Wall" ## The banner alt of the site.
+banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
 banner: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
@@ -13,7 +13,7 @@ charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2024 Kaishi. All rights reserved." ## The copyright of the site.
 date: "July 12, 2023"
-description: "Everything You Need to Build a Stunning Website." ## The description of the site. (max 160 characters)
+description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 hreflang: "en" ## The hreflang of the site. (default: en-gb)
@@ -23,25 +23,25 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (max 160 characters)
+keywords: "offline, starter, templates, static, site, generator, rust, shokunin, kaishi" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
-layout: "feature" ## The layout of the site.
+layout: "index" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
 logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
-permalink: "https://kaishi.one/features" ## The url of the site.
+permalink: "https://kaishi.one/offline" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
-tags: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The tags of the site. (max 160 characters)
+tags: "offline, starter, templates, static, site, generator, rust, shokunin, kaishi" ## The tags of the site. (comma separated, max 10 tags)
 theme-color: "143, 250, 113" ## The theme color of the site.
-title: "Features" ## The title of the page. (max 64 characters)
+title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
@@ -49,16 +49,18 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
+news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_loc: "https://kaishi.one" ## The loc of the site.
 news_publication_date: "Tue, 20 Feb 2024 15:15:15 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## The news publication name of the site.
-news_title: "Features" ## The title of the page. (max 64 characters)
+news_title: "Offline" ## The title of the page. (max 64 characters)
+
 
 # RSS - The RSS feed front matter (YAML).
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.31)"
+generator: "Shokunin SSG (version 0.0.30)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -91,7 +93,7 @@ twitter_card: "summary"
 ## twitter_creator - The Twitter Card creator of the page.
 twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
-twitter_description: "Everything You Need to Build a Stunning Website."
+twitter_description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator Starter Template."
 ## twitter_image - The Twitter Card image of the page.
 twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
@@ -115,25 +117,10 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
+Try:
 
-## Starter Templates
-
-All the starter templates, whether pages or websites are built from scratch
-using the same principles and features. This means that you can easily mix and
-match them together to create your own custom layouts and content.
-
-Get started with Shokunin using any of our Starter Templates for building
-your website or web application.
-
-**Kaishi Starter Templates** has the following features enabled:
-
-- **Accessibility Meta-Tags:** These meta tags are designed to make the website more accessible to users with disabilities. By setting Accessible Rich Internet Applications (ARIA) roles and attributes, full keyboard control, and no flashing hazard, you can make sure your website is accessible to everyone.
-- **Apple Meta-Tags:** These meta tags improve websites for Apple devices, like iPhones, iPads, and Apple devices. You can change web app capabilities, status bar style, title, application name, and author to improve Apple devices' appearance.
-- **Bootstrap CSS:** Bootstrap is a popular CSS framework that provides you with a set of pre-designed styles and components. By using Bootstrap, you can quickly and easily create a professional-looking website without having to write CSS from scratch.
-- **Bootstrap JavaScript:** Bootstrap JavaScript is a set of pre-built scripts that provide you with responsive navigation menus and modal dialogues.
-- **Content Security Policy:** This meta tag is used to specify the sources of content allowed to load on the page. It is designed to prevent cross-site scripting (XSS) attacks and other security vulnerabilities.
-- **Microsoft Meta Tags:** These meta tags are designed to optimise the website for Microsoft devices. You can set site verification, application configuration, tap highlight colour, tile colour, and tile image to look good on Windows devices.
-- **Open Graph/Facebook Meta-Tags:** These meta tags allow you to control how your website appears when shared on Facebook and other social media platforms. By setting the title, description, and image, you can make sure that your website looks its best when shared online.
-- **Responsive Navigation Bar:** The responsive navigation bar provides users with an intuitive and easy-to-use interface for navigating the website. It aims to adapt to the size of the screen, making it accessible to users on both desktop and mobile devices.
-- **Schema.org Meta Tags:** These meta tags are used to provide structured data about the website's content. Setting the name, description, and image on a website helps search engines and others understand the content better.
-- **Twitter Meta Tags:** These meta tags are designed to optimise the website for Twitter sharing. You can set the card type, creator, description, image, site, title, and URL to make their website look good on Twitter.
+- Turning off airplane mode.
+- Turning on Wi-Fi, mobile data, or cellular data.
+- Checking the signal in your area.
+- Checking the cables and connections.
+- Restarting your router.

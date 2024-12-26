@@ -1,9 +1,13 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! This crate tests human data generation functionality using `HumansGenerator`.
 
 #[cfg(test)]
 mod tests {
-    use staticdatagen::modules::human::create_human_data;
+    use staticdatagen::generators::humans::{
+        HumansConfig, HumansGenerator,
+    };
     use std::collections::HashMap;
 
     #[test]
@@ -42,33 +46,46 @@ mod tests {
         let _ = metadata
             .insert("thanks".to_string(), "Contributors".to_string());
 
-        let human_data = create_human_data(&metadata);
+        let config = HumansConfig::from_metadata(&metadata)
+            .expect("Expected valid config from full metadata");
+        let generated = HumansGenerator::new(config).generate();
 
-        assert_eq!(human_data.author_location, "Location");
-        assert_eq!(human_data.author_twitter, "@twitter_handle");
-        assert_eq!(human_data.author_website, "https://example.com");
-        assert_eq!(human_data.author, "John Doe");
-        assert_eq!(human_data.site_components, "Components");
-        assert_eq!(human_data.site_last_updated, "2023-01-01");
-        assert_eq!(human_data.site_software, "Software");
-        assert_eq!(human_data.site_standards, "Standards");
-        assert_eq!(human_data.thanks, "Contributors");
-    }
-
-    #[test]
-    fn test_create_human_data_with_missing_fields() {
-        let metadata = HashMap::new(); // Empty metadata
-
-        let human_data = create_human_data(&metadata);
-
-        assert_eq!(human_data.author_location, "");
-        assert_eq!(human_data.author_twitter, "");
-        assert_eq!(human_data.author_website, "");
-        assert_eq!(human_data.author, "");
-        assert_eq!(human_data.site_components, "");
-        assert_eq!(human_data.site_last_updated, "");
-        assert_eq!(human_data.site_software, "");
-        assert_eq!(human_data.site_standards, "");
-        assert_eq!(human_data.thanks, "");
+        // Check that all expected values are present in the generated output
+        assert!(
+            generated.contains("John Doe"),
+            "Expected 'John Doe' in output"
+        );
+        assert!(
+            generated.contains("Location"),
+            "Expected 'Location' in output"
+        );
+        assert!(
+            generated.contains("@twitter_handle"),
+            "Expected '@twitter_handle' in output"
+        );
+        assert!(
+            generated.contains("https://example.com"),
+            "Expected 'https://example.com' in output"
+        );
+        assert!(
+            generated.contains("Components"),
+            "Expected 'Components' in output"
+        );
+        assert!(
+            generated.contains("2023-01-01"),
+            "Expected '2023-01-01' in output"
+        );
+        assert!(
+            generated.contains("Software"),
+            "Expected 'Software' in output"
+        );
+        assert!(
+            generated.contains("Standards"),
+            "Expected 'Standards' in output"
+        );
+        assert!(
+            generated.contains("Contributors"),
+            "Expected 'Contributors' in output"
+        );
     }
 }

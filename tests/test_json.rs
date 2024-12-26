@@ -1,5 +1,7 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! This crate tests JSON data generation functionality using `JsonGenerator`.
 
 #[cfg(test)]
 mod tests {

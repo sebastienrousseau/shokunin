@@ -1,4 +1,7 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+//! Tests for the `NavigationGenerator` module in staticdatagen,
+//! ensuring navigation data structures and generation work correctly.
+
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #[cfg(test)]

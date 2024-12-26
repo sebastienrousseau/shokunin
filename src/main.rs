@@ -58,12 +58,12 @@ use ssg::run;
 ///
 /// # Return
 /// `Result<String, String>` - A result containing either a success message or an error string.
-fn execute_main_logic() -> Result<String, String> {
+async fn execute_main_logic() -> Result<String, String> {
     // Determine the user's language preference, defaulting to English ("en") if unset.
     let lang =
         std::env::var("LANGUAGE").unwrap_or_else(|_| "en".to_string());
 
-    match run() {
+    match run().await {
         Ok(_) => {
             // Translate and return a success message in the chosen language.
             match translate(&lang, "main_logger_msg") {
@@ -98,8 +98,9 @@ fn execute_main_logic() -> Result<String, String> {
 /// - Retrieves the user's language preference from the `LANGUAGE` environment variable.
 /// - Executes `execute_main_logic` to generate the site.
 /// - Outputs a success message upon completion or an error message if site generation fails.
-fn main() {
-    match execute_main_logic() {
+#[tokio::main]
+async fn main() {
+    match execute_main_logic().await {
         Ok(msg) => println!("{}", msg),
         Err(e) => eprintln!("{}", e),
     }

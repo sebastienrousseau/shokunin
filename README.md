@@ -69,23 +69,32 @@ shokunin = "0.0.31"
 ```
 
 Basic implementation:
-
-```rust
+```rust,no_run
 use staticdatagen::compiler::service::compile;
+use std::fs;
 use std::path::Path;
+use std::error::Error;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Define the paths to the build, site, content and template directories.
+fn main() -> Result<(), Box<dyn Error>> {
+    // Define the paths to the build, site, content, and template directories.
     let build_path = Path::new("build");
     let content_path = Path::new("content");
     let site_path = Path::new("public");
     let template_path = Path::new("templates");
 
+    // Ensure the required directories exist.
+    fs::create_dir_all(build_path)?;
+    fs::create_dir_all(content_path)?;
+    fs::create_dir_all(site_path)?;
+    fs::create_dir_all(template_path)?;
+
+    // Call the compile function with the specified paths.
     compile(build_path, content_path, site_path, template_path)?;
 
     Ok(())
 }
 ```
+
 
 ### Usage
 

@@ -13,7 +13,7 @@ charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
 copyright: "© 2024 Kaishi. All rights reserved." ## The copyright of the site.
 date: "July 12, 2023"
-description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator starter template." ## The description of the site. (max 160 characters)
+description: "Delve deeper into the Kaishi website by exploring topics and tags, and get to the subjects that matter most to you." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 hreflang: "en" ## The hreflang of the site. (default: en-gb)
@@ -23,7 +23,7 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The keywords of the site. (max 160 characters)
+keywords: "terms of use, intellectual property" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "page" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
@@ -32,16 +32,16 @@ logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
 logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
-permalink: "https://kaishi.one/privacy" ## The url of the site.
+permalink: "https://kaishi.one/terms" ## The url of the site.
 rating: "general" ## The rating of the site.
 referrer: "no-referrer" ## The referrer of the site.
 revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
-tags: "privacy policy, kaishi, shokunin static site generator, static site generator, user data, google analytics, microsoft clarity, tracking tools, personal information, rights, changes" ## The tags of the site. (max 160 characters)
+tags: "terms of use, kaishi, shokunin static site generator, static site generator, intellectual property, linked sites, liability, privacy, governing law, changes, contact us" ## The tags of the site. (max 160 characters)
 theme-color: "143, 250, 113" ## The theme color of the site.
-title: "Kaishi, a Shokunin Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
+title: "Explore by tag" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
@@ -49,26 +49,26 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
-news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_loc: "https://kaishi.one" ## The loc of the site.
+news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_publication_date: "Tue, 20 Feb 2024 15:15:15 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## The news publication name of the site.
-news_title: "Privacy" ## The title of the page. (max 64 characters)
+news_title: "Tags" ## The title of the page. (max 64 characters)
 
 
 # RSS - The RSS feed front matter (YAML).
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.31)"
+generator: "Shokunin SSG (version 0.0.30)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
-item_pub_date: "Sun, 18 Feb 2024 15:15:15 GMT"
-item_title: "RSS"
-last_build_date: "Sun, 18 Feb 2024 15:15:15 GMT"
+item_pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
+item_title: "Tags"
+last_build_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 managing_editor: jane.doe@kaishi.one (Jane Doe)
-pub_date: "Sun, 18 Feb 2024 15:15:15 GMT"
+pub_date: "Tue, 20 Feb 2024 15:15:15 GMT"
 ttl: "60"
 type: "website"
 webmaster: jane.doe@kaishi.one
@@ -93,7 +93,7 @@ twitter_card: "summary"
 ## twitter_creator - The Twitter Card creator of the page.
 twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
-twitter_description: "Make beautiful websites with Kaishi, a Shokunin Static Site Generator Starter Template."
+twitter_description: "Delve deeper into the Kaishi website by exploring topics and tags, and get to the subjects that matter most to you."
 ## twitter_image - The Twitter Card image of the page.
 twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
@@ -117,32 +117,4 @@ site_software: "Shokunin, Rust" ## The software of the site.
 
 ---
 
-## Information Collection and Use.class=\"color-primary\"
-
-We do not directly collect any personal data from you while you navigate our website. We do not use cookies for logic or save any personal information from a user.
-
-## Use of Tracking Tools
-
-We use two third-party services to monitor and analyze web traffic: Google Analytics and Microsoft Clarity.
-
-### Google Analytics
-
-Google Analytics is a web analytics service offered by Google that tracks and reports website traffic. Google uses the data collected to track and monitor the use of our Website. This data is shared with other Google services. For more information on the privacy practices of Google, please visit the Google Privacy & Terms web page: [Google Privacy & Terms ⧉](https://policies.google.com/privacy)
-
-### Microsoft Clarity
-
-Microsoft Clarity is a user behaviour analytics tool that helps us understand how users interact with our website. The data collected includes information such as mouse movements, clicks, and scrolls. For more information on the privacy practices of Microsoft, please visit the Microsoft Privacy Statement web page: [Microsoft Privacy Statement ⧉](https://privacy.microsoft.com/en-us/privacystatement)
-
-## Your Rights
-
-Depending on where you reside, you may have certain rights with respect to your personal data, such as the right to request access, correction, or deletion of your data, or to object to our use of your data.
-
-## Changes to This Privacy Policy
-
-We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
-
-We advise you to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
-
-## Contact Us
-
-If you have any questions about this Privacy Policy, please contact us.
+[[content]]

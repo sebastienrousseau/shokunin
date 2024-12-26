@@ -1,4 +1,4 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::Result;
@@ -44,6 +44,10 @@ pub enum ProcessError {
     /// Wraps underlying I/O errors.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+
+    /// Represents a failure during the frontmatter processing.
+    #[error("Frontmatter processing error: {0}")]
+    FrontmatterError(String),
 }
 
 /// Retrieves the value of a specified command-line argument.
@@ -111,18 +115,12 @@ pub fn ensure_directory(
 ) -> Result<(), ProcessError> {
     if !path.exists() {
         fs::create_dir_all(path).map_err(|e| {
-            // Convert the IO error to our custom error type
-            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                ProcessError::DirectoryCreation {
-                    dir_type: dir_type.to_string(),
-                    path: path.display().to_string(),
-                    source: e,
-                }
-            } else {
-                ProcessError::IoError(e)
+            ProcessError::DirectoryCreation {
+                dir_type: dir_type.to_string(),
+                path: path.display().to_string(),
+                source: e,
             }
         })?;
-        println!("Created {} directory: {}", dir_type, path.display());
     }
     Ok(())
 }
@@ -156,6 +154,53 @@ fn internal_compile(
         template_path,
     )
     .map_err(|e| e.to_string())
+}
+
+/// Preprocesses markdown files to properly handle frontmatter
+fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
+    if !content_path.exists() {
+        return Ok(());
+    }
+
+    // Process all .md files in the content directory
+    for entry in fs::read_dir(content_path)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file()
+            && path.extension().map_or(false, |ext| ext == "md")
+        {
+            let content = fs::read_to_string(&path)?;
+            let processed_content = process_frontmatter(&content)
+                .map_err(|e| {
+                    ProcessError::FrontmatterError(e.to_string())
+                })?;
+            fs::write(&path, processed_content)?;
+        }
+    }
+    Ok(())
+}
+
+/// Processes frontmatter in markdown content to ensure proper rendering
+fn process_frontmatter(content: &str) -> Result<String, ProcessError> {
+    const DELIMITER: &str = "---";
+
+    let parts: Vec<&str> = content.splitn(3, DELIMITER).collect();
+    match parts.len() {
+        3 => {
+            // Format: ---\nfrontmatter\n---\ncontent
+            let frontmatter = parts[1].trim();
+            let main_content = parts[2].trim();
+
+            // Add an HTML comment to preserve frontmatter for metadata processing
+            // while preventing it from appearing in the rendered output
+            Ok(format!(
+                "---\n{}\n---\n<!--frontmatter-processed-->\n{}",
+                frontmatter, main_content
+            ))
+        }
+        _ => Ok(content.to_string()), // Return unchanged if no frontmatter found
+    }
 }
 
 /// Processes command-line arguments and initiates the static site generation.
@@ -197,6 +242,9 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     ensure_directory(build_path, "output")?;
     ensure_directory(site_path, "project")?;
     ensure_directory(template_path, "template")?;
+
+    // Preprocess content files to handle frontmatter
+    preprocess_content(content_path)?;
 
     // Compile the site
     internal_compile(
