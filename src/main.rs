@@ -395,4 +395,140 @@ mod tests {
 
         cleanup_env();
     }
+
+    #[test]
+    fn test_execute_main_logic_with_invalid_language_env() {
+        initialize();
+        cleanup_env();
+        env::set_var("LANGUAGE", "invalid-lang");
+
+        let rt = Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            let run_result = mock_run_ok();
+            match run_result {
+                Ok(_) => mock_translate_success(
+                    "invalid-lang",
+                    "main_logger_msg",
+                ),
+                Err(e) => Err(e),
+            }
+        });
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Success message in invalid-lang");
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_execute_main_logic_run_and_translate_failures() {
+        initialize();
+        cleanup_env();
+
+        let rt = Runtime::new().unwrap();
+
+        let result = rt.block_on(async {
+            let run_result = mock_run_err();
+            match run_result {
+                Ok(_) => mock_translate_failure("", "main_logger_msg"),
+                Err(e) => {
+                    Err(format!("Run and translate failed: {}", e))
+                }
+            }
+        });
+
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Run and translate failed: Site generation failed"
+        );
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_execute_main_logic_with_unsupported_language() {
+        initialize();
+        cleanup_env();
+        env::set_var("LANGUAGE", "unsupported-lang");
+
+        let rt = Runtime::new().unwrap();
+        let result = rt.block_on(async {
+            let run_result = mock_run_ok();
+            match run_result {
+                Ok(_) => mock_translate_failure(
+                    "unsupported-lang",
+                    "main_logger_msg",
+                ),
+                Err(e) => Err(e),
+            }
+        });
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Translation error");
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_concurrent_translate_with_mixed_results() {
+        initialize();
+        cleanup_env();
+        let rt = Runtime::new().unwrap();
+
+        let languages = vec!["en", "fr", "error-lang", "es", "de"];
+        let futures: Vec<_> = languages
+            .into_iter()
+            .map(|lang| async move {
+                if lang == "error-lang" {
+                    mock_translate_failure(lang, "main_logger_msg")
+                } else {
+                    mock_translate_success(lang, "main_logger_msg")
+                }
+            })
+            .collect();
+
+        let results = rt.block_on(async {
+            let mut results = vec![];
+            for future in futures {
+                results.push(future.await);
+            }
+            results
+        });
+
+        assert!(results[0].is_ok());
+        assert_eq!(
+            results[0].as_ref().unwrap(),
+            "Success message in en"
+        );
+
+        assert!(results[1].is_ok());
+        assert_eq!(
+            results[1].as_ref().unwrap(),
+            "Success message in fr"
+        );
+
+        assert!(results[2].is_err());
+        assert_eq!(
+            results[2].as_ref().err(),
+            Some(&"Translation error".to_string())
+        );
+
+        cleanup_env();
+    }
+
+    #[test]
+    fn test_translate_with_empty_key() {
+        initialize();
+        cleanup_env();
+
+        let rt = Runtime::new().unwrap();
+        let result =
+            rt.block_on(async { mock_translate_failure("en", "") });
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Translation error");
+
+        cleanup_env();
+    }
 }
