@@ -113,7 +113,19 @@ pub fn ensure_directory(
     path: &Path,
     dir_type: &str,
 ) -> Result<(), ProcessError> {
-    if !path.exists() {
+    if path.exists() {
+        // Check if the existing path is a directory
+        if !path.is_dir() {
+            return Err(ProcessError::DirectoryCreation {
+                dir_type: dir_type.to_string(),
+                path: path.display().to_string(),
+                source: std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    "Path exists but is not a directory",
+                ),
+            });
+        }
+    } else {
         fs::create_dir_all(path).map_err(|e| {
             ProcessError::DirectoryCreation {
                 dir_type: dir_type.to_string(),
@@ -262,6 +274,8 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 mod tests {
     use super::*;
     use clap::{arg, Command};
+    use std::fs::Permissions;
+    use std::fs::{self, File};
     use tempfile::tempdir;
 
     /// Helper function to create a test `ArgMatches` with all required arguments.
@@ -459,5 +473,359 @@ mod tests {
         );
 
         Ok(())
+    }
+    #[test]
+    fn test_process_frontmatter_with_valid_frontmatter(
+    ) -> Result<(), ProcessError> {
+        let content = "\
+---
+title: Test Post
+date: 2024-01-01
+---
+# Main Content
+This is the main content.";
+
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+        assert!(processed.contains("title: Test Post"));
+        assert!(processed.contains("# Main Content"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_without_frontmatter(
+    ) -> Result<(), ProcessError> {
+        let content = "# Just Content\nNo frontmatter here.";
+        let processed = process_frontmatter(content)?;
+        assert_eq!(processed, content);
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_with_empty_frontmatter(
+    ) -> Result<(), ProcessError> {
+        let content = "---\n---\nContent after empty frontmatter";
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_multiple_files(
+    ) -> Result<(), ProcessError> {
+        let temp_dir = tempdir()?;
+
+        // Create multiple markdown files
+        let file1_path = temp_dir.path().join("post1.md");
+        let file2_path = temp_dir.path().join("post2.md");
+        let non_md_path = temp_dir.path().join("other.txt");
+
+        fs::write(&file1_path, "---\ntitle: Post 1\n---\nContent 1")?;
+        fs::write(&file2_path, "---\ntitle: Post 2\n---\nContent 2")?;
+        fs::write(&non_md_path, "Not a markdown file")?;
+
+        preprocess_content(temp_dir.path())?;
+
+        // Verify markdown files were processed
+        let content1 = fs::read_to_string(&file1_path)?;
+        let content2 = fs::read_to_string(&file2_path)?;
+        let other = fs::read_to_string(&non_md_path)?;
+
+        assert!(content1.contains("<!--frontmatter-processed-->"));
+        assert!(content2.contains("<!--frontmatter-processed-->"));
+        assert_eq!(other, "Not a markdown file");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_non_existent_directory(
+    ) -> Result<(), ProcessError> {
+        let non_existent = Path::new("non_existent_directory");
+        let result = preprocess_content(non_existent);
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_invalid_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("readonly.md");
+
+        // Create file with frontmatter
+        fs::write(&file_path, "---\ntitle: Test\n---\nContent")
+            .unwrap();
+
+        // Make file read-only
+        fs::set_permissions(&file_path, Permissions::from_mode(0o444))
+            .unwrap();
+
+        let result = preprocess_content(temp_dir.path());
+        assert!(result.is_err());
+
+        // Reset permissions for cleanup
+        fs::set_permissions(&file_path, Permissions::from_mode(0o666))
+            .unwrap();
+    }
+
+    #[test]
+    fn test_internal_compile_error_handling() {
+        let temp_dir = tempdir().unwrap();
+        let result = internal_compile(
+            &temp_dir.path().join("build"),
+            &temp_dir.path().join("content"),
+            &temp_dir.path().join("site"),
+            &temp_dir.path().join("template"),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_argument_with_empty_value() {
+        let matches = Command::new("test")
+            .arg(arg!(--"empty" <EMPTY> "Empty value"))
+            .get_matches_from(vec!["test", "--empty", ""]);
+
+        let result = get_argument(&matches, "empty");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "");
+    }
+
+    #[test]
+    fn test_ensure_directory_with_existing_file(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("existing_file");
+
+        // Create a file instead of a directory
+        let _file = File::create(&file_path)?;
+
+        // Attempt to ensure directory at the same path
+        let result = ensure_directory(&file_path, "test");
+
+        // Verify that the operation failed because path exists but is not a directory
+        assert!(result.is_err());
+        if let Err(ProcessError::DirectoryCreation { source, .. }) =
+            result
+        {
+            assert_eq!(
+                source.kind(),
+                std::io::ErrorKind::AlreadyExists
+            );
+        } else {
+            panic!("Expected DirectoryCreation error");
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_directory_with_existing_directory(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let dir_path = temp_dir.path().join("existing_dir");
+
+        // First create the directory
+        fs::create_dir(&dir_path)?;
+
+        // Attempt to ensure directory at the same path
+        let result = ensure_directory(&dir_path, "test");
+
+        // Should succeed because path exists and is a directory
+        assert!(result.is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_invalid_utf8() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let file_path = temp_dir.path().join("invalid.md");
+
+        // Write invalid UTF-8 bytes
+        let invalid_bytes = vec![0xFF, 0xFF];
+        fs::write(&file_path, invalid_bytes)?;
+
+        let result = preprocess_content(temp_dir.path());
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_with_multiple_delimiters() -> Result<()>
+    {
+        let content = "\
+---
+title: First
+---
+---
+title: Second
+---
+Content";
+
+        let processed = process_frontmatter(content)?;
+        // Should only process the first frontmatter section
+        assert!(processed.contains("title: First"));
+        assert!(processed.contains("---\ntitle: Second"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_with_malformed_delimiters(
+    ) -> Result<(), ProcessError> {
+        // Test case where there's only one delimiter
+        let content = "---\ntitle: Test\nContent";
+        let processed = process_frontmatter(content)?;
+        assert_eq!(processed, content); // Should remain unchanged with single delimiter
+
+        // Test case with extra spaces in delimiters (this should still be valid frontmatter)
+        let content = "---\ntitle: Test\n---\nContent";
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+        assert!(processed.contains("title: Test"));
+        assert!(processed.contains("Content"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_with_whitespace(
+    ) -> Result<(), ProcessError> {
+        // Test with whitespace before first delimiter
+        let content = "\n\n---\ntitle: Test\n---\nContent";
+        let processed = process_frontmatter(content)?;
+        // Should still process valid frontmatter even with leading whitespace
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+        assert!(processed.contains("title: Test"));
+        assert!(processed.contains("Content"));
+
+        // Test with mixed whitespace in frontmatter
+        let content =
+            "---\n  title: Test  \n  author: Someone  \n---\nContent";
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+        assert!(processed.contains("title: Test"));
+        assert!(processed.contains("author: Someone"));
+        assert!(processed.contains("Content"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_with_invalid_format(
+    ) -> Result<(), ProcessError> {
+        // Missing second delimiter completely
+        let content = "---\ntitle: Test\nContent";
+        let processed = process_frontmatter(content)?;
+        assert_eq!(processed, content);
+
+        // Wrong delimiter character
+        let content = "===\ntitle: Test\n===\nContent";
+        let processed = process_frontmatter(content)?;
+        assert_eq!(processed, content);
+
+        // Empty content between delimiters
+        let content = "---\n\n---\nContent";
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_nested_directories(
+    ) -> Result<(), ProcessError> {
+        let temp_dir = tempdir()?;
+        let nested_dir = temp_dir.path().join("nested");
+        fs::create_dir(&nested_dir)?;
+
+        // Create files in both root and nested directory
+        let root_file = temp_dir.path().join("root.md");
+        let nested_file = nested_dir.join("nested.md");
+
+        fs::write(&root_file, "---\ntitle: Root\n---\nRoot content")?;
+        fs::write(
+            &nested_file,
+            "---\ntitle: Nested\n---\nNested content",
+        )?;
+
+        preprocess_content(temp_dir.path())?;
+
+        // Verify only root file was processed (since we don't recurse into subdirectories)
+        let root_content = fs::read_to_string(&root_file)?;
+        assert!(root_content.contains("<!--frontmatter-processed-->"));
+
+        let nested_content = fs::read_to_string(&nested_file)?;
+        assert!(
+            !nested_content.contains("<!--frontmatter-processed-->")
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_preprocess_content_with_empty_files(
+    ) -> Result<(), ProcessError> {
+        let temp_dir = tempdir()?;
+        let empty_file = temp_dir.path().join("empty.md");
+
+        // Create empty markdown file
+        fs::write(&empty_file, "")?;
+
+        preprocess_content(temp_dir.path())?;
+
+        // Verify empty file remains unchanged
+        let content = fs::read_to_string(&empty_file)?;
+        assert!(content.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_ensure_directory_with_symlink() -> Result<(), ProcessError>
+    {
+        let temp_dir = tempdir()?;
+        let real_dir = temp_dir.path().join("real_dir");
+        let symlink = temp_dir.path().join("symlink_dir");
+
+        fs::create_dir(&real_dir)?;
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&real_dir, &symlink)?;
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(&real_dir, &symlink)?;
+
+        // Should succeed as symlink points to a valid directory
+        let result = ensure_directory(&symlink, "symlink");
+        assert!(result.is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_internal_compile_with_empty_directories() {
+        let temp_dir = tempdir().unwrap();
+
+        // Create empty required directories
+        let build_dir = temp_dir.path().join("build");
+        let content_dir = temp_dir.path().join("content");
+        let site_dir = temp_dir.path().join("site");
+        let template_dir = temp_dir.path().join("template");
+
+        fs::create_dir_all(&build_dir).unwrap();
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+
+        let result = internal_compile(
+            &build_dir,
+            &content_dir,
+            &site_dir,
+            &template_dir,
+        );
+
+        assert!(result.is_err());
     }
 }
