@@ -248,12 +248,6 @@ impl ShokuninConfig {
         Ok(config)
     }
 
-    /// Creates a new `ShokuninConfig` instance from command-line arguments.
-    pub fn from_str(config_str: &str) -> Result<Self, CliError> {
-        let config: ShokuninConfig = toml::from_str(config_str)?;
-        config.validate()?;
-        Ok(config)
-    }
     /// Creates a new `ShokuninConfig` instance from a TOML file.
     pub fn validate(&self) -> Result<(), CliError> {
         debug!("Validating config: {:?}", self);
@@ -581,7 +575,7 @@ mod tests {
     language = "en-GB"
     "#;
 
-        let config = ShokuninConfig::from_str(config_str);
+        let config: Result<ShokuninConfig, _> = config_str.parse();
         assert!(config.is_ok());
     }
 
