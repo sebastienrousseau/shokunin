@@ -1,11 +1,11 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <img src="https://kura.pro/shokunin/images/logos/shokunin.svg"
-alt="NucleusFlow logo" height="66" align="right" />
+alt="Shokunin logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
-# `Shokunin Static Site Generator (SSG)`
+# Shokunin Static Site Generator (SSG)
 
-A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
+A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -19,19 +19,15 @@ A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
 </center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-## Overview
+## Overview 🚀
 
-Shokunin is a lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
+Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:
 
-## Features
-
-- **⚡ Blazing Fast Performance**: Built in Rust for optimal speed and efficiency
-- **📱 SEO Optimised**: Built-in features for maximum search engine visibility
-- **🛠️ Multiple Content Formats**: Support for Markdown, YAML, JSON, and TOML
-- **📊 Analytics Ready**: Built-in support for Google Analytics and Bing Analytics
-- **🔄 Automated Feeds**: Automatic generation of Atom and RSS feeds
-- **🎨 Flexible Theming**: Compatible with custom HTML themes and templates
-- **📱 Development Server**: Built-in Rust server for local testing
+- Content-first development approach
+- Lightning-fast site generation
+- WCAG 2.1 Level AA accessibility compliance
+- Advanced SEO optimization
+- Type-safe operations with comprehensive error handling
 
 [00]: https://shokunin.one
 [01]: https://lib.rs/crates/ssg
@@ -49,7 +45,7 @@ Shokunin is a lightning-fast static site generator (SSG) optimised for search en
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 [github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.1-orange.svg?style=for-the-badge
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.31-orange.svg?style=for-the-badge
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust
 
 ## Changelog 📚

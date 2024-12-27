@@ -377,27 +377,49 @@ pub async fn verify_and_copy_files_async(
 
 /// Recursively copies directories with a progress bar for feedback.
 pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
-    // Initialize the progress bar
-    let progress_bar = ProgressBar::new(100); // Example total value, adjust as needed
+    if !src.exists() {
+        anyhow::bail!(
+            "Source directory does not exist: {}",
+            src.display()
+        );
+    }
+
+    fs::create_dir_all(dst).with_context(|| {
+        format!(
+            "Failed to create destination directory: {}",
+            dst.display()
+        )
+    })?;
+
+    let entries = fs::read_dir(src).with_context(|| {
+        format!("Failed to read source directory: {}", src.display())
+    })?;
+
+    let progress_bar = ProgressBar::new(entries.count() as u64);
     progress_bar.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")?
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+            .unwrap()
             .progress_chars("#>-"),
     );
 
-    // Perform directory copying with progress tracking
     for entry in fs::read_dir(src)? {
         let entry = entry?;
-        let file_name = entry.file_name();
-        let src_path = src.join(&file_name);
-        let dst_path = dst.join(&file_name);
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
 
         if src_path.is_dir() {
-            fs::create_dir_all(&dst_path)?;
             copy_dir_with_progress(&src_path, &dst_path)?;
+        } else {
+            let _ =
+                fs::copy(&src_path, &dst_path).with_context(|| {
+                    format!(
+                        "Failed to copy file from {} to {}",
+                        src_path.display(),
+                        dst_path.display()
+                    )
+                })?;
         }
-
-        // Update progress bar
         progress_bar.inc(1);
     }
 
@@ -2205,5 +2227,75 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_empty_source() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        // Call the function with an empty source directory
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+
+        // Verify that the destination directory exists and is empty
+        assert!(dst_dir.path().exists());
+        assert!(fs::read_dir(dst_dir.path())?.next().is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_source_does_not_exist() {
+        let src_dir = Path::new("/nonexistent");
+        let dst_dir = tempdir().unwrap();
+
+        let result = copy_dir_with_progress(src_dir, dst_dir.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_single_file() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        fs::write(src_dir.path().join("file1.txt"), "content")?;
+
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+
+        let copied_file = dst_dir.path().join("file1.txt");
+        assert!(copied_file.exists());
+        assert_eq!(fs::read_to_string(copied_file)?, "content");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_nested_directories() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        let nested_dir = src_dir.path().join("nested");
+        fs::create_dir(&nested_dir)?;
+        fs::write(nested_dir.join("file.txt"), "nested content")?;
+
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+
+        let copied_nested_file = dst_dir.path().join("nested/file.txt");
+        assert!(copied_nested_file.exists());
+        assert_eq!(
+            fs::read_to_string(copied_nested_file)?,
+            "nested content"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_destination_creation_failure() {
+        let src_dir = tempdir().unwrap();
+        let dst_dir = Path::new("/invalid_path");
+
+        let result = copy_dir_with_progress(src_dir.path(), dst_dir);
+        assert!(result.is_err());
     }
 }

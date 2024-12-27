@@ -3,9 +3,9 @@
 alt="Shokunin logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
-# `Shokunin Static Site Generator (SSG)`
+# Shokunin Static Site Generator (SSG)
 
-A modern, high-performance static site generator crafted in Rust, optimised for content-first development.
+A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -19,43 +19,51 @@ A modern, high-performance static site generator crafted in Rust, optimised for 
 </center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-## Overview
+## Overview 🚀
 
-Shokunin is a lightning-fast static site generator (SSG) built with Rust, delivering exceptional performance while maintaining strict accessibility standards. It prioritises content management, search engine optimisation (SEO), and WCAG 2.1 Level AA compliance.
+Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:
 
-## Key Features
+- Content-first development approach
+- Lightning-fast site generation
+- WCAG 2.1 Level AA accessibility compliance
+- Advanced SEO optimization
+- Type-safe operations with comprehensive error handling
 
-- **⚡ Exceptional Performance**: Leverages Rust's zero-cost abstractions for optimal speed
-- **📱 Advanced SEO**: Built-in optimisations for maximum search engine visibility
-- **🛠️ Versatile Content Support**: Seamlessly handles Markdown, YAML, JSON, and TOML
-- **📊 Analytics Integration**: Native support for Google Analytics and Bing Analytics
-- **🔄 Automated Feed Generation**: Auto-generates Atom and RSS feeds
-- **🎨 Customisable Themes**: Supports bespoke HTML themes and templates
-- **📱 Development Tools**: Integrated Rust server for local development
+## Key Features 🎯
 
-### Accessibility Features
+### Core Capabilities
 
-Shokunin automatically implements WCAG 2.1 Level AA standards through:
+- **⚡ Exceptional Performance**: Zero-cost abstractions through Rust
+- **📱 SEO Optimization**: Built-in enhancements for search visibility
+- **♿ Accessibility**: Automatic WCAG 2.1 Level AA compliance
+- **🛠️ Multi-format Support**: Handles Markdown, YAML, JSON, and TOML
+- **🔄 Feed Generation**: Automatic Atom and RSS feed creation
+- **📊 Analytics**: Native Google and Bing Analytics integration
+- **🎨 Theming**: Custom HTML themes and template support
 
-- Semantic HTML structure
-- ARIA landmark roles
-- Keyboard navigation support
-- Screen reader optimisation
-- Colour contrast compliance
-- Responsive text scaling
-- Alt text management
-- Clear document hierarchy
-- Focus state handling
+### Development Features
 
-## Getting Started
+- **🔧 CLI Tools**: Comprehensive command-line interface
+- **🚀 Dev Server**: Built-in Rust server for local development
+- **🔍 Hot Reload**: Automatic content updates during development
+- **📝 Type Safety**: Guaranteed memory and thread safety
+- **⚡ Async Support**: Full asynchronous operation capabilities
+
+## Getting Started 📦
 
 ### Installation
 
-Add Shokunin to your `Cargo.toml`:
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-shokunin = "0.0.31"
+ssg = "0.0.31"
+```
+
+Or install via Cargo:
+
+```bash
+cargo install ssg
 ```
 
 ### Basic Usage
@@ -65,38 +73,31 @@ use staticdatagen::compiler::service::compile;
 use std::{path::Path, error::Error};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // Define paths to existing directories
-    let build_dir = Path::new("./examples/build");        // For temporary build files
-    let content_dir = Path::new("./examples/content");    // Your markdown content
-    let public_dir = Path::new("./examples/public");      // Generated site output
-    let template_dir = Path::new("./examples/templates"); // HTML templates
+    // Define directory paths
+    let build_dir = Path::new("./examples/build");          // Build directory
+    let content_dir = Path::new("./examples/content");      // Content directory
+    let public_dir = Path::new("./examples/public");        // Public directory
+    let template_dir = Path::new("./examples/templates");   // Templates
 
-    // Generate the static site
+    // Generate site
     compile(build_dir, content_dir, public_dir, template_dir)?;
-
     println!("✨ Site generated successfully!");
     Ok(())
 }
 ```
 
-### Command-Line Interface
+### CLI Usage
 
-Create a new site with the following command:
-
-```bash
-ssg --content=content \
-    --template=templates \
-    --output=output \
-    --serve=public
-```
-
-Or use the shorter form:
+Create a new site:
 
 ```bash
+# Full command syntax
+ssg --content=content --template=templates --output=output --serve=public
+
+# Short form
 ssg -c=content -t=templates -o=output -s=public
-```
 
-```bash
+# Using cargo run
 cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./examples/output" -s="./examples/public"
 ```
 
@@ -104,59 +105,58 @@ cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./e
 
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
-| `--content` | `-c` | Content directory path | Yes |
-| `--template` | `-t` | Template directory path | Yes |
-| `--output` | `-o` | Output directory path | Yes |
-| `--serve` | `-s` | Development server path | No |
+| `--content` | `-c` | Content path | Yes |
+| `--template` | `-t` | Template path | Yes |
+| `--output` | `-o` | Output path | Yes |
+| `--serve` | `-s` | Server Public path | Yes |
 
-## Documentation
+## Examples 📚
 
-For comprehensive API documentation, visit [docs.rs/crate/ssg/](https://docs.rs/crate/ssg/).
+Try our example implementations:
 
-## Examples
-
-Explore example implementations:
-
-- Basic Example
-
-```shell
+```bash
+# Basic example
+## Convert Markdown to static sites effortlessly, with templates, organized builds, and instant local hosting.
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
 cargo run --example basic
-```
 
-- Quick Start Example
-
-```shell
-git clone https://github.com/sebastienrousseau/shokunin.git
-cd shokunin
+# Quick start example
+## Create, compile, and host a static site effortlessly with Shokunin: simple setup, error handling, and instant local server for previews.
 cargo run --example quickstart
-```
 
-- Multilingual Example
-
-```shell
-git clone https://github.com/sebastienrousseau/shokunin.git
-cd shokunin
+# Multilingual example
+## Build multilingual static sites effortlessly: generate language-specific sites, create a language selector, and serve all from a single directory.
 cargo run --example multilingual
 ```
 
-## Contributing
+## Documentation 📖
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- [API Documentation][04]
+- [User Guide][00]
+- [Contributing Guidelines][05]
 
-## License
+## Contributing 🤝
 
-This project is licensed under either of
+We welcome contributions! Please see our [Contributing Guidelines][05] for details on:
+
+- Code of Conduct
+- Development Process
+- Pull Request Guidelines
+- Issue Reporting
+
+## License 📄
+
+This project is dual-licensed under:
 
 - [Apache License, Version 2.0][10]
-- [MIT license][11]
+- [MIT License][11]
 
 at your option.
 
-## Acknowledgements
+## Acknowledgements 🙏
 
-Special thanks to all contributors who have helped build the `ssg` library.
+Special thanks to all contributors who have helped build Shokunin.
 
 [00]: https://shokunin.one
 [01]: https://lib.rs/crates/ssg
@@ -176,5 +176,5 @@ Special thanks to all contributors who have helped build the `ssg` library.
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 [github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.1-orange.svg?style=for-the-badge
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.31-orange.svg?style=for-the-badge
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust
