@@ -5,10 +5,10 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.30"                      # The version of the library
+version = "0.0.31"                      # The version of the library
 authors = ["Shokunin Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.56.0"                 # Minimum supported Rust version
+rust-version = "1.57.0"                 # Minimum supported Rust version
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
@@ -78,23 +78,25 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = ["async", "tokio"]                     # No default features enabled
-async = ["tokio"]          # This enables tokio when the async feature is enabled
+default = ["async", "tokio"]            # No default features enabled
+async = ["tokio"]                       # This enables tokio when the async feature is enabled
 cli = []                                # Enable command-line interface support
+benchmark = []                          # Enable benchmark-specific functionality
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
 # -----------------------------------------------------------------------------
 [build-dependencies]
 # Dependencies for the build script, used for pre-compilation tasks.
-version_check = "0.9"                   # Ensures that a compatible Rust version is used
+version_check = "0.9.5"                   # Ensures that a compatible Rust version is used
 
 # -----------------------------------------------------------------------------
 # Development Dependencies
 # -----------------------------------------------------------------------------
 [dev-dependencies]
 # Dependencies required for testing and development.
-criterion = "0.5"                       # Benchmarking library to test performance
+criterion = "0.5.1"                       # Benchmarking library to test performance
+lazy_static = "1.5.0"                      # Static variables for lazy evaluation
 
 # -----------------------------------------------------------------------------
 # Dependencies
@@ -103,25 +105,30 @@ criterion = "0.5"                       # Benchmarking library to test performan
 # Required dependencies for building and running the project.
 anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
+colored = "2.2.0"
 dtt = "0.0.8"
+env_logger = "0.11.6"
 http-handle = "0.0.2"
+indicatif = { version = "0.17.9", features = ["rayon"] }
 langweave = "0.0.1"
 log = { version = "0.4.22", features = ["std"] }
+once_cell = "1.20.2"
 rayon = "1.10.0"
 rlg = "0.0.6"
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.134"
-staticdatagen = "0.0.1"
+staticdatagen = "0.0.4"
 tempfile = "3.14.0"
 thiserror = "2.0.9"
 toml = "0.8.19"
 tokio = { version = "1.42.0", features = ["full"], optional = true }
-url = "2.5.4"
+url = "2.5.3"
 uuid = { version = "1.11.0", features = ["v4"] }
+warp = "0.3.7"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10", features = ["vendored"] }
+openssl = { version = "0.10.68", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
@@ -130,6 +137,24 @@ openssl = { version = "0.10", features = ["vendored"] }
 # Benchmarking configuration for performance testing.
 name = "bench"                              # Name of the benchmark
 harness = false                             # Disable the default benchmark harness (used by Criterion)
+
+# -----------------------------------------------------------------------------
+# Examples
+# -----------------------------------------------------------------------------
+[[example]]
+# Basic example configuration for showcasing the library.
+name = "basic"                            # Name of the example
+path = "examples/basic_example.rs"        # Path to the example file
+
+[[example]]
+# Quickstart example configuration for showcasing the library.
+name = "quickstart"                       # Name of the example
+path = "examples/quickstart_example.rs"   # Path to the example file
+
+[[example]]
+# Multilingual example configuration for showcasing the library.
+name = "multilingual"                     # Name of the example
+path = "examples/multilingual_example.rs" # Path to the example file
 
 # -----------------------------------------------------------------------------
 # Documentation Configuration

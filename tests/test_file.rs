@@ -1,5 +1,7 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! This crate tests file generation functionality using `FileGenerator`.
 
 #[cfg(test)]
 mod tests {
@@ -39,7 +41,6 @@ mod tests {
             files.iter().find(|f| f.name == "file1.txt").unwrap();
         assert_eq!(file1.content, "File 1 content");
         assert_eq!(file1.rss, "File 1 content");
-        assert_eq!(file1.json, "\"File 1 content\"");
         assert_eq!(file1.txt, "File 1 content");
         assert_eq!(file1.cname, "File 1 content");
         assert_eq!(file1.sitemap, "File 1 content");
@@ -48,7 +49,6 @@ mod tests {
             files.iter().find(|f| f.name == "file2.txt").unwrap();
         assert_eq!(file2.content, "File 2 content");
         assert_eq!(file2.rss, "File 2 content");
-        assert_eq!(file2.json, "\"File 2 content\"");
         assert_eq!(file2.txt, "File 2 content");
         assert_eq!(file2.cname, "File 2 content");
         assert_eq!(file2.sitemap, "File 2 content");

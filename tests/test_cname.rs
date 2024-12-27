@@ -1,9 +1,10 @@
-// Copyright © 2024 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-#[cfg(test)]
+//! This crate tests CNAME generation functionality using `CnameGenerator`.
+
 mod tests {
-    use staticdatagen::modules::cname::create_cname_data;
+    use staticdatagen::generators::cname::CnameGenerator;
     use std::collections::HashMap;
 
     #[test]
@@ -12,17 +13,25 @@ mod tests {
         let _ = metadata
             .insert("cname".to_string(), "example.com".to_string());
 
-        let cname_data = create_cname_data(&metadata);
+        let result = CnameGenerator::from_metadata(&metadata);
+        assert!(result.is_ok(), "Expected CNAME generation to succeed");
 
-        assert_eq!(cname_data.cname, "example.com");
+        let cname_data = result.unwrap();
+        assert!(
+            cname_data.contains("example.com"),
+            "Expected generated data to contain 'example.com', got: {}",
+            cname_data
+        );
     }
 
     #[test]
     fn test_create_cname_data_with_missing_cname() {
-        let metadata = HashMap::new(); // Empty metadata
+        let metadata = HashMap::new(); // No "cname" entry
 
-        let cname_data = create_cname_data(&metadata);
-
-        assert_eq!(cname_data.cname, "");
+        let result = CnameGenerator::from_metadata(&metadata);
+        assert!(
+            result.is_err(),
+            "Expected error due to missing 'cname' key in metadata"
+        );
     }
 }
