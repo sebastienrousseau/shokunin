@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Verifies the safety of a file for processing."><title>verify_file_safety in ssg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.85.0-nightly (917bfa784 2024-12-26)" data-channel="nightly" data-search-js="search-036cda7a.js" data-settings-js="settings-0f613d39.js" ><script src="../static.files/storage-59e33391.js"></script><script defer src="sidebar-items.js"></script><script defer src="../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://kura.pro/shokunin/images/favicon.ico"></head><body class="rustdoc fn"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="logo"></a><h2><a href="../ssg/index.html">ssg</a><span class="version">0.0.31</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">verify_<wbr>file_<wbr>safety</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#arguments" title="Arguments">Arguments</a></li><li><a href="#returns" title="Returns">Returns</a></li><li><a href="#safety-checks" title="Safety Checks">Safety Checks</a></li><li><a href="#examples" title="Examples">Examples</a></li><li><a href="#errors" title="Errors">Errors</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="index.html">In crate ssg</a></h2></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><span class="rustdoc-breadcrumbs"><a href="index.html">ssg</a></span><h1>Function <span class="fn">verify_file_safety</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/ssg/lib.rs.html#534-566">Source</a> </span></div><pre class="rust item-decl"><code>pub fn verify_file_safety(path: &amp;<a class="struct" href="https://doc.rust-lang.org/nightly/std/path/struct.Path.html" title="struct std::path::Path">Path</a>) -&gt; <a class="type" href="https://docs.rs/anyhow/1.0.95/anyhow/type.Result.html" title="type anyhow::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Verifies the safety of a file for processing.</p>
+<p>Performs comprehensive safety checks on a file to ensure it meets security
+requirements before processing. These checks include symlink detection and
+file size validation.</p>
+<h2 id="arguments"><a class="doc-anchor" href="#arguments">§</a>Arguments</h2>
+<ul>
+<li><code>path</code> - Reference to the path of the file to verify</li>
+</ul>
+<h2 id="returns"><a class="doc-anchor" href="#returns">§</a>Returns</h2>
+<ul>
+<li><code>Ok(())</code> - If the file passes all safety checks</li>
+<li><code>Err</code> - If any safety check fails</li>
+</ul>
+<h2 id="safety-checks"><a class="doc-anchor" href="#safety-checks">§</a>Safety Checks</h2>
+<ul>
+<li>Symlinks: Not allowed (returns error)</li>
+<li>File size: Must be under 10MB</li>
+<li>File type: Must be a regular file</li>
+</ul>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>Verifies the safety of a file.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>std::fs;
+<span class="kw">use </span>std::path::Path;
+<span class="kw">use </span>ssg::verify_file_safety;
+<span class="kw">use </span>tempfile::tempdir;
+
+<span class="comment">// Create temporary directory
+</span><span class="kw">let </span>temp_dir = tempdir()<span class="question-mark">?</span>;
+<span class="kw">let </span>file_path = temp_dir.path().join(<span class="string">"index.md"</span>);
+
+<span class="comment">// Create test file
+</span>fs::write(<span class="kw-2">&amp;</span>file_path, <span class="string">"Hello, world!"</span>)<span class="question-mark">?</span>;
+
+<span class="comment">// Perform verification
+</span>verify_file_safety(<span class="kw-2">&amp;</span>file_path)<span class="question-mark">?</span>;
+
+<span class="comment">// Directory and file are automatically cleaned up</span></code></pre></div>
+<h2 id="errors"><a class="doc-anchor" href="#errors">§</a>Errors</h2>
+<p>Returns an error if:</p>
+<ul>
+<li>File is a symlink</li>
+<li>File size exceeds 10MB</li>
+<li>Cannot read file metadata</li>
+</ul>
+</div></details></section></div></main></body></html>

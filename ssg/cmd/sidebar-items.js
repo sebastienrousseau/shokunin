@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_HOST","DEFAULT_PORT","DEFAULT_SITE_NAME","DEFAULT_SITE_TITLE","MAX_CONFIG_SIZE","RESERVED_NAMES"],"enum":["CliError"],"fn":["validate_url"],"static":["DEFAULT_CONFIG"],"struct":["Cli","LanguageCode","ShokuninConfig","ShokuninConfigBuilder"]};

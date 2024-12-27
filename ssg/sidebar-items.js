@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["collect_files_recursive","copy_dir_all","copy_dir_all_async","copy_dir_with_progress","create_directories","create_log_file","handle_server","is_safe_path","log_arguments","log_initialization","run","verify_and_copy_files","verify_and_copy_files_async","verify_file_safety"],"mod":["cmd","process"],"struct":["Paths","PathsBuilder"]};
