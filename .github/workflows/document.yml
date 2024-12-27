@@ -3,6 +3,7 @@ name: 🧪 Document
 on:
   push:
     branches:
+      - main
       - feat/ssg
   pull_request:
     branches:
@@ -18,11 +19,11 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: hecrj/setup-rust-action@v2
+      - uses: hecrj/setup-rust-action@v2.0.1
         with:
           rust-version: nightly
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Update libssl
         run: |
@@ -37,7 +38,7 @@ jobs:
             echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
 
       - name: Deploy
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.5.0
         with:
           name: documentation
           path: target/doc
@@ -45,16 +46,15 @@ jobs:
           retention-days: 1
 
       - name: Write CNAME file
-        run: echo 'docs.shokunin.one' > ./target/doc/CNAME
+        run: echo 'doc.shokunin.one' > ./target/doc/CNAME
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/doc
           publish_branch: gh-pages
           cname: true
-          clean: true
           commit_message: Deploy documentation at ${{ github.sha }}
-          commit_user_name: github-actions
-          commit_user_email: actions@users.noreply.github.com
+          user_name: github-actions
+          user_email: actions@users.noreply.github.com
