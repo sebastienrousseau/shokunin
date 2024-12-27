@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Define paths to existing directories
     let build_dir = Path::new("./examples/build");        // For temporary build files
     let content_dir = Path::new("./examples/content");    // Your markdown content
-    let public_dir = Path::new("./examples/public");      // Generated site output 
+    let public_dir = Path::new("./examples/public");      // Generated site output
     let template_dir = Path::new("./examples/templates"); // HTML templates
 
     // Generate the static site
@@ -84,8 +84,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 Create a new site with the following command:
 
 ```bash
-ssg --new=docs \
-    --content=content \
+ssg --content=content \
     --template=templates \
     --output=output \
     --serve=public
@@ -94,14 +93,17 @@ ssg --new=docs \
 Or use the shorter form:
 
 ```bash
-ssg -n=docs -c=content -t=templates -o=output -s=public
+ssg -c=content -t=templates -o=output -s=public
+```
+
+```bash
+cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./examples/output" -s="./examples/public"
 ```
 
 ### CLI Options
 
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
-| `--new` | `-n` | Project directory name | Yes |
 | `--content` | `-c` | Content directory path | Yes |
 | `--template` | `-t` | Template directory path | Yes |
 | `--output` | `-o` | Output directory path | Yes |
@@ -115,10 +117,28 @@ For comprehensive API documentation, visit [docs.rs/crate/ssg/](https://docs.rs/
 
 Explore example implementations:
 
+- Basic Example
+
 ```shell
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
-cargo run --example basic_site
+cargo run --example basic
+```
+
+- Quick Start Example
+
+```shell
+git clone https://github.com/sebastienrousseau/shokunin.git
+cd shokunin
+cargo run --example quickstart
+```
+
+- Multilingual Example
+
+```shell
+git clone https://github.com/sebastienrousseau/shokunin.git
+cd shokunin
+cargo run --example multilingual
 ```
 
 ## Contributing

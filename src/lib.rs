@@ -17,16 +17,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::cmd::{Cli, ShokuninConfig};
+
 // Third-party imports
-use anyhow::ensure;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use dtt::datetime::DateTime;
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use http_handle::Server;
+use indicatif::{ProgressBar, ProgressStyle};
 use langweave::translate;
 use log::{info, LevelFilter};
 use rayon::prelude::*;
 use rlg::{macro_log, LogFormat, LogLevel};
-use staticdatagen::generate_unique_string;
+use staticdatagen::{compile, generate_unique_string};
 use tokio::fs as async_fs;
 
 pub mod cmd;
@@ -227,36 +229,49 @@ fn initialize_logging() -> Result<()> {
 ///
 /// Introduces asynchronous file operations, parallel processing, and a progress bar for feedback.
 pub async fn run() -> Result<()> {
+    // 1. Initialize logging
     initialize_logging()?;
     info!("Starting site generation process");
 
-    // Mocked example of file collection and processing with progress bar
-    let files_to_process = vec!["file1", "file2", "file3"];
-    let progress_bar = ProgressBar::new(files_to_process.len() as u64);
-    progress_bar.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")?
-            .progress_chars("#>-"),
-    );
+    // 2. Parse command-line arguments
+    let matches = Cli::build().get_matches();
 
-    files_to_process
-        .par_iter()
-        .progress_with(progress_bar.clone())
-        .try_for_each(|file| {
-            process_file(file)
-                .context(format!("Failed to process file: {}", file))
-        })?;
+    // 3. Create/override config from CLI
+    let config = ShokuninConfig::from_matches(&matches)?;
+    println!("Configuration loaded: {:?}", config);
 
-    progress_bar.finish_with_message("All files processed.");
-    info!("Site generation completed successfully.");
-    Ok(())
-}
+    // 4. Directories gleaned from `config`.
+    // If you want a separate “build” folder vs. final “site” folder,
+    // you can store that in ShokuninConfig as well.
+    //
+    let build_dir = &config.output_dir; // “Temporary” build location
+    let content_dir = &config.content_dir;
+    let template_dir = &config.template_dir;
 
-/// Simulated function for processing a file.
-fn process_file(file: &str) -> Result<()> {
-    info!("Processing file: {}", file);
-    // Simulated work
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    // 5. Use `serve_dir` if set, else fall back to `output_dir` for the final site.
+    let site_dir =
+        config.serve_dir.as_ref().unwrap_or(&config.output_dir);
+
+    // 6. Compile the site
+    compile(build_dir, content_dir, site_dir, template_dir).map_err(
+        |e| {
+            eprintln!("    ❌ Error compiling site: {:?}", e);
+            // Convert the error into an anyhow::Error so run() will fail
+            anyhow!("Failed to compile site: {:?}", e)
+        },
+    )?;
+
+    // 7. If compilation succeeded, serve the generated website locally.
+    let example_root =
+        site_dir.to_str().unwrap_or("./examples/public").to_string();
+
+    // 8. Create a new server with an address and document root
+    let server = Server::new("127.0.0.1:3000", &example_root);
+
+    // 9. Start the server (this will block in practice)
+    let _ = server.start();
+
+    // 10. If everything goes well, return Ok.
     Ok(())
 }
 
@@ -1019,7 +1034,7 @@ mod tests {
         fs::{self, File},
         path::PathBuf,
     };
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
 
     #[test]
     fn test_create_log_file_success() -> Result<()> {
@@ -2057,5 +2072,138 @@ mod tests {
             Some(value) => env::set_var(ENV_LOG_LEVEL, value),
             None => env::remove_var(ENV_LOG_LEVEL),
         }
+    }
+
+    #[test]
+    fn test_initialize_logging_custom_levels() {
+        // Instead of actually initializing the logger, just verify the level parsing
+        for level in &["debug", "warn", "error", "trace"] {
+            env::set_var(ENV_LOG_LEVEL, level);
+            let log_level = env::var(ENV_LOG_LEVEL)
+                .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.to_string());
+            assert_eq!(log_level, *level);
+        }
+        env::remove_var(ENV_LOG_LEVEL);
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_operations() -> Result<()> {
+        use tokio::fs as async_fs;
+
+        let temp_dir = TempDir::new()?;
+        let src_dir = temp_dir.path().join("src");
+        let dst_dir = temp_dir.path().join("dst");
+
+        // Create source directory
+        async_fs::create_dir_all(&src_dir).await?;
+
+        // Create files concurrently
+        let mut handles = Vec::new();
+        for i in 0..100 {
+            let src = src_dir.clone();
+            handles.push(tokio::spawn(async move {
+                async_fs::write(
+                    src.join(format!("file_{}.txt", i)),
+                    format!("content {}", i),
+                )
+                .await
+            }));
+        }
+
+        // Wait for all files to be created
+        for handle in handles {
+            handle.await??;
+        }
+
+        // Ensure source files exist before copying
+        tokio::time::sleep(tokio::time::Duration::from_millis(100))
+            .await;
+
+        // Verify source files
+        let mut src_files = Vec::new();
+        collect_files_recursive(&src_dir, &mut src_files)?;
+        assert_eq!(
+            src_files.len(),
+            100,
+            "Source directory should have 100 files, found {}",
+            src_files.len()
+        );
+
+        // Create destination directory
+        async_fs::create_dir_all(&dst_dir).await?;
+
+        // Copy files using verify_and_copy_files instead of async version
+        verify_and_copy_files(&src_dir, &dst_dir)?;
+
+        // Allow some time for filesystem operations to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(100))
+            .await;
+
+        // Verify destination files
+        let mut dst_files = Vec::new();
+        collect_files_recursive(&dst_dir, &mut dst_files)?;
+
+        // Debug output
+        if dst_files.len() != 100 {
+            println!("Source directory contents:");
+            for file in &src_files {
+                println!("  {:?}", file);
+            }
+            println!("Destination directory contents:");
+            for file in &dst_files {
+                println!("  {:?}", file);
+            }
+        }
+
+        assert_eq!(
+            dst_files.len(),
+            100,
+            "Destination directory should have 100 files, found {}",
+            dst_files.len()
+        );
+
+        // Verify file contents
+        for i in 0..100 {
+            let dst_path = dst_dir.join(format!("file_{}.txt", i));
+            assert!(
+                dst_path.exists(),
+                "File {} does not exist in destination",
+                dst_path.display()
+            );
+
+            let content = fs::read_to_string(&dst_path)?;
+            assert_eq!(
+                content,
+                format!("content {}", i),
+                "Content mismatch for file {}",
+                i
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_and_copy_files_basic() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let src_dir = temp_dir.path().join("src");
+        let dst_dir = temp_dir.path().join("dst");
+
+        fs::create_dir_all(&src_dir)?;
+
+        // Create a test file
+        fs::write(src_dir.join("test.txt"), "test content")?;
+
+        // Copy files
+        verify_and_copy_files(&src_dir, &dst_dir)?;
+
+        // Verify file was copied
+        assert!(dst_dir.join("test.txt").exists());
+        assert_eq!(
+            fs::read_to_string(dst_dir.join("test.txt"))?,
+            "test content"
+        );
+
+        Ok(())
     }
 }

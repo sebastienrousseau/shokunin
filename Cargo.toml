@@ -78,9 +78,10 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = ["async", "tokio"]                     # No default features enabled
-async = ["tokio"]          # This enables tokio when the async feature is enabled
+default = ["async", "tokio"]            # No default features enabled
+async = ["tokio"]                       # This enables tokio when the async feature is enabled
 cli = []                                # Enable command-line interface support
+benchmark = []                          # Enable benchmark-specific functionality
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -103,6 +104,7 @@ criterion = "0.5.1"                       # Benchmarking library to test perform
 # Required dependencies for building and running the project.
 anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
+colored = "2.2.0"
 dtt = "0.0.8"
 env_logger = "0.11.6"
 http-handle = "0.0.2"
