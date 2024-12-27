@@ -96,6 +96,7 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.5.1"                       # Benchmarking library to test performance
+lazy_static = "1.5.0"                      # Static variables for lazy evaluation
 
 # -----------------------------------------------------------------------------
 # Dependencies

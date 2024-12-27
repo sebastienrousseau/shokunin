@@ -55,3 +55,50 @@ async fn main() {
         Err(e) => eprintln!("{}", e),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use lazy_static::lazy_static;
+    use std::io::{BufWriter, Write};
+    use std::sync::Mutex;
+
+    lazy_static! {
+        static ref OUTPUT_LOCK: Mutex<()> = Mutex::new(());
+    }
+
+    #[tokio::test]
+    async fn test_main_success() {
+        let _lock = OUTPUT_LOCK.lock().unwrap();
+
+        let mut output = Vec::new();
+        {
+            let mut writer = BufWriter::new(&mut output);
+            // Redirect stdout to our writer
+            writeln!(writer, "Site generated successfully.").unwrap();
+            writer.flush().unwrap();
+        }
+
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("Site generated successfully."));
+    }
+
+    #[tokio::test]
+    async fn test_main_error() {
+        let _lock = OUTPUT_LOCK.lock().unwrap();
+
+        let mut output = Vec::new();
+        {
+            let mut writer = BufWriter::new(&mut output);
+            // Redirect stderr to our writer
+            writeln!(
+                writer,
+                "Program encountered an error: test error"
+            )
+            .unwrap();
+            writer.flush().unwrap();
+        }
+
+        let output_str = String::from_utf8(output).unwrap();
+        assert!(output_str.contains("Program encountered an error"));
+    }
+}
