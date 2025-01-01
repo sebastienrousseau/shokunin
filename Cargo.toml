@@ -106,7 +106,7 @@ lazy_static = "1.5.0"                      # Static variables for lazy evaluatio
 anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
 colored = "2.2.0"
-dtt = "0.0.8"
+dtt = "0.0.9"
 env_logger = "0.11.6"
 http-handle = "0.0.2"
 indicatif = { version = "0.17.9", features = ["rayon"] }

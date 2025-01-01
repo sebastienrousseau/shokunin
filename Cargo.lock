@@ -1067,6 +1067,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dtt"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3d0ded54a7c92b3bbc6d8a6a5ae97f120caa634ab7ee49d0b20ac2041037e2d"
+dependencies = [
+ "lazy_static",
+ "paste",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.9",
+ "time",
+ "version_check",
+]
+
+[[package]]
 name = "ego-tree"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3228,7 +3244,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7f175675d227fe657c5e3214a00c847516117810206f7f26828abc0b934817"
 dependencies = [
  "config",
- "dtt 0.0.8",
+ "dtt 0.0.6",
  "envy",
  "hostname 0.4.0",
  "log",
@@ -3266,7 +3282,7 @@ version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87de826a400568de2c3a99c64977559141a5485b73ae3a91cdaf51728a010ebd"
 dependencies = [
- "dtt 0.0.8",
+ "dtt 0.0.6",
  "log",
  "quick-xml 0.36.2",
  "serde",
@@ -3500,9 +3516,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
 ]
@@ -3518,9 +3534,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3730,7 +3746,7 @@ dependencies = [
  "clap",
  "colored",
  "criterion",
- "dtt 0.0.8",
+ "dtt 0.0.9",
  "env_logger",
  "http-handle",
  "indicatif",
