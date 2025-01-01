@@ -562,27 +562,6 @@ dependencies = [
 
 [[package]]
 name = "comrak"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "453dcb42e33f7b474d7e0db12e0b8d82802c88f35cf5a1d8c297d0dfcecb154f"
-dependencies = [
- "bon",
- "caseless",
- "clap",
- "entities",
- "memchr",
- "once_cell",
- "regex",
- "shell-words",
- "slug",
- "syntect",
- "typed-arena",
- "unicode_categories",
- "xdg",
-]
-
-[[package]]
-name = "comrak"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48ae8f3e7e3f3d424cbb33354fc36943d507327d210aa5794b0192f4be726c6d"
@@ -1067,6 +1046,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dtt"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3d0ded54a7c92b3bbc6d8a6a5ae97f120caa634ab7ee49d0b20ac2041037e2d"
+dependencies = [
+ "lazy_static",
+ "paste",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.9",
+ "time",
+ "version_check",
+]
+
+[[package]]
 name = "ego-tree"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1074,9 +1069,9 @@ checksum = "12a0bb14ac04a9fcf170d0bbbef949b44cc492f4452bd20c095636956f653642"
 
 [[package]]
 name = "ego-tree"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c6ba7d4eec39eaa9ab24d44a0e73a7949a1095a8b3f3abb11eddf27dbb56a53"
+checksum = "b2972feb8dffe7bc8c5463b1dacda1b0dfbed3710e50f977d965429692d74cd8"
 
 [[package]]
 name = "either"
@@ -1548,23 +1543,24 @@ dependencies = [
 
 [[package]]
 name = "html-generator"
-version = "0.0.2"
+version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7ca97825b16cf9ca25d6bdb951c1980449cf2088404e2be0166db2f4b424e5c"
+checksum = "996c5a71e1cf23548209a503067083647ff3e850f6fa49f5947abc66a3259de0"
 dependencies = [
  "cfg",
- "comrak 0.31.0",
+ "comrak 0.32.0",
  "lazy_static",
  "log",
  "mdx-gen",
  "minify-html",
  "once_cell",
  "regex",
- "scraper 0.21.0",
+ "scraper 0.22.0",
  "serde_json",
  "tempfile",
  "thiserror 2.0.9",
  "tokio",
+ "uuid",
  "version_check",
 ]
 
@@ -3228,7 +3224,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7f175675d227fe657c5e3214a00c847516117810206f7f26828abc0b934817"
 dependencies = [
  "config",
- "dtt 0.0.8",
+ "dtt 0.0.9",
  "envy",
  "hostname 0.4.0",
  "log",
@@ -3266,7 +3262,7 @@ version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87de826a400568de2c3a99c64977559141a5485b73ae3a91cdaf51728a010ebd"
 dependencies = [
- "dtt 0.0.8",
+ "dtt 0.0.9",
  "log",
  "quick-xml 0.36.2",
  "serde",
@@ -3417,13 +3413,12 @@ dependencies = [
 
 [[package]]
 name = "scraper"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0e749d29b2064585327af5038a5a8eb73aeebad4a3472e83531a436563f7208"
+checksum = "cc3d051b884f40e309de6c149734eab57aa8cc1347992710dc80bcc1c2194c15"
 dependencies = [
- "ahash 0.8.11",
  "cssparser 0.34.0",
- "ego-tree 0.9.0",
+ "ego-tree 0.10.0",
  "getopts",
  "html5ever 0.29.0",
  "precomputed-hash",
@@ -3500,9 +3495,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
 ]
@@ -3518,9 +3513,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3730,7 +3725,7 @@ dependencies = [
  "clap",
  "colored",
  "criterion",
- "dtt 0.0.8",
+ "dtt 0.0.9",
  "env_logger",
  "http-handle",
  "indicatif",
@@ -3762,15 +3757,15 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.4"
+version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdbcf02e4c7cbeb64b3e60d240b4a1be6ecc616662800d7aae5fc4802c7f3556"
+checksum = "f79f6376f0552bd405208e3f7c59df11c97fb6ff506911d6f17c0d282203725e"
 dependencies = [
  "anyhow",
  "clap",
  "comrak 0.32.0",
- "dtt 0.0.8",
- "html-generator 0.0.2",
+ "dtt 0.0.9",
+ "html-generator 0.0.3",
  "http-handle",
  "idna",
  "langweave",
