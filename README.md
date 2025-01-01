@@ -92,13 +92,13 @@ Create a new site:
 
 ```bash
 # Full command syntax
-ssg --content=content --template=templates --output=output --serve=public
+ssg --content=content --template=templates --serve=public
 
 # Short form
 ssg -c=content -t=templates -o=output -s=public
 
 # Using cargo run
-cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./examples/output" -s="./examples/public"
+cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -s="./examples/public"
 ```
 
 ### CLI Options
@@ -107,7 +107,6 @@ cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./e
 |--------|-------|-------------|----------|
 | `--content` | `-c` | Content path | Yes |
 | `--template` | `-t` | Template path | Yes |
-| `--output` | `-o` | Output path | Yes |
 | `--serve` | `-s` | Server Public path | Yes |
 
 ## Examples 📚
