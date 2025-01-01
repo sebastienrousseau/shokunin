@@ -57,7 +57,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg = "0.0.31"
+ssg = "0.0.32"
 ```
 
 Or install via Cargo:
@@ -92,13 +92,13 @@ Create a new site:
 
 ```bash
 # Full command syntax
-ssg --content=content --template=templates --output=output --serve=public
+ssg --content=content --template=templates --serve=public
 
 # Short form
 ssg -c=content -t=templates -o=output -s=public
 
 # Using cargo run
-cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./examples/output" -s="./examples/public"
+cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -s="./examples/public"
 ```
 
 ### CLI Options
@@ -107,7 +107,6 @@ cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -o="./e
 |--------|-------|-------------|----------|
 | `--content` | `-c` | Content path | Yes |
 | `--template` | `-t` | Template path | Yes |
-| `--output` | `-o` | Output path | Yes |
 | `--serve` | `-s` | Server Public path | Yes |
 
 ## Examples 📚
@@ -176,5 +175,5 @@ Special thanks to all contributors who have helped build Shokunin.
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 [github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.31-orange.svg?style=for-the-badge
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.32-orange.svg?style=for-the-badge
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust

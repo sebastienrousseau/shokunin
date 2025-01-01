@@ -60,7 +60,7 @@ news_title: "Nous Contacter" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/contact/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.31)"
+generator: "Shokunin SSG (version 0.0.32)"
 item_description: Flux RSS pour la page de contact du site Kaishi.
 item_guid: https://kaishi.fr/contact/rss.xml
 item_link: https://kaishi.fr/contact/rss.xml

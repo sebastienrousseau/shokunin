@@ -37,7 +37,7 @@ mod tests {
         );
         // The navigation generator appears to create additional entries for structure
         assert!(
-            navigation.len() > 0,
+            !navigation.is_empty(),
             "Navigation should contain at least one entry"
         );
     }

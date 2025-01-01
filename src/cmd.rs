@@ -221,8 +221,7 @@ impl ShokuninConfig {
 
         // If `--watch` was used
         if matches.get_flag("watch") {
-            // do something like self.enable_watch = true; if you have that
-            // or just log, e.g. debug!("Watch mode enabled")
+            // TODO: Implement watch mode
         }
 
         // Re-validate after overriding
