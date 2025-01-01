@@ -5,10 +5,10 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.31"                      # The version of the library
+version = "0.0.32"                      # The version of the library
 authors = ["Shokunin Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.57.0"                 # Minimum supported Rust version
+rust-version = "1.58.0"                 # Minimum supported Rust version
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.

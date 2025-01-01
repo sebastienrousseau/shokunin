@@ -58,7 +58,7 @@ news_title: "Confidentialité" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.31)"
+generator: "Shokunin SSG (version 0.0.32)"
 item_description: Flux RSS pour le site
 item_guid: https://kaishi.fr/rss.xml
 item_link: https://kaishi.fr/rss.xml
