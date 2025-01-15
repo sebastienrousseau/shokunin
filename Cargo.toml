@@ -123,7 +123,7 @@ thiserror = "2.0.11"
 toml = "0.8.19"
 tokio = { version = "1.43.0", features = ["full"], optional = true }
 url = "2.5.4"
-uuid = { version = "1.11.1", features = ["v4"] }
+uuid = { version = "1.12.0", features = ["v4"] }
 warp = "0.3.7"
 
 # Platform-specific dependency for Unix with OpenSSL
