@@ -18,7 +18,7 @@ use std::path::PathBuf;
 /// # Arguments
 ///
 /// * `c` - A reference to a `Criterion` instance used for benchmark configuration
-///         and measurement.
+///   and measurement.
 ///
 /// # Example Output
 ///

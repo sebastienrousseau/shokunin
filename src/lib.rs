@@ -391,11 +391,16 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
         )
     })?;
 
-    let entries = fs::read_dir(src).with_context(|| {
-        format!("Failed to read source directory: {}", src.display())
-    })?;
+    let entries: Vec<_> = fs::read_dir(src)
+        .with_context(|| {
+            format!(
+                "Failed to read source directory: {}",
+                src.display()
+            )
+        })?
+        .collect::<std::io::Result<Vec<_>>>()?;
 
-    let progress_bar = ProgressBar::new(entries.count() as u64);
+    let progress_bar = ProgressBar::new(entries.len() as u64);
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
@@ -403,8 +408,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
             .progress_chars("#>-"),
     );
 
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
+    for entry in &entries {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
 
@@ -467,10 +471,8 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
         )
     })?;
 
-    let normalized = canonical.components().collect::<PathBuf>();
-
-    // Check if the path contains any parent directory references
-    let contains_parent_refs = normalized
+    // Check if the canonicalized path contains any parent directory references
+    let contains_parent_refs = canonical
         .components()
         .any(|comp| matches!(comp, std::path::Component::ParentDir));
 
@@ -834,7 +836,7 @@ pub async fn handle_server(
         &LogLevel::INFO,
         "process",
         &translate("lib_server_log_msg", "default server message")
-            .unwrap_or("Default server message".to_string()),
+            .unwrap_or_else(|_| "Default server message".to_string()),
         &LogFormat::CLF
     );
     writeln!(log_file, "{}", server_log)?;
@@ -905,7 +907,6 @@ pub fn collect_files_recursive(
     files: &mut Vec<PathBuf>,
 ) -> Result<()> {
     for entry in fs::read_dir(dir)? {
-        let entry = entry;
         let path = entry?.path();
 
         if path.is_dir() {

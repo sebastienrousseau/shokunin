@@ -180,7 +180,7 @@ fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
         let path = entry.path();
 
         if path.is_file()
-            && path.extension().map_or(false, |ext| ext == "md")
+            && path.extension().is_some_and(|ext| ext == "md")
         {
             let content = fs::read_to_string(&path)?;
             let processed_content = process_frontmatter(&content)
@@ -385,10 +385,8 @@ mod tests {
 
     #[test]
     fn test_process_error_io_error() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "an I/O error occurred",
-        );
+        let io_error =
+            std::io::Error::other("an I/O error occurred");
         let error: ProcessError = io_error.into();
         assert!(matches!(error, ProcessError::IoError(_)));
         assert_eq!(error.to_string(), "an I/O error occurred");
