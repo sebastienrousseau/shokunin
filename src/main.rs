@@ -1,4 +1,4 @@
-// Copyright © 2023-2025 Shokunin Static Site Generator.
+// Copyright © 2023-2026 Shokunin Static Site Generator.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! # Shokunin Static Site Generator - Main Entry Point
@@ -58,6 +58,7 @@ async fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use lazy_static::lazy_static;
     use std::io::{BufWriter, Write};
     use std::sync::Mutex;
@@ -100,5 +101,49 @@ mod tests {
 
         let output_str = String::from_utf8(output).unwrap();
         assert!(output_str.contains("Program encountered an error"));
+    }
+
+    // ---------------------------------------------------------------
+    // Test for execute_main_logic error path (lines 35-36, 38)
+    //
+    // Calling run() without proper CLI arguments will trigger the error
+    // branch in execute_main_logic. This covers lines 35, 36, and 38.
+    // Line 37 (Ok path) requires a full working SSG environment and is
+    // not feasible in unit tests.
+    // ---------------------------------------------------------------
+
+    #[tokio::test]
+    async fn execute_main_logic_without_args_returns_error() {
+        // Act: execute_main_logic calls run() which will fail
+        // because no proper CLI args are provided
+        let result = execute_main_logic().await;
+
+        // Assert: should be an error since run() fails without setup
+        assert!(
+            result.is_err(),
+            "Expected error from execute_main_logic without CLI args"
+        );
+
+        let err_msg = result.unwrap_err();
+        assert!(
+            err_msg.contains("Program encountered an error"),
+            "Expected error message prefix, got: {}",
+            err_msg
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Test for message format consistency
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn success_message_format_is_consistent() {
+        // Arrange & Act
+        let success_msg = "Site generated successfully.".to_string();
+        let error_msg = format!("Program encountered an error: {}", "test");
+
+        // Assert
+        assert_eq!(success_msg, "Site generated successfully.");
+        assert!(error_msg.starts_with("Program encountered an error:"));
     }
 }

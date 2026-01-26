@@ -1,4 +1,4 @@
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025-2026 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![doc = include_str!("../README.md")]
@@ -369,6 +369,9 @@ pub async fn verify_and_copy_files_async(
         if src_path.is_dir() {
             Box::pin(verify_and_copy_files_async(&src_path, &dst_path))
                 .await?;
+        } else {
+            verify_file_safety(&src_path)?;
+            let _ = async_fs::copy(&src_path, &dst_path).await?;
         }
     }
 
@@ -408,7 +411,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
             .progress_chars("#>-"),
     );
 
-    for entry in &entries {
+    entries.par_iter().try_for_each(|entry| -> Result<()> {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
 
@@ -425,7 +428,8 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
                 })?;
         }
         progress_bar.inc(1);
-    }
+        Ok(())
+    })?;
 
     progress_bar.finish_with_message("Copy complete.");
     Ok(())
@@ -771,9 +775,6 @@ pub fn create_directories(paths: &Paths) -> Result<()> {
         anyhow::bail!("One or more paths are unsafe. Ensure paths do not contain '..' and are accessible.");
     }
 
-    // Optional directory listing with error context
-    list_directory_contents(&paths.content)
-        .with_context(|| format!("Failed to list contents of content directory at path: {:?}", &paths.content))?;
     Ok(())
 }
 
@@ -841,7 +842,8 @@ pub async fn handle_server(
     );
     writeln!(log_file, "{}", server_log)?;
 
-    fs::create_dir_all(serve_dir)
+    async_fs::create_dir_all(serve_dir)
+        .await
         .context("Failed to create serve directory")?;
 
     println!("Setting up server...");
@@ -1017,35 +1019,6 @@ async fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Creates a recursive directory listing.
-///
-/// Generates a complete listing of directory contents
-/// for verification and debugging purposes.
-///
-/// # Arguments
-///
-/// * `dir` - Directory to list recursively
-///
-/// # Errors
-///
-/// Returns an error if:
-/// * Directory access fails
-/// * Permission issues occur
-/// * Resource limits are exceeded
-fn list_directory_contents(dir: &Path) -> Result<()> {
-    let entries: Vec<_> =
-        fs::read_dir(dir)?.collect::<std::io::Result<Vec<_>>>()?;
-
-    entries.par_iter().try_for_each(|entry| -> Result<()> {
-        let path = entry.path();
-        if path.is_dir() {
-            list_directory_contents(&path)?;
-        }
-        Ok(())
-    })?;
-
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {
@@ -1187,19 +1160,6 @@ mod tests {
         let result =
             handle_server(&mut log_file, &date, &paths, &serve_dir);
         assert!(result.await.is_err());
-    }
-
-    #[test]
-    fn test_list_directory_contents() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let sub_dir = temp_dir.path().join("subdir");
-        fs::create_dir(&sub_dir)?;
-        let temp_file = sub_dir.join("test_file.txt");
-        _ = File::create(&temp_file)?;
-
-        let result = list_directory_contents(temp_dir.path());
-        assert!(result.is_ok());
-        Ok(())
     }
 
     #[test]
@@ -1905,27 +1865,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_list_directory_contents_with_many_files() -> Result<()> {
-        let temp_dir = tempdir()?;
-
-        // Create multiple files and directories
-        for i in 0..5 {
-            fs::create_dir(temp_dir.path().join(format!("dir{}", i)))?;
-            for j in 0..5 {
-                fs::write(
-                    temp_dir
-                        .path()
-                        .join(format!("dir{}/file{}.txt", i, j)),
-                    "content",
-                )?;
-            }
-        }
-
-        list_directory_contents(temp_dir.path())?;
-        Ok(())
-    }
-
     #[tokio::test]
     async fn test_copy_dir_all_async_with_empty_dirs() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -2298,5 +2237,701 @@ mod tests {
 
         let result = copy_dir_with_progress(src_dir.path(), dst_dir);
         assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for Paths::builder() (line 54)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn paths_builder_returns_default_paths_builder() {
+        // Act
+        let builder = Paths::builder();
+
+        // Assert: builder should have all None fields
+        assert!(builder.site.is_none());
+        assert!(builder.content.is_none());
+        assert!(builder.build.is_none());
+        assert!(builder.template.is_none());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for Paths::validate metadata error (lines 102-104)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn paths_validate_symlink_detected_returns_error() {
+        // Arrange: create a symlink path to trigger the symlink check
+        let temp_dir = tempdir().unwrap();
+        let real_dir = temp_dir.path().join("real_site");
+        let symlink_dir = temp_dir.path().join("sym_site");
+        fs::create_dir_all(&real_dir).unwrap();
+        std::os::unix::fs::symlink(&real_dir, &symlink_dir).unwrap();
+
+        let paths = Paths {
+            site: symlink_dir,
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+
+        // Act
+        let result = paths.validate();
+
+        // Assert
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("symlink"),
+            "Expected symlink error, got: {}",
+            err_msg
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_and_copy_files with a single file as source (line 332)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn verify_and_copy_files_source_is_file_triggers_safety_check() -> Result<()> {
+        // Arrange: create a source file (not directory).
+        // verify_and_copy_files calls verify_file_safety for files, then
+        // copy_dir_all which will fail since it cannot read_dir on a file.
+        let temp_dir = tempdir()?;
+        let src_file = temp_dir.path().join("single_file.txt");
+        fs::write(&src_file, "file content")?;
+        let dst_dir = temp_dir.path().join("dst_for_file");
+
+        // Act
+        let result = verify_and_copy_files(&src_file, &dst_dir);
+
+        // Assert: copy_dir_all fails on a file source, but verify_file_safety ran
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_and_copy_files_async with files (line 373)
+    // ---------------------------------------------------------------
+
+    #[tokio::test]
+    async fn verify_and_copy_files_async_copies_files_and_dirs() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let src_dir = temp_dir.path().join("async_src");
+        let dst_dir = temp_dir.path().join("async_dst");
+        fs::create_dir_all(&src_dir)?;
+
+        // Create a file to copy
+        fs::write(src_dir.join("hello.txt"), "hello async")?;
+
+        // Create nested dir with file
+        let nested = src_dir.join("subdir");
+        fs::create_dir_all(&nested)?;
+        fs::write(nested.join("nested.txt"), "nested async")?;
+
+        // Act
+        verify_and_copy_files_async(&src_dir, &dst_dir).await?;
+
+        // Assert
+        assert!(dst_dir.join("hello.txt").exists());
+        assert_eq!(fs::read_to_string(dst_dir.join("hello.txt"))?, "hello async");
+        assert!(dst_dir.join("subdir").join("nested.txt").exists());
+        assert_eq!(
+            fs::read_to_string(dst_dir.join("subdir").join("nested.txt"))?,
+            "nested async"
+        );
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_and_copy_files_async create_dir_all failure (lines 354-355, 361)
+    // ---------------------------------------------------------------
+
+    #[tokio::test]
+    async fn verify_and_copy_files_async_invalid_dst_returns_error() {
+        // Arrange
+        let temp_dir = tempdir().unwrap();
+        let src_dir = temp_dir.path().join("src_valid");
+        fs::create_dir_all(&src_dir).unwrap();
+        fs::write(src_dir.join("file.txt"), "content").unwrap();
+
+        // Use /dev/null/impossible as an invalid destination on Unix
+        let dst_dir = Path::new("/dev/null/impossible_dst");
+
+        // Act
+        let result = verify_and_copy_files_async(&src_dir, dst_dir).await;
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for copy_dir_with_progress error contexts (lines 392, 399-401, 421-426)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn copy_dir_with_progress_multiple_files_succeeds() -> Result<()> {
+        // Arrange: multiple files to trigger parallel progress
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        for i in 0..5 {
+            fs::write(
+                src_dir.path().join(format!("file_{}.txt", i)),
+                format!("content {}", i),
+            )?;
+        }
+
+        // Also create a nested directory with a file
+        let nested = src_dir.path().join("nested_progress");
+        fs::create_dir(&nested)?;
+        fs::write(nested.join("deep.txt"), "deep content")?;
+
+        // Act
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+
+        // Assert: all files copied including nested
+        for i in 0..5 {
+            assert!(dst_dir.path().join(format!("file_{}.txt", i)).exists());
+        }
+        assert!(dst_dir.path().join("nested_progress").join("deep.txt").exists());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for is_safe_path with canonicalize error (lines 472, 474)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn is_safe_path_existing_directory_canonicalizes_successfully() -> Result<()> {
+        // Arrange: temp dir exists, so canonicalize will be called
+        let temp_dir = tempdir()?;
+        let existing = temp_dir.path();
+
+        // Act
+        let result = is_safe_path(existing)?;
+
+        // Assert
+        assert!(result);
+        Ok(())
+    }
+
+    #[test]
+    fn is_safe_path_nonexistent_parent_nonexistent_returns_true() -> Result<()> {
+        // Arrange: path where neither parent nor self exist
+        let path = PathBuf::from("totally_nonexistent_parent/child_path");
+
+        // Act
+        let result = is_safe_path(&path)?;
+
+        // Assert: non-existent paths with non-existent parents are considered safe
+        assert!(result);
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_file_safety metadata error (lines 545-548)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn verify_file_safety_nonexistent_file_returns_error() {
+        // Arrange
+        let path = Path::new("/nonexistent/file/that/does/not/exist.txt");
+
+        // Act
+        let result = verify_file_safety(path);
+
+        // Assert: should fail on symlink_metadata
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Failed to get symlink metadata"),
+            "Expected metadata error, got: {}",
+            err_msg
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_file_safety file size exceeded (lines 565-566)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn verify_file_safety_oversized_file_returns_size_error() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let large_file = temp_dir.path().join("oversized.bin");
+        let file = File::create(&large_file)?;
+        file.set_len(11 * 1024 * 1024)?; // 11MB > 10MB limit
+
+        // Act
+        let result = verify_file_safety(&large_file);
+
+        // Assert
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("exceeds maximum allowed size"),
+            "Expected size error, got: {}",
+            err_msg
+        );
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for log_initialization (line 655)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn log_initialization_writes_banner_log() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let log_path = temp_dir.path().join("init.log");
+        let mut log_file = File::create(&log_path)?;
+        let date = DateTime::new();
+
+        // Act
+        log_initialization(&mut log_file, &date)?;
+
+        // Assert
+        let content = fs::read_to_string(&log_path)?;
+        assert!(!content.is_empty(), "Log file should not be empty");
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for log_arguments (lines 698, 704)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn log_arguments_writes_args_log() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let log_path = temp_dir.path().join("args.log");
+        let mut log_file = File::create(&log_path)?;
+        let date = DateTime::new();
+
+        // Act
+        log_arguments(&mut log_file, &date)?;
+
+        // Assert
+        let content = fs::read_to_string(&log_path)?;
+        assert!(!content.is_empty(), "Log file should not be empty");
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for create_directories error context formatting (lines 755-757, 761-763)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn create_directories_with_valid_temp_paths_succeeds() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let paths = Paths {
+            site: temp_dir.path().join("cd_site"),
+            content: temp_dir.path().join("cd_content"),
+            build: temp_dir.path().join("cd_build"),
+            template: temp_dir.path().join("cd_template"),
+        };
+
+        // Act
+        create_directories(&paths)?;
+
+        // Assert
+        assert!(paths.site.exists());
+        assert!(paths.content.exists());
+        assert!(paths.build.exists());
+        assert!(paths.template.exists());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for Paths Debug derive
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn paths_debug_format_works() {
+        // Arrange
+        let paths = Paths::default_paths();
+
+        // Act
+        let debug_str = format!("{:?}", paths);
+
+        // Assert
+        assert!(debug_str.contains("site"));
+        assert!(debug_str.contains("content"));
+        assert!(debug_str.contains("build"));
+        assert!(debug_str.contains("template"));
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for PathsBuilder Debug derive
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn paths_builder_debug_format_works() {
+        // Arrange
+        let builder = PathsBuilder::default();
+
+        // Act
+        let debug_str = format!("{:?}", builder);
+
+        // Assert
+        assert!(debug_str.contains("PathsBuilder"));
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for copy_dir_all with nested directories (recursive)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn copy_dir_all_deeply_nested_succeeds() -> Result<()> {
+        // Arrange
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        // Create deeply nested structure
+        let deep = src_dir.path().join("a").join("b").join("c");
+        fs::create_dir_all(&deep)?;
+        fs::write(deep.join("deep_file.txt"), "deep content")?;
+        fs::write(src_dir.path().join("root.txt"), "root")?;
+
+        // Act
+        copy_dir_all(src_dir.path(), dst_dir.path())?;
+
+        // Assert
+        assert!(dst_dir.path().join("root.txt").exists());
+        assert!(dst_dir.path().join("a").join("b").join("c").join("deep_file.txt").exists());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Test verify_and_copy_files with unsafe source path
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn verify_and_copy_files_unsafe_source_returns_error() {
+        // Arrange: try a path that is_safe_path would reject
+        // Using a non-existent directory
+        let src = Path::new("/nonexistent_source_dir");
+        let dst_dir = tempdir().unwrap();
+
+        // Act
+        let result = verify_and_copy_files(src, dst_dir.path());
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for collect_files_recursive with multiple levels
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn collect_files_recursive_multiple_levels_collects_all() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let level1 = temp_dir.path().join("l1");
+        let level2 = level1.join("l2");
+        fs::create_dir_all(&level2)?;
+
+        fs::write(temp_dir.path().join("root.txt"), "root")?;
+        fs::write(level1.join("l1.txt"), "level1")?;
+        fs::write(level2.join("l2.txt"), "level2")?;
+
+        // Act
+        let mut files = Vec::new();
+        collect_files_recursive(temp_dir.path(), &mut files)?;
+
+        // Assert
+        assert_eq!(files.len(), 3);
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Test for verify_and_copy_files_async with symlink in source
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn verify_and_copy_files_async_symlink_file_returns_error() -> Result<()> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let src_dir = temp_dir.path().join("sym_async_src");
+        let dst_dir = temp_dir.path().join("sym_async_dst");
+        fs::create_dir_all(&src_dir)?;
+
+        // Create a real file and symlink to it
+        let real_file = src_dir.join("real.txt");
+        fs::write(&real_file, "real content")?;
+        let sym_file = src_dir.join("link.txt");
+        std::os::unix::fs::symlink(&real_file, &sym_file)?;
+
+        // Act
+        let result = verify_and_copy_files_async(&src_dir, &dst_dir).await;
+
+        // Assert: should fail due to symlink
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Test for create_log_file with invalid path
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn create_log_file_invalid_path_returns_error() {
+        // Arrange & Act
+        let result = create_log_file("/nonexistent/dir/log.log");
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for create_directories error context on build dir (lines 754-757)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn create_directories_build_dir_failure_returns_context_error() {
+        // Arrange: content under valid temp, build under invalid path
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let readonly_dir = temp_dir.path().join("readonly");
+        fs::create_dir_all(&readonly_dir).unwrap();
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o444),
+        )
+        .unwrap();
+
+        let paths = Paths {
+            site: temp_dir.path().join("site"),
+            content: temp_dir.path().join("content"),
+            build: readonly_dir.join("cannot_create_build"),
+            template: temp_dir.path().join("templates"),
+        };
+
+        // Act
+        let result = create_directories(&paths);
+
+        // Assert
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("build"),
+            "Expected build dir error, got: {}",
+            err_msg
+        );
+
+        // Cleanup: restore permissions
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for create_directories error context on site dir (lines 760-763)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn create_directories_site_dir_failure_returns_context_error() {
+        // Arrange: content+build succeed, site fails
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let readonly_dir = temp_dir.path().join("readonly_site");
+        fs::create_dir_all(&readonly_dir).unwrap();
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o444),
+        )
+        .unwrap();
+
+        let paths = Paths {
+            site: readonly_dir.join("cannot_create_site"),
+            content: temp_dir.path().join("content"),
+            build: temp_dir.path().join("build"),
+            template: temp_dir.path().join("templates"),
+        };
+
+        // Act
+        let result = create_directories(&paths);
+
+        // Assert
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("site"),
+            "Expected site dir error, got: {}",
+            err_msg
+        );
+
+        // Cleanup
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for create_directories error context on template dir (line 766-767)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn create_directories_template_dir_failure_returns_context_error() {
+        // Arrange: content+build+site succeed, template fails
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let readonly_dir = temp_dir.path().join("readonly_tpl");
+        fs::create_dir_all(&readonly_dir).unwrap();
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o444),
+        )
+        .unwrap();
+
+        let paths = Paths {
+            site: temp_dir.path().join("site"),
+            content: temp_dir.path().join("content"),
+            build: temp_dir.path().join("build"),
+            template: readonly_dir.join("cannot_create_template"),
+        };
+
+        // Act
+        let result = create_directories(&paths);
+
+        // Assert
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("template"),
+            "Expected template dir error, got: {}",
+            err_msg
+        );
+
+        // Cleanup
+        fs::set_permissions(
+            &readonly_dir,
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for copy_dir_with_progress read_dir failure (lines 399-401)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_with_progress_unreadable_source_returns_error() {
+        // Arrange: create a dir with no read permission
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let src = temp_dir.path().join("no_read_src");
+        let dst = temp_dir.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::set_permissions(&src, std::fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        // Act
+        let result = copy_dir_with_progress(&src, &dst);
+
+        // Assert
+        assert!(result.is_err());
+
+        // Cleanup
+        fs::set_permissions(&src, std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for copy_dir_with_progress file copy failure (lines 421-426)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_with_progress_readonly_dest_file_copy_fails() {
+        // Arrange: create src with a file, dst as readonly so copy fails
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let src = temp_dir.path().join("cp_src");
+        let dst = temp_dir.path().join("cp_dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("file.txt"), "content").unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        // Act
+        let result = copy_dir_with_progress(&src, &dst);
+
+        // Assert
+        assert!(result.is_err());
+
+        // Cleanup
+        fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o755))
+            .unwrap();
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for is_safe_path canonicalize failure (lines 472, 474)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn is_safe_path_nonexistent_with_existing_parent_fails_canonicalize() {
+        // Arrange: parent exists, but the path itself does not.
+        // Since parent exists, the early return for non-existent parent
+        // is skipped, so canonicalize is attempted on a non-existent path.
+        let temp_dir = tempdir().unwrap();
+        let nonexistent_child = temp_dir.path().join("does_not_exist");
+
+        // Act
+        let result = is_safe_path(&nonexistent_child);
+
+        // Assert: canonicalize fails for non-existent path with existing parent
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Failed to canonicalize"),
+            "Expected canonicalize error, got: {}",
+            err_msg
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for verify_and_copy_files copy_dir_all context error (line 341)
+    // ---------------------------------------------------------------
+
+    #[cfg(unix)]
+    #[test]
+    fn verify_and_copy_files_copy_dir_all_failure_returns_context_error() {
+        // Arrange: src exists and is safe, dst is read-only so copy fails
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempdir().unwrap();
+        let src = temp_dir.path().join("vac_src");
+        let dst = temp_dir.path().join("vac_dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("file.txt"), "data").unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        // Act
+        let result = verify_and_copy_files(&src, &dst);
+
+        // Assert
+        assert!(result.is_err());
+
+        // Cleanup
+        fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o755))
+            .unwrap();
     }
 }

@@ -1,4 +1,4 @@
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025-2026 Shokunin Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::Result;
@@ -825,5 +825,207 @@ Content";
         );
 
         assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for ProcessError::FrontmatterError display (line 188)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn process_error_frontmatter_error_display() {
+        // Arrange
+        let error = ProcessError::FrontmatterError(
+            "Invalid frontmatter format".to_string(),
+        );
+
+        // Act
+        let display = error.to_string();
+
+        // Assert
+        assert_eq!(
+            display,
+            "Frontmatter processing error: Invalid frontmatter format"
+        );
+    }
+
+    // ---------------------------------------------------------------
+    // Test for process_frontmatter returning content unchanged
+    // when no frontmatter delimiters found (line 214 - implicit)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn process_frontmatter_no_delimiters_returns_unchanged() -> Result<(), ProcessError> {
+        // Arrange: content with no --- delimiters at all
+        let content = "Just plain text without any delimiters";
+
+        // Act
+        let result = process_frontmatter(content)?;
+
+        // Assert
+        assert_eq!(result, content);
+        Ok(())
+    }
+
+    #[test]
+    fn process_frontmatter_single_delimiter_returns_unchanged() -> Result<(), ProcessError> {
+        // Arrange: only one --- delimiter (splitn produces 2 parts)
+        let content = "some text---more text";
+
+        // Act
+        let result = process_frontmatter(content)?;
+
+        // Assert: with exactly 2 parts from splitn(3, "---"), it's not 3, so unchanged
+        assert_eq!(result, content);
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Tests to exercise args() function more thoroughly (line 270)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn args_missing_content_argument_returns_error() {
+        // Arrange
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--output",
+                "output",
+                "--new",
+                "site",
+                "--template",
+                "template",
+            ]);
+
+        // Act
+        let result = args(&matches);
+
+        // Assert
+        assert!(matches!(
+            result,
+            Err(ProcessError::MissingArgument(ref arg)) if arg == "content"
+        ));
+    }
+
+    #[test]
+    fn args_missing_output_argument_returns_error() {
+        // Arrange
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                "content",
+                "--new",
+                "site",
+                "--template",
+                "template",
+            ]);
+
+        // Act
+        let result = args(&matches);
+
+        // Assert
+        assert!(matches!(
+            result,
+            Err(ProcessError::MissingArgument(ref arg)) if arg == "output"
+        ));
+    }
+
+    #[test]
+    fn args_missing_new_argument_returns_error() {
+        // Arrange
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                "content",
+                "--output",
+                "output",
+                "--template",
+                "template",
+            ]);
+
+        // Act
+        let result = args(&matches);
+
+        // Assert
+        assert!(matches!(
+            result,
+            Err(ProcessError::MissingArgument(ref arg)) if arg == "new"
+        ));
+    }
+
+    // ---------------------------------------------------------------
+    // Test for ensure_directory creating a new directory
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn ensure_directory_creates_nested_directory() -> Result<(), ProcessError> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        let nested = temp_dir.path().join("a").join("b").join("c");
+
+        // Act
+        ensure_directory(&nested, "nested")?;
+
+        // Assert
+        assert!(nested.exists());
+        assert!(nested.is_dir());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Test for preprocess_content with empty directory
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn preprocess_content_empty_dir_succeeds() -> Result<(), ProcessError> {
+        // Arrange
+        let temp_dir = tempdir()?;
+
+        // Act
+        let result = preprocess_content(temp_dir.path());
+
+        // Assert
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    // ---------------------------------------------------------------
+    // Test for preprocess_content with directory containing only non-md files
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn preprocess_content_only_non_md_files_no_changes() -> Result<(), ProcessError> {
+        // Arrange
+        let temp_dir = tempdir()?;
+        fs::write(temp_dir.path().join("file.txt"), "text content")?;
+        fs::write(temp_dir.path().join("file.html"), "<h1>HTML</h1>")?;
+
+        // Act
+        preprocess_content(temp_dir.path())?;
+
+        // Assert: non-md files should be untouched
+        assert_eq!(
+            fs::read_to_string(temp_dir.path().join("file.txt"))?,
+            "text content"
+        );
+        assert_eq!(
+            fs::read_to_string(temp_dir.path().join("file.html"))?,
+            "<h1>HTML</h1>"
+        );
+        Ok(())
     }
 }

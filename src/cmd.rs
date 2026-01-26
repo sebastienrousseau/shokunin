@@ -825,4 +825,407 @@ mod tests {
             Err(CliError::IoError(_))
         ));
     }
+
+    // ---------------------------------------------------------------
+    // Tests for override_with_cli branches (lines 196, 202, 207, 214, 219)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_matches_with_new_flag_overrides_site_name() {
+        // Arrange: build CLI with --new flag
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--new",
+            "my_custom_site",
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert: site_name was overridden by CLI
+        assert_eq!(config.site_name, "my_custom_site");
+    }
+
+    #[test]
+    fn from_matches_with_content_flag_overrides_content_dir() {
+        // Arrange
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--content",
+            "my_content",
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.content_dir, PathBuf::from("my_content"));
+    }
+
+    #[test]
+    fn from_matches_with_output_flag_overrides_output_dir() {
+        // Arrange
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--output",
+            "my_output",
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.output_dir, PathBuf::from("my_output"));
+    }
+
+    #[test]
+    fn from_matches_with_template_flag_overrides_template_dir() {
+        // Arrange
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--template",
+            "my_templates",
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.template_dir, PathBuf::from("my_templates"));
+    }
+
+    #[test]
+    fn from_matches_with_serve_flag_overrides_serve_dir() {
+        // Arrange
+        let temp_dir = tempdir().unwrap();
+        let serve_path = temp_dir.path().join("serve");
+        fs::create_dir_all(&serve_path).unwrap();
+
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--serve",
+            serve_path.to_str().unwrap(),
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.serve_dir, Some(serve_path));
+    }
+
+    #[test]
+    fn from_matches_with_all_cli_flags_overrides_all() {
+        // Arrange: provide all overridable CLI flags
+        let temp_dir = tempdir().unwrap();
+        let serve_path = temp_dir.path().join("all_serve");
+        fs::create_dir_all(&serve_path).unwrap();
+
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--new",
+            "all_site",
+            "--content",
+            "all_content",
+            "--output",
+            "all_output",
+            "--template",
+            "all_templates",
+            "--serve",
+            serve_path.to_str().unwrap(),
+            "--watch",
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.site_name, "all_site");
+        assert_eq!(config.content_dir, PathBuf::from("all_content"));
+        assert_eq!(config.output_dir, PathBuf::from("all_output"));
+        assert_eq!(config.template_dir, PathBuf::from("all_templates"));
+        assert_eq!(config.serve_dir, Some(serve_path));
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for from_matches with config file (lines 252-253)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_matches_with_config_file_loads_from_file() {
+        // Arrange: create a valid TOML config file
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+site_name = "FromFileTest"
+content_dir = "file_content"
+output_dir = "file_output"
+template_dir = "file_templates"
+base_url = "http://example.com"
+site_title = "File Site"
+site_description = "Loaded from file"
+language = "en-GB"
+"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let matches = Cli::build().get_matches_from(vec![
+            "shokunin",
+            "--config",
+            config_path.to_str().unwrap(),
+        ]);
+
+        // Act
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+
+        // Assert
+        assert_eq!(config.site_name, "FromFileTest");
+        assert_eq!(config.content_dir, PathBuf::from("file_content"));
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for from_file TOML parsing + validation (lines 291-292)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn from_file_valid_toml_returns_config() {
+        // Arrange: create a valid TOML config
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("valid.toml");
+        let config_content = r#"
+site_name = "ValidSite"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+base_url = "http://example.com"
+site_title = "Valid Site"
+site_description = "A valid site"
+language = "en-GB"
+"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        // Act
+        let config = ShokuninConfig::from_file(&config_path);
+
+        // Assert
+        assert!(config.is_ok());
+        let cfg = config.unwrap();
+        assert_eq!(cfg.site_name, "ValidSite");
+        assert_eq!(cfg.site_title, "Valid Site");
+    }
+
+    #[test]
+    fn from_file_valid_toml_with_invalid_url_returns_validation_error() {
+        // Arrange: valid TOML but invalid base_url
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("bad_url.toml");
+        let config_content = r#"
+site_name = "BadUrlSite"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+base_url = "javascript:alert(1)"
+site_title = "Bad URL Site"
+site_description = "Has a bad URL"
+language = "en-GB"
+"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        // Act
+        let result = ShokuninConfig::from_file(&config_path);
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for validate_url non-http/https scheme (line 430)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn validate_url_ftp_scheme_returns_error() {
+        // Arrange & Act
+        let result = validate_url("ftp://example.com");
+
+        // Assert: ftp is not http or https, so it should fail
+        assert!(result.is_err());
+        if let Err(CliError::InvalidUrl(msg)) = result {
+            assert_eq!(msg, "ftp://example.com");
+        } else {
+            panic!("Expected CliError::InvalidUrl");
+        }
+    }
+
+    #[test]
+    fn validate_url_data_scheme_returns_error() {
+        // Arrange & Act
+        let result = validate_url("data:text/html,<h1>Hi</h1>");
+
+        // Assert: data: is in the XSS pattern list
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_url_vbscript_scheme_returns_error() {
+        // Arrange & Act
+        let result = validate_url("vbscript:msgbox");
+
+        // Assert: vbscript: is in XSS pattern list
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_url_with_angle_brackets_returns_error() {
+        // Arrange & Act: URL containing '>'
+        let result = validate_url("http://example.com/page>");
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_url_with_double_quotes_returns_error() {
+        // Arrange & Act: URL containing '"'
+        let result = validate_url("http://example.com/page\"attr");
+
+        // Assert
+        assert!(result.is_err());
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for validate_path_safety invalid characters (lines 445-447)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn validate_path_safety_with_invalid_chars_returns_error() {
+        // Arrange: paths with invalid characters
+        let invalid_paths = vec![
+            "path<name",
+            "path>name",
+            "path|name",
+            "path\"name",
+            "path?name",
+            "path*name",
+        ];
+
+        for invalid_path in invalid_paths {
+            // Act
+            let result =
+                validate_path_safety(Path::new(invalid_path), "test_field");
+
+            // Assert
+            assert!(
+                result.is_err(),
+                "Expected error for path: {}",
+                invalid_path
+            );
+            if let Err(CliError::InvalidPath { field, details }) = &result {
+                assert_eq!(field, "test_field");
+                assert!(
+                    details.contains("invalid characters"),
+                    "Expected 'invalid characters' in details, got: {}",
+                    details
+                );
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Tests for validate_path_safety parent directory traversal (lines 461-462, 464)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn validate_path_safety_relative_with_traversal_returns_error() {
+        // Arrange: relative path with '..'
+        let path = Path::new("some/../secret");
+
+        // Act
+        let result = validate_path_safety(path, "traversal_field");
+
+        // Assert
+        assert!(result.is_err());
+        if let Err(CliError::InvalidPath { field, details }) = &result {
+            assert_eq!(field, "traversal_field");
+            assert!(
+                details.contains("parent directory traversal"),
+                "Expected 'parent directory traversal', got: {}",
+                details
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Test for CliError Display formatting
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn cli_error_display_formats_correctly() {
+        // Arrange & Assert: InvalidPath
+        let err = CliError::InvalidPath {
+            field: "content".to_string(),
+            details: "Path is invalid".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "Invalid path 'content': Path is invalid"
+        );
+
+        // MissingArgument
+        let err = CliError::MissingArgument("output".to_string());
+        assert_eq!(
+            err.to_string(),
+            "Required argument missing: output"
+        );
+
+        // InvalidUrl
+        let err = CliError::InvalidUrl("bad://url".to_string());
+        assert_eq!(err.to_string(), "Invalid URL: bad://url");
+
+        // ValidationError
+        let err = CliError::ValidationError("bad config".to_string());
+        assert_eq!(err.to_string(), "Validation error: bad config");
+    }
+
+    // ---------------------------------------------------------------
+    // Test for Cli::new()
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn cli_new_returns_instance() {
+        let cli = Cli::new();
+        // Verify it returns a usable Cli struct
+        let _debug_str = format!("{:?}", cli);
+    }
+
+    // ---------------------------------------------------------------
+    // Test for DEFAULT_CONFIG lazy static
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn default_config_lazy_static_is_accessible() {
+        // Arrange & Act
+        let config = &*DEFAULT_CONFIG;
+
+        // Assert
+        assert_eq!(config.site_name, DEFAULT_SITE_NAME);
+        assert_eq!(config.site_title, DEFAULT_SITE_TITLE);
+        assert_eq!(config.language, "en-GB");
+        assert!(config.base_url.contains(DEFAULT_HOST));
+    }
+
+    // ---------------------------------------------------------------
+    // Test for ShokuninConfig Default trait
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn shokunin_config_default_matches_default_config() {
+        // Act
+        let config = ShokuninConfig::default();
+
+        // Assert
+        assert_eq!(config.site_name, DEFAULT_SITE_NAME);
+        assert_eq!(config.content_dir, PathBuf::from("content"));
+        assert_eq!(config.output_dir, PathBuf::from("public"));
+        assert_eq!(config.template_dir, PathBuf::from("templates"));
+        assert!(config.serve_dir.is_none());
+    }
 }
