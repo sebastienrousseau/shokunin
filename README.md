@@ -5,7 +5,7 @@ alt="Shokunin logo" height="66" align="right" />
 
 # Shokunin Static Site Generator (SSG)
 
-A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.
+A content-first static site generator built in Rust, optimized for performance, accessibility, and search engine visibility.
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -19,54 +19,54 @@ A content-first static site generator crafted in Rust, optimized for performance
 </center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-## Overview 🚀
+## Overview
 
-Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:
+Shokunin is a high-performance static site generator (SSG) built in Rust that focuses on:
 
-- Content-first development approach
-- Lightning-fast site generation
+- Content-first development
+- Fast site generation
 - WCAG 2.1 Level AA accessibility compliance
 - Advanced SEO optimization
-- Type-safe operations with comprehensive error handling
+- Type-safe operations with thorough error handling
 
-## Key Features 🎯
+## Key features
 
-### Core Capabilities
+### Core capabilities
 
-- **⚡ Exceptional Performance**: Zero-cost abstractions through Rust
-- **📱 SEO Optimization**: Built-in enhancements for search visibility
-- **♿ Accessibility**: Automatic WCAG 2.1 Level AA compliance
-- **🛠️ Multi-format Support**: Handles Markdown, YAML, JSON, and TOML
-- **🔄 Feed Generation**: Automatic Atom and RSS feed creation
-- **📊 Analytics**: Native Google and Bing Analytics integration
-- **🎨 Theming**: Custom HTML themes and template support
+- **High performance**: Zero-cost abstractions through Rust
+- **SEO optimization**: Built-in enhancements for search visibility
+- **Accessibility**: Automatic WCAG 2.1 Level AA compliance
+- **Multi-format support**: Handles Markdown, YAML, JSON, and TOML
+- **Feed generation**: Automatic Atom and RSS feed creation
+- **Analytics**: Native Google and Bing Analytics integration
+- **Theming**: Custom HTML themes and template support
 
-### Development Features
+### Development features
 
-- **🔧 CLI Tools**: Comprehensive command-line interface
-- **🚀 Dev Server**: Built-in Rust server for local development
-- **🔍 Hot Reload**: Automatic content updates during development
-- **📝 Type Safety**: Guaranteed memory and thread safety
-- **⚡ Async Support**: Full asynchronous operation capabilities
+- **CLI tools**: Full-featured command-line interface
+- **Dev server**: Built-in Rust server for local development
+- **Hot reload**: Automatic content updates during development
+- **Type safety**: Guaranteed memory and thread safety
+- **Async support**: Full asynchronous operation capabilities
 
-## Getting Started 📦
+## Getting started
 
 ### Installation
 
-Add to your `Cargo.toml`:
+Add Shokunin to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 ssg = "0.0.32"
 ```
 
-Or install via Cargo:
+Or install with Cargo:
 
 ```bash
 cargo install ssg
 ```
 
-### Basic Usage
+### Basic usage
 
 ```rust
 use staticdatagen::compiler::service::compile;
@@ -81,12 +81,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Generate site
     compile(build_dir, content_dir, public_dir, template_dir)?;
-    println!("✨ Site generated successfully!");
+    println!("Site generated successfully!");
     Ok(())
 }
 ```
 
-### CLI Usage
+### CLI usage
 
 Create a new site:
 
@@ -101,17 +101,17 @@ ssg -c=content -t=templates -o=output -s=public
 cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -s="./examples/public"
 ```
 
-### CLI Options
+### CLI options
 
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
 | `--content` | `-c` | Content path | Yes |
 | `--template` | `-t` | Template path | Yes |
-| `--serve` | `-s` | Server Public path | Yes |
+| `--serve` | `-s` | Server public path | Yes |
 
-## Examples 📚
+## Examples
 
-Try our example implementations:
+Try these example implementations:
 
 ```bash
 # Basic example
@@ -129,22 +129,22 @@ cargo run --example quickstart
 cargo run --example multilingual
 ```
 
-## Documentation 📖
+## Documentation
 
-- [API Documentation][04]
-- [User Guide][00]
-- [Contributing Guidelines][05]
+- [API documentation][04]
+- [Guide][00]
+- [Contributing guidelines][05]
 
-## Contributing 🤝
+## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines][05] for details on:
+We welcome contributions. See the [Contributing guidelines][05] for details on:
 
-- Code of Conduct
-- Development Process
-- Pull Request Guidelines
-- Issue Reporting
+- Code of conduct
+- Development process
+- Pull request guidelines
+- Issue reporting
 
-## License 📄
+## License
 
 This project is dual-licensed under:
 
@@ -153,7 +153,7 @@ This project is dual-licensed under:
 
 at your option.
 
-## Acknowledgements 🙏
+## Acknowledgements
 
 Special thanks to all contributors who have helped build Shokunin.
 

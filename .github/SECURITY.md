@@ -1,38 +1,39 @@
 # Security
 
-We take the security of our software products and services seriously, which includes all source code repositories managed through our GitHub repositories.
+We take the security of our software products and services seriously. This includes all source code repositories managed through our GitHub organization.
 
-## Contact Information
+## Contact information
 
-To report a security vulnerability, please use the following email address: <contact@shokunin.one>.
+To report a security vulnerability, email us at <contact@shokunin.one>.
 
-We accept reports in the following languages:English or French.
+We accept reports in English or French.
 
-## Reporting Security Issues
+## Reporting security issues
 
-When reporting a security issue, please include as much of the following information as possible to help us understand the nature and scope of the possible issue:
+When you report a security issue, include as much of the following information as possible so we can understand the nature and scope of the issue:
 
-- Type of issue (e.g., buffer overflow, SQL injection, cross-site scripting, etc.)
-- Full paths of source file(s) related to the manifestation of the issue
-- The location of the affected source code (tag/branch/commit or direct URL)
+- Type of issue (for example, buffer overflow, SQL injection, or cross-site scripting)
+- Full paths of source files related to the issue
+- Location of the affected source code (tag, branch, commit, or direct URL)
 - Any special configuration required to reproduce the issue
 - Step-by-step instructions to reproduce the issue
-- Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit it
-- This information will help us triage your report more quickly.
+- Proof-of-concept or exploit code, if available
+- Impact of the issue, including how an attacker could exploit it
 
-## Response Time
+This information helps us review your report faster.
 
-We aim to acknowledge receipt of your vulnerability report within 48 hours and will strive to keep you informed of the progress we're making toward resolving the issue.
+## Response time
 
-## Disclosure Policy
+We aim to acknowledge your vulnerability report within 48 hours and will keep you informed of our progress toward a resolution.
 
-Once we've resolved a reported security issue, we may disclose it publicly. We will coordinate the disclosure with the person who reported the issue to ensure that they are credited for their discovery.
+## Disclosure policy
 
-## Acknowledgments
+After we resolve a reported security issue, we may disclose it publicly. We coordinate the disclosure with the reporter to ensure proper credit for the discovery.
 
-We will publicly thank security researchers who follow this responsible disclosure policy, recognizing their contributions in our 'Hall of Fame' or 'Thank You' page.
+## Acknowledgements
 
-## Safe Harbour
+We publicly thank security researchers who follow this responsible disclosure policy and recognize their contributions on our acknowledgements page.
 
-We promise not to initiate legal action against researchers for disclosing vulnerabilities as long as they adhere to responsible disclosure guidelines, which includes reporting it to us and not publicly disclosing the issue until we've had a reasonable time to address it.
+## Safe harbour
+
+We will not pursue legal action against researchers who disclose vulnerabilities responsibly. This means reporting the issue to us first and not disclosing it publicly until we have had reasonable time to address it.

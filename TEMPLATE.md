@@ -5,7 +5,7 @@ alt="Shokunin logo" height="66" align="right" />
 
 # Shokunin Static Site Generator (SSG)
 
-A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.
+A content-first static site generator built in Rust, optimized for performance, accessibility, and search engine visibility.
 
 <!-- markdownlint-disable MD033 MD041 -->
 <center>
@@ -19,15 +19,15 @@ A content-first static site generator crafted in Rust, optimized for performance
 </center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-## Overview 🚀
+## Overview
 
-Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:
+Shokunin is a high-performance static site generator (SSG) built in Rust that focuses on:
 
-- Content-first development approach
-- Lightning-fast site generation
+- Content-first development
+- Fast site generation
 - WCAG 2.1 Level AA accessibility compliance
 - Advanced SEO optimization
-- Type-safe operations with comprehensive error handling
+- Type-safe operations with thorough error handling
 
 [00]: https://shokunin.one
 [01]: https://lib.rs/crates/ssg
@@ -48,4 +48,4 @@ Shokunin is a high-performance static site generator (SSG) engineered in Rust th
 [libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.32-orange.svg?style=for-the-badge
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust
 
-## Changelog 📚
+## Changelog
