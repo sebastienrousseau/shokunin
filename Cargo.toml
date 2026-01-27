@@ -124,7 +124,7 @@ toml = "0.8.19"
 tokio = { version = "1.43.0", features = ["full"], optional = true }
 url = "2.5.4"
 uuid = { version = "1.12.1", features = ["v4"] }
-warp = "0.3.7"
+warp = "0.4.2"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
