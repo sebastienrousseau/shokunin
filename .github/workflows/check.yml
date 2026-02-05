@@ -19,6 +19,6 @@ jobs:
       - uses: hecrj/setup-rust-action@v2
         with:
           components: clippy
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check lints
         run: cargo check --all-targets --workspace --all-features
