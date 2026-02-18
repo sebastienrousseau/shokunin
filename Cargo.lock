@@ -510,6 +510,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "commons"
+version = "0.0.1"
+source = "git+https://github.com/sebastienrousseau/commons?branch=feat/v0.0.1#4d3ed8e239b1adaacbf18d92db81fa7f1372901a"
+dependencies = [
+ "serde",
+ "thiserror 1.0.69",
+ "toml",
+]
+
+[[package]]
 name = "comrak"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3809,6 +3819,7 @@ dependencies = [
  "anyhow",
  "clap",
  "colored",
+ "commons",
  "criterion",
  "dtt 0.0.9",
  "env_logger",

@@ -127,7 +127,7 @@ uuid = { version = "1.20.0", features = ["v4"] }
 warp = "0.3.7"
 
 # Ecosystem shared utilities
-commons = { git = "https://github.com/sebastienrousseau/commons", branch = "feat/v0.0.1", default-features = false, features = ["error", "logging", "config", "time", "id", "env"] }
+commons = { git = "https://github.com/sebastienrousseau/commons", tag = "v0.0.1", default-features = false, features = ["error", "logging", "config", "time", "id", "env"] }
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
