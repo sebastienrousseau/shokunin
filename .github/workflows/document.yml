@@ -4,10 +4,9 @@ on:
   push:
     branches:
       - main
-      - feat/ssg
   pull_request:
     branches:
-      - feat/ssg
+      - main
   release:
     types: [created]
 

@@ -2,12 +2,8 @@ name: 🧪 Release
 
 on:
   push:
-    branches:
-      - main
-      - feat/ssg
-  pull_request:
-    branches:
-      - feat/ssg
+    tags:
+      - "v*"
   release:
     types: [created]
 
