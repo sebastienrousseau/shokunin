@@ -279,7 +279,7 @@ impl ShokuninConfig {
     /// ```
     pub fn from_file(path: &Path) -> Result<Self, CliError> {
         let metadata = fs::metadata(path)?;
-        if metadata.len() > MAX_CONFIG_SIZE.try_into().unwrap() {
+        if metadata.len() > MAX_CONFIG_SIZE as u64 {
             return Err(CliError::ValidationError(format!(
                 "Config file too large (max {} bytes)",
                 MAX_CONFIG_SIZE
@@ -496,10 +496,6 @@ const _: () = {
 pub struct Cli;
 
 impl Cli {
-    /// Creates a new `Cli` instance.
-    pub fn new() -> Self {
-        Self
-    }
     /// Creates the command-line interface.
     pub fn build() -> Command {
         Command::new(env!("CARGO_PKG_NAME"))
@@ -519,7 +515,6 @@ impl Cli {
                     .help("Create new project")
                     .long("new")
                     .short('n')
-                    // .required_unless_present("config")
                     .value_name("NAME")
                     .value_parser(clap::value_parser!(String)), // Change from PathBuf to String
             )
@@ -528,7 +523,6 @@ impl Cli {
                     .help("Content directory")
                     .long("content")
                     .short('c')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )
@@ -537,7 +531,6 @@ impl Cli {
                     .help("Output directory")
                     .long("output")
                     .short('o')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )
@@ -546,7 +539,6 @@ impl Cli {
                     .help("Template directory")
                     .long("template")
                     .short('t')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )

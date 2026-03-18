@@ -44,12 +44,15 @@ use std::process;
 /// }
 /// ```
 fn main() {
-    let min_version = "1.56";
+    let min_version = "1.58";
 
     match version_check::is_min_version(min_version) {
         Some(true) => {}
         _ => {
-            eprintln!("'fd' requires Rustc version >= {}", min_version);
+            eprintln!(
+                "'ssg' requires Rustc version >= {}",
+                min_version
+            );
             process::exit(1);
         }
     }

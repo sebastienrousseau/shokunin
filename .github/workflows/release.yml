@@ -59,10 +59,9 @@ jobs:
       # Install the stable Rust toolchain.
       - name: Install stable toolchain
         id: install-toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
+          targets: ${{ env.TARGET }}
 
       # Cache dependencies to speed up subsequent builds.
       - name: Cache dependencies
@@ -73,18 +72,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      # Install the targets for the cross-compilation toolchain
-      - name: Install target
-        id: install-target
-        run: rustup target add ${{ env.TARGET }}
-
       # Build the targets
       - name: Build targets
         id: build-targets
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --workspace --release --target ${{ env.TARGET }}
+        run: cargo build --verbose --workspace --release --target ${{ env.TARGET }}
 
       # Package the binary for each target
       - name: Package the binary
@@ -115,10 +106,7 @@ jobs:
 
       # Install the stable Rust toolchain
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       # Update the version number based on the Cargo.toml file
       - name: Update version number
@@ -186,13 +174,12 @@ jobs:
       # Create the release on GitHub releases
       - name: Create Release
         id: create-release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ env.VERSION }}
         with:
           tag_name: v${{ env.VERSION }}
-          release_name: Shokunin (SSG) 🦀 v${{ env.VERSION }}
+          name: Shokunin (SSG) v${{ env.VERSION }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
           draft: true
           prerelease: false
@@ -212,10 +199,7 @@ jobs:
       # Install the stable Rust toolchain
       - name: Install stable toolchain
         id: install-toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+        uses: dtolnay/rust-toolchain@stable
 
       # Cache dependencies to speed up subsequent builds
       - name: Cache dependencies
@@ -242,10 +226,6 @@ jobs:
       # Publish the Rust library to Crate.io
       - name: Publish Library to Crate.io
         id: publish-library
-        uses: actions-rs/cargo@v1
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_API_TOKEN }}
-        with:
-          command: publish
-          args: "--no-verify --allow-dirty"
-          use-cross: false
+        run: cargo publish

@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.32"                      # The version of the library
+version = "0.0.33"                      # The version of the library
 authors = ["Shokunin Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.58.0"                 # Minimum supported Rust version
@@ -219,33 +219,29 @@ variant_size_differences = "deny"           # Deny enum variants with significan
 # -----------------------------------------------------------------------------
 # Clippy Configuration
 # -----------------------------------------------------------------------------
-[package.metadata.clippy]
+[lints.clippy]
 # Clippy lint configuration for enhanced code analysis.
-warn-lints = [
-    "clippy::all",                           # Enable all common Clippy lints
-    "clippy::pedantic",                      # Enable pedantic lints for stricter checking
-    "clippy::cargo",                         # Enable lints specific to cargo
-    "clippy::nursery",                       # Enable experimental lints from Clippy’s nursery
-    "clippy::complexity",                    # Warn on code complexity and suggest improvements
-    "clippy::correctness",                   # Ensure code correctness, flagging potential issues
-    "clippy::perf",                          # Lints that catch performance issues
-    "clippy::style",                         # Suggest stylistic improvements
-    "clippy::suspicious",                    # Detect suspicious code patterns
-    "clippy::module_name_repetitions",       # Avoid repeating module names in the crate name
-]
 
-# Customize Clippy to allow certain less critical lints.
-allow-lints = [
-    "clippy::module_inception",              # Allow modules with the same name as their parents
-    "clippy::too_many_arguments",            # Allow functions with more than 7 arguments if justified
-    "clippy::missing_docs_in_private_items", # Skip requiring documentation for private items
-]
+## Warnings
+all = "warn"                                 # Enable all common Clippy lints
+pedantic = "warn"                            # Enable pedantic lints for stricter checking
+cargo = "warn"                               # Enable lints specific to cargo
+nursery = "warn"                             # Enable experimental lints from Clippy’s nursery
+complexity = "warn"                          # Warn on code complexity and suggest improvements
+correctness = "warn"                         # Ensure code correctness, flagging potential issues
+perf = "warn"                                # Lints that catch performance issues
+style = "warn"                               # Suggest stylistic improvements
+suspicious = "warn"                          # Detect suspicious code patterns
+module_name_repetitions = "warn"             # Avoid repeating module names in the crate name
 
-# Enforce specific warnings and errors more strictly.
-deny-lints = [
-    "clippy::unwrap_used",                   # Deny the use of unwrap to ensure error handling
-    "clippy::expect_used",                   # Deny the use of expect to avoid improper error handling
-]
+## Allowances
+module_inception = "allow"                   # Allow modules with the same name as their parents
+too_many_arguments = "allow"                 # Allow functions with more than 7 arguments if justified
+missing_docs_in_private_items = "allow"      # Skip requiring documentation for private items
+
+## Denials
+unwrap_used = "deny"                         # Deny the use of unwrap to ensure error handling
+expect_used = "deny"                         # Deny the use of expect to avoid improper error handling
 
 # -----------------------------------------------------------------------------
 # Profiles
@@ -271,7 +267,7 @@ debug-assertions = false                    # Disable debug assertions
 incremental = false                         # Disable incremental compilation for optimal binary size
 lto = true                                  # Enable link-time optimization for smaller and faster binaries
 opt-level = "z"                             # Optimize for binary size
-overflow-checks = false                     # Disable overflow checks for performance
+overflow-checks = true                      # Enable overflow checks for safety
 panic = "abort"                             # Use abort on panic for minimal overhead
 rpath = false                               # Disable rpath generation
 strip = "symbols"                           # Strip symbols for smaller binary size

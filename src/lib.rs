@@ -262,11 +262,19 @@ pub async fn run() -> Result<()> {
     )?;
 
     // 7. If compilation succeeded, serve the generated website locally.
-    let example_root =
-        site_dir.to_str().unwrap_or("./examples/public").to_string();
+    let example_root = site_dir
+        .to_str()
+        .ok_or_else(|| {
+            anyhow!(
+                "Site directory path contains invalid UTF-8: {:?}",
+                site_dir
+            )
+        })?
+        .to_string();
 
     // 8. Create a new server with an address and document root
-    let server = Server::new("127.0.0.1:3000", &example_root);
+    let addr = format!("{}:{}", cmd::DEFAULT_HOST, cmd::DEFAULT_PORT);
+    let server = Server::new(&addr, &example_root);
 
     // 9. Start the server (this will block in practice)
     let _ = server.start();
@@ -369,6 +377,16 @@ pub async fn verify_and_copy_files_async(
         if src_path.is_dir() {
             Box::pin(verify_and_copy_files_async(&src_path, &dst_path))
                 .await?;
+        } else {
+            async_fs::copy(&src_path, &dst_path).await.with_context(
+                || {
+                    format!(
+                        "Failed to copy file from {} to {}",
+                        src_path.display(),
+                        dst_path.display()
+                    )
+                },
+            )?;
         }
     }
 
@@ -399,7 +417,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("Invalid progress bar template: {}", e))?
             .progress_chars("#>-"),
     );
 
@@ -691,9 +709,9 @@ pub fn log_arguments(
         &date.to_string(),
         &LogLevel::INFO,
         "process",
-        &translate("lib_banner_log_msg", "default message")
+        &translate("lib_args_log_msg", "default arguments message")
             .unwrap_or_else(|_| {
-                "Default banner log message".to_string()
+                "Arguments processed successfully".to_string()
             }),
         &LogFormat::CLF
     );
@@ -898,17 +916,28 @@ pub async fn handle_server(
 ///
 /// This function:
 /// * Only collects file paths, not directory paths
-/// * Follows symbolic links (use with caution)
+/// * Rejects symbolic links (consistent with security model)
 /// * Maintains original path structure
 pub fn collect_files_recursive(
     dir: &Path,
     files: &mut Vec<PathBuf>,
 ) -> Result<()> {
     for entry in fs::read_dir(dir)? {
-        let entry = entry;
-        let path = entry?.path();
+        let entry = entry?;
+        let path = entry.path();
 
-        if path.is_dir() {
+        // Reject symlinks to match security model
+        let metadata = path.symlink_metadata().with_context(|| {
+            format!("Failed to get metadata for: {}", path.display())
+        })?;
+        if metadata.file_type().is_symlink() {
+            anyhow::bail!(
+                "Symlinks are not allowed: {}",
+                path.display()
+            );
+        }
+
+        if metadata.is_dir() {
             collect_files_recursive(&path, files)?;
         } else {
             files.push(path);

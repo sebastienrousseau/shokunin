@@ -19,9 +19,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: hecrj/setup-rust-action@v2.0.1
-        with:
-          rust-version: nightly
+      - uses: dtolnay/rust-toolchain@nightly
 
       - uses: actions/checkout@v6
 
