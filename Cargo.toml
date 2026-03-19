@@ -282,3 +282,10 @@ opt-level = 0                               # No optimizations in test builds
 overflow-checks = true                      # Enable overflow checks for tests
 rpath = false                               # Disable rpath generation
 strip = false                               # Do not strip symbols in test builds
+
+# -----------------------------------------------------------------------------
+# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
+# safe-only implementation.
+# -----------------------------------------------------------------------------
+[patch.crates-io]
+serde_yml = { path = "crates/serde_yml" }
