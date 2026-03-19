@@ -465,6 +465,20 @@ fn validate_path_safety(
         });
     }
 
+    // Check for Windows reserved names
+    if let Some(stem) = path.file_stem() {
+        let stem_lower = stem.to_string_lossy().to_lowercase();
+        if RESERVED_NAMES.contains(&stem_lower.as_str()) {
+            return Err(CliError::InvalidPath {
+                field: field.to_string(),
+                details: format!(
+                    "Path uses reserved name '{}'",
+                    stem_lower
+                ),
+            });
+        }
+    }
+
     // If path exists, check if it's a symlink
     if path.exists() {
         let metadata = fs::symlink_metadata(path).map_err(|e| {

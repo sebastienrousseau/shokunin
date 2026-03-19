@@ -3,11 +3,12 @@ name: 🧪 Test
 on: [pull_request, push]
 jobs:
   test-lib:
-    name: Test library
-    runs-on: ubuntu-latest
+    name: Test library (${{ matrix.os }}, ${{ matrix.toolchain }})
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         toolchain: [stable, nightly]
     continue-on-error: true
 
@@ -18,9 +19,10 @@ jobs:
 
       # Setup Rust
       - name: Setup Rust
-        run: |
-          rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
-          rustup override set ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: llvm-tools-preview
 
       # Configure cache
       - name: Configure cache
