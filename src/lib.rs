@@ -24,11 +24,10 @@ use anyhow::{anyhow, ensure, Context, Result};
 use dtt::datetime::DateTime;
 use http_handle::Server;
 use indicatif::{ProgressBar, ProgressStyle};
-use langweave::translate;
 use log::{info, LevelFilter};
 use rayon::prelude::*;
-use rlg::{macro_log, LogFormat, LogLevel};
-use staticdatagen::{compile, generate_unique_string};
+use rlg::log::Log;
+use staticdatagen::compile;
 use tokio::fs as async_fs;
 
 pub mod cmd;
@@ -378,15 +377,15 @@ pub async fn verify_and_copy_files_async(
             Box::pin(verify_and_copy_files_async(&src_path, &dst_path))
                 .await?;
         } else {
-            async_fs::copy(&src_path, &dst_path).await.with_context(
-                || {
+            let _ = async_fs::copy(&src_path, &dst_path)
+                .await
+                .with_context(|| {
                     format!(
                         "Failed to copy file from {} to {}",
                         src_path.display(),
                         dst_path.display()
                     )
-                },
-            )?;
+                })?;
         }
     }
 
@@ -655,19 +654,10 @@ pub fn log_initialization(
     log_file: &mut File,
     date: &DateTime,
 ) -> Result<()> {
-    let banner_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_banner_log_msg", "default message")
-            .unwrap_or_else(|_| {
-                "Default banner log message".to_string()
-            }),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", banner_log)
-        .context("Failed to write banner log")
+    let entry = Log::info("System initialization complete")
+        .time(&date.to_string())
+        .component("process");
+    writeln!(log_file, "{entry}").context("Failed to write banner log")
 }
 
 /// Logs processed command-line arguments for debugging and auditing.
@@ -704,18 +694,10 @@ pub fn log_arguments(
     log_file: &mut File,
     date: &DateTime,
 ) -> Result<()> {
-    let args_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_args_log_msg", "default arguments message")
-            .unwrap_or_else(|_| {
-                "Arguments processed successfully".to_string()
-            }),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", args_log)
+    let entry = Log::info("Arguments processed successfully")
+        .time(&date.to_string())
+        .component("process");
+    writeln!(log_file, "{entry}")
         .context("Failed to write arguments log")
 }
 
@@ -846,16 +828,10 @@ pub async fn handle_server(
     serve_dir: &PathBuf,
 ) -> Result<()> {
     // Log server initialization
-    let server_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_server_log_msg", "default server message")
-            .unwrap_or("Default server message".to_string()),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", server_log)?;
+    let entry = Log::info("Server initialization")
+        .time(&date.to_string())
+        .component("process");
+    writeln!(log_file, "{entry}")?;
 
     fs::create_dir_all(serve_dir)
         .context("Failed to create serve directory")?;

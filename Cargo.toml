@@ -8,7 +8,7 @@ name = "ssg"                            # The name of the library
 version = "0.0.33"                      # The version of the library
 authors = ["Shokunin Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.58.0"                 # Minimum supported Rust version
+rust-version = "1.88.0"                 # Minimum supported Rust version
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
@@ -114,21 +114,21 @@ langweave = "0.0.1"
 log = { version = "0.4.25", features = ["std"] }
 once_cell = "1.20.2"
 rayon = "1.10.0"
-rlg = "0.0.6"
+rlg = "0.0.8"
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
-staticdatagen = "0.0.5"
+staticdatagen = "0.0.7"
 tempfile = "3.15.0"
 thiserror = "2.0.11"
 toml = "0.8.19"
-tokio = { version = "1.43.0", features = ["full"], optional = true }
+tokio = { version = "1.44.2", features = ["full"], optional = true }
 url = "2.5.4"
 uuid = { version = "1.12.1", features = ["v4"] }
 warp = "0.3.7"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.68", features = ["vendored"] }
+openssl = { version = "0.10.72", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
@@ -200,7 +200,6 @@ future_incompatible = { level = "deny", priority = -1 } # Handle future compatib
 keyword_idents = { level = "deny", priority = -1 }      # Deny usage of keywords as identifiers
 macro_use_extern_crate = "deny"             # Deny macro use of `extern crate`
 meta_variable_misuse = "deny"               # Deny misuse of meta variables in macros
-missing_fragment_specifier = "deny"         # Deny missing fragment specifiers in macros
 noop_method_call = "deny"                   # Deny method calls that have no effect
 rust_2018_idioms = { level = "deny", priority = -1 }    # Enforce Rust 2018 idioms
 rust_2021_compatibility = { level = "deny", priority = -1 } # Enforce Rust 2021 compatibility

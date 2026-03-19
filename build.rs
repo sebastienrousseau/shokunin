@@ -44,7 +44,7 @@ use std::process;
 /// }
 /// ```
 fn main() {
-    let min_version = "1.58";
+    let min_version = "1.88";
 
     match version_check::is_min_version(min_version) {
         Some(true) => {}
