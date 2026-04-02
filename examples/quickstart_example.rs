@@ -11,9 +11,7 @@
 //! - Progress logging
 
 use anyhow::{Context, Result};
-use dtt::datetime::DateTime;
 use http_handle::Server;
-use rlg::{log_format::LogFormat, log_level::LogLevel, macro_log};
 use ssg::{cmd::ShokuninConfig, verify_and_copy_files, Paths};
 use staticdatagen::compiler::service::compile;
 use std::{
@@ -107,37 +105,19 @@ impl SiteGenerator {
             fs::create_dir_all(path).with_context(|| {
                 format!("Failed to create {} directory", name)
             })?;
-            self.log_message(
-                &format!(
-                    "Ensured {} directory at: {}",
-                    name,
-                    path.display()
-                ),
-                LogLevel::INFO,
-            )?;
+            self.log_message(&format!(
+                "Ensured {} directory at: {}",
+                name,
+                path.display()
+            ))?;
         }
         Ok(())
     }
 
     /// Logs a message with timestamp to the log file
-    fn log_message(
-        &self,
-        message: &str,
-        level: LogLevel,
-    ) -> Result<()> {
-        let date = DateTime::new();
-        let log_entry = macro_log!(
-            &self.config.site_name,
-            &date.to_string(),
-            &level,
-            "process",
-            message,
-            &LogFormat::CLF
-        );
-
-        writeln!(&self.log_file, "{}", log_entry)
+    fn log_message(&self, message: &str) -> Result<()> {
+        writeln!(&self.log_file, "[INFO] {}", message)
             .context("Failed to write to log file")?;
-
         println!("{}", message);
         Ok(())
     }
@@ -150,14 +130,13 @@ impl SiteGenerator {
                 "Starting generation for site: {}",
                 self.config.site_name
             ),
-            LogLevel::INFO,
         )?;
 
         // Prepare directories - this ensures they exist but doesn't delete them
         self.prepare_directories()?;
 
         // Compile the site
-        self.log_message("Compiling site...", LogLevel::INFO)?;
+        self.log_message("Compiling site...")?;
         compile(
             &self.config.output_dir,
             &self.config.content_dir,
@@ -166,24 +145,21 @@ impl SiteGenerator {
         )
         .context("Failed to compile site")?;
 
-        self.log_message("Site compilation completed", LogLevel::INFO)?;
+        self.log_message("Site compilation completed")?;
 
         // First ensure the build directory exists
         if !self.config.output_dir.exists() {
             fs::create_dir_all(&self.config.output_dir)
                 .context("Failed to create build directory")?;
 
-            self.log_message(
-                &format!(
-                    "Created build directory at: {}",
-                    self.config.output_dir.display()
-                ),
-                LogLevel::INFO,
-            )?;
+            self.log_message(&format!(
+                "Created build directory at: {}",
+                self.config.output_dir.display()
+            ))?;
         }
 
         // Copy static files
-        self.log_message("Copying static files...", LogLevel::INFO)?;
+        self.log_message("Copying static files...")?;
         verify_and_copy_files(
             &self.config.output_dir,
             &self.paths.site,
@@ -195,7 +171,6 @@ impl SiteGenerator {
                 "Site generated successfully at: {}",
                 self.paths.site.display()
             ),
-            LogLevel::INFO,
         )?;
 
         Ok(())
@@ -205,7 +180,6 @@ impl SiteGenerator {
     fn serve(&self) -> Result<()> {
         self.log_message(
             "Starting development server at http://127.0.0.1:3000",
-            LogLevel::INFO,
         )?;
 
         // Get the site directory as a string for the server

@@ -24,11 +24,9 @@ use anyhow::{anyhow, ensure, Context, Result};
 use dtt::datetime::DateTime;
 use http_handle::Server;
 use indicatif::{ProgressBar, ProgressStyle};
-use langweave::translate;
 use log::{info, LevelFilter};
 use rayon::prelude::*;
-use rlg::{macro_log, LogFormat, LogLevel};
-use staticdatagen::{compile, generate_unique_string};
+use staticdatagen::compile;
 use tokio::fs as async_fs;
 
 pub mod cmd;
@@ -371,7 +369,7 @@ pub async fn verify_and_copy_files_async(
                 .await?;
         } else {
             verify_file_safety(&src_path)?;
-            let _ = async_fs::copy(&src_path, &dst_path).await?;
+            _ = async_fs::copy(&src_path, &dst_path).await?;
         }
     }
 
@@ -411,7 +409,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
             .progress_chars("#>-"),
     );
 
-    entries.par_iter().try_for_each(|entry| -> Result<()> {
+    for entry in &entries {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
 
@@ -428,8 +426,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
                 })?;
         }
         progress_bar.inc(1);
-        Ok(())
-    })?;
+    }
 
     progress_bar.finish_with_message("Copy complete.");
     Ok(())
@@ -458,16 +455,19 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
 /// * Validating path components
 ///
 pub fn is_safe_path(path: &Path) -> Result<bool> {
-    // If path doesn't exist, check its parent
+    // Non-existent paths that will be created are considered safe
     if !path.exists() {
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                return Ok(true); // Consider non-existent paths safe if they'll be created
+                return Ok(true);
             }
         }
     }
 
-    let canonical = path.canonicalize().map_err(|e| {
+    // canonicalize() resolves symlinks and all `..' components,
+    // so the resulting path is always absolute with no parent refs.
+    // A failure here (e.g. broken symlink) means the path is unsafe.
+    let _canonical = path.canonicalize().map_err(|e| {
         anyhow::anyhow!(
             "Failed to canonicalize path {}: {}",
             path.display(),
@@ -475,13 +475,7 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
         )
     })?;
 
-    // Check if the canonicalized path contains any parent directory references
-    let contains_parent_refs = canonical
-        .components()
-        .any(|comp| matches!(comp, std::path::Component::ParentDir));
-
-    // Consider the path safe if it doesn't contain parent refs and starts with current directory
-    Ok(!contains_parent_refs)
+    Ok(true)
 }
 
 /// Verifies the safety of a file for processing.
@@ -643,19 +637,12 @@ pub fn log_initialization(
     log_file: &mut File,
     date: &DateTime,
 ) -> Result<()> {
-    let banner_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_banner_log_msg", "default message")
-            .unwrap_or_else(|_| {
-                "Default banner log message".to_string()
-            }),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", banner_log)
-        .context("Failed to write banner log")
+    writeln!(
+        log_file,
+        "[{}] INFO process: System initialization complete",
+        date
+    )
+    .context("Failed to write banner log")
 }
 
 /// Logs processed command-line arguments for debugging and auditing.
@@ -692,19 +679,12 @@ pub fn log_arguments(
     log_file: &mut File,
     date: &DateTime,
 ) -> Result<()> {
-    let args_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_banner_log_msg", "default message")
-            .unwrap_or_else(|_| {
-                "Default banner log message".to_string()
-            }),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", args_log)
-        .context("Failed to write arguments log")
+    writeln!(
+        log_file,
+        "[{}] INFO process: Arguments processed",
+        date
+    )
+    .context("Failed to write arguments log")
 }
 
 /// Creates and verifies required directories for site generation.
@@ -831,16 +811,11 @@ pub async fn handle_server(
     serve_dir: &PathBuf,
 ) -> Result<()> {
     // Log server initialization
-    let server_log = macro_log!(
-        &generate_unique_string(),
-        &date.to_string(),
-        &LogLevel::INFO,
-        "process",
-        &translate("lib_server_log_msg", "default server message")
-            .unwrap_or_else(|_| "Default server message".to_string()),
-        &LogFormat::CLF
-    );
-    writeln!(log_file, "{}", server_log)?;
+    writeln!(
+        log_file,
+        "[{}] INFO process: Server initialization",
+        date
+    )?;
 
     async_fs::create_dir_all(serve_dir)
         .await
@@ -946,25 +921,36 @@ pub fn collect_files_recursive(
 /// * Maintains original file permissions
 /// * Handles circular references
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    /// Minimum number of entries to justify Rayon parallel dispatch overhead.
+    const PARALLEL_THRESHOLD: usize = 16;
+
     fs::create_dir_all(dst)?;
 
     let entries: Vec<_> =
         fs::read_dir(src)?.collect::<std::io::Result<Vec<_>>>()?;
 
-    entries
-        .into_par_iter()
-        .try_for_each(|entry| -> Result<()> {
-            let src_path = entry.path();
-            let dst_path = dst.join(entry.file_name());
+    let copy_entry = |entry: &fs::DirEntry| -> Result<()> {
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
 
-            if src_path.is_dir() {
-                copy_dir_all(&src_path, &dst_path)?;
-            } else {
-                verify_file_safety(&src_path)?;
-                _ = fs::copy(&src_path, &dst_path)?;
-            }
-            Ok(())
-        })?;
+        if src_path.is_dir() {
+            copy_dir_all(&src_path, &dst_path)?;
+        } else {
+            verify_file_safety(&src_path)?;
+            _ = fs::copy(&src_path, &dst_path)?;
+        }
+        Ok(())
+    };
+
+    if entries.len() >= PARALLEL_THRESHOLD {
+        entries
+            .par_iter()
+            .try_for_each(copy_entry)?;
+    } else {
+        entries
+            .iter()
+            .try_for_each(copy_entry)?;
+    }
 
     Ok(())
 }

@@ -1,0 +1,6 @@
+# Work around oniguruma C code (bundled by onig_sys) using K&R-style
+# function declarations that are rejected by GCC 15's stricter C23 defaults.
+# In K&R C, () means "unspecified arguments"; in modern C, it means "no arguments".
+# Building with -std=gnu11 restores the old behavior while keeping GNU extensions.
+[env]
+CFLAGS = "-std=gnu11 -Wno-error=incompatible-pointer-types"
