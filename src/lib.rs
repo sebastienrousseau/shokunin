@@ -200,6 +200,14 @@ impl PathsBuilder {
 const DEFAULT_LOG_LEVEL: &str = "info";
 const ENV_LOG_LEVEL: &str = "SHOKUNIN_LOG_LEVEL";
 
+/// Maximum directory nesting depth for all traversal operations.
+/// Prevents stack overflow from pathological or circular directory trees.
+/// 128 levels accommodates any realistic project structure.
+pub const MAX_DIR_DEPTH: usize = 128;
+
+/// Minimum number of entries to justify Rayon parallel dispatch overhead.
+const PARALLEL_THRESHOLD: usize = 16;
+
 /// Initializes the logging system based on environment variables
 fn initialize_logging() -> Result<()> {
     let log_level = std::env::var(ENV_LOG_LEVEL)
@@ -343,6 +351,9 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
 }
 
 /// Asynchronously validates and copies files between directories.
+///
+/// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
+/// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
 pub async fn verify_and_copy_files_async(
     src: &Path,
     dst: &Path,
@@ -359,24 +370,39 @@ pub async fn verify_and_copy_files_async(
         dst
     ))?;
 
-    let mut entries = async_fs::read_dir(src).await?;
-    while let Some(entry) = entries.next_entry().await? {
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
+    // (source_dir, dest_dir, depth)
+    let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
-        if src_path.is_dir() {
-            Box::pin(verify_and_copy_files_async(&src_path, &dst_path))
-                .await?;
-        } else {
-            verify_file_safety(&src_path)?;
-            _ = async_fs::copy(&src_path, &dst_path).await?;
+    while let Some((src_dir, dst_dir, depth)) = stack.pop() {
+        ensure!(
+            depth < MAX_DIR_DEPTH,
+            "Directory nesting exceeds maximum depth of {}: {}",
+            MAX_DIR_DEPTH,
+            src_dir.display()
+        );
+
+        let mut entries = async_fs::read_dir(&src_dir).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let src_path = entry.path();
+            let dst_path = dst_dir.join(entry.file_name());
+
+            if src_path.is_dir() {
+                async_fs::create_dir_all(&dst_path).await?;
+                stack.push((src_path, dst_path, depth + 1));
+            } else {
+                verify_file_safety(&src_path)?;
+                _ = async_fs::copy(&src_path, &dst_path).await?;
+            }
         }
     }
 
     Ok(())
 }
 
-/// Recursively copies directories with a progress bar for feedback.
+/// Copies directories with a progress bar for feedback.
+///
+/// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
+/// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
 pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
     if !src.exists() {
         anyhow::bail!(
@@ -392,40 +418,53 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
         )
     })?;
 
-    let entries: Vec<_> = fs::read_dir(src)
-        .with_context(|| {
-            format!(
-                "Failed to read source directory: {}",
-                src.display()
-            )
-        })?
-        .collect::<std::io::Result<Vec<_>>>()?;
-
-    let progress_bar = ProgressBar::new(entries.len() as u64);
+    let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+            .template("{spinner:.green} [{elapsed_precise}] {pos} files {msg}")
             .unwrap()
             .progress_chars("#>-"),
     );
 
-    for entry in &entries {
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
+    // (source_dir, dest_dir, depth)
+    let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
-        if src_path.is_dir() {
-            copy_dir_with_progress(&src_path, &dst_path)?;
-        } else {
-            let _ =
-                fs::copy(&src_path, &dst_path).with_context(|| {
-                    format!(
-                        "Failed to copy file from {} to {}",
-                        src_path.display(),
-                        dst_path.display()
-                    )
-                })?;
+    while let Some((src_dir, dst_dir, depth)) = stack.pop() {
+        ensure!(
+            depth < MAX_DIR_DEPTH,
+            "Directory nesting exceeds maximum depth of {}: {}",
+            MAX_DIR_DEPTH,
+            src_dir.display()
+        );
+
+        let entries: Vec<_> = fs::read_dir(&src_dir)
+            .with_context(|| {
+                format!(
+                    "Failed to read source directory: {}",
+                    src_dir.display()
+                )
+            })?
+            .collect::<std::io::Result<Vec<_>>>()?;
+
+        for entry in &entries {
+            let src_path = entry.path();
+            let dst_path = dst_dir.join(entry.file_name());
+
+            if src_path.is_dir() {
+                fs::create_dir_all(&dst_path)?;
+                stack.push((src_path, dst_path, depth + 1));
+            } else {
+                let _ =
+                    fs::copy(&src_path, &dst_path).with_context(|| {
+                        format!(
+                            "Failed to copy file from {} to {}",
+                            src_path.display(),
+                            dst_path.display()
+                        )
+                    })?;
+            }
+            progress_bar.inc(1);
         }
-        progress_bar.inc(1);
     }
 
     progress_bar.finish_with_message("Copy complete.");
@@ -883,13 +922,25 @@ pub fn collect_files_recursive(
     dir: &Path,
     files: &mut Vec<PathBuf>,
 ) -> Result<()> {
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
+    // (directory, depth)
+    let mut stack = vec![(dir.to_path_buf(), 0usize)];
 
-        if path.is_dir() {
-            collect_files_recursive(&path, files)?;
-        } else {
-            files.push(path);
+    while let Some((current_dir, depth)) = stack.pop() {
+        ensure!(
+            depth < MAX_DIR_DEPTH,
+            "Directory nesting exceeds maximum depth of {}: {}",
+            MAX_DIR_DEPTH,
+            current_dir.display()
+        );
+
+        for entry in fs::read_dir(&current_dir)? {
+            let path = entry?.path();
+
+            if path.is_dir() {
+                stack.push((path, depth + 1));
+            } else {
+                files.push(path);
+            }
         }
     }
     Ok(())
@@ -921,35 +972,60 @@ pub fn collect_files_recursive(
 /// * Maintains original file permissions
 /// * Handles circular references
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
-    /// Minimum number of entries to justify Rayon parallel dispatch overhead.
-    const PARALLEL_THRESHOLD: usize = 16;
-
     fs::create_dir_all(dst)?;
 
-    let entries: Vec<_> =
-        fs::read_dir(src)?.collect::<std::io::Result<Vec<_>>>()?;
+    // (source_dir, dest_dir, depth)
+    let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
-    let copy_entry = |entry: &fs::DirEntry| -> Result<()> {
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
+    while let Some((src_dir, dst_dir, depth)) = stack.pop() {
+        ensure!(
+            depth < MAX_DIR_DEPTH,
+            "Directory nesting exceeds maximum depth of {}: {}",
+            MAX_DIR_DEPTH,
+            src_dir.display()
+        );
 
-        if src_path.is_dir() {
-            copy_dir_all(&src_path, &dst_path)?;
-        } else {
+        let entries: Vec<_> =
+            fs::read_dir(&src_dir)?.collect::<std::io::Result<Vec<_>>>()?;
+
+        // Separate files from directories in a single pass
+        let mut subdirs = Vec::new();
+        let files: Vec<_> = entries
+            .iter()
+            .filter(|entry| {
+                let path = entry.path();
+                if path.is_dir() {
+                    subdirs.push((
+                        path,
+                        dst_dir.join(entry.file_name()),
+                    ));
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect();
+
+        // Copy files — parallel only when worth the dispatch cost
+        let copy_file = |entry: &&fs::DirEntry| -> Result<()> {
+            let src_path = entry.path();
+            let dst_path = dst_dir.join(entry.file_name());
             verify_file_safety(&src_path)?;
             _ = fs::copy(&src_path, &dst_path)?;
-        }
-        Ok(())
-    };
+            Ok(())
+        };
 
-    if entries.len() >= PARALLEL_THRESHOLD {
-        entries
-            .par_iter()
-            .try_for_each(copy_entry)?;
-    } else {
-        entries
-            .iter()
-            .try_for_each(copy_entry)?;
+        if files.len() >= PARALLEL_THRESHOLD {
+            files.par_iter().try_for_each(copy_file)?;
+        } else {
+            files.iter().try_for_each(copy_file)?;
+        }
+
+        // Push subdirectories onto the stack
+        for (sub_src, sub_dst) in subdirs {
+            fs::create_dir_all(&sub_dst)?;
+            stack.push((sub_src, sub_dst, depth + 1));
+        }
     }
 
     Ok(())
@@ -983,9 +1059,17 @@ pub async fn copy_dir_all_async(src: &Path, dst: &Path) -> Result<()> {
 async fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
     tokio::fs::create_dir_all(dst).await?;
 
-    let mut stack = vec![(src.to_path_buf(), dst.to_path_buf())];
+    // (source_dir, dest_dir, depth)
+    let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
-    while let Some((src_path, dst_path)) = stack.pop() {
+    while let Some((src_path, dst_path, depth)) = stack.pop() {
+        ensure!(
+            depth < MAX_DIR_DEPTH,
+            "Directory nesting exceeds maximum depth of {}: {}",
+            MAX_DIR_DEPTH,
+            src_path.display()
+        );
+
         let mut entries = tokio::fs::read_dir(&src_path).await?;
 
         while let Some(entry) = entries.next_entry().await? {
@@ -994,7 +1078,7 @@ async fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
 
             if src_entry.is_dir() {
                 tokio::fs::create_dir_all(&dst_entry).await?;
-                stack.push((src_entry, dst_entry));
+                stack.push((src_entry, dst_entry, depth + 1));
             } else {
                 verify_file_safety(&src_entry)?;
                 _ = tokio::fs::copy(&src_entry, &dst_entry).await?;
