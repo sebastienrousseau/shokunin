@@ -3004,4 +3004,281 @@ mod tests {
         fs::set_permissions(&dst, std::fs::Permissions::from_mode(0o755))
             .unwrap();
     }
+
+    // =========================================================================
+    // MAX_DIR_DEPTH boundary tests
+    // =========================================================================
+
+    /// Creates a directory chain of `depth` nested levels, returning the
+    /// innermost directory path.
+    fn create_nested_dirs(base: &Path, depth: usize) -> PathBuf {
+        let mut current = base.to_path_buf();
+        for i in 0..depth {
+            current = current.join(format!("d{}", i));
+            fs::create_dir(&current).unwrap();
+        }
+        current
+    }
+
+    #[test]
+    fn copy_dir_all_exceeding_max_depth_returns_error() {
+        // Arrange: create a directory tree deeper than MAX_DIR_DEPTH
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+        let deepest = create_nested_dirs(&src, MAX_DIR_DEPTH + 1);
+        fs::write(deepest.join("file.txt"), "deep").unwrap();
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        let result = copy_dir_all(&src, &dst);
+
+        // Assert
+        assert!(result.is_err(), "Should fail when depth exceeds MAX_DIR_DEPTH");
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("maximum depth"),
+            "Error should mention depth limit, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn copy_dir_with_progress_exceeding_max_depth_returns_error() {
+        // Arrange
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+        let deepest = create_nested_dirs(&src, MAX_DIR_DEPTH + 1);
+        fs::write(deepest.join("file.txt"), "deep").unwrap();
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        let result = copy_dir_with_progress(&src, &dst);
+
+        // Assert
+        assert!(result.is_err(), "Should fail when depth exceeds MAX_DIR_DEPTH");
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
+    }
+
+    #[test]
+    fn collect_files_recursive_exceeding_max_depth_returns_error() {
+        // Arrange
+        let temp = tempdir().unwrap();
+        let root = temp.path().join("root");
+        fs::create_dir(&root).unwrap();
+        let deepest = create_nested_dirs(&root, MAX_DIR_DEPTH + 1);
+        fs::write(deepest.join("file.txt"), "deep").unwrap();
+
+        let mut files = Vec::new();
+
+        // Act
+        let result = collect_files_recursive(&root, &mut files);
+
+        // Assert
+        assert!(result.is_err(), "Should fail when depth exceeds MAX_DIR_DEPTH");
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
+    }
+
+    #[tokio::test]
+    async fn verify_and_copy_files_async_exceeding_max_depth_returns_error() {
+        // Arrange
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+        let deepest = create_nested_dirs(&src, MAX_DIR_DEPTH + 1);
+        fs::write(deepest.join("file.txt"), "deep").unwrap();
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        let result = verify_and_copy_files_async(&src, &dst).await;
+
+        // Assert
+        assert!(result.is_err(), "Should fail when depth exceeds MAX_DIR_DEPTH");
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
+    }
+
+    #[tokio::test]
+    async fn copy_dir_all_async_exceeding_max_depth_returns_error() {
+        // Arrange
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+        let deepest = create_nested_dirs(&src, MAX_DIR_DEPTH + 1);
+        fs::write(deepest.join("file.txt"), "deep").unwrap();
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        let result = copy_dir_all_async(&src, &dst).await;
+
+        // Assert
+        assert!(result.is_err(), "Should fail when depth exceeds MAX_DIR_DEPTH");
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
+    }
+
+    // =========================================================================
+    // PARALLEL_THRESHOLD boundary tests
+    // =========================================================================
+
+    #[test]
+    fn copy_dir_all_below_parallel_threshold_copies_sequentially() {
+        // Arrange: create fewer than PARALLEL_THRESHOLD files
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+
+        for i in 0..PARALLEL_THRESHOLD - 1 {
+            fs::write(src.join(format!("file_{}.txt", i)), format!("content {}", i))
+                .unwrap();
+        }
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        copy_dir_all(&src, &dst).unwrap();
+
+        // Assert
+        let src_count = fs::read_dir(&src).unwrap().count();
+        let dst_count = fs::read_dir(&dst).unwrap().count();
+        assert_eq!(src_count, dst_count, "All files should be copied");
+        assert_eq!(dst_count, PARALLEL_THRESHOLD - 1);
+    }
+
+    #[test]
+    fn copy_dir_all_at_parallel_threshold_copies_in_parallel() {
+        // Arrange: create exactly PARALLEL_THRESHOLD files to trigger par_iter
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+
+        for i in 0..PARALLEL_THRESHOLD + 8 {
+            fs::write(src.join(format!("file_{}.txt", i)), format!("content {}", i))
+                .unwrap();
+        }
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        copy_dir_all(&src, &dst).unwrap();
+
+        // Assert: all files copied correctly even through parallel path
+        let expected = PARALLEL_THRESHOLD + 8;
+        let dst_count = fs::read_dir(&dst).unwrap().count();
+        assert_eq!(dst_count, expected, "All {} files should be copied via parallel path", expected);
+
+        // Verify content integrity
+        for i in 0..expected {
+            let content = fs::read_to_string(dst.join(format!("file_{}.txt", i))).unwrap();
+            assert_eq!(content, format!("content {}", i));
+        }
+    }
+
+    #[test]
+    fn copy_dir_all_mixed_files_and_dirs_separates_correctly() {
+        // Arrange: mix of files and subdirectories
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+
+        // Create 20 files (above threshold) + 3 subdirs with files
+        for i in 0..20 {
+            fs::write(src.join(format!("f{}.txt", i)), "data").unwrap();
+        }
+        for i in 0..3 {
+            let sub = src.join(format!("sub{}", i));
+            fs::create_dir(&sub).unwrap();
+            fs::write(sub.join("nested.txt"), "nested").unwrap();
+        }
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        copy_dir_all(&src, &dst).unwrap();
+
+        // Assert: all 20 files + 3 subdirs with their files
+        assert_eq!(fs::read_dir(&dst).unwrap().count(), 23);
+        for i in 0..3 {
+            let nested = dst.join(format!("sub{}", i)).join("nested.txt");
+            assert!(nested.exists(), "Nested file in sub{} should exist", i);
+        }
+    }
+
+    // =========================================================================
+    // Iterative traversal correctness tests
+    // =========================================================================
+
+    #[test]
+    fn collect_files_recursive_deep_tree_collects_all_files() {
+        // Arrange: 5 levels deep, 3 files per level = 15 files total
+        let temp = tempdir().unwrap();
+        let root = temp.path().join("root");
+        fs::create_dir(&root).unwrap();
+
+        let mut expected_count = 0;
+        let mut current = root.clone();
+        for level in 0..5 {
+            for f in 0..3 {
+                fs::write(
+                    current.join(format!("l{}_f{}.txt", level, f)),
+                    "data",
+                )
+                .unwrap();
+                expected_count += 1;
+            }
+            let next = current.join(format!("level_{}", level));
+            fs::create_dir(&next).unwrap();
+            current = next;
+        }
+
+        let mut files = Vec::new();
+
+        // Act
+        collect_files_recursive(&root, &mut files).unwrap();
+
+        // Assert
+        assert_eq!(
+            files.len(),
+            expected_count,
+            "Should collect all {} files across 5 levels",
+            expected_count
+        );
+    }
+
+    #[tokio::test]
+    async fn verify_and_copy_files_async_preserves_content_across_depth() {
+        // Arrange: nested dirs with unique content at each level
+        let temp = tempdir().unwrap();
+        let src = temp.path().join("src");
+        fs::create_dir(&src).unwrap();
+
+        let mut current = src.clone();
+        for i in 0..5 {
+            fs::write(
+                current.join(format!("level_{}.txt", i)),
+                format!("content at level {}", i),
+            )
+            .unwrap();
+            let next = current.join(format!("dir_{}", i));
+            fs::create_dir(&next).unwrap();
+            current = next;
+        }
+
+        let dst = temp.path().join("dst");
+
+        // Act
+        verify_and_copy_files_async(&src, &dst).await.unwrap();
+
+        // Assert: verify content at each level
+        let mut check = dst.clone();
+        for i in 0..5 {
+            let content =
+                fs::read_to_string(check.join(format!("level_{}.txt", i))).unwrap();
+            assert_eq!(content, format!("content at level {}", i));
+            check = check.join(format!("dir_{}", i));
+        }
+    }
 }
