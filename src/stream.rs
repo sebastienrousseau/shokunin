@@ -35,7 +35,7 @@ pub const STREAM_BUFFER_SIZE: usize = 8 * 1024;
 pub const MAX_BATCH_SIZE: usize = 100_000;
 
 /// Result of processing a batch of files.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct BatchResult {
     /// Number of files processed.
     pub files_processed: usize,

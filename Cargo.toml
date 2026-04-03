@@ -154,6 +154,11 @@ path = "examples/quickstart_example.rs"   # Path to the example file
 name = "multilingual"                     # Name of the example
 path = "examples/multilingual_example.rs" # Path to the example file
 
+[[example]]
+# Plugin pipeline example — SEO, search, minify, live-reload.
+name = "plugins"                          # Name of the example
+path = "examples/plugins_example.rs"      # Path to the example file
+
 # -----------------------------------------------------------------------------
 # Documentation Configuration
 # -----------------------------------------------------------------------------
