@@ -1,76 +1,134 @@
-<!-- markdownlint-disable MD033 MD041 -->
-<img src="https://kura.pro/shokunin/images/logos/shokunin.svg"
-alt="SSG logo" height="66" align="right" />
-<!-- markdownlint-enable MD033 MD041 -->
+<p align="center">
+  <img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="SSG logo" width="128" />
+</p>
 
-# Static Site Generator (SSG)
+<h1 align="center">Static Site Generator (SSG)</h1>
 
-A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.
+<p align="center">
+  <strong>A content-first static site generator crafted in Rust. Fast builds, accessible output, search-engine-ready markup. One CLI to create, compile, and serve.</strong>
+</p>
 
-<!-- markdownlint-disable MD033 MD041 -->
-<center>
-<!-- markdownlint-enable MD033 MD041 -->
+<p align="center">
+  <a href="https://github.com/sebastienrousseau/shokunin/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/test.yml?style=for-the-badge&logo=github" alt="Build" /></a>
+  <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
+  <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
+  <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.33-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+</p>
 
-[![Made With Love][made-with-rust]][08] [![Crates.io][crates-badge]][03] [![lib.rs][libs-badge]][01] [![Docs.rs][docs-badge]][04] [![Codecov][codecov-badge]][06] [![Build Status][build-badge]][07] [![GitHub][github-badge]][09]
+---
 
-[Website][00] | [Documentation][04] | [Report Bug][02] | [Request Feature][02] | [Contributing Guidelines][05]
-
-<!-- markdownlint-disable MD033 MD041 -->
-</center>
-<!-- markdownlint-enable MD033 MD041 -->
-
-## Overview
-
-SSG is a high-performance static site generator (SSG) engineered in Rust that prioritises:
-
-- Content-first development approach
-- Lightning-fast site generation
-- WCAG 2.1 Level AA accessibility compliance
-- Advanced SEO optimization
-- Type-safe operations with comprehensive error handling
-
-## Key features
-
-- **Exceptional performance**: Zero-cost abstractions through Rust
-- **SEO optimization**: Built-in enhancements for search visibility
-- **Accessibility**: Automatic WCAG 2.1 Level AA compliance
-- **Multi-format support**: Handles Markdown, YAML, JSON, and TOML
-- **Feed generation**: Automatic Atom and RSS feed creation
-- **Analytics**: Native Google and Bing Analytics integration
-- **Custom theming**: HTML themes and template support
-- **CLI tools**: Comprehensive command-line interface
-- **Dev server**: Built-in Rust server for local development
-- **Async support**: Full asynchronous operation capabilities
-
-## Prerequisites
-
-- **Rust** 1.74.0 or later ([install](https://rustup.rs/))
-
-Verify your installation:
+## Install
 
 ```bash
-rustc --version   # must be >= 1.74.0
-cargo --version
+cargo install ssg
 ```
 
-## Getting started
-
-### Installation
-
-Add to your `Cargo.toml`:
+Or add as a library dependency:
 
 ```toml
 [dependencies]
 ssg = "0.0.33"
 ```
 
-Or install the CLI via Cargo:
+You need [Rust](https://rustup.rs/) 1.74.0 or later. Works on macOS, Linux, and Windows.
 
-```bash
-cargo install ssg
+---
+
+## Overview
+
+SSG generates static websites from Markdown content, YAML frontmatter, and HTML templates. It compiles everything into production-ready HTML with built-in SEO metadata, accessibility compliance, and feed generation. The plugin system handles the rest.
+
+- **Zero-cost performance** through Rust's ownership model and parallel file operations
+- **Incremental builds** with content fingerprinting — only changed files are reprocessed
+- **File watching** with automatic rebuild on content changes
+- **Plugin architecture** with lifecycle hooks for custom processing
+- **WCAG 2.1 Level AA** accessibility compliance in generated output
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    A[Content: Markdown + YAML] --> B{SSG CLI}
+    B --> C[Incremental Cache]
+    C --> D[Compile: staticdatagen]
+    D --> E[Plugin Pipeline]
+    E --> F[Minify / Optimize / Deploy]
+    D --> G[Dev Server: Warp]
+    B --> H[File Watcher]
+    H -->|changed files| C
 ```
 
-### Basic usage (library)
+---
+
+## Features
+
+| | |
+| :--- | :--- |
+| **Performance** | Parallel file operations with Rayon, iterative traversal with depth bounds, incremental builds |
+| **Content** | Markdown, YAML frontmatter, JSON, TOML. Atom and RSS feed generation |
+| **SEO** | Meta tags, Open Graph, sitemaps, structured data, canonical URLs |
+| **Accessibility** | Automatic WCAG 2.1 Level AA compliance |
+| **Theming** | Custom HTML templates with variable substitution |
+| **Plugins** | Lifecycle hooks: `before_compile`, `after_compile`, `on_serve`. Built-in minify, image-opti, deploy |
+| **Watch mode** | Polling-based file watcher with configurable interval |
+| **Caching** | Content fingerprinting via `.ssg-cache.json` for fast rebuilds |
+| **Config** | TOML config files with JSON Schema for IDE autocomplete (`ssg.schema.json`) |
+| **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits |
+| **CI** | Multi-platform test matrix (macOS, Linux, Windows), cargo audit, cargo deny, SBOM generation |
+
+---
+
+## The CLI
+
+| Command | What it does |
+| :--- | :--- |
+| `ssg -n mysite -c content -o build -t templates` | Generate a site from source directories |
+| `ssg --config config.toml` | Load configuration from a TOML file |
+| `ssg --serve public` | Serve from a specific directory |
+| `ssg --watch` | Watch content for changes and rebuild |
+
+<details>
+<summary><b>All CLI options</b></summary>
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--new` | `-n` | Project name |
+| `--content` | `-c` | Content directory |
+| `--output` | `-o` | Output/build directory |
+| `--template` | `-t` | Template directory |
+| `--serve` | `-s` | Dev server directory |
+| `--config` | `-f` | Config file path (TOML) |
+| `--watch` | `-w` | Watch for changes |
+
+When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
+
+</details>
+
+---
+
+## First 5 Minutes
+
+```bash
+# 1. Install
+cargo install ssg
+
+# 2. Create a site
+ssg -n mysite -c content -o build -t templates
+
+# 3. Or run the examples
+git clone https://github.com/sebastienrousseau/shokunin.git
+cd shokunin
+cargo run --example basic
+cargo run --example quickstart
+cargo run --example multilingual
+```
+
+---
+
+## Library Usage
 
 ```rust,no_run
 use staticdatagen::compiler::service::compile;
@@ -88,117 +146,123 @@ fn main() -> anyhow::Result<()> {
 }
 ```
 
-### CLI usage
+<details>
+<summary><b>Plugin example</b></summary>
 
-```bash
-# Create a new site with all directories specified
-ssg --new mysite \
-    --content=content \
-    --output=build \
-    --template=templates
+```rust
+use ssg::plugin::{Plugin, PluginContext, PluginManager};
+use anyhow::Result;
+use std::path::Path;
 
-# Short form
-ssg -n mysite -c content -o build -t templates
+#[derive(Debug)]
+struct LogPlugin;
 
-# Using cargo run
-cargo run --bin ssg -- -n mysite -c ./examples/content -t ./examples/templates -o ./examples/build
+impl Plugin for LogPlugin {
+    fn name(&self) -> &str { "logger" }
+    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+        println!("Site compiled to {:?}", ctx.site_dir);
+        Ok(())
+    }
+}
 
-# With optional dev server directory
-ssg -n mysite -c content -o build -t templates --serve public
+let mut pm = PluginManager::new();
+pm.register(LogPlugin);
+pm.register(ssg::plugins::MinifyPlugin);
 
-# Load from a config file
-ssg --config config.toml
+let ctx = PluginContext::new(
+    Path::new("content"),
+    Path::new("build"),
+    Path::new("public"),
+    Path::new("templates"),
+);
+pm.run_after_compile(&ctx).unwrap();
 ```
 
-### CLI options
+</details>
 
-| Option | Short | Description | Required |
-|--------|-------|-------------|----------|
-| `--new` | `-n` | Project name | No |
-| `--content` | `-c` | Content directory | No |
-| `--output` | `-o` | Output/build directory | No |
-| `--template` | `-t` | Template directory | No |
-| `--serve` | `-s` | Dev server directory | No |
-| `--config` | `-f` | Config file path (TOML) | No |
-| `--watch` | `-w` | Watch for changes | No |
+<details>
+<summary><b>Incremental build example</b></summary>
 
-When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
+```rust,no_run
+use ssg::cache::BuildCache;
+use std::path::Path;
 
-## Examples
+let cache_path = Path::new(".ssg-cache.json");
+let content_dir = Path::new("content");
 
-```bash
-git clone https://github.com/sebastienrousseau/shokunin.git
-cd shokunin
+let mut cache = BuildCache::load(cache_path).unwrap();
+let changed = cache.changed_files(content_dir).unwrap();
 
-# Basic example — convert Markdown to a static site
-cargo run --example basic
-
-# Quick start — create, compile, and host a static site
-cargo run --example quickstart
-
-# Multilingual — build language-specific sites from a single source
-cargo run --example multilingual
+if changed.is_empty() {
+    println!("No changes detected, skipping build.");
+} else {
+    println!("Rebuilding {} changed files", changed.len());
+    // ... run build ...
+    cache.update(content_dir).unwrap();
+    cache.save().unwrap();
+}
 ```
+
+</details>
+
+---
 
 ## Development
 
 ```bash
-# Build
-make build        # or: cargo build
-
-# Run tests
-make test         # or: cargo test
-
-# Lint
-make lint         # or: cargo clippy --all-targets
-
-# Format
-make format       # or: cargo fmt --all
-
-# Security audit
-make deny         # or: cargo deny check
+make build        # Build the project
+make test         # Run all tests
+make lint         # Lint with Clippy
+make format       # Format with rustfmt
+make deny         # Check licenses and advisories
 ```
 
-## Documentation
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guidelines.
 
-- [API Reference (docs.rs)][04]
-- [Website][00]
-- [Contributing Guidelines][05]
+---
 
-## Contributing
+## What's Included
 
-We welcome contributions. Please see our [Contributing Guidelines][05] for details.
+<details>
+<summary><b>Core modules</b></summary>
 
-All commits must be signed. See `CONTRIBUTING.md` for setup instructions.
+- **cmd** — CLI argument parsing, configuration management, input validation
+- **process** — Directory creation, frontmatter preprocessing, site compilation
+- **plugin** — Trait-based plugin system with lifecycle hooks
+- **plugins** — Built-in MinifyPlugin, ImageOptiPlugin, DeployPlugin
+- **cache** — Content fingerprinting for incremental builds
+- **watch** — Polling-based file watcher for live rebuild
+- **schema** — JSON Schema generator for configuration
+</details>
+
+<details>
+<summary><b>Security and compliance</b></summary>
+
+- **`#![forbid(unsafe_code)]`** across the entire codebase
+- **Path traversal prevention** with `..` detection and symlink rejection
+- **File size limits** (10 MB per file) and directory depth bounds (128 levels)
+- **`cargo audit`** with zero warnings — all advisories tracked in `.cargo/audit.toml`
+- **`cargo deny`** — license, advisory, ban, and source checks all pass
+- **SBOM** generated as a release artifact
+- **Signed commits** enforced via SSH ED25519
+</details>
+
+<details>
+<summary><b>Test coverage</b></summary>
+
+- **342 total tests** (197 unit + 23 doc-tests + 36 integration + 86 serde_yml)
+- **98% library line coverage** measured with cargo-llvm-cov
+- **Multi-platform CI** — macOS, Ubuntu, Windows (stable + nightly)
+</details>
+
+---
+
+**THE ARCHITECT** ᛫ [Sebastien Rousseau](https://sebastienrousseau.com)
+
+---
 
 ## License
 
-Dual-licensed under your choice of:
+Dual-licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) or [MIT](https://opensource.org/licenses/MIT), at your option.
 
-- [Apache License, Version 2.0][10]
-- [MIT License][11]
-
-## Acknowledgements
-
-Special thanks to all contributors who have helped build SSG.
-
-[00]: https://shokunin.one
-[01]: https://lib.rs/crates/ssg
-[02]: https://github.com/sebastienrousseau/shokunin/issues
-[03]: https://crates.io/crates/ssg
-[04]: https://docs.rs/ssg
-[05]: https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md
-[06]: https://codecov.io/gh/sebastienrousseau/shokunin
-[07]: https://github.com/sebastienrousseau/shokunin/actions?query=branch%3Amain
-[08]: https://www.rust-lang.org/
-[09]: https://github.com/sebastienrousseau/shokunin
-[10]: https://www.apache.org/licenses/LICENSE-2.0
-[11]: https://opensource.org/licenses/MIT
-
-[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/release.yml?branch=main&style=for-the-badge&logo=github
-[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt&logo=codecov
-[crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
-[docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
-[github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.33-orange.svg?style=for-the-badge
-[made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust
+<p align="right"><a href="#static-site-generator-ssg">Back to Top</a></p>
