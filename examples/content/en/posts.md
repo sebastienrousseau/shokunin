@@ -61,10 +61,10 @@ category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
 generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the site
-item_guid: https://kaishi.one/rss.xml
-item_link: https://kaishi.one/rss.xml
+item_guid: "https://kaishi.one/posts/index.html"
+item_link: "https://kaishi.one/posts/index.html"
 item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
-item_title: "RSS"
+item_title: "Posts"
 last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"
 managing_editor: jane.doe@kaishi.one (Jane Doe)
 pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"

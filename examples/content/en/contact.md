@@ -63,8 +63,8 @@ category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
 generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the contact page of the Kaishi website.
-item_guid: https://kaishi.one/contact/rss.xml
-item_link: https://kaishi.one/contact/rss.xml
+item_guid: "https://kaishi.one/contact/index.html"
+item_link: "https://kaishi.one/contact/index.html"
 item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
 item_title: "Contact Us"
 last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"

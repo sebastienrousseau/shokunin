@@ -61,10 +61,10 @@ category: "Technologie" ## La catégorie du flux RSS.
 docs: https://validator.w3.org/feed/docs/rss2.html ## La documentation du flux RSS.
 generator: "SSG (version 0.0.33)" ## Le générateur du flux RSS.
 item_description: Flux RSS pour le site Kaishi. ## La description du flux RSS.
-item_guid: https://kaishi.fr/rss.xml ## L'identifiant du flux RSS.
-item_link: https://kaishi.fr/rss.xml ## L'URL du flux RSS.
+item_guid: "https://kaishi.fr"
+item_link: "https://kaishi.fr"
 item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du flux RSS.
-item_title: "RSS" ## Le titre de la page. (max 64 caractères)
+item_title: "Kaishi, un modèle de démarrage pour le Static Site Generator"
 last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La dernière date de construction du flux RSS.
 managing_editor: jane.doe@kaishi.fr (Jane Doe) ## L'éditeur en chef du flux RSS.
 pub_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du flux RSS.

@@ -60,10 +60,10 @@ category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
 generator: "SSG (version 0.0.33)"
 item_description: Flux RSS pour le site
-item_guid: https://kaishi.fr/rss.xml
-item_link: https://kaishi.fr/rss.xml
+item_guid: "https://kaishi.fr/tags/index.html"
+item_link: "https://kaishi.fr/tags/index.html"
 item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
-item_title: "Tags"
+item_title: "Explorer par tag"
 last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"
 managing_editor: jane.doe@kaishi.fr (Jane Doe)
 pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
