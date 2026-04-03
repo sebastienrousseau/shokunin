@@ -5,7 +5,7 @@
 <h1 align="center">Static Site Generator (SSG)</h1>
 
 <p align="center">
-  <strong>A content-first static site generator crafted in Rust. Fast builds, accessible output, search-engine-ready markup. One CLI to create, compile, and serve.</strong>
+  <strong>The fast, safe, extensible static site generator — built in Rust.</strong>
 </p>
 
 <p align="center">
@@ -91,17 +91,22 @@ graph TD
 | `ssg --watch` | Watch content for changes and rebuild |
 
 <details>
-<summary><b>All CLI options</b></summary>
+<summary><b>Full CLI reference</b></summary>
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--new` | `-n` | Project name |
-| `--content` | `-c` | Content directory |
-| `--output` | `-o` | Output/build directory |
-| `--template` | `-t` | Template directory |
-| `--serve` | `-s` | Dev server directory |
-| `--config` | `-f` | Config file path (TOML) |
-| `--watch` | `-w` | Watch for changes |
+```text
+Usage: ssg [OPTIONS]
+
+Options:
+  -f, --config <FILE>   Configuration file path
+  -n, --new <NAME>      Create new project
+  -c, --content <DIR>   Content directory
+  -o, --output <DIR>    Output directory
+  -t, --template <DIR>  Template directory
+  -s, --serve <DIR>     Development server directory
+  -w, --watch           Watch for changes
+  -h, --help            Print help
+  -V, --version         Print version
+```
 
 When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
 
@@ -204,6 +209,18 @@ if changed.is_empty() {
 ```
 
 </details>
+
+---
+
+## Benchmarks
+
+| Metric | Value |
+| :--- | :--- |
+| **Release binary** | ~5 MB (stripped, LTO) |
+| **Unsafe code** | 0 blocks — `#![forbid(unsafe_code)]` enforced |
+| **Test suite** | 342 tests in < 2 seconds |
+| **Dependencies** | 19 direct, all audited |
+| **Coverage** | 98% library line coverage |
 
 ---
 

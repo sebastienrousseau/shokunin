@@ -27,7 +27,7 @@ use std::fs;
 /// let mut pm = PluginManager::new();
 /// pm.register(MinifyPlugin);
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct MinifyPlugin;
 
 impl Plugin for MinifyPlugin {
@@ -99,7 +99,7 @@ fn minify_html(html: &str) -> String {
 /// let mut pm = PluginManager::new();
 /// pm.register(ImageOptiPlugin);
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct ImageOptiPlugin;
 
 impl Plugin for ImageOptiPlugin {
