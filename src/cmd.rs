@@ -832,4 +832,124 @@ mod tests {
             Err(CliError::IoError(_))
         ));
     }
+
+    #[test]
+    fn test_from_matches_with_config_file() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+site_name = "from-file"
+content_dir = "./examples/content"
+output_dir = "./examples/public"
+template_dir = "./examples/templates"
+base_url = "http://example.com"
+site_title = "File Site"
+site_description = "From file"
+language = "en-GB"
+"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec![
+            "ssg",
+            "--config",
+            config_path.to_str().unwrap(),
+        ]);
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+        assert_eq!(config.site_name, "from-file");
+    }
+
+    #[test]
+    fn test_override_with_cli_all_flags() {
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec![
+            "ssg",
+            "--new",
+            "cli-site",
+            "--content",
+            "./examples/content",
+            "--output",
+            "./examples/public",
+            "--template",
+            "./examples/templates",
+            "--serve",
+            "./examples/public",
+        ]);
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+        assert_eq!(config.site_name, "cli-site");
+        assert_eq!(config.content_dir, PathBuf::from("./examples/content"));
+        assert_eq!(config.output_dir, PathBuf::from("./examples/public"));
+        assert_eq!(
+            config.template_dir,
+            PathBuf::from("./examples/templates")
+        );
+        assert!(config.serve_dir.is_some());
+    }
+
+    #[test]
+    fn test_validate_url_ftp_scheme() {
+        assert!(validate_url("ftp://example.com").is_err());
+    }
+
+    #[test]
+    fn test_validate_path_with_invalid_chars() {
+        let result =
+            validate_path_safety(Path::new("path<with>invalid"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_validate_path_with_traversal() {
+        let result =
+            validate_path_safety(Path::new("../etc/passwd"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_validate_path_with_reserved_name() {
+        let result = validate_path_safety(Path::new("con"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        let result = validate_path_safety(Path::new("aux"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_validate_path_with_backslash() {
+        let result =
+            validate_path_safety(Path::new("path\\with\\backslash"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_override_with_watch_flag() {
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec!["ssg", "--watch"]);
+        let config = ShokuninConfig::from_matches(&matches).unwrap();
+        // Watch flag is accepted but is a no-op currently
+        assert!(!config.site_name.is_empty());
+    }
+
+    #[test]
+    fn test_validate_empty_url() {
+        let config = ShokuninConfig::builder()
+            .site_name("test".to_string())
+            .base_url(String::new())
+            .build();
+        // Empty URL should be accepted (skips validation)
+        assert!(config.is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_validate_path_existing_symlink() {
+        let temp_dir = tempdir().unwrap();
+        let target = temp_dir.path().join("real");
+        let link = temp_dir.path().join("link");
+        fs::create_dir(&target).unwrap();
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let result = validate_path_safety(&link, "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
 }

@@ -2378,4 +2378,279 @@ mod tests {
         let result = copy_dir_with_progress(src_dir.path(), dst_dir);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_verify_and_copy_files_single_file() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let src_file = temp_dir.path().join("single.txt");
+        fs::write(&src_file, "content")?;
+        let dst_dir = temp_dir.path().join("dst");
+        // Calling with a file as src triggers verify_file_safety branch
+        // then copy_dir_all fails because src is a file, not a directory
+        let result = verify_and_copy_files(&src_file, &dst_dir);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_safe_path_traversal_nonexistent() -> Result<()> {
+        assert!(!is_safe_path(Path::new("../../etc/passwd"))?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_nested() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+        // Create nested structure with files
+        let sub = src_dir.path().join("sub");
+        fs::create_dir(&sub)?;
+        fs::write(src_dir.path().join("root.txt"), "root")?;
+        fs::write(sub.join("nested.txt"), "nested")?;
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+        assert!(dst_dir.path().join("root.txt").exists());
+        assert!(dst_dir.path().join("sub/nested.txt").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_all_parallel_threshold() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+        // Create >= 16 files to trigger parallel path
+        for i in 0..20 {
+            fs::write(
+                src_dir.path().join(format!("file{}.txt", i)),
+                format!("content {}", i),
+            )?;
+        }
+        copy_dir_all(src_dir.path(), dst_dir.path())?;
+        for i in 0..20 {
+            assert!(dst_dir
+                .path()
+                .join(format!("file{}.txt", i))
+                .exists());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_collect_files_recursive_depth_exceeded() -> Result<()> {
+        let temp_dir = tempdir()?;
+        // Create a directory deeper than MAX_DIR_DEPTH
+        let mut path = temp_dir.path().to_path_buf();
+        for i in 0..=MAX_DIR_DEPTH {
+            path = path.join(format!("d{}", i));
+            fs::create_dir(&path)?;
+        }
+        let mut files = Vec::new();
+        let result =
+            collect_files_recursive(temp_dir.path(), &mut files);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("maximum depth"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_all_depth_exceeded() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+        let mut path = src_dir.path().to_path_buf();
+        for i in 0..=MAX_DIR_DEPTH {
+            path = path.join(format!("d{}", i));
+            fs::create_dir(&path)?;
+        }
+        let result = copy_dir_all(src_dir.path(), dst_dir.path());
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("maximum depth"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_verify_and_copy_files_async_depth_exceeded(
+    ) -> Result<()> {
+        let temp_dir = tempdir()?;
+        let src = temp_dir.path().join("src");
+        let dst = temp_dir.path().join("dst");
+        let mut path = src.clone();
+        for i in 0..=MAX_DIR_DEPTH {
+            path = path.join(format!("d{}", i));
+            fs::create_dir_all(&path)?;
+        }
+        let result =
+            verify_and_copy_files_async(&src, &dst).await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("maximum depth"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_copy_dir_all_async_depth_exceeded() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let src = temp_dir.path().join("src");
+        let dst = temp_dir.path().join("dst");
+        let mut path = src.clone();
+        for i in 0..=MAX_DIR_DEPTH {
+            path = path.join(format!("d{}", i));
+            fs::create_dir_all(&path)?;
+        }
+        let result = copy_dir_all_async(&src, &dst).await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("maximum depth"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_file_safety_nonexistent() {
+        let result =
+            verify_file_safety(Path::new("/nonexistent/file.txt"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_nonexistent_source() {
+        let result = copy_dir_with_progress(
+            Path::new("/nonexistent/source"),
+            Path::new("/tmp/dst"),
+        );
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verify_and_copy_files_async_with_files() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let src = temp_dir.path().join("src");
+        let dst = temp_dir.path().join("dst");
+
+        // Create source with nested dirs + files to cover lines 415-420
+        fs::create_dir_all(src.join("sub1/sub2"))?;
+        fs::write(src.join("root.txt"), "root")?;
+        fs::write(src.join("sub1/a.txt"), "a")?;
+        fs::write(src.join("sub1/sub2/b.txt"), "b")?;
+
+        verify_and_copy_files_async(&src, &dst).await?;
+
+        assert_eq!(fs::read_to_string(dst.join("root.txt"))?, "root");
+        assert_eq!(fs::read_to_string(dst.join("sub1/a.txt"))?, "a");
+        assert_eq!(
+            fs::read_to_string(dst.join("sub1/sub2/b.txt"))?,
+            "b"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_with_files() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+
+        // Create nested structure to cover lines 463-490
+        let sub1 = src_dir.path().join("a");
+        let sub2 = sub1.join("b");
+        fs::create_dir_all(&sub2)?;
+        fs::write(src_dir.path().join("file1.txt"), "f1")?;
+        fs::write(sub1.join("file2.txt"), "f2")?;
+        fs::write(sub2.join("file3.txt"), "f3")?;
+
+        copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
+
+        assert_eq!(
+            fs::read_to_string(dst_dir.path().join("file1.txt"))?,
+            "f1"
+        );
+        assert_eq!(
+            fs::read_to_string(dst_dir.path().join("a/file2.txt"))?,
+            "f2"
+        );
+        assert_eq!(
+            fs::read_to_string(dst_dir.path().join("a/b/file3.txt"))?,
+            "f3"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_safe_path_broken_symlink() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let target = temp_dir.path().join("nonexistent_target");
+        let link = temp_dir.path().join("broken_link");
+
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&target, &link)?;
+            // Broken symlink: .exists() returns false, so is_safe_path
+            // treats it as a non-existent path without traversal → safe
+            let result = is_safe_path(&link)?;
+            assert!(result);
+        }
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_paths_validate_symlink() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let real = temp_dir.path().join("real");
+        let link = temp_dir.path().join("link");
+
+        fs::create_dir(&real)?;
+        std::os::unix::fs::symlink(&real, &link)?;
+
+        let paths = Paths {
+            site: link,
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+        let result = paths.validate();
+        assert!(result.is_err());
+        assert!(
+            result.unwrap_err().to_string().contains("symlink")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_copy_dir_with_progress_depth_exceeded() -> Result<()> {
+        let src_dir = tempdir()?;
+        let dst_dir = tempdir()?;
+        let mut path = src_dir.path().to_path_buf();
+        for i in 0..=MAX_DIR_DEPTH {
+            path = path.join(format!("d{}", i));
+            fs::create_dir(&path)?;
+        }
+        let result =
+            copy_dir_with_progress(src_dir.path(), dst_dir.path());
+        assert!(result.is_err());
+        assert!(
+            result.unwrap_err().to_string().contains("maximum depth")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_and_copy_files_source_is_file() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let src_file = temp_dir.path().join("source.txt");
+        let dst_dir = temp_dir.path().join("dst");
+        fs::write(&src_file, "hello")?;
+
+        // verify_and_copy_files with a file as source triggers
+        // verify_file_safety then copy_dir_all (which fails on a file)
+        let result = verify_and_copy_files(&src_file, &dst_dir);
+        assert!(result.is_err());
+        Ok(())
+    }
 }
