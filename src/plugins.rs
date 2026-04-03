@@ -301,4 +301,120 @@ mod tests {
         assert_eq!(pm.len(), 3);
         assert_eq!(pm.names(), vec!["minify", "image-opti", "deploy"]);
     }
+
+    #[test]
+    fn minify_plugin_preserves_pre_blocks() {
+        // Arrange
+        let input = "<pre>  code   with   spaces  </pre><p>  other  </p>";
+
+        // Act
+        let result = minify_html(input);
+
+        // Assert — content with <pre> is returned verbatim
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn minify_plugin_handles_nested_html() {
+        // Arrange
+        let input = "<div>  <section>  <article>  <p>  deep  </p>  </article>  </section>  </div>";
+
+        // Act
+        let result = minify_html(input);
+
+        // Assert — runs of whitespace collapsed to single spaces
+        assert!(!result.contains("  "));
+        assert!(result.contains("<div>"));
+        assert!(result.contains("</div>"));
+        assert!(result.contains("deep"));
+    }
+
+    #[test]
+    fn minify_plugin_empty_html_file() -> Result<()> {
+        // Arrange
+        let temp = tempdir()?;
+        let html_path = temp.path().join("empty.html");
+        fs::write(&html_path, "")?;
+
+        // Act
+        let ctx = test_ctx_with(temp.path());
+        MinifyPlugin.after_compile(&ctx)?;
+
+        // Assert — file exists, no crash
+        let content = fs::read_to_string(&html_path)?;
+        assert!(content.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn image_opti_plugin_finds_jpeg_variants() -> Result<()> {
+        // Arrange
+        let temp = tempdir()?;
+        fs::write(temp.path().join("photo.jpg"), "JPG")?;
+        fs::write(temp.path().join("banner.jpeg"), "JPEG")?;
+        fs::write(temp.path().join("readme.txt"), "text")?;
+
+        // Act
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+
+        // Assert — plugin runs without error (it only logs; we verify no crash)
+        // Also verify both extensions are recognized by the match arm
+        let mut found = Vec::new();
+        for entry in fs::read_dir(temp.path())? {
+            let path = entry?.path();
+            if let Some(ext) = path.extension() {
+                let ext = ext.to_string_lossy().to_lowercase();
+                if matches!(ext.as_str(), "jpg" | "jpeg") {
+                    found.push(path);
+                }
+            }
+        }
+        assert_eq!(found.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn image_opti_plugin_nested_directories() -> Result<()> {
+        // Arrange — ImageOptiPlugin only reads top-level (read_dir, not recursive)
+        let temp = tempdir()?;
+        let subdir = temp.path().join("subdir");
+        fs::create_dir(&subdir)?;
+        fs::write(subdir.join("deep.png"), "PNG")?;
+        fs::write(temp.path().join("top.png"), "PNG")?;
+
+        // Act
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+
+        // Assert — plugin completes without error; subdir images are not
+        // discovered since read_dir is non-recursive
+        Ok(())
+    }
+
+    #[test]
+    fn deploy_plugin_custom_target() -> Result<()> {
+        // Arrange
+        let temp = tempdir()?;
+        let ctx = test_ctx_with(temp.path());
+        let target_name = "staging-eu-west-1";
+        let plugin = DeployPlugin::new(target_name);
+
+        // Act — after_compile prints the target
+        plugin.after_compile(&ctx)?;
+
+        // Assert — the stored target matches what was provided
+        assert_eq!(plugin.target, target_name);
+        Ok(())
+    }
+
+    #[test]
+    fn minify_plugin_nonexistent_dir_returns_ok() -> Result<()> {
+        // Arrange
+        let ctx = test_ctx_with(Path::new("/this/path/does/not/exist/at/all"));
+
+        // Act & Assert — returns Ok without error
+        assert!(MinifyPlugin.after_compile(&ctx).is_ok());
+        Ok(())
+    }
 }

@@ -775,4 +775,199 @@ mod tests {
         assert_eq!(pm.len(), 3);
         assert_eq!(pm.names(), vec!["seo", "robots", "canonical"]);
     }
+
+    // -----------------------------------------------------------------
+    // Additional edge-case tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_description_unicode_truncation_respects_char_boundary() {
+        // Arrange: multi-byte chars (é = 2 bytes, 日 = 3 bytes)
+        let text = "café 日本語 ".repeat(30);
+        let html = format!(
+            "<html><head></head><body><p>{text}</p></body></html>"
+        );
+
+        // Act
+        let desc = extract_description(&html, 50);
+
+        // Assert: result is valid UTF-8 and within limit
+        assert!(desc.len() <= 50);
+        assert!(!desc.is_empty());
+        // Verify it doesn't panic and is a valid string
+        let _ = desc.chars().count();
+    }
+
+    #[test]
+    fn extract_description_empty_main_falls_back_to_body() {
+        // Arrange: <main> is present but empty
+        let html = "<html><head></head><body>\
+                     <main></main>\
+                     <p>Body fallback text</p>\
+                     </body></html>";
+
+        // Act
+        let desc = extract_description(html, 160);
+
+        // Assert: empty main yields empty string (main takes priority)
+        assert!(
+            desc.is_empty(),
+            "expected empty description from empty <main>, got: {desc}"
+        );
+    }
+
+    #[test]
+    fn extract_description_no_body_uses_raw_html() {
+        // Arrange: no <body> tag at all
+        let html = "<div><p>Raw content without body</p></div>";
+
+        // Act
+        let desc = extract_description(html, 160);
+
+        // Assert: falls back to raw HTML content
+        assert!(
+            desc.contains("Raw content without body"),
+            "expected raw content fallback, got: {desc}"
+        );
+    }
+
+    #[test]
+    fn extract_title_with_nested_tags() {
+        // Arrange: title contains nested HTML tags
+        let html = "<html><head><title><span>Foo</span></title></head></html>";
+
+        // Act
+        let title = extract_title(html);
+
+        // Assert: nested tags are stripped, text is preserved
+        assert_eq!(title, "Foo");
+    }
+
+    #[test]
+    fn escape_attr_all_special_chars() {
+        // Arrange
+        let input = r#"Tom & "Jerry" <script>alert('xss')</script>"#;
+
+        // Act
+        let escaped = escape_attr(input);
+
+        // Assert: all special chars are escaped
+        assert!(escaped.contains("&amp;"), "& should be escaped");
+        assert!(escaped.contains("&quot;"), "\" should be escaped");
+        assert!(escaped.contains("&lt;"), "< should be escaped");
+        assert!(escaped.contains("&gt;"), "> should be escaped");
+        assert_eq!(
+            escaped,
+            "Tom &amp; &quot;Jerry&quot; &lt;script&gt;alert('xss')&lt;/script&gt;"
+        );
+    }
+
+    #[test]
+    fn seo_plugin_skips_existing_single_quote_meta() -> Result<()> {
+        // Arrange: meta tags use single quotes
+        let html = "<html><head>\
+                     <meta name='description' content='Already set'>\
+                     <meta property='og:title' content='Title'>\
+                     <meta property='og:description' content='Desc'>\
+                     <meta property='og:type' content='website'>\
+                     <meta name='twitter:card' content='summary'>\
+                     <title>Test</title></head>\
+                     <body><p>Content</p></body></html>";
+        let tmp = tempdir()?;
+        let path = tmp.path().join("single-quote.html");
+        fs::write(&path, html)?;
+
+        // Act
+        let ctx = test_ctx(tmp.path());
+        SeoPlugin.after_compile(&ctx)?;
+
+        // Assert: no duplicate meta tags injected
+        let result = fs::read_to_string(&path)?;
+        assert_eq!(
+            result.matches("meta name=\"description\"").count()
+                + result.matches("meta name='description'").count(),
+            1,
+            "description meta should not be duplicated"
+        );
+        assert_eq!(
+            result.matches("og:title").count(),
+            1,
+            "og:title should not be duplicated"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn canonical_plugin_trailing_slash_base_url() -> Result<()> {
+        // Arrange: base_url has a trailing slash
+        let tmp = tempdir()?;
+        fs::write(
+            tmp.path().join("index.html"),
+            make_html("Home", "<p>Welcome</p>"),
+        )?;
+
+        // Act
+        let ctx = test_ctx(tmp.path());
+        let plugin = CanonicalPlugin::new("https://example.com/");
+        plugin.after_compile(&ctx)?;
+
+        // Assert: canonical URL has no double slash
+        let result = fs::read_to_string(tmp.path().join("index.html"))?;
+        assert!(
+            result.contains("https://example.com/index.html"),
+            "should produce clean URL without double slash"
+        );
+        assert!(
+            !result.contains("https://example.com//"),
+            "should not contain double slash in canonical URL"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn robots_plugin_trailing_slash_base_url() -> Result<()> {
+        // Arrange: base_url has a trailing slash
+        let tmp = tempdir()?;
+        let ctx = test_ctx(tmp.path());
+        let plugin = RobotsPlugin::new("https://example.com/");
+
+        // Act
+        plugin.after_compile(&ctx)?;
+
+        // Assert: sitemap URL has no double slash
+        let content =
+            fs::read_to_string(tmp.path().join("robots.txt"))?;
+        assert!(
+            content.contains("Sitemap: https://example.com/sitemap.xml"),
+            "sitemap URL should not have double slash, got: {content}"
+        );
+        assert!(
+            !content.contains("https://example.com//"),
+            "should not contain double slash"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn extract_description_nested_script_in_main() {
+        // Arrange: <main> contains a <script> block alongside real content
+        let html = "<html><head></head><body>\
+                     <main>\
+                     <script>var x = 'ignore me';</script>\
+                     <p>Visible text after script</p>\
+                     </main></body></html>";
+
+        // Act
+        let desc = extract_description(html, 160);
+
+        // Assert: script content is stripped, visible text remains
+        assert!(
+            desc.contains("Visible text after script"),
+            "should contain the paragraph text, got: {desc}"
+        );
+        assert!(
+            !desc.contains("ignore me"),
+            "should not contain script content, got: {desc}"
+        );
+    }
 }

@@ -396,4 +396,99 @@ mod tests {
         assert!(script.contains("bottom"));
         assert!(script.contains("right"));
     }
+
+    #[test]
+    fn livereload_custom_port() {
+        // Arrange
+        let port: u16 = 44444;
+
+        // Act
+        let script = livereload_script(port);
+
+        // Assert — custom port appears, default does not
+        assert!(script.contains("44444"));
+        assert!(!script.contains("35729"));
+    }
+
+    #[test]
+    fn livereload_plugin_no_html_files() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        fs::write(tmp.path().join("style.css"), "body{}")?;
+        fs::write(tmp.path().join("data.json"), "{}")?;
+
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+
+        // Act
+        let result = LiveReloadPlugin::new().on_serve(&ctx);
+
+        // Assert
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn livereload_plugin_idempotent() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let html_path = tmp.path().join("page.html");
+        fs::write(&html_path, make_html("<p>Hello</p>"))?;
+
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+
+        // Act — run the full plugin twice
+        LiveReloadPlugin::new().on_serve(&ctx)?;
+        let after_first = fs::read_to_string(&html_path)?;
+
+        LiveReloadPlugin::new().on_serve(&ctx)?;
+        let after_second = fs::read_to_string(&html_path)?;
+
+        // Assert — content identical, no double injection
+        assert_eq!(after_first, after_second);
+        // The marker string appears in both the data attribute and the
+        // indicator id within a single injection, so count the script tags.
+        let script_count = after_second.matches("data-ssg-livereload").count();
+        assert_eq!(script_count, 1, "script tag should appear exactly once");
+        Ok(())
+    }
+
+    #[test]
+    fn livereload_script_contains_reconnect_logic() {
+        // Arrange & Act
+        let script = livereload_script(DEFAULT_PORT);
+
+        // Assert — script has exponential backoff reconnection
+        assert!(script.contains("delay*2"), "should double the delay");
+        assert!(script.contains("maxDelay"), "should cap the delay");
+        assert!(script.contains("setTimeout"), "should schedule reconnect");
+        assert!(script.contains("connect"), "should call connect again");
+    }
+
+    #[test]
+    fn livereload_plugin_nonexistent_dir() -> Result<()> {
+        // Arrange
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            Path::new("/absolutely/nonexistent/directory/for/test"),
+            Path::new("templates"),
+        );
+
+        // Act
+        let result = LiveReloadPlugin::new().on_serve(&ctx);
+
+        // Assert — returns Ok, does not error on missing directory
+        assert!(result.is_ok());
+        Ok(())
+    }
 }

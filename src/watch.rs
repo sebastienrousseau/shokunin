@@ -449,4 +449,74 @@ mod tests {
         assert!(watcher.is_ok());
         assert_eq!(watcher.unwrap().tracked_file_count(), 0);
     }
+
+    #[test]
+    fn watch_config_default_values() {
+        // Arrange
+        let dir = PathBuf::from("/tmp/watch_defaults");
+        let poll = Duration::from_secs(2);
+        let debounce = Duration::from_millis(100);
+
+        // Act
+        let cfg = WatchConfig::new(dir.clone(), poll);
+
+        // Assert — verify the values we passed are stored correctly
+        assert_eq!(cfg.poll_interval(), Duration::from_secs(2));
+        assert_eq!(cfg.directory(), Path::new("/tmp/watch_defaults"));
+        // Debounce is not part of WatchConfig; confirm poll is distinct
+        assert_ne!(cfg.poll_interval(), debounce);
+    }
+
+    #[test]
+    fn file_watcher_empty_directory() {
+        // Arrange
+        let dir = tmp_dir("empty_watch");
+
+        // Act — creating a watcher on an empty dir must not panic
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Assert
+        assert_eq!(watcher.tracked_file_count(), 0);
+        let changes = watcher.check_for_changes().expect("check");
+        assert!(changes.is_empty(), "empty dir should have no changes");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn file_watcher_detects_new_file() {
+        // Arrange
+        let dir = tmp_dir("detect_new");
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+        assert_eq!(watcher.tracked_file_count(), 0);
+
+        // Act — create a new file after initial snapshot
+        write_file(&dir.join("added.md"), "new content");
+        let changes = watcher.check_for_changes().expect("check");
+
+        // Assert
+        assert_eq!(changes.len(), 1);
+        assert!(changes[0].ends_with("added.md"));
+        assert_eq!(watcher.tracked_file_count(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn file_watcher_nested_directory() {
+        // Arrange
+        let dir = tmp_dir("nested_watch");
+        let sub = dir.join("a/b/c");
+        fs::create_dir_all(&sub).expect("create nested dirs");
+        write_file(&sub.join("deep.md"), "deep content");
+        write_file(&dir.join("root.md"), "root content");
+
+        // Act
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Assert — both root and deeply nested files are tracked
+        assert_eq!(watcher.tracked_file_count(), 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

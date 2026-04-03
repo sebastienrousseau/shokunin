@@ -713,4 +713,178 @@ mod tests {
         assert_eq!(files.len(), 50);
         Ok(())
     }
+
+    #[test]
+    fn search_index_empty_site_dir() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+
+        // Act
+        let index = SearchIndex::build(tmp.path())?;
+
+        // Assert
+        assert!(index.is_empty());
+        assert_eq!(index.len(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn search_index_max_content_length_truncation() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let long_content = "a ".repeat(MAX_CONTENT_LENGTH + 1000);
+        fs::write(
+            tmp.path().join("long.html"),
+            make_html("Long Page", &format!("<p>{long_content}</p>")),
+        )?;
+
+        // Act
+        let index = SearchIndex::build(tmp.path())?;
+
+        // Assert
+        assert_eq!(index.len(), 1);
+        assert!(
+            index.entries[0].content.chars().count() <= MAX_CONTENT_LENGTH,
+            "content should be truncated to at most MAX_CONTENT_LENGTH characters"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn search_index_unicode_content() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let unicode_body = "<p>Héllo wörld! 日本語テスト 🦀🔍 Ñoño café</p>";
+        fs::write(
+            tmp.path().join("unicode.html"),
+            make_html("Ünïcödé Pagé 🎉", unicode_body),
+        )?;
+
+        // Act
+        let index = SearchIndex::build(tmp.path())?;
+
+        // Assert
+        assert_eq!(index.len(), 1);
+        let entry = &index.entries[0];
+        assert_eq!(entry.title, "Ünïcödé Pagé 🎉");
+        assert!(entry.content.contains("日本語テスト"));
+        assert!(entry.content.contains("🦀🔍"));
+        assert!(entry.content.contains("café"));
+        Ok(())
+    }
+
+    #[test]
+    fn search_plugin_nonexistent_dir_returns_ok() -> Result<()> {
+        // Arrange
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            Path::new("/tmp/nonexistent_search_test_dir_xyz"),
+            Path::new("templates"),
+        );
+
+        // Act
+        let result = SearchPlugin.after_compile(&ctx);
+
+        // Assert
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn inject_search_ui_no_body_tag() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let path = tmp.path().join("fragment.html");
+        fs::write(&path, "<html><p>No body tag here</p></html>")?;
+
+        // Act
+        inject_search_ui(&path)?;
+
+        // Assert
+        let result = fs::read_to_string(&path)?;
+        assert!(
+            result.contains("ssg-search-widget"),
+            "widget should be appended even without </body>"
+        );
+        assert!(result.contains("<html><p>No body tag here</p></html>"));
+        Ok(())
+    }
+
+    #[test]
+    fn search_entry_serialization_roundtrip() -> Result<()> {
+        // Arrange
+        let entry = SearchEntry {
+            title: "Roundtrip Test".into(),
+            url: "/roundtrip/index.html".into(),
+            content: "Some searchable content here".into(),
+            headings: vec!["Introduction".into(), "Details".into()],
+        };
+
+        // Act
+        let json = serde_json::to_string(&entry)?;
+        let deserialized: SearchEntry = serde_json::from_str(&json)?;
+
+        // Assert
+        assert_eq!(entry, deserialized);
+        assert_eq!(deserialized.title, "Roundtrip Test");
+        assert_eq!(deserialized.headings.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn search_index_multiple_headings() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let html = "\
+            <html><head><title>Multi Heading</title></head><body>\
+            <h1>Main Title</h1>\
+            <h2>Section A</h2>\
+            <p>Content A</p>\
+            <h3>Subsection A1</h3>\
+            <p>Content A1</p>\
+            </body></html>";
+        fs::write(tmp.path().join("headings.html"), html)?;
+
+        // Act
+        let index = SearchIndex::build(tmp.path())?;
+
+        // Assert
+        assert_eq!(index.len(), 1);
+        let entry = &index.entries[0];
+        assert!(entry.headings.contains(&"Main Title".to_string()));
+        assert!(entry.headings.contains(&"Section A".to_string()));
+        assert!(entry.headings.contains(&"Subsection A1".to_string()));
+        assert_eq!(entry.headings.len(), 3);
+        Ok(())
+    }
+
+    #[test]
+    fn search_index_nested_directories_deep() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        fs::create_dir_all(tmp.path().join("docs/guide/advanced"))?;
+        fs::write(
+            tmp.path().join("index.html"),
+            make_html("Root", "<p>Root page</p>"),
+        )?;
+        fs::write(
+            tmp.path().join("docs/overview.html"),
+            make_html("Docs", "<p>Docs overview</p>"),
+        )?;
+        fs::write(
+            tmp.path().join("docs/guide/advanced/tips.html"),
+            make_html("Tips", "<p>Advanced tips</p>"),
+        )?;
+
+        // Act
+        let index = SearchIndex::build(tmp.path())?;
+
+        // Assert
+        assert_eq!(index.len(), 3);
+        let urls: Vec<&str> = index.entries.iter().map(|e| e.url.as_str()).collect();
+        assert!(urls.iter().any(|u| u.contains("docs/guide/advanced")));
+        assert!(urls.iter().any(|u| u.contains("index.html")));
+        Ok(())
+    }
 }

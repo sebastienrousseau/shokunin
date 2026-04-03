@@ -439,4 +439,75 @@ mod tests {
         let changed = cache.changed_files(&content).ok().unwrap();
         assert_eq!(changed.len(), 1);
     }
+
+    // 13. Corrupted JSON in cache file returns an error.
+    #[test]
+    fn build_cache_load_corrupted_json() {
+        // Arrange
+        let tmp = TempDir::new().ok().unwrap();
+        let cache_path = tmp.path().join(".ssg-cache.json");
+        fs::write(&cache_path, "{ not valid json !!!").ok();
+
+        // Act
+        let result = BuildCache::load(&cache_path);
+
+        // Assert — malformed JSON must produce an error
+        assert!(result.is_err(), "corrupted JSON should fail to load");
+    }
+
+    // 14. Empty directory produces no changes.
+    #[test]
+    fn build_cache_empty_directory() {
+        // Arrange
+        let (_tmp, content, cache_path) = setup();
+        let mut cache = BuildCache::new(&cache_path);
+        cache.update(&content).ok();
+
+        // Act
+        let changed = cache.changed_files(&content).ok().unwrap();
+
+        // Assert
+        assert!(changed.is_empty(), "empty directory should have no changes");
+        assert_eq!(cache.len(), 0);
+    }
+
+    // 15. File present in cache but deleted from disk is detected on update.
+    #[test]
+    fn build_cache_file_removed_detected() {
+        // Arrange
+        let (_tmp, content, cache_path) = setup();
+        write_file(&content, "a.md", "keep");
+        write_file(&content, "b.md", "remove-me");
+
+        let mut cache = BuildCache::new(&cache_path);
+        cache.update(&content).ok();
+        assert_eq!(cache.len(), 2);
+
+        // Act — delete one file, then update the cache
+        fs::remove_file(content.join("b.md")).ok();
+        cache.update(&content).ok();
+
+        // Assert — removed file is no longer in the fingerprint map
+        assert_eq!(cache.len(), 1, "deleted file should be pruned from cache");
+    }
+
+    // 16. Unchanged files do not appear in the changed list.
+    #[test]
+    fn build_cache_unchanged_files_not_reported() {
+        // Arrange
+        let (_tmp, content, cache_path) = setup();
+        write_file(&content, "a.md", "stable");
+        write_file(&content, "b.md", "also stable");
+
+        let mut cache = BuildCache::new(&cache_path);
+        cache.update(&content).ok();
+        cache.save().ok();
+
+        // Act — reload without modifying any files
+        let cache2 = BuildCache::load(&cache_path).ok().unwrap();
+        let changed = cache2.changed_files(&content).ok().unwrap();
+
+        // Assert — nothing should be reported as changed
+        assert!(changed.is_empty(), "unchanged files must not be in changed list");
+    }
 }

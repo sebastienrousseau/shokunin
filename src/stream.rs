@@ -472,4 +472,96 @@ mod tests {
         assert_eq!(count, 0);
         Ok(())
     }
+
+    #[test]
+    fn stream_copy_exact_buffer_size_file() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let src = tmp.path().join("exact.bin");
+        let dst = tmp.path().join("exact_copy.bin");
+        let data = vec![0xCDu8; STREAM_BUFFER_SIZE];
+        fs::write(&src, &data)?;
+
+        // Act
+        let bytes = stream_copy(&src, &dst)?;
+
+        // Assert
+        assert_eq!(bytes, STREAM_BUFFER_SIZE as u64);
+        assert_eq!(fs::read(&dst)?, data);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_hash_empty_file() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let path = tmp.path().join("empty.bin");
+        fs::write(&path, b"")?;
+
+        // Act
+        let h1 = stream_hash(&path)?;
+        let h2 = stream_hash(&path)?;
+
+        // Assert
+        assert_eq!(h1, h2, "hash of empty file must be deterministic");
+        assert_eq!(h1.len(), 16);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_hash_same_content_same_hash() -> Result<()> {
+        // Arrange
+        let tmp = tempdir()?;
+        let a = tmp.path().join("file_a.txt");
+        let b = tmp.path().join("file_b.txt");
+        let content = "identical content in both files";
+        fs::write(&a, content)?;
+        fs::write(&b, content)?;
+
+        // Act
+        let hash_a = stream_hash(&a)?;
+        let hash_b = stream_hash(&b)?;
+
+        // Assert
+        assert_eq!(hash_a, hash_b, "same content must produce same hash");
+        Ok(())
+    }
+
+    #[test]
+    fn stream_lines_binary_content() -> Result<()> {
+        // Arrange — file with no newline characters
+        let tmp = tempdir()?;
+        let path = tmp.path().join("binary.bin");
+        fs::write(&path, "no-newlines-here")?;
+
+        // Act
+        let mut lines_seen = Vec::new();
+        let count = stream_lines(&path, |_i, line| {
+            lines_seen.push(line.to_string());
+            Ok(())
+        })?;
+
+        // Assert — single line, no newline splitting
+        assert_eq!(count, 1);
+        assert_eq!(lines_seen, vec!["no-newlines-here"]);
+        Ok(())
+    }
+
+    #[test]
+    fn process_batch_empty_directory() -> Result<()> {
+        // Arrange — source directory with no files
+        let tmp = tempdir()?;
+        let src = tmp.path().join("empty_src");
+        let dst = tmp.path().join("empty_dst");
+        fs::create_dir_all(&src)?;
+
+        // Act
+        let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+
+        // Assert
+        assert_eq!(result.files_processed, 0);
+        assert_eq!(result.bytes_read, 0);
+        assert_eq!(result.bytes_written, 0);
+        Ok(())
+    }
 }
