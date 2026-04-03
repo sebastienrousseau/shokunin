@@ -258,6 +258,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 ---
 
 **THE ARCHITECT** ᛫ [Sebastien Rousseau](https://sebastienrousseau.com)
+**THE ENGINE** ᛞ [EUXIS](https://euxis.co) ᛫ Enterprise Unified Execution Intelligence System
 
 ---
 
