@@ -3,8 +3,8 @@
 
 #![doc = include_str!("../README.md")]
 #![doc(
-    html_favicon_url = "https://kura.pro/shokunin/images/favicon.ico",
-    html_logo_url = "https://kura.pro/shokunin/images/logos/shokunin.svg",
+    html_favicon_url = "https://cloudcdn.pro/shokunin/images/favicon.ico",
+    html_logo_url = "https://cloudcdn.pro/shokunin/images/logos/shokunin.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]

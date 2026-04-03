@@ -6,8 +6,8 @@ author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 char
 banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
-cdn: "https://kura.pro" ## The CDN of the site.
+banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
+cdn: "https://cloudcdn.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
@@ -17,12 +17,12 @@ description: "Delve deeper into the Kaishi website by exploring topics and tags,
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 hreflang: "en" ## The hreflang of the site. (default: en-gb)
-icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
-image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
 keywords: "terms of use, intellectual property" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "page" ## The layout of the site.
@@ -30,7 +30,7 @@ locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
-logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
 permalink: "https://kaishi.one/terms" ## The url of the site.
 rating: "general" ## The rating of the site.
@@ -50,7 +50,7 @@ news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Op
 news_keywords: "kaishi, static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
 news_loc: "https://kaishi.one" ## The loc of the site.
-news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
+news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## The news publication name of the site.
 news_title: "Tags" ## The title of the page. (max 64 characters)
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
 twitter_description: "Delve deeper into the Kaishi website by exploring topics and tags, and get to the subjects that matter most to you."
 ## twitter_image - The Twitter Card image of the page.
-twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
 twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
@@ -106,7 +106,7 @@ twitter_title: "Kaishi, a Static Site Generator Starter Template"
 twitter_url: "https://kaishi.one"
 
 # Humans.txt - The Humans.txt front matter (YAML).
-author_website: "https://kura.pro" ## The author website of the page.
+author_website: "https://cloudcdn.pro" ## The author website of the page.
 author_twitter: "@wwdseb" ## The author twitter of the page.
 author_location: "London, UK" ## The author location of the page.
 thanks: "Thanks for reading!" ## The thanks of the page.

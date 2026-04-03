@@ -6,8 +6,8 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Plante à feuilles vertes" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://kura.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
-cdn: "https://kura.pro" ## Le CDN du site.
+banner: "https://cloudcdn.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
 cname: "kaishi.fr" ## La valeur CNAME du site. (Requise uniquement pour la page index.)
@@ -17,12 +17,12 @@ description: "Créez de beaux sites web avec Kaishi, un modèle de démarrage po
 download: "" ## L'URL de téléchargement pour le produit.
 format-detection: "telephone=no" ## La détection de format du site.
 hreflang: "fr" ## La langue hreflang du site. (par défaut : en-gb)
-icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
 id: "https://kaishi.fr" ## L'ID du site.
 image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image du site.
 image_height: "630" ## La hauteur de l'image du site.
 image_width: "1200" ## La largeur de l'image du site.
-image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
 keywords: "kaishi, SSG, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 language: "fr-FR" ## La langue du site. (par défaut : en-GB)
 layout: "index" ## La mise en page du site.
@@ -30,7 +30,7 @@ locale: "fr_FR" ## La locale du site.
 logo_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif du logo du site.
 logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
-logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
 name: "Kaishi" ## Le nom du site. (max 64 caractères)
 permalink: "https://kaishi.fr" ## L'URL du site.
 rating: "general" ## L'évaluation du site.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, SSG, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 news_language: "fr" ## La langue du site. (par défaut : en)
-news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
+news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## Le nom de la publication de nouvelles du site.
@@ -88,14 +88,14 @@ msapplication-navbutton-color: "rgb(0,102,204)" ## La couleur du bouton de navig
 twitter_card: "summary" ## Le type de carte Twitter.
 twitter_creator: "janedoe" ## Le créateur de la carte Twitter.
 twitter_description: "Créez de beaux sites web avec Kaishi, un modèle de démarrage pour le Static Site Generator." ## La description de la carte Twitter.
-twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
 twitter_image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image de la carte Twitter.
 twitter_site: "janedoe" ## Le site Twitter.
 twitter_title: "Kaishi, un modèle de démarrage pour le Static Site Generator" ## Le titre de la carte Twitter.
 twitter_url: "https://kaishi.fr" ## L'URL de la carte Twitter.
 
 # Humans.txt - Métadonnées Humans.txt (YAML).
-author_website: "https://kura.pro" ## Le site web de l'auteur.
+author_website: "https://cloudcdn.pro" ## Le site web de l'auteur.
 author_twitter: "@wwdseb" ## Le compte Twitter de l'auteur.
 author_location: "Londres, Royaume-Uni" ## L'emplacement de l'auteur.
 thanks: "Merci de votre lecture !" ## Les remerciements de la page.

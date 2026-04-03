@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="SSG logo" width="128" />
+  <img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg" alt="SSG logo" width="128" />
 </p>
 
 <h1 align="center">Static Site Generator (SSG)</h1>

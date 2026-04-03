@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD033 MD041 -->
-<img src="https://kura.pro/shokunin/images/logos/shokunin.svg"
+<img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg"
 alt="SSG logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 

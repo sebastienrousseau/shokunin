@@ -5,8 +5,8 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Mur carrelé vert et noir" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://kura.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
-cdn: "https://kura.pro" ## Le CDN du site.
+banner: "https://cloudcdn.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
 cname: "kaishi.fr" ## La valeur CNAME du site. (Requise uniquement pour la page index.)
@@ -16,12 +16,12 @@ description: "Tout ce dont vous avez besoin pour créer un site web époustoufla
 download: "" ## L'URL de téléchargement pour le produit.
 format-detection: "telephone=no" ## La détection de format du site.
 hreflang: "fr" ## La langue hreflang du site. (par défaut : en-gb)
-icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
 id: "https://kaishi.fr" ## L'ID du site.
 image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image du site.
 image_height: "630" ## La hauteur de l'image du site.
 image_width: "1200" ## La largeur de l'image du site.
-image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
 keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (max 160 caractères)
 language: "fr-FR" ## La langue du site. (par défaut : en-GB)
 layout: "feature" ## La mise en page du site.
@@ -29,7 +29,7 @@ locale: "fr_FR" ## La locale du site.
 logo_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif du logo du site.
 logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
-logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
 name: "Kaishi" ## Le nom du site. (max 64 caractères)
 permalink: "https://kaishi.fr/features" ## L'URL du site.
 rating: "general" ## L'évaluation du site.
@@ -86,14 +86,14 @@ msapplication-navbutton-color: "rgb(0,102,204)"
 twitter_card: "summary" ## Le type de carte Twitter.
 twitter_creator: "janedoe" ## Le créateur de la carte Twitter.
 twitter_description: "Tout ce dont vous avez besoin pour créer un site web époustouflant." ## La description de la carte Twitter.
-twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
 twitter_image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## L'alternative texte de l'image de la carte Twitter.
 twitter_site: "janedoe" ## Le site Twitter associé.
 twitter_title: "Kaishi, un modèle de démarrage pour Static Site Generator" ## Le titre de la carte Twitter.
 twitter_url: "https://kaishi.fr" ## L'URL de la carte Twitter.
 
 # Humans.txt - Les métadonnées Humans.txt (YAML)
-author_website: "https://kura.pro" ## Le site web de l'auteur de la page.
+author_website: "https://cloudcdn.pro" ## Le site web de l'auteur de la page.
 author_twitter: "@wwdseb" ## Le compte Twitter de l'auteur de la page.
 author_location: "Londres, Royaume-Uni" ## La localisation de l'auteur de la page.
 thanks: "Merci pour votre lecture !" ## Les remerciements de la page.
