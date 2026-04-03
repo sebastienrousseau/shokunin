@@ -43,6 +43,19 @@ fn main() -> Result<()> {
         }
     }
 
+    // Copy shared assets (manifest.json, rss.xml) to root so
+    // absolute paths emitted by staticdatagen resolve correctly.
+    for asset in &["manifest.json", "rss.xml", "robots.txt", "sitemap.xml"] {
+        // Prefer the English version as the root copy
+        let src = public_root.join("en").join(asset);
+        if src.exists() {
+            let dst = public_root.join(asset);
+            if !dst.exists() {
+                fs::copy(&src, &dst)?;
+            }
+        }
+    }
+
     // Generate the root `index.html` with language links
     generate_language_selector(public_root, &languages)?;
 
