@@ -93,7 +93,7 @@ pre code{background:none;padding:0}
 .footer{background:var(--vp-ba);padding:48px 24px 24px}
 .footer-inner{max-width:1152px;margin:0 auto}
 .footer-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-bottom:32px}
-.footer-col h4{font-size:14px;font-weight:700;color:var(--vp-t1);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.footer-heading{font-size:14px;font-weight:700;color:var(--vp-t1);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
 .footer-col a{display:block;color:var(--vp-t2);font-size:14px;padding:3px 0}
 .footer-col a:hover{color:var(--vp-br)}
 .footer-bottom{border-top:1px solid var(--vp-bd);padding-top:20px;text-align:center;color:var(--vp-t3);font-size:13px}
@@ -135,21 +135,21 @@ pre code{background:none;padding:0}
   <nav class="nav" id="mainNav" itemscope itemtype="http://schema.org/SiteNavigationElement" aria-label="Main navigation">
     <div class="nav-inner">
       <a class="nav-brand" href="/en/" aria-label="{{logo_alt}} - Home">
-        <img width="{{logo_width}}" height="{{logo_height}}" src="{{logo}}" alt="{{logo_alt}}" fetchpriority="high" />
+        <img width="{{logo_width}}" height="{{logo_height}}" src="{{logo}}" alt="{{logo_alt}}" />
         <span itemprop="name">{{name}}</span>
       </a>
       <button class="nav-search" type="button" aria-label="Search">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span>Search</span>
         <kbd>&#8984;K</kbd>
       </button>
-      <div class="nav-links" id="navLinks" role="navigation">
+      <div class="nav-links" id="navLinks">
         {{navigation}}
       </div>
       <div class="nav-controls">
         <div style="position:relative">
           <button class="lang-btn" type="button" aria-label="Select language" id="langToggle">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
           </button>
           <div class="lang-dropdown" id="langDropdown">
             <a href="/en/">English</a>
@@ -157,12 +157,12 @@ pre code{background:none;padding:0}
           </div>
         </div>
         <button class="theme-switch" type="button" aria-label="Toggle dark mode" id="themeToggle">
-          <svg class="sun-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-          <svg class="moon-svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg aria-hidden="true" class="sun-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg aria-hidden="true" class="moon-svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
       </div>
       <button class="menu-toggle" type="button" aria-controls="mobileMenu" aria-expanded="false" aria-label="Toggle navigation">
-        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
     </div>
   </nav>
@@ -189,18 +189,17 @@ pre code{background:none;padding:0}
     <div class="footer-inner">
       <div class="footer-cols">
         <div class="footer-col">
-          <h4>About</h4>
+          <p class="footer-heading">About</p>
           <a href="/en/">Home</a>
-          
           <a href="/en/contact/index.html">Contact</a>
         </div>
         <div class="footer-col">
-          <h4>Resources</h4>
+          <p class="footer-heading">Resources</p>
           <a href="/en/posts/index.html">Blog</a>
           <a href="/en/rss.xml">RSS Feed</a>
         </div>
         <div class="footer-col">
-          <h4>Legal</h4>
+          <p class="footer-heading">Legal</p>
           <a href="/en/privacy/index.html">Privacy</a>
         </div>
       </div>
