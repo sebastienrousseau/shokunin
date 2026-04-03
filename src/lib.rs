@@ -224,6 +224,28 @@ fn initialize_logging() -> Result<()> {
     Ok(())
 }
 
+/// Resolves distinct build and site directories for compilation.
+///
+/// `staticdatagen::compile` finalizes output by renaming the build directory
+/// into the site directory. If both paths are identical, finalization fails.
+/// This helper guarantees distinct paths when needed.
+fn resolve_build_and_site_dirs(
+    config: &ShokuninConfig,
+) -> (PathBuf, PathBuf) {
+    let site_dir = config
+        .serve_dir
+        .clone()
+        .unwrap_or_else(|| config.output_dir.clone());
+
+    let build_dir = if site_dir == config.output_dir {
+        config.output_dir.with_extension("build-tmp")
+    } else {
+        config.output_dir.clone()
+    };
+
+    (build_dir, site_dir)
+}
+
 /// Executes the static site generation process.
 ///
 /// Introduces asynchronous file operations, parallel processing, and a progress bar for feedback.
@@ -243,16 +265,12 @@ pub async fn run() -> Result<()> {
     // If you want a separate “build” folder vs. final “site” folder,
     // you can store that in ShokuninConfig as well.
     //
-    let build_dir = &config.output_dir; // “Temporary” build location
+    let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
     let content_dir = &config.content_dir;
     let template_dir = &config.template_dir;
 
-    // 5. Use `serve_dir` if set, else fall back to `output_dir` for the final site.
-    let site_dir =
-        config.serve_dir.as_ref().unwrap_or(&config.output_dir);
-
     // 6. Compile the site
-    compile(build_dir, content_dir, site_dir, template_dir).map_err(
+    compile(&build_dir, content_dir, &site_dir, template_dir).map_err(
         |e| {
             eprintln!("    ❌ Error compiling site: {:?}", e);
             // Convert the error into an anyhow::Error so run() will fail
@@ -356,11 +374,21 @@ pub async fn verify_and_copy_files_async(
     src: &Path,
     dst: &Path,
 ) -> Result<()> {
+    ensure!(
+        is_safe_path(src)?,
+        "Source directory is unsafe or inaccessible: {:?}",
+        src
+    );
+
     if !src.exists() {
         return Err(anyhow::anyhow!(
             "Source directory does not exist: {:?}",
             src
         ));
+    }
+
+    if src.is_file() {
+        verify_file_safety(src)?;
     }
 
     async_fs::create_dir_all(dst).await.with_context(|| format!(
@@ -377,6 +405,7 @@ pub async fn verify_and_copy_files_async(
             Box::pin(verify_and_copy_files_async(&src_path, &dst_path))
                 .await?;
         } else {
+            verify_file_safety(&src_path)?;
             let _ = async_fs::copy(&src_path, &dst_path)
                 .await
                 .with_context(|| {
@@ -408,11 +437,13 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
         )
     })?;
 
-    let entries = fs::read_dir(src).with_context(|| {
-        format!("Failed to read source directory: {}", src.display())
-    })?;
+    let entries: Vec<_> = fs::read_dir(src)
+        .with_context(|| {
+            format!("Failed to read source directory: {}", src.display())
+        })?
+        .collect::<std::io::Result<Vec<_>>>()?;
 
-    let progress_bar = ProgressBar::new(entries.count() as u64);
+    let progress_bar = ProgressBar::new(entries.len() as u64);
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
@@ -420,8 +451,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
             .progress_chars("#>-"),
     );
 
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
+    for entry in entries {
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
 
@@ -467,13 +497,13 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
 /// * Validating path components
 ///
 pub fn is_safe_path(path: &Path) -> Result<bool> {
-    // If path doesn't exist, check its parent
+    // If path doesn't exist, check for traversal patterns in the string
     if !path.exists() {
-        if let Some(parent) = path.parent() {
-            if !parent.exists() {
-                return Ok(true); // Consider non-existent paths safe if they'll be created
-            }
+        let path_str = path.to_string_lossy();
+        if path_str.contains("..") {
+            return Ok(false);
         }
+        return Ok(true); // Non-existent paths without traversal are safe
     }
 
     let canonical = path.canonicalize().map_err(|e| {
@@ -898,6 +928,25 @@ pub fn collect_files_recursive(
     dir: &Path,
     files: &mut Vec<PathBuf>,
 ) -> Result<()> {
+    collect_files_recursive_depth(dir, files, 0)
+}
+
+/// Maximum allowed directory nesting depth to prevent stack overflow.
+const MAX_RECURSION_DEPTH: usize = 100;
+
+fn collect_files_recursive_depth(
+    dir: &Path,
+    files: &mut Vec<PathBuf>,
+    depth: usize,
+) -> Result<()> {
+    if depth > MAX_RECURSION_DEPTH {
+        anyhow::bail!(
+            "Maximum directory depth ({}) exceeded at: {}",
+            MAX_RECURSION_DEPTH,
+            dir.display()
+        );
+    }
+
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -914,7 +963,7 @@ pub fn collect_files_recursive(
         }
 
         if metadata.is_dir() {
-            collect_files_recursive(&path, files)?;
+            collect_files_recursive_depth(&path, files, depth + 1)?;
         } else {
             files.push(path);
         }
@@ -948,6 +997,22 @@ pub fn collect_files_recursive(
 /// * Maintains original file permissions
 /// * Handles circular references
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    copy_dir_all_depth(src, dst, 0)
+}
+
+fn copy_dir_all_depth(
+    src: &Path,
+    dst: &Path,
+    depth: usize,
+) -> Result<()> {
+    if depth > MAX_RECURSION_DEPTH {
+        anyhow::bail!(
+            "Maximum directory depth ({}) exceeded at: {}",
+            MAX_RECURSION_DEPTH,
+            src.display()
+        );
+    }
+
     fs::create_dir_all(dst)?;
 
     let entries: Vec<_> =
@@ -960,7 +1025,7 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
             let dst_path = dst.join(entry.file_name());
 
             if src_path.is_dir() {
-                copy_dir_all(&src_path, &dst_path)?;
+                copy_dir_all_depth(&src_path, &dst_path, depth + 1)?;
             } else {
                 verify_file_safety(&src_path)?;
                 _ = fs::copy(&src_path, &dst_path)?;
@@ -1037,13 +1102,28 @@ async fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
 /// * Permission issues occur
 /// * Resource limits are exceeded
 fn list_directory_contents(dir: &Path) -> Result<()> {
+    list_directory_contents_depth(dir, 0)
+}
+
+fn list_directory_contents_depth(
+    dir: &Path,
+    depth: usize,
+) -> Result<()> {
+    if depth > MAX_RECURSION_DEPTH {
+        anyhow::bail!(
+            "Maximum directory depth ({}) exceeded at: {}",
+            MAX_RECURSION_DEPTH,
+            dir.display()
+        );
+    }
+
     let entries: Vec<_> =
         fs::read_dir(dir)?.collect::<std::io::Result<Vec<_>>>()?;
 
     entries.par_iter().try_for_each(|entry| -> Result<()> {
         let path = entry.path();
         if path.is_dir() {
-            list_directory_contents(&path)?;
+            list_directory_contents_depth(&path, depth + 1)?;
         }
         Ok(())
     })?;
@@ -1662,6 +1742,49 @@ mod tests {
         assert_eq!(paths.build, PathBuf::from("build"));
         assert_eq!(paths.template, PathBuf::from("templates"));
         Ok(())
+    }
+
+    #[test]
+    fn test_resolve_build_and_site_dirs_without_serve_dir() {
+        let mut config = ShokuninConfig::default();
+        config.output_dir = PathBuf::from("docs");
+        config.serve_dir = None;
+
+        let (build_dir, site_dir) =
+            resolve_build_and_site_dirs(&config);
+
+        assert_eq!(site_dir, PathBuf::from("docs"));
+        assert_eq!(build_dir, PathBuf::from("docs.build-tmp"));
+        assert_ne!(build_dir, site_dir);
+    }
+
+    #[test]
+    fn test_resolve_build_and_site_dirs_with_distinct_serve_dir() {
+        let mut config = ShokuninConfig::default();
+        config.output_dir = PathBuf::from("docs");
+        config.serve_dir = Some(PathBuf::from("public"));
+
+        let (build_dir, site_dir) =
+            resolve_build_and_site_dirs(&config);
+
+        assert_eq!(build_dir, PathBuf::from("docs"));
+        assert_eq!(site_dir, PathBuf::from("public"));
+        assert_ne!(build_dir, site_dir);
+    }
+
+    #[test]
+    fn test_resolve_build_and_site_dirs_with_same_serve_and_output_dir()
+    {
+        let mut config = ShokuninConfig::default();
+        config.output_dir = PathBuf::from("docs");
+        config.serve_dir = Some(PathBuf::from("docs"));
+
+        let (build_dir, site_dir) =
+            resolve_build_and_site_dirs(&config);
+
+        assert_eq!(site_dir, PathBuf::from("docs"));
+        assert_eq!(build_dir, PathBuf::from("docs.build-tmp"));
+        assert_ne!(build_dir, site_dir);
     }
 
     #[test]

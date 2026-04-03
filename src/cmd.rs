@@ -448,7 +448,8 @@ fn validate_path_safety(
         });
     }
 
-    // Check for mixed/invalid path separators
+    // Check for mixed/invalid path separators (only on non-Windows)
+    #[cfg(not(target_os = "windows"))]
     if path_str.contains('\\') {
         return Err(CliError::InvalidPath {
             field: field.to_string(),

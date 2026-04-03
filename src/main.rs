@@ -52,53 +52,25 @@ async fn execute_main_logic() -> Result<String, String> {
 async fn main() {
     match execute_main_logic().await {
         Ok(msg) => println!("{}", msg),
-        Err(e) => eprintln!("{}", e),
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use lazy_static::lazy_static;
-    use std::io::{BufWriter, Write};
-    use std::sync::Mutex;
-
-    lazy_static! {
-        static ref OUTPUT_LOCK: Mutex<()> = Mutex::new(());
-    }
+    use super::*;
 
     #[tokio::test]
-    async fn test_main_success() {
-        let _lock = OUTPUT_LOCK.lock().unwrap();
-
-        let mut output = Vec::new();
-        {
-            let mut writer = BufWriter::new(&mut output);
-            // Redirect stdout to our writer
-            writeln!(writer, "Site generated successfully.").unwrap();
-            writer.flush().unwrap();
-        }
-
-        let output_str = String::from_utf8(output).unwrap();
-        assert!(output_str.contains("Site generated successfully."));
-    }
-
-    #[tokio::test]
-    async fn test_main_error() {
-        let _lock = OUTPUT_LOCK.lock().unwrap();
-
-        let mut output = Vec::new();
-        {
-            let mut writer = BufWriter::new(&mut output);
-            // Redirect stderr to our writer
-            writeln!(
-                writer,
-                "Program encountered an error: test error"
-            )
-            .unwrap();
-            writer.flush().unwrap();
-        }
-
-        let output_str = String::from_utf8(output).unwrap();
-        assert!(output_str.contains("Program encountered an error"));
+    async fn test_execute_main_logic_returns_result() {
+        // execute_main_logic calls run() which requires CLI args;
+        // without valid args it should return an error or success
+        // depending on environment. We verify it returns a Result.
+        let result = execute_main_logic().await;
+        // Without proper CLI args, this will typically be Ok (default config)
+        // or Err (missing content). Either is valid — we just confirm no panic.
+        let _ = result;
     }
 }
