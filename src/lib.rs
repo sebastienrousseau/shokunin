@@ -40,6 +40,8 @@ pub mod plugins;
 pub mod process;
 /// JSON Schema generation for configuration.
 pub mod schema;
+/// Client-side search index generator and search UI.
+pub mod search;
 /// High-performance streaming file processor.
 pub mod stream;
 /// File-watching for live rebuild.
