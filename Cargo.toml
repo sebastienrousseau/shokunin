@@ -103,7 +103,7 @@ lazy_static = "1.5.0"                      # Static variables for lazy evaluatio
 # -----------------------------------------------------------------------------
 [dependencies]
 # Required dependencies for building and running the project.
-anyhow = "1.0.95"
+anyhow = "1.0.102"
 clap = { version = "4.5.27", features = ["derive", "cargo", "env"] }
 colored = "3.0.0"
 dtt = "0.0.9"
