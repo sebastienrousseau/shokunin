@@ -171,6 +171,11 @@ jobs:
           fi
         shell: bash
 
+      # Generate SBOM from dependency tree
+      - name: Generate SBOM
+        id: generate-sbom
+        run: cargo tree --depth 100 --prefix none --format '{p} {l}' > sbom.txt
+
       # Create the release on GitHub releases
       - name: Create Release
         id: create-release
@@ -181,6 +186,7 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: SSG v${{ env.VERSION }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
+          files: sbom.txt
           draft: true
           prerelease: false
 

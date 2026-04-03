@@ -29,10 +29,19 @@ use rayon::prelude::*;
 use staticdatagen::compile;
 use tokio::fs as async_fs;
 
+/// Content fingerprinting for incremental builds.
+pub mod cache;
 pub mod cmd;
-/// Module declarations
+/// Lifecycle hook plugin system.
 pub mod plugin;
+/// Built-in plugins for common tasks.
+pub mod plugins;
+/// Command-line argument processing and site compilation.
 pub mod process;
+/// JSON Schema generation for configuration.
+pub mod schema;
+/// File-watching for live rebuild.
+pub mod watch;
 
 /// Re-exports
 pub use staticdatagen;

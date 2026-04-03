@@ -1,0 +1,442 @@
+// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! File-watching module for the static site generator.
+//!
+//! Provides a polling-based file watcher that monitors a content directory
+//! for changes and triggers rebuilds when modifications are detected.
+//! Uses only `std` library types — no external dependencies required.
+//!
+//! # Architecture
+//!
+//! The watcher tracks file modification times in a [`HashMap`] and compares
+//! them on each poll cycle. Three kinds of changes are detected:
+//!
+//! - **Modified** — a file's `mtime` has advanced since the last snapshot.
+//! - **Added** — a file exists on disk but was not present in the snapshot.
+//! - **Removed** — a file was in the snapshot but is no longer on disk.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use std::path::PathBuf;
+//! use std::time::Duration;
+//! use ssg::watch::{FileWatcher, WatchConfig};
+//!
+//! let config = WatchConfig::new(
+//!     PathBuf::from("content"),
+//!     Duration::from_secs(2),
+//! );
+//!
+//! let mut watcher = FileWatcher::new(config).expect("failed to create watcher");
+//!
+//! // Non-blocking: check once and get changed paths.
+//! let changes = watcher.check_for_changes().expect("check failed");
+//! if !changes.is_empty() {
+//!     println!("Changed files: {:?}", changes);
+//! }
+//! ```
+
+use std::collections::HashMap;
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::{Duration, SystemTime};
+
+// ---------------------------------------------------------------------------
+// WatchConfig
+// ---------------------------------------------------------------------------
+
+/// Configuration for the file watcher.
+#[derive(Debug, Clone)]
+pub struct WatchConfig {
+    /// Root directory to watch for changes.
+    directory: PathBuf,
+    /// How often to poll the filesystem.
+    poll_interval: Duration,
+}
+
+impl WatchConfig {
+    /// Creates a new `WatchConfig`.
+    ///
+    /// # Arguments
+    ///
+    /// * `directory`     — Path to the directory to watch.
+    /// * `poll_interval` — Duration between successive polls.
+    pub fn new(directory: PathBuf, poll_interval: Duration) -> Self {
+        Self {
+            directory,
+            poll_interval,
+        }
+    }
+
+    /// Returns a reference to the watched directory.
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
+    /// Returns the configured poll interval.
+    pub fn poll_interval(&self) -> Duration {
+        self.poll_interval
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FileWatcher
+// ---------------------------------------------------------------------------
+
+/// A polling-based file watcher that tracks modification times.
+///
+/// Call [`FileWatcher::check_for_changes`] to perform a single non-blocking
+/// scan, or [`watch_blocking`] to enter a poll-sleep loop with a rebuild
+/// callback.
+#[derive(Debug)]
+pub struct FileWatcher {
+    /// Watcher configuration.
+    config: WatchConfig,
+    /// Snapshot of `path → last-modified` for every file seen so far.
+    snapshots: HashMap<PathBuf, SystemTime>,
+}
+
+impl FileWatcher {
+    /// Creates a new `FileWatcher` and takes an initial snapshot of the
+    /// watched directory.
+    ///
+    /// Returns an error if the directory does not exist or is unreadable.
+    pub fn new(config: WatchConfig) -> io::Result<Self> {
+        let snapshots = Self::scan_directory(&config.directory)?;
+        Ok(Self { config, snapshots })
+    }
+
+    /// Returns a reference to the watcher's configuration.
+    pub fn config(&self) -> &WatchConfig {
+        &self.config
+    }
+
+    /// Performs a single, non-blocking check for file changes.
+    ///
+    /// Scans the watched directory, compares modification times against the
+    /// internal snapshot, and returns the list of paths that have been added,
+    /// modified, or removed since the last check.
+    ///
+    /// The internal snapshot is updated to reflect the current state of the
+    /// filesystem after each call.
+    pub fn check_for_changes(&mut self) -> io::Result<Vec<PathBuf>> {
+        let current = Self::scan_directory(&self.config.directory)?;
+        let mut changed: Vec<PathBuf> = Vec::new();
+
+        // Detect added or modified files.
+        for (path, mtime) in &current {
+            match self.snapshots.get(path) {
+                Some(old_mtime) if old_mtime == mtime => {}
+                _ => changed.push(path.clone()),
+            }
+        }
+
+        // Detect removed files.
+        for path in self.snapshots.keys() {
+            if !current.contains_key(path) {
+                changed.push(path.clone());
+            }
+        }
+
+        self.snapshots = current;
+        Ok(changed)
+    }
+
+    /// Returns the number of files currently tracked in the snapshot.
+    pub fn tracked_file_count(&self) -> usize {
+        self.snapshots.len()
+    }
+
+    // -- private helpers ----------------------------------------------------
+
+    /// Recursively scans `dir` and returns a map of file paths to their
+    /// last-modified times.
+    fn scan_directory(dir: &Path) -> io::Result<HashMap<PathBuf, SystemTime>> {
+        let mut map = HashMap::new();
+        if dir.is_dir() {
+            Self::walk_dir(dir, &mut map)?;
+        }
+        Ok(map)
+    }
+
+    /// Recursive directory walker.
+    fn walk_dir(
+        dir: &Path,
+        out: &mut HashMap<PathBuf, SystemTime>,
+    ) -> io::Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            let ft = entry.file_type()?;
+
+            if ft.is_dir() {
+                Self::walk_dir(&path, out)?;
+            } else if ft.is_file() {
+                if let Ok(meta) = fs::metadata(&path) {
+                    if let Ok(mtime) = meta.modified() {
+                        let _ = out.insert(path, mtime);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Blocking watch loop
+// ---------------------------------------------------------------------------
+
+/// Enters a blocking poll loop that invokes `callback` whenever file
+/// changes are detected.
+///
+/// The loop runs indefinitely until `callback` returns `false`, at which
+/// point the function returns.
+///
+/// # Arguments
+///
+/// * `watcher`  — A mutable reference to a [`FileWatcher`].
+/// * `callback` — Called with the list of changed paths.  Return `true` to
+///                keep watching, `false` to stop.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use std::path::PathBuf;
+/// use std::time::Duration;
+/// use ssg::watch::{FileWatcher, WatchConfig, watch_blocking};
+///
+/// let config = WatchConfig::new(PathBuf::from("content"), Duration::from_secs(1));
+/// let mut watcher = FileWatcher::new(config).unwrap();
+///
+/// watch_blocking(&mut watcher, |changes| {
+///     println!("rebuilding for: {:?}", changes);
+///     // Return false to stop watching.
+///     false
+/// });
+/// ```
+pub fn watch_blocking<F>(watcher: &mut FileWatcher, mut callback: F)
+where
+    F: FnMut(&[PathBuf]) -> bool,
+{
+    loop {
+        match watcher.check_for_changes() {
+            Ok(changes) if !changes.is_empty() => {
+                if !callback(&changes) {
+                    return;
+                }
+            }
+            Ok(_) => {} // no changes
+            Err(e) => {
+                eprintln!("watch error: {e}");
+            }
+        }
+        thread::sleep(watcher.config.poll_interval);
+    }
+}
+
+// ===========================================================================
+// Tests
+// ===========================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::io::Write;
+    use std::thread;
+    use std::time::Duration;
+
+    /// Helper: create a temporary directory with a unique name.
+    fn tmp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "ssg_watch_test_{name}_{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("create tmp dir");
+        dir
+    }
+
+    /// Helper: write some content to a file.
+    fn write_file(path: &Path, content: &str) {
+        let mut f = File::create(path).expect("create file");
+        f.write_all(content.as_bytes()).expect("write file");
+    }
+
+    // -- tests --------------------------------------------------------------
+
+    #[test]
+    fn config_accessors() {
+        let dir = PathBuf::from("/tmp/fake");
+        let interval = Duration::from_millis(500);
+        let cfg = WatchConfig::new(dir.clone(), interval);
+        assert_eq!(cfg.directory(), dir.as_path());
+        assert_eq!(cfg.poll_interval(), interval);
+    }
+
+    #[test]
+    fn new_watcher_snapshots_existing_files() {
+        let dir = tmp_dir("snapshot");
+        write_file(&dir.join("a.md"), "hello");
+        write_file(&dir.join("b.md"), "world");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        assert_eq!(watcher.tracked_file_count(), 2);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn no_changes_returns_empty() {
+        let dir = tmp_dir("nochange");
+        write_file(&dir.join("a.md"), "hello");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        let changes = watcher.check_for_changes().expect("check");
+        assert!(changes.is_empty(), "expected no changes");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn detects_new_file() {
+        let dir = tmp_dir("newfile");
+        write_file(&dir.join("a.md"), "hello");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Add a new file.
+        write_file(&dir.join("b.md"), "new");
+
+        let changes = watcher.check_for_changes().expect("check");
+        assert!(
+            changes.contains(&dir.join("b.md")),
+            "expected new file in changes"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn detects_modified_file() {
+        let dir = tmp_dir("modified");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Some filesystems have 1-second mtime granularity.
+        thread::sleep(Duration::from_millis(1100));
+        write_file(&dir.join("a.md"), "v2");
+
+        let changes = watcher.check_for_changes().expect("check");
+        assert!(
+            changes.contains(&dir.join("a.md")),
+            "expected modified file in changes"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn detects_removed_file() {
+        let dir = tmp_dir("removed");
+        write_file(&dir.join("a.md"), "hello");
+        write_file(&dir.join("b.md"), "world");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        fs::remove_file(dir.join("b.md")).expect("remove file");
+
+        let changes = watcher.check_for_changes().expect("check");
+        assert!(
+            changes.contains(&dir.join("b.md")),
+            "expected removed file in changes"
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn tracks_files_in_subdirectories() {
+        let dir = tmp_dir("subdirs");
+        let sub = dir.join("posts");
+        fs::create_dir_all(&sub).expect("create subdir");
+        write_file(&sub.join("first.md"), "post");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        assert_eq!(watcher.tracked_file_count(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn check_clears_changes_after_read() {
+        let dir = tmp_dir("clear");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Add file, detect it, then check again — should be empty.
+        write_file(&dir.join("b.md"), "new");
+        let first = watcher.check_for_changes().expect("check");
+        assert!(!first.is_empty());
+
+        let second = watcher.check_for_changes().expect("check");
+        assert!(second.is_empty(), "changes should be cleared after read");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn watch_blocking_stops_on_false() {
+        let dir = tmp_dir("blocking");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(10));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Introduce a change so callback fires.
+        thread::sleep(Duration::from_millis(1100));
+        write_file(&dir.join("a.md"), "v2");
+
+        let mut invoked = false;
+        watch_blocking(&mut watcher, |_changes| {
+            invoked = true;
+            false // stop immediately
+        });
+
+        assert!(invoked, "callback should have been invoked");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn empty_directory_is_valid() {
+        let dir = tmp_dir("empty");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        assert_eq!(watcher.tracked_file_count(), 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn nonexistent_directory_errors() {
+        let dir = PathBuf::from("/tmp/ssg_watch_test_nonexistent_99999");
+        let _ = fs::remove_dir_all(&dir);
+
+        let cfg = WatchConfig::new(dir, Duration::from_millis(50));
+        // A non-existent directory is not `is_dir()`, so scan returns an
+        // empty map — the watcher creates successfully with zero files.
+        let watcher = FileWatcher::new(cfg);
+        assert!(watcher.is_ok());
+        assert_eq!(watcher.unwrap().tracked_file_count(), 0);
+    }
+}

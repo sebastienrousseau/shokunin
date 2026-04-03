@@ -219,10 +219,7 @@ impl SsgConfig {
             self.serve_dir = Some(serve_dir.clone());
         }
 
-        // If `--watch` was used
-        if matches.get_flag("watch") {
-            // TODO: Implement watch mode
-        }
+        // `--watch` flag is handled by the caller (run() in lib.rs)
 
         // Re-validate after overriding
         self.validate()?;

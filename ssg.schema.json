@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SSG Configuration",
+  "description": "Configuration schema for the Static Site Generator (SSG)",
+  "type": "object",
+  "properties": {
+    "site_name": {
+      "type": "string",
+      "description": "Name of the site",
+      "default": "MySsgSite"
+    },
+    "content_dir": {
+      "type": "string",
+      "description": "Path to the content directory",
+      "default": "content"
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Path to the output/build directory",
+      "default": "public"
+    },
+    "template_dir": {
+      "type": "string",
+      "description": "Path to the template directory",
+      "default": "templates"
+    },
+    "serve_dir": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional path to the dev server directory",
+      "default": null
+    },
+    "base_url": {
+      "type": "string",
+      "description": "Base URL of the site",
+      "format": "uri",
+      "default": "http://127.0.0.1:8000"
+    },
+    "site_title": {
+      "type": "string",
+      "description": "Display title of the site",
+      "default": "My SSG Site"
+    },
+    "site_description": {
+      "type": "string",
+      "description": "Description of the site",
+      "default": "A site built with SSG"
+    },
+    "language": {
+      "type": "string",
+      "description": "Language code (e.g. en-GB)",
+      "pattern": "^[a-z]{2}-[A-Z]{2}$",
+      "default": "en-GB"
+    }
+  },
+  "required": [
+    "site_name"
+  ]
+}
