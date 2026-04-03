@@ -330,59 +330,89 @@ fn inject_search_ui(path: &Path) -> Result<()> {
 }
 
 /// The self-contained search widget (HTML + CSS + JS).
+///
+/// Includes a fixed search button in the top-right corner (like pacs008.com's
+/// DocSearch bar) that opens a full-screen search modal. Also responds to
+/// `Ctrl+K` / `Cmd+K`.
 const SEARCH_WIDGET_SCRIPT: &str = r##"
 <!-- SSG Search Widget -->
 <div id="ssg-search-widget">
 <style>
-#ssg-search-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding-top:15vh}
+/* ── Trigger button (always visible) ── */
+#ssg-search-btn{position:fixed;top:16px;right:16px;z-index:9998;display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#6b7280;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s}
+#ssg-search-btn:hover{border-color:#9ca3af;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+#ssg-search-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#ssg-search-btn kbd{font-family:inherit;font-size:11px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;color:#9ca3af;margin-left:4px}
+/* ── Modal overlay ── */
+#ssg-search-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding-top:12vh}
 #ssg-search-overlay.active{display:flex}
-#ssg-search-box{background:#fff;border-radius:12px;width:90%;max-width:600px;box-shadow:0 25px 50px rgba(0,0,0,.25);overflow:hidden;font-family:-apple-system,system-ui,sans-serif}
-#ssg-search-input{width:100%;padding:16px 20px;font-size:17px;border:none;outline:none;box-sizing:border-box;background:transparent}
-#ssg-search-results{max-height:50vh;overflow-y:auto;border-top:1px solid #e5e7eb}
+#ssg-search-box{background:#fff;border-radius:12px;width:92%;max-width:640px;box-shadow:0 25px 60px rgba(0,0,0,.3);overflow:hidden;font-family:-apple-system,system-ui,sans-serif}
+#ssg-search-header{display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #e5e7eb}
+#ssg-search-header svg{width:20px;height:20px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0}
+#ssg-search-input{flex:1;padding:16px 12px;font-size:16px;border:none;outline:none;background:transparent}
+#ssg-search-results{max-height:50vh;overflow-y:auto}
 .ssg-result{display:block;padding:12px 20px;text-decoration:none;color:#111;border-bottom:1px solid #f3f4f6;transition:background .1s}
-.ssg-result:hover,.ssg-result.active{background:#f0f4ff}
-.ssg-result-title{font-weight:600;font-size:15px;margin-bottom:2px}
-.ssg-result-snippet{font-size:13px;color:#6b7280;line-height:1.4}
-.ssg-result-snippet mark{background:#fef08a;color:inherit;border-radius:2px;padding:0 1px}
-.ssg-no-results{padding:20px;text-align:center;color:#9ca3af;font-size:14px}
-.ssg-search-hint{padding:8px 20px;font-size:12px;color:#9ca3af;text-align:right;border-top:1px solid #e5e7eb}
+.ssg-result:hover,.ssg-result.active{background:#eff6ff}
+.ssg-result-title{font-weight:600;font-size:15px;margin-bottom:3px}
+.ssg-result-snippet{font-size:13px;color:#6b7280;line-height:1.5}
+.ssg-result-snippet mark{background:#fef08a;color:inherit;border-radius:2px;padding:0 2px}
+.ssg-no-results{padding:32px 20px;text-align:center;color:#9ca3af;font-size:14px}
+.ssg-search-footer{display:flex;gap:16px;padding:10px 20px;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;justify-content:flex-end}
+.ssg-search-footer kbd{font-family:inherit;font-size:11px;padding:1px 5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px}
+/* ── Dark mode ── */
 @media(prefers-color-scheme:dark){
+#ssg-search-btn{background:#1f2937;border-color:#374151;color:#9ca3af}
+#ssg-search-btn:hover{border-color:#4b5563}
+#ssg-search-btn kbd{background:#374151;border-color:#4b5563;color:#6b7280}
 #ssg-search-box{background:#1f2937;color:#f9fafb}
+#ssg-search-header{border-color:#374151}
 #ssg-search-input{color:#f9fafb}
-#ssg-search-results{border-color:#374151}
 .ssg-result{color:#f9fafb;border-color:#374151}
 .ssg-result:hover,.ssg-result.active{background:#374151}
 .ssg-result-snippet{color:#9ca3af}
 .ssg-result-snippet mark{background:#854d0e;color:#fef08a}
 .ssg-no-results{color:#6b7280}
-.ssg-search-hint{border-color:#374151;color:#6b7280}
+.ssg-search-footer{border-color:#374151;color:#6b7280}
+.ssg-search-footer kbd{background:#374151;border-color:#4b5563}
 }
 </style>
+<!-- Search trigger button -->
+<button id="ssg-search-btn" type="button" aria-label="Search">
+<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+<span>Search</span>
+<kbd>K</kbd>
+</button>
+<!-- Search modal -->
 <div id="ssg-search-overlay" role="dialog" aria-label="Search">
 <div id="ssg-search-box">
-<input id="ssg-search-input" type="search" placeholder="Search..." autocomplete="off" aria-label="Search query"/>
+<div id="ssg-search-header">
+<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+<input id="ssg-search-input" type="search" placeholder="Search documentation..." autocomplete="off" aria-label="Search query"/>
+</div>
 <div id="ssg-search-results"></div>
-<div class="ssg-search-hint">ESC to close · ↑↓ to navigate · Enter to open</div>
+<div class="ssg-search-footer"><span><kbd>Esc</kbd> close</span><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span><span><kbd>Enter</kbd> open</span></div>
 </div>
 </div>
 <script>
 (function(){
 var idx=null,overlay=document.getElementById('ssg-search-overlay'),
 input=document.getElementById('ssg-search-input'),
-results=document.getElementById('ssg-search-results'),active=-1;
+results=document.getElementById('ssg-search-results'),
+btn=document.getElementById('ssg-search-btn'),active=-1;
 function load(){if(idx)return Promise.resolve();return fetch('/search-index.json').then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
 function open(){load().then(function(){overlay.classList.add('active');input.value='';results.innerHTML='';input.focus();active=-1})}
 function close(){overlay.classList.remove('active');active=-1}
 function highlight(text,q){if(!q)return esc(text);var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');return esc(text).replace(re,'<mark>$1</mark>')}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function snippet(content,q,len){len=len||120;if(!q)return esc(content.substring(0,len));var i=content.toLowerCase().indexOf(q.toLowerCase());if(i<0)return esc(content.substring(0,len));var s=Math.max(0,i-40),e=Math.min(content.length,i+len);var t=(s>0?'...':'')+content.substring(s,e)+(e<content.length?'...':'');return highlight(t,q)}
+function snippet(content,q,len){len=len||150;if(!q)return esc(content.substring(0,len));var i=content.toLowerCase().indexOf(q.toLowerCase());if(i<0)return esc(content.substring(0,len));var s=Math.max(0,i-50),e=Math.min(content.length,i+len);var t=(s>0?'...':'')+content.substring(s,e)+(e<content.length?'...':'');return highlight(t,q)}
 function search(q){if(!idx||!q){results.innerHTML='';return}q=q.trim();if(!q){results.innerHTML='';return}var ql=q.toLowerCase(),hits=[];
 for(var i=0;i<idx.length&&hits.length<20;i++){var e=idx[i],s=0;if(e.title.toLowerCase().indexOf(ql)>=0)s+=10;if(e.content.toLowerCase().indexOf(ql)>=0)s+=5;for(var h=0;h<e.headings.length;h++){if(e.headings[h].toLowerCase().indexOf(ql)>=0){s+=3;break}}if(s>0)hits.push({entry:e,score:s})}
 hits.sort(function(a,b){return b.score-a.score});
-if(!hits.length){results.innerHTML='<div class="ssg-no-results">No results for "'+esc(q)+'"</div>';return}
+if(!hits.length){results.innerHTML='<div class="ssg-no-results">No results for &ldquo;'+esc(q)+'&rdquo;</div>';return}
 var html='';for(var j=0;j<hits.length;j++){var e=hits[j].entry;html+='<a class="ssg-result" href="'+esc(e.url)+'">'+'<div class="ssg-result-title">'+highlight(e.title,q)+'</div>'+'<div class="ssg-result-snippet">'+snippet(e.content,q)+'</div></a>'}
 results.innerHTML=html;active=-1}
 function nav(dir){var items=results.querySelectorAll('.ssg-result');if(!items.length)return;if(active>=0&&items[active])items[active].classList.remove('active');active+=dir;if(active<0)active=items.length-1;if(active>=items.length)active=0;items[active].classList.add('active');items[active].scrollIntoView({block:'nearest'})}
+btn.addEventListener('click',function(){open()});
 input.addEventListener('input',function(){search(this.value)});
 overlay.addEventListener('click',function(e){if(e.target===overlay)close()});
 document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();if(overlay.classList.contains('active'))close();else open()}
