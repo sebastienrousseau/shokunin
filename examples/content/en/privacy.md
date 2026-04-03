@@ -11,7 +11,7 @@ cdn: "https://cloudcdn.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
-copyright: "Copyright © 2023-2025 Kaishi. All rights reserved." ## The copyright of the site.
+copyright: "Copyright © 2023-2026 Kaishi. All rights reserved." ## The copyright of the site.
 date: "January 01, 2025"
 description: "Make beautiful websites with Kaishi, a Static Site Generator starter template." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.

@@ -1,7 +1,7 @@
 ---
 
 # Le front matter HTML (YAML).
-author: "<jane.doe@kaishi.fr> (Jane Doe)" ## L'auteur de la page. (max 64 caractères)
+author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractères)
 banner_alt: "une forêt remplie de nombreux arbres verts" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
@@ -10,7 +10,7 @@ cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
 cname: "kaishi.fr" ## La valeur CNAME du site. (Requise uniquement pour la page index.)
-copyright: "Copyright © 2023-2025 Kaishi. Tous droits réservés." ## Le copyright du site.
+copyright: "Copyright © 2023-2026 Kaishi. Tous droits réservés." ## Le copyright du site.
 date: "2023-07-12" ## La date de la page.
 description: "Vous pouvez nous contacter à l'aide du formulaire de contact ci-dessous." ## La description du site. (max 160 caractères)
 download: "" ## L'URL de téléchargement pour le produit.

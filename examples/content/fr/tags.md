@@ -10,7 +10,7 @@ cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
 cname: "kaishi.fr" ## La valeur CNAME du site. (Requise uniquement pour la page index.)
-copyright: "Copyright © 2023-2025 Kaishi. Tous droits réservés." ## Le copyright du site.
+copyright: "Copyright © 2023-2026 Kaishi. Tous droits réservés." ## Le copyright du site.
 date: "January 01, 2025"
 description: "Explorez davantage le site web de Kaishi en découvrant les sujets et les tags qui vous intéressent le plus." ## La description du site. (max 160 caractères)
 download: "" ## L'URL de téléchargement pour le produit.
@@ -31,7 +31,7 @@ logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
 logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
 name: "Kaishi" ## Le nom du site. (max 64 caractères)
-permalink: "https://kaishi.fr/terms" ## L'URL du site.
+permalink: "https://kaishi.fr/tags" ## L'URL du site.
 rating: "general" ## L'évaluation du site.
 referrer: "no-referrer" ## Le référent du site.
 revisit-after: "7 days" ## Le délai de revisite du site.
