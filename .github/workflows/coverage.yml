@@ -16,7 +16,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Run tests with coverage
-        run: cargo tarpaulin --out Lcov --all-features --no-fail-fast
+        run: cargo tarpaulin --out Lcov --all-features --no-fail-fast --exclude-files 'crates/*'
         env:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Ccodegen-units=1 -Clink-dead-code -Coverflow-checks=off'
