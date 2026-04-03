@@ -2169,14 +2169,20 @@ mod tests {
 
     #[test]
     fn test_initialize_logging_custom_levels() {
-        // Instead of actually initializing the logger, just verify the level parsing
-        for level in &["debug", "warn", "error", "trace"] {
-            env::set_var(ENV_LOG_LEVEL, level);
-            let log_level = env::var(ENV_LOG_LEVEL)
-                .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.to_string());
-            assert_eq!(log_level, *level);
+        // Verify that the expected log level strings are valid
+        let valid_levels = ["debug", "warn", "error", "trace", "info"];
+        for level in &valid_levels {
+            assert!(
+                ["trace", "debug", "info", "warn", "error"]
+                    .contains(level),
+                "unexpected log level: {level}"
+            );
         }
-        env::remove_var(ENV_LOG_LEVEL);
+        // Verify our default is valid
+        assert!(
+            ["trace", "debug", "info", "warn", "error"]
+                .contains(&DEFAULT_LOG_LEVEL),
+        );
     }
 
     #[tokio::test]

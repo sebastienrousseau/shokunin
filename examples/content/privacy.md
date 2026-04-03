@@ -117,7 +117,7 @@ site_software: "SSG, Rust" ## The software of the site.
 
 ---
 
-## Information Collection and Use.class=\"color-primary\"
+## Information Collection and Use
 
 We do not directly collect any personal data from you while you navigate our website. We do not use cookies for logic or save any personal information from a user.
 

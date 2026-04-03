@@ -34,34 +34,72 @@ fn extract_title(html: &str) -> String {
     String::new()
 }
 
-/// Extract plain text from the `<body>`, strip tags, and truncate to
+/// Extract plain text from the page content, strip tags, and truncate to
 /// `max_len` characters.
+///
+/// Prefers `<main>` content if present. Falls back to `<body>` with nav,
+/// header, footer, script, and style blocks removed.
 fn extract_description(html: &str, max_len: usize) -> String {
-    // Find body content
-    let body = if let Some(start) = html.find("<body") {
+    // Try to extract from <main> first — this is the actual page content
+    let content = if let Some(start) = html.find("<main") {
         let after = &html[start..];
         if let Some(gt) = after.find('>') {
-            let content = &after[gt + 1..];
-            if let Some(end) = content.find("</body>") {
-                &content[..end]
+            let inner = &after[gt + 1..];
+            if let Some(end) = inner.find("</main>") {
+                inner[..end].to_string()
             } else {
-                content
+                inner.to_string()
             }
         } else {
-            ""
+            String::new()
         }
     } else {
-        html
+        // Fall back to <body> with non-content elements stripped
+        let body = if let Some(start) = html.find("<body") {
+            let after = &html[start..];
+            if let Some(gt) = after.find('>') {
+                let inner = &after[gt + 1..];
+                if let Some(end) = inner.find("</body>") {
+                    inner[..end].to_string()
+                } else {
+                    inner.to_string()
+                }
+            } else {
+                String::new()
+            }
+        } else {
+            html.to_string()
+        };
+
+        let mut clean = body;
+        for tag in &["script", "style", "nav", "header", "footer"] {
+            let open = format!("<{tag}");
+            let close = format!("</{tag}>");
+            while let Some(start) = clean.find(&open) {
+                if let Some(end) = clean[start..].find(&close) {
+                    clean.replace_range(
+                        start..start + end + close.len(),
+                        " ",
+                    );
+                } else {
+                    break;
+                }
+            }
+        }
+        clean
     };
 
-    // Remove script and style blocks
-    let mut clean = body.to_string();
+    // Strip remaining HTML tags from <main> content too
+    let mut clean = content;
     for tag in &["script", "style"] {
         let open = format!("<{tag}");
         let close = format!("</{tag}>");
         while let Some(start) = clean.find(&open) {
             if let Some(end) = clean[start..].find(&close) {
-                clean.replace_range(start..start + end + close.len(), " ");
+                clean.replace_range(
+                    start..start + end + close.len(),
+                    " ",
+                );
             } else {
                 break;
             }
@@ -515,6 +553,34 @@ mod tests {
 
         assert_eq!(first, second);
         Ok(())
+    }
+
+    #[test]
+    fn test_extract_description_excludes_nav_header_footer() {
+        let html = r##"<html><head></head><body>
+            <a href="#main">Skip to content</a>
+            <nav><ul><li>Home</li><li>About</li><li>Search</li></ul></nav>
+            <header><h1>Site Header</h1></header>
+            <main><p>This is the actual page content that should be extracted.</p></main>
+            <footer><p>Copyright 2026</p></footer>
+            </body></html>"##;
+        let desc = extract_description(html, 160);
+        assert!(
+            desc.contains("actual page content"),
+            "description should contain main content, got: {desc}"
+        );
+        assert!(
+            !desc.contains("Skip to content"),
+            "description should not contain skip link text"
+        );
+        assert!(
+            !desc.contains("Site Header"),
+            "description should not contain header text"
+        );
+        assert!(
+            !desc.contains("Copyright"),
+            "description should not contain footer text"
+        );
     }
 
     #[test]
