@@ -1,4 +1,4 @@
-// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![doc = include_str!("../README.md")]
@@ -40,6 +40,8 @@ pub mod plugins;
 pub mod process;
 /// JSON Schema generation for configuration.
 pub mod schema;
+/// High-performance streaming file processor.
+pub mod stream;
 /// File-watching for live rebuild.
 pub mod watch;
 

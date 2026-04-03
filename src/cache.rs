@@ -1,4 +1,4 @@
-// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! Content fingerprinting for incremental builds.
@@ -37,8 +37,6 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::hash::{DefaultHasher, Hasher};
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -126,20 +124,10 @@ impl BuildCache {
 
     /// Compute a deterministic hex fingerprint of the given file.
     ///
-    /// We read the entire file into memory, feed the bytes through
-    /// [`DefaultHasher`] (SipHash-2-4), and format the resulting `u64`
-    /// as a 16-character hex string.  This is not cryptographic, but it
-    /// is fast and sufficient for detecting content changes.
+    /// Uses streaming I/O via `stream::stream_hash` — reads in 8 KB
+    /// chunks so memory usage is constant regardless of file size.
     fn fingerprint(path: &Path) -> Result<String> {
-        let mut file = fs::File::open(path)
-            .with_context(|| format!("cannot open file: {}", path.display()))?;
-        let mut buf = Vec::new();
-        let _bytes_read = file.read_to_end(&mut buf)
-            .with_context(|| format!("cannot read file: {}", path.display()))?;
-
-        let mut hasher = DefaultHasher::new();
-        hasher.write(&buf);
-        Ok(format!("{:016x}", hasher.finish()))
+        crate::stream::stream_hash(path)
     }
 
     /// Recursively collect all files under `dir`, returning paths

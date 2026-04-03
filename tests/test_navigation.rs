@@ -1,7 +1,7 @@
 //! Tests for the `NavigationGenerator` module in staticdatagen,
 //! ensuring navigation data structures and generation work correctly.
 
-// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #[cfg(test)]

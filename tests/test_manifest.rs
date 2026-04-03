@@ -1,6 +1,6 @@
 //! Tests for generating web app manifest data from metadata using the new StaticDataGen approach.
 
-// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use serde_json::json;

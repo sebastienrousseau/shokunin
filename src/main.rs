@@ -1,4 +1,4 @@
-// Copyright © 2023-2025 Static Site Generator.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! # Static Site Generator - Main Entry Point
