@@ -1,0 +1,4 @@
+[env]
+# Workaround: onig_sys C code uses K&R-style function declarations that
+# fail with GCC 15's default -std=gnu23.  Force gnu11 until upstream fixes.
+CFLAGS = "-std=gnu11 -Wno-error=incompatible-pointer-types"
