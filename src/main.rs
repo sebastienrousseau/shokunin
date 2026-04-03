@@ -22,55 +22,20 @@
 //! }
 //! ```
 
-use ssg::run;
-
-/// Executes the main logic of the Shokunin Static Site Generator.
-///
-/// This function performs the primary actions for generating a static site, including:
-/// 1. Calling `run` from the `ssg` module to generate the site.
-/// 2. Returning a fixed success or failure message (no translation).
-///
-/// # Return
-/// `Result<String, String>` - A result containing either a success message or an error string.
-async fn execute_main_logic() -> Result<String, String> {
-    match run().await {
-        Ok(_) => Ok("Site generated successfully.".to_string()),
-        Err(e) => Err(format!("Program encountered an error: {}", e)),
-    }
-}
-
 /// The main entry point of the Shokunin Static Site Generator.
 ///
-/// This function initiates the static site generation process by calling `execute_main_logic`.
-/// It handles the output to the console, displaying either a success message
-/// or an error message if the generation fails.
+/// Delegates to [`ssg::run`] and maps the result to an exit code.
 ///
 /// ### Exit Codes
 /// - Returns `0` if site generation is successful.
 /// - Returns a non-zero status code if an error occurs.
 #[tokio::main]
 async fn main() {
-    match execute_main_logic().await {
-        Ok(msg) => println!("{}", msg),
+    match ssg::run().await {
+        Ok(()) => println!("Site generated successfully."),
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("Program encountered an error: {}", e);
             std::process::exit(1);
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_execute_main_logic_returns_result() {
-        // execute_main_logic calls run() which requires CLI args;
-        // without valid args it should return an error or success
-        // depending on environment. We verify it returns a Result.
-        let result = execute_main_logic().await;
-        // Without proper CLI args, this will typically be Ok (default config)
-        // or Err (missing content). Either is valid — we just confirm no panic.
-        let _ = result;
     }
 }

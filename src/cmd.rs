@@ -482,12 +482,8 @@ fn validate_path_safety(
 
     // If path exists, check if it's a symlink
     if path.exists() {
-        let metadata = fs::symlink_metadata(path).map_err(|e| {
-            CliError::InvalidPath {
-                field: field.to_string(),
-                details: format!("Failed to get path metadata: {}", e),
-            }
-        })?;
+        let metadata = fs::symlink_metadata(path)
+            .map_err(|_| CliError::IoError(std::io::Error::other("Failed to get path metadata")))?;
 
         if metadata.file_type().is_symlink() {
             return Err(CliError::InvalidPath {

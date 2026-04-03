@@ -183,10 +183,7 @@ fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
             && path.extension().map_or(false, |ext| ext == "md")
         {
             let content = fs::read_to_string(&path)?;
-            let processed_content = process_frontmatter(&content)
-                .map_err(|e| {
-                    ProcessError::FrontmatterError(e.to_string())
-                })?;
+            let processed_content = process_frontmatter(&content)?;
             fs::write(&path, processed_content)?;
         }
     }
@@ -608,16 +605,15 @@ This is the main content.";
         let result = ensure_directory(&file_path, "test");
 
         // Verify that the operation failed because path exists but is not a directory
-        assert!(result.is_err());
-        if let Err(ProcessError::DirectoryCreation { source, .. }) =
-            result
-        {
-            assert_eq!(
-                source.kind(),
-                std::io::ErrorKind::AlreadyExists
-            );
-        } else {
-            panic!("Expected DirectoryCreation error");
+        let err = result.unwrap_err();
+        match err {
+            ProcessError::DirectoryCreation { source, .. } => {
+                assert_eq!(
+                    source.kind(),
+                    std::io::ErrorKind::AlreadyExists
+                );
+            }
+            other => panic!("Expected DirectoryCreation, got: {}", other),
         }
 
         Ok(())

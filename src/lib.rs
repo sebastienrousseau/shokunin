@@ -95,14 +95,9 @@ impl Paths {
 
             // If path exists, perform additional checks
             if path.exists() {
-                let metadata =
-                    path.symlink_metadata().with_context(|| {
-                        format!(
-                            "Failed to get metadata for {}: {}",
-                            name,
-                            path.display()
-                        )
-                    })?;
+                let metadata = path.symlink_metadata().context(
+                    format!("Failed to get metadata for {}", name),
+                )?;
 
                 if metadata.file_type().is_symlink() {
                     anyhow::bail!(
@@ -255,38 +250,26 @@ fn resolve_build_and_site_dirs(
 
 /// Executes the static site generation process.
 ///
-/// Introduces asynchronous file operations, parallel processing, and a progress bar for feedback.
+/// Parses CLI arguments, compiles the site, and starts a local dev server.
+/// This function blocks indefinitely while the server is running.
 pub async fn run() -> Result<()> {
-    // 1. Initialize logging
     initialize_logging()?;
     info!("Starting site generation process");
 
-    // 2. Parse command-line arguments
     let matches = Cli::build().get_matches();
-
-    // 3. Create/override config from CLI
     let config = ShokuninConfig::from_matches(&matches)?;
     println!("Configuration loaded: {:?}", config);
 
-    // 4. Directories gleaned from `config`.
-    // If you want a separate “build” folder vs. final “site” folder,
-    // you can store that in ShokuninConfig as well.
-    //
     let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
-    let content_dir = &config.content_dir;
-    let template_dir = &config.template_dir;
+    compile_site(&build_dir, &config.content_dir, &site_dir, &config.template_dir)?;
+    serve_site(&site_dir)
+}
 
-    // 6. Compile the site
-    compile(&build_dir, content_dir, &site_dir, template_dir).map_err(
-        |e| {
-            eprintln!("    ❌ Error compiling site: {:?}", e);
-            // Convert the error into an anyhow::Error so run() will fail
-            anyhow!("Failed to compile site: {:?}", e)
-        },
-    )?;
-
-    // 7. If compilation succeeded, serve the generated website locally.
-    let example_root = site_dir
+/// Converts a site directory path to a string and starts an HTTP server.
+///
+/// This function blocks while the server is running.
+pub fn serve_site(site_dir: &Path) -> Result<()> {
+    let root = site_dir
         .to_str()
         .ok_or_else(|| {
             anyhow!(
@@ -295,16 +278,23 @@ pub async fn run() -> Result<()> {
             )
         })?
         .to_string();
-
-    // 8. Create a new server with an address and document root
     let addr = format!("{}:{}", cmd::DEFAULT_HOST, cmd::DEFAULT_PORT);
-    let server = Server::new(&addr, &example_root);
-
-    // 9. Start the server (this will block in practice)
+    let server = Server::new(&addr, &root);
     let _ = server.start();
-
-    // 10. If everything goes well, return Ok.
     Ok(())
+}
+
+/// Compiles the static site from source directories.
+pub fn compile_site(
+    build_dir: &Path,
+    content_dir: &Path,
+    site_dir: &Path,
+    template_dir: &Path,
+) -> Result<()> {
+    compile(build_dir, content_dir, site_dir, template_dir).map_err(|e| {
+        eprintln!("    Error compiling site: {:?}", e);
+        anyhow!("Failed to compile site: {:?}", e)
+    })
 }
 
 /// Validates and copies files from source to destination.
@@ -464,12 +454,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
         );
 
         let entries: Vec<_> = fs::read_dir(&src_dir)
-            .with_context(|| {
-                format!(
-                    "Failed to read source directory: {}",
-                    src_dir.display()
-                )
-            })?
+            .context(format!("Failed to read source directory: {}", src_dir.display()))?
             .collect::<std::io::Result<Vec<_>>>()?;
 
         for entry in &entries {
@@ -480,14 +465,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
                 fs::create_dir_all(&dst_path)?;
                 stack.push((src_path, dst_path, depth + 1));
             } else {
-                let _ =
-                    fs::copy(&src_path, &dst_path).with_context(|| {
-                        format!(
-                            "Failed to copy file from {} to {}",
-                            src_path.display(),
-                            dst_path.display()
-                        )
-                    })?;
+                let _ = fs::copy(&src_path, &dst_path)?;
             }
             progress_bar.inc(1);
         }
@@ -532,13 +510,9 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
     // canonicalize() resolves symlinks and all `..' components,
     // so the resulting path is always absolute with no parent refs.
     // A failure here (e.g. broken symlink) means the path is unsafe.
-    let _canonical = path.canonicalize().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to canonicalize path {}: {}",
-            path.display(),
-            e
-        )
-    })?;
+    let _canonical = path
+        .canonicalize()
+        .context(format!("Failed to canonicalize path {}", path.display()))?;
 
     Ok(true)
 }
@@ -794,22 +768,16 @@ pub fn log_arguments(
 /// * Safe path verification
 pub fn create_directories(paths: &Paths) -> Result<()> {
     // Ensure each directory exists, with custom error messages for each.
-    fs::create_dir_all(&paths.content)
-        .with_context(|| format!("Failed to create or access content directory at path: {:?}", &paths.content))?;
-    fs::create_dir_all(&paths.build).with_context(|| {
-        format!(
-            "Failed to create or access build directory at path: {:?}",
-            &paths.build
-        )
-    })?;
-    fs::create_dir_all(&paths.site).with_context(|| {
-        format!(
-            "Failed to create or access site directory at path: {:?}",
-            &paths.site
-        )
-    })?;
-    fs::create_dir_all(&paths.template)
-        .with_context(|| format!("Failed to create or access template directory at path: {:?}", &paths.template))?;
+    for (name, path) in [
+        ("content", &paths.content),
+        ("build", &paths.build),
+        ("site", &paths.site),
+        ("template", &paths.template),
+    ] {
+        fs::create_dir_all(path).with_context(|| {
+            format!("Failed to create or access {} directory at path: {:?}", name, path)
+        })?;
+    }
 
     // Path safety check with additional context
     if !is_safe_path(&paths.content)?
@@ -882,6 +850,22 @@ pub async fn handle_server(
         date
     )?;
 
+    prepare_serve_dir(paths, serve_dir).await?;
+
+    println!("\nStarting server at http://127.0.0.1:8000");
+    println!("Serving content from: {}", serve_dir.display());
+
+    warp::serve(warp::fs::dir(serve_dir.clone()))
+        .run(([127, 0, 0, 1], 8000))
+        .await;
+    Ok(())
+}
+
+/// Prepares the serve directory by creating it and copying site files.
+pub async fn prepare_serve_dir(
+    paths: &Paths,
+    serve_dir: &PathBuf,
+) -> Result<()> {
     async_fs::create_dir_all(serve_dir)
         .await
         .context("Failed to create serve directory")?;
@@ -893,13 +877,6 @@ pub async fn handle_server(
     if serve_dir != &paths.site {
         verify_and_copy_files_async(&paths.site, serve_dir).await?;
     }
-
-    println!("\nStarting server at http://127.0.0.1:8000");
-    println!("Serving content from: {}", serve_dir.display());
-
-    warp::serve(warp::fs::dir(serve_dir.clone()))
-        .run(([127, 0, 0, 1], 8000))
-        .await;
     Ok(())
 }
 
@@ -2063,28 +2040,24 @@ mod tests {
         }
 
         // Restore the original environment variable state
-        match original_value {
-            Some(value) => env::set_var(ENV_LOG_LEVEL, value),
-            None => env::remove_var(ENV_LOG_LEVEL),
+        env::remove_var(ENV_LOG_LEVEL);
+        if let Some(value) = original_value {
+            env::set_var(ENV_LOG_LEVEL, value);
         }
     }
 
     /// Test for default log level when environment variable is not set
     #[test]
     fn test_default_log_level() {
-        // Save current environment variable value
         let original_value = env::var(ENV_LOG_LEVEL).ok();
-
-        // Remove the environment variable to test default behavior
         env::remove_var(ENV_LOG_LEVEL);
 
         let log_level = env::var(ENV_LOG_LEVEL)
             .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.to_string())
             .to_lowercase();
-
         assert_eq!(log_level, DEFAULT_LOG_LEVEL.to_lowercase());
 
-        // Restore original environment variable state
+        env::remove_var(ENV_LOG_LEVEL);
         if let Some(value) = original_value {
             env::set_var(ENV_LOG_LEVEL, value);
         }
@@ -2170,9 +2143,9 @@ mod tests {
         }
 
         // Restore original state
-        match original_value {
-            Some(value) => env::set_var(ENV_LOG_LEVEL, value),
-            None => env::remove_var(ENV_LOG_LEVEL),
+        env::remove_var(ENV_LOG_LEVEL);
+        if let Some(value) = original_value {
+            env::set_var(ENV_LOG_LEVEL, value);
         }
     }
 
@@ -2224,12 +2197,7 @@ mod tests {
         // Verify source files
         let mut src_files = Vec::new();
         collect_files_recursive(&src_dir, &mut src_files)?;
-        assert_eq!(
-            src_files.len(),
-            100,
-            "Source directory should have 100 files, found {}",
-            src_files.len()
-        );
+        assert_eq!(src_files.len(), 100);
 
         // Create destination directory
         async_fs::create_dir_all(&dst_dir).await?;
@@ -2245,24 +2213,7 @@ mod tests {
         let mut dst_files = Vec::new();
         collect_files_recursive(&dst_dir, &mut dst_files)?;
 
-        // Debug output
-        if dst_files.len() != 100 {
-            println!("Source directory contents:");
-            for file in &src_files {
-                println!("  {:?}", file);
-            }
-            println!("Destination directory contents:");
-            for file in &dst_files {
-                println!("  {:?}", file);
-            }
-        }
-
-        assert_eq!(
-            dst_files.len(),
-            100,
-            "Destination directory should have 100 files, found {}",
-            dst_files.len()
-        );
+        assert_eq!(dst_files.len(), 100);
 
         // Verify file contents
         for i in 0..100 {
@@ -2651,6 +2602,91 @@ mod tests {
         // verify_file_safety then copy_dir_all (which fails on a file)
         let result = verify_and_copy_files(&src_file, &dst_dir);
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_compile_site_error() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let build = temp_dir.path().join("build");
+        let content = temp_dir.path().join("content");
+        let site = temp_dir.path().join("site");
+        let template = temp_dir.path().join("template");
+        fs::create_dir_all(&build)?;
+        fs::create_dir_all(&content)?;
+        fs::create_dir_all(&site)?;
+        fs::create_dir_all(&template)?;
+
+        let result = compile_site(&build, &content, &site, &template);
+        // Compilation with empty dirs will fail
+        assert!(result.is_err());
+        Ok(())
+    }
+
+
+
+    #[tokio::test]
+    async fn test_prepare_serve_dir_same_as_site() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let site_dir = temp_dir.path().join("site");
+        fs::create_dir_all(&site_dir)?;
+        fs::write(site_dir.join("index.html"), "<html/>")?;
+
+        let paths = Paths {
+            site: site_dir.clone(),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+
+        // When serve_dir == site, no copy should happen
+        prepare_serve_dir(&paths, &site_dir).await?;
+        assert!(site_dir.join("index.html").exists());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_prepare_serve_dir_different() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let site_dir = temp_dir.path().join("site");
+        let serve_dir = temp_dir.path().join("serve");
+        fs::create_dir_all(&site_dir)?;
+        fs::write(site_dir.join("index.html"), "<html/>")?;
+
+        let paths = Paths {
+            site: site_dir,
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+
+        prepare_serve_dir(&paths, &serve_dir).await?;
+        assert!(serve_dir.join("index.html").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_directories_all_valid() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let paths = Paths {
+            site: temp_dir.path().join("s"),
+            content: temp_dir.path().join("c"),
+            build: temp_dir.path().join("b"),
+            template: temp_dir.path().join("t"),
+        };
+        create_directories(&paths)?;
+        assert!(paths.site.exists());
+        assert!(paths.build.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_safe_path_existing_valid() -> Result<()> {
+        let temp_dir = tempdir()?;
+        let dir = temp_dir.path().join("valid");
+        fs::create_dir(&dir)?;
+        let canonical = dir.canonicalize()?;
+        assert!(is_safe_path(&canonical)?);
         Ok(())
     }
 }
