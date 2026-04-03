@@ -15,7 +15,7 @@ date: "January 01, 2025"
 description: "Tout ce dont vous avez besoin pour créer un site web époustouflant." ## La description du site. (max 160 caractères)
 download: "" ## L'URL de téléchargement pour le produit.
 format-detection: "telephone=no" ## La détection de format du site.
-hreflang: "en" ## La langue hreflang du site. (par défaut : en-gb)
+hreflang: "fr" ## La langue hreflang du site. (par défaut : en-gb)
 icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
 id: "https://kaishi.fr" ## L'ID du site.
 image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image du site.
@@ -23,9 +23,9 @@ image_height: "630" ## La hauteur de l'image du site.
 image_width: "1200" ## La largeur de l'image du site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
 keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (max 160 caractères)
-language: "en-GB" ## La langue du site. (par défaut : en-GB)
+language: "fr-FR" ## La langue du site. (par défaut : en-GB)
 layout: "post" ## La mise en page du site.
-locale: "en_GB" ## La locale du site.
+locale: "fr_FR" ## La locale du site.
 logo_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif du logo du site.
 logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
@@ -47,7 +47,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 # News - Les métadonnées SiteMap News (YAML)
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
-news_language: "en" ## La langue du site. (par défaut : en)
+news_language: "fr" ## La langue du site. (par défaut : en)
 news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du site.

@@ -47,7 +47,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 # News - Les métadonnées SiteMap News (YAML)
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, SSG, générateur de sites statiques, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
-news_language: "en" ## La langue du site. (par défaut : en)
+news_language: "fr" ## La langue du site. (par défaut : en)
 news_loc: "https://kaishi.fr" ## L'URL du site.
 news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du site.
