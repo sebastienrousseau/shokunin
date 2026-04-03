@@ -475,4 +475,24 @@ mod tests {
         let debug = format!("{:?}", pm);
         assert!(debug.contains("NoopPlugin"));
     }
+
+    #[test]
+    fn test_fail_plugin_non_matching_hooks_succeed() {
+        let ctx = test_ctx();
+
+        // FailPlugin("before") should succeed on after_compile and on_serve
+        let p = FailPlugin { hook: "before" };
+        assert!(p.after_compile(&ctx).is_ok());
+        assert!(p.on_serve(&ctx).is_ok());
+
+        // FailPlugin("after") should succeed on before_compile and on_serve
+        let p = FailPlugin { hook: "after" };
+        assert!(p.before_compile(&ctx).is_ok());
+        assert!(p.on_serve(&ctx).is_ok());
+
+        // FailPlugin("serve") should succeed on before_compile and after_compile
+        let p = FailPlugin { hook: "serve" };
+        assert!(p.before_compile(&ctx).is_ok());
+        assert!(p.after_compile(&ctx).is_ok());
+    }
 }
