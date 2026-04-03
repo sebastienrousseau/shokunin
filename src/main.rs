@@ -34,7 +34,7 @@ async fn main() {
     match ssg::run().await {
         Ok(()) => println!("Site generated successfully."),
         Err(e) => {
-            eprintln!("Program encountered an error: {}", e);
+            eprintln!("Program encountered an error: {e}");
             std::process::exit(1);
         }
     }

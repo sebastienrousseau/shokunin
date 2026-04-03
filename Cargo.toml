@@ -236,9 +236,9 @@ module_inception = "allow"                   # Allow modules with the same name 
 too_many_arguments = "allow"                 # Allow functions with more than 7 arguments if justified
 missing_docs_in_private_items = "allow"      # Skip requiring documentation for private items
 
-## Denials
-unwrap_used = "deny"                         # Deny the use of unwrap to ensure error handling
-expect_used = "deny"                         # Deny the use of expect to avoid improper error handling
+## Denials — warn level so tests can use unwrap/expect; CI lint enforces on lib
+unwrap_used = "warn"                         # Warn on unwrap to encourage error handling
+expect_used = "warn"                         # Warn on expect to encourage error handling
 
 # -----------------------------------------------------------------------------
 # Profiles

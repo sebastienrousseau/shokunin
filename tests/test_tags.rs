@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Tests for the tags module in StaticDataGen, ensuring correct tagging logic
 //! and data handling.
 

@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 // examples/basic_site.rs
 //! # Basic Site Generation Example
 //!
