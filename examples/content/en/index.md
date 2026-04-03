@@ -60,7 +60,7 @@ news_title: "Kaishi, a Static Site Generator Starter Template" ## The title of t
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.32)"
+generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -130,7 +130,7 @@ security_encryption: "https://kaishi.one/encryption" ## The encryption of the pa
 
 ## Overview
 
-**Kaishi** is a minimalist and modern [SSG static website generator ⧉][0]
+**Kaishi** is a minimalist and modern [SSG static site generator ⧉][0]
 starter template designed for professionals who value simplicity and elegance.
 
 With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
@@ -144,8 +144,8 @@ the perfect foundation for your online presence. With its minimalist design,
 Kaishi is the ultimate website starter template for modern and professional
 websites.
 
-This page is an example for the SSG static website generator. You
+This page is an example for the SSG static site generator. You
 can use it as a template for your website or blog. It uses a markdown template
 for the content and a custom HTML theme for the layout.
 
-[0]: https://shokunin.one/
+[0]: https://static-site-generator.com/

@@ -60,7 +60,7 @@ news_title: "Nous Contacter" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/contact/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.32)"
+generator: "SSG (version 0.0.33)"
 item_description: Flux RSS pour la page de contact du site Kaishi.
 item_guid: https://kaishi.fr/contact/rss.xml
 item_link: https://kaishi.fr/contact/rss.xml
@@ -106,3 +106,9 @@ site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi T
 site_software: "SSG, Rust" ## Les logiciels utilisés par le site.
 
 ---
+
+## Nous Contacter
+
+Une question, une suggestion ou une demande professionnelle ? Remplissez le formulaire ci-dessous et un membre de notre équipe vous répondra dans les 48 heures.
+
+Tous les champs marqués d'un astérisque sont obligatoires.

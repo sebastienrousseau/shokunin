@@ -61,7 +61,7 @@ news_title: "Contact Us" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/contact/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.32)"
+generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the contact page of the Kaishi website.
 item_guid: https://kaishi.one/contact/rss.xml
 item_link: https://kaishi.one/contact/rss.xml
@@ -117,3 +117,9 @@ site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi T
 site_software: "SSG, Rust" ## The software of the site.
 
 ---
+
+## Get in Touch
+
+Have a question, suggestion, or business enquiry? Fill out the form below and a member of the team will respond within 48 hours.
+
+All fields marked with an asterisk are required.

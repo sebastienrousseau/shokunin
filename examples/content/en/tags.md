@@ -60,7 +60,7 @@ news_title: "Tags" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.32)"
+generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -116,5 +116,9 @@ site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi T
 site_software: "SSG, Rust" ## The software of the site.
 
 ---
+
+## Explore by Tag
+
+Browse all content organised by topic. Select a tag below to discover related pages, articles, and resources.
 
 [[content]]
