@@ -271,7 +271,6 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 mod tests {
     use super::*;
     use clap::{arg, Command};
-    use std::fs::Permissions;
     use std::fs::{self, File};
     use tempfile::tempdir;
 
@@ -548,6 +547,7 @@ This is the main content.";
     #[cfg(unix)]
     #[test]
     fn test_preprocess_content_with_invalid_permissions() {
+        use std::fs::Permissions;
         use std::os::unix::fs::PermissionsExt;
 
         let temp_dir = tempdir().unwrap();

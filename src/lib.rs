@@ -2533,20 +2533,16 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_is_safe_path_broken_symlink() -> Result<()> {
         let temp_dir = tempdir()?;
         let target = temp_dir.path().join("nonexistent_target");
         let link = temp_dir.path().join("broken_link");
 
-        #[cfg(unix)]
-        {
-            std::os::unix::fs::symlink(&target, &link)?;
-            // Broken symlink: .exists() returns false, so is_safe_path
-            // treats it as a non-existent path without traversal → safe
-            let result = is_safe_path(&link)?;
-            assert!(result);
-        }
+        std::os::unix::fs::symlink(&target, &link)?;
+        let result = is_safe_path(&link)?;
+        assert!(result);
         Ok(())
     }
 
