@@ -19,3 +19,4 @@ src/.DS_Store
 tarpaulin-report.html
 Cargo.lock
 coverage/
+crates/serde_yml/target/
