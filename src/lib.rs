@@ -32,6 +32,8 @@ use tokio::fs as async_fs;
 /// Content fingerprinting for incremental builds.
 pub mod cache;
 pub mod cmd;
+/// WebSocket-based live-reload script injection.
+pub mod livereload;
 /// Lifecycle hook plugin system.
 pub mod plugin;
 /// Built-in plugins for common tasks.
@@ -42,6 +44,8 @@ pub mod process;
 pub mod schema;
 /// Client-side search index generator and search UI.
 pub mod search;
+/// SEO plugins: meta tags, robots.txt, and canonical URLs.
+pub mod seo;
 /// High-performance streaming file processor.
 pub mod stream;
 /// File-watching for live rebuild.
