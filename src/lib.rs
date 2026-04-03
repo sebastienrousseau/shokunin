@@ -31,6 +31,7 @@ use tokio::fs as async_fs;
 
 pub mod cmd;
 /// Module declarations
+pub mod plugin;
 pub mod process;
 
 /// Re-exports
