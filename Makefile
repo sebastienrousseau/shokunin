@@ -69,7 +69,7 @@ ensure-rustfmt:
 	@cargo fmt --version || rustup component add rustfmt
 
 ensure-cargo-fix:
-	@cargo fix --version || rustup component add rustfix
+	@cargo version > /dev/null 2>&1 || (echo "cargo is required" && exit 1)
 
 ensure-cargo-deny:
 	@command -v cargo-deny || cargo install cargo-deny

@@ -1,4 +1,4 @@
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::Result;
@@ -183,10 +183,7 @@ fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
             && path.extension().map_or(false, |ext| ext == "md")
         {
             let content = fs::read_to_string(&path)?;
-            let processed_content = process_frontmatter(&content)
-                .map_err(|e| {
-                    ProcessError::FrontmatterError(e.to_string())
-                })?;
+            let processed_content = process_frontmatter(&content)?;
             fs::write(&path, processed_content)?;
         }
     }
@@ -274,7 +271,6 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 mod tests {
     use super::*;
     use clap::{arg, Command};
-    use std::fs::Permissions;
     use std::fs::{self, File};
     use tempfile::tempdir;
 
@@ -405,6 +401,7 @@ mod tests {
         assert_eq!(error.to_string(), "File not found");
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_ensure_directory_permission_denied() {
         use std::fs::Permissions;
@@ -547,8 +544,10 @@ This is the main content.";
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_preprocess_content_with_invalid_permissions() {
+        use std::fs::Permissions;
         use std::os::unix::fs::PermissionsExt;
 
         let temp_dir = tempdir().unwrap();
@@ -606,16 +605,15 @@ This is the main content.";
         let result = ensure_directory(&file_path, "test");
 
         // Verify that the operation failed because path exists but is not a directory
-        assert!(result.is_err());
-        if let Err(ProcessError::DirectoryCreation { source, .. }) =
-            result
-        {
-            assert_eq!(
-                source.kind(),
-                std::io::ErrorKind::AlreadyExists
-            );
-        } else {
-            panic!("Expected DirectoryCreation error");
+        let err = result.unwrap_err();
+        match err {
+            ProcessError::DirectoryCreation { source, .. } => {
+                assert_eq!(
+                    source.kind(),
+                    std::io::ErrorKind::AlreadyExists
+                );
+            }
+            other => panic!("Expected DirectoryCreation, got: {}", other),
         }
 
         Ok(())

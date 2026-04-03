@@ -1,0 +1,15 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 85%
+        threshold: 5%
+    patch:
+      default:
+        target: 80%
+
+ignore:
+  - "crates/serde_yml/**"
+  - "examples/**"
+  - "benches/**"
+  - "target/**"

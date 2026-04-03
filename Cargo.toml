@@ -1,14 +1,14 @@
 # -----------------------------------------------------------------------------
-# Shokunin - A lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
+# SSG - A lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
 # -----------------------------------------------------------------------------
 
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.32"                      # The version of the library
-authors = ["Shokunin Contributors"]     # The authors of the library
+version = "0.0.33"                      # The version of the library
+authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.58.0"                 # Minimum supported Rust version
+rust-version = "1.74.0"                 # Minimum supported Rust version (required by clap 4.x)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
@@ -103,32 +103,30 @@ lazy_static = "1.5.0"                      # Static variables for lazy evaluatio
 # -----------------------------------------------------------------------------
 [dependencies]
 # Required dependencies for building and running the project.
-anyhow = "1.0.95"
-clap = { version = "4.5.27", features = ["derive", "cargo", "env"] }
-colored = "3.0.0"
+anyhow = "1.0.102"
+clap = { version = "4.6.0", features = ["derive", "cargo", "env"] }
+colored = "3.1.1"
 dtt = "0.0.9"
-env_logger = "0.11.6"
-http-handle = "0.0.2"
-indicatif = { version = "0.17.9", features = ["rayon"] }
-langweave = "0.0.1"
-log = { version = "0.4.25", features = ["std"] }
-once_cell = "1.20.2"
-rayon = "1.10.0"
-rlg = "0.0.6"
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.137"
-staticdatagen = "0.0.5"
-tempfile = "3.15.0"
-thiserror = "2.0.11"
-toml = "0.8.19"
-tokio = { version = "1.43.0", features = ["full"], optional = true }
-url = "2.5.4"
-uuid = { version = "1.12.1", features = ["v4"] }
+env_logger = "0.11.10"
+http-handle = "0.0.4"
+indicatif = { version = "0.17.11", features = ["rayon"] }
+log = { version = "0.4.29", features = ["std"] }
+once_cell = "1.21.4"
+rayon = "1.11.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+staticdatagen = "0.0.7"
+tempfile = "3.27.0"
+thiserror = "2.0.18"
+toml = "0.8.23"
+tokio = { version = "1.50.0", features = ["full"], optional = true }
+url = "2.5.8"
+uuid = { version = "1.22.0", features = ["v4"] }
 warp = "0.3.7"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.68", features = ["vendored"] }
+openssl = { version = "0.10.75", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
@@ -155,6 +153,11 @@ path = "examples/quickstart_example.rs"   # Path to the example file
 # Multilingual example configuration for showcasing the library.
 name = "multilingual"                     # Name of the example
 path = "examples/multilingual_example.rs" # Path to the example file
+
+[[example]]
+# Plugin pipeline example — SEO, search, minify, live-reload.
+name = "plugins"                          # Name of the example
+path = "examples/plugins_example.rs"      # Path to the example file
 
 # -----------------------------------------------------------------------------
 # Documentation Configuration
@@ -184,7 +187,7 @@ elided_lifetimes_in_paths = "allow"         # Allow lifetimes to be elided in pa
 non_camel_case_types = "allow"              # Allow non-camel-case types
 non_upper_case_globals = "allow"            # Allow non-uppercase global variables
 trivial_bounds = "allow"                    # Allow trivial bounds in trait definitions
-unsafe_code = "allow"                       # Allow the usage of unsafe code blocks
+unsafe_code = "forbid"                       # Forbid the usage of unsafe code blocks
 
 ## Forbidden
 missing_debug_implementations = "forbid"    # Forbid missing `Debug` implementations
@@ -200,7 +203,6 @@ future_incompatible = { level = "deny", priority = -1 } # Handle future compatib
 keyword_idents = { level = "deny", priority = -1 }      # Deny usage of keywords as identifiers
 macro_use_extern_crate = "deny"             # Deny macro use of `extern crate`
 meta_variable_misuse = "deny"               # Deny misuse of meta variables in macros
-missing_fragment_specifier = "deny"         # Deny missing fragment specifiers in macros
 noop_method_call = "deny"                   # Deny method calls that have no effect
 rust_2018_idioms = { level = "deny", priority = -1 }    # Enforce Rust 2018 idioms
 rust_2021_compatibility = { level = "deny", priority = -1 } # Enforce Rust 2021 compatibility
@@ -219,33 +221,29 @@ variant_size_differences = "deny"           # Deny enum variants with significan
 # -----------------------------------------------------------------------------
 # Clippy Configuration
 # -----------------------------------------------------------------------------
-[package.metadata.clippy]
+[lints.clippy]
 # Clippy lint configuration for enhanced code analysis.
-warn-lints = [
-    "clippy::all",                           # Enable all common Clippy lints
-    "clippy::pedantic",                      # Enable pedantic lints for stricter checking
-    "clippy::cargo",                         # Enable lints specific to cargo
-    "clippy::nursery",                       # Enable experimental lints from Clippy’s nursery
-    "clippy::complexity",                    # Warn on code complexity and suggest improvements
-    "clippy::correctness",                   # Ensure code correctness, flagging potential issues
-    "clippy::perf",                          # Lints that catch performance issues
-    "clippy::style",                         # Suggest stylistic improvements
-    "clippy::suspicious",                    # Detect suspicious code patterns
-    "clippy::module_name_repetitions",       # Avoid repeating module names in the crate name
-]
 
-# Customize Clippy to allow certain less critical lints.
-allow-lints = [
-    "clippy::module_inception",              # Allow modules with the same name as their parents
-    "clippy::too_many_arguments",            # Allow functions with more than 7 arguments if justified
-    "clippy::missing_docs_in_private_items", # Skip requiring documentation for private items
-]
+## Warnings
+all = "warn"                                 # Enable all common Clippy lints
+pedantic = "warn"                            # Enable pedantic lints for stricter checking
+cargo = "warn"                               # Enable lints specific to cargo
+nursery = "warn"                             # Enable experimental lints from Clippy’s nursery
+complexity = "warn"                          # Warn on code complexity and suggest improvements
+correctness = "warn"                         # Ensure code correctness, flagging potential issues
+perf = "warn"                                # Lints that catch performance issues
+style = "warn"                               # Suggest stylistic improvements
+suspicious = "warn"                          # Detect suspicious code patterns
+module_name_repetitions = "warn"             # Avoid repeating module names in the crate name
 
-# Enforce specific warnings and errors more strictly.
-deny-lints = [
-    "clippy::unwrap_used",                   # Deny the use of unwrap to ensure error handling
-    "clippy::expect_used",                   # Deny the use of expect to avoid improper error handling
-]
+## Allowances
+module_inception = "allow"                   # Allow modules with the same name as their parents
+too_many_arguments = "allow"                 # Allow functions with more than 7 arguments if justified
+missing_docs_in_private_items = "allow"      # Skip requiring documentation for private items
+
+## Denials — warn level so tests can use unwrap/expect; CI lint enforces on lib
+unwrap_used = "warn"                         # Warn on unwrap to encourage error handling
+expect_used = "warn"                         # Warn on expect to encourage error handling
 
 # -----------------------------------------------------------------------------
 # Profiles
@@ -270,8 +268,8 @@ debug = false                               # Disable debug symbols in release b
 debug-assertions = false                    # Disable debug assertions
 incremental = false                         # Disable incremental compilation for optimal binary size
 lto = true                                  # Enable link-time optimization for smaller and faster binaries
-opt-level = "z"                             # Optimize for binary size
-overflow-checks = false                     # Disable overflow checks for performance
+opt-level = 3                               # Optimize for runtime speed
+overflow-checks = true                      # Enable overflow checks for safety
 panic = "abort"                             # Use abort on panic for minimal overhead
 rpath = false                               # Disable rpath generation
 strip = "symbols"                           # Strip symbols for smaller binary size
@@ -287,3 +285,10 @@ opt-level = 0                               # No optimizations in test builds
 overflow-checks = true                      # Enable overflow checks for tests
 rpath = false                               # Disable rpath generation
 strip = false                               # Do not strip symbols in test builds
+
+# -----------------------------------------------------------------------------
+# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
+# safe-only implementation.
+# -----------------------------------------------------------------------------
+[patch.crates-io]
+serde_yml = { path = "crates/serde_yml" }

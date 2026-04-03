@@ -1,7 +1,7 @@
 //! # Command Line Interface Module
 //!
 //! This module provides a secure and robust command-line interface (CLI) for the
-//! **Shokunin Static Site Generator**. It handles argument parsing, configuration management,
+//! **Static Site Generator (SSG)**. It handles argument parsing, configuration management,
 //! and validation of user inputs to ensure that the static site generator operates
 //! reliably and securely.
 //!
@@ -14,13 +14,13 @@
 //!
 //! ## Example Usage
 //! ```rust,no_run
-//! use ssg::cmd::{Cli, ShokuninConfig};
+//! use ssg::cmd::{Cli, SsgConfig};
 //!
 //! fn main() -> anyhow::Result<()> {
 //!     let matches = Cli::build().get_matches();
 //!
 //!     // Attempt to load configuration from command-line arguments
-//!     let mut config = ShokuninConfig::from_matches(&matches)?;
+//!     let mut config = SsgConfig::from_matches(&matches)?;
 //!
 //!     println!("Configuration loaded: {:?}", config);
 //!     // Continue with application logic...
@@ -54,14 +54,14 @@ pub const RESERVED_NAMES: &[&str] =
 pub const MAX_CONFIG_SIZE: usize = 1024 * 1024; // 1MB limit
 
 /// Default site name for the configuration.
-pub const DEFAULT_SITE_NAME: &str = "MyShokuninSite";
+pub const DEFAULT_SITE_NAME: &str = "MySsgSite";
 /// Default site title for the configuration.
-pub const DEFAULT_SITE_TITLE: &str = "My Shokunin Site";
+pub const DEFAULT_SITE_TITLE: &str = "My SSG Site";
 
-/// A static default configuration for the Shokunin site.
-pub static DEFAULT_CONFIG: Lazy<Arc<ShokuninConfig>> =
+/// A static default configuration for the SSG site.
+pub static DEFAULT_CONFIG: Lazy<Arc<SsgConfig>> =
     Lazy::new(|| {
-        Arc::new(ShokuninConfig {
+        Arc::new(SsgConfig {
             site_name: DEFAULT_SITE_NAME.to_string(),
             content_dir: PathBuf::from("content"),
             output_dir: PathBuf::from("public"),
@@ -72,7 +72,7 @@ pub static DEFAULT_CONFIG: Lazy<Arc<ShokuninConfig>> =
                 DEFAULT_HOST, DEFAULT_PORT
             ),
             site_title: DEFAULT_SITE_TITLE.to_string(),
-            site_description: "A site built with Shokunin".to_string(),
+            site_description: "A site built with SSG".to_string(),
             language: "en-GB".to_string(),
         })
     });
@@ -158,7 +158,7 @@ pub enum CliError {
 
 /// Core configuration for the static site generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShokuninConfig {
+pub struct SsgConfig {
     /// Name of the site.
     pub site_name: String,
     /// Directory containing content files.
@@ -179,13 +179,13 @@ pub struct ShokuninConfig {
     pub language: String,
 }
 
-impl Default for ShokuninConfig {
+impl Default for SsgConfig {
     fn default() -> Self {
         DEFAULT_CONFIG.as_ref().clone()
     }
 }
 
-impl ShokuninConfig {
+impl SsgConfig {
     /// Applies command-line arguments to override defaults.
     fn override_with_cli(
         mut self,
@@ -219,10 +219,7 @@ impl ShokuninConfig {
             self.serve_dir = Some(serve_dir.clone());
         }
 
-        // If `--watch` was used
-        if matches.get_flag("watch") {
-            // TODO: Implement watch mode
-        }
+        // `--watch` flag is handled by the caller (run() in lib.rs)
 
         // Re-validate after overriding
         self.validate()?;
@@ -242,7 +239,7 @@ impl ShokuninConfig {
     /// # Examples
     /// ```rust,ignore
     /// let matches = cli.build().get_matches();
-    /// let config = ShokuninConfig::from_matches(&matches)?;
+    /// let config = SsgConfig::from_matches(&matches)?;
     /// ```
     pub fn from_matches(
         matches: &ArgMatches,
@@ -275,11 +272,11 @@ impl ShokuninConfig {
     ///
     /// # Examples
     /// ```rust,ignore
-    /// let config = ShokuninConfig::from_file(Path::new("config.toml"))?;
+    /// let config = SsgConfig::from_file(Path::new("config.toml"))?;
     /// ```
     pub fn from_file(path: &Path) -> Result<Self, CliError> {
         let metadata = fs::metadata(path)?;
-        if metadata.len() > MAX_CONFIG_SIZE.try_into().unwrap() {
+        if metadata.len() > MAX_CONFIG_SIZE as u64 {
             return Err(CliError::ValidationError(format!(
                 "Config file too large (max {} bytes)",
                 MAX_CONFIG_SIZE
@@ -287,12 +284,12 @@ impl ShokuninConfig {
         }
 
         let content = fs::read_to_string(path)?;
-        let config: ShokuninConfig = toml::from_str(&content)?;
+        let config: SsgConfig = toml::from_str(&content)?;
         config.validate()?;
         Ok(config)
     }
 
-    /// Creates a new `ShokuninConfig` instance from a TOML file.
+    /// Creates a new `SsgConfig` instance from a TOML file.
     pub fn validate(&self) -> Result<(), CliError> {
         debug!("Validating config: {:?}", self);
 
@@ -318,38 +315,38 @@ impl ShokuninConfig {
         Ok(())
     }
 
-    /// Creates a new `ShokuninConfig` instance from a TOML file.
-    pub fn builder() -> ShokuninConfigBuilder {
-        ShokuninConfigBuilder::default()
+    /// Creates a new `SsgConfig` instance from a TOML file.
+    pub fn builder() -> SsgConfigBuilder {
+        SsgConfigBuilder::default()
     }
 }
 
-impl FromStr for ShokuninConfig {
+impl FromStr for SsgConfig {
     type Err = CliError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config: ShokuninConfig = toml::from_str(s)?;
+        let config: SsgConfig = toml::from_str(s)?;
         config.validate()?;
         Ok(config)
     }
 }
 
-/// Builder for `ShokuninConfig`.
+/// Builder for `SsgConfig`.
 #[derive(Debug, Clone, Default)]
-pub struct ShokuninConfigBuilder {
-    config: ShokuninConfig,
+pub struct SsgConfigBuilder {
+    config: SsgConfig,
 }
 
 /// # Examples
 /// ```
-/// use ssg::cmd::ShokuninConfig;
-/// let config = ShokuninConfig::builder()
+/// use ssg::cmd::SsgConfig;
+/// let config = SsgConfig::builder()
 ///     .site_name("My Site".to_string())
 ///     .base_url("http://example.com".to_string())
 ///     .build()
 ///     .unwrap();
 /// ```
-impl ShokuninConfigBuilder {
+impl SsgConfigBuilder {
     /// Sets the site name for the configuration.
     pub fn site_name(mut self, name: String) -> Self {
         self.config.site_name = name;
@@ -395,8 +392,8 @@ impl ShokuninConfigBuilder {
         self.config.language = lang;
         self
     }
-    /// Builds the final `ShokuninConfig` instance.
-    pub fn build(self) -> Result<ShokuninConfig, CliError> {
+    /// Builds the final `SsgConfig` instance.
+    pub fn build(self) -> Result<SsgConfig, CliError> {
         self.config.validate()?;
         Ok(self.config)
     }
@@ -448,7 +445,8 @@ fn validate_path_safety(
         });
     }
 
-    // Check for mixed/invalid path separators
+    // Check for mixed/invalid path separators (only on non-Windows)
+    #[cfg(not(target_os = "windows"))]
     if path_str.contains('\\') {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
@@ -465,14 +463,24 @@ fn validate_path_safety(
         });
     }
 
+    // Check for Windows reserved names
+    if let Some(stem) = path.file_stem() {
+        let stem_lower = stem.to_string_lossy().to_lowercase();
+        if RESERVED_NAMES.contains(&stem_lower.as_str()) {
+            return Err(CliError::InvalidPath {
+                field: field.to_string(),
+                details: format!(
+                    "Path uses reserved name '{}'",
+                    stem_lower
+                ),
+            });
+        }
+    }
+
     // If path exists, check if it's a symlink
     if path.exists() {
-        let metadata = fs::symlink_metadata(path).map_err(|e| {
-            CliError::InvalidPath {
-                field: field.to_string(),
-                details: format!("Failed to get path metadata: {}", e),
-            }
-        })?;
+        let metadata = fs::symlink_metadata(path)
+            .map_err(|_| CliError::IoError(std::io::Error::other("Failed to get path metadata")))?;
 
         if metadata.file_type().is_symlink() {
             return Err(CliError::InvalidPath {
@@ -492,14 +500,10 @@ const _: () = {
 };
 
 #[derive(Clone, Copy, Debug, Default)]
-/// A simple CLI struct for building the Shokunin command.
+/// A simple CLI struct for building the SSG command.
 pub struct Cli;
 
 impl Cli {
-    /// Creates a new `Cli` instance.
-    pub fn new() -> Self {
-        Self
-    }
     /// Creates the command-line interface.
     pub fn build() -> Command {
         Command::new(env!("CARGO_PKG_NAME"))
@@ -519,7 +523,6 @@ impl Cli {
                     .help("Create new project")
                     .long("new")
                     .short('n')
-                    // .required_unless_present("config")
                     .value_name("NAME")
                     .value_parser(clap::value_parser!(String)), // Change from PathBuf to String
             )
@@ -528,7 +531,6 @@ impl Cli {
                     .help("Content directory")
                     .long("content")
                     .short('c')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )
@@ -537,7 +539,6 @@ impl Cli {
                     .help("Output directory")
                     .long("output")
                     .short('o')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )
@@ -546,7 +547,6 @@ impl Cli {
                     .help("Template directory")
                     .long("template")
                     .short('t')
-                    // .required_unless_present("config")
                     .value_name("DIR")
                     .value_parser(clap::value_parser!(PathBuf)),
             )
@@ -570,8 +570,8 @@ impl Cli {
     /// Displays the application banner
     pub fn print_banner() {
         let version = env!("CARGO_PKG_VERSION");
-        let mut title = String::with_capacity(24 + version.len());
-        title.push_str("Shokunin (ssg) 🦀 v");
+        let mut title = String::with_capacity(16 + version.len());
+        title.push_str("SSG 🦀 v");
         title.push_str(version);
 
         let description =
@@ -613,7 +613,7 @@ mod tests {
     #[test]
     fn test_config_validation() {
         let config =
-            ShokuninConfig::builder().site_name("".to_string()).build();
+            SsgConfig::builder().site_name("".to_string()).build();
         assert!(matches!(config, Err(CliError::ValidationError(_))));
     }
 
@@ -622,7 +622,7 @@ mod tests {
         let cmd = Cli::build();
         // Provide the required arguments so Clap won't fail:
         let _matches = cmd.get_matches_from(vec![
-            "shokunin",
+            "ssg",
             "--new",
             "dummy_site",
             "--content",
@@ -649,7 +649,7 @@ mod tests {
         write!(file, "{}", "x".repeat(MAX_CONFIG_SIZE + 1)).unwrap();
 
         assert!(matches!(
-            ShokuninConfig::from_file(&config_path),
+            SsgConfig::from_file(&config_path),
             Err(CliError::ValidationError(_))
         ));
     }
@@ -675,7 +675,7 @@ mod tests {
     language = "en-GB"
     "#;
 
-        let config: Result<ShokuninConfig, _> = config_str.parse();
+        let config: Result<SsgConfig, _> = config_str.parse();
         assert!(config.is_ok());
     }
 
@@ -687,7 +687,7 @@ mod tests {
         // Create the serve directory
         fs::create_dir_all(&serve_dir).unwrap();
 
-        let config = ShokuninConfig::builder()
+        let config = SsgConfig::builder()
             .site_name("test".to_string())
             .base_url("http://example.com".to_string())
             .content_dir(PathBuf::from("./examples/content"))
@@ -706,7 +706,7 @@ mod tests {
     fn test_banner_display() {
         // Create the expected title
         let version = env!("CARGO_PKG_VERSION");
-        let title = format!("Shokunin (ssg) 🦀 v{}", version);
+        let title = format!("SSG 🦀 v{}", version);
         let description =
             "A Fast and Flexible Static Site Generator written in Rust";
         let width = title.len().max(description.len()) + 4;
@@ -719,7 +719,7 @@ mod tests {
 
         // Basic sanity check - verify the banner components are formatted correctly
         assert!(!line.is_empty());
-        assert!(title.contains("Shokunin"));
+        assert!(title.contains("SSG"));
         assert!(title.contains(version));
     }
 
@@ -731,7 +731,7 @@ mod tests {
         write!(file, "invalid toml content").unwrap();
 
         assert!(matches!(
-            ShokuninConfig::from_file(&config_path),
+            SsgConfig::from_file(&config_path),
             Err(CliError::TomlError(_))
         ));
     }
@@ -744,8 +744,8 @@ mod tests {
 
     #[test]
     fn test_from_matches() {
-        let matches = Cli::build().get_matches_from(vec!["shokunin"]);
-        let config = ShokuninConfig::from_matches(&matches);
+        let matches = Cli::build().get_matches_from(vec!["ssg"]);
+        let config = SsgConfig::from_matches(&matches);
         assert!(config.is_ok());
     }
 
@@ -758,7 +758,7 @@ mod tests {
 
     #[test]
     fn test_config_builder_empty_required_fields() {
-        let config = ShokuninConfig::builder()
+        let config = SsgConfig::builder()
             .site_name("".to_string())
             .site_title("".to_string())
             .build();
@@ -821,8 +821,128 @@ mod tests {
     fn test_config_file_not_found() {
         let non_existent = Path::new("non_existent.toml");
         assert!(matches!(
-            ShokuninConfig::from_file(non_existent),
+            SsgConfig::from_file(non_existent),
             Err(CliError::IoError(_))
         ));
+    }
+
+    #[test]
+    fn test_from_matches_with_config_file() {
+        let temp_dir = tempdir().unwrap();
+        let config_path = temp_dir.path().join("config.toml");
+        let config_content = r#"
+site_name = "from-file"
+content_dir = "./examples/content"
+output_dir = "./examples/public"
+template_dir = "./examples/templates"
+base_url = "http://example.com"
+site_title = "File Site"
+site_description = "From file"
+language = "en-GB"
+"#;
+        fs::write(&config_path, config_content).unwrap();
+
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec![
+            "ssg",
+            "--config",
+            config_path.to_str().unwrap(),
+        ]);
+        let config = SsgConfig::from_matches(&matches).unwrap();
+        assert_eq!(config.site_name, "from-file");
+    }
+
+    #[test]
+    fn test_override_with_cli_all_flags() {
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec![
+            "ssg",
+            "--new",
+            "cli-site",
+            "--content",
+            "./examples/content",
+            "--output",
+            "./examples/public",
+            "--template",
+            "./examples/templates",
+            "--serve",
+            "./examples/public",
+        ]);
+        let config = SsgConfig::from_matches(&matches).unwrap();
+        assert_eq!(config.site_name, "cli-site");
+        assert_eq!(config.content_dir, PathBuf::from("./examples/content"));
+        assert_eq!(config.output_dir, PathBuf::from("./examples/public"));
+        assert_eq!(
+            config.template_dir,
+            PathBuf::from("./examples/templates")
+        );
+        assert!(config.serve_dir.is_some());
+    }
+
+    #[test]
+    fn test_validate_url_ftp_scheme() {
+        assert!(validate_url("ftp://example.com").is_err());
+    }
+
+    #[test]
+    fn test_validate_path_with_invalid_chars() {
+        let result =
+            validate_path_safety(Path::new("path<with>invalid"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_validate_path_with_traversal() {
+        let result =
+            validate_path_safety(Path::new("../etc/passwd"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_validate_path_with_reserved_name() {
+        let result = validate_path_safety(Path::new("con"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        let result = validate_path_safety(Path::new("aux"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_validate_path_with_backslash() {
+        let result =
+            validate_path_safety(Path::new("path\\with\\backslash"), "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+    }
+
+    #[test]
+    fn test_override_with_watch_flag() {
+        let cmd = Cli::build();
+        let matches = cmd.get_matches_from(vec!["ssg", "--watch"]);
+        let config = SsgConfig::from_matches(&matches).unwrap();
+        // Watch flag is accepted but is a no-op currently
+        assert!(!config.site_name.is_empty());
+    }
+
+    #[test]
+    fn test_validate_empty_url() {
+        let config = SsgConfig::builder()
+            .site_name("test".to_string())
+            .base_url(String::new())
+            .build();
+        // Empty URL should be accepted (skips validation)
+        assert!(config.is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_validate_path_existing_symlink() {
+        let temp_dir = tempdir().unwrap();
+        let target = temp_dir.path().join("real");
+        let link = temp_dir.path().join("link");
+        fs::create_dir(&target).unwrap();
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let result = validate_path_safety(&link, "test");
+        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
     }
 }

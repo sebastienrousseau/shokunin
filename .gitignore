@@ -1,4 +1,5 @@
 *.DS_Store
+.DS_Store
 *.profraw
 *.log
 /.vscode/
@@ -17,3 +18,5 @@ shokunin.log
 src/.DS_Store
 tarpaulin-report.html
 Cargo.lock
+coverage/
+crates/serde_yml/target/

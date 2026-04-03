@@ -6,24 +6,24 @@ author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 char
 banner_alt: "a forest filled with lots of green trees" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
-cdn: "https://kura.pro" ## The CDN of the site.
+banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
+cdn: "https://cloudcdn.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
 cname: "kaishi.one" ## The cname value of the site. (Only required for the index page.)
-copyright: "Copyright © 2023-2025 Kaishi. All rights reserved." ## The copyright of the site.
+copyright: "Copyright © 2023-2026 Kaishi. All rights reserved." ## The copyright of the site.
 date: "2023-07-12" ## The date of the page.
 description: "You can contact us using the contact form below." ## The description of the site. (max 160 characters)
 download: "" ## The download url for the product.
 format-detection: "telephone=no" ## The format detection of the site.
 form-id: "https://formspree.io/f/meqwylbe" ## The form id of the site.
 hreflang: "en" ## The hreflang of the site. (default: en-gb)
-icon: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## The icon of the site in SVG format.
 id: "https://kaishi.one" ## The id of the site.
 image_alt: "Logo of Kaishi, a starter template for static sites" ## The image alt of the site.
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
-image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
 keywords: "contact us, contact form, get in touch, contact page, contact information, customer service, support, feedback, questions, inquiries, help" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "contact" ## The layout of the site.
@@ -31,7 +31,7 @@ locale: "en_GB" ## The locale of the site.
 logo_alt: "Logo of Kaishi, a starter template for static sites" ## The logo alt of the site.
 logo_height: "33" ## The logo height of the site.
 logo_width: "100" ## The logo width of the site.
-logo: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## The logo of the site in SVG format.
 name: "Kaishi" ## The name of the website. (max 64 characters)
 permalink: "https://kaishi.one/contact" ## The url of the site.
 rating: "general" ## The rating of the site.
@@ -48,9 +48,9 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 
 # News - The News SiteMap front matter (YAML).
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
-news_keywords: "kaishi, shokunin static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
+news_keywords: "kaishi, static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
-news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
+news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_loc: "https://kaishi.one" ## The loc of the site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## The news publication name of the site.
@@ -61,10 +61,10 @@ news_title: "Contact Us" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/contact/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.32)"
+generator: "SSG (version 0.0.33)"
 item_description: RSS feed for the contact page of the Kaishi website.
-item_guid: https://kaishi.one/contact/rss.xml
-item_link: https://kaishi.one/contact/rss.xml
+item_guid: "https://kaishi.one/contact/index.html"
+item_link: "https://kaishi.one/contact/index.html"
 item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
 item_title: "Contact Us"
 last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"
@@ -96,7 +96,7 @@ twitter_creator: "janedoe"
 ## twitter_description - The Twitter Card description of the page.
 twitter_description: "Contact us form for Kaishi, a starter template for static sites"
 ## twitter_image - The Twitter Card image of the page.
-twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
 ## twitter_image:alt - The Twitter Card image alt of the page.
 twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
@@ -107,13 +107,19 @@ twitter_title: "Contact Us"
 twitter_url: "https://kaishi.one"
 
 # Humans.txt - The Humans.txt front matter (YAML).
-author_website: "https://kura.pro" ## The author website of the page.
+author_website: "https://cloudcdn.pro" ## The author website of the page.
 author_twitter: "@wwdseb" ## The author twitter of the page.
 author_location: "London, UK" ## The author location of the page.
 thanks: "Thanks for reading!" ## The thanks of the page.
 site_last_updated: "2025-01-01" ## The last updated of the site.
 site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The standards of the site.
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
-site_software: "Shokunin, Rust" ## The software of the site.
+site_software: "SSG, Rust" ## The software of the site.
 
 ---
+
+## Get in Touch
+
+Have a question, suggestion, or business enquiry? Fill out the form below and a member of the team will respond within 48 hours.
+
+All fields marked with an asterisk are required.

@@ -16,9 +16,9 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: hecrj/setup-rust-action@v2
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: rustfmt
       - uses: actions/checkout@v6
       - name: Check format
         run: cargo fmt --all -- --check --verbose
