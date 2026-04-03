@@ -1,180 +1,134 @@
 <!DOCTYPE html>
 <html lang="{{language}}">
-
 <head>
-    <meta charset="{{charset}}" />
-    <title>{{title}}</title>
-
-    <!-- # Start Primary Meta Tags -->
-    {{primary}}
-    <!-- # End Primary Meta Tags -->
-
-    <!-- # Start Open Graph / Facebook Meta Tags -->
-    {{opengraph}}
-    <!-- # End Open Graph / Facebook Meta Tags -->
-
-    <!-- # Start Accessibility Meta Tags -->
-    <meta name="accessibility" content="ARIA" />
-    <meta name="accessibility" content="fullKeyboardControl" />
-    <meta name="accessibility" content="noFlashingHazard" />
-    <!-- # End Accessibility Meta Tags -->
-
-    <!-- # Start Apple Meta Tags -->
-    {{apple}}
-    <!-- # End Apple Meta Tags -->
-
-    <!-- # Start Content Security Policy Meta Tags -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' *.google-analytics.com https://cdn.jsdelivr.net unpkg.com www.googletagmanager.com x.clarity.ms; connect-src 'self' collect; img-src 'self' data: https: kura.pro; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com; media-src 'self';" />
-    <!-- # End Content Security Policy Meta Tags -->
-
-    <!-- # Start Microsoft Meta Tags -->
-    {{microsoft}}
-    <!-- # End Microsoft Meta Tags -->
-
-    <!-- # Start Twitter Meta Tags -->
-    {{twitter}}
-    <!-- # End Twitter Meta Tags -->
-
-    <!-- # Start Links -->
-    <link as="style" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" onload="this.onload=null;this.rel='stylesheet'" rel="preload" />
-    <link rel="alternate" href="{{url}}" hreflang="{{hreflang}}" />
-    <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
-    <link rel="apple-touch-icon" href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png" sizes="{{apple_touch_icon_sizes}}" />
-    <link rel="canonical" href="{{url}}" />
-    <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/16x16.png" sizes="16x16" />
-    <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/32x32.png" sizes="32x32" />
-    <link rel="icon" type="image/x-icon" href="{{cdn}}/{{short_name}}/images/favicon.ico" />
-    <link rel="manifest" href="/manifest.json" />
-    <!-- # End Links -->
-
-    <!-- # Start Styles -->
-    <style>
-      @keyframes dropDown{from{transform:translateY(-.618rem)}to{transform:translateY(0)}}@keyframes fadeIn{from{opacity:0}to{opacity:1}}.blur-light{backdrop-filter:saturate(180%) blur(20px);background-color:rgba(255,255,255,.618)}.card{overflow:hidden}.drop-down{animation:1.618s dropDown}.fade-in{animation:3s fadeIn}*{font-weight:300}pre{background:#f9f9f9;border:1px solid #ddd;border-left:3px solid var(--theme-color);color:#666;display:block;font-family:monospace;font-size:15px;line-height:1.618;margin-bottom:1.618em;max-width:100%;overflow:auto;padding:1em 1.618em;page-break-inside:avoid;word-wrap:break-word}.zoom-in{transition:transform .618s cubic-bezier(.618,1,.618,1)}.zoom-in:hover{transform:scale(1.0618)}.content .container{padding:30px 20px;box-shadow:2px 15px 20px #1f1f1f10,-2px -8px 20px #1f1f1f1a}.container .rollers{flex:0 0 230px}.container .start-roller{left:0;top:0;background-image:linear-gradient(to right,#fff 30%,transparent)}.container .end-roller,.container .start-roller{height:100%;width:40px;position:absolute;z-index:1}.container .end-roller{right:0;top:0;background-image:linear-gradient(to left,#fff 30%,transparent)}.container .rollers .wrapper{position:relative;width:1400px;height:100px;margin:0 0 20px;flex:0 0 auto}.container .rollers .wrapper .items-container{display:flex;align-items:center;position:absolute;width:200%;height:100%;animation-duration:16s;animation-iteration-count:infinite;animation-timing-function:linear}.container .rollers .wrapper .items-container.roll-LL{animation-name:roll}@keyframes roll{from{left:0}to{left:-100%}}.container .rollers .wrapper .items-container .item{flex:1 1 200px;min-width:0;margin:20px}.container .rollers .wrapper .items-container .item .company{filter:grayscale(100%);opacity:.2;width:100%;object-fit:contain}.container .rollers .wrapper .items-container .item .company:hover{filter:grayscale(0);opacity:1;cursor:not-allowed}.container img{vertical-align:middle;}:root{--theme-color:rgb({{theme-color}})}a{color:var(--theme-color);text-decoration:none}a:hover{text-decoration:underline}.active,.article-info,h1,h2,h3,h4,h5,h6,strong{font-weight:400}.article-info,h1,h2,h3,h4,h5,h6{color:var(--theme-color)}img{max-width:100%;height:auto;box-sizing: border-box;object-fit: cover;}
-    </style>
-    <!-- # End Styles -->
+  <meta charset="{{charset}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{title}}</title>
+  {{primary}}
+  {{opengraph}}
+  <meta name="accessibility" content="ARIA" />
+  <meta name="accessibility" content="fullKeyboardControl" />
+  <meta name="accessibility" content="noFlashingHazard" />
+  {{apple}}
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self';" />
+  {{microsoft}}
+  {{twitter}}
+  <link rel="alternate" href="{{url}}" hreflang="{{hreflang}}" />
+  <link rel="canonical" href="{{url}}" />
+  <link rel="icon" type="image/x-icon" href="{{cdn}}/{{short_name}}/images/favicon.ico" />
+  <link rel="apple-touch-icon" href="{{cdn}}/{{short_name}}/images/icons/{{apple_touch_icon_sizes}}.png" sizes="{{apple_touch_icon_sizes}}" />
+  <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/16x16.png" sizes="16x16" />
+  <link rel="icon" type="image/png" href="{{cdn}}/{{short_name}}/images/icons/32x32.png" sizes="32x32" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="alternate" type="application/rss+xml" href="/rss.xml" />
+  <style>
+:root{--color-bg:#fff;--color-text:#1a1a2e;--color-primary:rgb({{theme-color}});--color-surface:#f4f4f8;--color-border:#e0e0e6;--color-nav-bg:rgba(255,255,255,.72);--color-hero-overlay:rgba(0,0,0,.6);--radius:6px;--max-w:72rem}
+[data-theme="dark"]{--color-bg:#111;--color-text:#e4e4e7;--color-surface:#1e1e24;--color-border:#2e2e36;--color-nav-bg:rgba(17,17,17,.78);--color-hero-overlay:rgba(0,0,0,.72)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--color-bg:#111;--color-text:#e4e4e7;--color-surface:#1e1e24;--color-border:#2e2e36;--color-nav-bg:rgba(17,17,17,.78);--color-hero-overlay:rgba(0,0,0,.72)}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:400;line-height:1.6;color:var(--color-text);background:var(--color-bg)}
+a{color:var(--color-primary);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;height:auto;display:block}
+h1,h2,h3,h4,h5,h6{font-weight:600;line-height:1.2;color:var(--color-primary)}
+h1{font-size:clamp(2rem,5vw,3.5rem)}
+h2{font-size:clamp(1.5rem,3vw,2.25rem)}
+h3{font-size:1.25rem}
+strong{font-weight:600}
+pre{background:var(--color-surface);border:1px solid var(--color-border);border-left:3px solid var(--color-primary);color:var(--color-text);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;line-height:1.6;max-width:100%;overflow-x:auto;padding:1em 1.25em;border-radius:var(--radius);word-wrap:break-word}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em}
+.skip-link{position:absolute;top:-100%;left:1rem;background:var(--color-primary);color:#fff;padding:.5rem 1rem;border-radius:var(--radius);z-index:1000;font-weight:600}
+.skip-link:focus{top:1rem;outline:none}
+.nav{position:sticky;top:0;z-index:100;background:var(--color-nav-bg);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--color-border)}
+.nav-inner{display:flex;align-items:center;gap:1rem;max-width:var(--max-w);margin:0 auto;padding:.75rem 1.5rem}
+.nav-brand{display:flex;align-items:center;gap:.5rem;text-decoration:none;color:var(--color-text);font-weight:600;flex-shrink:0}
+.nav-brand img{width:auto;height:32px}
+.nav-links{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap;margin-left:auto}
+.nav-links a{padding:.375rem .75rem;border-radius:var(--radius);color:var(--color-text);font-size:.9rem;transition:background .15s}
+.nav-links a:hover{background:var(--color-surface);text-decoration:none}
+.nav-controls{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.lang-select{background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius);padding:.25rem .5rem;font-size:.85rem;cursor:pointer}
+.theme-toggle{background:none;border:1px solid var(--color-border);border-radius:var(--radius);padding:.35rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text);transition:background .15s}
+.theme-toggle:hover{background:var(--color-surface)}
+.theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.menu-toggle{display:none;background:none;border:1px solid var(--color-border);border-radius:var(--radius);padding:.35rem .5rem;cursor:pointer;color:var(--color-text)}
+.menu-toggle svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
+.hero{position:relative;min-height:70vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero-overlay{position:relative;z-index:1;background:var(--color-hero-overlay);width:100%;min-height:70vh;display:flex;align-items:center;justify-content:center}
+.hero-text{text-align:center;padding:2rem 1.5rem;max-width:48rem;color:#fff}
+.hero-text h1{color:#fff;margin-bottom:1rem}
+.hero-text p{font-size:1.25rem;opacity:.9}
+.wrap{max-width:var(--max-w);margin:0 auto;padding:3rem 1.5rem}
+.content{font-size:1.05rem}
+.content img{border-radius:var(--radius)}
+.footer{background:var(--color-surface);border-top:1px solid var(--color-border);padding:2rem 1.5rem;text-align:center;font-size:.875rem}
+.footer-links{display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+.footer-links a{color:var(--color-text)}
+.footer-copy{color:var(--color-text);opacity:.7}
+:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+@media(max-width:48rem){.nav-links{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;background:var(--color-nav-bg);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--color-border);padding:1rem;gap:.25rem}.nav-links.open{display:flex}.menu-toggle{display:flex}}
+.article-meta{font-size:.9rem;color:var(--color-text);opacity:.7;margin-bottom:2rem}
+  </style>
 </head>
-
-<body
-    id="page-top"
-    itemscope
-    itemtype="http://schema.org/WebPage"
-    class="text-center bg-black text-white text-start fs-6"
-  >
-    <!-- # Start Responsive navbar -->
-    <nav
-      class="navbar navbar-expand-lg bd-navbar navbar-dark bg-black text-white sticky-top shadow-small border-bottom border-black blur-dark shadow-lg"
-      id="mainNav"
-      itemscope
-      itemtype="http://schema.org/SiteNavigationElement"
-    >
-      <div class="container-xxl p-3">
-      <a class="navbar-brand p-0 me-0 me-lg-2" href="/" aria-label="logo">
-        <img
-          class="d-inline-block align-top"
-          width="{{logo_width}}"
-          height="{{logo_height}}"
-          src="{{logo}}"
-          alt="{{logo_alt}}"
-          title="{{logo_alt}}"
-          loading="lazy"
-        />
+<body id="page-top" itemscope itemtype="http://schema.org/WebPage">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <nav class="nav" id="mainNav" itemscope itemtype="http://schema.org/SiteNavigationElement" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a class="nav-brand" href="/" aria-label="{{logo_alt}} - Home">
+        <img width="{{logo_width}}" height="{{logo_height}}" src="{{logo}}" alt="{{logo_alt}}" loading="lazy" />
+        <span itemprop="name">{{name}}</span>
       </a>
-      <span itemprop="name">{{name}}</span>
-      <button
-          aria-controls="navbarSupportedContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-          class="navbar-toggler"
-          data-bs-target="#navbarSupportedContent"
-          data-bs-toggle="collapse"
-          type="button"
-        >
-          <span class="navbar-toggler-icon"></span>
+      <button class="menu-toggle" type="button" aria-controls="navLinks" aria-expanded="false" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="nav-links" id="navLinks" role="navigation">
+        {{navigation}}
+      </div>
+      <div class="nav-controls">
+        <select class="lang-select" aria-label="Select language" onchange="if(this.value)window.location.href=this.value">
+          <option value="/en/" selected>EN</option>
+          <option value="/fr/">FR</option>
+        </select>
+        <button class="theme-toggle" type="button" aria-label="Toggle dark mode" id="themeToggle">
+          <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <div
-          class="collapse navbar-collapse"
-          role="navigation"
-          id="navbarSupportedContent"
-        >
-          {{navigation}}
-        </div>
       </div>
-    </nav>
-    <!-- # End Responsive navbar -->
-
-    <!-- Header-->
-    <header class="w-100 position-relative">
-      <img
-        alt="{{banner_alt}}"
-        aria-hidden="false"
-        class="fade-in position-absolute top-0 start-0 w-100 h-100"
-        data-has-animated="true"
-        data-show-type="fade-in"
-        height="{{banner_height}}"
-        loading="lazy"
-        src="{{banner}}"
-        style="object-fit: cover; z-index: -1;"
-        title="{{banner_alt}}"
-        width="{{banner_width}}"
-      />
-      <div class="text-center text-theme center mx-auto"
-        style="
-          background: rgba(0,0,0,.618);
-          width: 100vw;
-          height: 100vh;
-          z-index: 1;">
-        <section
-          class="position-absolute top-50 start-50 translate-middle w-75 p-5">
-              <h1 class="mb-3 fw-semibold text-white display-1 lh-1">{{name}}</h1>
-              <p class="fs-4">{{subtitle}}</p>
-        </section>
+    </div>
+  </nav>
+  <header class="hero">
+    <img class="hero-img" src="{{banner}}" alt="{{banner_alt}}" width="{{banner_width}}" height="{{banner_height}}" loading="lazy" />
+    <div class="hero-overlay">
+      <div class="hero-text">
+        <h1>{{name}}</h1>
+        <p>{{subtitle}}</p>
       </div>
-    </header>
-    <!-- # End Header-->
-
-    <!-- Main content-->
-    <main id="main" class="bd-masthead fs-5 p-5" aria-label="main">
-      <div class="text-start justify-content-between">{{content}}</div>
-    </main>
-
-    <!-- Footer-->
-    <footer id="footer" aria-label="footer" class="footer bg-dark text-white mt-auto fs-6 py-5">
-        <p class="mb-0 text-center">
-          <span class="px-2"><a href="/contact/index.html">Contact us</a></span>
-          <span class="px-2"><a href="/privacy/index.html">Privacy notice and cookies</a></span>
-          <span class="px-2"><a href="/terms/index.html">Terms of use</a></span>
-        </p>
-        <p class="mb-0 text-center py-2">
-          <span class="px-2">{{copyright}}</span>
-        </p>
-      </footer>
-      <!-- # End Footer-->
-    <script async crossorigin="anonymous" integrity="sha512-ToL6UYWePxjhDQKNioSi4AyJ5KkRxY+F1+Fi7Jgh0Hp5Kk2/s8FD7zusJDdonfe5B00Qw+B8taXxF6CFLnqNCw==" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js" />
-    <script type="application/ld+json">{"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"","datePublished":"","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}</script>
-    <script>
-        // This is an Immediately Invoked Function Expression (IIFE) which helps
-        // to avoid declaring any globals.
-        (function () {
-            // Create a new script element
-            var script = document.createElement("script");
-
-            // Set the source of the script element to "/main.js".
-            // A timestamp is appended as a query string to ensure the browser
-            // always fetches the latest version of the script, bypassing the
-            // cache.
-            script.src = "/main.js";
-
-            // The script is of type "text/javascript"
-            script.type = "text/javascript";
-
-            // The script is set to execute asynchronously as soon as it's
-            //available
-            script.async = true;
-
-            // Append the script element to the head of the document
-            document.head.appendChild(script);
-        })(); // The function is immediately invoked
-    </script>
+    </div>
+  </header>
+  <main id="main" class="wrap" aria-label="Main content">
+    <article class="content">
+      <div class="article-meta">
+        <span>By {{author}}</span> &middot;
+        <time datetime="{{item_pub_date}}">{{item_pub_date}}</time>
+      </div>
+      {{content}}
+    </article>
+  </main>
+  <footer class="footer" id="footer" aria-label="Footer">
+    <div class="footer-links">
+      <a href="/contact/index.html">Contact us</a>
+      <a href="/privacy/index.html">Privacy notice and cookies</a>
+      <a href="/terms/index.html">Terms of use</a>
+    </div>
+    <p class="footer-copy">{{copyright}}</p>
+  </footer>
+  <script type="application/ld+json">
+    {"@context":"http://schema.org/","@type":"BlogPosting","headline":"{{title}}","datePublished":"{{last_build_date}}","dateModified":"{{item_pub_date}}","description":"{{description}}","image":{"@type":"ImageObject","height":"2048","width":"2048","url":"{{logo}}"},"mainEntityOfPage":{"@type":"WebPage","@id":"{{id}}","name":"{{subtitle}}"},"author":"{{author}}","copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"inLanguage":"{{language}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
+  </script>
+  <script>
+(function(){var t=document.getElementById('themeToggle'),s=t.querySelector('.sun-icon'),m=t.querySelector('.moon-icon'),r=document.documentElement;function set(v){r.setAttribute('data-theme',v);localStorage.setItem('theme',v);if(v==='dark'){s.style.display='none';m.style.display='block'}else{s.style.display='block';m.style.display='none'}}var saved=localStorage.getItem('theme');if(saved)set(saved);else if(matchMedia('(prefers-color-scheme:dark)').matches)set('dark');t.addEventListener('click',function(){set(r.getAttribute('data-theme')==='dark'?'light':'dark')});document.querySelector('.menu-toggle').addEventListener('click',function(){var n=document.getElementById('navLinks'),ex=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',!ex);n.classList.toggle('open')})})();
+  </script>
 </body>
-
 </html>
