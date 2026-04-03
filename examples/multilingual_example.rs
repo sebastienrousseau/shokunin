@@ -10,6 +10,9 @@
 use anyhow::Context;
 use anyhow::Result;
 use http_handle::Server;
+use ssg::plugin::{PluginContext, PluginManager};
+use ssg::search::SearchPlugin;
+use ssg::seo::SeoPlugin;
 use staticdatagen::compiler::service::compile;
 use std::fs::{self, write};
 use std::path::Path;
@@ -38,14 +41,22 @@ fn main() -> Result<()> {
             Ok(_) => println!("    ✅ Successfully compiled static site for language: {}", lang),
             Err(e) => {
                 println!("    ❌ Error compiling site for {}: {:?}", lang, e);
-                return Err(e); // Halt execution on error
+                return Err(e);
             }
         }
+
+        // Run plugins (SEO + Search) for this language
+        let mut plugins = PluginManager::new();
+        plugins.register(SeoPlugin);
+        plugins.register(SearchPlugin);
+        let ctx = PluginContext::new(&content_dir, &build_dir, &site_dir, &template_dir);
+        plugins.run_after_compile(&ctx)?;
+        println!("    🔌 Plugins complete for {lang}");
     }
 
     // Copy shared assets (manifest.json, rss.xml) to root so
     // absolute paths emitted by staticdatagen resolve correctly.
-    for asset in &["manifest.json", "rss.xml", "robots.txt", "sitemap.xml"] {
+    for asset in &["manifest.json", "rss.xml", "robots.txt", "sitemap.xml", "search-index.json"] {
         // Prefer the English version as the root copy
         let src = public_root.join("en").join(asset);
         if src.exists() {

@@ -111,8 +111,13 @@ fn extract_description(html: &str, max_len: usize) -> String {
     if trimmed.len() <= max_len {
         trimmed.to_string()
     } else {
+        // Find a char boundary at or before max_len
+        let mut end = max_len;
+        while end > 0 && !trimmed.is_char_boundary(end) {
+            end -= 1;
+        }
+        let truncated = &trimmed[..end];
         // Truncate at word boundary
-        let truncated = &trimmed[..max_len];
         if let Some(last_space) = truncated.rfind(' ') {
             truncated[..last_space].to_string()
         } else {
