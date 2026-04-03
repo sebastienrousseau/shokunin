@@ -1,21 +1,47 @@
 [licenses]
-# List of allowed licenses for dependencies
-allow = ["MIT", "Apache-2.0", "Unicode-DFS-2016"]
+# Allowed licenses for dependencies.
+# MPL-2.0: used by colored (file-level copyleft, compatible with MIT/Apache-2.0)
+# AGPL-3.0: used by http-handle (dev server only, same author)
+# ISC: used by some transitive deps
+# BSD-2-Clause/BSD-3-Clause: used by some transitive deps
+# Unicode-3.0: used by unicode data crates
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "ISC",
+    "BSL-1.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "MITNFA",
+    "AGPL-3.0-only",
+]
 
 [bans]
 # Lint level for when multiple versions of the same crate are detected
 multiple-versions = "warn"
 
 # The graph highlighting used when creating dotgraphs for crates with multiple versions
-# Options: "lowest-version", "simplest-path", "all"
 highlight = "all"
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = []
 
-# Similarly to `skip` allows you to skip certain crates during duplicate detection, unlike skip, it also includes the entire tree of transitive dependencies starting at the specified crate, up to a certain depth, which is by default infinite
+# Similarly to `skip` allows you to skip certain crates during duplicate detection
 skip-tree = []
 
 [advisories]
-# List of advisory IDs to ignore
-ignore = []
+# List of advisory IDs to ignore.
+# These are unmaintained crate warnings from transitive deps in staticdatagen
+# that cannot be resolved without upstream changes.
+ignore = [
+    "RUSTSEC-2024-0320", # yaml-rust (unmaintained) — via syntect/comrak
+    "RUSTSEC-2024-0436", # paste (unmaintained) — via dtt
+    "RUSTSEC-2025-0057", # fxhash (unmaintained) — via selectors/scraper
+    "RUSTSEC-2025-0119", # number_prefix (unmaintained) — via indicatif
+    "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
+]
