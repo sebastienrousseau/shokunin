@@ -72,7 +72,7 @@ cargo install ssg
 
 ### Basic usage (library)
 
-```rust
+```rust,no_run
 use staticdatagen::compiler::service::compile;
 use std::path::Path;
 
