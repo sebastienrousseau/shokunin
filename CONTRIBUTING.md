@@ -1,58 +1,94 @@
-# Contributing to `Shokunin Static Site Generator (SSG)`
+# Contributing to Shokunin
 
-Welcome! We're thrilled that you're interested in contributing to the `Shokunin Static Site Generator (SSG)` library. Whether you're looking to evangelize, submit feedback, or contribute code, we appreciate your involvement in making `Shokunin Static Site Generator (SSG)` a better tool for everyone. Here's how you can get started.
+Welcome! We're thrilled that you're interested in contributing to Shokunin. Whether you're looking to report a bug, suggest a feature, or submit code, this guide will help you get started.
 
-## Evangelize
+## Development setup
 
-One of the simplest ways to help us out is by spreading the word about shokunin. We believe that a bigger, more involved community makes for a better framework, and that better frameworks make the world a better place. If you know people who might benefit from using shokunin, please let them know!
+### Prerequisites
 
-## How to Contribute
+- [Rust](https://rustup.rs/) 1.74.0 or later
+- Git with commit signing configured (see below)
 
-If you're interested in making a more direct contribution, there are several ways you can help us improve shokunin. Here are some guidelines for submitting feedback, bug reports, and code contributions.
+### Getting started
 
-### Feedback
+```bash
+git clone https://github.com/sebastienrousseau/shokunin.git
+cd shokunin
+cargo build
+cargo test
+```
 
-Your feedback is incredibly valuable to us, and we're always looking for ways to make shokunin better. If you have ideas, suggestions, or questions about shokunin, we'd love to hear them. Here's how you can provide feedback:
+### Useful commands
 
-- Click [here][2] to submit a new feedback.
-- Use a descriptive title that clearly summarizes your feedback.
-- Provide a detailed description of the issue or suggestion.
-- Be patient while we review and respond to your feedback.
+```bash
+make build       # Build the project
+make test        # Run all tests
+make lint        # Lint with Clippy
+make format      # Format code with rustfmt
+make deny        # Check dependencies for security/license issues
+```
 
-### Bug Reports
+## Signed commits
 
-If you encounter a bug while using shokunin, please let us know so we can fix it. Here's how you can submit a bug report:
+All commits must be signed. Configure Git to sign commits with either GPG or SSH:
 
-- Click [here][2] to submit a new issue.
-- Use a descriptive title that clearly summarizes the bug.
-- Provide a detailed description of the issue, including steps to reproduce it.
-- Be patient while we review and respond to your bug report.
+```bash
+# SSH signing (recommended)
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
 
-### Code Contributions
+# Or GPG signing
+git config --global commit.gpgsign true
+git config --global user.signingkey YOUR_GPG_KEY_ID
+```
 
-If you're interested in contributing code to shokunin, we're excited to have your help! Here's what you need to know:
+Verify your setup:
 
-#### Feature Requests
+```bash
+echo "test" | git commit --allow-empty -S -m "test signing"
+git log --show-signature -1
+```
 
-If you have an idea for a new feature or improvement, we'd love to hear it. Here's how you can contribute code for a new feature to shokunin:
+## How to contribute
 
-- Fork the repo.
-- Clone the shokunin[1] repo by running:
-  `git clone https://github.com/sebastienrousseau/shokunin`
-- Edit files in the `src/` folder. The `src/` folder contains the source code for shokunin.
-- Submit a pull request, and we'll review and merge your changes if they fit with our vision for shokunin.
+### Reporting bugs
 
-#### Submitting Code
+- Open an [issue](https://github.com/sebastienrousseau/shokunin/issues/new) with a descriptive title.
+- Include steps to reproduce, expected vs actual behavior, and your OS/Rust version.
 
-If you've identified a bug or have a specific code improvement in mind, we welcome your pull requests. Here's how to submit your code changes:
+### Suggesting features
 
-- Fork the repo.
-- Clone the shokunin repo by running:
-  `git clone https://github.com/sebastienrousseau/shokunin`
-- Edit files in the `src/` folder. The `src/` folder contains the source code for shokunin.
-- Submit a pull request, and we'll review and merge your changes if they fit with our vision for shokunin.
+- Open an [issue](https://github.com/sebastienrousseau/shokunin/issues/new) describing the use case and proposed solution.
 
-We hope that this guide has been helpful in explaining how you can contribute to shokunin. Thank you for your interest and involvement in our project!
+### Submitting code
 
-[1]: https://github.com/sebastienrousseau/shokunin
-[2]: https://github.com/sebastienrousseau/shokunin/issues/new
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Make your changes in `src/`. Add tests for new functionality.
+4. Ensure all checks pass:
+   ```bash
+   cargo fmt --all -- --check
+   cargo clippy --all-targets
+   cargo test
+   ```
+5. Commit with a signed, [conventional commit](https://www.conventionalcommits.org/) message:
+   ```bash
+   git commit -S -m "feat: add support for TOML frontmatter"
+   ```
+6. Push and open a pull request against `main`.
+
+### Pull request guidelines
+
+- Keep PRs focused on a single change.
+- Include a clear description of what changed and why.
+- Ensure CI passes before requesting review.
+- Reference related issues (e.g., `Closes #123`).
+
+## Code of Conduct
+
+Please read our [Code of Conduct](.github/CODE-OF-CONDUCT.md) before participating.
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the same dual license as the project (MIT OR Apache-2.0).

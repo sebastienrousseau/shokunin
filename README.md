@@ -13,13 +13,13 @@ A content-first static site generator crafted in Rust, optimized for performance
 
 [![Made With Love][made-with-rust]][08] [![Crates.io][crates-badge]][03] [![lib.rs][libs-badge]][01] [![Docs.rs][docs-badge]][04] [![Codecov][codecov-badge]][06] [![Build Status][build-badge]][07] [![GitHub][github-badge]][09]
 
-• [Website][00] • [Documentation][04] • [Report Bug][02] • [Request Feature][02] • [Contributing Guidelines][05]
+[Website][00] | [Documentation][04] | [Report Bug][02] | [Request Feature][02] | [Contributing Guidelines][05]
 
 <!-- markdownlint-disable MD033 MD041 -->
 </center>
 <!-- markdownlint-enable MD033 MD041 -->
 
-## Overview 🚀
+## Overview
 
 Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:
 
@@ -29,27 +29,31 @@ Shokunin is a high-performance static site generator (SSG) engineered in Rust th
 - Advanced SEO optimization
 - Type-safe operations with comprehensive error handling
 
-## Key Features 🎯
+## Key features
 
-### Core Capabilities
+- **Exceptional performance**: Zero-cost abstractions through Rust
+- **SEO optimization**: Built-in enhancements for search visibility
+- **Accessibility**: Automatic WCAG 2.1 Level AA compliance
+- **Multi-format support**: Handles Markdown, YAML, JSON, and TOML
+- **Feed generation**: Automatic Atom and RSS feed creation
+- **Analytics**: Native Google and Bing Analytics integration
+- **Custom theming**: HTML themes and template support
+- **CLI tools**: Comprehensive command-line interface
+- **Dev server**: Built-in Rust server for local development
+- **Async support**: Full asynchronous operation capabilities
 
-- **⚡ Exceptional Performance**: Zero-cost abstractions through Rust
-- **📱 SEO Optimization**: Built-in enhancements for search visibility
-- **♿ Accessibility**: Automatic WCAG 2.1 Level AA compliance
-- **🛠️ Multi-format Support**: Handles Markdown, YAML, JSON, and TOML
-- **🔄 Feed Generation**: Automatic Atom and RSS feed creation
-- **📊 Analytics**: Native Google and Bing Analytics integration
-- **🎨 Theming**: Custom HTML themes and template support
+## Prerequisites
 
-### Development Features
+- **Rust** 1.74.0 or later ([install](https://rustup.rs/))
 
-- **🔧 CLI Tools**: Comprehensive command-line interface
-- **🚀 Dev Server**: Built-in Rust server for local development
-- **🔍 Hot Reload**: Automatic content updates during development
-- **📝 Type Safety**: Guaranteed memory and thread safety
-- **⚡ Async Support**: Full asynchronous operation capabilities
+Verify your installation:
 
-## Getting Started 📦
+```bash
+rustc --version   # must be >= 1.74.0
+cargo --version
+```
+
+## Getting started
 
 ### Installation
 
@@ -57,103 +61,124 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg = "0.0.32"
+ssg = "0.0.33"
 ```
 
-Or install via Cargo:
+Or install the CLI via Cargo:
 
 ```bash
 cargo install ssg
 ```
 
-### Basic Usage
+### Basic usage (library)
 
 ```rust
 use staticdatagen::compiler::service::compile;
-use std::{path::Path, error::Error};
+use std::path::Path;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // Define directory paths
-    let build_dir = Path::new("./examples/build");          // Build directory
-    let content_dir = Path::new("./examples/content");      // Content directory
-    let public_dir = Path::new("./examples/public");        // Public directory
-    let template_dir = Path::new("./examples/templates");   // Templates
+fn main() -> anyhow::Result<()> {
+    let build_dir = Path::new("build");
+    let content_dir = Path::new("content");
+    let site_dir = Path::new("public");
+    let template_dir = Path::new("templates");
 
-    // Generate site
-    compile(build_dir, content_dir, public_dir, template_dir)?;
-    println!("✨ Site generated successfully!");
+    compile(build_dir, content_dir, site_dir, template_dir)?;
+    println!("Site generated successfully!");
     Ok(())
 }
 ```
 
-### CLI Usage
-
-Create a new site:
+### CLI usage
 
 ```bash
-# Full command syntax
-ssg --content=content --template=templates --serve=public
+# Create a new site with all directories specified
+ssg --new mysite \
+    --content=content \
+    --output=build \
+    --template=templates
 
 # Short form
-ssg -c=content -t=templates -o=output -s=public
+ssg -n mysite -c content -o build -t templates
 
 # Using cargo run
-cargo run --bin ssg -- -c="./examples/content" -t="./examples/templates" -s="./examples/public"
+cargo run --bin ssg -- -n mysite -c ./examples/content -t ./examples/templates -o ./examples/build
+
+# With optional dev server directory
+ssg -n mysite -c content -o build -t templates --serve public
+
+# Load from a config file
+ssg --config config.toml
 ```
 
-### CLI Options
+### CLI options
 
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
-| `--content` | `-c` | Content path | Yes |
-| `--template` | `-t` | Template path | Yes |
-| `--serve` | `-s` | Server Public path | Yes |
+| `--new` | `-n` | Project name | No |
+| `--content` | `-c` | Content directory | No |
+| `--output` | `-o` | Output/build directory | No |
+| `--template` | `-t` | Template directory | No |
+| `--serve` | `-s` | Dev server directory | No |
+| `--config` | `-f` | Config file path (TOML) | No |
+| `--watch` | `-w` | Watch for changes | No |
 
-## Examples 📚
+When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
 
-Try our example implementations:
+## Examples
 
 ```bash
-# Basic example
-## Convert Markdown to static sites effortlessly, with templates, organized builds, and instant local hosting.
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
+
+# Basic example — convert Markdown to a static site
 cargo run --example basic
 
-# Quick start example
-## Create, compile, and host a static site effortlessly with Shokunin: simple setup, error handling, and instant local server for previews.
+# Quick start — create, compile, and host a static site
 cargo run --example quickstart
 
-# Multilingual example
-## Build multilingual static sites effortlessly: generate language-specific sites, create a language selector, and serve all from a single directory.
+# Multilingual — build language-specific sites from a single source
 cargo run --example multilingual
 ```
 
-## Documentation 📖
+## Development
 
-- [API Documentation][04]
-- [User Guide][00]
+```bash
+# Build
+make build        # or: cargo build
+
+# Run tests
+make test         # or: cargo test
+
+# Lint
+make lint         # or: cargo clippy --all-targets
+
+# Format
+make format       # or: cargo fmt --all
+
+# Security audit
+make deny         # or: cargo deny check
+```
+
+## Documentation
+
+- [API Reference (docs.rs)][04]
+- [Website][00]
 - [Contributing Guidelines][05]
 
-## Contributing 🤝
+## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines][05] for details on:
+We welcome contributions. Please see our [Contributing Guidelines][05] for details.
 
-- Code of Conduct
-- Development Process
-- Pull Request Guidelines
-- Issue Reporting
+All commits must be signed. See `CONTRIBUTING.md` for setup instructions.
 
-## License 📄
+## License
 
-This project is dual-licensed under:
+Dual-licensed under your choice of:
 
 - [Apache License, Version 2.0][10]
 - [MIT License][11]
 
-at your option.
-
-## Acknowledgements 🙏
+## Acknowledgements
 
 Special thanks to all contributors who have helped build Shokunin.
 
@@ -175,5 +200,5 @@ Special thanks to all contributors who have helped build Shokunin.
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 [github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.32-orange.svg?style=for-the-badge
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.33-orange.svg?style=for-the-badge
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust
