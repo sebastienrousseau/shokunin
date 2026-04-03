@@ -218,11 +218,15 @@ impl FileWatcher {
 ///     false
 /// });
 /// ```
+/// Maximum number of poll iterations before `watch_blocking` exits.
+/// Prevents unbounded loops per Power of Ten Rule 2.
+pub const MAX_WATCH_ITERATIONS: usize = 1_000_000;
+
 pub fn watch_blocking<F>(watcher: &mut FileWatcher, mut callback: F)
 where
     F: FnMut(&[PathBuf]) -> bool,
 {
-    loop {
+    for _ in 0..MAX_WATCH_ITERATIONS {
         match watcher.check_for_changes() {
             Ok(changes) if !changes.is_empty() => {
                 if !callback(&changes) {
