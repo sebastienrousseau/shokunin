@@ -405,6 +405,7 @@ mod tests {
         assert_eq!(error.to_string(), "File not found");
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_ensure_directory_permission_denied() {
         use std::fs::Permissions;
@@ -547,6 +548,7 @@ This is the main content.";
         Ok(())
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_preprocess_content_with_invalid_permissions() {
         use std::os::unix::fs::PermissionsExt;
