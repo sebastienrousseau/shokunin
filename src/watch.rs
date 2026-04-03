@@ -9,7 +9,7 @@
 //!
 //! # Architecture
 //!
-//! The watcher tracks file modification times in a [`HashMap`] and compares
+//! The watcher tracks file modification times in a `HashMap` and compares
 //! them on each poll cycle. Three kinds of changes are detected:
 //!
 //! - **Modified** — a file's `mtime` has advanced since the last snapshot.

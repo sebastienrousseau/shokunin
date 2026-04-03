@@ -3,18 +3,18 @@
 
 //! Content fingerprinting for incremental builds.
 //!
-//! This module provides [`BuildCache`], which tracks SHA-256-style
+//! This module provides `BuildCache`, which tracks SHA-256-style
 //! fingerprints of content files so that only files modified since the
 //! last build need to be re-processed.
 //!
 //! # Overview
 //!
-//! 1. On startup, call [`BuildCache::load`] to read the previous
+//! 1. On startup, call `BuildCache::load` to read the previous
 //!    fingerprint map from `.ssg-cache.json`.
-//! 2. Call [`BuildCache::changed_files`] with the content directory to
+//! 2. Call `BuildCache::changed_files` with the content directory to
 //!    obtain the list of files whose contents have changed (or are new).
-//! 3. After a successful build, call [`BuildCache::update`] to record
-//!    the current fingerprints, then [`BuildCache::save`] to persist
+//! 3. After a successful build, call `BuildCache::update` to record
+//!    the current fingerprints, then `BuildCache::save` to persist
 //!    them to disk.
 //!
 //! # Example

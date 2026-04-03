@@ -5,9 +5,9 @@
 //!
 //! Ready-to-use plugins for common static site generation tasks.
 //!
-//! - [`MinifyPlugin`] — Minifies HTML files in the site output directory.
-//! - [`ImageOptiPlugin`] — Logs image files for optimization (stub for external tooling).
-//! - [`DeployPlugin`] — Logs deployment target after build (stub for CI integration).
+//! - `MinifyPlugin` — Minifies HTML files in the site output directory.
+//! - `ImageOptiPlugin` — Logs image files for optimization (stub for external tooling).
+//! - `DeployPlugin` — Logs deployment target after build (stub for CI integration).
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};

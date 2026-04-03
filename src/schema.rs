@@ -3,7 +3,7 @@
 
 //! # Configuration Schema Generator
 //!
-//! This module generates a JSON Schema for [`SsgConfig`], enabling
+//! This module generates a JSON Schema for [`crate::cmd::SsgConfig`], enabling
 //! editor auto-completion, validation, and documentation of the
 //! configuration format.
 
@@ -12,7 +12,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-/// Generates a JSON Schema describing all [`SsgConfig`] fields.
+/// Generates a JSON Schema describing all [`crate::cmd::SsgConfig`] fields.
 ///
 /// The returned schema follows the JSON Schema Draft-07 specification
 /// and includes type information, descriptions, and default values for
