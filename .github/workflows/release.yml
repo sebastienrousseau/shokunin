@@ -113,7 +113,7 @@ jobs:
         run: |
           NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
           echo "VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
-        shell: /bin/bash -e {0}
+        shell: bash
 
       # Cache dependencies to speed up subsequent builds
       - name: Cache dependencies
@@ -206,7 +206,7 @@ jobs:
         id: cache-dependencies
         uses: actions/cache@v4
         with:
-          path: /home/runner/.cargo/registry/index/
+          path: ~/.cargo/registry/index/
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-index-
 
@@ -216,7 +216,7 @@ jobs:
         run: |
           NEW_VERSION=$(grep version Cargo.toml | sed -n 2p | cut -d '"' -f 2)
           echo "VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
-        shell: /bin/bash -e {0}
+        shell: bash
 
       # Log in to crates.io
       - name: Log in to crates.io
