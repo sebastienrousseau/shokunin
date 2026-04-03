@@ -51,7 +51,7 @@ fn main() -> Result<()> {
         if src.exists() {
             let dst = public_root.join(asset);
             if !dst.exists() {
-                fs::copy(&src, &dst)?;
+                let _ = fs::copy(&src, &dst)?;
             }
         }
     }
