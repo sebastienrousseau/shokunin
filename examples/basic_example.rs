@@ -36,12 +36,12 @@ fn main() -> Result<()> {
     // The content directory.
     // This is where the source content files are located (e.g., Markdown files).
     // These files will be converted into HTML files in the build process.
-    let content_dir = Path::new("./examples/content");
+    let content_dir = Path::new("./examples/content/en");
 
     // The template directory.
     // This is where the HTML template files are located.
     // These templates are used to structure the content from the Markdown files.
-    let template_dir = Path::new("./examples/templates");
+    let template_dir = Path::new("./examples/templates/en");
 
     // Call the compile function to generate the website.
     // The function takes the paths defined above as arguments and will

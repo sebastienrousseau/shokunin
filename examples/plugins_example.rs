@@ -21,8 +21,8 @@ use std::fs;
 fn main() -> Result<()> {
     let build_dir = Path::new("./examples/build");
     let site_dir = Path::new("./examples/public");
-    let content_dir = Path::new("./examples/content");
-    let template_dir = Path::new("./examples/templates");
+    let content_dir = Path::new("./examples/content/en");
+    let template_dir = Path::new("./examples/templates/en");
     let cache_path = Path::new(".ssg-cache.json");
 
     // ── Step 1: Incremental build check ──────────────────────────
