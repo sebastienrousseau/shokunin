@@ -5,7 +5,7 @@
 <h1 align="center">Static Site Generator (SSG)</h1>
 
 <p align="center">
-  <strong>The fast, safe, extensible static site generator — built in Rust.</strong>
+  <strong>Fast, memory-safe, and extensible — built in Rust.</strong>
 </p>
 
 <p align="center">
