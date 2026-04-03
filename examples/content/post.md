@@ -23,7 +23,7 @@ image_alt: "Logo of Kaishi, a starter template for static sites" ## The image al
 image_height: "630" ## The image height of the site.
 image_width: "1200" ## The image width of the site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## The main image of the site in SVG format.
-keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (max 160 characters)
+keywords: "kaishi starter templates, static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (max 160 characters)
 language: "en-GB" ## The language of the site. (default: en-GB)
 layout: "post" ## The layout of the site.
 locale: "en_GB" ## The locale of the site.
@@ -39,7 +39,7 @@ revisit-after: "7 days" ## The revisit after of the site.
 robots: "index, follow" ## The robots of the site.
 short_name: "kaishi" ## The short name of the site. (max 12 characters)
 subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templates" ## The subtitle of the page. (max 64 characters)
-tags: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The tags of the site. (max 160 characters)
+tags: "kaishi starter templates, static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The tags of the site. (max 160 characters)
 theme-color: "143, 250, 113" ## The theme color of the site.
 title: "Posts" ## The title of the page. (max 64 characters)
 url: "https://kaishi.one" ## The url of the site.
@@ -47,7 +47,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 
 # News - The News SiteMap front matter (YAML).
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
-news_keywords: "kaishi starter templates, shokunin static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (comma separated, max 10 keywords)
+news_keywords: "kaishi starter templates, static site generator, static site generator, starter templates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
 news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
 news_loc: "https://kaishi.one" ## The loc of the site.
@@ -59,7 +59,7 @@ news_title: "Posts" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.32)"
+generator: "SSG (version 0.0.32)"
 item_description: RSS feed for the site
 item_guid: https://kaishi.one/rss.xml
 item_link: https://kaishi.one/rss.xml
@@ -100,7 +100,7 @@ twitter_image_alt: "Logo of Kaishi, a starter template for static sites"
 ## twitter_site - The Twitter Card site of the page.
 twitter_site: "janedoe"
 ## twitter_title - The Twitter Card title of the page.
-twitter_title: "Kaishi, a Shokunin Static Site Generator Starter Template"
+twitter_title: "Kaishi, a Static Site Generator Starter Template"
 ## twitter_url - The Twitter Card url of the page.
 twitter_url: "https://kaishi.one"
 
@@ -112,7 +112,7 @@ thanks: "Thanks for reading!" ## The thanks of the page.
 site_last_updated: "2025-01-01" ## The last updated of the site.
 site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## The standards of the site.
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## The components of the site.
-site_software: "Shokunin, Rust" ## The software of the site.
+site_software: "SSG, Rust" ## The software of the site.
 
 ---
 
@@ -126,7 +126,7 @@ match them together to create your own custom layouts and content.
 
 ### Pages
 
-Get started with Shokunin using any of our Starter Templates for building
+Get started with SSG using any of our Starter Templates for building
 your website or web application. Our templates are designed to be flexible and easy to modify.
 
 #### Template Features

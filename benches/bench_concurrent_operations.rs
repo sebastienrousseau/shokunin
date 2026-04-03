@@ -1,9 +1,9 @@
-// Copyright © 2023-2025 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2025 Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![allow(missing_docs)]
 
-//! Benchmark suite for concurrent operations in the Shokunin Static Site Generator.
+//! Benchmark suite for concurrent operations in the Static Site Generator.
 //!
 //! This module contains performance benchmarks for concurrent file operations,
 //! including copying, verification, and directory traversal.

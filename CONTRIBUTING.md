@@ -1,6 +1,6 @@
-# Contributing to Shokunin
+# Contributing to SSG
 
-Welcome! We're thrilled that you're interested in contributing to Shokunin. Whether you're looking to report a bug, suggest a feature, or submit code, this guide will help you get started.
+Welcome! We're thrilled that you're interested in contributing to SSG. Whether you're looking to report a bug, suggest a feature, or submit code, this guide will help you get started.
 
 ## Development setup
 

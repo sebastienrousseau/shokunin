@@ -1,4 +1,4 @@
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![doc = include_str!("../README.md")]
@@ -17,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::cmd::{Cli, ShokuninConfig};
+use crate::cmd::{Cli, SsgConfig};
 
 // Third-party imports
 use anyhow::{anyhow, ensure, Context, Result};
@@ -193,7 +193,7 @@ impl PathsBuilder {
 
 // Constants for configuration
 const DEFAULT_LOG_LEVEL: &str = "info";
-const ENV_LOG_LEVEL: &str = "SHOKUNIN_LOG_LEVEL";
+const ENV_LOG_LEVEL: &str = "SSG_LOG_LEVEL";
 
 /// Maximum directory nesting depth for all traversal operations.
 /// Prevents stack overflow from pathological or circular directory trees.
@@ -232,7 +232,7 @@ fn initialize_logging() -> Result<()> {
 /// into the site directory. If both paths are identical, finalization fails.
 /// This helper guarantees distinct paths when needed.
 fn resolve_build_and_site_dirs(
-    config: &ShokuninConfig,
+    config: &SsgConfig,
 ) -> (PathBuf, PathBuf) {
     let site_dir = config
         .serve_dir
@@ -257,7 +257,7 @@ pub async fn run() -> Result<()> {
     info!("Starting site generation process");
 
     let matches = Cli::build().get_matches();
-    let config = ShokuninConfig::from_matches(&matches)?;
+    let config = SsgConfig::from_matches(&matches)?;
     println!("Configuration loaded: {:?}", config);
 
     let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
@@ -1695,7 +1695,7 @@ mod tests {
 
     #[test]
     fn test_resolve_build_and_site_dirs_without_serve_dir() {
-        let mut config = ShokuninConfig::default();
+        let mut config = SsgConfig::default();
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = None;
 
@@ -1709,7 +1709,7 @@ mod tests {
 
     #[test]
     fn test_resolve_build_and_site_dirs_with_distinct_serve_dir() {
-        let mut config = ShokuninConfig::default();
+        let mut config = SsgConfig::default();
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = Some(PathBuf::from("public"));
 
@@ -1724,7 +1724,7 @@ mod tests {
     #[test]
     fn test_resolve_build_and_site_dirs_with_same_serve_and_output_dir()
     {
-        let mut config = ShokuninConfig::default();
+        let mut config = SsgConfig::default();
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = Some(PathBuf::from("docs"));
 

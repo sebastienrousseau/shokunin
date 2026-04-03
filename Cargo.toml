@@ -1,12 +1,12 @@
 # -----------------------------------------------------------------------------
-# Shokunin - A lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
+# SSG - A lightning-fast static site generator (SSG) optimised for search engine visibility (SEO) and compliant with WCAG 2.1 Level AA accessibility standards.
 # -----------------------------------------------------------------------------
 
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
 version = "0.0.33"                      # The version of the library
-authors = ["Shokunin Contributors"]     # The authors of the library
+authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.74.0"                 # Minimum supported Rust version (required by clap 4.x)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy

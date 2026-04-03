@@ -48,7 +48,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 # News - Les métadonnées SiteMap News (YAML)
 
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
-news_keywords: "kaishi, générateur de sites statiques shokunin, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
+news_keywords: "kaishi, SSG, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 news_language: "en" ## La langue du site. (par défaut : en)
 news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
@@ -60,7 +60,7 @@ news_title: "Nous Contacter" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/contact/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.32)"
+generator: "SSG (version 0.0.32)"
 item_description: Flux RSS pour la page de contact du site Kaishi.
 item_guid: https://kaishi.fr/contact/rss.xml
 item_link: https://kaishi.fr/contact/rss.xml
@@ -103,6 +103,6 @@ thanks: "Merci pour votre lecture !" ## Les remerciements de la page.
 site_last_updated: "2025-01-01" ## La dernière mise à jour du site.
 site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## Les standards du site.
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## Les composants du site.
-site_software: "Shokunin, Rust" ## Les logiciels utilisés par le site.
+site_software: "SSG, Rust" ## Les logiciels utilisés par le site.
 
 ---

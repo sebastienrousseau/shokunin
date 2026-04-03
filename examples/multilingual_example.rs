@@ -1,4 +1,4 @@
-// Copyright © 2023-2025 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2025 Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! # Multilingual Static Site Generator Example

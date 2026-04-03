@@ -1,7 +1,7 @@
-// Copyright © 2023-2025 Shokunin Static Site Generator. All rights reserved.
+// Copyright © 2023-2025 Static Site Generator. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Benchmark suite for the Shokunin Static Site Generator.
+//! Benchmark suite for the Static Site Generator.
 //!
 //! This module contains performance benchmarks for critical operations
 //! in the static site generator, including file operations and content processing.
@@ -11,7 +11,7 @@ use staticdatagen::utilities::directory::directory;
 use tempfile::TempDir;
 
 /**
- * This function is used to benchmark the utilities of the Shokunin Static Site Generator.
+ * This function is used to benchmark the utilities of the Static Site Generator.
  * It creates a temporary directory, performs various operations on it, and measures their performance.
  *
  * # Arguments

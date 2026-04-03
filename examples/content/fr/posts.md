@@ -22,7 +22,7 @@ image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le
 image_height: "630" ## La hauteur de l'image du site.
 image_width: "1200" ## La largeur de l'image du site.
 image: "https://kura.pro/kaishi/images/banners/banner-kaishi.webp" ## L'image principale du site au format SVG.
-keywords: "modèles de démarrage Kaishi, générateur de sites statiques Shokunin, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (max 160 caractères)
+keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (max 160 caractères)
 language: "en-GB" ## La langue du site. (par défaut : en-GB)
 layout: "post" ## La mise en page du site.
 locale: "en_GB" ## La locale du site.
@@ -38,7 +38,7 @@ revisit-after: "7 days" ## Le délai de revisite du site.
 robots: "index, follow" ## Les robots du site.
 short_name: "kaishi" ## Le nom court du site. (max 12 caractères)
 subtitle: "Créez des sites incroyables avec un minimum d'effort grâce aux modèles de démarrage Kaishi" ## Le sous-titre de la page. (max 64 caractères)
-tags: "modèles de démarrage Kaishi, générateur de sites statiques Shokunin, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les tags du site. (max 160 caractères)
+tags: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les tags du site. (max 160 caractères)
 theme-color: "214, 171, 133" ## La couleur du thème du site.
 title: "Articles" ## Le titre de la page. (max 64 caractères)
 url: "https://kaishi.fr" ## L'URL du site.
@@ -46,7 +46,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 
 # News - Les métadonnées SiteMap News (YAML)
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
-news_keywords: "modèles de démarrage Kaishi, générateur de sites statiques Shokunin, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
+news_keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 news_language: "en" ## La langue du site. (par défaut : en)
 news_image_loc: "https://kura.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
@@ -58,7 +58,7 @@ news_title: "Articles" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "Shokunin SSG (version 0.0.32)"
+generator: "SSG (version 0.0.32)"
 item_description: Flux RSS pour le site
 item_guid: https://kaishi.fr/rss.xml
 item_link: https://kaishi.fr/rss.xml
@@ -90,7 +90,7 @@ twitter_description: "Tout ce dont vous avez besoin pour créer un site web épo
 twitter_image: "https://kura.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
 twitter_image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## L'alternative texte de l'image de la carte Twitter.
 twitter_site: "janedoe" ## Le site Twitter associé.
-twitter_title: "Kaishi, un modèle de démarrage pour générateur de sites statiques Shokunin" ## Le titre de la carte Twitter.
+twitter_title: "Kaishi, un modèle de démarrage pour Static Site Generator" ## Le titre de la carte Twitter.
 twitter_url: "https://kaishi.fr" ## L'URL de la carte Twitter.
 
 # Humans.txt - Les métadonnées Humans.txt (YAML)
@@ -101,7 +101,7 @@ thanks: "Merci pour votre lecture !" ## Les remerciements de la page.
 site_last_updated: "2025-01-01" ## La dernière mise à jour du site.
 site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## Les standards du site.
 site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## Les composants du site.
-site_software: "Shokunin, Rust" ## Les logiciels utilisés par le site.
+site_software: "SSG, Rust" ## Les logiciels utilisés par le site.
 
 ---
 
@@ -111,7 +111,7 @@ Tous les modèles de démarrage, qu'il s'agisse de pages ou de sites web, sont c
 
 ### Pages
 
-Commencez avec Shokunin en utilisant l'un de nos modèles de démarrage pour créer votre site web ou application web. Nos modèles sont conçus pour être flexibles et faciles à modifier.
+Commencez avec SSG en utilisant l'un de nos modèles de démarrage pour créer votre site web ou application web. Nos modèles sont conçus pour être flexibles et faciles à modifier.
 
 #### Fonctionnalités des Modèles
 

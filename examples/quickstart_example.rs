@@ -1,7 +1,7 @@
 // examples/basic_site.rs
 //! # Basic Site Generation Example
 //!
-//! This example demonstrates how to use the Shokunin Static Site Generator (SSG)
+//! This example demonstrates how to use the Static Site Generator (SSG)
 //! to create a basic static website. It showcases:
 //!
 //! - Basic configuration setup
@@ -13,7 +13,7 @@
 use anyhow::{Context, Result};
 use dtt::datetime::DateTime;
 use http_handle::Server;
-use ssg::{cmd::ShokuninConfig, verify_and_copy_files, Paths};
+use ssg::{cmd::SsgConfig, verify_and_copy_files, Paths};
 use staticdatagen::compiler::service::compile;
 use std::{
     fs::{self, File},
@@ -23,7 +23,7 @@ use std::{
 
 /// Represents the configuration for site generation
 struct SiteGenerator {
-    config: ShokuninConfig,
+    config: SsgConfig,
     paths: Paths,
     log_file: File,
 }
@@ -66,15 +66,15 @@ impl SiteGenerator {
             fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
 
         // Create configuration
-        let config = ShokuninConfig::builder()
+        let config = SsgConfig::builder()
             .site_name(site_name.to_string())
             .base_url(base_url.to_string())
             .content_dir(content_dir.clone())
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
-            .site_title("Basic Shokunin Site".to_string())
+            .site_title("Basic SSG Site".to_string())
             .site_description(
-                "A basic static site built with Shokunin".to_string(),
+                "A basic static site built with SSG".to_string(),
             )
             .language("en-GB".to_string())
             .build()

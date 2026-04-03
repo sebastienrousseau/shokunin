@@ -1,4 +1,4 @@
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use anyhow::Result;

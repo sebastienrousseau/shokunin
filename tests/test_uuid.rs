@@ -1,6 +1,6 @@
 //! Tests for the `generate_unique_string` function from `utilities::uuid`.
 
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #[cfg(test)]

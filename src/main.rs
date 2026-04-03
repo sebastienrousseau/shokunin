@@ -1,9 +1,9 @@
-// Copyright © 2023-2025 Shokunin Static Site Generator.
+// Copyright © 2023-2025 Static Site Generator.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Shokunin Static Site Generator - Main Entry Point
+//! # Static Site Generator - Main Entry Point
 //!
-//! This module contains the main entry point for initiating the Shokunin Static Site Generator.
+//! This module contains the main entry point for initiating the Static Site Generator.
 //! It defines the `main` function and an `execute_main_logic` helper function, which together
 //! handle the core execution flow, including error handling.
 //!
@@ -22,7 +22,7 @@
 //! }
 //! ```
 
-/// The main entry point of the Shokunin Static Site Generator.
+/// The main entry point of the Static Site Generator.
 ///
 /// Delegates to [`ssg::run`] and maps the result to an exit code.
 ///

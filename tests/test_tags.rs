@@ -1,7 +1,7 @@
 //! Tests for the tags module in StaticDataGen, ensuring correct tagging logic
 //! and data handling.
 
-// Copyright © 2025 Shokunin Static Site Generator (SSG). All rights reserved.
+// Copyright © 2025 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::{
