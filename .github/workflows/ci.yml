@@ -2,15 +2,30 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/ssg]
+    branches: [main]
     paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
   pull_request:
-    branches: [main, feat/ssg]
+    branches: [main]
     paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
+  workflow_dispatch:
+    inputs:
+      use_github_hosted:
+        description: Use GitHub-hosted runners (incurs billed minutes)
+        required: false
+        default: false
+        type: boolean
+      full_checks:
+        description: Run expensive checks (coverage + cross-platform)
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -19,10 +34,12 @@ jobs:
       rust-version: stable
       run-clippy: true
       run-fmt: true
-      run-audit: true
-      run-coverage: ${{ github.ref == 'refs/heads/main' }}
-      run-cross-platform: ${{ github.ref == 'refs/heads/main' }}
+      # rust-ci audit/coverage jobs run on ubuntu-latest; disable by default for strict zero billed minutes.
+      run-audit: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted }}
+      run-coverage: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && inputs.full_checks }}
+      run-cross-platform: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && inputs.full_checks }}
       coverage-exclude: 'crates/*'
-      timeout-minutes: 25
+      runner: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && 'ubuntu-latest' || 'self-hosted' }}
+      timeout-minutes: 20
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

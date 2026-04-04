@@ -1,15 +1,24 @@
 name: Document
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      use_github_hosted:
+        description: Allow GitHub-hosted docs jobs (incurs billed minutes)
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: docs-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   docs:
+    if: inputs.use_github_hosted
     uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
     with:
       type: rust
