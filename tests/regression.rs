@@ -10,23 +10,21 @@
 use anyhow::Result;
 use ssg::cache::BuildCache;
 use ssg::cmd::{
-    Cli, CliError, LanguageCode, SsgConfig,
-    DEFAULT_HOST, DEFAULT_PORT, DEFAULT_SITE_NAME, DEFAULT_SITE_TITLE,
-    MAX_CONFIG_SIZE, RESERVED_NAMES,
+    Cli, CliError, LanguageCode, SsgConfig, DEFAULT_HOST, DEFAULT_PORT,
+    DEFAULT_SITE_NAME, DEFAULT_SITE_TITLE, MAX_CONFIG_SIZE, RESERVED_NAMES,
 };
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
 use ssg::plugins::{DeployPlugin, ImageOptiPlugin, MinifyPlugin};
 use ssg::schema::{generate_schema, write_schema};
 use ssg::stream::{
-    process_batch, stream_copy, stream_hash,
-    stream_lines, BatchResult, MAX_BATCH_SIZE, STREAM_BUFFER_SIZE,
+    process_batch, stream_copy, stream_hash, stream_lines, BatchResult,
+    MAX_BATCH_SIZE, STREAM_BUFFER_SIZE,
 };
 use ssg::watch::{FileWatcher, WatchConfig, MAX_WATCH_ITERATIONS};
 use ssg::{
-    collect_files_recursive, copy_dir_all,
-    copy_dir_with_progress, create_directories, create_log_file,
-    is_safe_path, log_arguments, log_initialization,
-    verify_and_copy_files, verify_file_safety, Paths,
+    collect_files_recursive, copy_dir_all, copy_dir_with_progress,
+    create_directories, create_log_file, is_safe_path, log_arguments,
+    log_initialization, verify_and_copy_files, verify_file_safety, Paths,
     MAX_DIR_DEPTH,
 };
 use std::fs;
@@ -300,9 +298,7 @@ fn ssg_config_default_has_site_name() {
 
 #[test]
 fn ssg_config_builder_validates() {
-    let result = SsgConfig::builder()
-        .site_name(String::new())
-        .build();
+    let result = SsgConfig::builder().site_name(String::new()).build();
     assert!(matches!(result, Err(CliError::ValidationError(_))));
 }
 
@@ -336,7 +332,9 @@ language = "en-GB"
 fn ssg_config_from_file() -> Result<(), Box<dyn std::error::Error>> {
     let tmp = tempdir()?;
     let path = tmp.path().join("config.toml");
-    fs::write(&path, r#"
+    fs::write(
+        &path,
+        r#"
 site_name = "file"
 content_dir = "c"
 output_dir = "o"
@@ -345,7 +343,8 @@ base_url = "http://example.com"
 site_title = "File"
 site_description = "From file"
 language = "en-GB"
-"#)?;
+"#,
+    )?;
     let config = SsgConfig::from_file(&path)?;
     assert_eq!(config.site_name, "file");
     Ok(())
@@ -459,8 +458,10 @@ fn plugin_manager_register_and_run() -> Result<()> {
     assert_eq!(pm.names(), vec!["test"]);
 
     let ctx = PluginContext::new(
-        Path::new("c"), Path::new("b"),
-        Path::new("s"), Path::new("t"),
+        Path::new("c"),
+        Path::new("b"),
+        Path::new("s"),
+        Path::new("t"),
     );
     pm.run_before_compile(&ctx)?;
     pm.run_after_compile(&ctx)?;
@@ -472,8 +473,10 @@ fn plugin_manager_register_and_run() -> Result<()> {
 fn plugin_manager_empty_runs_succeed() -> Result<()> {
     let pm = PluginManager::new();
     let ctx = PluginContext::new(
-        Path::new("c"), Path::new("b"),
-        Path::new("s"), Path::new("t"),
+        Path::new("c"),
+        Path::new("b"),
+        Path::new("s"),
+        Path::new("t"),
     );
     pm.run_before_compile(&ctx)?;
     pm.run_after_compile(&ctx)?;
@@ -484,8 +487,10 @@ fn plugin_manager_empty_runs_succeed() -> Result<()> {
 #[test]
 fn plugin_context_fields() {
     let ctx = PluginContext::new(
-        Path::new("/a"), Path::new("/b"),
-        Path::new("/c"), Path::new("/d"),
+        Path::new("/a"),
+        Path::new("/b"),
+        Path::new("/c"),
+        Path::new("/d"),
     );
     assert_eq!(ctx.content_dir, PathBuf::from("/a"));
     assert_eq!(ctx.build_dir, PathBuf::from("/b"));
@@ -502,8 +507,10 @@ fn minify_plugin_processes_html() -> Result<()> {
     let tmp = tempdir()?;
     fs::write(tmp.path().join("page.html"), "<p>  spaced  </p>")?;
     let ctx = PluginContext::new(
-        Path::new("c"), Path::new("b"),
-        tmp.path(), Path::new("t"),
+        Path::new("c"),
+        Path::new("b"),
+        tmp.path(),
+        Path::new("t"),
     );
     MinifyPlugin.after_compile(&ctx)?;
     let content = fs::read_to_string(tmp.path().join("page.html"))?;
@@ -516,8 +523,10 @@ fn image_opti_plugin_scans_images() -> Result<()> {
     let tmp = tempdir()?;
     fs::write(tmp.path().join("photo.png"), "PNG")?;
     let ctx = PluginContext::new(
-        Path::new("c"), Path::new("b"),
-        tmp.path(), Path::new("t"),
+        Path::new("c"),
+        Path::new("b"),
+        tmp.path(),
+        Path::new("t"),
     );
     ImageOptiPlugin.after_compile(&ctx)?;
     Ok(())
@@ -527,8 +536,10 @@ fn image_opti_plugin_scans_images() -> Result<()> {
 fn deploy_plugin_runs() -> Result<()> {
     let tmp = tempdir()?;
     let ctx = PluginContext::new(
-        Path::new("c"), Path::new("b"),
-        tmp.path(), Path::new("t"),
+        Path::new("c"),
+        Path::new("b"),
+        tmp.path(),
+        Path::new("t"),
     );
     let p = DeployPlugin::new("staging");
     p.after_compile(&ctx)?;
@@ -721,10 +732,8 @@ fn batch_result_fields() {
 
 #[test]
 fn watch_config_accessors() {
-    let cfg = WatchConfig::new(
-        PathBuf::from("content"),
-        Duration::from_secs(2),
-    );
+    let cfg =
+        WatchConfig::new(PathBuf::from("content"), Duration::from_secs(2));
     assert_eq!(cfg.directory(), Path::new("content"));
     assert_eq!(cfg.poll_interval(), Duration::from_secs(2));
 }
@@ -968,9 +977,8 @@ fn e2e_full_directory_lifecycle() -> Result<()> {
     assert!(paths.build.join("about.md").exists());
 
     // Log
-    let mut log = create_log_file(
-        tmp.path().join("build.log").to_str().unwrap(),
-    )?;
+    let mut log =
+        create_log_file(tmp.path().join("build.log").to_str().unwrap())?;
     let date = dtt::datetime::DateTime::new();
     log_initialization(&mut log, &date)?;
     log_arguments(&mut log, &date)?;

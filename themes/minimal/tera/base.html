@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="{{ site.language | default(value='en') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page.title | default(value="") }}{% endblock %}</title>
+  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  <link rel="stylesheet" href="/css/minimal.css">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <a href="#content" class="sr-only">Skip to content</a>
+  {% block header %}
+  <header>
+    <nav aria-label="Main">
+      <strong><a href="/">{{ site.name | default(value="") }}</a></strong>
+      {% block nav %}{% endblock %}
+    </nav>
+  </header>
+  {% endblock %}
+  <main id="content">{% block content %}{% endblock %}</main>
+  {% block footer %}
+  <footer><p>&copy; {{ site.name | default(value="") }}</p></footer>
+  {% endblock %}
+</body>
+</html>

@@ -1,7 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-
 #![allow(missing_docs)]
 
 //! Benchmark suite for concurrent operations in the Static Site Generator.
@@ -9,9 +8,7 @@
 //! This module contains performance benchmarks for concurrent file operations,
 //! including copying, verification, and directory traversal.
 
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use ssg::{copy_dir_all, verify_and_copy_files, verify_file_safety};
 use std::{
     fs::{self, File},
@@ -177,8 +174,7 @@ fn setup_nested_directories() -> (PathBuf, PathBuf) {
 
         for j in 0..3 {
             let file_path = nested_dir.join(format!("file_{}.txt", j));
-            fs::write(file_path, format!("content {}_{}", i, j))
-                .unwrap();
+            fs::write(file_path, format!("content {}_{}", i, j)).unwrap();
         }
     }
 
@@ -211,11 +207,8 @@ fn setup_mixed_content() -> (PathBuf, PathBuf) {
         fs::create_dir_all(&sub_dir).unwrap();
 
         // Mixed files and empty directories
-        fs::write(
-            sub_dir.join("content.txt"),
-            format!("dir content {}", i),
-        )
-        .unwrap();
+        fs::write(sub_dir.join("content.txt"), format!("dir content {}", i))
+            .unwrap();
         fs::create_dir_all(sub_dir.join("empty")).unwrap();
     }
 
@@ -237,10 +230,8 @@ mod tests {
         assert!(dst.exists());
 
         // Verify file count
-        let files: Vec<_> = fs::read_dir(&src)
-            .unwrap()
-            .filter_map(Result::ok)
-            .collect();
+        let files: Vec<_> =
+            fs::read_dir(&src).unwrap().filter_map(Result::ok).collect();
         assert_eq!(files.len(), 5);
 
         // Verify file size

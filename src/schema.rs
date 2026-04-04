@@ -188,8 +188,8 @@ mod tests {
 
         let content =
             fs::read_to_string(&path).expect("failed to read schema file");
-        let parsed: Value = serde_json::from_str(&content)
-            .expect("output is not valid JSON");
+        let parsed: Value =
+            serde_json::from_str(&content).expect("output is not valid JSON");
         assert_eq!(parsed["title"], "SsgConfig");
     }
 

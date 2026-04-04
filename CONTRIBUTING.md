@@ -50,6 +50,50 @@ echo "test" | git commit --allow-empty -S -m "test signing"
 git log --show-signature -1
 ```
 
+## Architecture
+
+```
+src/
+  lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
+  cmd.rs            — CLI parsing and SsgConfig
+  plugin.rs         — Plugin trait + PluginManager
+  frontmatter.rs    — Frontmatter extraction + .meta.json sidecars
+  tera_engine.rs    — Tera template engine wrapper
+  tera_plugin.rs    — Tera rendering plugin
+  seo.rs            — SeoPlugin, JsonLdPlugin, CanonicalPlugin, RobotsPlugin
+  ai.rs             — AI readiness (llms.txt, meta tags, alt validation)
+  accessibility.rs  — WCAG checker + ARIA validation
+  search.rs         — Client-side search index generation
+  highlight.rs      — Syntax highlighting for code blocks
+  shortcodes.rs     — Shortcode expansion (youtube, gist, figure, admonitions)
+  assets.rs         — Asset fingerprinting + SRI hashes
+  deploy.rs         — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
+  cache.rs          — Incremental build cache
+  stream.rs         — High-performance streaming I/O
+  watch.rs          — File watcher for live rebuild
+  livereload.rs     — WebSocket live-reload injection
+```
+
+### Writing a Plugin
+
+```rust
+use ssg::plugin::{Plugin, PluginContext};
+use anyhow::Result;
+
+#[derive(Debug)]
+struct MyPlugin;
+
+impl Plugin for MyPlugin {
+    fn name(&self) -> &str { "my-plugin" }
+    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+        if let Some(config) = &ctx.config {
+            println!("Site: {}", config.site_name);
+        }
+        Ok(())
+    }
+}
+```
+
 ## How to contribute
 
 ### Reporting bugs

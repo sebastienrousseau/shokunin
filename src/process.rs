@@ -14,9 +14,7 @@ pub enum ProcessError {
     /// # Fields
     /// - `dir_type`: The type of directory (e.g., "content", "output").
     /// - `path`: The file path where the directory creation failed.
-    #[error(
-        "Failed to create {dir_type} directory at '{path}': {source}"
-    )]
+    #[error("Failed to create {dir_type} directory at '{path}': {source}")]
     DirectoryCreation {
         /// Type of the directory, such as "content" or "output".
         dir_type: String,
@@ -179,9 +177,7 @@ fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file()
-            && path.extension().map_or(false, |ext| ext == "md")
-        {
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
             let content = fs::read_to_string(&path)?;
             let processed_content = process_frontmatter(&content)?;
             fs::write(&path, processed_content)?;
@@ -256,13 +252,8 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     preprocess_content(content_path)?;
 
     // Compile the site
-    internal_compile(
-        build_path,
-        content_path,
-        site_path,
-        template_path,
-    )
-    .map_err(ProcessError::CompilationError)?;
+    internal_compile(build_path, content_path, site_path, template_path)
+        .map_err(ProcessError::CompilationError)?;
 
     Ok(())
 }
@@ -307,10 +298,7 @@ mod tests {
             .arg(arg!(--"config" <CONFIG> "Config file"))
             .get_matches_from(vec!["test"]);
         let result = get_argument(&matches, "config");
-        assert!(matches!(
-            result,
-            Err(ProcessError::MissingArgument(_))
-        ));
+        assert!(matches!(result, Err(ProcessError::MissingArgument(_))));
     }
 
     #[test]
@@ -353,12 +341,8 @@ mod tests {
 
     #[test]
     fn test_process_error_display() {
-        let error =
-            ProcessError::MissingArgument("content".to_string());
-        assert_eq!(
-            error.to_string(),
-            "Required argument missing: content"
-        );
+        let error = ProcessError::MissingArgument("content".to_string());
+        assert_eq!(error.to_string(), "Required argument missing: content");
 
         let error = ProcessError::DirectoryCreation {
             dir_type: "content".to_string(),
@@ -370,13 +354,9 @@ mod tests {
             "Failed to create content directory at '/invalid/path': Permission denied (os error 13)"
         );
 
-        let error = ProcessError::CompilationError(
-            "Failed to compile".to_string(),
-        );
-        assert_eq!(
-            error.to_string(),
-            "Compilation error: Failed to compile"
-        );
+        let error =
+            ProcessError::CompilationError("Failed to compile".to_string());
+        assert_eq!(error.to_string(), "Compilation error: Failed to compile");
     }
 
     #[test]
@@ -392,10 +372,8 @@ mod tests {
 
     #[test]
     fn test_process_error_io_error_format() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "File not found",
-        );
+        let io_error =
+            std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
         let error: ProcessError = io_error.into();
         assert!(matches!(error, ProcessError::IoError(_)));
         assert_eq!(error.to_string(), "File not found");
@@ -412,11 +390,8 @@ mod tests {
 
         // Create the directory and make it read-only
         fs::create_dir(&protected_path).unwrap();
-        fs::set_permissions(
-            &protected_path,
-            Permissions::from_mode(0o400),
-        )
-        .unwrap();
+        fs::set_permissions(&protected_path, Permissions::from_mode(0o400))
+            .unwrap();
 
         // Attempt to create a subdirectory inside the protected directory to trigger a permission error
         let sub_dir = protected_path.join("sub_dir");
@@ -429,11 +404,8 @@ mod tests {
         ));
 
         // Reset permissions for cleanup
-        fs::set_permissions(
-            &protected_path,
-            Permissions::from_mode(0o700),
-        )
-        .unwrap();
+        fs::set_permissions(&protected_path, Permissions::from_mode(0o700))
+            .unwrap();
     }
 
     #[test]
@@ -490,8 +462,8 @@ This is the main content.";
     }
 
     #[test]
-    fn test_process_frontmatter_without_frontmatter(
-    ) -> Result<(), ProcessError> {
+    fn test_process_frontmatter_without_frontmatter() -> Result<(), ProcessError>
+    {
         let content = "# Just Content\nNo frontmatter here.";
         let processed = process_frontmatter(content)?;
         assert_eq!(processed, content);
@@ -508,8 +480,8 @@ This is the main content.";
     }
 
     #[test]
-    fn test_preprocess_content_with_multiple_files(
-    ) -> Result<(), ProcessError> {
+    fn test_preprocess_content_with_multiple_files() -> Result<(), ProcessError>
+    {
         let temp_dir = tempdir()?;
 
         // Create multiple markdown files
@@ -554,19 +526,16 @@ This is the main content.";
         let file_path = temp_dir.path().join("readonly.md");
 
         // Create file with frontmatter
-        fs::write(&file_path, "---\ntitle: Test\n---\nContent")
-            .unwrap();
+        fs::write(&file_path, "---\ntitle: Test\n---\nContent").unwrap();
 
         // Make file read-only
-        fs::set_permissions(&file_path, Permissions::from_mode(0o444))
-            .unwrap();
+        fs::set_permissions(&file_path, Permissions::from_mode(0o444)).unwrap();
 
         let result = preprocess_content(temp_dir.path());
         assert!(result.is_err());
 
         // Reset permissions for cleanup
-        fs::set_permissions(&file_path, Permissions::from_mode(0o666))
-            .unwrap();
+        fs::set_permissions(&file_path, Permissions::from_mode(0o666)).unwrap();
     }
 
     #[test]
@@ -608,10 +577,7 @@ This is the main content.";
         let err = result.unwrap_err();
         match err {
             ProcessError::DirectoryCreation { source, .. } => {
-                assert_eq!(
-                    source.kind(),
-                    std::io::ErrorKind::AlreadyExists
-                );
+                assert_eq!(source.kind(), std::io::ErrorKind::AlreadyExists);
             }
             other => panic!("Expected DirectoryCreation, got: {}", other),
         }
@@ -652,8 +618,7 @@ This is the main content.";
     }
 
     #[test]
-    fn test_process_frontmatter_with_multiple_delimiters() -> Result<()>
-    {
+    fn test_process_frontmatter_with_multiple_delimiters() -> Result<()> {
         let content = "\
 ---
 title: First
@@ -689,8 +654,7 @@ Content";
     }
 
     #[test]
-    fn test_process_frontmatter_with_whitespace(
-    ) -> Result<(), ProcessError> {
+    fn test_process_frontmatter_with_whitespace() -> Result<(), ProcessError> {
         // Test with whitespace before first delimiter
         let content = "\n\n---\ntitle: Test\n---\nContent";
         let processed = process_frontmatter(content)?;
@@ -700,8 +664,7 @@ Content";
         assert!(processed.contains("Content"));
 
         // Test with mixed whitespace in frontmatter
-        let content =
-            "---\n  title: Test  \n  author: Someone  \n---\nContent";
+        let content = "---\n  title: Test  \n  author: Someone  \n---\nContent";
         let processed = process_frontmatter(content)?;
         assert!(processed.contains("<!--frontmatter-processed-->"));
         assert!(processed.contains("title: Test"));
@@ -712,8 +675,8 @@ Content";
     }
 
     #[test]
-    fn test_process_frontmatter_with_invalid_format(
-    ) -> Result<(), ProcessError> {
+    fn test_process_frontmatter_with_invalid_format() -> Result<(), ProcessError>
+    {
         // Missing second delimiter completely
         let content = "---\ntitle: Test\nContent";
         let processed = process_frontmatter(content)?;
@@ -744,10 +707,7 @@ Content";
         let nested_file = nested_dir.join("nested.md");
 
         fs::write(&root_file, "---\ntitle: Root\n---\nRoot content")?;
-        fs::write(
-            &nested_file,
-            "---\ntitle: Nested\n---\nNested content",
-        )?;
+        fs::write(&nested_file, "---\ntitle: Nested\n---\nNested content")?;
 
         preprocess_content(temp_dir.path())?;
 
@@ -756,16 +716,13 @@ Content";
         assert!(root_content.contains("<!--frontmatter-processed-->"));
 
         let nested_content = fs::read_to_string(&nested_file)?;
-        assert!(
-            !nested_content.contains("<!--frontmatter-processed-->")
-        );
+        assert!(!nested_content.contains("<!--frontmatter-processed-->"));
 
         Ok(())
     }
 
     #[test]
-    fn test_preprocess_content_with_empty_files(
-    ) -> Result<(), ProcessError> {
+    fn test_preprocess_content_with_empty_files() -> Result<(), ProcessError> {
         let temp_dir = tempdir()?;
         let empty_file = temp_dir.path().join("empty.md");
 
@@ -782,8 +739,7 @@ Content";
     }
 
     #[test]
-    fn test_ensure_directory_with_symlink() -> Result<(), ProcessError>
-    {
+    fn test_ensure_directory_with_symlink() -> Result<(), ProcessError> {
         let temp_dir = tempdir()?;
         let real_dir = temp_dir.path().join("real_dir");
         let symlink = temp_dir.path().join("symlink_dir");

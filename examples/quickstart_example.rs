@@ -63,8 +63,7 @@ impl SiteGenerator {
         let content_dir = fs::canonicalize(content_dir)?;
         let output_dir = fs::canonicalize(output_dir)?;
         let template_dir = fs::canonicalize(template_dir)?;
-        let site_dir =
-            fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
+        let site_dir = fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
 
         // Create configuration
         let config = SsgConfig::builder()
@@ -74,9 +73,7 @@ impl SiteGenerator {
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
             .site_title("Basic SSG Site".to_string())
-            .site_description(
-                "A basic static site built with SSG".to_string(),
-            )
+            .site_description("A basic static site built with SSG".to_string())
             .language("en-GB".to_string())
             .build()
             .context("Failed to build configuration")?;
@@ -119,12 +116,8 @@ impl SiteGenerator {
     /// Logs a message with timestamp to the log file
     fn log_message(&self, message: &str) -> Result<()> {
         let date = DateTime::new();
-        writeln!(
-            &self.log_file,
-            "[{}] INFO process: {}",
-            date, message
-        )
-        .context("Failed to write to log file")?;
+        writeln!(&self.log_file, "[{}] INFO process: {}", date, message)
+            .context("Failed to write to log file")?;
 
         println!("{}", message);
         Ok(())
@@ -166,11 +159,8 @@ impl SiteGenerator {
 
         // Copy static files
         self.log_message("Copying static files...")?;
-        verify_and_copy_files(
-            &self.config.output_dir,
-            &self.paths.site,
-        )
-        .context("Failed to copy static files")?;
+        verify_and_copy_files(&self.config.output_dir, &self.paths.site)
+            .context("Failed to copy static files")?;
 
         self.log_message(&format!(
             "Site generated successfully at: {}",
@@ -195,8 +185,7 @@ impl SiteGenerator {
             .to_string();
 
         // Create a new server with an address and document root
-        let server =
-            Server::new("127.0.0.1:3000", example_root.as_str());
+        let server = Server::new("127.0.0.1:3000", example_root.as_str());
 
         // Start the server
         let _ = server.start();
@@ -225,8 +214,7 @@ mod tests {
 
     #[test]
     fn test_site_generator_creation() -> Result<()> {
-        let generator =
-            SiteGenerator::new("test-site", "127.0.0.1:3000")?;
+        let generator = SiteGenerator::new("test-site", "127.0.0.1:3000")?;
         assert_eq!(generator.config.site_name, "test-site");
         assert_eq!(generator.config.base_url, "127.0.0.1:3000");
         Ok(())
@@ -234,8 +222,7 @@ mod tests {
 
     #[test]
     fn test_directory_preparation() -> Result<()> {
-        let generator =
-            SiteGenerator::new("test-site", "127.0.0.1:3000")?;
+        let generator = SiteGenerator::new("test-site", "127.0.0.1:3000")?;
         generator.prepare_directories()?;
 
         assert!(generator.config.content_dir.exists());

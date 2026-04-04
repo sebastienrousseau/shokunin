@@ -2,7 +2,7 @@
 edition = "2021"
 
 # Maximum width of each line
-max_width = 72
+max_width = 80
 
 # Number of spaces per tab
 tab_spaces = 4

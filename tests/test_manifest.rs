@@ -91,18 +91,13 @@ mod tests {
     #[test]
     fn test_create_manifest_data_with_valid_metadata() {
         let mut metadata = HashMap::new();
+        let _ = metadata.insert("name".to_string(), "My Web App".to_string());
+        let _ = metadata.insert("short_name".to_string(), "App".to_string());
         let _ = metadata
-            .insert("name".to_string(), "My Web App".to_string());
-        let _ = metadata
-            .insert("short_name".to_string(), "App".to_string());
-        let _ = metadata.insert(
-            "description".to_string(),
-            "A cool web app".to_string(),
-        );
-        let _ = metadata
-            .insert("icon".to_string(), "app-icon.svg".to_string());
-        let _ = metadata
-            .insert("theme-color".to_string(), "#00aabb".to_string());
+            .insert("description".to_string(), "A cool web app".to_string());
+        let _ = metadata.insert("icon".to_string(), "app-icon.svg".to_string());
+        let _ =
+            metadata.insert("theme-color".to_string(), "#00aabb".to_string());
 
         let manifest_json = create_manifest_data(&metadata)
             .expect("Expected manifest generation to succeed");
@@ -117,8 +112,7 @@ mod tests {
         assert_eq!(manifest["background_color"], "#ffffff");
         assert_eq!(manifest["description"], "A cool web app");
 
-        let icons =
-            manifest["icons"].as_array().expect("Expected icons array");
+        let icons = manifest["icons"].as_array().expect("Expected icons array");
         assert_eq!(icons.len(), 1);
         assert_eq!(icons[0]["src"], "app-icon.svg");
         assert_eq!(icons[0]["sizes"], "512x512");
@@ -137,8 +131,9 @@ mod tests {
     fn test_create_manifest_data_with_missing_metadata() {
         let metadata = HashMap::new(); // Empty metadata
 
-        let manifest_json = create_manifest_data(&metadata)
-            .expect("Expected manifest generation to succeed even with empty metadata");
+        let manifest_json = create_manifest_data(&metadata).expect(
+            "Expected manifest generation to succeed even with empty metadata",
+        );
 
         let manifest: Value = serde_json::from_str(&manifest_json)
             .expect("Expected valid JSON output");
@@ -151,8 +146,7 @@ mod tests {
         assert_eq!(manifest["background_color"], "#ffffff");
         assert_eq!(manifest["description"], "");
 
-        let icons =
-            manifest["icons"].as_array().expect("Expected icons array");
+        let icons = manifest["icons"].as_array().expect("Expected icons array");
         assert!(icons.is_empty());
 
         assert_eq!(manifest["orientation"], "portrait-primary");
@@ -182,8 +176,7 @@ mod tests {
         assert_eq!(manifest["background_color"], "#ffffff");
         assert_eq!(manifest["description"], "");
 
-        let icons =
-            manifest["icons"].as_array().expect("Expected icons array");
+        let icons = manifest["icons"].as_array().expect("Expected icons array");
         assert!(icons.is_empty());
 
         assert_eq!(manifest["orientation"], "portrait-primary");

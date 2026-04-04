@@ -37,6 +37,7 @@
 //! }
 //! ```
 
+use crate::cmd::SsgConfig;
 use anyhow::Result;
 use std::{
     fmt,
@@ -54,6 +55,8 @@ pub struct PluginContext {
     pub site_dir: PathBuf,
     /// The template directory.
     pub template_dir: PathBuf,
+    /// Site configuration (base_url, site_name, language, etc.).
+    pub config: Option<SsgConfig>,
 }
 
 impl PluginContext {
@@ -69,6 +72,24 @@ impl PluginContext {
             build_dir: build_dir.to_path_buf(),
             site_dir: site_dir.to_path_buf(),
             template_dir: template_dir.to_path_buf(),
+            config: None,
+        }
+    }
+
+    /// Creates a new plugin context with site configuration.
+    pub fn with_config(
+        content_dir: &Path,
+        build_dir: &Path,
+        site_dir: &Path,
+        template_dir: &Path,
+        config: SsgConfig,
+    ) -> Self {
+        Self {
+            content_dir: content_dir.to_path_buf(),
+            build_dir: build_dir.to_path_buf(),
+            site_dir: site_dir.to_path_buf(),
+            template_dir: template_dir.to_path_buf(),
+            config: Some(config),
         }
     }
 }
@@ -178,10 +199,7 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_before_compile(
-        &self,
-        ctx: &PluginContext,
-    ) -> Result<()> {
+    pub fn run_before_compile(&self, ctx: &PluginContext) -> Result<()> {
         for plugin in &self.plugins {
             plugin.before_compile(ctx).map_err(|e| {
                 anyhow::anyhow!(
@@ -198,10 +216,7 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_after_compile(
-        &self,
-        ctx: &PluginContext,
-    ) -> Result<()> {
+    pub fn run_after_compile(&self, ctx: &PluginContext) -> Result<()> {
         for plugin in &self.plugins {
             plugin.after_compile(ctx).map_err(|e| {
                 anyhow::anyhow!(

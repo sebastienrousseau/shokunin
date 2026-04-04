@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="doc-page">
+  <h1>{{ page.title | default(value="") }}</h1>
+  {{ page.content | safe }}
+</article>
+{% endblock %}

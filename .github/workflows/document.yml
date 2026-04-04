@@ -1,51 +1,27 @@
-name: 🧪 Document
+name: Document
 
 on:
-  push:
-    branches:
-      - main
-      - feat/ssg
-  pull_request:
-    branches:
-      - feat/ssg
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      use_github_hosted:
+        description: Allow GitHub-hosted docs jobs (incurs billed minutes)
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  all:
-    name: Document
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-    steps:
-      - uses: dtolnay/rust-toolchain@nightly
-
-      - uses: actions/checkout@v6
-
-      - name: Generate documentation for all features and publish it
-        run: |
-          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
-          echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
-
-      - name: Deploy
-        uses: actions/upload-artifact@v4.5.0
-        with:
-          name: documentation
-          path: target/doc
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Write CNAME file
-        run: echo 'doc.shokunin.one' > ./target/doc/CNAME
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
-          publish_branch: gh-pages
-          cname: true
-          commit_message: Deploy documentation at ${{ github.sha }}
-          user_name: github-actions
-          user_email: actions@users.noreply.github.com
+  docs:
+    if: inputs.use_github_hosted
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
+    with:
+      type: rust
+      rust-version: nightly
+      redirect-crate: ssg
+      cname: doc.shokunin.one
