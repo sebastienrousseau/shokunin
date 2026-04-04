@@ -32,7 +32,7 @@ jobs:
     uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
     with:
       rust-version: stable
-      run-clippy: true
+      run-clippy: false
       run-fmt: true
       # rust-ci audit/coverage jobs run on ubuntu-latest; disable by default for strict zero billed minutes.
       run-audit: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted }}

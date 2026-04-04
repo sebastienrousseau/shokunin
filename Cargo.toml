@@ -234,15 +234,15 @@ variant_size_differences = "deny"           # Deny enum variants with significan
 # Clippy lint configuration for enhanced code analysis.
 
 ## Warnings
-all = "warn"                                 # Enable all common Clippy lints
-pedantic = "warn"                            # Enable pedantic lints for stricter checking
-cargo = "warn"                               # Enable lints specific to cargo
-nursery = "warn"                             # Enable experimental lints from Clippy’s nursery
-complexity = "warn"                          # Warn on code complexity and suggest improvements
-correctness = "warn"                         # Ensure code correctness, flagging potential issues
-perf = "warn"                                # Lints that catch performance issues
-style = "warn"                               # Suggest stylistic improvements
-suspicious = "warn"                          # Detect suspicious code patterns
+all = { level = "warn", priority = -1 }      # Enable all common Clippy lints
+pedantic = { level = "warn", priority = -1 } # Enable pedantic lints for stricter checking
+cargo = { level = "warn", priority = -1 }    # Enable lints specific to cargo
+nursery = { level = "warn", priority = -1 }  # Enable experimental lints from Clippy’s nursery
+complexity = { level = "warn", priority = -1 } # Warn on code complexity and suggest improvements
+correctness = { level = "warn", priority = -1 } # Ensure code correctness, flagging potential issues
+perf = { level = "warn", priority = -1 }     # Lints that catch performance issues
+style = { level = "warn", priority = -1 }    # Suggest stylistic improvements
+suspicious = { level = "warn", priority = -1 } # Detect suspicious code patterns
 module_name_repetitions = "warn"             # Avoid repeating module names in the crate name
 
 ## Allowances
