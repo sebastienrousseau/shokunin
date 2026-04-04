@@ -1,25 +1,144 @@
-:root { --text: #1a1a2e; --bg: #fff; --accent: #0066cc; --muted: #6b7280; --border: #e5e7eb; --sidebar-bg: #f8f9fa; --sidebar-w: 16rem; }
-@media (prefers-color-scheme: dark) { :root { --text: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; --border: #30363d; --sidebar-bg: #161b22; } }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font: 1rem/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.layout { display: flex; min-height: 100vh; }
-.sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); padding: 1.5rem 1rem; position: fixed; top: 0; bottom: 0; overflow-y: auto; }
-.sidebar-header { font-weight: 700; font-size: 1.1rem; margin-bottom: 1.5rem; }
-.sidebar nav ul { list-style: none; }
-.sidebar nav li { padding: 0.3rem 0; }
-.sidebar nav a { color: var(--muted); }
-.sidebar nav a:hover { color: var(--accent); }
-main { margin-left: var(--sidebar-w); padding: 2rem 3rem; max-width: 50rem; flex: 1; }
-.doc-page h1 { margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-.doc-page h2 { margin-top: 2rem; margin-bottom: 0.5rem; }
-.doc-page h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; }
-pre { background: #f6f8fa; border: 1px solid var(--border); border-radius: 6px; padding: 1em; overflow-x: auto; font-size: 0.875em; }
-@media (prefers-color-scheme: dark) { pre { background: #161b22; } }
-code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.9em; }
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-@media (max-width: 768px) {
-  .sidebar { position: static; width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-  main { margin-left: 0; padding: 1rem; }
+:root {
+  --text: #1a1a2e;
+  --bg: #fff;
+  --accent: #06c;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --sidebar-bg: #f8f9fa;
+  --sidebar-w: 16rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6edf3;
+    --bg: #0d1117;
+    --accent: #58a6ff;
+    --muted: #8b949e;
+    --border: #30363d;
+    --sidebar-bg: #161b22;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font: 1rem/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem 1rem;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar nav ul {
+  list-style: none;
+}
+
+.sidebar nav li {
+  padding: 0.3rem 0;
+}
+
+.sidebar nav a {
+  color: var(--muted);
+}
+
+.sidebar nav a:hover {
+  color: var(--accent);
+}
+
+main {
+  margin-left: var(--sidebar-w);
+  padding: 2rem 3rem;
+  max-width: 50rem;
+  flex: 1;
+}
+
+.doc-page h1 {
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+.doc-page h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-page h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+pre {
+  background: #f6f8fa;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+  font-size: 0.875em;
+}
+
+@media (prefers-color-scheme: dark) {
+  pre {
+    background: #161b22;
+  }
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.9em;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (width <= 768px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  main {
+    margin-left: 0;
+    padding: 1rem;
+  }
 }
