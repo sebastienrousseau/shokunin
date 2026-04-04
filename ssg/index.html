@@ -1,114 +1,218 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `ssg` crate."><title>ssg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-46132b98.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.86.0-nightly (3f43b1a63 2025-01-03)" data-channel="nightly" data-search-js="search-75f5ac3e.js" data-settings-js="settings-0f613d39.js" ><script src="../static.files/storage-59e33391.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-5f194d8c.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-893ab5e7.css"></noscript><link rel="icon" href="https://kura.pro/shokunin/images/favicon.ico"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../ssg/index.html"><img src="https://kura.pro/shokunin/images/logos/shokunin.svg" alt="logo"></a><h2><a href="../ssg/index.html">ssg</a><span class="version">0.0.32</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#shokunin-static-site-generator-ssg" title="Shokunin Static Site Generator (SSG)">Shokunin Static Site Generator (SSG)</a><ul><li><a href="#overview-" title="Overview 🚀">Overview 🚀</a></li><li><a href="#key-features-" title="Key Features 🎯">Key Features 🎯</a></li><li><a href="#getting-started-" title="Getting Started 📦">Getting Started 📦</a></li><li><a href="#examples-" title="Examples 📚">Examples 📚</a></li><li><a href="#documentation-" title="Documentation 📖">Documentation 📖</a></li><li><a href="#contributing-" title="Contributing 🤝">Contributing 🤝</a></li><li><a href="#license-" title="License 📄">License 📄</a></li><li><a href="#acknowledgements-" title="Acknowledgements 🙏">Acknowledgements 🙏</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>ssg</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/ssg/lib.rs.html#4-2301">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><!-- markdownlint-disable MD033 MD041 -->
-<p><img src="https://kura.pro/shokunin/images/logos/shokunin.svg"
-alt="Shokunin logo" height="66" align="right" /></p>
-<!-- markdownlint-enable MD033 MD041 -->
-<h2 id="shokunin-static-site-generator-ssg"><a class="doc-anchor" href="#shokunin-static-site-generator-ssg">§</a>Shokunin Static Site Generator (SSG)</h2>
-<p>A content-first static site generator crafted in Rust, optimized for performance, accessibility, and search engine visibility.</p>
-<!-- markdownlint-disable MD033 MD041 -->
-<center>
-<!-- markdownlint-enable MD033 MD041 -->
-<p><a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-f04041?style=for-the-badge&amp;labelColor=c0282d&amp;logo=rust" alt="Made With Love" /></a> <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&amp;color=fc8d62&amp;logo=rust" alt="Crates.io" /></a> <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.32-orange.svg?style=for-the-badge" alt="lib.rs" /></a> <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&amp;labelColor=555555&amp;logo=docs.rs" alt="Docs.rs" /></a> <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&amp;token=wAcpid8YEt&amp;logo=codecov" alt="Codecov" /></a> <a href="https://github.com/sebastienrousseau/shokunin/actions?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/release.yml?branch=main&amp;style=for-the-badge&amp;logo=github" alt="Build Status" /></a> <a href="https://github.com/sebastienrousseau/shokunin"><img src="https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&amp;labelColor=555555&amp;logo=github" alt="GitHub" /></a></p>
-<p>• <a href="https://shokunin.one">Website</a> • <a href="https://docs.rs/ssg">Documentation</a> • <a href="https://github.com/sebastienrousseau/shokunin/issues">Report Bug</a> • <a href="https://github.com/sebastienrousseau/shokunin/issues">Request Feature</a> • <a href="https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md">Contributing Guidelines</a></p>
-<!-- markdownlint-disable MD033 MD041 -->
-</center>
-<!-- markdownlint-enable MD033 MD041 -->
-<h3 id="overview-"><a class="doc-anchor" href="#overview-">§</a>Overview 🚀</h3>
-<p>Shokunin is a high-performance static site generator (SSG) engineered in Rust that prioritises:</p>
-<ul>
-<li>Content-first development approach</li>
-<li>Lightning-fast site generation</li>
-<li>WCAG 2.1 Level AA accessibility compliance</li>
-<li>Advanced SEO optimization</li>
-<li>Type-safe operations with comprehensive error handling</li>
-</ul>
-<h3 id="key-features-"><a class="doc-anchor" href="#key-features-">§</a>Key Features 🎯</h3><h4 id="core-capabilities"><a class="doc-anchor" href="#core-capabilities">§</a>Core Capabilities</h4>
-<ul>
-<li><strong>⚡ Exceptional Performance</strong>: Zero-cost abstractions through Rust</li>
-<li><strong>📱 SEO Optimization</strong>: Built-in enhancements for search visibility</li>
-<li><strong>♿ Accessibility</strong>: Automatic WCAG 2.1 Level AA compliance</li>
-<li><strong>🛠️ Multi-format Support</strong>: Handles Markdown, YAML, JSON, and TOML</li>
-<li><strong>🔄 Feed Generation</strong>: Automatic Atom and RSS feed creation</li>
-<li><strong>📊 Analytics</strong>: Native Google and Bing Analytics integration</li>
-<li><strong>🎨 Theming</strong>: Custom HTML themes and template support</li>
-</ul>
-<h4 id="development-features"><a class="doc-anchor" href="#development-features">§</a>Development Features</h4>
-<ul>
-<li><strong>🔧 CLI Tools</strong>: Comprehensive command-line interface</li>
-<li><strong>🚀 Dev Server</strong>: Built-in Rust server for local development</li>
-<li><strong>🔍 Hot Reload</strong>: Automatic content updates during development</li>
-<li><strong>📝 Type Safety</strong>: Guaranteed memory and thread safety</li>
-<li><strong>⚡ Async Support</strong>: Full asynchronous operation capabilities</li>
-</ul>
-<h3 id="getting-started-"><a class="doc-anchor" href="#getting-started-">§</a>Getting Started 📦</h3><h4 id="installation"><a class="doc-anchor" href="#installation">§</a>Installation</h4>
-<p>Add to your <code>Cargo.toml</code>:</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Install"><title>ssg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-77263533.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="ssg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.94.1 (e408947bf 2026-03-25)" data-channel="1.94.1" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-7bab91a1.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-ffcac47a.css"></noscript><link rel="icon" href="https://cloudcdn.pro/shokunin/images/favicon.ico"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate ssg</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../ssg/index.html"><img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg" alt="logo"></a><h2><a href="../ssg/index.html">ssg</a><span class="version">0.0.33</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#install" title="Install">Install</a></li><li><a href="#overview" title="Overview">Overview</a></li><li><a href="#architecture" title="Architecture">Architecture</a></li><li><a href="#features" title="Features">Features</a></li><li><a href="#the-cli" title="The CLI">The CLI</a></li><li><a href="#first-5-minutes" title="First 5 Minutes">First 5 Minutes</a></li><li><a href="#library-usage" title="Library Usage">Library Usage</a></li><li><a href="#benchmarks" title="Benchmarks">Benchmarks</a></li><li><a href="#development" title="Development">Development</a></li><li><a href="#whats-included" title="What’s Included">What’s Included</a></li><li><a href="#license" title="License">License</a></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#constants" title="Constants">Constants</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>ssg</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/ssg/lib.rs.html#4-2712">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p align="center">
+  <img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg" alt="SSG logo" width="128" />
+</p>
+<h1 align="center">Static Site Generator (SSG)</h1>
+<p align="center">
+  <strong>Fast, memory-safe, and extensible — built in Rust.</strong>
+</p>
+<p align="center">
+  <a href="https://github.com/sebastienrousseau/shokunin/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/test.yml?style=for-the-badge&logo=github" alt="Build" /></a>
+  <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
+  <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
+  <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.33-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+</p>
+<hr />
+<h3 id="install"><a class="doc-anchor" href="#install">§</a>Install</h3><div class="example-wrap"><pre class="language-bash"><code>cargo install ssg</code></pre></div>
+<p>Or add as a library dependency:</p>
 <div class="example-wrap"><pre class="language-toml"><code>[dependencies]
-ssg = &quot;0.0.32&quot;</code></pre></div>
-<p>Or install via Cargo:</p>
-<div class="example-wrap"><pre class="language-bash"><code>cargo install ssg</code></pre></div><h4 id="basic-usage"><a class="doc-anchor" href="#basic-usage">§</a>Basic Usage</h4>
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>staticdatagen::compiler::service::compile;
-<span class="kw">use </span>std::{path::Path, error::Error};
-
-<span class="kw">fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-    <span class="comment">// Define directory paths
-    </span><span class="kw">let </span>build_dir = Path::new(<span class="string">"./examples/build"</span>);          <span class="comment">// Build directory
-    </span><span class="kw">let </span>content_dir = Path::new(<span class="string">"./examples/content"</span>);      <span class="comment">// Content directory
-    </span><span class="kw">let </span>public_dir = Path::new(<span class="string">"./examples/public"</span>);        <span class="comment">// Public directory
-    </span><span class="kw">let </span>template_dir = Path::new(<span class="string">"./examples/templates"</span>);   <span class="comment">// Templates
-
-    // Generate site
-    </span>compile(build_dir, content_dir, public_dir, template_dir)<span class="question-mark">?</span>;
-    <span class="macro">println!</span>(<span class="string">"✨ Site generated successfully!"</span>);
-    <span class="prelude-val">Ok</span>(())
-}</code></pre></div>
-<h4 id="cli-usage"><a class="doc-anchor" href="#cli-usage">§</a>CLI Usage</h4>
-<p>Create a new site:</p>
-<div class="example-wrap"><pre class="language-bash"><code># Full command syntax
-ssg --content=content --template=templates --serve=public
-
-# Short form
-ssg -c=content -t=templates -o=output -s=public
-
-# Using cargo run
-cargo run --bin ssg -- -c=&quot;./examples/content&quot; -t=&quot;./examples/templates&quot; -s=&quot;./examples/public&quot;</code></pre></div><h4 id="cli-options"><a class="doc-anchor" href="#cli-options">§</a>CLI Options</h4><div><table><thead><tr><th>Option</th><th>Short</th><th>Description</th><th>Required</th></tr></thead><tbody>
-<tr><td><code>--content</code></td><td><code>-c</code></td><td>Content path</td><td>Yes</td></tr>
-<tr><td><code>--template</code></td><td><code>-t</code></td><td>Template path</td><td>Yes</td></tr>
-<tr><td><code>--serve</code></td><td><code>-s</code></td><td>Server Public path</td><td>Yes</td></tr>
+ssg = &quot;0.0.33&quot;</code></pre></div>
+<p>You need <a href="https://rustup.rs/">Rust</a> 1.74.0 or later. Works on macOS, Linux, and Windows.</p>
+<hr />
+<h3 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h3>
+<p>SSG generates static websites from Markdown content, YAML frontmatter, and HTML templates. It compiles everything into production-ready HTML with built-in SEO metadata, accessibility compliance, and feed generation. The plugin system handles the rest.</p>
+<ul>
+<li><strong>Zero-cost performance</strong> through Rust’s ownership model and parallel file operations</li>
+<li><strong>Incremental builds</strong> with content fingerprinting — only changed files are reprocessed</li>
+<li><strong>File watching</strong> with automatic rebuild on content changes</li>
+<li><strong>Plugin architecture</strong> with lifecycle hooks for custom processing</li>
+<li><strong>WCAG 2.1 Level AA</strong> accessibility compliance in generated output</li>
+</ul>
+<hr />
+<h3 id="architecture"><a class="doc-anchor" href="#architecture">§</a>Architecture</h3><div class="example-wrap"><pre class="language-mermaid"><code>graph TD
+    A[Content: Markdown + YAML] --&gt; B{SSG CLI}
+    B --&gt; C[Incremental Cache]
+    C --&gt; D[Compile: staticdatagen]
+    D --&gt; E[Plugin Pipeline]
+    E --&gt; F[Minify / Optimize / Deploy]
+    D --&gt; G[Dev Server: Warp]
+    B --&gt; H[File Watcher]
+    H --&gt;|changed files| C</code></pre></div>
+<hr />
+<h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3><div><table><thead><tr><th style="text-align: left"></th><th style="text-align: left"></th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Performance</strong></td><td style="text-align: left">Parallel file operations with Rayon, iterative traversal with depth bounds, incremental builds</td></tr>
+<tr><td style="text-align: left"><strong>Content</strong></td><td style="text-align: left">Markdown, YAML frontmatter, JSON, TOML. Atom and RSS feed generation</td></tr>
+<tr><td style="text-align: left"><strong>SEO</strong></td><td style="text-align: left">Meta tags, Open Graph, sitemaps, structured data, canonical URLs</td></tr>
+<tr><td style="text-align: left"><strong>Accessibility</strong></td><td style="text-align: left">Automatic WCAG 2.1 Level AA compliance</td></tr>
+<tr><td style="text-align: left"><strong>Theming</strong></td><td style="text-align: left">Custom HTML templates with variable substitution</td></tr>
+<tr><td style="text-align: left"><strong>Plugins</strong></td><td style="text-align: left">Lifecycle hooks: <code>before_compile</code>, <code>after_compile</code>, <code>on_serve</code>. Built-in minify, image-opti, deploy</td></tr>
+<tr><td style="text-align: left"><strong>Watch mode</strong></td><td style="text-align: left">Polling-based file watcher with configurable interval</td></tr>
+<tr><td style="text-align: left"><strong>Caching</strong></td><td style="text-align: left">Content fingerprinting via <code>.ssg-cache.json</code> for fast rebuilds</td></tr>
+<tr><td style="text-align: left"><strong>Config</strong></td><td style="text-align: left">TOML config files with JSON Schema for IDE autocomplete (<code>ssg.schema.json</code>)</td></tr>
+<tr><td style="text-align: left"><strong>Security</strong></td><td style="text-align: left"><code>#![forbid(unsafe_code)]</code>, path traversal prevention, symlink rejection, file size limits</td></tr>
+<tr><td style="text-align: left"><strong>CI</strong></td><td style="text-align: left">Multi-platform test matrix (macOS, Linux, Windows), cargo audit, cargo deny, SBOM generation</td></tr>
 </tbody></table>
-</div><h3 id="examples-"><a class="doc-anchor" href="#examples-">§</a>Examples 📚</h3>
-<p>Try our example implementations:</p>
-<div class="example-wrap"><pre class="language-bash"><code># Basic example
-## Convert Markdown to static sites effortlessly, with templates, organized builds, and instant local hosting.
+</div>
+<hr />
+<h3 id="the-cli"><a class="doc-anchor" href="#the-cli">§</a>The CLI</h3><div><table><thead><tr><th style="text-align: left">Command</th><th style="text-align: left">What it does</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>ssg -n mysite -c content -o build -t templates</code></td><td style="text-align: left">Generate a site from source directories</td></tr>
+<tr><td style="text-align: left"><code>ssg --config config.toml</code></td><td style="text-align: left">Load configuration from a TOML file</td></tr>
+<tr><td style="text-align: left"><code>ssg --serve public</code></td><td style="text-align: left">Serve from a specific directory</td></tr>
+<tr><td style="text-align: left"><code>ssg --watch</code></td><td style="text-align: left">Watch content for changes and rebuild</td></tr>
+</tbody></table>
+</div><details>
+<summary><b>Full CLI reference</b></summary>
+<div class="example-wrap"><pre class="language-text"><code>Usage: ssg [OPTIONS]
+
+Options:
+  -f, --config &lt;FILE&gt;   Configuration file path
+  -n, --new &lt;NAME&gt;      Create new project
+  -c, --content &lt;DIR&gt;   Content directory
+  -o, --output &lt;DIR&gt;    Output directory
+  -t, --template &lt;DIR&gt;  Template directory
+  -s, --serve &lt;DIR&gt;     Development server directory
+  -w, --watch           Watch for changes
+  -h, --help            Print help
+  -V, --version         Print version</code></pre></div>
+<p>When no flags are provided, sensible defaults are used (<code>content/</code>, <code>public/</code>, <code>templates/</code>).</p>
+</details>
+<hr />
+<h3 id="first-5-minutes"><a class="doc-anchor" href="#first-5-minutes">§</a>First 5 Minutes</h3><div class="example-wrap"><pre class="language-bash"><code># 1. Install
+cargo install ssg
+
+# 2. Create a site
+ssg -n mysite -c content -o build -t templates
+
+# 3. Or run the examples
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
 cargo run --example basic
-
-# Quick start example
-## Create, compile, and host a static site effortlessly with Shokunin: simple setup, error handling, and instant local server for previews.
 cargo run --example quickstart
+cargo run --example multilingual</code></pre></div>
+<hr />
+<h3 id="library-usage"><a class="doc-anchor" href="#library-usage">§</a>Library Usage</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>staticdatagen::compiler::service::compile;
+<span class="kw">use </span>std::path::Path;
 
-# Multilingual example
-## Build multilingual static sites effortlessly: generate language-specific sites, create a language selector, and serve all from a single directory.
-cargo run --example multilingual</code></pre></div><h3 id="documentation-"><a class="doc-anchor" href="#documentation-">§</a>Documentation 📖</h3>
+<span class="kw">fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>build_dir = Path::new(<span class="string">"build"</span>);
+    <span class="kw">let </span>content_dir = Path::new(<span class="string">"content"</span>);
+    <span class="kw">let </span>site_dir = Path::new(<span class="string">"public"</span>);
+    <span class="kw">let </span>template_dir = Path::new(<span class="string">"templates"</span>);
+
+    compile(build_dir, content_dir, site_dir, template_dir)<span class="question-mark">?</span>;
+    <span class="macro">println!</span>(<span class="string">"Site generated successfully!"</span>);
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><details>
+<summary><b>Plugin example</b></summary>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ssg::plugin::{Plugin, PluginContext, PluginManager};
+<span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>std::path::Path;
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">struct </span>LogPlugin;
+
+<span class="kw">impl </span>Plugin <span class="kw">for </span>LogPlugin {
+    <span class="kw">fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>str { <span class="string">"logger" </span>}
+    <span class="kw">fn </span>after_compile(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>PluginContext) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="macro">println!</span>(<span class="string">"Site compiled to {:?}"</span>, ctx.site_dir);
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="kw">let </span><span class="kw-2">mut </span>pm = PluginManager::new();
+pm.register(LogPlugin);
+pm.register(ssg::plugins::MinifyPlugin);
+
+<span class="kw">let </span>ctx = PluginContext::new(
+    Path::new(<span class="string">"content"</span>),
+    Path::new(<span class="string">"build"</span>),
+    Path::new(<span class="string">"public"</span>),
+    Path::new(<span class="string">"templates"</span>),
+);
+pm.run_after_compile(<span class="kw-2">&amp;</span>ctx).unwrap();</code></pre></div></details>
+<details>
+<summary><b>Incremental build example</b></summary>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ssg::cache::BuildCache;
+<span class="kw">use </span>std::path::Path;
+
+<span class="kw">let </span>cache_path = Path::new(<span class="string">".ssg-cache.json"</span>);
+<span class="kw">let </span>content_dir = Path::new(<span class="string">"content"</span>);
+
+<span class="kw">let </span><span class="kw-2">mut </span>cache = BuildCache::load(cache_path).unwrap();
+<span class="kw">let </span>changed = cache.changed_files(content_dir).unwrap();
+
+<span class="kw">if </span>changed.is_empty() {
+    <span class="macro">println!</span>(<span class="string">"No changes detected, skipping build."</span>);
+} <span class="kw">else </span>{
+    <span class="macro">println!</span>(<span class="string">"Rebuilding {} changed files"</span>, changed.len());
+    <span class="comment">// ... run build ...
+    </span>cache.update(content_dir).unwrap();
+    cache.save().unwrap();
+}</code></pre></div></details>
+<hr />
+<h3 id="benchmarks"><a class="doc-anchor" href="#benchmarks">§</a>Benchmarks</h3><div><table><thead><tr><th style="text-align: left">Metric</th><th style="text-align: left">Value</th></tr></thead><tbody>
+<tr><td style="text-align: left"><strong>Release binary</strong></td><td style="text-align: left">~5 MB (stripped, LTO)</td></tr>
+<tr><td style="text-align: left"><strong>Unsafe code</strong></td><td style="text-align: left">0 blocks — <code>#![forbid(unsafe_code)]</code> enforced</td></tr>
+<tr><td style="text-align: left"><strong>Test suite</strong></td><td style="text-align: left">342 tests in &lt; 2 seconds</td></tr>
+<tr><td style="text-align: left"><strong>Dependencies</strong></td><td style="text-align: left">19 direct, all audited</td></tr>
+<tr><td style="text-align: left"><strong>Coverage</strong></td><td style="text-align: left">98% library line coverage</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h3 id="development"><a class="doc-anchor" href="#development">§</a>Development</h3><div class="example-wrap"><pre class="language-bash"><code>make build        # Build the project
+make test         # Run all tests
+make lint         # Lint with Clippy
+make format       # Format with rustfmt
+make deny         # Check licenses and advisories</code></pre></div>
+<p>See <a href="CONTRIBUTING.md">CONTRIBUTING.md</a> for setup, signed commits, and PR guidelines.</p>
+<hr />
+<h3 id="whats-included"><a class="doc-anchor" href="#whats-included">§</a>What’s Included</h3><details>
+<summary><b>Core modules</b></summary>
 <ul>
-<li><a href="https://docs.rs/ssg">API Documentation</a></li>
-<li><a href="https://shokunin.one">User Guide</a></li>
-<li><a href="https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md">Contributing Guidelines</a></li>
+<li><strong>cmd</strong> — CLI argument parsing, configuration management, input validation</li>
+<li><strong>process</strong> — Directory creation, frontmatter preprocessing, site compilation</li>
+<li><strong>plugin</strong> — Trait-based plugin system with lifecycle hooks</li>
+<li><strong>plugins</strong> — Built-in MinifyPlugin, ImageOptiPlugin, DeployPlugin</li>
+<li><strong>cache</strong> — Content fingerprinting for incremental builds</li>
+<li><strong>watch</strong> — Polling-based file watcher for live rebuild</li>
+<li><strong>schema</strong> — JSON Schema generator for configuration</li>
 </ul>
-<h3 id="contributing-"><a class="doc-anchor" href="#contributing-">§</a>Contributing 🤝</h3>
-<p>We welcome contributions! Please see our <a href="https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md">Contributing Guidelines</a> for details on:</p>
+</details>
+<details>
+<summary><b>Security and compliance</b></summary>
 <ul>
-<li>Code of Conduct</li>
-<li>Development Process</li>
-<li>Pull Request Guidelines</li>
-<li>Issue Reporting</li>
+<li><strong><code>#![forbid(unsafe_code)]</code></strong> across the entire codebase</li>
+<li><strong>Path traversal prevention</strong> with <code>..</code> detection and symlink rejection</li>
+<li><strong>File size limits</strong> (10 MB per file) and directory depth bounds (128 levels)</li>
+<li><strong><code>cargo audit</code></strong> with zero warnings — all advisories tracked in <code>.cargo/audit.toml</code></li>
+<li><strong><code>cargo deny</code></strong> — license, advisory, ban, and source checks all pass</li>
+<li><strong>SBOM</strong> generated as a release artifact</li>
+<li><strong>Signed commits</strong> enforced via SSH ED25519</li>
 </ul>
-<h3 id="license-"><a class="doc-anchor" href="#license-">§</a>License 📄</h3>
-<p>This project is dual-licensed under:</p>
+</details>
+<details>
+<summary><b>Test coverage</b></summary>
 <ul>
-<li><a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a></li>
-<li><a href="https://opensource.org/licenses/MIT">MIT License</a></li>
+<li><strong>342 total tests</strong> (197 unit + 23 doc-tests + 36 integration + 86 serde_yml)</li>
+<li><strong>98% library line coverage</strong> measured with cargo-llvm-cov</li>
+<li><strong>Multi-platform CI</strong> — macOS, Ubuntu, Windows (stable + nightly)</li>
 </ul>
-<p>at your option.</p>
-<h3 id="acknowledgements-"><a class="doc-anchor" href="#acknowledgements-">§</a>Acknowledgements 🙏</h3>
-<p>Special thanks to all contributors who have helped build Shokunin.</p>
-</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name" id="reexport.staticdatagen"><code>pub use <a class="mod" href="https://docs.rs/staticdatagen/staticdatagen/index.html" title="mod staticdatagen">staticdatagen</a>;</code></div></li></ul><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="cmd/index.html" title="mod ssg::cmd">cmd</a></div><div class="desc docblock-short">Command Line Interface Module</div></li><li><div class="item-name"><a class="mod" href="process/index.html" title="mod ssg::process">process</a></div><div class="desc docblock-short">Module declarations</div></li></ul><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.Paths.html" title="struct ssg::Paths">Paths</a></div><div class="desc docblock-short">Represents the necessary directory paths for the site generator.</div></li><li><div class="item-name"><a class="struct" href="struct.PathsBuilder.html" title="struct ssg::PathsBuilder">Paths<wbr>Builder</a></div><div class="desc docblock-short">Builder for creating Paths configurations</div></li></ul><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="fn" href="fn.collect_files_recursive.html" title="fn ssg::collect_files_recursive">collect_<wbr>files_<wbr>recursive</a></div><div class="desc docblock-short">Recursively collects all file paths within a directory.</div></li><li><div class="item-name"><a class="fn" href="fn.copy_dir_all.html" title="fn ssg::copy_dir_all">copy_<wbr>dir_<wbr>all</a></div><div class="desc docblock-short">Recursively copies a directory whilst maintaining structure and attributes.</div></li><li><div class="item-name"><a class="fn" href="fn.copy_dir_all_async.html" title="fn ssg::copy_dir_all_async">copy_<wbr>dir_<wbr>all_<wbr>async</a></div><div class="desc docblock-short">Asynchronously copies an entire directory structure, preserving file attributes and handling nested directories.</div></li><li><div class="item-name"><a class="fn" href="fn.copy_dir_with_progress.html" title="fn ssg::copy_dir_with_progress">copy_<wbr>dir_<wbr>with_<wbr>progress</a></div><div class="desc docblock-short">Recursively copies directories with a progress bar for feedback.</div></li><li><div class="item-name"><a class="fn" href="fn.create_directories.html" title="fn ssg::create_directories">create_<wbr>directories</a></div><div class="desc docblock-short">Creates and verifies required directories for site generation.</div></li><li><div class="item-name"><a class="fn" href="fn.create_log_file.html" title="fn ssg::create_log_file">create_<wbr>log_<wbr>file</a></div><div class="desc docblock-short">Creates and initialises a log file for the static site generator.</div></li><li><div class="item-name"><a class="fn" href="fn.handle_server.html" title="fn ssg::handle_server">handle_<wbr>server</a></div><div class="desc docblock-short">Configures and launches the development server.</div></li><li><div class="item-name"><a class="fn" href="fn.is_safe_path.html" title="fn ssg::is_safe_path">is_<wbr>safe_<wbr>path</a></div><div class="desc docblock-short">Checks if a given path is safe to use.</div></li><li><div class="item-name"><a class="fn" href="fn.log_arguments.html" title="fn ssg::log_arguments">log_<wbr>arguments</a></div><div class="desc docblock-short">Logs processed command-line arguments for debugging and auditing.</div></li><li><div class="item-name"><a class="fn" href="fn.log_initialization.html" title="fn ssg::log_initialization">log_<wbr>initialization</a></div><div class="desc docblock-short">Records system initialisation in the logging system.</div></li><li><div class="item-name"><a class="fn" href="fn.run.html" title="fn ssg::run">run</a></div><div class="desc docblock-short">Executes the static site generation process.</div></li><li><div class="item-name"><a class="fn" href="fn.verify_and_copy_files.html" title="fn ssg::verify_and_copy_files">verify_<wbr>and_<wbr>copy_<wbr>files</a></div><div class="desc docblock-short">Validates and copies files from source to destination.</div></li><li><div class="item-name"><a class="fn" href="fn.verify_and_copy_files_async.html" title="fn ssg::verify_and_copy_files_async">verify_<wbr>and_<wbr>copy_<wbr>files_<wbr>async</a></div><div class="desc docblock-short">Asynchronously validates and copies files between directories.</div></li><li><div class="item-name"><a class="fn" href="fn.verify_file_safety.html" title="fn ssg::verify_file_safety">verify_<wbr>file_<wbr>safety</a></div><div class="desc docblock-short">Verifies the safety of a file for processing.</div></li></ul></section></div></main></body></html>
+</details>
+<hr />
+<p><strong>THE ARCHITECT</strong> ᛫ <a href="https://sebastienrousseau.com">Sebastien Rousseau</a>
+<strong>THE ENGINE</strong> ᛞ <a href="https://euxis.co">EUXIS</a> ᛫ Enterprise Unified Execution Intelligence System</p>
+<hr />
+<h3 id="license"><a class="doc-anchor" href="#license">§</a>License</h3>
+<p>Dual-licensed under <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a> or <a href="https://opensource.org/licenses/MIT">MIT</a>, at your option.</p>
+<p align="right"><a href="#static-site-generator-ssg">Back to Top</a></p></div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><dl class="item-table reexports"><dt id="reexport.staticdatagen"><code>pub use <a class="mod" href="https://docs.rs/staticdatagen/staticdatagen/index.html" title="mod staticdatagen">staticdatagen</a>;</code></dt></dl><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="cache/index.html" title="mod ssg::cache">cache</a></dt><dd>Content fingerprinting for incremental builds.
+Content fingerprinting for incremental builds.</dd><dt><a class="mod" href="cmd/index.html" title="mod ssg::cmd">cmd</a></dt><dd>Command Line Interface Module</dd><dt><a class="mod" href="livereload/index.html" title="mod ssg::livereload">livereload</a></dt><dd>WebSocket-based live-reload script injection.
+Live-reload script injection plugin.</dd><dt><a class="mod" href="plugin/index.html" title="mod ssg::plugin">plugin</a></dt><dd>Lifecycle hook plugin system.</dd><dt><a class="mod" href="plugins/index.html" title="mod ssg::plugins">plugins</a></dt><dd>Built-in plugins for common tasks.</dd><dt><a class="mod" href="process/index.html" title="mod ssg::process">process</a></dt><dd>Command-line argument processing and site compilation.</dd><dt><a class="mod" href="schema/index.html" title="mod ssg::schema">schema</a></dt><dd>JSON Schema generation for configuration.</dd><dt><a class="mod" href="search/index.html" title="mod ssg::search">search</a></dt><dd>Client-side search index generator and search UI.
+Client-side search index generator.</dd><dt><a class="mod" href="seo/index.html" title="mod ssg::seo">seo</a></dt><dd>SEO plugins: meta tags, robots.txt, and canonical URLs.
+SEO plugins for the static site generator.</dd><dt><a class="mod" href="stream/index.html" title="mod ssg::stream">stream</a></dt><dd>High-performance streaming file processor.
+High-performance streaming file processor.</dd><dt><a class="mod" href="watch/index.html" title="mod ssg::watch">watch</a></dt><dd>File-watching for live rebuild.
+File-watching module for the static site generator.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Paths.html" title="struct ssg::Paths">Paths</a></dt><dd>Represents the necessary directory paths for the site generator.</dd><dt><a class="struct" href="struct.PathsBuilder.html" title="struct ssg::PathsBuilder">Paths<wbr>Builder</a></dt><dd>Builder for creating Paths configurations</dd></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.MAX_DIR_DEPTH.html" title="constant ssg::MAX_DIR_DEPTH">MAX_<wbr>DIR_<wbr>DEPTH</a></dt><dd>Maximum directory nesting depth for all traversal operations.
+Prevents stack overflow from pathological or circular directory trees.
+128 levels accommodates any realistic project structure.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.collect_files_recursive.html" title="fn ssg::collect_files_recursive">collect_<wbr>files_<wbr>recursive</a></dt><dd>Recursively collects all file paths within a directory.</dd><dt><a class="fn" href="fn.compile_site.html" title="fn ssg::compile_site">compile_<wbr>site</a></dt><dd>Compiles the static site from source directories.</dd><dt><a class="fn" href="fn.copy_dir_all.html" title="fn ssg::copy_dir_all">copy_<wbr>dir_<wbr>all</a></dt><dd>Recursively copies a directory whilst maintaining structure and attributes.</dd><dt><a class="fn" href="fn.copy_dir_all_async.html" title="fn ssg::copy_dir_all_async">copy_<wbr>dir_<wbr>all_<wbr>async</a></dt><dd>Asynchronously copies an entire directory structure, preserving file attributes and handling nested directories.</dd><dt><a class="fn" href="fn.copy_dir_with_progress.html" title="fn ssg::copy_dir_with_progress">copy_<wbr>dir_<wbr>with_<wbr>progress</a></dt><dd>Copies directories with a progress bar for feedback.</dd><dt><a class="fn" href="fn.create_directories.html" title="fn ssg::create_directories">create_<wbr>directories</a></dt><dd>Creates and verifies required directories for site generation.</dd><dt><a class="fn" href="fn.create_log_file.html" title="fn ssg::create_log_file">create_<wbr>log_<wbr>file</a></dt><dd>Creates and initialises a log file for the static site generator.</dd><dt><a class="fn" href="fn.handle_server.html" title="fn ssg::handle_server">handle_<wbr>server</a></dt><dd>Configures and launches the development server.</dd><dt><a class="fn" href="fn.is_safe_path.html" title="fn ssg::is_safe_path">is_<wbr>safe_<wbr>path</a></dt><dd>Checks if a given path is safe to use.</dd><dt><a class="fn" href="fn.log_arguments.html" title="fn ssg::log_arguments">log_<wbr>arguments</a></dt><dd>Logs processed command-line arguments for debugging and auditing.</dd><dt><a class="fn" href="fn.log_initialization.html" title="fn ssg::log_initialization">log_<wbr>initialization</a></dt><dd>Records system initialisation in the logging system.</dd><dt><a class="fn" href="fn.prepare_serve_dir.html" title="fn ssg::prepare_serve_dir">prepare_<wbr>serve_<wbr>dir</a></dt><dd>Prepares the serve directory by creating it and copying site files.</dd><dt><a class="fn" href="fn.run.html" title="fn ssg::run">run</a></dt><dd>Executes the static site generation process.</dd><dt><a class="fn" href="fn.serve_site.html" title="fn ssg::serve_site">serve_<wbr>site</a></dt><dd>Converts a site directory path to a string and starts an HTTP server.</dd><dt><a class="fn" href="fn.verify_and_copy_files.html" title="fn ssg::verify_and_copy_files">verify_<wbr>and_<wbr>copy_<wbr>files</a></dt><dd>Validates and copies files from source to destination.</dd><dt><a class="fn" href="fn.verify_and_copy_files_async.html" title="fn ssg::verify_and_copy_files_async">verify_<wbr>and_<wbr>copy_<wbr>files_<wbr>async</a></dt><dd>Asynchronously validates and copies files between directories.</dd><dt><a class="fn" href="fn.verify_file_safety.html" title="fn ssg::verify_file_safety">verify_<wbr>file_<wbr>safety</a></dt><dd>Verifies the safety of a file for processing.</dd></dl></section></div></main></body></html>

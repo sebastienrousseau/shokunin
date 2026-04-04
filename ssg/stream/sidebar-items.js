@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_BATCH_SIZE","STREAM_BUFFER_SIZE"],"fn":["benchmark_throughput","process_batch","stream_copy","stream_hash","stream_lines"],"struct":["BatchResult"]};

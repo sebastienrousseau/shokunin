@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["ssg",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"ssg/cache/struct.BuildCache.html\" title=\"struct ssg::cache::BuildCache\">BuildCache</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"ssg/cmd/struct.LanguageCode.html\" title=\"struct ssg::cmd::LanguageCode\">LanguageCode</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"ssg/cmd/struct.SsgConfig.html\" title=\"struct ssg::cmd::SsgConfig\">SsgConfig</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"ssg/search/struct.SearchEntry.html\" title=\"struct ssg::search::SearchEntry\">SearchEntry</a>",0],["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/ser/trait.Serialize.html\" title=\"trait serde_core::ser::Serialize\">Serialize</a> for <a class=\"struct\" href=\"ssg/search/struct.SearchIndex.html\" title=\"struct ssg::search::SearchIndex\">SearchIndex</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[1454]}

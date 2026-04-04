@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_WATCH_ITERATIONS"],"fn":["watch_blocking"],"struct":["FileWatcher","WatchConfig"]};

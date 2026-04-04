@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_CONTENT_LENGTH","MAX_INDEX_ENTRIES"],"struct":["SearchEntry","SearchIndex","SearchPlugin"]};
