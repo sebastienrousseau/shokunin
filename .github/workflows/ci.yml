@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/ssg]
+    paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
+  pull_request:
+    branches: [main, feat/ssg]
+    paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
+    with:
+      rust-version: stable
+      run-clippy: true
+      run-fmt: true
+      run-audit: true
+      run-coverage: ${{ github.ref == 'refs/heads/main' }}
+      run-cross-platform: ${{ github.ref == 'refs/heads/main' }}
+      coverage-exclude: 'crates/*'
+      timeout-minutes: 25
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

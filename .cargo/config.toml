@@ -1,0 +1,12 @@
+[build]
+# Use fewer codegen-units in dev to reduce intermediate artifacts on disk
+# (override the 256 in Cargo.toml which generates massive target dirs)
+# Uncomment below if disk usage is a concern during local development:
+# codegen-units = 16
+
+[profile.dev]
+# Split debuginfo reduces target/ size significantly on macOS
+split-debuginfo = "unpacked"
+
+[net]
+git-fetch-with-cli = true

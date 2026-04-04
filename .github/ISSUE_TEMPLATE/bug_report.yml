@@ -1,0 +1,52 @@
+name: Bug Report
+description: Report a bug in SSG
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce the behaviour.
+      placeholder: |
+        1. Create a new project with `ssg --new test`
+        2. Add content to `content/index.md`
+        3. Run `ssg -c content -o public -t templates`
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SSG version
+      placeholder: "0.0.34"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true

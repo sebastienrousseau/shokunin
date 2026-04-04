@@ -13,8 +13,7 @@ mod tests {
     fn test_generate_navigation_empty_input() {
         // Test with empty file list
         let files = vec![];
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             navigation.is_empty(),
             "Navigation should be empty for empty file list"
@@ -29,8 +28,7 @@ mod tests {
             ..Default::default()
         }];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should not be empty for single file"
@@ -62,9 +60,11 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
-        assert!(navigation.len() > 3, "Navigation should contain entries for all files plus structure");
+        let navigation = NavigationGenerator::generate_navigation(&files);
+        assert!(
+            navigation.len() > 3,
+            "Navigation should contain entries for all files plus structure"
+        );
     }
 
     #[test]
@@ -82,8 +82,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle nested paths"
@@ -105,8 +104,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle index files"
@@ -133,8 +131,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle mixed content types"
@@ -156,8 +153,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         // Should still generate navigation but handle invalid paths appropriately
         assert!(
             !navigation.is_empty(),
@@ -180,8 +176,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle duplicate file names"
@@ -203,8 +198,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle empty content files"
@@ -216,17 +210,13 @@ mod tests {
         let mut files = vec![];
         for i in 0..100 {
             files.push(FileData {
-                name: format!(
-                    "very/deeply/nested/path/structure/file{}.md",
-                    i
-                ),
+                name: format!("very/deeply/nested/path/structure/file{}.md", i),
                 content: format!("Content {}", i),
                 ..Default::default()
             });
         }
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle deeply nested paths"
@@ -253,8 +243,7 @@ mod tests {
             },
         ];
 
-        let navigation =
-            NavigationGenerator::generate_navigation(&files);
+        let navigation = NavigationGenerator::generate_navigation(&files);
         assert!(
             !navigation.is_empty(),
             "Navigation should handle special filenames"

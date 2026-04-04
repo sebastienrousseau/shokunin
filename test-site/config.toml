@@ -1,0 +1,8 @@
+site_name = "test-site"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+base_url = "http://127.0.0.1:8000"
+site_title = "test-site"
+site_description = "A site built with SSG"
+language = "en-GB"

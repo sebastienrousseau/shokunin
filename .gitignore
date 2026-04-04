@@ -1,9 +1,9 @@
-*.DS_Store
-.DS_Store
-*.profraw
-*.log
-/.vscode/
-/backup_dir/
+# Build artifacts
+/target/
+crates/serde_yml/target/
+build/
+
+# Generated output
 /docs/
 /examples/public/
 /mysite/
@@ -11,12 +11,20 @@
 /pdfs/
 /public/
 /serve/
-/target/
-build
-Icon?
-shokunin.log
-src/.DS_Store
-tarpaulin-report.html
-Cargo.lock
+
+# Coverage & profiling
+*.profraw
 coverage/
-crates/serde_yml/target/
+tarpaulin-report/
+tarpaulin-report.html
+
+# Logs
+*.log
+
+# IDE / OS
+*.DS_Store
+/.vscode/
+Icon?
+
+# Backups
+/backup_dir/

@@ -19,10 +19,8 @@ pub fn generate_tags(
     file: &FileData,
     metadata: &HashMap<String, String>,
 ) -> HashMap<String, Vec<HashMap<String, String>>> {
-    let mut keywords_data_map: HashMap<
-        String,
-        Vec<HashMap<String, String>>,
-    > = HashMap::new();
+    let mut keywords_data_map: HashMap<String, Vec<HashMap<String, String>>> =
+        HashMap::new();
     let file_content = &file.content;
 
     // Extract target tags from metadata if available.
@@ -45,17 +43,11 @@ pub fn generate_tags(
             let mut tags_data = HashMap::new();
 
             // Extract metadata for the tag
-            let metadata_keys = [
-                "title",
-                "date",
-                "description",
-                "permalink",
-                "keywords",
-            ];
+            let metadata_keys =
+                ["title", "date", "description", "permalink", "keywords"];
             for key in &metadata_keys {
                 if let Some(value) = metadata.get(*key) {
-                    let _ = tags_data
-                        .insert((*key).to_string(), value.clone());
+                    let _ = tags_data.insert((*key).to_string(), value.clone());
                 }
             }
 
@@ -70,20 +62,12 @@ pub fn generate_tags(
 }
 
 /// Creates a `TagsData` struct populated with metadata.
-pub fn create_tags_data(
-    metadata: &HashMap<String, String>,
-) -> TagsData {
+pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
     TagsData {
         dates: metadata.get("date").cloned().unwrap_or_default(),
-        descriptions: metadata
-            .get("description")
-            .cloned()
-            .unwrap_or_default(),
+        descriptions: metadata.get("description").cloned().unwrap_or_default(),
         keywords: metadata.get("keywords").cloned().unwrap_or_default(),
-        permalinks: metadata
-            .get("permalink")
-            .cloned()
-            .unwrap_or_default(),
+        permalinks: metadata.get("permalink").cloned().unwrap_or_default(),
         titles: metadata.get("title").cloned().unwrap_or_default(),
     }
 }
@@ -186,10 +170,8 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("tags".to_string(), "tag1, tag2".to_string());
-        let _ = metadata
-            .insert("title".to_string(), "Test Page".to_string());
+        let _ = metadata.insert("tags".to_string(), "tag1, tag2".to_string());
+        let _ = metadata.insert("title".to_string(), "Test Page".to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -222,8 +204,7 @@ mod tests {
     #[test]
     fn test_create_tags_data_with_metadata() {
         let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("date".to_string(), "2021-09-04".to_string());
+        let _ = metadata.insert("date".to_string(), "2021-09-04".to_string());
         let _ = metadata.insert(
             "description".to_string(),
             "A sample description".to_string(),
@@ -295,8 +276,7 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("tags".to_string(), "tag1,tag2".to_string());
+        let _ = metadata.insert("tags".to_string(), "tag1,tag2".to_string());
         // Insert very long values for metadata
         let _ = metadata.insert(
             "title".to_string(),
@@ -338,8 +318,7 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata
-            .insert("tags".to_string(), special_tag.to_string());
+        let _ = metadata.insert("tags".to_string(), special_tag.to_string());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 

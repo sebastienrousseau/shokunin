@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site.title | default(value="Home") }}{% endblock %}
+
+{% block content %}
+<section>
+  <h1>{{ page.title | default(value=site.title | default(value="Welcome")) }}</h1>
+  {{ page.content | safe }}
+</section>
+{% endblock %}

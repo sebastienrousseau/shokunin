@@ -77,10 +77,7 @@ fn extract_description(html: &str, max_len: usize) -> String {
             let close = format!("</{tag}>");
             while let Some(start) = clean.find(&open) {
                 if let Some(end) = clean[start..].find(&close) {
-                    clean.replace_range(
-                        start..start + end + close.len(),
-                        " ",
-                    );
+                    clean.replace_range(start..start + end + close.len(), " ");
                 } else {
                     break;
                 }
@@ -96,10 +93,7 @@ fn extract_description(html: &str, max_len: usize) -> String {
         let close = format!("</{tag}>");
         while let Some(start) = clean.find(&open) {
             if let Some(end) = clean[start..].find(&close) {
-                clean.replace_range(
-                    start..start + end + close.len(),
-                    " ",
-                );
+                clean.replace_range(start..start + end + close.len(), " ");
             } else {
                 break;
             }
@@ -364,10 +358,9 @@ impl Plugin for RobotsPlugin {
             self.base_url.trim_end_matches('/')
         );
 
-        fs::write(&robots_path, content)
-            .with_context(|| {
-                format!("cannot write {}", robots_path.display())
-            })?;
+        fs::write(&robots_path, content).with_context(|| {
+            format!("cannot write {}", robots_path.display())
+        })?;
 
         Ok(())
     }
@@ -424,9 +417,7 @@ impl Plugin for CanonicalPlugin {
 
         for path in &html_files {
             let html = fs::read_to_string(path)
-                .with_context(|| {
-                    format!("cannot read {}", path.display())
-                })?;
+                .with_context(|| format!("cannot read {}", path.display()))?;
 
             if html.contains("<link rel=\"canonical\"")
                 || html.contains("<link rel='canonical'")
@@ -453,13 +444,216 @@ impl Plugin for CanonicalPlugin {
             };
 
             fs::write(path, result)
-                .with_context(|| {
-                    format!("cannot write {}", path.display())
-                })?;
+                .with_context(|| format!("cannot write {}", path.display()))?;
         }
 
         Ok(())
     }
+}
+
+// =====================================================================
+// JSON-LD Structured Data Plugin
+// =====================================================================
+
+/// Configuration for the JSON-LD structured data plugin.
+#[derive(Debug, Clone)]
+pub struct JsonLdConfig {
+    /// Base URL of the site (for absolute URLs in JSON-LD).
+    pub base_url: String,
+    /// Organization name for Organization schema.
+    pub org_name: String,
+    /// Whether to generate BreadcrumbList for every page.
+    pub breadcrumbs: bool,
+}
+
+/// Injects JSON-LD structured data into HTML files.
+///
+/// Auto-detects schema.org types from page metadata:
+/// - Pages with `<article>` → `Article`
+/// - All other pages → `WebPage`
+/// - BreadcrumbList derived from URL path (opt-in)
+///
+/// Idempotent: skips files that already contain `application/ld+json`.
+#[derive(Debug, Clone)]
+pub struct JsonLdPlugin {
+    config: JsonLdConfig,
+}
+
+impl JsonLdPlugin {
+    /// Creates a new `JsonLdPlugin` with the given configuration.
+    pub fn new(config: JsonLdConfig) -> Self {
+        Self { config }
+    }
+
+    /// Creates a `JsonLdPlugin` from site config values.
+    pub fn from_site(base_url: &str, site_name: &str) -> Self {
+        Self {
+            config: JsonLdConfig {
+                base_url: base_url.to_string(),
+                org_name: site_name.to_string(),
+                breadcrumbs: true,
+            },
+        }
+    }
+}
+
+impl Plugin for JsonLdPlugin {
+    fn name(&self) -> &str {
+        "json-ld"
+    }
+
+    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+        if !ctx.site_dir.exists() {
+            return Ok(());
+        }
+
+        let html_files = collect_html_files_recursive(&ctx.site_dir)?;
+        let mut injected = 0usize;
+        let base = self.config.base_url.trim_end_matches('/');
+
+        for path in &html_files {
+            let html = fs::read_to_string(path)?;
+
+            // Skip if already has JSON-LD
+            if html.contains("application/ld+json") {
+                continue;
+            }
+
+            let head_pos = match html.find("</head>") {
+                Some(p) => p,
+                None => continue,
+            };
+
+            let title = extract_title(&html);
+            let description = extract_description(&html, 160);
+            let rel_path = path
+                .strip_prefix(&ctx.site_dir)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            let page_url = format!("{}/{}", base, rel_path);
+
+            let mut scripts = Vec::new();
+
+            // Determine type: Article if <article> present, else WebPage
+            if html.contains("<article") {
+                let article = serde_json::json!({
+                    "@context": "https://schema.org",
+                    "@type": "Article",
+                    "headline": title,
+                    "description": description,
+                    "url": page_url,
+                    "mainEntityOfPage": {
+                        "@type": "WebPage",
+                        "@id": page_url
+                    },
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": self.config.org_name
+                    }
+                });
+                scripts.push(article);
+            } else {
+                let webpage = serde_json::json!({
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    "name": title,
+                    "description": description,
+                    "url": page_url
+                });
+                scripts.push(webpage);
+            }
+
+            // BreadcrumbList
+            if self.config.breadcrumbs {
+                let parts: Vec<&str> = rel_path
+                    .trim_matches('/')
+                    .split('/')
+                    .filter(|p| !p.is_empty() && *p != "index.html")
+                    .collect();
+
+                if !parts.is_empty() {
+                    let mut items = vec![serde_json::json!({
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": format!("{}/", base)
+                    })];
+
+                    let mut accumulated = String::new();
+                    for (i, part) in parts.iter().enumerate() {
+                        accumulated = format!("{}/{}", accumulated, part);
+                        let name =
+                            part.trim_end_matches(".html").replace('-', " ");
+                        items.push(serde_json::json!({
+                            "@type": "ListItem",
+                            "position": i + 2,
+                            "name": name,
+                            "item": format!("{}{}", base, accumulated)
+                        }));
+                    }
+
+                    let breadcrumb = serde_json::json!({
+                        "@context": "https://schema.org",
+                        "@type": "BreadcrumbList",
+                        "itemListElement": items
+                    });
+                    scripts.push(breadcrumb);
+                }
+            }
+
+            // Inject all JSON-LD scripts before </head>
+            let mut injection = String::new();
+            for script in &scripts {
+                let json = serde_json::to_string(script)?;
+                injection.push_str(&format!(
+                    "<script type=\"application/ld+json\">{}</script>\n",
+                    json
+                ));
+            }
+
+            let result = format!(
+                "{}{}{}",
+                &html[..head_pos],
+                injection,
+                &html[head_pos..]
+            );
+            fs::write(path, result)?;
+            injected += 1;
+        }
+
+        if injected > 0 {
+            log::info!(
+                "[json-ld] Injected structured data into {} page(s)",
+                injected
+            );
+        }
+        Ok(())
+    }
+}
+
+/// Recursively collects HTML files (shared helper).
+fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut files = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+
+    while let Some(current) = stack.pop() {
+        if !current.is_dir() {
+            continue;
+        }
+        for entry in fs::read_dir(&current)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().is_some_and(|ext| ext == "html") {
+                files.push(path);
+            }
+        }
+    }
+
+    files.sort();
+    Ok(files)
 }
 
 #[cfg(test)]
@@ -503,9 +697,8 @@ mod tests {
     #[test]
     fn test_extract_description_truncates() {
         let long = "word ".repeat(100);
-        let html = format!(
-            "<html><head></head><body><p>{long}</p></body></html>"
-        );
+        let html =
+            format!("<html><head></head><body><p>{long}</p></body></html>");
         let desc = extract_description(&html, 160);
         assert!(desc.len() <= 160);
         assert!(!desc.is_empty());
@@ -536,8 +729,12 @@ mod tests {
         assert!(result.contains("<meta property=\"og:title\""));
         assert!(result.contains("Hello World"));
         assert!(result.contains("<meta property=\"og:description\""));
-        assert!(result.contains("<meta property=\"og:type\" content=\"website\""));
-        assert!(result.contains("<meta name=\"twitter:card\" content=\"summary\""));
+        assert!(
+            result.contains("<meta property=\"og:type\" content=\"website\"")
+        );
+        assert!(
+            result.contains("<meta name=\"twitter:card\" content=\"summary\"")
+        );
         Ok(())
     }
 
@@ -599,8 +796,7 @@ mod tests {
         let ctx = test_ctx(tmp.path());
         SeoPlugin.after_compile(&ctx)?;
 
-        let result =
-            fs::read_to_string(tmp.path().join("no-title.html"))?;
+        let result = fs::read_to_string(tmp.path().join("no-title.html"))?;
         // Should still inject og:type and twitter:card
         assert!(result.contains("<meta property=\"og:type\""));
         assert!(result.contains("<meta name=\"twitter:card\""));
@@ -653,12 +849,10 @@ mod tests {
         let plugin = RobotsPlugin::new("https://example.com");
         plugin.after_compile(&ctx)?;
 
-        let content =
-            fs::read_to_string(tmp.path().join("robots.txt"))?;
+        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
         assert!(content.contains("User-agent: *"));
         assert!(content.contains("Allow: /"));
-        assert!(content
-            .contains("Sitemap: https://example.com/sitemap.xml"));
+        assert!(content.contains("Sitemap: https://example.com/sitemap.xml"));
         Ok(())
     }
 
@@ -685,10 +879,8 @@ mod tests {
         let plugin = RobotsPlugin::new("https://my-site.org");
         plugin.after_compile(&ctx)?;
 
-        let content =
-            fs::read_to_string(tmp.path().join("robots.txt"))?;
-        assert!(content
-            .contains("Sitemap: https://my-site.org/sitemap.xml"));
+        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
+        assert!(content.contains("Sitemap: https://my-site.org/sitemap.xml"));
         Ok(())
     }
 
@@ -716,8 +908,7 @@ mod tests {
 
         let result = fs::read_to_string(tmp.path().join("index.html"))?;
         assert!(result.contains("<link rel=\"canonical\""));
-        assert!(result
-            .contains("https://example.com/index.html"));
+        assert!(result.contains("https://example.com/index.html"));
         Ok(())
     }
 
@@ -754,11 +945,8 @@ mod tests {
         let plugin = CanonicalPlugin::new("https://example.com");
         plugin.after_compile(&ctx)?;
 
-        let result = fs::read_to_string(
-            tmp.path().join("blog/post.html"),
-        )?;
-        assert!(result
-            .contains("https://example.com/blog/post.html"));
+        let result = fs::read_to_string(tmp.path().join("blog/post.html"))?;
+        assert!(result.contains("https://example.com/blog/post.html"));
         Ok(())
     }
 
@@ -784,9 +972,8 @@ mod tests {
     fn extract_description_unicode_truncation_respects_char_boundary() {
         // Arrange: multi-byte chars (é = 2 bytes, 日 = 3 bytes)
         let text = "café 日本語 ".repeat(30);
-        let html = format!(
-            "<html><head></head><body><p>{text}</p></body></html>"
-        );
+        let html =
+            format!("<html><head></head><body><p>{text}</p></body></html>");
 
         // Act
         let desc = extract_description(&html, 50);
@@ -935,8 +1122,7 @@ mod tests {
         plugin.after_compile(&ctx)?;
 
         // Assert: sitemap URL has no double slash
-        let content =
-            fs::read_to_string(tmp.path().join("robots.txt"))?;
+        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
         assert!(
             content.contains("Sitemap: https://example.com/sitemap.xml"),
             "sitemap URL should not have double slash, got: {content}"
@@ -969,5 +1155,89 @@ mod tests {
             !desc.contains("ignore me"),
             "should not contain script content, got: {desc}"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // JSON-LD Plugin tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_jsonld_injects_webpage() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        let html = make_html("About", "<p>About us</p>");
+        fs::write(site.join("about.html"), &html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Test Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let output = fs::read_to_string(site.join("about.html")).unwrap();
+        assert!(output.contains("application/ld+json"));
+        assert!(output.contains("\"@type\":\"WebPage\""));
+        assert!(output.contains("\"name\":\"About\""));
+    }
+
+    #[test]
+    fn test_jsonld_injects_article() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        let html = "<html><head><title>Post</title></head>\
+                     <body><article><h1>Post</h1></article></body></html>";
+        fs::write(site.join("post.html"), html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "My Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let output = fs::read_to_string(site.join("post.html")).unwrap();
+        assert!(output.contains("\"@type\":\"Article\""));
+        assert!(output.contains("\"headline\":\"Post\""));
+        assert!(output.contains("My Org"));
+    }
+
+    #[test]
+    fn test_jsonld_breadcrumbs() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let blog = site.join("blog");
+        fs::create_dir_all(&blog).unwrap();
+
+        let html = make_html("My Post", "<p>Content</p>");
+        fs::write(blog.join("my-post.html"), &html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let output = fs::read_to_string(blog.join("my-post.html")).unwrap();
+        assert!(output.contains("BreadcrumbList"));
+        assert!(output.contains("\"name\":\"Home\""));
+        assert!(output.contains("\"name\":\"blog\""));
+    }
+
+    #[test]
+    fn test_jsonld_idempotent() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        let html = "<html><head><title>X</title>\
+                     <script type=\"application/ld+json\">{}</script>\
+                     </head><body></body></html>";
+        fs::write(site.join("x.html"), html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let output = fs::read_to_string(site.join("x.html")).unwrap();
+        // Should have exactly one ld+json (the original), not two
+        let count = output.matches("application/ld+json").count();
+        assert_eq!(count, 1);
     }
 }

@@ -56,7 +56,8 @@ impl SearchIndex {
     /// `.html` file, and returns the populated index.
     pub fn build(site_dir: &Path) -> Result<Self> {
         let html_files = collect_html_files(site_dir)?;
-        let mut entries = Vec::with_capacity(html_files.len().min(MAX_INDEX_ENTRIES));
+        let mut entries =
+            Vec::with_capacity(html_files.len().min(MAX_INDEX_ENTRIES));
 
         for path in html_files.iter().take(MAX_INDEX_ENTRIES) {
             let html = fs::read_to_string(path)
@@ -263,7 +264,8 @@ fn truncate(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         return s.to_string();
     }
-    let byte_pos: usize = s.char_indices()
+    let byte_pos: usize = s
+        .char_indices()
         .take(max)
         .last()
         .map(|(i, c)| i + c.len_utf8())
@@ -450,7 +452,8 @@ mod tests {
 
     #[test]
     fn extract_title_from_title_tag() {
-        let html = "<html><head><title>My Page</title></head><body></body></html>";
+        let html =
+            "<html><head><title>My Page</title></head><body></body></html>";
         assert_eq!(extract_title(html), "My Page");
     }
 
@@ -527,7 +530,8 @@ mod tests {
         assert_eq!(index.len(), 2);
         assert!(!index.is_empty());
 
-        let titles: Vec<&str> = index.entries.iter().map(|e| e.title.as_str()).collect();
+        let titles: Vec<&str> =
+            index.entries.iter().map(|e| e.title.as_str()).collect();
         assert!(titles.contains(&"Home"));
         assert!(titles.contains(&"About"));
         Ok(())
@@ -548,7 +552,8 @@ mod tests {
 
         let path = tmp.path().join("search-index.json");
         assert!(path.exists());
-        let json: SearchIndex = serde_json::from_str(&fs::read_to_string(&path)?)?;
+        let json: SearchIndex =
+            serde_json::from_str(&fs::read_to_string(&path)?)?;
         assert_eq!(json.entries.len(), 1);
         assert_eq!(json.entries[0].title, "Test");
         Ok(())
@@ -576,10 +581,7 @@ mod tests {
     fn search_index_nested_directories() -> Result<()> {
         let tmp = tempdir()?;
         fs::create_dir_all(tmp.path().join("blog"))?;
-        fs::write(
-            tmp.path().join("index.html"),
-            make_html("Home", ""),
-        )?;
+        fs::write(tmp.path().join("index.html"), make_html("Home", ""))?;
         fs::write(
             tmp.path().join("blog/post.html"),
             make_html("Post", "<p>Blog content</p>"),
@@ -587,7 +589,8 @@ mod tests {
 
         let index = SearchIndex::build(tmp.path())?;
         assert_eq!(index.len(), 2);
-        let urls: Vec<&str> = index.entries.iter().map(|e| e.url.as_str()).collect();
+        let urls: Vec<&str> =
+            index.entries.iter().map(|e| e.url.as_str()).collect();
         assert!(urls.iter().any(|u| u.contains("blog")));
         Ok(())
     }
@@ -674,8 +677,10 @@ mod tests {
     #[test]
     fn search_plugin_nonexistent_dir() -> Result<()> {
         let ctx = PluginContext::new(
-            Path::new("c"), Path::new("b"),
-            Path::new("/nonexistent"), Path::new("t"),
+            Path::new("c"),
+            Path::new("b"),
+            Path::new("/nonexistent"),
+            Path::new("t"),
         );
         SearchPlugin.after_compile(&ctx)?; // Should not error
         Ok(())
@@ -882,7 +887,8 @@ mod tests {
 
         // Assert
         assert_eq!(index.len(), 3);
-        let urls: Vec<&str> = index.entries.iter().map(|e| e.url.as_str()).collect();
+        let urls: Vec<&str> =
+            index.entries.iter().map(|e| e.url.as_str()).collect();
         assert!(urls.iter().any(|u| u.contains("docs/guide/advanced")));
         assert!(urls.iter().any(|u| u.contains("index.html")));
         Ok(())

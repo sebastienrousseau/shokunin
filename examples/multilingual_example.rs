@@ -38,7 +38,10 @@ fn main() -> Result<()> {
         // Call the compile function to generate the website
         println!("    🔍 Compiling content for language: {}...", lang);
         match compile(&build_dir, &content_dir, &site_dir, &template_dir) {
-            Ok(_) => println!("    ✅ Successfully compiled static site for language: {}", lang),
+            Ok(_) => println!(
+                "    ✅ Successfully compiled static site for language: {}",
+                lang
+            ),
             Err(e) => {
                 println!("    ❌ Error compiling site for {}: {:?}", lang, e);
                 return Err(e);
@@ -49,14 +52,25 @@ fn main() -> Result<()> {
         let mut plugins = PluginManager::new();
         plugins.register(SeoPlugin);
         plugins.register(SearchPlugin);
-        let ctx = PluginContext::new(&content_dir, &build_dir, &site_dir, &template_dir);
+        let ctx = PluginContext::new(
+            &content_dir,
+            &build_dir,
+            &site_dir,
+            &template_dir,
+        );
         plugins.run_after_compile(&ctx)?;
         println!("    🔌 Plugins complete for {lang}");
     }
 
     // Copy shared assets (manifest.json, rss.xml) to root so
     // absolute paths emitted by staticdatagen resolve correctly.
-    for asset in &["manifest.json", "rss.xml", "robots.txt", "sitemap.xml", "search-index.json"] {
+    for asset in &[
+        "manifest.json",
+        "rss.xml",
+        "robots.txt",
+        "sitemap.xml",
+        "search-index.json",
+    ] {
         // Prefer the English version as the root copy
         let src = public_root.join("en").join(asset);
         if src.exists() {
@@ -71,8 +85,7 @@ fn main() -> Result<()> {
     generate_language_selector(public_root, &languages)?;
 
     // Serve the root public directory
-    let server =
-        Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
+    let server = Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
     println!("Serving site at http://127.0.0.1:3000");
     let _ = server.start();
 
@@ -99,14 +112,15 @@ fn generate_language_selector(
         );
         language_links.push_str(&link);
     }
-    let output_html =
-        template.replace("{{LANGUAGE_LINKS}}", &language_links);
+    let output_html = template.replace("{{LANGUAGE_LINKS}}", &language_links);
 
     // Write the generated HTML to `public/index.html`
     let index_path = public_root.join("index.html");
     write(index_path, output_html)
         .context("Failed to write language selector index.html")?;
-    println!("    ✅ Generated language selector at root index.html using template");
+    println!(
+        "    ✅ Generated language selector at root index.html using template"
+    );
 
     Ok(())
 }

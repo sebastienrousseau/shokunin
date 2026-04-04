@@ -55,9 +55,7 @@ pub struct LiveReloadPlugin {
 impl LiveReloadPlugin {
     /// Creates a new `LiveReloadPlugin` with the default port (35729).
     pub fn new() -> Self {
-        Self {
-            port: DEFAULT_PORT,
-        }
+        Self { port: DEFAULT_PORT }
     }
 
     /// Creates a new `LiveReloadPlugin` with a custom WebSocket port.

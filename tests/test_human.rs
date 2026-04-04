@@ -5,18 +5,14 @@
 
 #[cfg(test)]
 mod tests {
-    use staticdatagen::generators::humans::{
-        HumansConfig, HumansGenerator,
-    };
+    use staticdatagen::generators::humans::{HumansConfig, HumansGenerator};
     use std::collections::HashMap;
 
     #[test]
     fn test_create_human_data_with_all_fields() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert(
-            "author_location".to_string(),
-            "Location".to_string(),
-        );
+        let _ = metadata
+            .insert("author_location".to_string(), "Location".to_string());
         let _ = metadata.insert(
             "author_twitter".to_string(),
             "@twitter_handle".to_string(),
@@ -25,26 +21,17 @@ mod tests {
             "author_website".to_string(),
             "https://example.com".to_string(),
         );
+        let _ = metadata.insert("author".to_string(), "John Doe".to_string());
         let _ = metadata
-            .insert("author".to_string(), "John Doe".to_string());
-        let _ = metadata.insert(
-            "site_components".to_string(),
-            "Components".to_string(),
-        );
-        let _ = metadata.insert(
-            "site_last_updated".to_string(),
-            "2023-01-01".to_string(),
-        );
-        let _ = metadata.insert(
-            "site_software".to_string(),
-            "Software".to_string(),
-        );
-        let _ = metadata.insert(
-            "site_standards".to_string(),
-            "Standards".to_string(),
-        );
+            .insert("site_components".to_string(), "Components".to_string());
         let _ = metadata
-            .insert("thanks".to_string(), "Contributors".to_string());
+            .insert("site_last_updated".to_string(), "2023-01-01".to_string());
+        let _ = metadata
+            .insert("site_software".to_string(), "Software".to_string());
+        let _ = metadata
+            .insert("site_standards".to_string(), "Standards".to_string());
+        let _ =
+            metadata.insert("thanks".to_string(), "Contributors".to_string());
 
         let config = HumansConfig::from_metadata(&metadata)
             .expect("Expected valid config from full metadata");

@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.33"                      # The version of the library
+version = "0.0.34"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.74.0"                 # Minimum supported Rust version (required by clap 4.x)
@@ -78,10 +78,12 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = ["async", "tokio"]            # No default features enabled
+default = ["async", "tokio", "tera-templates", "image-optimization"]
 async = ["tokio"]                       # This enables tokio when the async feature is enabled
 cli = []                                # Enable command-line interface support
 benchmark = []                          # Enable benchmark-specific functionality
+tera-templates = ["tera"]               # Tera templating engine with inheritance, loops, conditionals
+image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -115,7 +117,7 @@ once_cell = "1.21.4"
 rayon = "1.11.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-staticdatagen = "0.0.7"
+staticdatagen = { path = "../staticdatagen" }
 tempfile = "3.27.0"
 thiserror = "2.0.18"
 toml = "0.8.23"
@@ -123,6 +125,13 @@ tokio = { version = "1.50.0", features = ["full"], optional = true }
 url = "2.5.8"
 uuid = { version = "1.22.0", features = ["v4"] }
 warp = "0.3.7"
+
+# Optional dependencies (feature-gated)
+tera = { version = "1", optional = true }
+image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
+
+# Owned crate for frontmatter parsing
+frontmatter-gen = "0.0.5"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
@@ -250,8 +259,8 @@ expect_used = "warn"                         # Warn on expect to encourage error
 # -----------------------------------------------------------------------------
 [profile.dev]
 # Development profile configuration for fast builds and debugging.
-codegen-units = 256                         # Increase codegen units for faster compilation
-debug = true                                # Enable debugging symbols
+codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
+debug = 1                                   # Line tables only — saves ~60% disk vs full debuginfo
 debug-assertions = true                     # Enable debug assertions
 incremental = true                          # Enable incremental compilation
 lto = false                                 # Disable link-time optimization for development
@@ -276,8 +285,8 @@ strip = "symbols"                           # Strip symbols for smaller binary s
 
 [profile.test]
 # Test profile configuration for debugging and development.
-codegen-units = 256                         # Increase codegen units for faster test builds
-debug = true                                # Enable debugging symbols for test builds
+codegen-units = 16                          # Balance between compile speed and disk usage
+debug = 1                                   # Line tables only — enough for backtraces, saves disk
 debug-assertions = true                     # Enable debug assertions for tests
 incremental = true                          # Enable incremental compilation for tests
 lto = false                                 # Disable link-time optimization during testing

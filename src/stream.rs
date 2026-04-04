@@ -72,17 +72,20 @@ pub fn stream_copy(src: &Path, dst: &Path) -> Result<u64> {
     let mut total: u64 = 0;
 
     loop {
-        let n = reader.read(&mut buf)
+        let n = reader
+            .read(&mut buf)
             .with_context(|| format!("read error: {}", src.display()))?;
         if n == 0 {
             break;
         }
-        writer.write_all(&buf[..n])
+        writer
+            .write_all(&buf[..n])
             .with_context(|| format!("write error: {}", dst.display()))?;
         total += n as u64;
     }
 
-    writer.flush()
+    writer
+        .flush()
         .with_context(|| format!("flush error: {}", dst.display()))?;
 
     Ok(total)
@@ -104,7 +107,8 @@ pub fn stream_hash(path: &Path) -> Result<String> {
     let mut buf = [0u8; STREAM_BUFFER_SIZE];
 
     loop {
-        let n = reader.read(&mut buf)
+        let n = reader
+            .read(&mut buf)
             .with_context(|| format!("read error: {}", path.display()))?;
         if n == 0 {
             break;
@@ -144,7 +148,8 @@ where
     let mut count: usize = 0;
 
     for src_path in &entries {
-        let rel = src_path.strip_prefix(src_dir)
+        let rel = src_path
+            .strip_prefix(src_dir)
             .with_context(|| "strip_prefix failed")?;
         let dst_path = dst_dir.join(rel);
 
@@ -152,9 +157,7 @@ where
             fs::create_dir_all(parent)?;
         }
 
-        let src_size = fs::metadata(src_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let src_size = fs::metadata(src_path).map(|m| m.len()).unwrap_or(0);
         let written = processor(src_path, &dst_path)?;
 
         bytes_read += src_size;
@@ -233,7 +236,8 @@ where
     let mut count: usize = 0;
 
     for line in reader.lines() {
-        let line = line.with_context(|| format!("read error at line {count}"))?;
+        let line =
+            line.with_context(|| format!("read error at line {count}"))?;
         line_fn(count, &line)?;
         count += 1;
     }
@@ -429,7 +433,11 @@ mod tests {
     fn test_benchmark_throughput_runs() -> Result<()> {
         let result = benchmark_throughput(100)?;
         assert_eq!(result.files_processed, 100);
-        assert!(result.throughput > 1000.0, "throughput too low: {}", result.throughput);
+        assert!(
+            result.throughput > 1000.0,
+            "throughput too low: {}",
+            result.throughput
+        );
         println!(
             "Benchmark: {} files in {:.2} ms ({:.0} files/sec)",
             result.files_processed, result.duration_ms, result.throughput
@@ -452,7 +460,8 @@ mod tests {
 
     #[test]
     fn test_stream_copy_nonexistent_source() {
-        let result = stream_copy(Path::new("/nonexistent"), Path::new("/tmp/out"));
+        let result =
+            stream_copy(Path::new("/nonexistent"), Path::new("/tmp/out"));
         assert!(result.is_err());
     }
 

@@ -15,8 +15,8 @@ use ssg::plugins::MinifyPlugin;
 use ssg::search::SearchPlugin;
 use ssg::seo::{CanonicalPlugin, RobotsPlugin, SeoPlugin};
 use staticdatagen::compiler::service::compile;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 fn main() -> Result<()> {
     let build_dir = Path::new("./examples/build");
@@ -71,7 +71,8 @@ fn main() -> Result<()> {
     // Live reload — inject WebSocket script for dev mode
     plugins.register(LiveReloadPlugin::new());
 
-    let ctx = PluginContext::new(content_dir, build_dir, site_dir, template_dir);
+    let ctx =
+        PluginContext::new(content_dir, build_dir, site_dir, template_dir);
 
     println!("\n  🔌 Running {} plugins:", plugins.len());
     for name in plugins.names() {

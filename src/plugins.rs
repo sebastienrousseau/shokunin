@@ -43,11 +43,13 @@ impl Plugin for MinifyPlugin {
         for entry in fs::read_dir(&ctx.site_dir)? {
             let path = entry?.path();
             if path.extension().map_or(false, |e| e == "html") {
-                let content = fs::read_to_string(&path)
-                    .with_context(|| format!("Failed to read {}", path.display()))?;
+                let content = fs::read_to_string(&path).with_context(|| {
+                    format!("Failed to read {}", path.display())
+                })?;
                 let minified = minify_html(&content);
-                fs::write(&path, &minified)
-                    .with_context(|| format!("Failed to write {}", path.display()))?;
+                fs::write(&path, &minified).with_context(|| {
+                    format!("Failed to write {}", path.display())
+                })?;
                 count += 1;
             }
         }
@@ -116,7 +118,10 @@ impl Plugin for ImageOptiPlugin {
             let path = entry?.path();
             if let Some(ext) = path.extension() {
                 let ext = ext.to_string_lossy().to_lowercase();
-                if matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "bmp") {
+                if matches!(
+                    ext.as_str(),
+                    "png" | "jpg" | "jpeg" | "gif" | "bmp"
+                ) {
                     images.push(path);
                 }
             }

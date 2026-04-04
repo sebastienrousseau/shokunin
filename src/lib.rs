@@ -29,15 +29,41 @@ use rayon::prelude::*;
 use staticdatagen::compile;
 use tokio::fs as async_fs;
 
+/// Automated WCAG accessibility checker.
+pub mod accessibility;
+/// AI-readiness content hooks (GEO/AEO).
+pub mod ai;
+/// Asset fingerprinting, SRI hashes, and minification.
+pub mod assets;
 /// Content fingerprinting for incremental builds.
 pub mod cache;
 pub mod cmd;
+/// Deployment adapter generation.
+pub mod deploy;
+/// Draft content filtering.
+pub mod drafts;
+/// Shared frontmatter extraction and `.meta.json` sidecar files.
+pub mod frontmatter;
+/// Syntax highlighting for code blocks.
+pub mod highlight;
+/// Image optimization with WebP and responsive srcset.
+#[cfg(feature = "image-optimization")]
+pub mod image_plugin;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// Pagination for listing pages.
+pub mod pagination;
 /// Lifecycle hook plugin system.
 pub mod plugin;
 /// Built-in plugins for common tasks.
 pub mod plugins;
+/// Project scaffolding for `--new`.
+pub mod scaffold;
+/// Shortcode expansion for Markdown content.
+pub mod shortcodes;
+/// Taxonomy generation (tags, categories).
+pub mod taxonomy;
+use plugins as plugins_mod;
 /// Command-line argument processing and site compilation.
 pub mod process;
 /// JSON Schema generation for configuration.
@@ -48,6 +74,12 @@ pub mod search;
 pub mod seo;
 /// High-performance streaming file processor.
 pub mod stream;
+/// Tera templating engine integration.
+#[cfg(feature = "tera-templates")]
+pub mod tera_engine;
+/// Tera template rendering plugin.
+#[cfg(feature = "tera-templates")]
+pub mod tera_plugin;
 /// File-watching for live rebuild.
 pub mod watch;
 
@@ -113,9 +145,9 @@ impl Paths {
 
             // If path exists, perform additional checks
             if path.exists() {
-                let metadata = path.symlink_metadata().context(
-                    format!("Failed to get metadata for {}", name),
-                )?;
+                let metadata = path
+                    .symlink_metadata()
+                    .context(format!("Failed to get metadata for {}", name))?;
 
                 if metadata.file_type().is_symlink() {
                     anyhow::bail!(
@@ -193,9 +225,7 @@ impl PathsBuilder {
     pub fn build(self) -> Result<Paths> {
         let paths = Paths {
             site: self.site.unwrap_or_else(|| PathBuf::from("public")),
-            content: self
-                .content
-                .unwrap_or_else(|| PathBuf::from("content")),
+            content: self.content.unwrap_or_else(|| PathBuf::from("content")),
             build: self.build.unwrap_or_else(|| PathBuf::from("build")),
             template: self
                 .template
@@ -249,9 +279,7 @@ fn initialize_logging() -> Result<()> {
 /// `staticdatagen::compile` finalizes output by renaming the build directory
 /// into the site directory. If both paths are identical, finalization fails.
 /// This helper guarantees distinct paths when needed.
-fn resolve_build_and_site_dirs(
-    config: &SsgConfig,
-) -> (PathBuf, PathBuf) {
+fn resolve_build_and_site_dirs(config: &SsgConfig) -> (PathBuf, PathBuf) {
     let site_dir = config
         .serve_dir
         .clone()
@@ -268,19 +296,147 @@ fn resolve_build_and_site_dirs(
 
 /// Executes the static site generation process.
 ///
-/// Parses CLI arguments, compiles the site, and starts a local dev server.
-/// This function blocks indefinitely while the server is running.
+/// Parses CLI arguments, runs the plugin pipeline around compilation,
+/// and starts a local dev server. This function blocks indefinitely
+/// while the server is running.
 pub async fn run() -> Result<()> {
     initialize_logging()?;
     info!("Starting site generation process");
 
     let matches = Cli::build().get_matches();
     let config = SsgConfig::from_matches(&matches)?;
-    println!("Configuration loaded: {:?}", config);
+
+    let quiet = matches.get_flag("quiet");
+    let include_drafts = matches.get_flag("drafts");
+    let deploy_target = matches.get_one::<String>("deploy").cloned();
+
+    if !quiet {
+        Cli::print_banner();
+    }
 
     let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
-    compile_site(&build_dir, &config.content_dir, &site_dir, &config.template_dir)?;
+
+    // Build plugin context with full site configuration
+    let ctx = plugin::PluginContext::with_config(
+        &config.content_dir,
+        &build_dir,
+        &site_dir,
+        &config.template_dir,
+        config.clone(),
+    );
+
+    // Register plugins with CLI-driven options
+    let mut plugins = plugin::PluginManager::new();
+    register_default_plugins(
+        &mut plugins,
+        &config,
+        include_drafts,
+        deploy_target.as_deref(),
+    );
+
+    // Run pipeline: before_compile → compile → after_compile
+    let start = std::time::Instant::now();
+
+    plugins.run_before_compile(&ctx)?;
+    compile_site(
+        &build_dir,
+        &config.content_dir,
+        &site_dir,
+        &config.template_dir,
+    )?;
+    plugins.run_after_compile(&ctx)?;
+
+    let elapsed = start.elapsed();
+    if !quiet {
+        println!(
+            "Site built in {:.2}s ({} plugin(s))",
+            elapsed.as_secs_f64(),
+            plugins.len()
+        );
+    }
+
+    // Run on_serve hooks and start dev server
+    plugins.run_on_serve(&ctx)?;
     serve_site(&site_dir)
+}
+
+/// Registers the default plugin pipeline.
+///
+/// Plugins execute in registration order. The ordering is:
+/// 1. SEO plugins (meta tags, canonical URLs, robots.txt)
+/// 2. Search index generation
+/// 3. HTML minification (must be last content transform)
+/// 4. Live reload (on_serve only)
+fn register_default_plugins(
+    plugins: &mut plugin::PluginManager,
+    config: &SsgConfig,
+    include_drafts: bool,
+    deploy_target: Option<&str>,
+) {
+    let base_url = config.base_url.clone();
+
+    // Before-compile plugins
+    plugins.register(drafts::DraftPlugin::new(include_drafts));
+    plugins.register(shortcodes::ShortcodePlugin);
+
+    // Tera templating (must run first in after_compile)
+    #[cfg(feature = "tera-templates")]
+    plugins.register(tera_plugin::TeraPlugin::from_template_dir(
+        &config.template_dir,
+    ));
+
+    // Syntax highlighting
+    plugins.register(highlight::HighlightPlugin::default());
+
+    // SEO plugins
+    plugins.register(seo::SeoPlugin);
+    plugins
+        .register(seo::JsonLdPlugin::from_site(&base_url, &config.site_name));
+    plugins.register(seo::CanonicalPlugin::new(base_url.clone()));
+    plugins.register(seo::RobotsPlugin::new(base_url));
+
+    // AI readiness
+    plugins.register(ai::AiPlugin);
+
+    // Taxonomy and pagination
+    plugins.register(taxonomy::TaxonomyPlugin);
+    plugins.register(pagination::PaginationPlugin::default());
+
+    // Search & optimization
+    plugins.register(search::SearchPlugin);
+
+    // Accessibility validation
+    plugins.register(accessibility::AccessibilityPlugin);
+
+    // Image optimization (WebP, responsive srcset)
+    #[cfg(feature = "image-optimization")]
+    plugins.register(image_plugin::ImageOptimizationPlugin);
+
+    // Asset fingerprinting + SRI (after all content transforms)
+    plugins.register(assets::FingerprintPlugin);
+
+    // Minification (must be last content transform)
+    plugins.register(plugins_mod::MinifyPlugin);
+
+    // Deployment config generation (opt-in via --deploy flag)
+    if let Some(target) = deploy_target {
+        let dt = match target {
+            "netlify" => Some(deploy::DeployTarget::Netlify),
+            "vercel" => Some(deploy::DeployTarget::Vercel),
+            "cloudflare" => Some(deploy::DeployTarget::CloudflarePages),
+            "github" => Some(deploy::DeployTarget::GithubPages),
+            _ => {
+                log::warn!("Unknown deploy target: {}", target);
+                None
+            }
+        };
+        if let Some(dt) = dt {
+            plugins.register(deploy::DeployPlugin::new(dt));
+        }
+    }
+
+    // Dev server
+    plugins.register(livereload::LiveReloadPlugin::default());
 }
 
 /// Converts a site directory path to a string and starts an HTTP server.
@@ -373,12 +529,19 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
     }
 
     // Ensure the destination directory exists
-    fs::create_dir_all(dst)
-        .with_context(|| format!("Failed to create or access destination directory at path: {:?}", dst))?;
+    fs::create_dir_all(dst).with_context(|| {
+        format!(
+            "Failed to create or access destination directory at path: {:?}",
+            dst
+        )
+    })?;
 
     // Copy directory contents with safety checks
     copy_dir_all(src, dst).with_context(|| {
-        format!("Failed to copy files from source: {:?} to destination: {:?}", src, dst)
+        format!(
+            "Failed to copy files from source: {:?} to destination: {:?}",
+            src, dst
+        )
     })?;
 
     Ok(())
@@ -388,10 +551,7 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
-pub async fn verify_and_copy_files_async(
-    src: &Path,
-    dst: &Path,
-) -> Result<()> {
+pub async fn verify_and_copy_files_async(src: &Path, dst: &Path) -> Result<()> {
     if !src.exists() {
         return Err(anyhow::anyhow!(
             "Source directory does not exist: {:?}",
@@ -399,10 +559,12 @@ pub async fn verify_and_copy_files_async(
         ));
     }
 
-    async_fs::create_dir_all(dst).await.with_context(|| format!(
-        "Failed to create or access destination directory at path: {:?}",
-        dst
-    ))?;
+    async_fs::create_dir_all(dst).await.with_context(|| {
+        format!(
+            "Failed to create or access destination directory at path: {:?}",
+            dst
+        )
+    })?;
 
     // (source_dir, dest_dir, depth)
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
@@ -439,24 +601,20 @@ pub async fn verify_and_copy_files_async(
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
 pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
     if !src.exists() {
-        anyhow::bail!(
-            "Source directory does not exist: {}",
-            src.display()
-        );
+        anyhow::bail!("Source directory does not exist: {}", src.display());
     }
 
     fs::create_dir_all(dst).with_context(|| {
-        format!(
-            "Failed to create destination directory: {}",
-            dst.display()
-        )
+        format!("Failed to create destination directory: {}", dst.display())
     })?;
 
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] {pos} files {msg}")
-            .map_err(|e| anyhow::anyhow!("Invalid progress bar template: {}", e))?
+            .map_err(|e| {
+                anyhow::anyhow!("Invalid progress bar template: {}", e)
+            })?
             .progress_chars("#>-"),
     );
 
@@ -472,7 +630,10 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
         );
 
         let entries: Vec<_> = fs::read_dir(&src_dir)
-            .context(format!("Failed to read source directory: {}", src_dir.display()))?
+            .context(format!(
+                "Failed to read source directory: {}",
+                src_dir.display()
+            ))?
             .collect::<std::io::Result<Vec<_>>>()?;
 
         for entry in &entries {
@@ -690,10 +851,7 @@ pub fn create_log_file(file_path: &str) -> Result<File> {
 ///     Ok(())
 /// }
 /// ```
-pub fn log_initialization(
-    log_file: &mut File,
-    date: &DateTime,
-) -> Result<()> {
+pub fn log_initialization(log_file: &mut File, date: &DateTime) -> Result<()> {
     writeln!(
         log_file,
         "[{}] INFO process: System initialization complete",
@@ -732,16 +890,9 @@ pub fn log_initialization(
 ///     Ok(())
 /// }
 /// ```
-pub fn log_arguments(
-    log_file: &mut File,
-    date: &DateTime,
-) -> Result<()> {
-    writeln!(
-        log_file,
-        "[{}] INFO process: Arguments processed",
-        date
-    )
-    .context("Failed to write arguments log")
+pub fn log_arguments(log_file: &mut File, date: &DateTime) -> Result<()> {
+    writeln!(log_file, "[{}] INFO process: Arguments processed", date)
+        .context("Failed to write arguments log")
 }
 
 /// Creates and verifies required directories for site generation.
@@ -793,7 +944,10 @@ pub fn create_directories(paths: &Paths) -> Result<()> {
         ("template", &paths.template),
     ] {
         fs::create_dir_all(path).with_context(|| {
-            format!("Failed to create or access {} directory at path: {:?}", name, path)
+            format!(
+                "Failed to create or access {} directory at path: {:?}",
+                name, path
+            )
         })?;
     }
 
@@ -862,11 +1016,7 @@ pub async fn handle_server(
     serve_dir: &PathBuf,
 ) -> Result<()> {
     // Log server initialization
-    writeln!(
-        log_file,
-        "[{}] INFO process: Server initialization",
-        date
-    )?;
+    writeln!(log_file, "[{}] INFO process: Server initialization", date)?;
 
     prepare_serve_dir(paths, serve_dir).await?;
 
@@ -1016,10 +1166,7 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
             .filter(|entry| {
                 let path = entry.path();
                 if path.is_dir() {
-                    subdirs.push((
-                        path,
-                        dst_dir.join(entry.file_name()),
-                    ));
+                    subdirs.push((path, dst_dir.join(entry.file_name())));
                     false
                 } else {
                     true
@@ -1127,8 +1274,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let log_file_path = temp_dir.path().join("test.log");
 
-        let log_file =
-            create_log_file(log_file_path.to_str().unwrap())?;
+        let log_file = create_log_file(log_file_path.to_str().unwrap())?;
         assert!(log_file.metadata()?.is_file());
 
         Ok(())
@@ -1247,11 +1393,9 @@ mod tests {
 
         let serve_dir = temp_dir.path().join("serve");
         let date = DateTime::new();
-        let result =
-            handle_server(&mut log_file, &date, &paths, &serve_dir);
+        let result = handle_server(&mut log_file, &date, &paths, &serve_dir);
         assert!(result.await.is_err());
     }
-
 
     #[test]
     fn test_is_safe_path_safe() -> Result<()> {
@@ -1296,10 +1440,7 @@ mod tests {
         _ = File::create(&nested_file)?;
 
         copy_dir_all(src_dir.path(), dst_dir.path())?;
-        assert!(dst_dir
-            .path()
-            .join("nested_dir/nested_file.txt")
-            .exists());
+        assert!(dst_dir.path().join("nested_dir/nested_file.txt").exists());
 
         Ok(())
     }
@@ -1326,8 +1467,7 @@ mod tests {
             template: temp_dir.path().join("template"),
         };
 
-        let non_existent_serve_dir =
-            PathBuf::from("/non_existent_serve_dir");
+        let non_existent_serve_dir = PathBuf::from("/non_existent_serve_dir");
         let binding = DateTime::new();
         let result = handle_server(
             &mut log_file,
@@ -1356,8 +1496,7 @@ mod tests {
     }
 
     #[test]
-    fn test_collect_files_recursive_with_nested_directories(
-    ) -> Result<()> {
+    fn test_collect_files_recursive_with_nested_directories() -> Result<()> {
         let temp_dir = tempdir()?;
         let nested_dir = temp_dir.path().join("nested_dir");
         fs::create_dir(&nested_dir)?;
@@ -1390,15 +1529,11 @@ mod tests {
 
         // Check setup conditions before calling `handle_server`
         fs::create_dir_all(&serve_dir)?;
-        assert!(
-            serve_dir.exists(),
-            "Expected serve directory to be created"
-        );
+        assert!(serve_dir.exists(), "Expected serve directory to be created");
 
         // Now, call `handle_server` and check for specific output or error
         let date = DateTime::new();
-        let result =
-            handle_server(&mut log_file, &date, &paths, &serve_dir);
+        let result = handle_server(&mut log_file, &date, &paths, &serve_dir);
         assert!(
             result.await.is_err(),
             "Expected handle_server to fail without valid setup"
@@ -1438,10 +1573,7 @@ mod tests {
         println!("Result: {:?}", result);
 
         // Verify that we got an error
-        assert!(
-            result.is_err(),
-            "Expected error for symlink, got success"
-        );
+        assert!(result.is_err(), "Expected error for symlink, got success");
 
         // Verify the error message
         let err = result.unwrap_err();
@@ -1487,8 +1619,7 @@ mod tests {
         let src_dir = tempdir()?;
         let dst_dir = tempdir()?;
 
-        let result =
-            copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
+        let result = copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
         assert!(result.is_ok());
 
         // Verify destination directory exists
@@ -1542,9 +1673,7 @@ mod tests {
             "root content"
         );
         assert_eq!(
-            fs::read_to_string(
-                dst_dir.path().join("nested/nested.txt")
-            )?,
+            fs::read_to_string(dst_dir.path().join("nested/nested.txt"))?,
             "nested content"
         );
 
@@ -1576,8 +1705,7 @@ mod tests {
         }
 
         // Attempt to copy - should fail due to symlink
-        let result =
-            copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
+        let result = copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
         assert!(result.is_err());
 
         Ok(())
@@ -1595,8 +1723,7 @@ mod tests {
         file.set_len(11 * 1024 * 1024)?;
 
         // Attempt to copy - should fail due to file size limit
-        let result =
-            copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
+        let result = copy_dir_all_async(src_dir.path(), dst_dir.path()).await;
         assert!(result.is_err());
 
         Ok(())
@@ -1608,8 +1735,7 @@ mod tests {
         let src_dir = tempdir()?;
         let invalid_dst = PathBuf::from("/nonexistent/path");
 
-        let result =
-            copy_dir_all_async(src_dir.path(), &invalid_dst).await;
+        let result = copy_dir_all_async(src_dir.path(), &invalid_dst).await;
         assert!(result.is_err());
 
         Ok(())
@@ -1633,8 +1759,7 @@ mod tests {
 
         // Verify all files were copied
         for i in 0..5 {
-            let copied_file =
-                dst_dir.path().join(format!("file{}.txt", i));
+            let copied_file = dst_dir.path().join(format!("file{}.txt", i));
             assert!(copied_file.exists());
             assert_eq!(
                 fs::read_to_string(copied_file)?,
@@ -1681,8 +1806,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_verify_and_copy_files_async_missing_source(
-    ) -> Result<()> {
+    async fn test_verify_and_copy_files_async_missing_source() -> Result<()> {
         let temp_dir = tempdir()?;
         let src_dir = temp_dir.path().join("nonexistent");
         let dst_dir = temp_dir.path().join("dst");
@@ -1717,8 +1841,7 @@ mod tests {
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = None;
 
-        let (build_dir, site_dir) =
-            resolve_build_and_site_dirs(&config);
+        let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
 
         assert_eq!(site_dir, PathBuf::from("docs"));
         assert_eq!(build_dir, PathBuf::from("docs.build-tmp"));
@@ -1731,8 +1854,7 @@ mod tests {
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = Some(PathBuf::from("public"));
 
-        let (build_dir, site_dir) =
-            resolve_build_and_site_dirs(&config);
+        let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
 
         assert_eq!(build_dir, PathBuf::from("docs"));
         assert_eq!(site_dir, PathBuf::from("public"));
@@ -1740,14 +1862,12 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_build_and_site_dirs_with_same_serve_and_output_dir()
-    {
+    fn test_resolve_build_and_site_dirs_with_same_serve_and_output_dir() {
         let mut config = SsgConfig::default();
         config.output_dir = PathBuf::from("docs");
         config.serve_dir = Some(PathBuf::from("docs"));
 
-        let (build_dir, site_dir) =
-            resolve_build_and_site_dirs(&config);
+        let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
 
         assert_eq!(site_dir, PathBuf::from("docs"));
         assert_eq!(build_dir, PathBuf::from("docs.build-tmp"));
@@ -1765,15 +1885,9 @@ mod tests {
             .build()?;
 
         assert_eq!(paths.site, temp_dir.path().join("custom_public"));
-        assert_eq!(
-            paths.content,
-            temp_dir.path().join("custom_content")
-        );
+        assert_eq!(paths.content, temp_dir.path().join("custom_content"));
         assert_eq!(paths.build, temp_dir.path().join("custom_build"));
-        assert_eq!(
-            paths.template,
-            temp_dir.path().join("custom_templates")
-        );
+        assert_eq!(paths.template, temp_dir.path().join("custom_templates"));
         Ok(())
     }
 
@@ -1787,8 +1901,7 @@ mod tests {
         fs::create_dir_all(temp_dir.path().join("build"))?;
         fs::create_dir_all(temp_dir.path().join("templates"))?;
 
-        let paths =
-            Paths::builder().relative_to(temp_dir.path()).build()?;
+        let paths = Paths::builder().relative_to(temp_dir.path()).build()?;
 
         assert_eq!(paths.site, temp_dir.path().join("public"));
         assert_eq!(paths.content, temp_dir.path().join("content"));
@@ -1861,8 +1974,7 @@ mod tests {
         let temp_dir = tempdir()?;
         let valid_path = temp_dir.path().join("new_directory");
 
-        let paths =
-            Paths::builder().site(valid_path.clone()).build()?;
+        let paths = Paths::builder().site(valid_path.clone()).build()?;
 
         assert_eq!(paths.site, valid_path);
         Ok(())
@@ -1919,8 +2031,7 @@ mod tests {
 
         fs::create_dir(&src_dir)?;
 
-        let result =
-            verify_and_copy_files_async(&src_dir, &dst_dir).await;
+        let result = verify_and_copy_files_async(&src_dir, &dst_dir).await;
         assert!(result.is_ok());
         assert!(dst_dir.exists());
         Ok(())
@@ -1998,7 +2109,6 @@ mod tests {
         assert!(paths.validate().is_ok());
         Ok(())
     }
-
 
     #[tokio::test]
     async fn test_copy_dir_all_async_with_empty_dirs() -> Result<()> {
@@ -2105,13 +2215,10 @@ mod tests {
             };
 
             assert_eq!(
-            level,
-            expected,
-            "Log level mismatch for input: '{}' - expected {:?}, got {:?}",
-            input,
-            expected,
-            level
-        );
+                level, expected,
+                "Log level mismatch for input: '{}' - expected {:?}, got {:?}",
+                input, expected, level
+            );
         }
     }
 
@@ -2173,16 +2280,13 @@ mod tests {
         let valid_levels = ["debug", "warn", "error", "trace", "info"];
         for level in &valid_levels {
             assert!(
-                ["trace", "debug", "info", "warn", "error"]
-                    .contains(level),
+                ["trace", "debug", "info", "warn", "error"].contains(level),
                 "unexpected log level: {level}"
             );
         }
         // Verify our default is valid
-        assert!(
-            ["trace", "debug", "info", "warn", "error"]
-                .contains(&DEFAULT_LOG_LEVEL),
-        );
+        assert!(["trace", "debug", "info", "warn", "error"]
+            .contains(&DEFAULT_LOG_LEVEL),);
     }
 
     #[tokio::test]
@@ -2215,8 +2319,7 @@ mod tests {
         }
 
         // Ensure source files exist before copying
-        tokio::time::sleep(tokio::time::Duration::from_millis(100))
-            .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Verify source files
         let mut src_files = Vec::new();
@@ -2230,8 +2333,7 @@ mod tests {
         verify_and_copy_files(&src_dir, &dst_dir)?;
 
         // Allow some time for filesystem operations to complete
-        tokio::time::sleep(tokio::time::Duration::from_millis(100))
-            .await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Verify destination files
         let mut dst_files = Vec::new();
@@ -2337,10 +2439,7 @@ mod tests {
 
         let copied_nested_file = dst_dir.path().join("nested/file.txt");
         assert!(copied_nested_file.exists());
-        assert_eq!(
-            fs::read_to_string(copied_nested_file)?,
-            "nested content"
-        );
+        assert_eq!(fs::read_to_string(copied_nested_file)?, "nested content");
 
         Ok(())
     }
@@ -2401,10 +2500,7 @@ mod tests {
         }
         copy_dir_all(src_dir.path(), dst_dir.path())?;
         for i in 0..20 {
-            assert!(dst_dir
-                .path()
-                .join(format!("file{}.txt", i))
-                .exists());
+            assert!(dst_dir.path().join(format!("file{}.txt", i)).exists());
         }
         Ok(())
     }
@@ -2419,13 +2515,9 @@ mod tests {
             fs::create_dir(&path)?;
         }
         let mut files = Vec::new();
-        let result =
-            collect_files_recursive(temp_dir.path(), &mut files);
+        let result = collect_files_recursive(temp_dir.path(), &mut files);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("maximum depth"));
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
         Ok(())
     }
 
@@ -2440,16 +2532,12 @@ mod tests {
         }
         let result = copy_dir_all(src_dir.path(), dst_dir.path());
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("maximum depth"));
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_verify_and_copy_files_async_depth_exceeded(
-    ) -> Result<()> {
+    async fn test_verify_and_copy_files_async_depth_exceeded() -> Result<()> {
         let temp_dir = tempdir()?;
         let src = temp_dir.path().join("src");
         let dst = temp_dir.path().join("dst");
@@ -2458,13 +2546,9 @@ mod tests {
             path = path.join(format!("d{}", i));
             fs::create_dir_all(&path)?;
         }
-        let result =
-            verify_and_copy_files_async(&src, &dst).await;
+        let result = verify_and_copy_files_async(&src, &dst).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("maximum depth"));
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
         Ok(())
     }
 
@@ -2480,17 +2564,13 @@ mod tests {
         }
         let result = copy_dir_all_async(&src, &dst).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("maximum depth"));
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
         Ok(())
     }
 
     #[test]
     fn test_verify_file_safety_nonexistent() {
-        let result =
-            verify_file_safety(Path::new("/nonexistent/file.txt"));
+        let result = verify_file_safety(Path::new("/nonexistent/file.txt"));
         assert!(result.is_err());
     }
 
@@ -2519,10 +2599,7 @@ mod tests {
 
         assert_eq!(fs::read_to_string(dst.join("root.txt"))?, "root");
         assert_eq!(fs::read_to_string(dst.join("sub1/a.txt"))?, "a");
-        assert_eq!(
-            fs::read_to_string(dst.join("sub1/sub2/b.txt"))?,
-            "b"
-        );
+        assert_eq!(fs::read_to_string(dst.join("sub1/sub2/b.txt"))?, "b");
         Ok(())
     }
 
@@ -2541,10 +2618,7 @@ mod tests {
 
         copy_dir_with_progress(src_dir.path(), dst_dir.path())?;
 
-        assert_eq!(
-            fs::read_to_string(dst_dir.path().join("file1.txt"))?,
-            "f1"
-        );
+        assert_eq!(fs::read_to_string(dst_dir.path().join("file1.txt"))?, "f1");
         assert_eq!(
             fs::read_to_string(dst_dir.path().join("a/file2.txt"))?,
             "f2"
@@ -2587,9 +2661,7 @@ mod tests {
         };
         let result = paths.validate();
         assert!(result.is_err());
-        assert!(
-            result.unwrap_err().to_string().contains("symlink")
-        );
+        assert!(result.unwrap_err().to_string().contains("symlink"));
         Ok(())
     }
 
@@ -2602,12 +2674,9 @@ mod tests {
             path = path.join(format!("d{}", i));
             fs::create_dir(&path)?;
         }
-        let result =
-            copy_dir_with_progress(src_dir.path(), dst_dir.path());
+        let result = copy_dir_with_progress(src_dir.path(), dst_dir.path());
         assert!(result.is_err());
-        assert!(
-            result.unwrap_err().to_string().contains("maximum depth")
-        );
+        assert!(result.unwrap_err().to_string().contains("maximum depth"));
         Ok(())
     }
 
@@ -2642,8 +2711,6 @@ mod tests {
         assert!(result.is_err());
         Ok(())
     }
-
-
 
     #[tokio::test]
     async fn test_prepare_serve_dir_same_as_site() -> Result<()> {

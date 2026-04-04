@@ -59,23 +59,19 @@ pub const DEFAULT_SITE_NAME: &str = "MySsgSite";
 pub const DEFAULT_SITE_TITLE: &str = "My SSG Site";
 
 /// A static default configuration for the SSG site.
-pub static DEFAULT_CONFIG: Lazy<Arc<SsgConfig>> =
-    Lazy::new(|| {
-        Arc::new(SsgConfig {
-            site_name: DEFAULT_SITE_NAME.to_string(),
-            content_dir: PathBuf::from("content"),
-            output_dir: PathBuf::from("public"),
-            template_dir: PathBuf::from("templates"),
-            serve_dir: None,
-            base_url: format!(
-                "http://{}:{}",
-                DEFAULT_HOST, DEFAULT_PORT
-            ),
-            site_title: DEFAULT_SITE_TITLE.to_string(),
-            site_description: "A site built with SSG".to_string(),
-            language: "en-GB".to_string(),
-        })
-    });
+pub static DEFAULT_CONFIG: Lazy<Arc<SsgConfig>> = Lazy::new(|| {
+    Arc::new(SsgConfig {
+        site_name: DEFAULT_SITE_NAME.to_string(),
+        content_dir: PathBuf::from("content"),
+        output_dir: PathBuf::from("public"),
+        template_dir: PathBuf::from("templates"),
+        serve_dir: None,
+        base_url: format!("http://{}:{}", DEFAULT_HOST, DEFAULT_PORT),
+        site_title: DEFAULT_SITE_TITLE.to_string(),
+        site_description: "A site built with SSG".to_string(),
+        language: "en-GB".to_string(),
+    })
+});
 
 /// Type-safe representation of a language code.
 ///
@@ -197,8 +193,7 @@ impl SsgConfig {
         }
 
         // If `-c/--content` was used
-        if let Some(content_dir) = matches.get_one::<PathBuf>("content")
-        {
+        if let Some(content_dir) = matches.get_one::<PathBuf>("content") {
             self.content_dir = content_dir.clone();
         }
 
@@ -208,9 +203,7 @@ impl SsgConfig {
         }
 
         // If `-t/--template` was used
-        if let Some(template_dir) =
-            matches.get_one::<PathBuf>("template")
-        {
+        if let Some(template_dir) = matches.get_one::<PathBuf>("template") {
             self.template_dir = template_dir.clone();
         }
 
@@ -241,11 +234,8 @@ impl SsgConfig {
     /// let matches = cli.build().get_matches();
     /// let config = SsgConfig::from_matches(&matches)?;
     /// ```
-    pub fn from_matches(
-        matches: &ArgMatches,
-    ) -> Result<Self, CliError> {
-        if let Some(config_path) = matches.get_one::<PathBuf>("config")
-        {
+    pub fn from_matches(matches: &ArgMatches) -> Result<Self, CliError> {
+        if let Some(config_path) = matches.get_one::<PathBuf>("config") {
             let loaded_config = Self::from_file(config_path)?;
             return Ok(loaded_config);
         }
@@ -421,18 +411,15 @@ pub fn validate_url(url: &str) -> Result<(), CliError> {
         ));
     }
 
-    let parsed_url = Url::parse(url)
-        .map_err(|_| CliError::InvalidUrl(url.to_string()))?;
+    let parsed_url =
+        Url::parse(url).map_err(|_| CliError::InvalidUrl(url.to_string()))?;
     if parsed_url.scheme() != "http" && parsed_url.scheme() != "https" {
         return Err(CliError::InvalidUrl(url.to_string()));
     }
     Ok(())
 }
 
-fn validate_path_safety(
-    path: &Path,
-    field: &str,
-) -> Result<(), CliError> {
+fn validate_path_safety(path: &Path, field: &str) -> Result<(), CliError> {
     // Check for invalid characters and mixed separators
     let path_str = path.to_string_lossy();
 
@@ -458,8 +445,7 @@ fn validate_path_safety(
     if !path.is_absolute() && path_str.contains("..") {
         return Err(CliError::InvalidPath {
             field: field.to_string(),
-            details: "Path contains parent directory traversal"
-                .to_string(),
+            details: "Path contains parent directory traversal".to_string(),
         });
     }
 
@@ -469,18 +455,18 @@ fn validate_path_safety(
         if RESERVED_NAMES.contains(&stem_lower.as_str()) {
             return Err(CliError::InvalidPath {
                 field: field.to_string(),
-                details: format!(
-                    "Path uses reserved name '{}'",
-                    stem_lower
-                ),
+                details: format!("Path uses reserved name '{}'", stem_lower),
             });
         }
     }
 
     // If path exists, check if it's a symlink
     if path.exists() {
-        let metadata = fs::symlink_metadata(path)
-            .map_err(|_| CliError::IoError(std::io::Error::other("Failed to get path metadata")))?;
+        let metadata = fs::symlink_metadata(path).map_err(|_| {
+            CliError::IoError(std::io::Error::other(
+                "Failed to get path metadata",
+            ))
+        })?;
 
         if metadata.file_type().is_symlink() {
             return Err(CliError::InvalidPath {
@@ -565,6 +551,32 @@ impl Cli {
                     .short('w')
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("drafts")
+                    .help("Include draft pages in the build")
+                    .long("drafts")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("deploy")
+                    .help("Generate deployment config (netlify, vercel, cloudflare, github)")
+                    .long("deploy")
+                    .value_name("TARGET")
+                    .value_parser(clap::value_parser!(String)),
+            )
+            .arg(
+                Arg::new("quiet")
+                    .help("Suppress non-error output")
+                    .long("quiet")
+                    .short('q')
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("verbose")
+                    .help("Show detailed build information")
+                    .long("verbose")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Displays the application banner
@@ -580,17 +592,9 @@ impl Cli {
         let line = "─".repeat(width - 2);
 
         println!("\n┌{}┐", line);
-        println!(
-            "│{:^width$}│",
-            title.green().bold(),
-            width = width - 3
-        );
+        println!("│{:^width$}│", title.green().bold(), width = width - 3);
         println!("├{}┤", line);
-        println!(
-            "│{:^width$}│",
-            description.blue().bold(),
-            width = width - 2
-        );
+        println!("│{:^width$}│", description.blue().bold(), width = width - 2);
         println!("└{}┘\n", line);
     }
 }
@@ -612,8 +616,7 @@ mod tests {
 
     #[test]
     fn test_config_validation() {
-        let config =
-            SsgConfig::builder().site_name("".to_string()).build();
+        let config = SsgConfig::builder().site_name("".to_string()).build();
         assert!(matches!(config, Err(CliError::ValidationError(_))));
     }
 
@@ -657,8 +660,7 @@ mod tests {
     #[test]
     fn test_path_safety() {
         let valid = Path::new("valid");
-        let absolute_valid =
-            std::env::current_dir().unwrap().join(valid);
+        let absolute_valid = std::env::current_dir().unwrap().join(valid);
         assert!(validate_path_safety(&absolute_valid, "test").is_ok());
     }
 
@@ -773,8 +775,7 @@ mod tests {
     fn test_path_with_separators() {
         // Minimal command that doesn't require any flags:
         let cmd = Command::new("test_no_required_args");
-        let _matches =
-            cmd.get_matches_from(vec!["test_no_required_args"]);
+        let _matches = cmd.get_matches_from(vec!["test_no_required_args"]);
 
         // Now test the function you actually care about:
         let path = Path::new("path/to\\file");
@@ -872,10 +873,7 @@ language = "en-GB"
         assert_eq!(config.site_name, "cli-site");
         assert_eq!(config.content_dir, PathBuf::from("./examples/content"));
         assert_eq!(config.output_dir, PathBuf::from("./examples/public"));
-        assert_eq!(
-            config.template_dir,
-            PathBuf::from("./examples/templates")
-        );
+        assert_eq!(config.template_dir, PathBuf::from("./examples/templates"));
         assert!(config.serve_dir.is_some());
     }
 
@@ -893,8 +891,7 @@ language = "en-GB"
 
     #[test]
     fn test_validate_path_with_traversal() {
-        let result =
-            validate_path_safety(Path::new("../etc/passwd"), "test");
+        let result = validate_path_safety(Path::new("../etc/passwd"), "test");
         assert!(matches!(result, Err(CliError::InvalidPath { .. })));
     }
 

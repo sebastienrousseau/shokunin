@@ -82,11 +82,14 @@ impl BuildCache {
             });
         }
 
-        let data = fs::read_to_string(cache_path)
-            .with_context(|| format!("failed to read cache file: {}", cache_path.display()))?;
+        let data = fs::read_to_string(cache_path).with_context(|| {
+            format!("failed to read cache file: {}", cache_path.display())
+        })?;
 
-        let mut cache: Self = serde_json::from_str(&data)
-            .with_context(|| format!("failed to parse cache file: {}", cache_path.display()))?;
+        let mut cache: Self =
+            serde_json::from_str(&data).with_context(|| {
+                format!("failed to parse cache file: {}", cache_path.display())
+            })?;
 
         cache.cache_path = cache_path.to_path_buf();
         Ok(cache)
@@ -108,13 +111,9 @@ impl BuildCache {
     pub fn save(&self) -> Result<()> {
         let json = serde_json::to_string_pretty(self)
             .context("failed to serialize cache")?;
-        fs::write(&self.cache_path, json)
-            .with_context(|| {
-                format!(
-                    "failed to write cache file: {}",
-                    self.cache_path.display()
-                )
-            })?;
+        fs::write(&self.cache_path, json).with_context(|| {
+            format!("failed to write cache file: {}", self.cache_path.display())
+        })?;
         Ok(())
     }
 
@@ -144,15 +143,17 @@ impl BuildCache {
 
     /// Recursive directory walker.
     fn walk(base: &Path, current: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
-        let entries = fs::read_dir(current)
-            .with_context(|| format!("cannot read directory: {}", current.display()))?;
+        let entries = fs::read_dir(current).with_context(|| {
+            format!("cannot read directory: {}", current.display())
+        })?;
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
                 Self::walk(base, &path, out)?;
             } else {
-                let rel = path.strip_prefix(base)
+                let rel = path
+                    .strip_prefix(base)
                     .with_context(|| "strip_prefix failed")?;
                 out.push(rel.to_path_buf());
             }
@@ -390,10 +391,8 @@ mod tests {
         let tmp = TempDir::new().ok().unwrap();
         let cache_path = tmp.path().join(".ssg-cache.json");
         let cache = BuildCache::load(&cache_path).ok().unwrap();
-        let changed = cache
-            .changed_files(&tmp.path().join("nope"))
-            .ok()
-            .unwrap();
+        let changed =
+            cache.changed_files(&tmp.path().join("nope")).ok().unwrap();
         assert!(changed.is_empty());
     }
 
@@ -508,6 +507,9 @@ mod tests {
         let changed = cache2.changed_files(&content).ok().unwrap();
 
         // Assert — nothing should be reported as changed
-        assert!(changed.is_empty(), "unchanged files must not be in changed list");
+        assert!(
+            changed.is_empty(),
+            "unchanged files must not be in changed list"
+        );
     }
 }
