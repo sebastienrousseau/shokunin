@@ -1203,20 +1203,6 @@ dependencies = [
 [[package]]
 name = "dtt"
 version = "0.0.9"
-dependencies = [
- "lazy_static",
- "paste",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "time",
- "version_check",
-]
-
-[[package]]
-name = "dtt"
-version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3d0ded54a7c92b3bbc6d8a6a5ae97f120caa634ab7ee49d0b20ac2041037e2d"
 dependencies = [
@@ -1843,7 +1829,7 @@ dependencies = [
  "comrak 0.28.0",
  "frontmatter-gen 0.0.2",
  "lazy_static",
- "mdx-gen 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mdx-gen 0.0.1",
  "minify-html 0.15.0",
  "once_cell",
  "regex",
@@ -1858,13 +1844,15 @@ dependencies = [
 
 [[package]]
 name = "html-generator"
-version = "0.0.3"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "962715f8883a18b15e9dad9de412294ed2edcf590847b0f9986d9127367a9beb"
 dependencies = [
  "cfg",
  "comrak 0.50.0",
  "lazy_static",
  "log",
- "mdx-gen 0.0.1",
+ "mdx-gen 0.0.2",
  "minify-html 0.18.1",
  "once_cell",
  "regex",
@@ -2619,26 +2607,6 @@ checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
 [[package]]
 name = "mdx-gen"
 version = "0.0.1"
-dependencies = [
- "anyhow",
- "comrak 0.50.0",
- "env_logger",
- "html-escape",
- "lazy_static",
- "log",
- "regex",
- "serde",
- "serde_json",
- "syntect",
- "thiserror 2.0.18",
- "tokio",
- "toml 0.8.23",
- "version_check",
-]
-
-[[package]]
-name = "mdx-gen"
-version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eba95ca121d5154b8ec38928b5421207ce7354d9b924e04dc648589d09d9861c"
 dependencies = [
@@ -2659,6 +2627,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "mdx-gen"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03c4c8dc74c2c82e042d3aa231598122d8def5d1a09b96ae2c3e3075b342d838"
+dependencies = [
+ "anyhow",
+ "comrak 0.50.0",
+ "env_logger",
+ "html-escape",
+ "lazy_static",
+ "log",
+ "regex",
+ "serde",
+ "serde_json",
+ "syntect",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml 0.8.23",
+ "version_check",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2666,10 +2656,12 @@ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
 name = "metadata-gen"
-version = "0.0.1"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "864ed834296703867169c44c683ebbebaf474dcd23623ccf41a9754a8f409a6e"
 dependencies = [
  "anyhow",
- "dtt 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dtt 0.0.9",
  "quick-xml 0.39.2",
  "regex",
  "scraper 0.22.0",
@@ -4132,10 +4124,12 @@ dependencies = [
 [[package]]
 name = "rlg"
 version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7c9c573404feef0bc7012c96506ce134ec2bf04cd943ddd5eb205ac4e3c880d"
 dependencies = [
  "config",
  "crossbeam-queue",
- "dtt 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dtt 0.0.9",
  "envy",
  "euxis-commons",
  "hostname",
@@ -4172,7 +4166,7 @@ version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87de826a400568de2c3a99c64977559141a5485b73ae3a91cdaf51728a010ebd"
 dependencies = [
- "dtt 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dtt 0.0.9",
  "log",
  "quick-xml 0.36.2",
  "serde",
@@ -4713,7 +4707,7 @@ dependencies = [
  "clap",
  "colored",
  "criterion",
- "dtt 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "dtt 0.0.9",
  "env_logger",
  "frontmatter-gen 0.0.5",
  "http-handle 0.0.4",
@@ -4752,13 +4746,15 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.7"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3e1261be52af2ac6b5e11fd8091ca843aeac4894642541945997c5fd3b00de8"
 dependencies = [
  "anyhow",
  "clap",
  "comrak 0.50.0",
- "dtt 0.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "html-generator 0.0.3",
+ "dtt 0.0.9",
+ "html-generator 0.0.4",
  "http-handle 0.0.2",
  "idna",
  "langweave",
@@ -5533,7 +5529,9 @@ checksum = "65dd7eed29412da847b0f78bcec0ac98588165988a8cfe41d4ea1d429f8ccfff"
 
 [[package]]
 name = "vrd"
-version = "0.0.8"
+version = "0.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a508bb0b1488739a137cabf75d8e294f2b01295c75d7489c6c1dfb7feb7da301"
 dependencies = [
  "bitflags",
  "dtt 0.0.9",
