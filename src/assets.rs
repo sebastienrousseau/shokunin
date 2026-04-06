@@ -21,11 +21,11 @@ use std::{
 /// 2. Rename: `style.css` → `style.a1b2c3d4.css`
 /// 3. Rewrite all HTML `<link>` and `<script>` references
 /// 4. Add `integrity` and `crossorigin` attributes (SRI)
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FingerprintPlugin;
 
 impl Plugin for FingerprintPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "fingerprint"
     }
 
@@ -52,16 +52,15 @@ impl Plugin for FingerprintPlugin {
                 asset_path.file_stem().unwrap_or_default().to_string_lossy();
             let ext =
                 asset_path.extension().unwrap_or_default().to_string_lossy();
-            let new_name = format!("{}.{}.{}", stem, short_hash, ext);
+            let new_name = format!("{stem}.{short_hash}.{ext}");
             let new_path = asset_path.with_file_name(&new_name);
 
             // Compute SRI hash (base64 of full SHA-256)
             let sri = format!("sha256-{}", base64_encode(&content));
 
             // Rename file
-            fs::rename(asset_path, &new_path).with_context(|| {
-                format!("Failed to rename {:?}", asset_path)
-            })?;
+            fs::rename(asset_path, &new_path)
+                .with_context(|| format!("Failed to rename {asset_path:?}"))?;
 
             // Store mapping: relative old path → relative new path
             let rel_old = asset_path
@@ -113,7 +112,7 @@ fn rewrite_asset_refs(
     let mut result = html.to_string();
     for (old_path, info) in manifest {
         // Replace href="old" with href="new" integrity="..." crossorigin="anonymous"
-        let old_ref = format!("\"{}\"", old_path);
+        let old_ref = format!("\"{old_path}\"");
         let old_ref_slash = format!("\"/{old_path}\"");
         let new_ref = format!(
             "\"{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
@@ -138,13 +137,13 @@ fn sha256_hex(data: &[u8]) -> String {
     // For production SRI we need real SHA-256.
     //
     // Using a simple but effective hash based on content bytes:
-    let mut h: u64 = 0xcbf29ce484222325; // FNV offset basis
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
     for &byte in data {
-        h ^= byte as u64;
-        h = h.wrapping_mul(0x100000001b3); // FNV prime
+        h ^= u64::from(byte);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3); // FNV prime
     }
     let h2 = h.wrapping_add(data.len() as u64);
-    format!("{:016x}{:016x}", h, h2)
+    format!("{h:016x}{h2:016x}")
 }
 
 /// Base64-encode for SRI (simplified — uses hex fallback).

@@ -36,14 +36,13 @@ fn main() -> Result<()> {
         let template_dir = Path::new("./examples/templates").join(lang);
 
         // Call the compile function to generate the website
-        println!("    🔍 Compiling content for language: {}...", lang);
+        println!("    🔍 Compiling content for language: {lang}...");
         match compile(&build_dir, &content_dir, &site_dir, &template_dir) {
-            Ok(_) => println!(
-                "    ✅ Successfully compiled static site for language: {}",
-                lang
+            Ok(()) => println!(
+                "    ✅ Successfully compiled static site for language: {lang}"
             ),
             Err(e) => {
-                println!("    ❌ Error compiling site for {}: {:?}", lang, e);
+                println!("    ❌ Error compiling site for {lang}: {e:?}");
                 return Err(e);
             }
         }

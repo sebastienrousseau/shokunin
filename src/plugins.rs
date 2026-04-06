@@ -31,7 +31,7 @@ use std::fs;
 pub struct MinifyPlugin;
 
 impl Plugin for MinifyPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "minify"
     }
 
@@ -42,7 +42,7 @@ impl Plugin for MinifyPlugin {
         let mut count = 0usize;
         for entry in fs::read_dir(&ctx.site_dir)? {
             let path = entry?.path();
-            if path.extension().map_or(false, |e| e == "html") {
+            if path.extension().is_some_and(|e| e == "html") {
                 let content = fs::read_to_string(&path).with_context(|| {
                     format!("Failed to read {}", path.display())
                 })?;
@@ -54,7 +54,7 @@ impl Plugin for MinifyPlugin {
             }
         }
         if count > 0 {
-            println!("[minify] Processed {} HTML files", count);
+            println!("[minify] Processed {count} HTML files");
         }
         Ok(())
     }
@@ -105,7 +105,7 @@ fn minify_html(html: &str) -> String {
 pub struct ImageOptiPlugin;
 
 impl Plugin for ImageOptiPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "image-opti"
     }
 
@@ -157,6 +157,7 @@ pub struct DeployPlugin {
 
 impl DeployPlugin {
     /// Creates a new deployment plugin for the given target environment.
+    #[must_use]
     pub fn new(target: &str) -> Self {
         Self {
             target: target.to_string(),
@@ -165,7 +166,7 @@ impl DeployPlugin {
 }
 
 impl Plugin for DeployPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "deploy"
     }
 

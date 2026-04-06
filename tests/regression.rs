@@ -699,7 +699,7 @@ fn stream_lines_processes_each_line() -> Result<()> {
     fs::write(&path, "one\ntwo\nthree")?;
 
     let mut lines = Vec::new();
-    stream_lines(&path, |_i, line| {
+    let _ = stream_lines(&path, |_i, line| {
         lines.push(line.to_string());
         Ok(())
     })?;

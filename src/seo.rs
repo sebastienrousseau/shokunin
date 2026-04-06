@@ -164,7 +164,7 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
             let path = entry?.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
+            } else if path.extension().is_some_and(|e| e == "html") {
                 files.push(path);
             }
         }
@@ -207,7 +207,7 @@ fn escape_attr(s: &str) -> String {
 pub struct SeoPlugin;
 
 impl Plugin for SeoPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "seo"
     }
 
@@ -238,37 +238,34 @@ fn inject_seo_tags(path: &Path) -> Result<()> {
     // Meta description
     if !html.contains("<meta name=\"description\"")
         && !html.contains("<meta name='description'")
+        && !description.is_empty()
     {
-        if !description.is_empty() {
-            tags.push(format!(
-                "<meta name=\"description\" content=\"{}\">",
-                escape_attr(&description)
-            ));
-        }
+        tags.push(format!(
+            "<meta name=\"description\" content=\"{}\">",
+            escape_attr(&description)
+        ));
     }
 
     // Open Graph title
     if !html.contains("<meta property=\"og:title\"")
         && !html.contains("<meta property='og:title'")
+        && !title.is_empty()
     {
-        if !title.is_empty() {
-            tags.push(format!(
-                "<meta property=\"og:title\" content=\"{}\">",
-                escape_attr(&title)
-            ));
-        }
+        tags.push(format!(
+            "<meta property=\"og:title\" content=\"{}\">",
+            escape_attr(&title)
+        ));
     }
 
     // Open Graph description
     if !html.contains("<meta property=\"og:description\"")
         && !html.contains("<meta property='og:description'")
+        && !description.is_empty()
     {
-        if !description.is_empty() {
-            tags.push(format!(
-                "<meta property=\"og:description\" content=\"{}\">",
-                escape_attr(&description)
-            ));
-        }
+        tags.push(format!(
+            "<meta property=\"og:description\" content=\"{}\">",
+            escape_attr(&description)
+        ));
     }
 
     // Open Graph type
@@ -339,7 +336,7 @@ impl RobotsPlugin {
 }
 
 impl Plugin for RobotsPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "robots"
     }
 
@@ -403,7 +400,7 @@ impl CanonicalPlugin {
 }
 
 impl Plugin for CanonicalPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "canonical"
     }
 
@@ -462,7 +459,7 @@ pub struct JsonLdConfig {
     pub base_url: String,
     /// Organization name for Organization schema.
     pub org_name: String,
-    /// Whether to generate BreadcrumbList for every page.
+    /// Whether to generate `BreadcrumbList` for every page.
     pub breadcrumbs: bool,
 }
 
@@ -471,7 +468,7 @@ pub struct JsonLdConfig {
 /// Auto-detects schema.org types from page metadata:
 /// - Pages with `<article>` → `Article`
 /// - All other pages → `WebPage`
-/// - BreadcrumbList derived from URL path (opt-in)
+/// - `BreadcrumbList` derived from URL path (opt-in)
 ///
 /// Idempotent: skips files that already contain `application/ld+json`.
 #[derive(Debug, Clone)]
@@ -481,11 +478,13 @@ pub struct JsonLdPlugin {
 
 impl JsonLdPlugin {
     /// Creates a new `JsonLdPlugin` with the given configuration.
-    pub fn new(config: JsonLdConfig) -> Self {
+    #[must_use]
+    pub const fn new(config: JsonLdConfig) -> Self {
         Self { config }
     }
 
     /// Creates a `JsonLdPlugin` from site config values.
+    #[must_use]
     pub fn from_site(base_url: &str, site_name: &str) -> Self {
         Self {
             config: JsonLdConfig {
@@ -498,7 +497,7 @@ impl JsonLdPlugin {
 }
 
 impl Plugin for JsonLdPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "json-ld"
     }
 
@@ -531,7 +530,7 @@ impl Plugin for JsonLdPlugin {
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace('\\', "/");
-            let page_url = format!("{}/{}", base, rel_path);
+            let page_url = format!("{base}/{rel_path}");
 
             let mut scripts = Vec::new();
 
@@ -582,7 +581,7 @@ impl Plugin for JsonLdPlugin {
 
                     let mut accumulated = String::new();
                     for (i, part) in parts.iter().enumerate() {
-                        accumulated = format!("{}/{}", accumulated, part);
+                        accumulated = format!("{accumulated}/{part}");
                         let name =
                             part.trim_end_matches(".html").replace('-', " ");
                         items.push(serde_json::json!({
@@ -607,8 +606,7 @@ impl Plugin for JsonLdPlugin {
             for script in &scripts {
                 let json = serde_json::to_string(script)?;
                 injection.push_str(&format!(
-                    "<script type=\"application/ld+json\">{}</script>\n",
-                    json
+                    "<script type=\"application/ld+json\">{json}</script>\n"
                 ));
             }
 
@@ -624,8 +622,7 @@ impl Plugin for JsonLdPlugin {
 
         if injected > 0 {
             log::info!(
-                "[json-ld] Injected structured data into {} page(s)",
-                injected
+                "[json-ld] Injected structured data into {injected} page(s)"
             );
         }
         Ok(())

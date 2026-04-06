@@ -66,7 +66,7 @@ pub static DEFAULT_CONFIG: Lazy<Arc<SsgConfig>> = Lazy::new(|| {
         output_dir: PathBuf::from("public"),
         template_dir: PathBuf::from("templates"),
         serve_dir: None,
-        base_url: format!("http://{}:{}", DEFAULT_HOST, DEFAULT_PORT),
+        base_url: format!("http://{DEFAULT_HOST}:{DEFAULT_PORT}"),
         site_title: DEFAULT_SITE_TITLE.to_string(),
         site_description: "A site built with SSG".to_string(),
         language: "en-GB".to_string(),
@@ -81,7 +81,7 @@ pub static DEFAULT_CONFIG: Lazy<Arc<SsgConfig>> = Lazy::new(|| {
 /// assert!(LanguageCode::new("en-GB").is_ok());
 /// assert!(LanguageCode::new("invalid").is_err());
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LanguageCode(String);
 
 impl LanguageCode {
@@ -189,7 +189,7 @@ impl SsgConfig {
     ) -> Result<Self, CliError> {
         // If `-n/--new` was used
         if let Some(site_name) = matches.get_one::<String>("new") {
-            self.site_name = site_name.to_string();
+            self.site_name = site_name.clone();
         }
 
         // If `-c/--content` was used
@@ -268,20 +268,19 @@ impl SsgConfig {
         let metadata = fs::metadata(path)?;
         if metadata.len() > MAX_CONFIG_SIZE as u64 {
             return Err(CliError::ValidationError(format!(
-                "Config file too large (max {} bytes)",
-                MAX_CONFIG_SIZE
+                "Config file too large (max {MAX_CONFIG_SIZE} bytes)"
             )));
         }
 
         let content = fs::read_to_string(path)?;
-        let config: SsgConfig = toml::from_str(&content)?;
+        let config: Self = toml::from_str(&content)?;
         config.validate()?;
         Ok(config)
     }
 
     /// Creates a new `SsgConfig` instance from a TOML file.
     pub fn validate(&self) -> Result<(), CliError> {
-        debug!("Validating config: {:?}", self);
+        debug!("Validating config: {self:?}");
 
         if self.site_name.trim().is_empty() {
             error!("site_name cannot be empty");
@@ -306,6 +305,7 @@ impl SsgConfig {
     }
 
     /// Creates a new `SsgConfig` instance from a TOML file.
+    #[must_use]
     pub fn builder() -> SsgConfigBuilder {
         SsgConfigBuilder::default()
     }
@@ -315,7 +315,7 @@ impl FromStr for SsgConfig {
     type Err = CliError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let config: SsgConfig = toml::from_str(s)?;
+        let config: Self = toml::from_str(s)?;
         config.validate()?;
         Ok(config)
     }
@@ -338,46 +338,55 @@ pub struct SsgConfigBuilder {
 /// ```
 impl SsgConfigBuilder {
     /// Sets the site name for the configuration.
+    #[must_use]
     pub fn site_name(mut self, name: String) -> Self {
         self.config.site_name = name;
         self
     }
     /// Sets the base URL for the configuration.
+    #[must_use]
     pub fn base_url(mut self, url: String) -> Self {
         self.config.base_url = url;
         self
     }
     /// Sets the content directory for the configuration.
+    #[must_use]
     pub fn content_dir(mut self, dir: PathBuf) -> Self {
         self.config.content_dir = dir;
         self
     }
     /// Sets the output directory for the configuration.
+    #[must_use]
     pub fn output_dir(mut self, dir: PathBuf) -> Self {
         self.config.output_dir = dir;
         self
     }
     /// Sets the template directory for the configuration.
+    #[must_use]
     pub fn template_dir(mut self, dir: PathBuf) -> Self {
         self.config.template_dir = dir;
         self
     }
     /// Sets the optional development server directory for the configuration.
+    #[must_use]
     pub fn serve_dir(mut self, dir: Option<PathBuf>) -> Self {
         self.config.serve_dir = dir;
         self
     }
     /// Sets the site title for the configuration.
+    #[must_use]
     pub fn site_title(mut self, title: String) -> Self {
         self.config.site_title = title;
         self
     }
     /// Sets the site description for the configuration.
+    #[must_use]
     pub fn site_description(mut self, desc: String) -> Self {
         self.config.site_description = desc;
         self
     }
     /// Sets the language code for the configuration.
+    #[must_use]
     pub fn language(mut self, lang: String) -> Self {
         self.config.language = lang;
         self
@@ -455,7 +464,7 @@ fn validate_path_safety(path: &Path, field: &str) -> Result<(), CliError> {
         if RESERVED_NAMES.contains(&stem_lower.as_str()) {
             return Err(CliError::InvalidPath {
                 field: field.to_string(),
-                details: format!("Path uses reserved name '{}'", stem_lower),
+                details: format!("Path uses reserved name '{stem_lower}'"),
             });
         }
     }
@@ -491,6 +500,7 @@ pub struct Cli;
 
 impl Cli {
     /// Creates the command-line interface.
+    #[must_use]
     pub fn build() -> Command {
         Command::new(env!("CARGO_PKG_NAME"))
             .author(env!("CARGO_PKG_AUTHORS"))
@@ -591,11 +601,11 @@ impl Cli {
         let width = title.len().max(description.len()) + 4;
         let line = "─".repeat(width - 2);
 
-        println!("\n┌{}┐", line);
+        println!("\n┌{line}┐");
         println!("│{:^width$}│", title.green().bold(), width = width - 3);
-        println!("├{}┤", line);
+        println!("├{line}┤");
         println!("│{:^width$}│", description.blue().bold(), width = width - 2);
-        println!("└{}┘\n", line);
+        println!("└{line}┘\n");
     }
 }
 

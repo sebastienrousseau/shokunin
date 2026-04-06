@@ -260,7 +260,7 @@ pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
         fs::write(src.join(format!("f{i}.txt")), "a]".repeat(32))?;
     }
 
-    process_batch(&src, &dst, |s, d| stream_copy(s, d))
+    process_batch(&src, &dst, stream_copy)
 }
 
 #[cfg(test)]
@@ -409,7 +409,7 @@ mod tests {
         fs::write(&path, "alpha\nbeta\ngamma")?;
 
         let mut collected = Vec::new();
-        stream_lines(&path, |_i, line| {
+        let _ = stream_lines(&path, |_i, line| {
             collected.push(line.to_string());
             Ok(())
         })?;

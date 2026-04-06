@@ -43,7 +43,7 @@ impl HighlightPlugin {
 }
 
 impl Plugin for HighlightPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "highlight"
     }
 
@@ -65,10 +65,10 @@ impl Plugin for HighlightPlugin {
             let result = add_highlight_markup(&html);
             if result != html {
                 // Inject CSS link if not present
-                let output = if !result.contains("highlight.css") {
-                    inject_css_link(&result)
-                } else {
+                let output = if result.contains("highlight.css") {
                     result
+                } else {
+                    inject_css_link(&result)
                 };
                 fs::write(path, output)?;
                 highlighted += 1;
@@ -112,12 +112,10 @@ fn add_highlight_markup(html: &str) -> String {
                 // Write the enhanced pre tag
                 result.push_str(&html[pos..abs_pre]);
                 result.push_str(&format!(
-                    "<pre class=\"highlight language-{}\">",
-                    lang
+                    "<pre class=\"highlight language-{lang}\">"
                 ));
                 result.push_str(&format!(
-                    "<code class=\"language-{}\" data-lang=\"{}\">",
-                    lang, lang
+                    "<code class=\"language-{lang}\" data-lang=\"{lang}\">"
                 ));
 
                 // Skip past the original <pre><code class="language-X">

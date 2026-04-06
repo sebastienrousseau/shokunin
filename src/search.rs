@@ -23,7 +23,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// A single entry in the search index.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SearchEntry {
     /// Page title extracted from `<title>` or first `<h1>`.
     pub title: String,
@@ -95,11 +95,13 @@ impl SearchIndex {
     }
 
     /// Number of indexed pages.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Returns true if the index has no entries.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -120,7 +122,7 @@ impl SearchIndex {
 pub struct SearchPlugin;
 
 impl Plugin for SearchPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "search"
     }
 
@@ -268,8 +270,7 @@ fn truncate(s: &str, max: usize) -> String {
         .char_indices()
         .take(max)
         .last()
-        .map(|(i, c)| i + c.len_utf8())
-        .unwrap_or(0);
+        .map_or(0, |(i, c)| i + c.len_utf8());
     let truncated = &s[..byte_pos];
     if let Some(last_space) = truncated.rfind(' ') {
         truncated[..last_space].to_string()
@@ -293,7 +294,7 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
             let path = entry?.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
+            } else if path.extension().is_some_and(|e| e == "html") {
                 files.push(path);
             }
         }
@@ -334,9 +335,9 @@ fn inject_search_ui(path: &Path) -> Result<()> {
 /// The self-contained search widget (HTML + CSS + JS).
 ///
 /// Includes a fixed search button in the top-right corner (like pacs008.com's
-/// DocSearch bar) that opens a full-screen search modal. Also responds to
+/// `DocSearch` bar) that opens a full-screen search modal. Also responds to
 /// `Ctrl+K` / `Cmd+K`.
-const SEARCH_WIDGET_SCRIPT: &str = r##"
+const SEARCH_WIDGET_SCRIPT: &str = r#"
 <!-- SSG Search Widget -->
 <div id="ssg-search-widget">
 <style>
@@ -436,7 +437,7 @@ if(e.key==='Enter'){e.preventDefault();var items=results.querySelectorAll('.ssg-
 })();
 </script>
 </div>
-"##;
+"#;
 
 #[cfg(test)]
 mod tests {

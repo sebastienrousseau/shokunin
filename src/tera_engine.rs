@@ -84,7 +84,7 @@ impl TeraEngine {
     /// * `template_name` — template to render (e.g. `"page.html"`)
     /// * `page_content` — compiled HTML content from staticdatagen
     /// * `frontmatter` — parsed frontmatter as JSON key-value pairs
-    /// * `site_globals` — site-level variables (name, base_url, etc.)
+    /// * `site_globals` — site-level variables (name, `base_url`, etc.)
     pub fn render_page(
         &self,
         template_name: &str,
@@ -125,10 +125,11 @@ impl TeraEngine {
 
         self.tera
             .render(&tmpl, &context)
-            .with_context(|| format!("Failed to render template '{}'", tmpl))
+            .with_context(|| format!("Failed to render template '{tmpl}'"))
     }
 
     /// Builds site-level globals from an `SsgConfig`.
+    #[must_use]
     pub fn site_globals_from_config(
         config: &crate::cmd::SsgConfig,
     ) -> HashMap<String, serde_json::Value> {
@@ -162,6 +163,7 @@ impl TeraEngine {
     /// Files are accessible as `{{ data.filename }}` in templates.
     ///
     /// Example: `data/nav.toml` → `{{ data.nav.links }}`
+    #[must_use]
     pub fn load_data_files(
         content_dir: &std::path::Path,
     ) -> HashMap<String, serde_json::Value> {
@@ -230,7 +232,7 @@ fn reading_time_filter(
     let text = value.as_str().unwrap_or("");
     let word_count = text.split_whitespace().count();
     let minutes = (word_count / 200).max(1);
-    Ok(tera::Value::String(format!("{} min read", minutes)))
+    Ok(tera::Value::String(format!("{minutes} min read")))
 }
 
 #[cfg(all(test, feature = "tera-templates"))]

@@ -1,6 +1,6 @@
+#![forbid(unsafe_code)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/shokunin/images/favicon.ico",
@@ -101,11 +101,13 @@ pub struct Paths {
 
 impl Paths {
     /// Creates a new builder for configuring Paths
+    #[must_use]
     pub fn builder() -> PathsBuilder {
         PathsBuilder::default()
     }
 
     /// Creates paths with default directories
+    #[must_use]
     pub fn default_paths() -> Self {
         Self {
             site: PathBuf::from("public"),
@@ -147,7 +149,7 @@ impl Paths {
             if path.exists() {
                 let metadata = path
                     .symlink_metadata()
-                    .context(format!("Failed to get metadata for {}", name))?;
+                    .context(format!("Failed to get metadata for {name}"))?;
 
                 if metadata.file_type().is_symlink() {
                     anyhow::bail!(
@@ -270,7 +272,7 @@ fn initialize_logging() -> Result<()> {
         .format_timestamp_millis()
         .init();
 
-    info!("Logging initialized at level: {}", log_level);
+    info!("Logging initialized at level: {log_level}");
     Ok(())
 }
 
@@ -366,7 +368,7 @@ pub async fn run() -> Result<()> {
 /// 1. SEO plugins (meta tags, canonical URLs, robots.txt)
 /// 2. Search index generation
 /// 3. HTML minification (must be last content transform)
-/// 4. Live reload (on_serve only)
+/// 4. Live reload (`on_serve` only)
 fn register_default_plugins(
     plugins: &mut plugin::PluginManager,
     config: &SsgConfig,
@@ -426,7 +428,7 @@ fn register_default_plugins(
             "cloudflare" => Some(deploy::DeployTarget::CloudflarePages),
             "github" => Some(deploy::DeployTarget::GithubPages),
             _ => {
-                log::warn!("Unknown deploy target: {}", target);
+                log::warn!("Unknown deploy target: {target}");
                 None
             }
         };
@@ -446,10 +448,7 @@ pub fn serve_site(site_dir: &Path) -> Result<()> {
     let root = site_dir
         .to_str()
         .ok_or_else(|| {
-            anyhow!(
-                "Site directory path contains invalid UTF-8: {:?}",
-                site_dir
-            )
+            anyhow!("Site directory path contains invalid UTF-8: {site_dir:?}")
         })?
         .to_string();
     let addr = format!("{}:{}", cmd::DEFAULT_HOST, cmd::DEFAULT_PORT);
@@ -466,8 +465,8 @@ pub fn compile_site(
     template_dir: &Path,
 ) -> Result<()> {
     compile(build_dir, content_dir, site_dir, template_dir).map_err(|e| {
-        eprintln!("    Error compiling site: {:?}", e);
-        anyhow!("Failed to compile site: {:?}", e)
+        eprintln!("    Error compiling site: {e:?}");
+        anyhow!("Failed to compile site: {e:?}")
     })
 }
 
@@ -515,12 +514,11 @@ pub fn compile_site(
 pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
     ensure!(
         is_safe_path(src)?,
-        "Source directory is unsafe or inaccessible: {:?}",
-        src
+        "Source directory is unsafe or inaccessible: {src:?}"
     );
 
     if !src.exists() {
-        anyhow::bail!("Source directory does not exist: {:?}", src);
+        anyhow::bail!("Source directory does not exist: {src:?}");
     }
 
     // If source is a file, verify its safety
@@ -531,16 +529,14 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
     // Ensure the destination directory exists
     fs::create_dir_all(dst).with_context(|| {
         format!(
-            "Failed to create or access destination directory at path: {:?}",
-            dst
+            "Failed to create or access destination directory at path: {dst:?}"
         )
     })?;
 
     // Copy directory contents with safety checks
     copy_dir_all(src, dst).with_context(|| {
         format!(
-            "Failed to copy files from source: {:?} to destination: {:?}",
-            src, dst
+            "Failed to copy files from source: {src:?} to destination: {dst:?}"
         )
     })?;
 
@@ -554,15 +550,13 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
 pub async fn verify_and_copy_files_async(src: &Path, dst: &Path) -> Result<()> {
     if !src.exists() {
         return Err(anyhow::anyhow!(
-            "Source directory does not exist: {:?}",
-            src
+            "Source directory does not exist: {src:?}"
         ));
     }
 
     async_fs::create_dir_all(dst).await.with_context(|| {
         format!(
-            "Failed to create or access destination directory at path: {:?}",
-            dst
+            "Failed to create or access destination directory at path: {dst:?}"
         )
     })?;
 
@@ -612,9 +606,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
     progress_bar.set_style(
         ProgressStyle::default_bar()
             .template("{spinner:.green} [{elapsed_precise}] {pos} files {msg}")
-            .map_err(|e| {
-                anyhow::anyhow!("Invalid progress bar template: {}", e)
-            })?
+            .map_err(|e| anyhow::anyhow!("Invalid progress bar template: {e}"))?
             .progress_chars("#>-"),
     );
 
@@ -854,8 +846,7 @@ pub fn create_log_file(file_path: &str) -> Result<File> {
 pub fn log_initialization(log_file: &mut File, date: &DateTime) -> Result<()> {
     writeln!(
         log_file,
-        "[{}] INFO process: System initialization complete",
-        date
+        "[{date}] INFO process: System initialization complete"
     )
     .context("Failed to write banner log")
 }
@@ -891,7 +882,7 @@ pub fn log_initialization(log_file: &mut File, date: &DateTime) -> Result<()> {
 /// }
 /// ```
 pub fn log_arguments(log_file: &mut File, date: &DateTime) -> Result<()> {
-    writeln!(log_file, "[{}] INFO process: Arguments processed", date)
+    writeln!(log_file, "[{date}] INFO process: Arguments processed")
         .context("Failed to write arguments log")
 }
 
@@ -945,8 +936,7 @@ pub fn create_directories(paths: &Paths) -> Result<()> {
     ] {
         fs::create_dir_all(path).with_context(|| {
             format!(
-                "Failed to create or access {} directory at path: {:?}",
-                name, path
+                "Failed to create or access {name} directory at path: {path:?}"
             )
         })?;
     }
@@ -1016,7 +1006,7 @@ pub async fn handle_server(
     serve_dir: &PathBuf,
 ) -> Result<()> {
     // Log server initialization
-    writeln!(log_file, "[{}] INFO process: Server initialization", date)?;
+    writeln!(log_file, "[{date}] INFO process: Server initialization")?;
 
     prepare_serve_dir(paths, serve_dir).await?;
 

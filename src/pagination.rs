@@ -30,7 +30,7 @@ struct PageEntry {
 /// Runs in `after_compile`. Reads `.meta.json` sidecars, collects
 /// pages with dates, sorts by date descending, and generates
 /// `/page/N/index.html` files.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct PaginationPlugin {
     per_page: usize,
 }
@@ -45,6 +45,7 @@ impl Default for PaginationPlugin {
 
 impl PaginationPlugin {
     /// Creates a pagination plugin with a custom page size.
+    #[must_use]
     pub fn with_per_page(per_page: usize) -> Self {
         Self {
             per_page: per_page.max(1),
@@ -53,7 +54,7 @@ impl PaginationPlugin {
 }
 
 impl Plugin for PaginationPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "pagination"
     }
 
@@ -108,7 +109,7 @@ impl Plugin for PaginationPlugin {
         // Sort by date descending
         entries.sort_by(|a, b| b.date.cmp(&a.date));
 
-        let total_pages = (entries.len() + self.per_page - 1) / self.per_page;
+        let total_pages = entries.len().div_ceil(self.per_page);
 
         if total_pages <= 1 {
             return Ok(());
@@ -153,13 +154,11 @@ impl Plugin for PaginationPlugin {
 
             html.push_str("</ul>\n<nav aria-label=\"Pagination\">\n");
             html.push_str(&format!(
-                "<a href=\"{}\" rel=\"prev\">&larr; Previous</a>\n",
-                prev_url
+                "<a href=\"{prev_url}\" rel=\"prev\">&larr; Previous</a>\n"
             ));
             if let Some(next) = &next_url {
                 html.push_str(&format!(
-                    "<a href=\"{}\" rel=\"next\">Next &rarr;</a>\n",
-                    next
+                    "<a href=\"{next}\" rel=\"next\">Next &rarr;</a>\n"
                 ));
             }
             html.push_str("</nav>\n</main>\n</body>\n</html>\n");

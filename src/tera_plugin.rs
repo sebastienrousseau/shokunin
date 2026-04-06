@@ -40,12 +40,14 @@ pub struct TeraPlugin {
 #[cfg(feature = "tera-templates")]
 impl TeraPlugin {
     /// Creates a new `TeraPlugin` with the given configuration.
-    pub fn new(config: TeraConfig) -> Self {
+    #[must_use]
+    pub const fn new(config: TeraConfig) -> Self {
         Self { config }
     }
 
     /// Creates a `TeraPlugin` that looks for templates in the standard
     /// `templates/tera/` subdirectory of the template dir.
+    #[must_use]
     pub fn from_template_dir(template_dir: &Path) -> Self {
         Self {
             config: TeraConfig {
@@ -58,7 +60,7 @@ impl TeraPlugin {
 
 #[cfg(feature = "tera-templates")]
 impl Plugin for TeraPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "tera"
     }
 
@@ -67,21 +69,20 @@ impl Plugin for TeraPlugin {
         let sidecar_dir = ctx.build_dir.join(".meta");
         let count = frontmatter::emit_sidecars(&ctx.content_dir, &sidecar_dir)?;
         if count > 0 {
-            log::info!("[tera] Emitted {} frontmatter sidecar(s)", count);
+            log::info!("[tera] Emitted {count} frontmatter sidecar(s)");
         }
         Ok(())
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        let engine = match TeraEngine::init(self.config.clone())? {
-            Some(e) => e,
-            None => {
-                log::info!(
-                    "[tera] No templates at {:?}, skipping",
-                    self.config.template_dir
-                );
-                return Ok(());
-            }
+        let engine = if let Some(e) = TeraEngine::init(self.config.clone())? {
+            e
+        } else {
+            log::info!(
+                "[tera] No templates at {:?}, skipping",
+                self.config.template_dir
+            );
+            return Ok(());
         };
 
         // Build site-level globals from config
@@ -117,7 +118,7 @@ impl Plugin for TeraPlugin {
             // Determine template from `layout` field
             let layout =
                 fm.get("layout").and_then(|v| v.as_str()).unwrap_or("page");
-            let template_name = format!("{}.html", layout);
+            let template_name = format!("{layout}.html");
 
             match engine.render_page(
                 &template_name,
@@ -130,17 +131,13 @@ impl Plugin for TeraPlugin {
                     rendered += 1;
                 }
                 Err(e) => {
-                    log::warn!(
-                        "[tera] Failed to render {:?}: {}",
-                        html_path,
-                        e
-                    );
+                    log::warn!("[tera] Failed to render {html_path:?}: {e}");
                 }
             }
         }
 
         if rendered > 0 {
-            log::info!("[tera] Rendered {} page(s)", rendered);
+            log::info!("[tera] Rendered {rendered} page(s)");
         }
         Ok(())
     }

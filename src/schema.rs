@@ -17,6 +17,7 @@ use std::path::Path;
 /// The returned schema follows the JSON Schema Draft-07 specification
 /// and includes type information, descriptions, and default values for
 /// every configuration field.
+#[must_use]
 pub fn generate_schema() -> Value {
     json!({
         "$schema": "https://json-schema.org/draft-07/schema#",
@@ -94,7 +95,7 @@ pub fn generate_schema() -> Value {
 pub fn write_schema(path: &Path) -> io::Result<()> {
     let schema = generate_schema();
     let content = serde_json::to_string_pretty(&schema)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(|e| io::Error::other(e))?;
     fs::write(path, content)
 }
 

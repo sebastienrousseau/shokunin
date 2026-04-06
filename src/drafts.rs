@@ -19,7 +19,7 @@ use std::{
 /// In `before_compile`, scans content files for `draft: true` in
 /// frontmatter and renames them to `.md.draft` so staticdatagen
 /// skips them. In `after_compile`, restores the originals.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct DraftPlugin {
     include_drafts: bool,
 }
@@ -28,13 +28,14 @@ impl DraftPlugin {
     /// Creates a new `DraftPlugin`.
     ///
     /// If `include_drafts` is true, draft files are left in place.
-    pub fn new(include_drafts: bool) -> Self {
+    #[must_use]
+    pub const fn new(include_drafts: bool) -> Self {
         Self { include_drafts }
     }
 }
 
 impl Plugin for DraftPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "drafts"
     }
 
@@ -56,8 +57,7 @@ impl Plugin for DraftPlugin {
 
         if hidden > 0 {
             log::info!(
-                "[drafts] Hidden {} draft file(s) (use --drafts to include)",
-                hidden
+                "[drafts] Hidden {hidden} draft file(s) (use --drafts to include)"
             );
         }
         Ok(())

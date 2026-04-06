@@ -54,17 +54,20 @@ pub struct LiveReloadPlugin {
 
 impl LiveReloadPlugin {
     /// Creates a new `LiveReloadPlugin` with the default port (35729).
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self { port: DEFAULT_PORT }
     }
 
     /// Creates a new `LiveReloadPlugin` with a custom WebSocket port.
-    pub fn with_port(port: u16) -> Self {
+    #[must_use]
+    pub const fn with_port(port: u16) -> Self {
         Self { port }
     }
 
     /// Returns the configured port.
-    pub fn port(&self) -> u16 {
+    #[must_use]
+    pub const fn port(&self) -> u16 {
         self.port
     }
 }
@@ -76,7 +79,7 @@ impl Default for LiveReloadPlugin {
 }
 
 impl Plugin for LiveReloadPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "livereload"
     }
 
@@ -118,7 +121,7 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
             let path = entry?.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
+            } else if path.extension().is_some_and(|e| e == "html") {
                 files.push(path);
             }
         }
@@ -161,7 +164,7 @@ fn inject_livereload(path: &Path, port: u16) -> Result<()> {
 /// Generate the live-reload script tag for a given port.
 fn livereload_script(port: u16) -> String {
     format!(
-        r##"
+        r"
 <!-- SSG Live-Reload -->
 <script data-ssg-livereload>
 (function(){{
@@ -198,8 +201,7 @@ fn livereload_script(port: u16) -> String {
   }}
 }})();
 </script>
-"##,
-        port = port
+"
     )
 }
 

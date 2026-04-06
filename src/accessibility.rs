@@ -49,11 +49,11 @@ pub struct AccessibilityReport {
 /// Plugin that checks generated HTML for WCAG compliance.
 ///
 /// Runs in `after_compile`. Non-blocking by default (logs warnings).
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AccessibilityPlugin;
 
 impl Plugin for AccessibilityPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "accessibility"
     }
 
@@ -146,10 +146,8 @@ fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end = lower[abs..]
-            .find('>')
-            .map(|e| abs + e + 1)
-            .unwrap_or(lower.len());
+        let tag_end =
+            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
         let tag = &lower[abs..tag_end];
 
         // Check for alt attribute
@@ -178,10 +176,8 @@ fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
 fn check_html_lang(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let lower = html.to_lowercase();
     if let Some(start) = lower.find("<html") {
-        let tag_end = lower[start..]
-            .find('>')
-            .map(|e| start + e)
-            .unwrap_or(lower.len());
+        let tag_end =
+            lower[start..].find('>').map_or(lower.len(), |e| start + e);
         let tag = &lower[start..tag_end];
         if !tag.contains("lang=") {
             issues.push(AccessibilityIssue {
@@ -233,15 +229,14 @@ fn check_heading_hierarchy(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let mut last_level: u8 = 0;
 
     for level in 1..=6u8 {
-        let tag = format!("<h{}", level);
+        let tag = format!("<h{level}");
         if lower.contains(&tag) {
             if last_level > 0 && level > last_level + 1 {
                 issues.push(AccessibilityIssue {
                     criterion: "1.3.1".to_string(),
                     severity: "warning".to_string(),
                     message: format!(
-                        "Heading hierarchy skips from h{} to h{}",
-                        last_level, level
+                        "Heading hierarchy skips from h{last_level} to h{level}"
                     ),
                 });
             }
@@ -281,8 +276,7 @@ fn check_aria_landmarks(html: &str, issues: &mut Vec<AccessibilityIssue>) {
             criterion: "ARIA".to_string(),
             severity: "warning".to_string(),
             message: format!(
-                "Page has {} <main> elements (expected 1)",
-                main_count
+                "Page has {main_count} <main> elements (expected 1)"
             ),
         });
     }
@@ -291,10 +285,7 @@ fn check_aria_landmarks(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<nav") {
         let abs = pos + start;
-        let tag_end = lower[abs..]
-            .find('>')
-            .map(|e| abs + e)
-            .unwrap_or(lower.len());
+        let tag_end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e);
         let tag = &lower[abs..tag_end];
         if !tag.contains("aria-label") && !tag.contains("aria-labelledby") {
             issues.push(AccessibilityIssue {
@@ -310,16 +301,14 @@ fn check_aria_landmarks(html: &str, issues: &mut Vec<AccessibilityIssue>) {
 /// Extracts an attribute value from an HTML tag string.
 fn extract_attr_value(tag: &str, attr: &str) -> Option<String> {
     let lower = tag.to_lowercase();
-    let pattern = format!("{}=", attr);
+    let pattern = format!("{attr}=");
     let start = lower.find(&pattern)?;
     let after = &tag[start + pattern.len()..];
     let trimmed = after.trim_start();
-    if trimmed.starts_with('"') {
-        let inner = &trimmed[1..];
+    if let Some(inner) = trimmed.strip_prefix('"') {
         let end = inner.find('"')?;
         Some(inner[..end].to_string())
-    } else if trimmed.starts_with('\'') {
-        let inner = &trimmed[1..];
+    } else if let Some(inner) = trimmed.strip_prefix('\'') {
         let end = inner.find('\'')?;
         Some(inner[..end].to_string())
     } else {

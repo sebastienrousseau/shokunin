@@ -30,7 +30,7 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
 
     for md_path in &md_files {
         let content = fs::read_to_string(md_path)
-            .with_context(|| format!("Failed to read {:?}", md_path))?;
+            .with_context(|| format!("Failed to read {md_path:?}"))?;
 
         let meta = match frontmatter_gen::extract(&content) {
             Ok((fm, _body)) => frontmatter_to_json(&fm),
@@ -66,7 +66,7 @@ pub fn read_sidecar(
     }
 
     let content = fs::read_to_string(&sidecar)
-        .with_context(|| format!("Failed to read sidecar {:?}", sidecar))?;
+        .with_context(|| format!("Failed to read sidecar {sidecar:?}"))?;
     let meta: HashMap<String, serde_json::Value> =
         serde_json::from_str(&content)?;
     Ok(Some(meta))
@@ -92,18 +92,18 @@ pub fn read_sidecar_for_html(
     read_sidecar(&sidecar_path.with_extension("").with_extension(""))
 }
 
-/// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible HashMap.
+/// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible `HashMap`.
 fn frontmatter_to_json(
     fm: &frontmatter_gen::Frontmatter,
 ) -> HashMap<String, serde_json::Value> {
     let mut map = HashMap::new();
-    for (key, value) in fm.0.iter() {
+    for (key, value) in &fm.0 {
         let _ = map.insert(key.clone(), fm_value_to_json(value));
     }
     map
 }
 
-/// Converts a single frontmatter Value to serde_json::Value.
+/// Converts a single frontmatter Value to `serde_json::Value`.
 fn fm_value_to_json(value: &frontmatter_gen::Value) -> serde_json::Value {
     match value {
         frontmatter_gen::Value::String(s) => {
@@ -125,7 +125,7 @@ fn fm_value_to_json(value: &frontmatter_gen::Value) -> serde_json::Value {
         }
         frontmatter_gen::Value::Null => serde_json::Value::Null,
         // Fallback for any other variant
-        _ => serde_json::Value::String(format!("{:?}", value)),
+        _ => serde_json::Value::String(format!("{value:?}")),
     }
 }
 

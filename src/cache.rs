@@ -96,6 +96,7 @@ impl BuildCache {
     }
 
     /// Create a new empty cache that will be written to `cache_path`.
+    #[must_use]
     pub fn new(cache_path: &Path) -> Self {
         Self {
             cache_path: cache_path.to_path_buf(),
@@ -223,18 +224,21 @@ impl BuildCache {
     }
 
     /// Return the number of entries currently in the fingerprint map.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.fingerprints.len()
     }
 
     /// Return `true` if the fingerprint map is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.fingerprints.is_empty()
     }
 
     /// Return the path to the default cache file relative to the
     /// project root.
-    pub fn default_path() -> &'static str {
+    #[must_use]
+    pub const fn default_path() -> &'static str {
         DEFAULT_CACHE_FILE
     }
 }

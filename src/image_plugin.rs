@@ -26,17 +26,17 @@ const WIDTHS: &[u32] = &[320, 640, 1024, 1920];
 /// Plugin that optimises images and rewrites HTML with `<picture>` tags.
 ///
 /// Runs in `after_compile`:
-/// 1. Scans site_dir for JPEG/PNG images
+/// 1. Scans `site_dir` for JPEG/PNG images
 /// 2. Generates WebP variants at responsive widths
 /// 3. Rewrites `<img>` tags to `<picture>` with `srcset`
 /// 4. Adds `loading="lazy"`, `decoding="async"`, `width`, `height`
 #[cfg(feature = "image-optimization")]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ImageOptimizationPlugin;
 
 #[cfg(feature = "image-optimization")]
 impl Plugin for ImageOptimizationPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "image-optimization"
     }
 
@@ -61,11 +61,7 @@ impl Plugin for ImageOptimizationPlugin {
                     let _ = manifest.insert(entry.original_rel.clone(), entry);
                 }
                 Err(e) => {
-                    log::warn!(
-                        "[image] Failed to process {:?}: {}",
-                        img_path,
-                        e
-                    );
+                    log::warn!("[image] Failed to process {img_path:?}: {e}");
                 }
             }
         }
@@ -113,7 +109,7 @@ fn process_image(
     optimized_dir: &Path,
 ) -> Result<ImageManifest> {
     let img = image::open(img_path)
-        .with_context(|| format!("Failed to open {:?}", img_path))?;
+        .with_context(|| format!("Failed to open {img_path:?}"))?;
 
     let (orig_w, orig_h) = (img.width(), img.height());
     let rel = img_path
@@ -131,8 +127,8 @@ fn process_image(
             continue; // Skip sizes larger than original
         }
 
-        let ratio = width as f64 / orig_w as f64;
-        let height = (orig_h as f64 * ratio) as u32;
+        let ratio = f64::from(width) / f64::from(orig_w);
+        let height = (f64::from(orig_h) * ratio) as u32;
         let resized = img.resize_exact(
             width,
             height,
@@ -140,13 +136,13 @@ fn process_image(
         );
 
         // Save WebP variant
-        let variant_name = format!("{}-{}w.webp", stem, width);
+        let variant_name = format!("{stem}-{width}w.webp");
         let variant_path = optimized_dir.join(&variant_name);
         resized
             .save(&variant_path)
-            .with_context(|| format!("Failed to save {:?}", variant_path))?;
+            .with_context(|| format!("Failed to save {variant_path:?}"))?;
 
-        let variant_rel = format!("optimized/{}", variant_name);
+        let variant_rel = format!("optimized/{variant_name}");
         variants.push(ImageVariant {
             rel_path: variant_rel,
             width,
@@ -184,7 +180,7 @@ fn rewrite_img_tags(
 
         // Find and replace <img src="...original_rel...">
         let patterns = [
-            format!("\"{}\"", original_rel),
+            format!("\"{original_rel}\""),
             format!("\"/{original_rel}\""),
         ];
 
@@ -195,8 +191,7 @@ fn rewrite_img_tags(
                 if let Some(tag_start) = search_back.rfind("<img") {
                     let tag_end = result[tag_start..]
                         .find('>')
-                        .map(|e| tag_start + e + 1)
-                        .unwrap_or(result.len());
+                        .map_or(result.len(), |e| tag_start + e + 1);
 
                     let old_tag = &result[tag_start..tag_end];
 
@@ -236,7 +231,7 @@ fn rewrite_img_tags(
 
 #[cfg(feature = "image-optimization")]
 fn extract_attr(tag: &str, attr: &str) -> Option<String> {
-    let pattern = format!("{}=\"", attr);
+    let pattern = format!("{attr}=\"");
     let start = tag.find(&pattern)? + pattern.len();
     let end = tag[start..].find('"')? + start;
     Some(tag[start..end].to_string())

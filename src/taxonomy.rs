@@ -32,11 +32,11 @@ pub struct TaxonomyTerm {
 /// - `/tags/index.html` — list of all tags with page counts
 /// - `/tags/{slug}/index.html` — list of pages for each tag
 /// - `/categories/index.html` and `/categories/{slug}/index.html`
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TaxonomyPlugin;
 
 impl Plugin for TaxonomyPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "taxonomy"
     }
 
@@ -158,15 +158,12 @@ fn generate_taxonomy_pages(
         let mut term_html = format!(
             "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
              <meta charset=\"utf-8\">\
-             <title>{}</title></head>\n<body>\n<main>\n\
-             <h1>{}</h1>\n<ul>\n",
-            term, term,
+             <title>{term}</title></head>\n<body>\n<main>\n\
+             <h1>{term}</h1>\n<ul>\n",
         );
         for (title, url) in *pages {
-            term_html.push_str(&format!(
-                "<li><a href=\"{}\">{}</a></li>\n",
-                url, title
-            ));
+            term_html
+                .push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
         }
         term_html.push_str("</ul>\n</main>\n</body>\n</html>\n");
 

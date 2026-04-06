@@ -13,7 +13,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.33-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.35-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -28,7 +28,7 @@ Or add as a library dependency:
 
 ```toml
 [dependencies]
-ssg = "0.0.33"
+ssg = "0.0.35"
 ```
 
 You need [Rust](https://rustup.rs/) 1.74.0 or later. Works on macOS, Linux, and Windows.
@@ -246,7 +246,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 - **cmd** — CLI argument parsing, configuration management, input validation
 - **process** — Directory creation, frontmatter preprocessing, site compilation
 - **plugin** — Trait-based plugin system with lifecycle hooks
-- **plugins** — Built-in MinifyPlugin, ImageOptiPlugin, DeployPlugin
+- **plugins** — Built-in `MinifyPlugin`, `ImageOptiPlugin`, `DeployPlugin`
 - **cache** — Content fingerprinting for incremental builds
 - **watch** — Polling-based file watcher for live rebuild
 - **schema** — JSON Schema generator for configuration
@@ -267,7 +267,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 <details>
 <summary><b>Test coverage</b></summary>
 
-- **342 total tests** (197 unit + 23 doc-tests + 36 integration + 86 serde_yml)
+- **342 total tests** (197 unit + 23 doc-tests + 36 integration + 86 `serde_yml`)
 - **98% library line coverage** measured with cargo-llvm-cov
 - **Multi-platform CI** — macOS, Ubuntu, Windows (stable + nightly)
 </details>

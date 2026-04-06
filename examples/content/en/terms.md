@@ -60,7 +60,7 @@ news_title: "Terms" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.33)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed for the site
 item_guid: "https://kaishi.one/terms/index.html"
 item_link: "https://kaishi.one/terms/index.html"

@@ -21,18 +21,18 @@ use std::{
 /// processes it.
 ///
 /// Built-in shortcodes:
-/// - `{{< youtube id="..." >}}` — responsive YouTube embed
+/// - `{{< youtube id="..." >}}` — responsive `YouTube` embed
 /// - `{{< gist user="..." id="..." >}}` — GitHub gist embed
 /// - `{{< figure src="..." alt="..." caption="..." >}}` — figure with caption
 /// - `{{< warning >}}...{{< /warning >}}` — admonition blocks
 /// - `{{< info >}}...{{< /info >}}`
 /// - `{{< tip >}}...{{< /tip >}}`
 /// - `{{< danger >}}...{{< /danger >}}`
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ShortcodePlugin;
 
 impl Plugin for ShortcodePlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "shortcodes"
     }
 
@@ -55,8 +55,7 @@ impl Plugin for ShortcodePlugin {
 
         if expanded > 0 {
             log::info!(
-                "[shortcodes] Expanded shortcodes in {} file(s)",
-                expanded
+                "[shortcodes] Expanded shortcodes in {expanded} file(s)"
             );
         }
         Ok(())
@@ -64,6 +63,7 @@ impl Plugin for ShortcodePlugin {
 }
 
 /// Expands all shortcodes in a string.
+#[must_use]
 pub fn expand_shortcodes(input: &str) -> String {
     let mut result = input.to_string();
 
@@ -80,8 +80,8 @@ pub fn expand_shortcodes(input: &str) -> String {
 
 /// Expands block shortcodes like `{{< warning >}}...{{< /warning >}}`.
 fn expand_block_shortcode(input: &str, name: &str) -> String {
-    let open = format!("{{{{< {} >}}}}", name);
-    let close = format!("{{{{< /{} >}}}}", name);
+    let open = format!("{{{{< {name} >}}}}");
+    let close = format!("{{{{< /{name} >}}}}");
     let mut result = input.to_string();
 
     while let Some(start) = result.find(&open) {
@@ -137,50 +137,46 @@ fn expand_inline_shortcodes(input: &str) -> String {
 /// Renders a single inline shortcode tag content.
 fn render_inline_shortcode(tag: &str) -> String {
     let parts = parse_shortcode_attrs(tag);
-    let name = parts.get("_name").map(|s| s.as_str()).unwrap_or("");
+    let name = parts.get("_name").map_or("", String::as_str);
 
     match name {
         "youtube" => {
-            let id = parts.get("id").map(|s| s.as_str()).unwrap_or("");
+            let id = parts.get("id").map_or("", String::as_str);
             if id.is_empty() {
-                return format!("<!-- youtube: missing id -->");
+                return "<!-- youtube: missing id -->".to_string();
             }
             format!(
                 "<div class=\"video-container\" style=\"position:relative;padding-bottom:56.25%;height:0;overflow:hidden\">\
-                 <iframe src=\"https://www.youtube-nocookie.com/embed/{}\" \
+                 <iframe src=\"https://www.youtube-nocookie.com/embed/{id}\" \
                  style=\"position:absolute;top:0;left:0;width:100%;height:100%\" \
                  frameborder=\"0\" allowfullscreen loading=\"lazy\" \
-                 title=\"YouTube video\"></iframe></div>",
-                id
+                 title=\"YouTube video\"></iframe></div>"
             )
         }
         "gist" => {
-            let user = parts.get("user").map(|s| s.as_str()).unwrap_or("");
-            let id = parts.get("id").map(|s| s.as_str()).unwrap_or("");
+            let user = parts.get("user").map_or("", String::as_str);
+            let id = parts.get("id").map_or("", String::as_str);
             if user.is_empty() || id.is_empty() {
-                return format!("<!-- gist: missing user or id -->");
+                return "<!-- gist: missing user or id -->".to_string();
             }
             format!(
-                "<script src=\"https://gist.github.com/{}/{}.js\"></script>",
-                user, id
+                "<script src=\"https://gist.github.com/{user}/{id}.js\"></script>"
             )
         }
         "figure" => {
-            let src = parts.get("src").map(|s| s.as_str()).unwrap_or("");
-            let alt = parts.get("alt").map(|s| s.as_str()).unwrap_or("");
-            let caption =
-                parts.get("caption").map(|s| s.as_str()).unwrap_or("");
+            let src = parts.get("src").map_or("", String::as_str);
+            let alt = parts.get("alt").map_or("", String::as_str);
+            let caption = parts.get("caption").map_or("", String::as_str);
             let mut html = format!(
-                "<figure><img src=\"{}\" alt=\"{}\" loading=\"lazy\">",
-                src, alt
+                "<figure><img src=\"{src}\" alt=\"{alt}\" loading=\"lazy\">"
             );
             if !caption.is_empty() {
-                html.push_str(&format!("<figcaption>{}</figcaption>", caption));
+                html.push_str(&format!("<figcaption>{caption}</figcaption>"));
             }
             html.push_str("</figure>");
             html
         }
-        _ => format!("<!-- unknown shortcode: {} -->", name),
+        _ => format!("<!-- unknown shortcode: {name} -->"),
     }
 }
 
@@ -198,7 +194,7 @@ fn parse_shortcode_attrs(tag: &str) -> HashMap<String, String> {
             break;
         }
         name_end = i + c.len_utf8();
-        chars.next();
+        let _ = chars.next();
     }
     let _ = attrs.insert("_name".to_string(), trimmed[..name_end].to_string());
 

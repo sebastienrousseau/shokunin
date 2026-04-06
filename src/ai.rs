@@ -23,11 +23,11 @@ use std::{
 /// - Checks all images have alt text (logs warnings for missing)
 /// - Generates `llms.txt` in the site root
 /// - Adds max-snippet meta for AI citation eligibility
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AiPlugin;
 
 impl Plugin for AiPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "ai"
     }
 
@@ -63,11 +63,7 @@ impl Plugin for AiPlugin {
             if missing > 0 {
                 let rel =
                     path.strip_prefix(&ctx.site_dir).unwrap_or(path).display();
-                log::warn!(
-                    "[ai] {} image(s) missing alt text in {}",
-                    missing,
-                    rel
-                );
+                log::warn!("[ai] {missing} image(s) missing alt text in {rel}");
                 pages_with_missing_alt += 1;
             }
 
@@ -78,8 +74,7 @@ impl Plugin for AiPlugin {
 
         if pages_with_missing_alt > 0 {
             log::warn!(
-                "[ai] {} page(s) have images without alt text",
-                pages_with_missing_alt
+                "[ai] {pages_with_missing_alt} page(s) have images without alt text"
             );
         }
 
@@ -95,9 +90,9 @@ fn generate_llms_txt(
     site_dir: &Path,
     config: Option<&crate::cmd::SsgConfig>,
 ) -> Result<()> {
-    let site_name = config.map(|c| c.site_name.as_str()).unwrap_or("Site");
-    let base_url = config.map(|c| c.base_url.as_str()).unwrap_or("");
-    let description = config.map(|c| c.site_description.as_str()).unwrap_or("");
+    let site_name = config.map_or("Site", |c| c.site_name.as_str());
+    let base_url = config.map_or("", |c| c.base_url.as_str());
+    let description = config.map_or("", |c| c.site_description.as_str());
     let canonical_root = base_url.trim_end_matches('/');
     let source_example = if canonical_root.is_empty() {
         "<canonical-page-url>".to_string()
@@ -143,10 +138,8 @@ fn count_missing_alt(html: &str) -> usize {
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end = lower[abs..]
-            .find('>')
-            .map(|e| abs + e + 1)
-            .unwrap_or(lower.len());
+        let tag_end =
+            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
         let tag = &lower[abs..tag_end];
 
         let has_alt = tag.contains("alt=");
