@@ -37,7 +37,7 @@ body:
     id: version
     attributes:
       label: SSG version
-      placeholder: "0.0.35"
+      placeholder: "0.0.34"
     validations:
       required: true
   - type: dropdown

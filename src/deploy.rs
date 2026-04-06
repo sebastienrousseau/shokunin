@@ -161,12 +161,7 @@ mod tests {
         let dir = tempdir().expect("create tempdir");
         let site = dir.path().join("site");
         fs::create_dir_all(&site).expect("create site dir");
-        let ctx = PluginContext::new(
-            dir.path(),
-            dir.path(),
-            &site,
-            dir.path(),
-        );
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         (dir, site, ctx)
     }
 
@@ -211,10 +206,7 @@ mod tests {
         // accidental duplicate discriminants if the enum is reordered.
         assert_ne!(DeployTarget::Netlify, DeployTarget::Vercel);
         assert_ne!(DeployTarget::Vercel, DeployTarget::CloudflarePages);
-        assert_ne!(
-            DeployTarget::CloudflarePages,
-            DeployTarget::GithubPages
-        );
+        assert_ne!(DeployTarget::CloudflarePages, DeployTarget::GithubPages);
         assert_ne!(DeployTarget::GithubPages, DeployTarget::Netlify);
     }
 
@@ -233,8 +225,9 @@ mod tests {
         assert!(format!("{:?}", DeployTarget::Vercel).contains("Vercel"));
         assert!(format!("{:?}", DeployTarget::CloudflarePages)
             .contains("CloudflarePages"));
-        assert!(format!("{:?}", DeployTarget::GithubPages)
-            .contains("GithubPages"));
+        assert!(
+            format!("{:?}", DeployTarget::GithubPages).contains("GithubPages")
+        );
     }
 
     // -------------------------------------------------------------------
@@ -437,13 +430,9 @@ mod tests {
         let parsed: serde_json::Value =
             serde_json::from_str(&raw).expect("valid JSON");
 
-        let routes = parsed["headers"]
-            .as_array()
-            .expect("headers is an array");
-        let sources: Vec<&str> = routes
-            .iter()
-            .filter_map(|r| r["source"].as_str())
-            .collect();
+        let routes = parsed["headers"].as_array().expect("headers is an array");
+        let sources: Vec<&str> =
+            routes.iter().filter_map(|r| r["source"].as_str()).collect();
         assert!(sources.iter().any(|s| s.contains("/assets/")));
         assert!(sources.iter().any(|s| s.contains("/(.*)")));
     }
@@ -479,8 +468,7 @@ mod tests {
 
         let nojekyll = dir.path().join(".nojekyll");
         assert!(nojekyll.exists());
-        let contents =
-            fs::read_to_string(&nojekyll).expect("read .nojekyll");
+        let contents = fs::read_to_string(&nojekyll).expect("read .nojekyll");
         assert!(
             contents.is_empty(),
             ".nojekyll is a marker file and must be empty"

@@ -1,0 +1,12 @@
+[advisories]
+# RUSTSEC-2025-0068 — serde_yml is unmaintained and uses unsafe libyml.
+#
+# Pulled transitively by `staticdatagen` (via `metadata-gen`) and
+# `frontmatter-gen`. We replace the upstream crate with a local
+# safe-only re-implementation via `[patch.crates-io]` in Cargo.toml
+# (`crates/serde_yml`), which `forbid(unsafe_code)`. The advisory is
+# therefore not actionable for this build.
+#
+# TODO: remove once upstream `staticdatagen` / `frontmatter-gen` drop
+# their dependency on `serde_yml`.
+ignore = ["RUSTSEC-2025-0068"]

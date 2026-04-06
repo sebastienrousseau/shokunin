@@ -59,7 +59,7 @@ news_title: "Kaishi, un modèle de démarrage pour le Static Site Generator" ## 
 atom_link: https://kaishi.fr/rss.xml ## L'URL du flux Atom.
 category: "Technologie" ## La catégorie du flux RSS.
 docs: https://validator.w3.org/feed/docs/rss2.html ## La documentation du flux RSS.
-generator: "SSG (version 0.0.35)" ## Le générateur du flux RSS.
+generator: "SSG (version 0.0.34)" ## Le générateur du flux RSS.
 item_description: Flux RSS pour le site Kaishi. ## La description du flux RSS.
 item_guid: "https://kaishi.fr"
 item_link: "https://kaishi.fr"
