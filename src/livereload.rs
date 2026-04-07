@@ -54,17 +54,20 @@ pub struct LiveReloadPlugin {
 
 impl LiveReloadPlugin {
     /// Creates a new `LiveReloadPlugin` with the default port (35729).
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self { port: DEFAULT_PORT }
     }
 
     /// Creates a new `LiveReloadPlugin` with a custom WebSocket port.
-    pub fn with_port(port: u16) -> Self {
+    #[must_use]
+    pub const fn with_port(port: u16) -> Self {
         Self { port }
     }
 
     /// Returns the configured port.
-    pub fn port(&self) -> u16 {
+    #[must_use]
+    pub const fn port(&self) -> u16 {
         self.port
     }
 }
@@ -76,7 +79,7 @@ impl Default for LiveReloadPlugin {
 }
 
 impl Plugin for LiveReloadPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "livereload"
     }
 
@@ -105,26 +108,7 @@ impl Plugin for LiveReloadPlugin {
 
 /// Collect all `.html` files under `dir` (iterative, bounded).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-
-    while let Some(current) = stack.pop() {
-        if files.len() >= MAX_FILES {
-            break;
-        }
-        let entries = fs::read_dir(&current)
-            .with_context(|| format!("cannot read {}", current.display()))?;
-        for entry in entries {
-            let path = entry?.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-
-    Ok(files)
+    crate::walk::walk_files_bounded_count(dir, "html", MAX_FILES)
 }
 
 /// Inject the live-reload script into a single HTML file.
@@ -161,7 +145,7 @@ fn inject_livereload(path: &Path, port: u16) -> Result<()> {
 /// Generate the live-reload script tag for a given port.
 fn livereload_script(port: u16) -> String {
     format!(
-        r##"
+        r"
 <!-- SSG Live-Reload -->
 <script data-ssg-livereload>
 (function(){{
@@ -198,8 +182,7 @@ fn livereload_script(port: u16) -> String {
   }}
 }})();
 </script>
-"##,
-        port = port
+"
     )
 }
 

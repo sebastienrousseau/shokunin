@@ -55,12 +55,13 @@ pub struct PluginContext {
     pub site_dir: PathBuf,
     /// The template directory.
     pub template_dir: PathBuf,
-    /// Site configuration (base_url, site_name, language, etc.).
+    /// Site configuration (`base_url`, `site_name`, language, etc.).
     pub config: Option<SsgConfig>,
 }
 
 impl PluginContext {
     /// Creates a new plugin context from directory paths.
+    #[must_use]
     pub fn new(
         content_dir: &Path,
         build_dir: &Path,
@@ -77,6 +78,7 @@ impl PluginContext {
     }
 
     /// Creates a new plugin context with site configuration.
+    #[must_use]
     pub fn with_config(
         content_dir: &Path,
         build_dir: &Path,
@@ -167,6 +169,7 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Creates a new empty plugin manager.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             plugins: Vec::new(),
@@ -181,16 +184,19 @@ impl PluginManager {
     }
 
     /// Returns the number of registered plugins.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
     /// Returns `true` if no plugins are registered.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }
 
     /// Returns the names of all registered plugins.
+    #[must_use]
     pub fn names(&self) -> Vec<&str> {
         self.plugins.iter().map(|p| p.name()).collect()
     }
@@ -265,15 +271,15 @@ mod tests {
             self.name
         }
         fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
-            self.before.fetch_add(1, Ordering::SeqCst);
+            let _ = self.before.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
         fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
-            self.after.fetch_add(1, Ordering::SeqCst);
+            let _ = self.after.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
         fn on_serve(&self, _ctx: &PluginContext) -> Result<()> {
-            self.serve.fetch_add(1, Ordering::SeqCst);
+            let _ = self.serve.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
     }

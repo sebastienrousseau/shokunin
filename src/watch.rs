@@ -64,7 +64,8 @@ impl WatchConfig {
     ///
     /// * `directory`     — Path to the directory to watch.
     /// * `poll_interval` — Duration between successive polls.
-    pub fn new(directory: PathBuf, poll_interval: Duration) -> Self {
+    #[must_use]
+    pub const fn new(directory: PathBuf, poll_interval: Duration) -> Self {
         Self {
             directory,
             poll_interval,
@@ -72,12 +73,14 @@ impl WatchConfig {
     }
 
     /// Returns a reference to the watched directory.
+    #[must_use]
     pub fn directory(&self) -> &Path {
         &self.directory
     }
 
     /// Returns the configured poll interval.
-    pub fn poll_interval(&self) -> Duration {
+    #[must_use]
+    pub const fn poll_interval(&self) -> Duration {
         self.poll_interval
     }
 }
@@ -110,7 +113,8 @@ impl FileWatcher {
     }
 
     /// Returns a reference to the watcher's configuration.
-    pub fn config(&self) -> &WatchConfig {
+    #[must_use]
+    pub const fn config(&self) -> &WatchConfig {
         &self.config
     }
 
@@ -146,6 +150,7 @@ impl FileWatcher {
     }
 
     /// Returns the number of files currently tracked in the snapshot.
+    #[must_use]
     pub fn tracked_file_count(&self) -> usize {
         self.snapshots.len()
     }
@@ -218,7 +223,6 @@ impl FileWatcher {
 ///     false
 /// });
 /// ```
-
 /// Maximum number of poll iterations before `watch_blocking` exits.
 /// Prevents unbounded loops per Power of Ten Rule 2.
 pub const MAX_WATCH_ITERATIONS: usize = 1_000_000;
@@ -284,6 +288,19 @@ mod tests {
         let cfg = WatchConfig::new(dir.clone(), interval);
         assert_eq!(cfg.directory(), dir.as_path());
         assert_eq!(cfg.poll_interval(), interval);
+    }
+
+    #[test]
+    fn file_watcher_config_accessor_returns_stored_config() {
+        // Covers lines 117-119: `FileWatcher::config()` accessor.
+        let dir = tmp_dir("watcher_config");
+        let interval = Duration::from_millis(250);
+        let cfg = WatchConfig::new(dir.clone(), interval);
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+        let returned = watcher.config();
+        assert_eq!(returned.directory(), dir.as_path());
+        assert_eq!(returned.poll_interval(), interval);
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

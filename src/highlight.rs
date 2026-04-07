@@ -43,7 +43,7 @@ impl HighlightPlugin {
 }
 
 impl Plugin for HighlightPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "highlight"
     }
 
@@ -65,10 +65,10 @@ impl Plugin for HighlightPlugin {
             let result = add_highlight_markup(&html);
             if result != html {
                 // Inject CSS link if not present
-                let output = if !result.contains("highlight.css") {
-                    inject_css_link(&result)
-                } else {
+                let output = if result.contains("highlight.css") {
                     result
+                } else {
+                    inject_css_link(&result)
                 };
                 fs::write(path, output)?;
                 highlighted += 1;
@@ -112,12 +112,10 @@ fn add_highlight_markup(html: &str) -> String {
                 // Write the enhanced pre tag
                 result.push_str(&html[pos..abs_pre]);
                 result.push_str(&format!(
-                    "<pre class=\"highlight language-{}\">",
-                    lang
+                    "<pre class=\"highlight language-{lang}\">"
                 ));
                 result.push_str(&format!(
-                    "<code class=\"language-{}\" data-lang=\"{}\">",
-                    lang, lang
+                    "<code class=\"language-{lang}\" data-lang=\"{lang}\">"
                 ));
 
                 // Skip past the original <pre><code class="language-X">
@@ -182,24 +180,7 @@ pre.highlight code {
 }
 
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
@@ -235,6 +216,105 @@ mod tests {
         let css = generate_highlight_css("github");
         assert!(css.contains("pre.highlight"));
         assert!(css.contains("prefers-color-scheme: dark"));
+    }
+
+    // -------------------------------------------------------------------
+    // Plugin trait + constructor surface
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn name_returns_static_highlight_identifier() {
+        assert_eq!(HighlightPlugin::default().name(), "highlight");
+    }
+
+    #[test]
+    fn default_constructor_uses_github_theme() {
+        let plugin = HighlightPlugin::default();
+        assert_eq!(plugin.theme, "github");
+    }
+
+    #[test]
+    fn with_theme_stores_supplied_theme_name() {
+        // Covers the `with_theme` constructor at lines 38-42.
+        let plugin = HighlightPlugin::with_theme("solarized");
+        assert_eq!(plugin.theme, "solarized");
+        let plugin2 = HighlightPlugin::with_theme(String::from("dracula"));
+        assert_eq!(plugin2.theme, "dracula");
+    }
+
+    #[test]
+    fn after_compile_missing_site_dir_returns_ok() {
+        // Line 52: `!ctx.site_dir.exists()` early return.
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), &missing, dir.path());
+        HighlightPlugin::default().after_compile(&ctx).unwrap();
+        assert!(!missing.join("highlight.css").exists());
+    }
+
+    #[test]
+    fn after_compile_html_without_code_blocks_is_unchanged() {
+        // Covers the `result != html` false branch at line 66 —
+        // file is not rewritten when add_highlight_markup returns
+        // its input unchanged.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = "<html><head></head><body><p>no code</p></body></html>";
+        fs::write(site.join("plain.html"), html).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        HighlightPlugin::default().after_compile(&ctx).unwrap();
+        assert_eq!(fs::read_to_string(site.join("plain.html")).unwrap(), html);
+    }
+
+    #[test]
+    fn after_compile_preserves_existing_highlight_css_link() {
+        // Covers the `result.contains("highlight.css")` true branch
+        // at line 68 — when the link is already present the file is
+        // rewritten without re-injection.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = r#"<html><head><link rel="stylesheet" href="/highlight.css"></head><body><pre><code class="language-rs">x</code></pre></body></html>"#;
+        fs::write(site.join("index.html"), html).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        HighlightPlugin::default().after_compile(&ctx).unwrap();
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        // Exactly one stylesheet link — no double-injection.
+        assert_eq!(out.matches("/highlight.css").count(), 1);
+    }
+
+    #[test]
+    fn inject_css_link_without_head_returns_input_unchanged() {
+        // Line 145: the `else` branch of the `</head>` search.
+        let html = "<body>no head</body>";
+        let result = inject_css_link(html);
+        assert_eq!(result, html);
+    }
+
+    #[test]
+    fn collect_html_files_recurses_and_sorts() {
+        let dir = tempdir().unwrap();
+        let sub = dir.path().join("sub");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(dir.path().join("z.html"), "").unwrap();
+        fs::write(dir.path().join("a.html"), "").unwrap();
+        fs::write(sub.join("m.html"), "").unwrap();
+
+        let files = collect_html_files(dir.path()).unwrap();
+        assert_eq!(files.len(), 3);
+        let first = files[0].file_name().unwrap().to_str().unwrap();
+        assert_eq!(first, "a.html");
+    }
+
+    #[test]
+    fn collect_html_files_returns_empty_for_missing_directory() {
+        let dir = tempdir().unwrap();
+        let result = collect_html_files(&dir.path().join("missing")).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]

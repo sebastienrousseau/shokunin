@@ -1,0 +1,37 @@
+[advisories]
+# All ignored advisories below are *unmaintained-crate* warnings on
+# transitive dependencies that this repository does not own. They are
+# tracked here so `cargo audit --deny warnings` stays green until the
+# upstreams cut a release that drops these dependencies.
+#
+# - RUSTSEC-2025-0068  serde_yml (unsound + unmaintained)
+#     Pulled by staticdatagen (via metadata-gen) and frontmatter-gen.
+#     Replaced in-tree via [patch.crates-io] with crates/serde_yml,
+#     a safe-only reimplementation that `forbid(unsafe_code)`.
+#
+# - RUSTSEC-2025-0141  bincode (unmaintained)
+#     Transitive via syntect -> mdx-gen -> html-generator -> staticdatagen.
+#
+# - RUSTSEC-2025-0057  fxhash (unmaintained)
+#     Transitive via tera / scraper.
+#
+# - RUSTSEC-2025-0119  number_prefix (unmaintained)
+#     Transitive via indicatif (direct dep, awaiting upstream bump).
+#
+# - RUSTSEC-2024-0436  paste (unmaintained)
+#     Transitive via several proc-macro consumers.
+#
+# - RUSTSEC-2024-0320  yaml-rust (unmaintained)
+#     Transitive via syntect -> mdx-gen -> html-generator -> staticdatagen.
+#
+# TODO: re-audit once staticdatagen, frontmatter-gen, mdx-gen, syntect,
+# tera, scraper, and indicatif have all updated their dependency
+# closures upstream.
+ignore = [
+    "RUSTSEC-2024-0320",
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2025-0057",
+    "RUSTSEC-2025-0068",
+    "RUSTSEC-2025-0119",
+    "RUSTSEC-2025-0141",
+]

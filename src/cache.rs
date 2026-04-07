@@ -82,10 +82,16 @@ impl BuildCache {
             });
         }
 
+        fail::fail_point!("cache::read", |_| {
+            anyhow::bail!("injected: cache::read")
+        });
         let data = fs::read_to_string(cache_path).with_context(|| {
             format!("failed to read cache file: {}", cache_path.display())
         })?;
 
+        fail::fail_point!("cache::parse", |_| {
+            anyhow::bail!("injected: cache::parse")
+        });
         let mut cache: Self =
             serde_json::from_str(&data).with_context(|| {
                 format!("failed to parse cache file: {}", cache_path.display())
@@ -96,6 +102,7 @@ impl BuildCache {
     }
 
     /// Create a new empty cache that will be written to `cache_path`.
+    #[must_use]
     pub fn new(cache_path: &Path) -> Self {
         Self {
             cache_path: cache_path.to_path_buf(),
@@ -111,6 +118,9 @@ impl BuildCache {
     pub fn save(&self) -> Result<()> {
         let json = serde_json::to_string_pretty(self)
             .context("failed to serialize cache")?;
+        fail::fail_point!("cache::write", |_| {
+            anyhow::bail!("injected: cache::write")
+        });
         fs::write(&self.cache_path, json).with_context(|| {
             format!("failed to write cache file: {}", self.cache_path.display())
         })?;
@@ -223,18 +233,21 @@ impl BuildCache {
     }
 
     /// Return the number of entries currently in the fingerprint map.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.fingerprints.len()
     }
 
     /// Return `true` if the fingerprint map is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.fingerprints.is_empty()
     }
 
     /// Return the path to the default cache file relative to the
     /// project root.
-    pub fn default_path() -> &'static str {
+    #[must_use]
+    pub const fn default_path() -> &'static str {
         DEFAULT_CACHE_FILE
     }
 }

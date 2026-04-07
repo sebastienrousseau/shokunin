@@ -1,22 +1,27 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directory: /
+    directory: "/"
     schedule:
       interval: weekly
       day: monday
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
     groups:
-      minor-patch:
+      minor-and-patch:
         update-types: [minor, patch]
-    labels: [dependencies]
+    labels: ["dependencies", "rust"]
     commit-message:
-      prefix: "chore(deps):"
-
+      prefix: "chore(deps)"
   - package-ecosystem: github-actions
-    directory: /
+    directory: "/"
     schedule:
       interval: weekly
       day: monday
-    labels: [ci]
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
     commit-message:
-      prefix: "chore(ci):"
+      prefix: "chore(deps)"

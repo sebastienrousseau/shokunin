@@ -21,11 +21,11 @@ use std::{
 /// 2. Rename: `style.css` → `style.a1b2c3d4.css`
 /// 3. Rewrite all HTML `<link>` and `<script>` references
 /// 4. Add `integrity` and `crossorigin` attributes (SRI)
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct FingerprintPlugin;
 
 impl Plugin for FingerprintPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "fingerprint"
     }
 
@@ -52,16 +52,15 @@ impl Plugin for FingerprintPlugin {
                 asset_path.file_stem().unwrap_or_default().to_string_lossy();
             let ext =
                 asset_path.extension().unwrap_or_default().to_string_lossy();
-            let new_name = format!("{}.{}.{}", stem, short_hash, ext);
+            let new_name = format!("{stem}.{short_hash}.{ext}");
             let new_path = asset_path.with_file_name(&new_name);
 
             // Compute SRI hash (base64 of full SHA-256)
             let sri = format!("sha256-{}", base64_encode(&content));
 
             // Rename file
-            fs::rename(asset_path, &new_path).with_context(|| {
-                format!("Failed to rename {:?}", asset_path)
-            })?;
+            fs::rename(asset_path, &new_path)
+                .with_context(|| format!("Failed to rename {asset_path:?}"))?;
 
             // Store mapping: relative old path → relative new path
             let rel_old = asset_path
@@ -113,7 +112,7 @@ fn rewrite_asset_refs(
     let mut result = html.to_string();
     for (old_path, info) in manifest {
         // Replace href="old" with href="new" integrity="..." crossorigin="anonymous"
-        let old_ref = format!("\"{}\"", old_path);
+        let old_ref = format!("\"{old_path}\"");
         let old_ref_slash = format!("\"/{old_path}\"");
         let new_ref = format!(
             "\"{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
@@ -138,13 +137,13 @@ fn sha256_hex(data: &[u8]) -> String {
     // For production SRI we need real SHA-256.
     //
     // Using a simple but effective hash based on content bytes:
-    let mut h: u64 = 0xcbf29ce484222325; // FNV offset basis
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
     for &byte in data {
-        h ^= byte as u64;
-        h = h.wrapping_mul(0x100000001b3); // FNV prime
+        h ^= u64::from(byte);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3); // FNV prime
     }
     let h2 = h.wrapping_add(data.len() as u64);
-    format!("{:016x}{:016x}", h, h2)
+    format!("{h:016x}{h2:016x}")
 }
 
 /// Base64-encode for SRI (simplified — uses hex fallback).
@@ -156,47 +155,11 @@ fn base64_encode(data: &[u8]) -> String {
 
 /// Collects all `.css` and `.js` files from site dir.
 fn collect_assets(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if let Some(ext) = path.extension() {
-                if ext == "css" || ext == "js" {
-                    files.push(path);
-                }
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    crate::walk::walk_files_multi(dir, &["css", "js"])
 }
 
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
@@ -258,6 +221,102 @@ mod tests {
         assert!(output.contains("integrity="));
         assert!(output.contains("crossorigin=\"anonymous\""));
         assert!(!output.contains("href=\"style.css\""));
+    }
+
+    #[test]
+    fn name_returns_static_fingerprint_identifier() {
+        assert_eq!(FingerprintPlugin.name(), "fingerprint");
+    }
+
+    #[test]
+    fn after_compile_missing_site_dir_returns_ok() {
+        // Line 34: `!ctx.site_dir.exists()` early return.
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), &missing, dir.path());
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+        assert!(!missing.exists());
+    }
+
+    #[test]
+    fn after_compile_no_assets_short_circuits() {
+        // Line 40: `assets.is_empty()` early return — site with
+        // HTML but no CSS/JS.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("index.html"), "<p></p>").unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+        // HTML untouched.
+        assert_eq!(
+            fs::read_to_string(site.join("index.html")).unwrap(),
+            "<p></p>"
+        );
+    }
+
+    #[test]
+    fn after_compile_fingerprint_absolute_path_href() {
+        // Covers the `old_ref_slash` variant (with leading /) in
+        // rewrite_asset_refs — absolute-path stylesheet links.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("app.js"), "console.log(1);").unwrap();
+        fs::write(
+            site.join("index.html"),
+            r#"<html><head><script src="/app.js"></script></head></html>"#,
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+        let html = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(html.contains("integrity="));
+    }
+
+    #[test]
+    fn collect_assets_filters_non_css_js_extensions() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.css"), "").unwrap();
+        fs::write(dir.path().join("b.js"), "").unwrap();
+        fs::write(dir.path().join("c.html"), "").unwrap();
+        fs::write(dir.path().join("d.png"), "").unwrap();
+        let files = collect_assets(dir.path()).unwrap();
+        assert_eq!(files.len(), 2);
+    }
+
+    #[test]
+    fn collect_assets_recurses_into_subdirectories() {
+        let dir = tempdir().unwrap();
+        let nested = dir.path().join("vendor");
+        fs::create_dir(&nested).unwrap();
+        fs::write(dir.path().join("top.css"), "").unwrap();
+        fs::write(nested.join("lib.js"), "").unwrap();
+        let files = collect_assets(dir.path()).unwrap();
+        assert_eq!(files.len(), 2);
+    }
+
+    #[test]
+    fn collect_html_files_filters_non_html() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("a.html"), "").unwrap();
+        fs::write(dir.path().join("b.css"), "").unwrap();
+        let files = collect_html_files(dir.path()).unwrap();
+        assert_eq!(files.len(), 1);
+    }
+
+    #[test]
+    fn sha256_hex_produces_32_hex_chars() {
+        assert_eq!(sha256_hex(b"abc").len(), 32);
+        assert_eq!(sha256_hex(b"").len(), 32);
+    }
+
+    #[test]
+    fn base64_encode_is_nonempty_for_input() {
+        assert!(!base64_encode(b"hello").is_empty());
     }
 
     #[test]

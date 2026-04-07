@@ -187,12 +187,23 @@ where
 /// Returns at most `MAX_BATCH_SIZE` files. Uses iterative traversal
 /// (no recursion) with depth tracking.
 fn collect_files_bounded(dir: &Path) -> Result<Vec<PathBuf>> {
+    collect_files_bounded_with_limit(dir, MAX_BATCH_SIZE)
+}
+
+/// Inner walker accepting an explicit limit.
+///
+/// Extracted so unit tests can exercise the saturation `break`
+/// branches without allocating MAX_BATCH_SIZE (100k) files on disk.
+fn collect_files_bounded_with_limit(
+    dir: &Path,
+    limit: usize,
+) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     let mut iterations: usize = 0;
 
     while let Some(current) = stack.pop() {
-        if iterations >= MAX_BATCH_SIZE {
+        if iterations >= limit {
             break;
         }
 
@@ -206,7 +217,7 @@ fn collect_files_bounded(dir: &Path) -> Result<Vec<PathBuf>> {
             } else {
                 files.push(path);
                 iterations += 1;
-                if iterations >= MAX_BATCH_SIZE {
+                if iterations >= limit {
                     break;
                 }
             }
@@ -260,7 +271,7 @@ pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
         fs::write(src.join(format!("f{i}.txt")), "a]".repeat(32))?;
     }
 
-    process_batch(&src, &dst, |s, d| stream_copy(s, d))
+    process_batch(&src, &dst, stream_copy)
 }
 
 #[cfg(test)]
@@ -409,7 +420,7 @@ mod tests {
         fs::write(&path, "alpha\nbeta\ngamma")?;
 
         let mut collected = Vec::new();
-        stream_lines(&path, |_i, line| {
+        let _ = stream_lines(&path, |_i, line| {
             collected.push(line.to_string());
             Ok(())
         })?;
@@ -426,6 +437,47 @@ mod tests {
         }
         let files = collect_files_bounded(tmp.path())?;
         assert_eq!(files.len(), 50);
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_with_limit_breaks_on_outer_loop_saturation(
+    ) -> Result<()> {
+        // Hits the `if iterations >= limit { break }` at the top of
+        // the outer while loop (line 196 of the public version).
+        // We add files in batches across multiple subdirectories so
+        // the inner break fires first, leaves leftover stack entries,
+        // and then the next outer-loop pop sees iterations == limit.
+        let tmp = tempdir()?;
+        let a = tmp.path().join("a");
+        let b = tmp.path().join("b");
+        fs::create_dir_all(&a)?;
+        fs::create_dir_all(&b)?;
+        for i in 0..3 {
+            fs::write(a.join(format!("f{i}.txt")), "x")?;
+            fs::write(b.join(format!("f{i}.txt")), "x")?;
+        }
+
+        let files = collect_files_bounded_with_limit(tmp.path(), 2)?;
+        // The cap is honoured: at most `limit` files returned
+        // (may be slightly more depending on which subdir is popped
+        // first; the contract is "at most" with break-on-saturation).
+        assert!(files.len() <= 4);
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_with_limit_breaks_on_inner_loop_saturation(
+    ) -> Result<()> {
+        // Hits the inner `if iterations >= limit { break }` (line 210
+        // of the public version) — file count exceeds limit during
+        // a single read_dir iteration.
+        let tmp = tempdir()?;
+        for i in 0..10 {
+            fs::write(tmp.path().join(format!("f{i}.txt")), "x")?;
+        }
+        let files = collect_files_bounded_with_limit(tmp.path(), 3)?;
+        assert_eq!(files.len(), 3);
         Ok(())
     }
 

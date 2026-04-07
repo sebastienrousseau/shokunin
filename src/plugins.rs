@@ -31,7 +31,7 @@ use std::fs;
 pub struct MinifyPlugin;
 
 impl Plugin for MinifyPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "minify"
     }
 
@@ -42,11 +42,17 @@ impl Plugin for MinifyPlugin {
         let mut count = 0usize;
         for entry in fs::read_dir(&ctx.site_dir)? {
             let path = entry?.path();
-            if path.extension().map_or(false, |e| e == "html") {
+            if path.extension().is_some_and(|e| e == "html") {
+                fail::fail_point!("plugins::minify-read", |_| {
+                    anyhow::bail!("injected: plugins::minify-read")
+                });
                 let content = fs::read_to_string(&path).with_context(|| {
                     format!("Failed to read {}", path.display())
                 })?;
                 let minified = minify_html(&content);
+                fail::fail_point!("plugins::minify-write", |_| {
+                    anyhow::bail!("injected: plugins::minify-write")
+                });
                 fs::write(&path, &minified).with_context(|| {
                     format!("Failed to write {}", path.display())
                 })?;
@@ -54,36 +60,35 @@ impl Plugin for MinifyPlugin {
             }
         }
         if count > 0 {
-            println!("[minify] Processed {} HTML files", count);
+            println!("[minify] Processed {count} HTML files");
         }
         Ok(())
     }
 }
 
 /// Minimal HTML minification: collapse whitespace runs into single spaces.
+///
+/// `<pre>` blocks short-circuit and return the input unchanged. This
+/// is intentionally simplistic; a real minifier lives in `minify-html`.
 fn minify_html(html: &str) -> String {
+    // Fast path: any `<pre` anywhere disables minification entirely.
+    if html.contains("<pre") {
+        return html.to_string();
+    }
+
     let mut result = String::with_capacity(html.len());
     let mut in_whitespace = false;
-    let in_pre = false;
-
     for ch in html.chars() {
-        if html.contains("<pre") {
-            // Simple pre-tag detection — skip minification if any <pre> exists
-            return html.to_string();
-        }
         if ch.is_whitespace() {
-            if !in_whitespace && !in_pre {
+            if !in_whitespace {
                 result.push(' ');
                 in_whitespace = true;
-            } else if in_pre {
-                result.push(ch);
             }
         } else {
             in_whitespace = false;
             result.push(ch);
         }
     }
-    let _ = in_pre; // suppress unused warning
     result
 }
 
@@ -105,7 +110,7 @@ fn minify_html(html: &str) -> String {
 pub struct ImageOptiPlugin;
 
 impl Plugin for ImageOptiPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "image-opti"
     }
 
@@ -157,6 +162,7 @@ pub struct DeployPlugin {
 
 impl DeployPlugin {
     /// Creates a new deployment plugin for the given target environment.
+    #[must_use]
     pub fn new(target: &str) -> Self {
         Self {
             target: target.to_string(),
@@ -165,7 +171,7 @@ impl DeployPlugin {
 }
 
 impl Plugin for DeployPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "deploy"
     }
 
@@ -183,10 +189,12 @@ impl Plugin for DeployPlugin {
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;
+    use crate::test_support::init_logger;
     use std::path::Path;
     use tempfile::tempdir;
 
     fn test_ctx_with(site_dir: &Path) -> PluginContext {
+        init_logger();
         PluginContext::new(
             Path::new("content"),
             Path::new("build"),

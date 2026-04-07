@@ -84,6 +84,7 @@ cli = []                                # Enable command-line interface support
 benchmark = []                          # Enable benchmark-specific functionality
 tera-templates = ["tera"]               # Tera templating engine with inheritance, loops, conditionals
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
+test-fault-injection = ["fail/failpoints"]  # Test-only fault injection for fs error paths
 
 # -----------------------------------------------------------------------------
 # Build Dependencies
@@ -97,8 +98,9 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 # -----------------------------------------------------------------------------
 [dev-dependencies]
 # Dependencies required for testing and development.
-criterion = "0.5.1"                       # Benchmarking library to test performance
+criterion = "0.8.2"                       # Benchmarking library to test performance
 lazy_static = "1.5.0"                      # Static variables for lazy evaluation
+serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
 
 # -----------------------------------------------------------------------------
 # Dependencies
@@ -111,7 +113,7 @@ colored = "3.1.1"
 dtt = "0.0.9"
 env_logger = "0.11.10"
 http-handle = "0.0.4"
-indicatif = { version = "0.17.11", features = ["rayon"] }
+indicatif = { version = "0.18.4", features = ["rayon"] }
 log = { version = "0.4.29", features = ["std"] }
 once_cell = "1.21.4"
 rayon = "1.11.0"
@@ -120,11 +122,13 @@ serde_json = "1.0.149"
 staticdatagen = "0.0.8"
 tempfile = "3.27.0"
 thiserror = "2.0.18"
-toml = "0.8.23"
+toml = "1.1.2"
 tokio = { version = "1.50.0", features = ["full"], optional = true }
 url = "2.5.8"
 uuid = { version = "1.22.0", features = ["v4"] }
 warp = "0.3.7"
+
+fail = "0.5"                              # Fault injection (no-op unless feature flag enables it)
 
 # Optional dependencies (feature-gated)
 tera = { version = "1", optional = true }
@@ -249,6 +253,7 @@ module_name_repetitions = "warn"             # Avoid repeating module names in t
 module_inception = "allow"                   # Allow modules with the same name as their parents
 too_many_arguments = "allow"                 # Allow functions with more than 7 arguments if justified
 missing_docs_in_private_items = "allow"      # Skip requiring documentation for private items
+multiple_crate_versions = "allow"            # Transitive duplicates from staticdatagen/tera/scraper — not actionable from this repo
 
 ## Denials — warn level so tests can use unwrap/expect; CI lint enforces on lib
 unwrap_used = "warn"                         # Warn on unwrap to encourage error handling

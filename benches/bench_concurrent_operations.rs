@@ -8,8 +8,9 @@
 //! This module contains performance benchmarks for concurrent file operations,
 //! including copying, verification, and directory traversal.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use ssg::{copy_dir_all, verify_and_copy_files, verify_file_safety};
+use std::hint::black_box;
 use std::{
     fs::{self, File},
     io::Write,

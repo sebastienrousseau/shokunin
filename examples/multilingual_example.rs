@@ -17,9 +17,43 @@ use staticdatagen::compiler::service::compile;
 use std::fs::{self, write};
 use std::path::Path;
 
+/// Supported locales as (code, native name) pairs.
+/// Matches the language set offered on bankstatementparser.com.
+const LANGUAGES: &[(&str, &str)] = &[
+    ("en", "English"),
+    ("fr", "Français"),
+    ("ar", "العربية"),
+    ("bn", "বাংলা"),
+    ("cs", "Čeština"),
+    ("de", "Deutsch"),
+    ("es", "Español"),
+    ("ha", "Hausa"),
+    ("he", "עברית"),
+    ("hi", "हिन्दी"),
+    ("id", "Indonesia"),
+    ("it", "Italiano"),
+    ("ja", "日本語"),
+    ("ko", "한국어"),
+    ("nl", "Nederlands"),
+    ("pl", "Polski"),
+    ("pt", "Português"),
+    ("ro", "Română"),
+    ("ru", "Русский"),
+    ("sv", "Svenska"),
+    ("th", "ไทย"),
+    ("tl", "Filipino"),
+    ("tr", "Türkçe"),
+    ("uk", "Українська"),
+    ("vi", "Tiếng Việt"),
+    ("yo", "Yorùbá"),
+    ("zh", "简体中文"),
+    ("zh-tw", "繁體中文"),
+];
+
 fn main() -> Result<()> {
     // Define supported languages
-    let languages = vec!["en", "fr"];
+    let languages: Vec<&str> =
+        LANGUAGES.iter().map(|(code, _)| *code).collect();
 
     // Root directory for public files
     let public_root = Path::new("./examples/public");
@@ -36,14 +70,13 @@ fn main() -> Result<()> {
         let template_dir = Path::new("./examples/templates").join(lang);
 
         // Call the compile function to generate the website
-        println!("    🔍 Compiling content for language: {}...", lang);
+        println!("    🔍 Compiling content for language: {lang}...");
         match compile(&build_dir, &content_dir, &site_dir, &template_dir) {
-            Ok(_) => println!(
-                "    ✅ Successfully compiled static site for language: {}",
-                lang
+            Ok(()) => println!(
+                "    ✅ Successfully compiled static site for language: {lang}"
             ),
             Err(e) => {
-                println!("    ❌ Error compiling site for {}: {:?}", lang, e);
+                println!("    ❌ Error compiling site for {lang}: {e:?}");
                 return Err(e);
             }
         }
@@ -102,13 +135,16 @@ fn generate_language_selector(
     let template = fs::read_to_string(template_path)
         .context("Failed to read selector.html template")?;
 
-    // Replace the placeholder with the language links
+    // Build <a> button entries using native language names.
     let mut language_links = String::new();
     for lang in languages {
+        let native = LANGUAGES
+            .iter()
+            .find(|(code, _)| code == lang)
+            .map(|(_, name)| *name)
+            .unwrap_or(lang);
         let link = format!(
-            "<li><a href=\"./{}/\">{}</a></li>\n",
-            lang,
-            lang.to_uppercase()
+            "      <a href=\"./{lang}/\" class=\"btn btn-outline-light m-1\" hreflang=\"{lang}\" lang=\"{lang}\">{native}</a>\n"
         );
         language_links.push_str(&link);
     }

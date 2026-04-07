@@ -60,7 +60,7 @@ news_title: "Kaishi, a Static Site Generator Starter Template" ## The title of t
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.33)"
+generator: "SSG (version 0.0.34)"
 item_description: RSS feed for the site
 item_guid: "https://kaishi.one"
 item_link: "https://kaishi.one"
