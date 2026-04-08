@@ -60,7 +60,7 @@ news_title: "Prywatność" ## Tytuł strony. (maks. 64 znaki)
 atom_link: https://kaishi.pl/rss.xml
 category: "Technologia"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kanał RSS witryny
 item_guid: "https://kaishi.pl/privacy/index.html"
 item_link: "https://kaishi.pl/privacy/index.html"

@@ -61,7 +61,7 @@ news_title: "联系我们" ## 页面标题。(最多 64 个字符)
 atom_link: https://kaishi.cn/contact/rss.xml
 category: "技术"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kaishi 网站联系页面的 RSS 订阅源。
 item_guid: "https://kaishi.cn/contact/index.html"
 item_link: "https://kaishi.cn/contact/index.html"

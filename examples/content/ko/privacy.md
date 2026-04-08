@@ -60,7 +60,7 @@ news_title: "개인정보 처리방침" ## 페이지의 제목. (최대 64자)
 atom_link: https://kaishi.kr/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: 사이트의 RSS 피드
 item_guid: "https://kaishi.kr/privacy/index.html"
 item_link: "https://kaishi.kr/privacy/index.html"

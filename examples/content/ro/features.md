@@ -58,7 +58,7 @@ news_title: "Funcționalități" ## Titlul paginii. (max. 64 de caractere)
 atom_link: https://kaishi.ro/rss.xml
 category: "Tehnologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versiunea 0.0.34)"
+generator: "SSG (versiunea 0.0.35)"
 item_description: Flux RSS pentru site
 item_guid: "https://kaishi.ro/features/index.html"
 item_link: "https://kaishi.ro/features/index.html"

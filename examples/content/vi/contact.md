@@ -61,7 +61,7 @@ news_title: "Liên hệ với chúng tôi" ## Tiêu đề của trang. (tối đ
 atom_link: https://kaishi.vn/contact/rss.xml
 category: "Công nghệ"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (phiên bản 0.0.34)"
+generator: "SSG (phiên bản 0.0.35)"
 item_description: Nguồn cấp RSS cho trang liên hệ của trang web Kaishi.
 item_guid: "https://kaishi.vn/contact/index.html"
 item_link: "https://kaishi.vn/contact/index.html"

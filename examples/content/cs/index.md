@@ -60,7 +60,7 @@ news_title: "Kaishi, startovací šablona pro generátor statických webů" ## T
 atom_link: https://kaishi.cz/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed pro web
 item_guid: "https://kaishi.cz"
 item_link: "https://kaishi.cz"

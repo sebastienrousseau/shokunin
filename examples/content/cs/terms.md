@@ -60,7 +60,7 @@ news_title: "Podmínky použití" ## Titulek stránky. (max. 64 znaků)
 atom_link: https://kaishi.cz/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed pro web
 item_guid: "https://kaishi.cz/terms/index.html"
 item_link: "https://kaishi.cz/terms/index.html"

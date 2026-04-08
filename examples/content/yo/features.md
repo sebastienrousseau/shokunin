@@ -58,7 +58,7 @@ news_title: "Àwọn Ẹ̀yà" ## Àkọlé ojú ewé.
 atom_link: https://kaishi.com.ng/rss.xml
 category: "Ìmọ̀-ẹ̀rọ"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed fún ojú òpó náà
 item_guid: "https://kaishi.com.ng/features/index.html"
 item_link: "https://kaishi.com.ng/features/index.html"

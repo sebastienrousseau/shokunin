@@ -60,7 +60,7 @@ news_title: "Tags" ## Ang pamagat ng pahina. (max 64 na karakter)
 atom_link: https://kaishi.ph/rss.xml
 category: "Teknolohiya"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (bersyon 0.0.34)"
+generator: "SSG (bersyon 0.0.35)"
 item_description: RSS feed para sa site
 item_guid: "https://kaishi.ph/tags/index.html"
 item_link: "https://kaishi.ph/tags/index.html"

@@ -61,7 +61,7 @@ news_title: "Makipag-ugnayan sa Amin" ## Ang pamagat ng pahina. (max 64 na karak
 atom_link: https://kaishi.ph/contact/rss.xml
 category: "Teknolohiya"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (bersyon 0.0.34)"
+generator: "SSG (bersyon 0.0.35)"
 item_description: RSS feed para sa contact page ng Kaishi website.
 item_guid: "https://kaishi.ph/contact/index.html"
 item_link: "https://kaishi.ph/contact/index.html"

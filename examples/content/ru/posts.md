@@ -59,7 +59,7 @@ news_title: "Записи" ## Заголовок страницы. (макс. 64
 atom_link: https://kaishi.ru/rss.xml
 category: "Технологии"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-лента сайта
 item_guid: "https://kaishi.ru/posts/index.html"
 item_link: "https://kaishi.ru/posts/index.html"

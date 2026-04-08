@@ -58,7 +58,7 @@ news_title: "Funcionalidades" ## O título da página. (máx. 64 caracteres)
 atom_link: https://kaishi.pt/rss.xml
 category: "Tecnologia"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versão 0.0.34)"
+generator: "SSG (versão 0.0.35)"
 item_description: Feed RSS do site
 item_guid: "https://kaishi.pt/features/index.html"
 item_link: "https://kaishi.pt/features/index.html"

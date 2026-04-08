@@ -61,7 +61,7 @@ news_title: "お問い合わせ" ## ページのタイトル。(最大64文字)
 atom_link: https://kaishi.jp/contact/rss.xml
 category: "テクノロジー"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kaishi ウェブサイトのお問い合わせページ用 RSS フィード。
 item_guid: "https://kaishi.jp/contact/index.html"
 item_link: "https://kaishi.jp/contact/index.html"

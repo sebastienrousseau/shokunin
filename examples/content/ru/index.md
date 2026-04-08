@@ -60,7 +60,7 @@ news_title: "Kaishi, стартовый шаблон для генератора
 atom_link: https://kaishi.ru/rss.xml
 category: "Технологии"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-лента сайта
 item_guid: "https://kaishi.ru"
 item_link: "https://kaishi.ru"

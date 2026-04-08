@@ -59,7 +59,7 @@ news_title: "Articole" ## Titlul paginii. (max. 64 de caractere)
 atom_link: https://kaishi.ro/rss.xml
 category: "Tehnologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versiunea 0.0.34)"
+generator: "SSG (versiunea 0.0.35)"
 item_description: Flux RSS pentru site
 item_guid: "https://kaishi.ro/posts/index.html"
 item_link: "https://kaishi.ro/posts/index.html"

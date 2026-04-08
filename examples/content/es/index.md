@@ -60,7 +60,7 @@ news_title: "Kaishi, una plantilla de inicio para generadores de sitios estátic
 atom_link: https://kaishi.es/rss.xml
 category: "Tecnología"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Feed RSS del sitio
 item_guid: "https://kaishi.es"
 item_link: "https://kaishi.es"

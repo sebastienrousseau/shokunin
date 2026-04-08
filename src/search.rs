@@ -554,7 +554,7 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 #ssg-search-input{flex:1;padding:16px 12px;font-size:16px;border:none;outline:none;background:transparent}
 #ssg-search-results{max-height:50vh;overflow-y:auto}
 .ssg-result{display:block;padding:12px 20px;text-decoration:none;color:#111;border-bottom:1px solid #f3f4f6;transition:background .1s}
-.ssg-result:hover,.ssg-result.active{background:#eff6ff}
+.ssg-result:hover,.ssg-result.active{background:#ecfdf5}
 .ssg-result-title{font-weight:600;font-size:15px;margin-bottom:3px}
 .ssg-result-snippet{font-size:13px;color:#6b7280;line-height:1.5}
 .ssg-result-snippet mark{background:#fef08a;color:inherit;border-radius:2px;padding:0 2px}

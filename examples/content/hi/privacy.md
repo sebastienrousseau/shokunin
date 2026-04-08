@@ -60,7 +60,7 @@ news_title: "गोपनीयता" ## पृष्ठ का शीर्ष
 atom_link: https://kaishi.in/rss.xml
 category: "प्रौद्योगिकी"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (संस्करण 0.0.34)"
+generator: "SSG (संस्करण 0.0.35)"
 item_description: साइट के लिए RSS फ़ीड
 item_guid: "https://kaishi.in/privacy/index.html"
 item_link: "https://kaishi.in/privacy/index.html"

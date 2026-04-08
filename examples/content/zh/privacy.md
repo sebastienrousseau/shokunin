@@ -60,7 +60,7 @@ news_title: "隐私" ## 页面标题。(最多 64 个字符)
 atom_link: https://kaishi.cn/rss.xml
 category: "技术"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: 本站的 RSS 订阅源
 item_guid: "https://kaishi.cn/privacy/index.html"
 item_link: "https://kaishi.cn/privacy/index.html"

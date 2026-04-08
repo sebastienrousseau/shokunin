@@ -60,7 +60,7 @@ news_title: "Kaishi, একটি স্ট্যাটিক সাইট জ�
 atom_link: https://kaishi.bd/rss.xml
 category: "প্রযুক্তি"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: সাইটের জন্য RSS ফিড
 item_guid: "https://kaishi.bd"
 item_link: "https://kaishi.bd"

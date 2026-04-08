@@ -61,7 +61,7 @@ news_title: "Ẹ Bá Wa Sọ̀rọ̀" ## Àkọlé ojú ewé náà.
 atom_link: https://kaishi.com.ng/contact/rss.xml
 category: "Ìmọ̀-ẹ̀rọ"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed fún ojú ewé ìkànsí ti ojú òpó Kaishi.
 item_guid: "https://kaishi.com.ng/contact/index.html"
 item_link: "https://kaishi.com.ng/contact/index.html"

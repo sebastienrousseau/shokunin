@@ -58,7 +58,7 @@ news_title: "機能" ## ページのタイトル。(最大64文字)
 atom_link: https://kaishi.jp/rss.xml
 category: "テクノロジー"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: サイトのRSSフィード
 item_guid: "https://kaishi.jp/features/index.html"
 item_link: "https://kaishi.jp/features/index.html"

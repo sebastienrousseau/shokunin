@@ -61,7 +61,7 @@ news_title: "Contactați-ne" ## Titlul paginii. (max. 64 de caractere)
 atom_link: https://kaishi.ro/contact/rss.xml
 category: "Tehnologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versiunea 0.0.34)"
+generator: "SSG (versiunea 0.0.35)"
 item_description: Flux RSS pentru pagina de contact a site-ului Kaishi.
 item_guid: "https://kaishi.ro/contact/index.html"
 item_link: "https://kaishi.ro/contact/index.html"

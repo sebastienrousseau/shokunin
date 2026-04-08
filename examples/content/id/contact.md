@@ -61,7 +61,7 @@ news_title: "Hubungi Kami" ## Judul halaman. (maks. 64 karakter)
 atom_link: https://kaishi.id/contact/rss.xml
 category: "Teknologi"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versi 0.0.34)"
+generator: "SSG (versi 0.0.35)"
 item_description: Feed RSS untuk halaman kontak situs Kaishi.
 item_guid: "https://kaishi.id/contact/index.html"
 item_link: "https://kaishi.id/contact/index.html"

@@ -61,7 +61,7 @@ news_title: "צור קשר" ## כותרת העמוד. (עד 64 תווים)
 atom_link: https://kaishi.co.il/contact/rss.xml
 category: "טכנולוגיה"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: הזנת RSS עבור עמוד יצירת הקשר של אתר Kaishi.
 item_guid: "https://kaishi.co.il/contact/index.html"
 item_link: "https://kaishi.co.il/contact/index.html"

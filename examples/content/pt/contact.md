@@ -61,7 +61,7 @@ news_title: "Contacte-nos" ## O título da página. (máx. 64 caracteres)
 atom_link: https://kaishi.pt/contact/rss.xml
 category: "Tecnologia"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versão 0.0.34)"
+generator: "SSG (versão 0.0.35)"
 item_description: Feed RSS da página de contacto do sítio Kaishi.
 item_guid: "https://kaishi.pt/contact/index.html"
 item_link: "https://kaishi.pt/contact/index.html"

@@ -60,7 +60,7 @@ news_title: "Koşullar" ## Sayfanın başlığı. (en fazla 64 karakter)
 atom_link: https://kaishi.com.tr/rss.xml
 category: "Teknoloji"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Site için RSS beslemesi
 item_guid: "https://kaishi.com.tr/terms/index.html"
 item_link: "https://kaishi.com.tr/terms/index.html"

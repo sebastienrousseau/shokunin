@@ -59,7 +59,7 @@ news_title: "পোস্ট" ## পৃষ্ঠার শিরোনাম। 
 atom_link: https://kaishi.bd/rss.xml
 category: "প্রযুক্তি"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: সাইটের জন্য RSS ফিড
 item_guid: "https://kaishi.bd/posts/index.html"
 item_link: "https://kaishi.bd/posts/index.html"
