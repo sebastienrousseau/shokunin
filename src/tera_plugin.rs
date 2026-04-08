@@ -413,13 +413,17 @@ mod tests {
 
     #[test]
     fn after_compile_loads_data_files_into_context() {
-        // The `!data_files.is_empty()` branch at line 97 must
-        // populate the site-globals map with the `data` key.
+        // The `!data_files.is_empty()` branch at lines 97-101 must
+        // populate the site-globals map with the `data` key. Note:
+        // load_data_files looks at `content_dir.parent().join("data")`,
+        // so the data file must be a SIBLING of the content dir,
+        // not inside it.
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
-        // Drop a data file into the content directory.
-        let data = dir.path().join("content").join("data");
+        // data/ as a sibling of content/ — this is what
+        // load_data_files actually scans.
+        let data = dir.path().join("data");
         fs::create_dir_all(&data).unwrap();
         fs::write(data.join("nav.toml"), r#"site = "demo""#).unwrap();
 
