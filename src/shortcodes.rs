@@ -141,13 +141,15 @@ fn expand_inline_shortcodes(input: &str) -> String {
         }
         // Fallthrough: push the next full codepoint, not just one
         // byte — this handles multi-byte UTF-8 characters cleanly.
-        let remaining = &input[pos..];
-        if let Some(c) = remaining.chars().next() {
-            result.push(c);
-            pos += c.len_utf8();
-        } else {
-            break;
-        }
+        // The `chars().next()` is guaranteed to be `Some` because
+        // the loop guard `pos < input.len()` ensures the suffix is
+        // non-empty, so an `unwrap` here cannot panic.
+        let c = input[pos..]
+            .chars()
+            .next()
+            .expect("loop guard ensures pos < input.len()");
+        result.push(c);
+        pos += c.len_utf8();
     }
 
     result
