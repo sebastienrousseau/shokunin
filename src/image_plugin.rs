@@ -697,6 +697,34 @@ mod tests {
     }
 
     #[test]
+    fn after_compile_html_without_image_refs_skips_rewrite() {
+        // Covers the FALSE branch of `if rewritten != html` at
+        // line 74 — the html doesn't reference any of the image
+        // files, so rewrite_img_tags returns the input unchanged
+        // and fs::write is NOT called.
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path().join("site");
+        let images = site.join("images");
+        fs::create_dir_all(&images).unwrap();
+
+        // Create a real image so the early-return doesn't fire.
+        write_test_jpeg(&images.join("orphan.jpg"), 1000, 1000);
+        // HTML that does NOT reference orphan.jpg.
+        let original_html =
+            "<html><head></head><body><p>no images here</p></body></html>";
+        fs::write(site.join("index.html"), original_html).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        ImageOptimizationPlugin.after_compile(&ctx).unwrap();
+
+        let after = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(
+            after, original_html,
+            "html with no image refs should not be rewritten"
+        );
+    }
+
+    #[test]
     fn after_compile_no_images_short_circuits_without_creating_optimized_dir() {
         // The `images.is_empty()` early return at line 49 must not
         // create the `optimized/` directory.
