@@ -1,0 +1,148 @@
+---
+
+# Front Matter (YAML)
+
+author: "jane.doe@kaishi.pl (Jane Doe)" ## Autor strony. (maks. 64 znaki)
+banner_alt: "MacBook Pro na białej powierzchni" ## Tekst alternatywny banera witryny.
+banner_height: "398" ## Wysokość banera witryny.
+banner_width: "1440" ## Szerokość banera witryny.
+banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Baner witryny.
+cdn: "https://cloudcdn.pro" ## CDN witryny.
+changefreq: "weekly" ## Częstotliwość zmian witryny.
+charset: "utf-8" ## Kodowanie znaków witryny. (domyślnie: utf-8)
+cname: "kaishi.pl" ## Wartość CNAME witryny. (wymagane tylko dla strony głównej)
+copyright: "Copyright © 2023-2026 Kaishi. Wszelkie prawa zastrzeżone." ## Prawa autorskie witryny.
+date: "January 01, 2025"
+description: "Twórz piękne witryny z Kaishi, szablonem startowym dla Static Site Generator." ## Opis witryny. (maks. 160 znaków)
+download: "" ## Adres URL pobierania produktu.
+format-detection: "telephone=no" ## Wykrywanie formatu witryny.
+hreflang: "pl" ## Atrybut hreflang witryny. (domyślnie: en-gb)
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ikona witryny w formacie SVG.
+id: "https://kaishi.pl" ## Identyfikator witryny.
+image_alt: "Logo Kaishi, szablonu startowego dla stron statycznych" ## Tekst alternatywny obrazu witryny.
+image_height: "630" ## Wysokość obrazu witryny.
+image_width: "1200" ## Szerokość obrazu witryny.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## Główny obraz witryny w formacie SVG.
+keywords: "polityka prywatności, kaishi, static site generator, generator stron statycznych, dane użytkownika, google analytics, microsoft clarity, narzędzia śledzące, dane osobowe, prawa, zmiany" ## Słowa kluczowe witryny. (maks. 160 znaków)
+language: "pl-PL" ## Język witryny. (domyślnie: en-GB)
+layout: "page" ## Układ witryny.
+locale: "pl_PL" ## Ustawienia regionalne witryny.
+logo_alt: "Logo Kaishi, szablonu startowego dla stron statycznych" ## Tekst alternatywny logo witryny.
+logo_height: "33" ## Wysokość logo witryny.
+logo_width: "100" ## Szerokość logo witryny.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo witryny w formacie SVG.
+name: "Kaishi" ## Nazwa witryny. (maks. 64 znaki)
+permalink: "https://kaishi.pl/privacy" ## Adres URL witryny.
+rating: "general" ## Ocena witryny.
+referrer: "no-referrer" ## Polityka referrer witryny.
+revisit-after: "7 days" ## Czas do ponownego odwiedzenia witryny.
+robots: "index, follow" ## Instrukcje dla robotów witryny.
+short_name: "kaishi" ## Skrócona nazwa witryny. (maks. 12 znaków)
+subtitle: "Twórz wspaniałe witryny minimalnym nakładem pracy dzięki szablonom startowym Kaishi" ## Podtytuł strony. (maks. 64 znaki)
+tags: "polityka prywatności, kaishi, static site generator, generator stron statycznych, dane użytkownika, google analytics, microsoft clarity, narzędzia śledzące, dane osobowe, prawa, zmiany" ## Tagi witryny. (maks. 160 znaków)
+theme-color: "143, 250, 113" ## Kolor motywu witryny.
+title: "Kaishi, szablon startowy dla Static Site Generator" ## Tytuł strony. (maks. 64 znaki)
+url: "https://kaishi.pl" ## Adres URL witryny.
+viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport witryny.
+
+# News - Metadane News SiteMap (YAML).
+news_genres: "Blog" ## Gatunki witryny. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
+news_keywords: "kaishi, static site generator, generator stron statycznych, minimalistyczny szablon strony, nowoczesny szablon strony, responsywny szablon strony, szablon startowy strony, freelancer kreatywny, założyciel startupu, właściciel małej firmy, obecność online" ## Słowa kluczowe witryny. (oddzielone przecinkami, maks. 10 słów kluczowych)
+news_language: "pl" ## Język witryny. (domyślnie: en)
+news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokalizacja obrazu witryny.
+news_loc: "https://kaishi.pl" ## Lokalizacja witryny.
+news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Data publikacji witryny.
+news_publication_name: "Kaishi" ## Nazwa publikacji newsowej witryny.
+news_title: "Prywatność" ## Tytuł strony. (maks. 64 znaki)
+
+
+# RSS - Metadane kanału RSS (YAML).
+atom_link: https://kaishi.pl/rss.xml
+category: "Technologia"
+docs: https://validator.w3.org/feed/docs/rss2.html
+generator: "SSG (version 0.0.34)"
+item_description: Kanał RSS witryny
+item_guid: "https://kaishi.pl/privacy/index.html"
+item_link: "https://kaishi.pl/privacy/index.html"
+item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+item_title: "Kaishi, szablon startowy dla Static Site Generator"
+last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+managing_editor: jane.doe@kaishi.pl (Jane Doe)
+pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+ttl: "60"
+type: "website"
+webmaster: jane.doe@kaishi.pl
+
+# Apple - Metadane Apple (YAML).
+apple_mobile_web_app_orientations: "portrait" ## Orientacje Apple Mobile Web App strony.
+apple_touch_icon_sizes: "192x192" ## Rozmiary ikon Apple Touch strony.
+apple-mobile-web-app-capable: "yes" ## Czy Apple Mobile Web App jest obsługiwane.
+apple-mobile-web-app-status-bar-inset: "black" ## Wstawka paska stanu Apple Mobile Web App.
+apple-mobile-web-app-status-bar-style: "black-translucent" ## Styl paska stanu Apple Mobile Web App.
+apple-mobile-web-app-title: "Kaishi" ## Tytuł Apple Mobile Web App.
+apple-touch-fullscreen: "yes" ## Tryb pełnoekranowy Apple Touch.
+
+# MS Application - Metadane MS Application (YAML).
+
+msapplication-navbutton-color: "rgb(0,102,204)"
+
+# Twitter Card - Metadane Twitter Card (YAML).
+
+## twitter_card - Typ Twitter Card strony.
+twitter_card: "summary"
+## twitter_creator - Twórca Twitter Card strony.
+twitter_creator: "janedoe"
+## twitter_description - Opis Twitter Card strony.
+twitter_description: "Twórz piękne witryny z Kaishi, szablonem startowym dla Static Site Generator."
+## twitter_image - Obraz Twitter Card strony.
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+## twitter_image:alt - Tekst alternatywny obrazu Twitter Card strony.
+twitter_image_alt: "Logo Kaishi, szablonu startowego dla stron statycznych"
+## twitter_site - Konto Twitter strony.
+twitter_site: "janedoe"
+## twitter_title - Tytuł Twitter Card strony.
+twitter_title: "Kaishi, szablon startowy dla Static Site Generator"
+## twitter_url - Adres URL Twitter Card strony.
+twitter_url: "https://kaishi.pl"
+
+# Humans.txt - Metadane Humans.txt (YAML).
+author_website: "https://cloudcdn.pro" ## Witryna autora strony.
+author_twitter: "@wwdseb" ## Konto Twitter autora strony.
+author_location: "Londyn, Wielka Brytania" ## Lokalizacja autora strony.
+thanks: "Dziękujemy za przeczytanie!" ## Podziękowania strony.
+site_last_updated: "2025-01-01" ## Data ostatniej aktualizacji witryny.
+site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## Standardy witryny.
+site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## Komponenty witryny.
+site_software: "SSG, Rust" ## Oprogramowanie witryny.
+
+---
+
+## Zbieranie i wykorzystywanie informacji
+
+Nie zbieramy bezpośrednio żadnych danych osobowych podczas przeglądania naszej witryny. Nie używamy plików cookie w celach logicznych ani nie zapisujemy żadnych danych osobowych użytkownika.
+
+## Wykorzystanie narzędzi śledzących
+
+Korzystamy z dwóch usług stron trzecich do monitorowania i analizowania ruchu sieciowego: Google Analytics i Microsoft Clarity.
+
+### Google Analytics
+
+Google Analytics to usługa analityki internetowej oferowana przez Google, która śledzi i raportuje ruch na witrynie. Google wykorzystuje zebrane dane do śledzenia i monitorowania korzystania z naszej witryny. Dane te są udostępniane innym usługom Google. Aby uzyskać więcej informacji na temat praktyk prywatności Google, odwiedź stronę Zasady ochrony prywatności i warunki Google: [Zasady ochrony prywatności i warunki Google ⧉](https://policies.google.com/privacy)
+
+### Microsoft Clarity
+
+Microsoft Clarity to narzędzie do analizy zachowań użytkowników, które pomaga nam zrozumieć, jak użytkownicy wchodzą w interakcję z naszą witryną. Zbierane dane obejmują informacje takie jak ruchy myszy, kliknięcia i przewijanie. Aby uzyskać więcej informacji na temat praktyk prywatności Microsoft, odwiedź stronę Oświadczenia o ochronie prywatności firmy Microsoft: [Oświadczenie o ochronie prywatności Microsoft ⧉](https://privacy.microsoft.com/en-us/privacystatement)
+
+## Twoje prawa
+
+W zależności od miejsca zamieszkania możesz mieć określone prawa w odniesieniu do swoich danych osobowych, takie jak prawo do żądania dostępu, sprostowania lub usunięcia swoich danych, lub do sprzeciwu wobec naszego wykorzystania Twoich danych.
+
+## Zmiany w niniejszej Polityce prywatności
+
+Od czasu do czasu możemy aktualizować naszą Politykę prywatności. Powiadomimy Cię o wszelkich zmianach, publikując nową Politykę prywatności na tej stronie.
+
+Zalecamy okresowe przeglądanie niniejszej Polityki prywatności pod kątem wszelkich zmian. Zmiany w niniejszej Polityce prywatności wchodzą w życie z chwilą opublikowania ich na tej stronie.
+
+## Skontaktuj się z nami
+
+Jeśli masz pytania dotyczące niniejszej Polityki prywatności, skontaktuj się z nami.

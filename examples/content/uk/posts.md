@@ -1,0 +1,173 @@
+---
+
+# Front Matter (YAML)
+
+author: "jane.doe@kaishi.ua (Jane Doe)" ## Автор сторінки. (макс. 64 символи)
+banner_alt: "Зелено-чорна плиткова стіна" ## Альтернативний текст банера сайту.
+banner_height: "398" ## Висота банера сайту.
+banner_width: "1440" ## Ширина банера сайту.
+banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Банер сайту.
+cdn: "https://cloudcdn.pro" ## CDN сайту.
+changefreq: "weekly" ## Частота оновлення сайту.
+charset: "utf-8" ## Кодування сайту. (за замовчуванням: utf-8)
+cname: "kaishi.ua" ## Значення cname сайту. (Обов'язково лише для головної сторінки.)
+copyright: "Copyright © 2023-2026 Kaishi. Усі права захищено." ## Авторське право сайту.
+date: "01 січня 2025"
+description: "Усе, що вам потрібно для створення вражаючого сайту." ## Опис сайту. (макс. 160 символів)
+download: "" ## URL для завантаження продукту.
+format-detection: "telephone=no" ## Виявлення формату сайту.
+hreflang: "uk" ## hreflang сайту. (за замовчуванням: en-gb)
+icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Іконка сайту у форматі SVG.
+id: "https://kaishi.ua" ## Ідентифікатор сайту.
+image_alt: "Логотип Kaishi, стартового шаблону для статичних сайтів" ## Альтернативний текст зображення сайту.
+image_height: "630" ## Висота зображення сайту.
+image_width: "1200" ## Ширина зображення сайту.
+image: "https://cloudcdn.pro/kaishi/images/banners/banner-kaishi.webp" ## Головне зображення сайту у форматі SVG.
+keywords: "стартові шаблони kaishi, генератор статичних сайтів, static site generator, стартові шаблони, bootstrap, bootstrap css, bootstrap javascript, політика безпеки контенту, метатеги open graph, адаптивна навігаційна панель, метатеги schema.org" ## Ключові слова сайту. (макс. 160 символів)
+language: "uk-UA" ## Мова сайту. (за замовчуванням: en-GB)
+layout: "post" ## Макет сайту.
+locale: "uk_UA" ## Локаль сайту.
+logo_alt: "Логотип Kaishi, стартового шаблону для статичних сайтів" ## Альтернативний текст логотипа сайту.
+logo_height: "33" ## Висота логотипа сайту.
+logo_width: "100" ## Ширина логотипа сайту.
+logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Логотип сайту у форматі SVG.
+name: "Kaishi" ## Назва сайту. (макс. 64 символи)
+permalink: "https://kaishi.ua/posts" ## URL сайту.
+rating: "general" ## Рейтинг сайту.
+referrer: "no-referrer" ## Referrer сайту.
+revisit-after: "7 days" ## Період повторного відвідування сайту.
+robots: "index, follow" ## Інструкції для роботів сайту.
+short_name: "kaishi" ## Коротка назва сайту. (макс. 12 символів)
+subtitle: "Створюйте чудові сайти з мінімальними зусиллями за допомогою стартових шаблонів Kaishi" ## Підзаголовок сторінки. (макс. 64 символи)
+tags: "стартові шаблони kaishi, генератор статичних сайтів, static site generator, стартові шаблони, bootstrap, bootstrap css, bootstrap javascript, політика безпеки контенту, метатеги open graph, адаптивна навігаційна панель, метатеги schema.org" ## Теги сайту. (макс. 160 символів)
+theme-color: "143, 250, 113" ## Колір теми сайту.
+title: "Записи" ## Заголовок сторінки. (макс. 64 символи)
+url: "https://kaishi.ua" ## URL сайту.
+viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайту.
+
+# News - Метадані News SiteMap (YAML).
+news_genres: "Blog" ## Жанри сайту. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
+news_keywords: "стартові шаблони kaishi, генератор статичних сайтів, static site generator, стартові шаблони, bootstrap, bootstrap css, bootstrap javascript, політика безпеки контенту, метатеги open graph, адаптивна навігаційна панель, метатеги schema.org" ## Ключові слова сайту. (через кому, макс. 10 ключових слів)
+news_language: "uk" ## Мова сайту. (за замовчуванням: en)
+news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## URL зображення сайту.
+news_loc: "https://kaishi.ua" ## URL сайту.
+news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Дата публікації сайту.
+news_publication_name: "Kaishi" ## Назва новинної публікації сайту.
+news_title: "Записи" ## Заголовок сторінки. (макс. 64 символи)
+
+# RSS - Метадані RSS-стрічки (YAML).
+atom_link: https://kaishi.ua/rss.xml
+category: "Технології"
+docs: https://validator.w3.org/feed/docs/rss2.html
+generator: "SSG (version 0.0.34)"
+item_description: RSS-стрічка сайту
+item_guid: "https://kaishi.ua/posts/index.html"
+item_link: "https://kaishi.ua/posts/index.html"
+item_pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+item_title: "Записи"
+last_build_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+managing_editor: jane.doe@kaishi.ua (Jane Doe)
+pub_date: "Wed, 01 Jan 2025 01:01:01 GMT"
+ttl: "60"
+type: "website"
+webmaster: jane.doe@kaishi.ua
+
+# Apple - Метадані Apple (YAML).
+apple_mobile_web_app_orientations: "portrait" ## Орієнтації Apple-мобільного веб-застосунку сторінки.
+apple_touch_icon_sizes: "192x192" ## Розміри Apple-touch-icon сторінки.
+apple-mobile-web-app-capable: "yes" ## Підтримка Apple-мобільного веб-застосунку сторінки.
+apple-mobile-web-app-status-bar-inset: "black" ## Відступ рядка стану Apple-мобільного веб-застосунку сторінки.
+apple-mobile-web-app-status-bar-style: "black-translucent" ## Стиль рядка стану Apple-мобільного веб-застосунку сторінки.
+apple-mobile-web-app-title: "Kaishi" ## Заголовок Apple-мобільного веб-застосунку сторінки.
+apple-touch-fullscreen: "yes" ## Повноекранний режим Apple Touch сторінки.
+
+# MS Application - Метадані MS Application (YAML).
+
+msapplication-navbutton-color: "rgb(0,102,204)"
+
+# Twitter Card - Метадані Twitter Card (YAML).
+
+## twitter_card - Тип Twitter Card сторінки.
+twitter_card: "summary"
+## twitter_creator - Творець Twitter Card сторінки.
+twitter_creator: "janedoe"
+## twitter_description - Опис Twitter Card сторінки.
+twitter_description: "Усе, що вам потрібно для створення вражаючого сайту."
+## twitter_image - Зображення Twitter Card сторінки.
+twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+## twitter_image:alt - Альтернативний текст зображення Twitter Card сторінки.
+twitter_image_alt: "Логотип Kaishi, стартового шаблону для статичних сайтів"
+## twitter_site - Twitter-акаунт сторінки.
+twitter_site: "janedoe"
+## twitter_title - Заголовок Twitter Card сторінки.
+twitter_title: "Kaishi, стартовий шаблон для генератора статичних сайтів"
+## twitter_url - URL Twitter Card сторінки.
+twitter_url: "https://kaishi.ua"
+
+# Humans.txt - Метадані Humans.txt (YAML).
+author_website: "https://cloudcdn.pro" ## Вебсайт автора сторінки.
+author_twitter: "@wwdseb" ## Twitter автора сторінки.
+author_location: "Лондон, Велика Британія" ## Місцезнаходження автора сторінки.
+thanks: "Дякуємо за прочитання!" ## Подяки сторінки.
+site_last_updated: "2025-01-01" ## Останнє оновлення сайту.
+site_standards: "HTML5, CSS3, RSS, Atom, JSON, XML, YAML, Markdown, TOML" ## Стандарти сайту.
+site_components: "Kaishi, Kaishi Builder, Kaishi CLI, Kaishi Templates, Kaishi Themes" ## Компоненти сайту.
+site_software: "SSG, Rust" ## Програмне забезпечення сайту.
+
+---
+
+![Природа сяє][00]
+
+## Стартові шаблони
+
+Усі стартові шаблони — чи то сторінки, чи то цілі сайти — створено з нуля
+за одними й тими ж принципами та можливостями. Це означає, що ви можете легко
+поєднувати їх між собою, створюючи власні макети та зміст.
+
+### Сторінки
+
+Почніть роботу з SSG, використовуючи будь-який із наших стартових шаблонів для створення
+вашого сайту або вебзастосунку. Наші шаблони розроблено гнучкими та простими в редагуванні.
+
+#### Особливості шаблонів
+
+- **Адаптивний дизайн:** Усі шаблони повністю адаптивні та добре виглядають на будь-якому пристрої.
+- **Модульні компоненти:** Шаблони побудовано з модульних компонентів, що спрощує їх налаштування.
+- **Сучасна естетика:** Кожен шаблон створений з урахуванням сучасних тенденцій дизайну.
+
+#### Початок роботи
+
+Щоб почати, оберіть шаблон, який відповідає потребам вашого проєкту. Налаштуйте його своїм контентом, стилем і функціональністю.
+
+1. **Оберіть шаблон:** Перегляньте нашу колекцію та оберіть відправну точку.
+2. **Налаштуйте:** Змініть макет, додайте свій контент і підкоригуйте стилі.
+3. **Запустіть:** Розгорніть свій новий сайт або вебзастосунок у світі.
+
+### Сайти
+
+Створення сайту з нуля може бути непростим завданням, але наші стартові шаблони роблять цей процес простим і зрозумілим.
+
+
+![Природа сяє][00]
+
+### Чому варто використовувати наші шаблони?
+
+- **Швидкість:** Прискорте розробку завдяки готовим дизайнам.
+- **Якість:** Високоякісні, добре протестовані шаблони гарантують надійність.
+- **Підтримка:** Наша команда готова допомогти з будь-якими запитаннями чи проблемами.
+
+### Налаштування
+
+Налаштовуйте шаблони відповідно до ваших конкретних потреб. Можливості безмежні!
+
+#### Поради щодо налаштування
+
+- **Зрозумійте структуру:** Ознайомтеся зі структурою та компонентами шаблона.
+- **Експериментуйте:** Не бійтеся експериментувати з різними макетами та стилями.
+- **Відгуки:** Збирайте відгуки про свої дизайни та вдосконалюйте їх на основі отриманих думок.
+
+## Висновок
+
+Маючи наш набір стартових шаблонів, ви отримуєте міцну основу для створення чогось унікального та адаптованого під ваші конкретні потреби. Занурюйтесь і починайте творити!
+
+[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp

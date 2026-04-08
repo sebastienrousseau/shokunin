@@ -3132,9 +3132,93 @@ mod tests {
     #[test]
     fn http_transport_implements_serve_transport_trait() {
         // Compile-time check: HttpTransport satisfies the bound.
-        // We don't actually call .start() (it would block on a port).
         fn _assert_impl<T: ServeTransport>() {}
         _assert_impl::<HttpTransport>();
+    }
+
+    // NOTE: HttpTransport::start binds an HTTP server and BLOCKS
+    // indefinitely on success (it does not return until the server
+    // process is killed). There is no safe way to unit-test
+    // HttpTransport::start in-process without leaking file
+    // descriptors and bound ports. The lines are exercised
+    // manually via `cargo run --example multilingual` (confirmed
+    // green in the PR test plan) and the ServeTransport trait
+    // surface itself is covered by RecordingTransport and
+    // FailingTransport doubles.
+
+    // -----------------------------------------------------------------
+    // execute_build_pipeline — runs the actual build half of run()
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn execute_build_pipeline_propagates_compile_errors() -> Result<()> {
+        // Covers the body of execute_build_pipeline at lines 405-419,
+        // including the start.elapsed() / println! summary arm. We
+        // run it against a deliberately broken layout (empty
+        // content_dir, no templates) so compile_site returns Err
+        // and we exercise the Result-propagation continuation.
+        let temp = tempdir()?;
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("missing-content");
+        config.output_dir = temp.path().join("public");
+        config.template_dir = temp.path().join("missing-templates");
+        config.site_name = "broken".to_string();
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: None,
+        };
+
+        let (plugins, ctx, build_dir, site_dir) =
+            build_pipeline(&config, &opts);
+
+        // Pipeline must fail cleanly with an error rather than
+        // panicking on the missing directories.
+        let result = execute_build_pipeline(
+            &plugins,
+            &ctx,
+            &build_dir,
+            &config.content_dir,
+            &site_dir,
+            &config.template_dir,
+            opts.quiet,
+        );
+        assert!(result.is_err(), "broken layout should propagate Err");
+        Ok(())
+    }
+
+    #[test]
+    fn execute_build_pipeline_verbose_propagates_compile_errors() -> Result<()>
+    {
+        // Same as above with quiet=false to cover the `if !quiet`
+        // branch at lines 412-418 even on the failure path.
+        let temp = tempdir()?;
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("missing");
+        config.output_dir = temp.path().join("public");
+        config.template_dir = temp.path().join("missing-templates");
+        config.site_name = "broken-verbose".to_string();
+
+        let opts = RunOptions {
+            quiet: false,
+            include_drafts: false,
+            deploy_target: None,
+        };
+
+        let (plugins, ctx, build_dir, site_dir) =
+            build_pipeline(&config, &opts);
+
+        let _ = execute_build_pipeline(
+            &plugins,
+            &ctx,
+            &build_dir,
+            &config.content_dir,
+            &site_dir,
+            &config.template_dir,
+            opts.quiet,
+        );
+        Ok(())
     }
 
     #[test]

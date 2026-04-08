@@ -690,6 +690,103 @@ mod tests {
         Ok(())
     }
 
+    // -------------------------------------------------------------------
+    // Targeted edge-case coverage
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn search_plugin_after_compile_empty_index_short_circuits() -> Result<()> {
+        // Line 136: `if index.is_empty() { return Ok(()) }`. Need a
+        // site with HTML files that produce zero entries — easiest:
+        // a site with only a stylesheet (collect_html_files returns
+        // empty, build returns empty index).
+        let tmp = tempdir()?;
+        fs::write(tmp.path().join("style.css"), "body{}")?;
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        SearchPlugin.after_compile(&ctx)?;
+        // No search-index.json should have been written.
+        assert!(!tmp.path().join("search-index.json").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn extract_title_empty_title_falls_back_to_h1() {
+        // Line 167 false branch: title trimmed is empty, so we fall
+        // through to the h1 fallback at lines 172-180.
+        let html = "<html><head><title>   </title></head><body><h1>Heading One</h1></body></html>";
+        assert_eq!(extract_title(html), "Heading One");
+    }
+
+    #[test]
+    fn extract_title_no_title_tag_falls_back_to_h1() {
+        // Lines 178-179: the h1 fallback Some-Some success path.
+        let html = "<html><body><h1>From H1</h1></body></html>";
+        assert_eq!(extract_title(html), "From H1");
+    }
+
+    #[test]
+    fn extract_title_h1_with_attributes_works() {
+        // Verifies the `find('>')` step at line 174 handles attrs.
+        let html = r#"<html><body><h1 class="title">Attrs</h1></body></html>"#;
+        assert_eq!(extract_title(html), "Attrs");
+    }
+
+    #[test]
+    fn extract_title_no_title_no_h1_returns_empty() {
+        let html = "<html><body><p>just a paragraph</p></body></html>";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
+    fn extract_headings_unterminated_h_tag_breaks_inner_loop() {
+        // Line 204: the `break` when no `</hN>` close tag is found.
+        let html = "<html><body><h1>Has close</h1><h2>no close tag";
+        let headings = extract_headings(html);
+        // The first heading is captured; the unterminated one
+        // breaks out of the inner loop without panicking.
+        assert!(headings.contains(&"Has close".to_string()));
+    }
+
+    #[test]
+    fn extract_headings_unterminated_open_tag_breaks_outer() {
+        // Line 207: the `break` when `<h1` has no `>`. Build a
+        // pathological string that contains `<h1` but never `>`
+        // afterwards.
+        let html = "<h1 attr=\"unterminated";
+        let headings = extract_headings(html);
+        assert!(headings.is_empty());
+    }
+
+    #[test]
+    fn extract_text_unterminated_strip_tag_breaks() {
+        // Line 225: the `break` in the strip loop when a tag opener
+        // exists but no matching close. extract_text strips
+        // <script>/<style>/etc. blocks; an unterminated <script>
+        // hits the inner break.
+        let html = "<html><body><script>unterminated<p>visible</p>";
+        let _ = extract_text(html);
+    }
+
+    #[test]
+    fn truncate_no_space_falls_back_to_byte_cut() {
+        // Line 278: `else { truncated.to_string() }` when there is
+        // no space within the first `max` characters.
+        let result = truncate("oneverylongwordwithnospacesatall", 10);
+        // Returns the byte-truncated string (no space to break on).
+        assert_eq!(result, "oneverylon");
+    }
+
+    #[test]
+    fn truncate_short_string_returned_unchanged() {
+        // Line 266 true branch: input shorter than max returns as-is.
+        assert_eq!(truncate("short", 100), "short");
+    }
+
     #[test]
     fn collect_html_files_respects_bound() -> Result<()> {
         let tmp = tempdir()?;
