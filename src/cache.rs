@@ -503,6 +503,35 @@ mod tests {
         assert_eq!(cache.len(), 1, "deleted file should be pruned from cache");
     }
 
+    // 17. default_path() returns the compile-time constant.
+    #[test]
+    fn default_path_returns_compile_time_constant() {
+        // Covers the const fn at lines 250-252. The function is a
+        // trivial static-string accessor but it's part of the
+        // public API so we exercise it explicitly.
+        assert_eq!(BuildCache::default_path(), DEFAULT_CACHE_FILE);
+        assert!(!BuildCache::default_path().is_empty());
+    }
+
+    // 18. walk() propagates read_dir errors via with_context.
+    #[test]
+    fn walk_errors_on_nonexistent_directory() {
+        // Covers the with_context format! closure at lines 156-158.
+        // We call the walker directly with a path that doesn't
+        // exist — fs::read_dir returns Err, the closure fires, and
+        // the format! inside it evaluates (closing lines 157-158).
+        let tmp = TempDir::new().ok().unwrap();
+        let missing = tmp.path().join("does-not-exist");
+        let mut out = Vec::new();
+        let result = BuildCache::walk(tmp.path(), &missing, &mut out);
+        assert!(result.is_err(), "walk should Err on missing dir");
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(
+            msg.contains("cannot read directory"),
+            "error should contain with_context message: {msg}"
+        );
+    }
+
     // 16. Unchanged files do not appear in the changed list.
     #[test]
     fn build_cache_unchanged_files_not_reported() {

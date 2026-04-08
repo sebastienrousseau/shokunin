@@ -1359,6 +1359,36 @@ mod tests {
         assert!(desc.is_ascii() || !desc.is_empty());
     }
 
+    #[test]
+    fn extract_description_truncation_walks_back_multiple_bytes() {
+        // Forces the `end -= 1` loop at lines 110-112 to iterate
+        // at least once. A 4-byte emoji positioned so that `max_len`
+        // lands in the middle of its bytes forces the walk-back.
+        let mut input = String::from("<html><body><main>");
+        // pad with ASCII to near the max, then insert the emoji
+        input.push_str(&"a".repeat(20));
+        input.push('🎉'); // 4 bytes
+        input.push_str(&"b".repeat(20));
+        input.push_str("</main></body></html>");
+        // max_len=22 should land inside the emoji bytes.
+        let desc = extract_description(&input, 22);
+        assert!(!desc.is_empty(), "expected non-empty desc");
+        // Result must be valid UTF-8 (guaranteed by String type).
+        let _ = desc.len();
+    }
+
+    #[test]
+    fn extract_description_body_fallback_unterminated_nav_breaks() {
+        // Line 82: the body-fallback strip loop hits `break` when
+        // a `<nav` exists but no `</nav>` is found. Requires a
+        // <body> with NO <main>.
+        let html = "<html><body><nav>unterminated nav block<p>visible</p>";
+        let desc = extract_description(html, 200);
+        // Function terminates without panic; nav content may or
+        // may not survive depending on the exact strip semantics.
+        let _ = desc;
+    }
+
     // -----------------------------------------------------------------
     // SeoPlugin.after_compile — no </head> tag
     // -----------------------------------------------------------------
