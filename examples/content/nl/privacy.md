@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.nl (Jane Doe)" ## De auteur van de pagina. (max 64 teke
 banner_alt: "MacBook Pro op wit oppervlak" ## De alt-tekst van de banner van de site.
 banner_height: "398" ## De hoogte van de banner van de site.
 banner_width: "1440" ## De breedte van de banner van de site.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De banner van de site.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De banner van de site.
 cdn: "https://cloudcdn.pro" ## De CDN van de site.
 changefreq: "weekly" ## De wijzigingsfrequentie van de site.
 charset: "utf-8" ## De tekenset van de site. (standaard: utf-8)
@@ -17,7 +17,7 @@ description: "Maak prachtige websites met Kaishi, een starttemplate voor een sta
 download: "" ## De download-URL voor het product.
 format-detection: "telephone=no" ## De format-detectie van de site.
 hreflang: "nl" ## De hreflang van de site. (standaard: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Het icoon van de site in SVG-formaat.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Het icoon van de site in SVG-formaat.
 id: "https://kaishi.nl" ## De id van de site.
 image_alt: "Logo van Kaishi, een starttemplate voor statische sites" ## De alt-tekst van de afbeelding van de site.
 image_height: "630" ## De hoogte van de afbeelding van de site.
@@ -30,7 +30,7 @@ locale: "nl_NL" ## De locale van de site.
 logo_alt: "Logo van Kaishi, een starttemplate voor statische sites" ## De alt-tekst van het logo van de site.
 logo_height: "33" ## De hoogte van het logo van de site.
 logo_width: "100" ## De breedte van het logo van de site.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Het logo van de site in SVG-formaat.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Het logo van de site in SVG-formaat.
 name: "Kaishi" ## De naam van de website. (max 64 tekens)
 permalink: "https://kaishi.nl/privacy" ## De URL van de site.
 rating: "general" ## De beoordeling van de site.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## De viewport
 news_genres: "Blog" ## De genres van de site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, statische sitegenerator, static site generator, minimalistische websitetemplate, moderne websitetemplate, responsieve websitetemplate, website-starttemplate, freelance creatief, startup-oprichter, kleine ondernemer, online aanwezigheid" ## De trefwoorden van de site. (kommagescheiden, max 10 trefwoorden)
 news_language: "nl" ## De taal van de site. (standaard: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De image loc van de site.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De image loc van de site.
 news_loc: "https://kaishi.nl" ## De loc van de site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## De publicatiedatum van de site.
 news_publication_name: "Kaishi" ## De naam van de nieuwspublicatie van de site.
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - De Twitter Card-beschrijving van de pagina.
 twitter_description: "Maak prachtige websites met Kaishi, een starttemplate voor een statische sitegenerator."
 ## twitter_image - De Twitter Card-afbeelding van de pagina.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - De Twitter Card-afbeelding alt van de pagina.
 twitter_image_alt: "Logo van Kaishi, een starttemplate voor statische sites"
 ## twitter_site - De Twitter Card-site van de pagina.

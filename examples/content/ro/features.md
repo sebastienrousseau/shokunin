@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ro (Jane Doe)" ## Autorul paginii. (max. 64 de caracter
 banner_alt: "Perete cu plăci verzi și negre" ## Textul alternativ al bannerului site-ului.
 banner_height: "398" ## Înălțimea bannerului site-ului.
 banner_width: "1440" ## Lățimea bannerului site-ului.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
 cdn: "https://cloudcdn.pro" ## CDN-ul site-ului.
 changefreq: "weekly" ## Frecvența de actualizare a site-ului.
 charset: "utf-8" ## Setul de caractere al site-ului. (implicit: utf-8)
@@ -17,7 +17,7 @@ description: "Tot ce vă trebuie pentru a construi un site web superb." ## Descr
 download: "" ## URL-ul de descărcare pentru produs.
 format-detection: "telephone=no" ## Detectarea formatului site-ului.
 hreflang: "ro" ## Atributul hreflang al site-ului. (implicit: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Pictograma site-ului în format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Pictograma site-ului în format SVG.
 id: "https://kaishi.ro" ## ID-ul site-ului.
 image_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice" ## Textul alternativ al imaginii site-ului.
 image_height: "630" ## Înălțimea imaginii site-ului.
@@ -30,7 +30,7 @@ locale: "ro_RO" ## Localizarea site-ului.
 logo_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice" ## Textul alternativ al siglei site-ului.
 logo_height: "33" ## Înălțimea siglei site-ului.
 logo_width: "100" ## Lățimea siglei site-ului.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Sigla site-ului în format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Sigla site-ului în format SVG.
 name: "Kaishi" ## Numele site-ului. (max. 64 de caractere)
 permalink: "https://kaishi.ro/features" ## URL-ul site-ului.
 rating: "general" ## Evaluarea site-ului.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Descrierea Twitter Card a paginii.
 twitter_description: "Tot ce vă trebuie pentru a construi un site web superb."
 ## twitter_image - Imaginea Twitter Card a paginii.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Textul alternativ al imaginii Twitter Card a paginii.
 twitter_image_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice"
 ## twitter_site - Site-ul Twitter Card al paginii.

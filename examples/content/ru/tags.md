@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ru (Джейн Доу)" ## Автор страницы.
 banner_alt: "MacBook Pro на белой поверхности" ## Альтернативный текст баннера сайта.
 banner_height: "398" ## Высота баннера сайта.
 banner_width: "1440" ## Ширина баннера сайта.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Баннер сайта.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Баннер сайта.
 cdn: "https://cloudcdn.pro" ## CDN сайта.
 changefreq: "weekly" ## Частота изменений сайта.
 charset: "utf-8" ## Кодировка сайта. (по умолчанию: utf-8)
@@ -17,7 +17,7 @@ description: "Погрузитесь глубже в сайт Kaishi, изуча
 download: "" ## URL загрузки продукта.
 format-detection: "telephone=no" ## Определение формата сайта.
 hreflang: "ru" ## Атрибут hreflang сайта. (по умолчанию: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Иконка сайта в формате SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Иконка сайта в формате SVG.
 id: "https://kaishi.ru" ## Идентификатор сайта.
 image_alt: "Логотип Kaishi, стартового шаблона для статических сайтов" ## Альтернативный текст изображения сайта.
 image_height: "630" ## Высота изображения сайта.
@@ -30,7 +30,7 @@ locale: "ru_RU" ## Локаль сайта.
 logo_alt: "Логотип Kaishi, стартового шаблона для статических сайтов" ## Альтернативный текст логотипа сайта.
 logo_height: "33" ## Высота логотипа сайта.
 logo_width: "100" ## Ширина логотипа сайта.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Логотип сайта в формате SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Логотип сайта в формате SVG.
 name: "Kaishi" ## Название сайта. (макс. 64 символа)
 permalink: "https://kaishi.ru/tags" ## URL сайта.
 rating: "general" ## Рейтинг сайта.
@@ -50,7 +50,7 @@ news_genres: "Blog" ## Жанры сайта. (PressRelease|Satire|Blog|OpEd|Opi
 news_keywords: "kaishi, Static Site Generator, генератор статических сайтов, минималистичный шаблон сайта, современный шаблон сайта, адаптивный шаблон сайта, стартовый шаблон сайта, фрилансер-креатив, основатель стартапа, владелец малого бизнеса, онлайн-присутствие" ## Ключевые слова сайта. (через запятую, макс. 10 ключевых слов)
 news_language: "ru" ## Язык сайта. (по умолчанию: en)
 news_loc: "https://kaishi.ru" ## URL сайта.
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## URL изображения сайта.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## URL изображения сайта.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Дата публикации сайта.
 news_publication_name: "Kaishi" ## Название публикации новостей сайта.
 news_title: "Теги" ## Заголовок страницы. (макс. 64 символа)
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Описание Twitter Card страницы.
 twitter_description: "Погрузитесь глубже в сайт Kaishi, изучая темы и теги, и переходите к темам, которые наиболее важны для вас."
 ## twitter_image - Изображение Twitter Card страницы.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Альтернативный текст изображения Twitter Card страницы.
 twitter_image_alt: "Логотип Kaishi, стартового шаблона для статических сайтов"
 ## twitter_site - Twitter-аккаунт страницы.

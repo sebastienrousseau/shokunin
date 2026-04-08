@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.pt (Jane Doe)" ## O autor da página. (máx. 64 caracte
 banner_alt: "uma floresta repleta de árvores verdes" ## O texto alternativo do banner do site.
 banner_height: "398" ## A altura do banner do site.
 banner_width: "1440" ## A largura do banner do site.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## O banner do site.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## O banner do site.
 cdn: "https://cloudcdn.pro" ## O CDN do site.
 changefreq: "weekly" ## A frequência de alteração do site.
 charset: "utf-8" ## A codificação de caracteres do site. (predefinição: utf-8)
@@ -18,7 +18,7 @@ download: "" ## O URL de descarregamento do produto.
 format-detection: "telephone=no" ## A deteção de formato do site.
 form-id: "https://formspree.io/f/meqwylbe" ## O id do formulário do site.
 hreflang: "pt" ## O hreflang do site. (predefinição: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## O ícone do site em formato SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## O ícone do site em formato SVG.
 id: "https://kaishi.pt" ## O id do site.
 image_alt: "Logótipo do Kaishi, um modelo inicial para sítios estáticos" ## O texto alternativo da imagem do site.
 image_height: "630" ## A altura da imagem do site.
@@ -31,7 +31,7 @@ locale: "pt_PT" ## A localidade do site.
 logo_alt: "Logótipo do Kaishi, um modelo inicial para sítios estáticos" ## O texto alternativo do logótipo do site.
 logo_height: "33" ## A altura do logótipo do site.
 logo_width: "100" ## A largura do logótipo do site.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## O logótipo do site em formato SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## O logótipo do site em formato SVG.
 name: "Kaishi" ## O nome do sítio. (máx. 64 caracteres)
 permalink: "https://kaishi.pt/contact" ## O URL do site.
 rating: "general" ## A classificação do site.
@@ -50,7 +50,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport 
 news_genres: "Blog" ## Os géneros do site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, gerador de sítios estáticos, gerador de sites estáticos, modelo de site minimalista, modelo de site moderno, modelo de site responsivo, modelo inicial de site, criativo freelancer, fundador de startup, pequeno empresário, presença online" ## As palavras-chave do site. (separadas por vírgula, máx. 10 palavras-chave)
 news_language: "pt" ## O idioma do site. (predefinição: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## A localização da imagem do site.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## A localização da imagem do site.
 news_loc: "https://kaishi.pt" ## A localização do site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## A data de publicação do site.
 news_publication_name: "Kaishi" ## O nome da publicação de notícias do site.
@@ -96,7 +96,7 @@ twitter_creator: "janedoe"
 ## twitter_description - A descrição do Twitter Card da página.
 twitter_description: "Formulário de contacto do Kaishi, um modelo inicial para sítios estáticos"
 ## twitter_image - A imagem do Twitter Card da página.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - O texto alternativo da imagem do Twitter Card da página.
 twitter_image_alt: "Logótipo do Kaishi, um modelo inicial para sítios estáticos"
 ## twitter_site - O sítio do Twitter Card da página.

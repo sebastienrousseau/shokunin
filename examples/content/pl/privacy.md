@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.pl (Jane Doe)" ## Autor strony. (maks. 64 znaki)
 banner_alt: "MacBook Pro na białej powierzchni" ## Tekst alternatywny banera witryny.
 banner_height: "398" ## Wysokość banera witryny.
 banner_width: "1440" ## Szerokość banera witryny.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Baner witryny.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Baner witryny.
 cdn: "https://cloudcdn.pro" ## CDN witryny.
 changefreq: "weekly" ## Częstotliwość zmian witryny.
 charset: "utf-8" ## Kodowanie znaków witryny. (domyślnie: utf-8)
@@ -17,7 +17,7 @@ description: "Twórz piękne witryny z Kaishi, szablonem startowym dla Static Si
 download: "" ## Adres URL pobierania produktu.
 format-detection: "telephone=no" ## Wykrywanie formatu witryny.
 hreflang: "pl" ## Atrybut hreflang witryny. (domyślnie: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ikona witryny w formacie SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ikona witryny w formacie SVG.
 id: "https://kaishi.pl" ## Identyfikator witryny.
 image_alt: "Logo Kaishi, szablonu startowego dla stron statycznych" ## Tekst alternatywny obrazu witryny.
 image_height: "630" ## Wysokość obrazu witryny.
@@ -30,7 +30,7 @@ locale: "pl_PL" ## Ustawienia regionalne witryny.
 logo_alt: "Logo Kaishi, szablonu startowego dla stron statycznych" ## Tekst alternatywny logo witryny.
 logo_height: "33" ## Wysokość logo witryny.
 logo_width: "100" ## Szerokość logo witryny.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo witryny w formacie SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Logo witryny w formacie SVG.
 name: "Kaishi" ## Nazwa witryny. (maks. 64 znaki)
 permalink: "https://kaishi.pl/privacy" ## Adres URL witryny.
 rating: "general" ## Ocena witryny.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport wi
 news_genres: "Blog" ## Gatunki witryny. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, static site generator, generator stron statycznych, minimalistyczny szablon strony, nowoczesny szablon strony, responsywny szablon strony, szablon startowy strony, freelancer kreatywny, założyciel startupu, właściciel małej firmy, obecność online" ## Słowa kluczowe witryny. (oddzielone przecinkami, maks. 10 słów kluczowych)
 news_language: "pl" ## Język witryny. (domyślnie: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokalizacja obrazu witryny.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokalizacja obrazu witryny.
 news_loc: "https://kaishi.pl" ## Lokalizacja witryny.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Data publikacji witryny.
 news_publication_name: "Kaishi" ## Nazwa publikacji newsowej witryny.
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Opis Twitter Card strony.
 twitter_description: "Twórz piękne witryny z Kaishi, szablonem startowym dla Static Site Generator."
 ## twitter_image - Obraz Twitter Card strony.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Tekst alternatywny obrazu Twitter Card strony.
 twitter_image_alt: "Logo Kaishi, szablonu startowego dla stron statycznych"
 ## twitter_site - Konto Twitter strony.

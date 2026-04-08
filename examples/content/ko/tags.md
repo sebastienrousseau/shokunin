@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.kr (Jane Doe)" ## 페이지의 작성자. (최대 64자
 banner_alt: "흰색 표면 위의 MacBook Pro" ## 사이트의 배너 대체 텍스트.
 banner_height: "398" ## 사이트의 배너 높이.
 banner_width: "1440" ## 사이트의 배너 너비.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 배너.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 배너.
 cdn: "https://cloudcdn.pro" ## 사이트의 CDN.
 changefreq: "weekly" ## 사이트의 변경 빈도.
 charset: "utf-8" ## 사이트의 문자 집합. (기본값: utf-8)
@@ -17,7 +17,7 @@ description: "주제와 태그를 탐색하여 Kaishi 웹사이트를 더 깊이
 download: "" ## 제품 다운로드 URL.
 format-detection: "telephone=no" ## 사이트의 형식 감지.
 hreflang: "ko" ## 사이트의 hreflang. (기본값: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 형식의 사이트 아이콘.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 형식의 사이트 아이콘.
 id: "https://kaishi.kr" ## 사이트의 ID.
 image_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고" ## 사이트의 이미지 대체 텍스트.
 image_height: "630" ## 사이트의 이미지 높이.
@@ -30,7 +30,7 @@ locale: "ko_KR" ## 사이트의 로케일.
 logo_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고" ## 사이트의 로고 대체 텍스트.
 logo_height: "33" ## 사이트의 로고 높이.
 logo_width: "100" ## 사이트의 로고 너비.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 형식의 사이트 로고.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 형식의 사이트 로고.
 name: "Kaishi" ## 웹사이트의 이름. (최대 64자)
 permalink: "https://kaishi.kr/tags" ## 사이트의 URL.
 rating: "general" ## 사이트의 등급.
@@ -50,7 +50,7 @@ news_genres: "Blog" ## 사이트의 장르. (PressRelease|Satire|Blog|OpEd|Opini
 news_keywords: "kaishi, 정적 사이트 생성기, 정적 사이트 생성기, 미니멀 웹사이트 템플릿, 모던 웹사이트 템플릿, 반응형 웹사이트 템플릿, 웹사이트 스타터 템플릿, 프리랜서 크리에이티브, 스타트업 창업자, 소상공인, 온라인 존재감" ## 사이트의 키워드. (쉼표로 구분, 최대 10개)
 news_language: "ko" ## 사이트의 언어. (기본값: en)
 news_loc: "https://kaishi.kr" ## 사이트의 위치.
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 이미지 위치.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 이미지 위치.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## 사이트의 게시일.
 news_publication_name: "Kaishi" ## 사이트의 뉴스 발행처 이름.
 news_title: "태그" ## 페이지의 제목. (최대 64자)
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - 페이지의 Twitter Card 설명.
 twitter_description: "주제와 태그를 탐색하여 Kaishi 웹사이트를 더 깊이 살펴보고, 가장 관심 있는 주제에 도달하세요."
 ## twitter_image - 페이지의 Twitter Card 이미지.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - 페이지의 Twitter Card 이미지 대체 텍스트.
 twitter_image_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고"
 ## twitter_site - 페이지의 Twitter Card 사이트.

@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.vn (Jane Doe)" ## Tác giả của trang. (tối đa 64
 banner_alt: "Bức tường lát gạch xanh và đen" ## Mô tả ảnh banner của trang.
 banner_height: "398" ## Chiều cao banner của trang.
 banner_width: "1440" ## Chiều rộng banner của trang.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner của trang.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner của trang.
 cdn: "https://cloudcdn.pro" ## CDN của trang.
 changefreq: "weekly" ## Tần suất thay đổi của trang.
 charset: "utf-8" ## Bộ ký tự của trang. (mặc định: utf-8)
@@ -17,7 +17,7 @@ description: "Mọi thứ bạn cần để xây dựng một trang web tuyệt 
 download: "" ## URL tải xuống cho sản phẩm.
 format-detection: "telephone=no" ## Phát hiện định dạng của trang.
 hreflang: "vi" ## Hreflang của trang. (mặc định: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Biểu tượng của trang ở định dạng SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Biểu tượng của trang ở định dạng SVG.
 id: "https://kaishi.vn" ## Mã định danh của trang.
 image_alt: "Logo của Kaishi, một mẫu khởi đầu cho các trang tĩnh" ## Mô tả hình ảnh của trang.
 image_height: "630" ## Chiều cao hình ảnh của trang.
@@ -30,7 +30,7 @@ locale: "vi_VN" ## Khu vực của trang.
 logo_alt: "Logo của Kaishi, một mẫu khởi đầu cho các trang tĩnh" ## Mô tả logo của trang.
 logo_height: "33" ## Chiều cao logo của trang.
 logo_width: "100" ## Chiều rộng logo của trang.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo của trang ở định dạng SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Logo của trang ở định dạng SVG.
 name: "Kaishi" ## Tên trang web. (tối đa 64 ký tự)
 permalink: "https://kaishi.vn/features" ## URL của trang.
 rating: "general" ## Xếp hạng của trang.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Mô tả Twitter Card của trang.
 twitter_description: "Mọi thứ bạn cần để xây dựng một trang web tuyệt đẹp."
 ## twitter_image - Hình ảnh Twitter Card của trang.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Mô tả hình ảnh Twitter Card của trang.
 twitter_image_alt: "Logo của Kaishi, một mẫu khởi đầu cho các trang tĩnh"
 ## twitter_site - Trang Twitter Card của trang.

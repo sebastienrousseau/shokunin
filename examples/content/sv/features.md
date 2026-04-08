@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.se (Jane Doe)" ## Sidans författare. (max 64 tecken)
 banner_alt: "Grön och svart kaklad vägg" ## Webbplatsens banner alt-text.
 banner_height: "398" ## Webbplatsens bannerhöjd.
 banner_width: "1440" ## Webbplatsens bannerbredd.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Webbplatsens banner.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Webbplatsens banner.
 cdn: "https://cloudcdn.pro" ## Webbplatsens CDN.
 changefreq: "weekly" ## Webbplatsens ändringsfrekvens.
 charset: "utf-8" ## Webbplatsens teckenuppsättning. (standard: utf-8)
@@ -17,7 +17,7 @@ description: "Allt du behöver för att bygga en imponerande webbplats." ## Webb
 download: "" ## Nedladdnings-URL för produkten.
 format-detection: "telephone=no" ## Webbplatsens formatigenkänning.
 hreflang: "sv" ## Webbplatsens hreflang. (standard: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Webbplatsens ikon i SVG-format.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Webbplatsens ikon i SVG-format.
 id: "https://kaishi.se" ## Webbplatsens id.
 image_alt: "Logotyp för Kaishi, en startmall för statiska webbplatser" ## Webbplatsens bildens alt-text.
 image_height: "630" ## Webbplatsens bildhöjd.
@@ -30,7 +30,7 @@ locale: "sv_SE" ## Webbplatsens lokal.
 logo_alt: "Logotyp för Kaishi, en startmall för statiska webbplatser" ## Webbplatsens logotyp alt-text.
 logo_height: "33" ## Webbplatsens logotypshöjd.
 logo_width: "100" ## Webbplatsens logotypsbredd.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Webbplatsens logotyp i SVG-format.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Webbplatsens logotyp i SVG-format.
 name: "Kaishi" ## Webbplatsens namn. (max 64 tecken)
 permalink: "https://kaishi.se/features" ## Webbplatsens URL.
 rating: "general" ## Webbplatsens betyg.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Sidans Twitter Card-beskrivning.
 twitter_description: "Allt du behöver för att bygga en imponerande webbplats."
 ## twitter_image - Sidans Twitter Card-bild.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Sidans Twitter Card-bild alt-text.
 twitter_image_alt: "Logotyp för Kaishi, en startmall för statiska webbplatser"
 ## twitter_site - Sidans Twitter Card-webbplats.

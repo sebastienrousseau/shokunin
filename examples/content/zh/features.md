@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.cn (Jane Doe)" ## 页面作者。(最多 64 个字符)
 banner_alt: "绿黑相间的瓷砖墙" ## 网站横幅替代文本。
 banner_height: "398" ## 网站横幅高度。
 banner_width: "1440" ## 网站横幅宽度。
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 网站横幅图片。
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 网站横幅图片。
 cdn: "https://cloudcdn.pro" ## 网站 CDN。
 changefreq: "weekly" ## 网站更新频率。
 charset: "utf-8" ## 网站字符集。(默认:utf-8)
@@ -17,7 +17,7 @@ description: "打造精美网站所需的一切。" ## 网站描述。(最多 16
 download: "" ## 产品下载地址。
 format-detection: "telephone=no" ## 网站格式检测设置。
 hreflang: "zh" ## 网站 hreflang。(默认:en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 格式的网站图标。
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 格式的网站图标。
 id: "https://kaishi.cn" ## 网站 ID。
 image_alt: "Kaishi 的标志,一个用于静态网站的入门模板" ## 网站图片替代文本。
 image_height: "630" ## 网站图片高度。
@@ -30,7 +30,7 @@ locale: "zh_CN" ## 网站区域设置。
 logo_alt: "Kaishi 的标志,一个用于静态网站的入门模板" ## 网站标志替代文本。
 logo_height: "33" ## 网站标志高度。
 logo_width: "100" ## 网站标志宽度。
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 格式的网站标志。
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 格式的网站标志。
 name: "Kaishi" ## 网站名称。(最多 64 个字符)
 permalink: "https://kaishi.cn/features" ## 网站网址。
 rating: "general" ## 网站分级。
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - 页面的 Twitter 卡片描述。
 twitter_description: "打造精美网站所需的一切。"
 ## twitter_image - 页面的 Twitter 卡片图片。
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - 页面的 Twitter 卡片图片替代文本。
 twitter_image_alt: "Kaishi 的标志,一个用于静态网站的入门模板"
 ## twitter_site - 页面的 Twitter 卡片站点。

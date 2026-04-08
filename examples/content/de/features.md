@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.de (Jane Doe)" ## Der Autor der Seite. (max. 64 Zeichen
 banner_alt: "Grün-schwarz gekachelte Wand" ## Der Banner-Alternativtext der Website.
 banner_height: "398" ## Die Banner-Höhe der Website.
 banner_width: "1440" ## Die Banner-Breite der Website.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Das Banner der Website.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Das Banner der Website.
 cdn: "https://cloudcdn.pro" ## Das CDN der Website.
 changefreq: "weekly" ## Die Änderungshäufigkeit der Website.
 charset: "utf-8" ## Der Zeichensatz der Website. (Standard: utf-8)
@@ -17,7 +17,7 @@ description: "Alles, was Sie brauchen, um eine beeindruckende Website zu erstell
 download: "" ## Die Download-URL für das Produkt.
 format-detection: "telephone=no" ## Die Formaterkennung der Website.
 hreflang: "de" ## Das hreflang-Attribut der Website. (Standard: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Das Icon der Website im SVG-Format.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Das Icon der Website im SVG-Format.
 id: "https://kaishi.de" ## Die ID der Website.
 image_alt: "Logo von Kaishi, einer Starter-Vorlage für statische Websites" ## Der Bild-Alternativtext der Website.
 image_height: "630" ## Die Bildhöhe der Website.
@@ -30,7 +30,7 @@ locale: "de_DE" ## Die Locale der Website.
 logo_alt: "Logo von Kaishi, einer Starter-Vorlage für statische Websites" ## Der Logo-Alternativtext der Website.
 logo_height: "33" ## Die Logo-Höhe der Website.
 logo_width: "100" ## Die Logo-Breite der Website.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Das Logo der Website im SVG-Format.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Das Logo der Website im SVG-Format.
 name: "Kaishi" ## Der Name der Website. (max. 64 Zeichen)
 permalink: "https://kaishi.de/features" ## Die URL der Website.
 rating: "general" ## Die Bewertung der Website.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Die Beschreibung der Twitter Card der Seite.
 twitter_description: "Alles, was Sie brauchen, um eine beeindruckende Website zu erstellen."
 ## twitter_image - Das Bild der Twitter Card der Seite.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Der Bild-Alternativtext der Twitter Card der Seite.
 twitter_image_alt: "Logo von Kaishi, einer Starter-Vorlage für statische Websites"
 ## twitter_site - Das Twitter-Konto der Seite.

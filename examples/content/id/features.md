@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.id (Jane Doe)" ## Penulis halaman. (maks. 64 karakter)
 banner_alt: "Dinding Berubin Hijau dan Hitam" ## Teks alternatif banner situs.
 banner_height: "398" ## Tinggi banner situs.
 banner_width: "1440" ## Lebar banner situs.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
 cdn: "https://cloudcdn.pro" ## CDN situs.
 changefreq: "weekly" ## Frekuensi perubahan situs.
 charset: "utf-8" ## Charset situs. (default: utf-8)
@@ -17,7 +17,7 @@ description: "Semua yang Anda Butuhkan untuk Membangun Situs Web yang Memukau." 
 download: "" ## URL unduhan untuk produk.
 format-detection: "telephone=no" ## Deteksi format situs.
 hreflang: "id" ## Hreflang situs. (default: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ikon situs dalam format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ikon situs dalam format SVG.
 id: "https://kaishi.id" ## ID situs.
 image_alt: "Logo Kaishi, templat awal untuk situs statis" ## Teks alternatif gambar situs.
 image_height: "630" ## Tinggi gambar situs.
@@ -30,7 +30,7 @@ locale: "id_ID" ## Locale situs.
 logo_alt: "Logo Kaishi, templat awal untuk situs statis" ## Teks alternatif logo situs.
 logo_height: "33" ## Tinggi logo situs.
 logo_width: "100" ## Lebar logo situs.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo situs dalam format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Logo situs dalam format SVG.
 name: "Kaishi" ## Nama situs web. (maks. 64 karakter)
 permalink: "https://kaishi.id/features" ## URL situs.
 rating: "general" ## Peringkat situs.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Deskripsi Twitter Card halaman.
 twitter_description: "Semua yang Anda Butuhkan untuk Membangun Situs Web yang Memukau."
 ## twitter_image - Gambar Twitter Card halaman.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Teks alternatif gambar Twitter Card halaman.
 twitter_image_alt: "Logo Kaishi, templat awal untuk situs statis"
 ## twitter_site - Akun Twitter situs halaman.

@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.jp (Jane Doe)" ## ページの著者。(最大64文字)
 banner_alt: "緑と黒のタイル張りの壁" ## サイトのバナー代替テキスト。
 banner_height: "398" ## サイトのバナーの高さ。
 banner_width: "1440" ## サイトのバナーの幅。
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## サイトのバナー。
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## サイトのバナー。
 cdn: "https://cloudcdn.pro" ## サイトのCDN。
 changefreq: "weekly" ## サイトの更新頻度。
 charset: "utf-8" ## サイトの文字セット。(デフォルト: utf-8)
@@ -17,7 +17,7 @@ description: "素晴らしいウェブサイトの構築に必要なすべてが
 download: "" ## 製品のダウンロードURL。
 format-detection: "telephone=no" ## サイトのフォーマット検出。
 hreflang: "ja" ## サイトの hreflang。(デフォルト: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG形式のサイトアイコン。
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG形式のサイトアイコン。
 id: "https://kaishi.jp" ## サイトのID。
 image_alt: "静的サイト用スターターテンプレート Kaishi のロゴ" ## サイトの画像代替テキスト。
 image_height: "630" ## サイトの画像の高さ。
@@ -30,7 +30,7 @@ locale: "ja_JP" ## サイトのロケール。
 logo_alt: "静的サイト用スターターテンプレート Kaishi のロゴ" ## サイトのロゴ代替テキスト。
 logo_height: "33" ## サイトのロゴの高さ。
 logo_width: "100" ## サイトのロゴの幅。
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG形式のサイトのロゴ。
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG形式のサイトのロゴ。
 name: "Kaishi" ## サイトの名前。(最大64文字)
 permalink: "https://kaishi.jp/features" ## サイトのURL。
 rating: "general" ## サイトのレーティング。
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - ページの Twitter Card の説明。
 twitter_description: "素晴らしいウェブサイトの構築に必要なすべてがここにあります。"
 ## twitter_image - ページの Twitter Card の画像。
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - ページの Twitter Card の画像代替テキスト。
 twitter_image_alt: "静的サイト用スターターテンプレート Kaishi のロゴ"
 ## twitter_site - ページの Twitter Card のサイト。

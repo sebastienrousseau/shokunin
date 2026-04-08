@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ro (Jane Doe)" ## Autorul paginii. (max. 64 de caracter
 banner_alt: "MacBook Pro pe o suprafață albă" ## Textul alternativ al bannerului site-ului.
 banner_height: "398" ## Înălțimea bannerului site-ului.
 banner_width: "1440" ## Lățimea bannerului site-ului.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
 cdn: "https://cloudcdn.pro" ## CDN-ul site-ului.
 changefreq: "weekly" ## Frecvența de actualizare a site-ului.
 charset: "utf-8" ## Setul de caractere al site-ului. (implicit: utf-8)
@@ -17,7 +17,7 @@ description: "Creați site-uri web frumoase cu Kaishi, un șablon de bază pentr
 download: "" ## URL-ul de descărcare pentru produs.
 format-detection: "telephone=no" ## Detectarea formatului site-ului.
 hreflang: "ro" ## Atributul hreflang al site-ului. (implicit: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Pictograma site-ului în format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Pictograma site-ului în format SVG.
 id: "https://kaishi.ro" ## ID-ul site-ului.
 image_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice" ## Textul alternativ al imaginii site-ului.
 image_height: "630" ## Înălțimea imaginii site-ului.
@@ -30,7 +30,7 @@ locale: "ro_RO" ## Localizarea site-ului.
 logo_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice" ## Textul alternativ al siglei site-ului.
 logo_height: "33" ## Înălțimea siglei site-ului.
 logo_width: "100" ## Lățimea siglei site-ului.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Sigla site-ului în format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Sigla site-ului în format SVG.
 name: "Kaishi" ## Numele site-ului. (max. 64 de caractere)
 permalink: "https://kaishi.ro" ## URL-ul site-ului.
 rating: "general" ## Evaluarea site-ului.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul 
 news_genres: "Blog" ## Genurile site-ului. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, generator de site-uri statice, generator de site-uri statice, șablon minimalist de site, șablon modern de site, șablon de site responsiv, șablon de bază pentru site, creativ independent, fondator de startup, mic antreprenor, prezență online" ## Cuvintele-cheie ale site-ului. (separate prin virgulă, max. 10 cuvinte-cheie)
 news_language: "ro" ## Limba site-ului. (implicit: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Locația imaginii site-ului.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Locația imaginii site-ului.
 news_loc: "https://kaishi.ro" ## Locația site-ului.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Data publicării site-ului.
 news_publication_name: "Kaishi" ## Numele publicației site-ului.
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Descrierea Twitter Card a paginii.
 twitter_description: "Creați site-uri web frumoase cu Kaishi, un șablon de bază pentru generatorul de site-uri statice."
 ## twitter_image - Imaginea Twitter Card a paginii.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Textul alternativ al imaginii Twitter Card a paginii.
 twitter_image_alt: "Sigla Kaishi, un șablon de bază pentru site-uri statice"
 ## twitter_site - Site-ul Twitter Card al paginii.

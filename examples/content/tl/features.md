@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ph (Jane Doe)" ## Ang may-akda ng pahina. (max 64 na ka
 banner_alt: "Berde at Itim na Tiled na Pader" ## Ang banner alt ng site.
 banner_height: "398" ## Ang taas ng banner ng site.
 banner_width: "1440" ## Ang lapad ng banner ng site.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Ang banner ng site.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Ang banner ng site.
 cdn: "https://cloudcdn.pro" ## Ang CDN ng site.
 changefreq: "weekly" ## Ang changefreq ng site.
 charset: "utf-8" ## Ang charset ng site. (default: utf-8)
@@ -17,7 +17,7 @@ description: "Lahat ng Kailangan Mo upang Bumuo ng Kahanga-hangang Website." ## 
 download: "" ## Ang download url para sa produkto.
 format-detection: "telephone=no" ## Ang format detection ng site.
 hreflang: "tl" ## Ang hreflang ng site. (default: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ang icon ng site sa SVG format.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ang icon ng site sa SVG format.
 id: "https://kaishi.ph" ## Ang id ng site.
 image_alt: "Logo ng Kaishi, isang starter template para sa mga static site" ## Ang image alt ng site.
 image_height: "630" ## Ang taas ng imahe ng site.
@@ -30,7 +30,7 @@ locale: "tl_PH" ## Ang locale ng site.
 logo_alt: "Logo ng Kaishi, isang starter template para sa mga static site" ## Ang logo alt ng site.
 logo_height: "33" ## Ang taas ng logo ng site.
 logo_width: "100" ## Ang lapad ng logo ng site.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ang logo ng site sa SVG format.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ang logo ng site sa SVG format.
 name: "Kaishi" ## Ang pangalan ng website. (max 64 na karakter)
 permalink: "https://kaishi.ph/features" ## Ang url ng site.
 rating: "general" ## Ang rating ng site.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Ang paglalarawan sa Twitter Card ng pahina.
 twitter_description: "Lahat ng Kailangan Mo upang Bumuo ng Kahanga-hangang Website."
 ## twitter_image - Ang imahe sa Twitter Card ng pahina.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Ang image alt sa Twitter Card ng pahina.
 twitter_image_alt: "Logo ng Kaishi, isang starter template para sa mga static site"
 ## twitter_site - Ang Twitter Card site ng pahina.

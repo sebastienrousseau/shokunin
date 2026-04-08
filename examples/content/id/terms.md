@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.id (Jane Doe)" ## Penulis halaman. (maks. 64 karakter)
 banner_alt: "MacBook Pro di atas permukaan putih" ## Teks alternatif banner situs.
 banner_height: "398" ## Tinggi banner situs.
 banner_width: "1440" ## Lebar banner situs.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
 cdn: "https://cloudcdn.pro" ## CDN situs.
 changefreq: "weekly" ## Frekuensi perubahan situs.
 charset: "utf-8" ## Charset situs. (default: utf-8)
@@ -17,7 +17,7 @@ description: "Buat situs web yang indah dengan Kaishi, templat awal Static Site 
 download: "" ## URL unduhan untuk produk.
 format-detection: "telephone=no" ## Deteksi format situs.
 hreflang: "id" ## Hreflang situs. (default: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ikon situs dalam format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ikon situs dalam format SVG.
 id: "https://kaishi.id" ## ID situs.
 image_alt: "Logo Kaishi, templat awal untuk situs statis" ## Teks alternatif gambar situs.
 image_height: "630" ## Tinggi gambar situs.
@@ -30,7 +30,7 @@ locale: "id_ID" ## Locale situs.
 logo_alt: "Logo Kaishi, templat awal untuk situs statis" ## Teks alternatif logo situs.
 logo_height: "33" ## Tinggi logo situs.
 logo_width: "100" ## Lebar logo situs.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo situs dalam format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Logo situs dalam format SVG.
 name: "Kaishi" ## Nama situs web. (maks. 64 karakter)
 permalink: "https://kaishi.id/terms" ## URL situs.
 rating: "general" ## Peringkat situs.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport si
 news_genres: "Blog" ## Genre situs. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, static site generator, generator situs statis, templat situs minimalis, templat situs modern, templat situs responsif, templat awal situs, kreatif lepas, pendiri startup, pemilik usaha kecil, kehadiran online" ## Kata kunci situs. (dipisahkan koma, maks. 10 kata kunci)
 news_language: "id" ## Bahasa situs. (default: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokasi gambar situs.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokasi gambar situs.
 news_loc: "https://kaishi.id" ## Lokasi situs.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Tanggal publikasi situs.
 news_publication_name: "Kaishi" ## Nama publikasi berita situs.
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Deskripsi Twitter Card halaman.
 twitter_description: "Buat situs web yang indah dengan Kaishi, Templat Awal Static Site Generator."
 ## twitter_image - Gambar Twitter Card halaman.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Teks alternatif gambar Twitter Card halaman.
 twitter_image_alt: "Logo Kaishi, templat awal untuk situs statis"
 ## twitter_site - Akun Twitter situs halaman.

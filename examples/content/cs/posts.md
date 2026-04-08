@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.cz (Jane Doe)" ## Autor stránky. (max. 64 znaků)
 banner_alt: "Zeleno-černá kachlíková zeď" ## Alternativní text banneru webu.
 banner_height: "398" ## Výška banneru webu.
 banner_width: "1440" ## Šířka banneru webu.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner webu.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner webu.
 cdn: "https://cloudcdn.pro" ## CDN webu.
 changefreq: "weekly" ## Frekvence změn webu.
 charset: "utf-8" ## Znaková sada webu. (výchozí: utf-8)
@@ -17,7 +17,7 @@ description: "Vše, co potřebujete k vytvoření úžasného webu." ## Popis we
 download: "" ## URL ke stažení produktu.
 format-detection: "telephone=no" ## Detekce formátu webu.
 hreflang: "cs" ## Atribut hreflang webu. (výchozí: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Ikona webu ve formátu SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Ikona webu ve formátu SVG.
 id: "https://kaishi.cz" ## ID webu.
 image_alt: "Logo Kaishi, startovací šablony pro statické weby" ## Alternativní text obrázku webu.
 image_height: "630" ## Výška obrázku webu.
@@ -30,7 +30,7 @@ locale: "cs_CZ" ## Lokalizace webu.
 logo_alt: "Logo Kaishi, startovací šablony pro statické weby" ## Alternativní text loga webu.
 logo_height: "33" ## Výška loga webu.
 logo_width: "100" ## Šířka loga webu.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Logo webu ve formátu SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Logo webu ve formátu SVG.
 name: "Kaishi" ## Název webu. (max. 64 znaků)
 permalink: "https://kaishi.cz/posts" ## URL webu.
 rating: "general" ## Hodnocení webu.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport we
 news_genres: "Blog" ## Žánry webu. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "startovací šablony kaishi, generátor statických webů, generátor statických stránek, startovací šablony, bootstrap, bootstrap css, bootstrap javascript, zásady zabezpečení obsahu, meta značky open graph, responzivní navigační lišta, meta značky schema.org" ## Klíčová slova webu. (oddělená čárkami, max. 10 klíčových slov)
 news_language: "cs" ## Jazyk webu. (výchozí: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Umístění obrázku webu.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Umístění obrázku webu.
 news_loc: "https://kaishi.cz" ## URL webu.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Datum publikace webu.
 news_publication_name: "Kaishi" ## Název publikace webu.
@@ -94,7 +94,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Popis Twitter Card stránky.
 twitter_description: "Vše, co potřebujete k vytvoření úžasného webu."
 ## twitter_image - Obrázek Twitter Card stránky.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Alternativní text obrázku Twitter Card stránky.
 twitter_image_alt: "Logo Kaishi, startovací šablony pro statické weby"
 ## twitter_site - Web Twitter Card stránky.

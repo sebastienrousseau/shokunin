@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.es (Jane Doe)" ## El autor de la página. (máx. 64 car
 banner_alt: "Pared de azulejos verdes y negros" ## El texto alternativo del banner del sitio.
 banner_height: "398" ## La altura del banner del sitio.
 banner_width: "1440" ## La anchura del banner del sitio.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## El banner del sitio.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## El banner del sitio.
 cdn: "https://cloudcdn.pro" ## La CDN del sitio.
 changefreq: "weekly" ## La frecuencia de cambio del sitio.
 charset: "utf-8" ## El conjunto de caracteres del sitio. (por defecto: utf-8)
@@ -17,7 +17,7 @@ description: "Todo lo que necesitas para crear un sitio web impresionante." ## L
 download: "" ## La URL de descarga del producto.
 format-detection: "telephone=no" ## La detección de formato del sitio.
 hreflang: "es" ## El hreflang del sitio. (por defecto: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## El icono del sitio en formato SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## El icono del sitio en formato SVG.
 id: "https://kaishi.es" ## El identificador del sitio.
 image_alt: "Logotipo de Kaishi, una plantilla de inicio para sitios estáticos" ## El texto alternativo de la imagen del sitio.
 image_height: "630" ## La altura de la imagen del sitio.
@@ -30,7 +30,7 @@ locale: "es_ES" ## La configuración regional del sitio.
 logo_alt: "Logotipo de Kaishi, una plantilla de inicio para sitios estáticos" ## El texto alternativo del logotipo del sitio.
 logo_height: "33" ## La altura del logotipo del sitio.
 logo_width: "100" ## La anchura del logotipo del sitio.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## El logotipo del sitio en formato SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## El logotipo del sitio en formato SVG.
 name: "Kaishi" ## El nombre del sitio web. (máx. 64 caracteres)
 permalink: "https://kaishi.es/features" ## La URL del sitio.
 rating: "general" ## La clasificación del sitio.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - La descripción de la tarjeta Twitter de la página.
 twitter_description: "Todo lo que necesitas para crear un sitio web impresionante."
 ## twitter_image - La imagen de la tarjeta Twitter de la página.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - El texto alternativo de la imagen de la tarjeta Twitter de la página.
 twitter_image_alt: "Logotipo de Kaishi, una plantilla de inicio para sitios estáticos"
 ## twitter_site - El sitio Twitter de la página.

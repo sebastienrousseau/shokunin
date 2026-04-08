@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ru (Джейн Доу)" ## Автор страницы.
 banner_alt: "Зелёно-чёрная плиточная стена" ## Альтернативный текст баннера сайта.
 banner_height: "398" ## Высота баннера сайта.
 banner_width: "1440" ## Ширина баннера сайта.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Баннер сайта.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Баннер сайта.
 cdn: "https://cloudcdn.pro" ## CDN сайта.
 changefreq: "weekly" ## Частота изменений сайта.
 charset: "utf-8" ## Кодировка сайта. (по умолчанию: utf-8)
@@ -17,7 +17,7 @@ description: "Всё необходимое для создания впечат
 download: "" ## URL загрузки продукта.
 format-detection: "telephone=no" ## Определение формата сайта.
 hreflang: "ru" ## Атрибут hreflang сайта. (по умолчанию: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Иконка сайта в формате SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Иконка сайта в формате SVG.
 id: "https://kaishi.ru" ## Идентификатор сайта.
 image_alt: "Логотип Kaishi, стартового шаблона для статических сайтов" ## Альтернативный текст изображения сайта.
 image_height: "630" ## Высота изображения сайта.
@@ -30,7 +30,7 @@ locale: "ru_RU" ## Локаль сайта.
 logo_alt: "Логотип Kaishi, стартового шаблона для статических сайтов" ## Альтернативный текст логотипа сайта.
 logo_height: "33" ## Высота логотипа сайта.
 logo_width: "100" ## Ширина логотипа сайта.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Логотип сайта в формате SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Логотип сайта в формате SVG.
 name: "Kaishi" ## Название сайта. (макс. 64 символа)
 permalink: "https://kaishi.ru/features" ## URL сайта.
 rating: "general" ## Рейтинг сайта.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Описание Twitter Card страницы.
 twitter_description: "Всё необходимое для создания впечатляющего веб-сайта."
 ## twitter_image - Изображение Twitter Card страницы.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Альтернативный текст изображения Twitter Card страницы.
 twitter_image_alt: "Логотип Kaishi, стартового шаблона для статических сайтов"
 ## twitter_site - Twitter-аккаунт страницы.

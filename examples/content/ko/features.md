@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.kr (Jane Doe)" ## 페이지의 작성자. (최대 64자
 banner_alt: "녹색과 검은색 타일 벽" ## 사이트의 배너 대체 텍스트.
 banner_height: "398" ## 사이트의 배너 높이.
 banner_width: "1440" ## 사이트의 배너 너비.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 배너.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 배너.
 cdn: "https://cloudcdn.pro" ## 사이트의 CDN.
 changefreq: "weekly" ## 사이트의 변경 빈도.
 charset: "utf-8" ## 사이트의 문자 집합. (기본값: utf-8)
@@ -17,7 +17,7 @@ description: "멋진 웹사이트를 만드는 데 필요한 모든 것." ## 사
 download: "" ## 제품 다운로드 URL.
 format-detection: "telephone=no" ## 사이트의 형식 감지.
 hreflang: "ko" ## 사이트의 hreflang. (기본값: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 형식의 사이트 아이콘.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 형식의 사이트 아이콘.
 id: "https://kaishi.kr" ## 사이트의 ID.
 image_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고" ## 사이트의 이미지 대체 텍스트.
 image_height: "630" ## 사이트의 이미지 높이.
@@ -30,7 +30,7 @@ locale: "ko_KR" ## 사이트의 로케일.
 logo_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고" ## 사이트의 로고 대체 텍스트.
 logo_height: "33" ## 사이트의 로고 높이.
 logo_width: "100" ## 사이트의 로고 너비.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## SVG 형식의 사이트 로고.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## SVG 형식의 사이트 로고.
 name: "Kaishi" ## 웹사이트의 이름. (최대 64자)
 permalink: "https://kaishi.kr/features" ## 사이트의 URL.
 rating: "general" ## 사이트의 등급.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - 페이지의 Twitter Card 설명.
 twitter_description: "멋진 웹사이트를 만드는 데 필요한 모든 것."
 ## twitter_image - 페이지의 Twitter Card 이미지.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - 페이지의 Twitter Card 이미지 대체 텍스트.
 twitter_image_alt: "정적 사이트용 스타터 템플릿 Kaishi의 로고"
 ## twitter_site - 페이지의 Twitter Card 사이트.

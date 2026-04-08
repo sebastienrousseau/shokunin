@@ -16,7 +16,7 @@ description: "Tout ce dont vous avez besoin pour créer un site web époustoufla
 download: "" ## L'URL de téléchargement pour le produit.
 format-detection: "telephone=no" ## La détection de format du site.
 hreflang: "fr" ## La langue hreflang du site. (par défaut : en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## L'icône du site au format SVG.
 id: "https://kaishi.fr" ## L'ID du site.
 image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image du site.
 image_height: "630" ## La hauteur de l'image du site.
@@ -29,7 +29,7 @@ locale: "fr_FR" ## La locale du site.
 logo_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif du logo du site.
 logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Le logo du site au format SVG.
 name: "Kaishi" ## Le nom du site. (max 64 caractères)
 permalink: "https://kaishi.fr/articles" ## L'URL du site.
 rating: "general" ## L'évaluation du site.
@@ -48,7 +48,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 news_language: "fr" ## La langue du site. (par défaut : en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du site.
 news_publication_name: "Kaishi" ## Le nom de la publication de nouvelles du site.
@@ -87,7 +87,7 @@ msapplication-navbutton-color: "rgb(0,102,204)"
 twitter_card: "summary" ## Le type de carte Twitter.
 twitter_creator: "janedoe" ## Le créateur de la carte Twitter.
 twitter_description: "Tout ce dont vous avez besoin pour créer un site web époustouflant." ## La description de la carte Twitter.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## L'image de la carte Twitter.
 twitter_image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## L'alternative texte de l'image de la carte Twitter.
 twitter_site: "janedoe" ## Le site Twitter associé.
 twitter_title: "Kaishi, un modèle de démarrage pour Static Site Generator" ## Le titre de la carte Twitter.

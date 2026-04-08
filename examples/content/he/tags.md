@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.co.il (Jane Doe)" ## מחבר העמוד. (עד 64 תו
 banner_alt: "מקבוק פרו על משטח לבן" ## טקסט חלופי של באנר האתר.
 banner_height: "398" ## גובה הבאנר של האתר.
 banner_width: "1440" ## רוחב הבאנר של האתר.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## הבאנר של האתר.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## הבאנר של האתר.
 cdn: "https://cloudcdn.pro" ## ה-CDN של האתר.
 changefreq: "weekly" ## תדירות העדכון של האתר.
 charset: "utf-8" ## קידוד התווים של האתר. (ברירת מחדל: utf-8)
@@ -17,7 +17,7 @@ description: "צללו לעומקו של אתר Kaishi על ידי חקירת נ
 download: "" ## כתובת ההורדה של המוצר.
 format-detection: "telephone=no" ## זיהוי הפורמט של האתר.
 hreflang: "he" ## מאפיין ה-hreflang של האתר. (ברירת מחדל: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## סמל האתר בפורמט SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## סמל האתר בפורמט SVG.
 id: "https://kaishi.co.il" ## המזהה של האתר.
 image_alt: "לוגו של Kaishi, תבנית התחלה לאתרים סטטיים" ## טקסט חלופי לתמונה של האתר.
 image_height: "630" ## גובה התמונה של האתר.
@@ -30,7 +30,7 @@ locale: "he_IL" ## הלוקאל של האתר.
 logo_alt: "לוגו של Kaishi, תבנית התחלה לאתרים סטטיים" ## טקסט חלופי ללוגו של האתר.
 logo_height: "33" ## גובה הלוגו של האתר.
 logo_width: "100" ## רוחב הלוגו של האתר.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## הלוגו של האתר בפורמט SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## הלוגו של האתר בפורמט SVG.
 name: "Kaishi" ## שם האתר. (עד 64 תווים)
 permalink: "https://kaishi.co.il/tags" ## כתובת האתר.
 rating: "general" ## דירוג האתר.
@@ -50,7 +50,7 @@ news_genres: "Blog" ## הז'אנרים של האתר. (PressRelease|Satire|Blog|
 news_keywords: "kaishi, מחולל אתרים סטטיים, תבנית אתר מינימליסטית, תבנית אתר מודרנית, תבנית אתר רספונסיבית, תבנית התחלה לאתר, יוצר עצמאי, מייסד סטארטאפ, בעל עסק קטן, נוכחות מקוונת" ## מילות המפתח של האתר. (מופרדות בפסיקים, עד 10 מילים)
 news_language: "he" ## שפת האתר. (ברירת מחדל: en)
 news_loc: "https://kaishi.co.il" ## כתובת האתר.
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## כתובת התמונה של האתר.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## כתובת התמונה של האתר.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## תאריך הפרסום של האתר.
 news_publication_name: "Kaishi" ## שם הפרסום החדשותי של האתר.
 news_title: "תגיות" ## כותרת העמוד. (עד 64 תווים)
@@ -95,7 +95,7 @@ twitter_creator: "janedoe"
 ## twitter_description - התיאור של ה-Twitter Card בעמוד.
 twitter_description: "צללו לעומקו של אתר Kaishi על ידי חקירת נושאים ותגיות, והגיעו לנושאים החשובים לכם ביותר."
 ## twitter_image - התמונה של ה-Twitter Card בעמוד.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - טקסט חלופי לתמונה של ה-Twitter Card בעמוד.
 twitter_image_alt: "לוגו של Kaishi, תבנית התחלה לאתרים סטטיים"
 ## twitter_site - חשבון הטוויטר של העמוד.

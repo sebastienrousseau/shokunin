@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.com.tr (Jane Doe)" ## Sayfanın yazarı. (en fazla 64 k
 banner_alt: "Yeşil ve Siyah Fayanslı Duvar" ## Sitenin banner alternatif metni.
 banner_height: "398" ## Sitenin banner yüksekliği.
 banner_width: "1440" ## Sitenin banner genişliği.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Sitenin banner'ı.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Sitenin banner'ı.
 cdn: "https://cloudcdn.pro" ## Sitenin CDN'i.
 changefreq: "weekly" ## Sitenin değişiklik sıklığı.
 charset: "utf-8" ## Sitenin karakter kümesi. (varsayılan: utf-8)
@@ -17,7 +17,7 @@ description: "Etkileyici Bir Web Sitesi Oluşturmak İçin İhtiyacınız Olan H
 download: "" ## Ürün için indirme URL'si.
 format-detection: "telephone=no" ## Sitenin format algılaması.
 hreflang: "tr" ## Sitenin hreflang değeri. (varsayılan: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Sitenin SVG formatındaki simgesi.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Sitenin SVG formatındaki simgesi.
 id: "https://kaishi.com.tr" ## Sitenin kimliği.
 image_alt: "Statik siteler için başlangıç şablonu Kaishi'nin logosu" ## Sitenin görsel alternatif metni.
 image_height: "630" ## Sitenin görsel yüksekliği.
@@ -30,7 +30,7 @@ locale: "tr_TR" ## Sitenin yerel ayarı.
 logo_alt: "Statik siteler için başlangıç şablonu Kaishi'nin logosu" ## Sitenin logo alternatif metni.
 logo_height: "33" ## Sitenin logo yüksekliği.
 logo_width: "100" ## Sitenin logo genişliği.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Sitenin SVG formatındaki logosu.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Sitenin SVG formatındaki logosu.
 name: "Kaishi" ## Web sitesinin adı. (en fazla 64 karakter)
 permalink: "https://kaishi.com.tr/posts" ## Sitenin URL'si.
 rating: "general" ## Sitenin derecelendirmesi.
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Sitenin vie
 news_genres: "Blog" ## Sitenin türleri. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi başlangıç şablonları, statik site oluşturucu, statik site üreticisi, başlangıç şablonları, bootstrap, bootstrap css, bootstrap javascript, içerik güvenlik politikası, open graph meta etiketleri, duyarlı gezinme çubuğu, schema.org meta etiketleri" ## Sitenin anahtar kelimeleri. (virgülle ayrılmış, en fazla 10 anahtar kelime)
 news_language: "tr" ## Sitenin dili. (varsayılan: en)
-news_image_loc: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Sitenin görsel konumu.
+news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Sitenin görsel konumu.
 news_loc: "https://kaishi.com.tr" ## Sitenin konumu.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Sitenin yayın tarihi.
 news_publication_name: "Kaishi" ## Sitenin haber yayın adı.
@@ -94,7 +94,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Sayfanın Twitter Card açıklaması.
 twitter_description: "Etkileyici Bir Web Sitesi Oluşturmak İçin İhtiyacınız Olan Her Şey."
 ## twitter_image - Sayfanın Twitter Card görseli.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Sayfanın Twitter Card görsel alternatif metni.
 twitter_image_alt: "Statik siteler için başlangıç şablonu Kaishi'nin logosu"
 ## twitter_site - Sayfanın Twitter Card sitesi.

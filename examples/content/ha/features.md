@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ng (Jane Doe)" ## Marubucin shafin. (iyakar haruffa 64)
 banner_alt: "Bangon Tiled Kore da Baƙi" ## Rubutun madadin banner na shafin.
 banner_height: "398" ## Tsawon banner na shafin.
 banner_width: "1440" ## Fadin banner na shafin.
-banner: "https://cloudcdn.pro/stock/images/banners/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner na shafin.
+banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner na shafin.
 cdn: "https://cloudcdn.pro" ## CDN na shafin.
 changefreq: "weekly" ## Yawan canjin shafin.
 charset: "utf-8" ## Tsarin haruffa na shafin. (na asali: utf-8)
@@ -17,7 +17,7 @@ description: "Duk Abin Da Kuke Buƙata Don Gina Shafin Yanar Gizo Mai Ban Sha'aw
 download: "" ## Hanyar saukar da kayan.
 format-detection: "telephone=no" ## Gano tsarin shafin.
 hreflang: "ha" ## hreflang na shafin. (na asali: en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Tambarin shafin a tsarin SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Tambarin shafin a tsarin SVG.
 id: "https://kaishi.ng" ## ID na shafin.
 image_alt: "Tambarin Kaishi, samfurin farko don shafukan yanar gizo masu tsaye" ## Rubutun madadin hoton shafin.
 image_height: "630" ## Tsawon hoton shafin.
@@ -30,7 +30,7 @@ locale: "ha_NG" ## Locale na shafin.
 logo_alt: "Tambarin Kaishi, samfurin farko don shafukan yanar gizo masu tsaye" ## Rubutun madadin tambarin shafin.
 logo_height: "33" ## Tsawon tambari na shafin.
 logo_width: "100" ## Fadin tambari na shafin.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Tambari na shafin a tsarin SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Tambari na shafin a tsarin SVG.
 name: "Kaishi" ## Sunan shafin. (iyakar haruffa 64)
 permalink: "https://kaishi.ng/features" ## URL na shafin.
 rating: "general" ## Matsayin shafin.
@@ -93,7 +93,7 @@ twitter_creator: "janedoe"
 ## twitter_description - Bayanin Twitter Card na shafin.
 twitter_description: "Duk Abin Da Kuke Buƙata Don Gina Shafin Yanar Gizo Mai Ban Sha'awa."
 ## twitter_image - Hoton Twitter Card na shafin.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
 ## twitter_image:alt - Rubutun madadin hoton Twitter Card na shafin.
 twitter_image_alt: "Tambarin Kaishi, samfurin farko don shafukan yanar gizo masu tsaye"
 ## twitter_site - Shafin Twitter na shafin.
