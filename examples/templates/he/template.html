@@ -173,38 +173,9 @@ pre code{background:none;padding:0}
   </div>
   <main id="main" class="content-wrap" aria-label="תוכן ראשי">
     <div class="breadcrumb">
-      <a href="/he/">עמוד הבית</a><span>&gt;</span><span>צור קשר</span>
+      <a href="/he/">עמוד הבית</a><span>&gt;</span><span>{{title}}</span>
     </div>
     <div class="content">{{content}}</div>
-    <div class="form-card">
-      <form action="{{form-id}}" method="POST">
-        <div class="form-group">
-          <label for="sender">שם</label>
-          <input type="text" id="sender" name="sender" autocomplete="name" required />
-        </div>
-        <div class="form-group">
-          <label for="email">דוא״ל</label>
-          <input type="email" id="email" name="email" autocomplete="email" required />
-        </div>
-        <div class="form-group">
-          <label for="subject">נושא</label>
-          <select name="subject" id="subject" required aria-label="בחרו נושא">
-            <option value="">בחרו נושא</option>
-            <option value="press">פרסום / פניות עיתונות</option>
-            <option value="business">פניות עסקיות</option>
-            <option value="feedback">משוב / בקשת תכונה</option>
-            <option value="general">שאלות כלליות</option>
-            <option value="product">שאלות על המוצר</option>
-            <option value="support">תמיכה במוצר</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="message">הודעה</label>
-          <textarea id="message" name="message" placeholder="ההודעה שלכם..." required></textarea>
-        </div>
-        <button type="submit" class="btn-submit" title="שליחת הודעה">שליחת הודעה</button>
-      </form>
-    </div>
   </main>
   <footer class="footer" id="footer" aria-label="כותרת תחתונה">
     <div class="footer-inner">

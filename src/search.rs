@@ -743,6 +743,25 @@ mod tests {
     }
 
     #[test]
+    fn extract_title_unterminated_title_falls_back_to_h1() {
+        // <title> open without close — `find("</title>")` returns
+        // None, the outer `if let` body exits, and the function
+        // proceeds to the <h1> fallback.
+        let html =
+            "<html><head><title>Open<body><h1>Fallback</h1></body></html>";
+        let result = extract_title(html);
+        assert_eq!(result, "Fallback");
+    }
+
+    #[test]
+    fn extract_title_unterminated_h1_returns_empty() {
+        // <h1> open without `>` and without `</h1>` — both inner
+        // `if let`s return None, function returns "".
+        let html = "<html><body><h1 attr=\"open";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
     fn extract_headings_unterminated_h_tag_breaks_inner_loop() {
         // Line 204: the `break` when no `</hN>` close tag is found.
         let html = "<html><body><h1>Has close</h1><h2>no close tag";
