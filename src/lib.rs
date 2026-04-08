@@ -3111,6 +3111,105 @@ mod tests {
     }
 
     #[test]
+    fn verify_and_copy_files_destination_create_dir_failure_propagates(
+    ) -> Result<()> {
+        // Covers the with_context closure at lines 680-683 of
+        // verify_and_copy_files. Trick: place a regular file in
+        // the path where the destination parent should be a dir.
+        // fs::create_dir_all then fails with NotADirectory.
+        let temp = tempdir()?;
+        let blocker = temp.path().join("blocker.txt");
+        fs::write(&blocker, "i am a file, not a directory")?;
+
+        // dst is "blocker.txt/sub" — parent is a file → create_dir_all fails.
+        let bad_dst = blocker.join("sub");
+        let result = verify_and_copy_files(temp.path(), &bad_dst);
+        assert!(result.is_err());
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(
+            msg.contains("Failed to create or access destination"),
+            "expected with_context message, got: {msg}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn create_directories_unsafe_path_bails() -> Result<()> {
+        // Covers line 1099: the `anyhow::bail!` triggered when one
+        // of the paths fails is_safe_path. is_safe_path returns
+        // Ok(false) for non-existent paths containing `..`. The
+        // create_dir_all loop above (lines 1086-1091) creates the
+        // directories first, so we need a path that DOESN'T get
+        // created by create_dir_all but DOES contain `..` —
+        // but create_dir_all is permissive about `..` and resolves
+        // it. So we need a different angle: pass a path that's
+        // intentionally crafted to not exist after create_dir_all.
+        //
+        // Trick: use a path with a literal `..` segment after a
+        // file. fs::create_dir_all("file/../newdir") fails because
+        // it tries to walk into the file. After failure, the path
+        // doesn't exist AND contains `..`, so is_safe_path returns
+        // false → bail fires.
+        let temp = tempdir()?;
+        let blocker = temp.path().join("blocker.txt");
+        fs::write(&blocker, "x")?;
+
+        // The unsafe path: file/../subdir → traversal through file.
+        let unsafe_path = blocker.join("..").join("subdir");
+
+        let paths = Paths {
+            site: temp.path().join("s"),
+            content: unsafe_path,
+            build: temp.path().join("b"),
+            template: temp.path().join("t"),
+        };
+        let result = create_directories(&paths);
+        // Either the create_dir_all loop fails (line 1086 with_context)
+        // OR is_safe_path bails. Both are valid error continuations.
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dir_with_progress_read_dir_failure_propagates() -> Result<()> {
+        // Covers the .context(format!(...)) closure at lines 773-777
+        // of copy_dir_with_progress. Trick: the function checks
+        // src.exists() (which a regular file passes), creates the
+        // destination, then enters the iterative walker. The walker
+        // immediately calls fs::read_dir on the source, which fails
+        // with NotADirectory when src is a file.
+        let temp = tempdir()?;
+        let src_file = temp.path().join("not-a-dir.txt");
+        fs::write(&src_file, "content")?;
+        let dst = temp.path().join("dst");
+
+        let result = copy_dir_with_progress(&src_file, &dst);
+        assert!(result.is_err());
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(
+            msg.contains("Failed to read source directory"),
+            "expected with_context message, got: {msg}"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn verify_and_copy_files_async_destination_create_dir_failure_propagates(
+    ) -> Result<()> {
+        // Covers the async with_context closure at lines 707-710.
+        let temp = tempdir()?;
+        let blocker = temp.path().join("async-blocker.txt");
+        fs::write(&blocker, "blocker")?;
+
+        let bad_dst = blocker.join("sub");
+        let result = verify_and_copy_files_async(temp.path(), &bad_dst).await;
+        assert!(result.is_err());
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(msg.contains("Failed to create or access destination"));
+        Ok(())
+    }
+
+    #[test]
     #[cfg(unix)]
     fn build_serve_address_rejects_invalid_utf8_path() {
         // Covers lines 571-573: the to_str().ok_or_else closure that

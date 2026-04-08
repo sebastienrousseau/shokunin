@@ -173,38 +173,9 @@ pre code{background:none;padding:0}
   </div>
   <main id="main" class="content-wrap" aria-label="תוכן ראשי">
     <div class="breadcrumb">
-      <a href="/he/">עמוד הבית</a><span>&gt;</span><span>צור קשר</span>
+      <a href="/he/">עמוד הבית</a><span>&gt;</span><span>{{title}}</span>
     </div>
     <div class="content">{{content}}</div>
-    <div class="form-card">
-      <form action="{{form-id}}" method="POST">
-        <div class="form-group">
-          <label for="sender">שם</label>
-          <input type="text" id="sender" name="sender" autocomplete="name" required />
-        </div>
-        <div class="form-group">
-          <label for="email">דוא״ל</label>
-          <input type="email" id="email" name="email" autocomplete="email" required />
-        </div>
-        <div class="form-group">
-          <label for="subject">נושא</label>
-          <select name="subject" id="subject" required aria-label="בחרו נושא">
-            <option value="">בחרו נושא</option>
-            <option value="press">פרסום / פניות עיתונות</option>
-            <option value="business">פניות עסקיות</option>
-            <option value="feedback">משוב / בקשת תכונה</option>
-            <option value="general">שאלות כלליות</option>
-            <option value="product">שאלות על המוצר</option>
-            <option value="support">תמיכה במוצר</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="message">הודעה</label>
-          <textarea id="message" name="message" placeholder="ההודעה שלכם..." required></textarea>
-        </div>
-        <button type="submit" class="btn-submit" title="שליחת הודעה">שליחת הודעה</button>
-      </form>
-    </div>
   </main>
   <footer class="footer" id="footer" aria-label="כותרת תחתונה">
     <div class="footer-inner">
@@ -228,7 +199,7 @@ pre code{background:none;padding:0}
     </div>
   </footer>
   <script type="application/ld+json">
-    {"@context":"http://schema.org/","@type":"BlogPosting","headline":"{{title}}","datePublished":"{{last_build_date}}","dateModified":"{{item_pub_date}}","description":"{{description}}","image":{"@type":"ImageObject","height":"2048","width":"2048","url":"{{logo}}"},"mainEntityOfPage":{"@type":"WebPage","@id":"{{id}}","name":"{{subtitle}}"},"author":"{{author}}","copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"inLanguage":"{{language}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
+    {"@context":"https://schema.org/","@type":"WebPage","author":{"@type":"Person","@id":"{{author}}"},"copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"dateModified":"{{item_pub_date}}","datePublished":"{{last_build_date}}","description":"{{description}}","headline":"{{subtitle}}","image":{"@type":"ImageObject","url":"{{image}}"},"inLanguage":"{{language}}","mainEntityOfPage":"{{permalink}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
   </script>
   <script>
 (function(){var r=document.documentElement,sw=document.getElementById('themeToggle'),lt=document.getElementById('langToggle'),ld=document.getElementById('langDropdown'),mt=document.querySelector('.menu-toggle'),mm=document.getElementById('mobileMenu');function setTheme(v){r.setAttribute('data-theme',v);localStorage.setItem('vitepress-theme-appearance',v);if(v==='dark')sw.classList.add('dark');else sw.classList.remove('dark')}var saved=localStorage.getItem('vitepress-theme-appearance');if(saved)setTheme(saved);else if(matchMedia('(prefers-color-scheme:dark)').matches)setTheme('dark');var ns=document.querySelector('.nav-search');if(ns)ns.addEventListener('click',function(){var b=document.getElementById('ssg-search-btn');if(b){b.click()}else{var o=document.getElementById('ssg-search-overlay');if(o){o.classList.add('active');var inp=document.getElementById('ssg-search-input');if(inp){inp.value='';inp.focus()}}}});sw.addEventListener('click',function(){setTheme(r.getAttribute('data-theme')==='dark'?'light':'dark')});if(lt)lt.addEventListener('click',function(e){e.stopPropagation();ld.classList.toggle('open')});document.addEventListener('click',function(){if(ld)ld.classList.remove('open')});if(mt)mt.addEventListener('click',function(){var ex=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',!ex);mm.classList.toggle('open')});document.querySelectorAll('.navbar-nav').forEach(function(ul){var order=['תכונות','פוסטים','תגיות','צור קשר'],items=Array.from(ul.querySelectorAll('.nav-item'));items.sort(function(a,b){var at=a.textContent.trim(),bt=b.textContent.trim();return order.indexOf(at)-order.indexOf(bt)});items.forEach(function(li){ul.appendChild(li)})});var lp=location.pathname.match(/^\/(en|fr|he)\//);if(lp){var pfx='/'+lp[1];document.querySelectorAll('a[href^="/"]').forEach(function(a){var h=a.getAttribute('href');if(h&&h.charAt(0)==='/'&&!/^\/(en|fr|he)\//.test(h)){a.setAttribute('href',pfx+h)}})}})();
