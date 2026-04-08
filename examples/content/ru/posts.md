@@ -171,4 +171,4 @@ site_software: "SSG, Rust" ## Программное обеспечение са
 
 С нашим набором стартовых шаблонов у вас есть прочная основа для создания чего-то уникального и адаптированного под ваши конкретные требования. Погружайтесь и начинайте творить!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

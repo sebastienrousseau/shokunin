@@ -169,4 +169,4 @@ Pas templates aan om aan uw specifieke behoeften te voldoen. De mogelijkheden zi
 
 Met ons assortiment starttemplates heeft u een solide basis om iets unieks te bouwen dat is afgestemd op uw specifieke vereisten. Duik erin en begin met creëren!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

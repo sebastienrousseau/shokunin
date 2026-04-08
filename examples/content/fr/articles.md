@@ -5,7 +5,7 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Mur carrelé vert et noir" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://cloudcdn.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+banner: "https://cloudcdn.pro/stocks/images/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
 cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
@@ -153,4 +153,4 @@ Personnalisez les modèles pour répondre à vos besoins spécifiques. Les possi
 
 Avec notre gamme de modèles de démarrage, vous disposez d'une base solide pour créer quelque chose d'unique et adapté à vos besoins spécifiques. Plongez et commencez à créer !
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

@@ -1,0 +1,56 @@
+# Codacy configuration
+# https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+#
+# This file scopes Codacy's static analysis to *production* code only.
+# Test modules, integration test binaries, benches, and example
+# fixtures should not contribute to complexity / duplication metrics
+# because they are #[cfg(test)] gated and never ship in the binary.
+
+---
+exclude_paths:
+  # Integration tests (cargo test --test fault_injection, etc.)
+  - "tests/**"
+
+  # Benchmark suite (cargo bench)
+  - "benches/**"
+
+  # Example projects + their generated content/templates
+  - "examples/**"
+
+  # In-tree patched crate (separate workspace member, not part of ssg)
+  - "crates/**"
+
+  # Build script
+  - "build.rs"
+
+  # Generated artefacts
+  - "target/**"
+
+  # Lockfiles + manifests
+  - "Cargo.lock"
+
+engines:
+  # rust-clippy: keep enabled but exclude test modules
+  rust-clippy:
+    enabled: true
+    exclude_paths:
+      - "src/**/tests/**"
+      - "src/**/test_*.rs"
+
+  # Duplication detector: tests duplicate setup boilerplate
+  # by design (each test owns its own tempdir + fixture).
+  duplication:
+    enabled: true
+    exclude_paths:
+      - "src/**/tests/**"
+      - "src/**/test_*.rs"
+      - "tests/**"
+
+  # Complexity metric: same rationale — test fns are simple but
+  # numerous; counting them inflates the per-file complexity.
+  metrics:
+    enabled: true
+    exclude_paths:
+      - "src/**/tests/**"
+      - "src/**/test_*.rs"
+      - "tests/**"

@@ -167,4 +167,4 @@ Sesuaikan templat agar sesuai dengan kebutuhan spesifik Anda. Kemungkinannya tak
 
 Dengan rangkaian templat awal kami, Anda memiliki fondasi yang kokoh untuk membangun sesuatu yang unik dan disesuaikan dengan kebutuhan spesifik Anda. Selami dan mulailah berkreasi!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

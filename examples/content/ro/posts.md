@@ -172,4 +172,4 @@ Personalizați șabloanele pentru a se potrivi nevoilor dumneavoastră specifice
 
 Cu gama noastră de șabloane de bază, aveți o fundație solidă pentru a construi ceva unic și adaptat cerințelor dumneavoastră specifice. Treceți la treabă și începeți să creați!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

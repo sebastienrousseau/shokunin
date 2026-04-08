@@ -170,4 +170,4 @@ Keɓance samfuran don su dace da bukatunku na musamman. Yiwuwoyin ba su da iyaka
 
 Tare da samfuran farko mu iri-iri, kuna da tushe mai ƙarfi don gina wani abu na musamman kuma da aka dace da bukatunku na musamman. Shiga ciki kuma fara ƙirƙira!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

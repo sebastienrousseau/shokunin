@@ -171,4 +171,4 @@ Personaliza las plantillas para adaptarlas a tus necesidades específicas. ¡Las
 
 Con nuestra gama de plantillas de inicio, tienes una base sólida para construir algo único y a medida de tus necesidades específicas. ¡Lánzate y empieza a crear!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

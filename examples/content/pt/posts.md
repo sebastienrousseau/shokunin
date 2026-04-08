@@ -170,4 +170,4 @@ Personalize os modelos de acordo com as suas necessidades específicas. As possi
 
 Com a nossa gama de modelos iniciais, dispõe de uma base sólida para construir algo único e adaptado às suas necessidades específicas. Mergulhe e comece a criar!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

@@ -172,4 +172,4 @@ I-customize ang mga template upang umangkop sa iyong mga partikular na pangangai
 
 Sa aming hanay ng mga starter templates, mayroon kang isang matatag na pundasyon upang bumuo ng isang bagay na natatangi at iniayon sa iyong mga partikular na kinakailangan. Sumisid at magsimulang lumikha!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

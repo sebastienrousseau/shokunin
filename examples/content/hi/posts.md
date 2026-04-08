@@ -167,4 +167,4 @@ site_software: "SSG, Rust" ## साइट का सॉफ़्टवेयर
 
 हमारे स्टार्टर टेम्पलेट की श्रेणी के साथ, आपके पास कुछ अद्वितीय और अपनी विशिष्ट आवश्यकताओं के अनुरूप बनाने के लिए एक ठोस आधार है। शुरू हो जाइए और बनाना शुरू करें!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

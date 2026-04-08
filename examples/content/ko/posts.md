@@ -170,4 +170,4 @@ site_software: "SSG, Rust" ## 사이트의 소프트웨어.
 
 저희의 다양한 스타터 템플릿을 통해 여러분의 특정 요구 사항에 맞는 독창적인 무언가를 만들 수 있는 견고한 토대를 갖게 됩니다. 바로 뛰어들어 창작을 시작해 보세요!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

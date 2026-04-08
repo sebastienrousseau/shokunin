@@ -167,4 +167,4 @@ Personalizza i template per adattarli alle tue esigenze specifiche. Le possibili
 
 Con la nostra gamma di template di partenza hai una base solida per costruire qualcosa di unico e su misura per le tue esigenze specifiche. Immergiti e inizia a creare!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

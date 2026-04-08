@@ -167,4 +167,4 @@ Dostosuj szablony do swoich specyficznych potrzeb. Możliwości są nieograniczo
 
 Dzięki naszej gamie szablonów startowych masz solidną podstawę, aby zbudować coś unikalnego i dostosowanego do swoich specyficznych wymagań. Zanurz się i zacznij tworzyć!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

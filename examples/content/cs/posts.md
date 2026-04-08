@@ -170,4 +170,4 @@ Přizpůsobte šablony tak, aby vyhovovaly vašim konkrétním potřebám. Možn
 
 Díky naší škále startovacích šablon máte pevný základ pro vytvoření něčeho jedinečného a přizpůsobeného vašim konkrétním požadavkům. Pusťte se do toho a začněte tvořit!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

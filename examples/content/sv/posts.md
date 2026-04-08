@@ -170,4 +170,4 @@ Anpassa mallarna för att passa dina specifika behov. Möjligheterna är oändli
 
 Med vårt utbud av startmallar har du en solid grund för att bygga något unikt som är skräddarsytt efter dina specifika krav. Sätt igång och börja skapa!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

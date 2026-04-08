@@ -168,4 +168,4 @@ site_software: "SSG, Rust" ## 网站软件。
 
 借助我们丰富的入门模板,您将拥有一个坚实的基础,能够打造出独特且契合需求的作品。立即开始创作吧!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

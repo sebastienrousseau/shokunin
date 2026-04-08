@@ -170,4 +170,4 @@ Tuỳ chỉnh các mẫu để phù hợp với nhu cầu cụ thể của bạn
 
 Với loạt mẫu khởi đầu của chúng tôi, bạn có một nền tảng vững chắc để xây dựng một thứ độc đáo và phù hợp với yêu cầu cụ thể của mình. Hãy bắt đầu và sáng tạo!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

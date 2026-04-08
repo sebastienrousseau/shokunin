@@ -170,4 +170,4 @@ site_software: "SSG, Rust" ## התוכנה של האתר.
 
 עם מגוון תבניות ההתחלה שלנו, יש לכם בסיס איתן לבנייה של משהו ייחודי ומותאם אישית לדרישות הספציפיות שלכם. הצטרפו והתחילו ליצור!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

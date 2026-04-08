@@ -170,4 +170,4 @@ Customize templates to fit your specific needs. The possibilities are endless!
 
 With our range of starter templates, you have a solid foundation to build something unique and tailored to your specific requirements. Dive in and start creating!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

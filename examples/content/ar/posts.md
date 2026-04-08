@@ -170,4 +170,4 @@ site_software: "SSG, Rust" ## برنامج الموقع.
 
 مع مجموعة قوالب البداية الخاصة بنا، لديك أساس متين لبناء شيء فريد ومصمم لمتطلباتك الخاصة. انغمس وابدأ في الإنشاء!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

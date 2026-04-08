@@ -167,4 +167,4 @@ site_software: "SSG, Rust" ## サイトのソフトウェア。
 
 当社のスターターテンプレートのラインナップがあれば、特定の要件に合わせたユニークなものを構築する確かな基盤が得られます。さあ、飛び込んで制作を始めましょう！
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

@@ -160,4 +160,4 @@ Kíkọ́ ojú òpó wẹ́ẹ̀bù láti ibẹ̀rẹ̀ lè jẹ́ iṣẹ́ tí
 
 Pẹ̀lú àkójọ àwọn àwòṣe ìbẹ̀rẹ̀ wa, o ní ìpìlẹ̀ tí ó dúró ṣinṣin láti kọ́ ohun tí ó ṣọ̀tọ̀ tí ó sì baamu fún ohun tí o nílò ní pàtó. Wọlé kí o sì bẹ̀rẹ̀ sí ṣẹ̀dá!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

@@ -167,4 +167,4 @@ site_software: "SSG, Rust" ## 網站使用的軟體。
 
 有了我們多樣的入門範本作為穩固基礎,您就能打造符合自身需求、獨一無二的作品。立刻動手開始創作吧!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

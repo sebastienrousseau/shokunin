@@ -172,4 +172,4 @@ Passen Sie die Vorlagen an Ihre spezifischen Anforderungen an. Die Möglichkeite
 
 Mit unserer Auswahl an Starter-Vorlagen haben Sie eine solide Grundlage, um etwas Einzigartiges und genau auf Ihre Anforderungen Zugeschnittenes zu erstellen. Legen Sie los und beginnen Sie mit dem Erstellen!
 
-[00]: https://cloudcdn.pro/stock/images/banners/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp

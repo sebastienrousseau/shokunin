@@ -5,7 +5,7 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "une forêt remplie de nombreux arbres verts" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://cloudcdn.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+banner: "https://cloudcdn.pro/stocks/images/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
 cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
