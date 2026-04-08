@@ -1,0 +1,55 @@
+name: portability
+
+on:
+  push:
+    branches: [main, feat/**]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    name: ${{ matrix.os }} · ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest    # proxy for Linux + WSL2 (same kernel ABI)
+          - macos-latest     # Darwin / Apple Silicon
+          - windows-latest   # native Windows
+        toolchain:
+          - stable
+          - "1.74"           # MSRV declared in Cargo.toml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Rust ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: portability-${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Build (all targets)
+        run: cargo build --all-targets --locked
+
+      - name: Test (lib)
+        run: cargo test --lib --locked
+
+      - name: Doc (deny warnings)
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps -p ssg

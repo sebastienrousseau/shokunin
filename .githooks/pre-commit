@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# .githooks/pre-commit — refuses unsigned commits.
+#
+# Cross-platform: works under macOS Bash, Linux Bash, WSL2 Bash, and
+# Git for Windows (Git Bash).
+#
+# Install once per clone via:
+#   make hooks      (or)   git config core.hooksPath .githooks
+#
+# Override locally for emergencies with `git commit --no-verify`, but
+# branch protection on `main` will still reject unsigned commits.
+
+set -euo pipefail
+
+# Allow the hook to be skipped during interactive rebases that re-apply
+# already-signed commits.
+if [[ "${SKIP_SIGN_CHECK:-0}" == "1" ]]; then
+    exit 0
+fi
+
+cfg="$(git config --get commit.gpgsign 2>/dev/null || echo false)"
+if [[ "$cfg" != "true" ]]; then
+    cat >&2 <<'MSG'
+
+✗ Refusing unsigned commit.
+
+This repository requires GPG- or SSH-signed commits. Enable signing
+once with:
+
+    git config --global gpg.format ssh
+    git config --global user.signingkey ~/.ssh/id_ed25519.pub
+    git config --global commit.gpgsign true
+    git config --global tag.gpgsign true
+
+Then re-run your commit. To bypass this check in an emergency, use
+SKIP_SIGN_CHECK=1 git commit … (branch protection on main will still
+require a signature).
+
+MSG
+    exit 1
+fi

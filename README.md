@@ -150,6 +150,23 @@ cargo run --example multilingual        # 28 locales + localized search
 
 > On **WSL/Linux** the same commands work verbatim. On **native Windows**, replace `make` targets with their `cargo` equivalents (see [*Development*](#development)).
 
+### One-command bootstrap
+
+```bash
+make init       # detects platform, installs rustfmt + clippy + cargo-deny,
+                # wires up the signed-commit git hook, and runs cargo build
+```
+
+### WSL2 troubleshooting
+
+The bundled dev server binds to `127.0.0.1:3000` (or `:8000` for the CLI). On WSL2, that loopback is reachable from your Windows host as long as `localhostForwarding` is enabled (the default since the Microsoft Store version of WSL). If your browser can't reach the site, override the bind address with environment variables — no code changes needed:
+
+```bash
+SSG_HOST=0.0.0.0 SSG_PORT=8080 cargo run --example multilingual
+```
+
+The same vars work for `ssg --serve`. Use `0.0.0.0` for Codespaces, dev-containers, and any remote-dev setup where the listener needs to be reachable from outside its network namespace.
+
 ---
 
 ## Library Usage

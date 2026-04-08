@@ -106,9 +106,22 @@ fn main() -> Result<()> {
         println!("    ✅ Promoted English to site root");
     }
 
-    // Serve the root public directory
-    let server = Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
-    println!("Serving site at http://127.0.0.1:3000");
+    // Serve the root public directory.
+    //
+    // Host/port can be overridden via env vars so WSL2, Codespaces and
+    // dev-container users can opt into `0.0.0.0` without editing code:
+    //   SSG_HOST=0.0.0.0 SSG_PORT=8080 cargo run --example multilingual
+    let host = std::env::var("SSG_HOST")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+    let port = std::env::var("SSG_PORT")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(3000);
+    let bind = format!("{host}:{port}");
+    let server = Server::new(&bind, public_root.to_str().unwrap());
+    println!("Serving site at http://{bind}");
     let _ = server.start();
 
     Ok(())

@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn new_stores_supplied_config() {
         let cfg = TeraConfig {
-            template_dir: PathBuf::from("/tmp/fake"),
+            template_dir: std::env::temp_dir().join("ssg_tera_fake"),
             ..Default::default()
         };
         let plugin = TeraPlugin::new(cfg.clone());
