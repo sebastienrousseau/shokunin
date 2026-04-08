@@ -59,7 +59,7 @@ pre code{background:none;padding:0}
 .nav-controls{display:flex;align-items:center;gap:8px;margin-left:16px;flex-shrink:0}
 .lang-btn{position:relative;background:none;border:none;cursor:pointer;color:var(--vp-t2);padding:4px;display:flex;align-items:center}
 .lang-btn svg{width:20px;height:20px;stroke:currentColor;stroke-width:1.5;fill:none}
-.lang-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--vp-bg);border:1px solid var(--vp-bd);border-radius:8px;padding:4px;min-width:120px}
+.lang-dropdown{min-width:480px;padding:8px;max-height:70vh;overflow-y:auto}.lang-menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}.lang-menu-grid a{display:flex;align-items:center;gap:6px;padding:6px 10px;color:var(--vp-t1);font-size:12px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lang-menu-grid a:hover{background:var(--vp-bs)}.lang-menu-grid .flag{font-size:14px;flex-shrink:0}.lang-btn{gap:4px;font-size:13px;font-weight:500}.lang-btn .lang-code{font-variant:all-small-caps;letter-spacing:.5px}.mobile-lang{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;padding-top:12px;border-top:1px solid var(--vp-bd);margin-top:12px}.mobile-lang a{display:flex;align-items:center;gap:6px;padding:8px;color:var(--vp-t1);font-size:13px;border-bottom:none}@media(max-width:768px){.lang-dropdown{min-width:280px;right:8px}.lang-menu-grid{grid-template-columns:repeat(2,1fr)}}
 .lang-dropdown.open{display:block}
 .lang-dropdown a{display:block;padding:6px 12px;color:var(--vp-t1);font-size:13px;border-radius:4px}
 .lang-dropdown a:hover{background:var(--vp-bs)}
@@ -146,13 +146,38 @@ pre code{background:none;padding:0}
       </div>
       <div class="nav-controls">
         <div style="position:relative">
-          <button class="lang-btn" type="button" aria-label="Вибрати мову" id="langToggle">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
-          </button>
+          <button class="lang-btn" type="button" aria-label="Select language" id="langToggle"><span aria-hidden="true">🌐</span> <span class="lang-code">UK</span></button>
           <div class="lang-dropdown" id="langDropdown">
-            <a href="/en/">English</a>
-            <a href="/fr/">Fran&ccedil;ais</a>
-            <a href="/uk/">Українська</a>
+            <div class="lang-menu-grid">
+              <a href="/" hreflang="en" lang="en"><span class="flag">🇬🇧</span> English</a>
+              <a href="/fr/" hreflang="fr" lang="fr"><span class="flag">🇫🇷</span> Français</a>
+              <a href="/ar/" hreflang="ar" lang="ar"><span class="flag">🇸🇦</span> العربية</a>
+              <a href="/bn/" hreflang="bn" lang="bn"><span class="flag">🇧🇩</span> বাংলা</a>
+              <a href="/cs/" hreflang="cs" lang="cs"><span class="flag">🇨🇿</span> Čeština</a>
+              <a href="/de/" hreflang="de" lang="de"><span class="flag">🇩🇪</span> Deutsch</a>
+              <a href="/es/" hreflang="es" lang="es"><span class="flag">🇪🇸</span> Español</a>
+              <a href="/ha/" hreflang="ha" lang="ha"><span class="flag">🇳🇬</span> Hausa</a>
+              <a href="/he/" hreflang="he" lang="he"><span class="flag">🇮🇱</span> עברית</a>
+              <a href="/hi/" hreflang="hi" lang="hi"><span class="flag">🇮🇳</span> हिन्दी</a>
+              <a href="/id/" hreflang="id" lang="id"><span class="flag">🇮🇩</span> Indonesia</a>
+              <a href="/it/" hreflang="it" lang="it"><span class="flag">🇮🇹</span> Italiano</a>
+              <a href="/ja/" hreflang="ja" lang="ja"><span class="flag">🇯🇵</span> 日本語</a>
+              <a href="/ko/" hreflang="ko" lang="ko"><span class="flag">🇰🇷</span> 한국어</a>
+              <a href="/nl/" hreflang="nl" lang="nl"><span class="flag">🇳🇱</span> Nederlands</a>
+              <a href="/pl/" hreflang="pl" lang="pl"><span class="flag">🇵🇱</span> Polski</a>
+              <a href="/pt/" hreflang="pt" lang="pt"><span class="flag">🇵🇹</span> Português</a>
+              <a href="/ro/" hreflang="ro" lang="ro"><span class="flag">🇷🇴</span> Română</a>
+              <a href="/ru/" hreflang="ru" lang="ru"><span class="flag">🇷🇺</span> Русский</a>
+              <a href="/sv/" hreflang="sv" lang="sv"><span class="flag">🇸🇪</span> Svenska</a>
+              <a href="/th/" hreflang="th" lang="th"><span class="flag">🇹🇭</span> ไทย</a>
+              <a href="/tl/" hreflang="tl" lang="tl"><span class="flag">🇵🇭</span> Filipino</a>
+              <a href="/tr/" hreflang="tr" lang="tr"><span class="flag">🇹🇷</span> Türkçe</a>
+              <a href="/uk/" hreflang="uk" lang="uk"><span class="flag">🇺🇦</span> Українська</a>
+              <a href="/vi/" hreflang="vi" lang="vi"><span class="flag">🇻🇳</span> Tiếng Việt</a>
+              <a href="/yo/" hreflang="yo" lang="yo"><span class="flag">🇳🇬</span> Yorùbá</a>
+              <a href="/zh/" hreflang="zh" lang="zh"><span class="flag">🇨🇳</span> 简体中文</a>
+              <a href="/zh-tw/" hreflang="zh-tw" lang="zh-tw"><span class="flag">🇹🇼</span> 繁體中文</a>
+            </div>
           </div>
         </div>
         <button class="theme-switch" type="button" aria-label="Перемкнути темний режим" id="themeToggle">
@@ -167,9 +192,36 @@ pre code{background:none;padding:0}
   </nav>
   <div class="mobile-menu" id="mobileMenu" role="navigation" aria-label="Мобільна навігація">
     {{navigation}}
-    <a href="/en/">English</a>
-    <a href="/fr/">Fran&ccedil;ais</a>
-    <a href="/uk/">Українська</a>
+    <div class="mobile-lang">
+      <a href="/" hreflang="en" lang="en"><span class="flag">🇬🇧</span> English</a>
+      <a href="/fr/" hreflang="fr" lang="fr"><span class="flag">🇫🇷</span> Français</a>
+      <a href="/ar/" hreflang="ar" lang="ar"><span class="flag">🇸🇦</span> العربية</a>
+      <a href="/bn/" hreflang="bn" lang="bn"><span class="flag">🇧🇩</span> বাংলা</a>
+      <a href="/cs/" hreflang="cs" lang="cs"><span class="flag">🇨🇿</span> Čeština</a>
+      <a href="/de/" hreflang="de" lang="de"><span class="flag">🇩🇪</span> Deutsch</a>
+      <a href="/es/" hreflang="es" lang="es"><span class="flag">🇪🇸</span> Español</a>
+      <a href="/ha/" hreflang="ha" lang="ha"><span class="flag">🇳🇬</span> Hausa</a>
+      <a href="/he/" hreflang="he" lang="he"><span class="flag">🇮🇱</span> עברית</a>
+      <a href="/hi/" hreflang="hi" lang="hi"><span class="flag">🇮🇳</span> हिन्दी</a>
+      <a href="/id/" hreflang="id" lang="id"><span class="flag">🇮🇩</span> Indonesia</a>
+      <a href="/it/" hreflang="it" lang="it"><span class="flag">🇮🇹</span> Italiano</a>
+      <a href="/ja/" hreflang="ja" lang="ja"><span class="flag">🇯🇵</span> 日本語</a>
+      <a href="/ko/" hreflang="ko" lang="ko"><span class="flag">🇰🇷</span> 한국어</a>
+      <a href="/nl/" hreflang="nl" lang="nl"><span class="flag">🇳🇱</span> Nederlands</a>
+      <a href="/pl/" hreflang="pl" lang="pl"><span class="flag">🇵🇱</span> Polski</a>
+      <a href="/pt/" hreflang="pt" lang="pt"><span class="flag">🇵🇹</span> Português</a>
+      <a href="/ro/" hreflang="ro" lang="ro"><span class="flag">🇷🇴</span> Română</a>
+      <a href="/ru/" hreflang="ru" lang="ru"><span class="flag">🇷🇺</span> Русский</a>
+      <a href="/sv/" hreflang="sv" lang="sv"><span class="flag">🇸🇪</span> Svenska</a>
+      <a href="/th/" hreflang="th" lang="th"><span class="flag">🇹🇭</span> ไทย</a>
+      <a href="/tl/" hreflang="tl" lang="tl"><span class="flag">🇵🇭</span> Filipino</a>
+      <a href="/tr/" hreflang="tr" lang="tr"><span class="flag">🇹🇷</span> Türkçe</a>
+      <a href="/uk/" hreflang="uk" lang="uk"><span class="flag">🇺🇦</span> Українська</a>
+      <a href="/vi/" hreflang="vi" lang="vi"><span class="flag">🇻🇳</span> Tiếng Việt</a>
+      <a href="/yo/" hreflang="yo" lang="yo"><span class="flag">🇳🇬</span> Yorùbá</a>
+      <a href="/zh/" hreflang="zh" lang="zh"><span class="flag">🇨🇳</span> 简体中文</a>
+      <a href="/zh-tw/" hreflang="zh-tw" lang="zh-tw"><span class="flag">🇹🇼</span> 繁體中文</a>
+    </div>
   </div>
   <main id="main" class="content-wrap" aria-label="Основний вміст">
     <div class="breadcrumb">
