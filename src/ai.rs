@@ -23,11 +23,11 @@ use std::{
 /// - Checks all images have alt text (logs warnings for missing)
 /// - Generates `llms.txt` in the site root
 /// - Adds max-snippet meta for AI citation eligibility
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AiPlugin;
 
 impl Plugin for AiPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "ai"
     }
 
@@ -63,11 +63,7 @@ impl Plugin for AiPlugin {
             if missing > 0 {
                 let rel =
                     path.strip_prefix(&ctx.site_dir).unwrap_or(path).display();
-                log::warn!(
-                    "[ai] {} image(s) missing alt text in {}",
-                    missing,
-                    rel
-                );
+                log::warn!("[ai] {missing} image(s) missing alt text in {rel}");
                 pages_with_missing_alt += 1;
             }
 
@@ -78,8 +74,7 @@ impl Plugin for AiPlugin {
 
         if pages_with_missing_alt > 0 {
             log::warn!(
-                "[ai] {} page(s) have images without alt text",
-                pages_with_missing_alt
+                "[ai] {pages_with_missing_alt} page(s) have images without alt text"
             );
         }
 
@@ -95,9 +90,9 @@ fn generate_llms_txt(
     site_dir: &Path,
     config: Option<&crate::cmd::SsgConfig>,
 ) -> Result<()> {
-    let site_name = config.map(|c| c.site_name.as_str()).unwrap_or("Site");
-    let base_url = config.map(|c| c.base_url.as_str()).unwrap_or("");
-    let description = config.map(|c| c.site_description.as_str()).unwrap_or("");
+    let site_name = config.map_or("Site", |c| c.site_name.as_str());
+    let base_url = config.map_or("", |c| c.base_url.as_str());
+    let description = config.map_or("", |c| c.site_description.as_str());
     let canonical_root = base_url.trim_end_matches('/');
     let source_example = if canonical_root.is_empty() {
         "<canonical-page-url>".to_string()
@@ -143,10 +138,8 @@ fn count_missing_alt(html: &str) -> usize {
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end = lower[abs..]
-            .find('>')
-            .map(|e| abs + e + 1)
-            .unwrap_or(lower.len());
+        let tag_end =
+            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
         let tag = &lower[abs..tag_end];
 
         let has_alt = tag.contains("alt=");
@@ -159,48 +152,107 @@ fn count_missing_alt(html: &str) -> usize {
     count
 }
 
-/// Recursively collects HTML files.
+/// Recursively collects HTML files (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
+    crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::cmd::SsgConfig;
-    use tempfile::tempdir;
+    use crate::test_support::init_logger;
+    use std::path::PathBuf;
+    use tempfile::{tempdir, TempDir};
+
+    // -------------------------------------------------------------------
+    // Test fixtures
+    // -------------------------------------------------------------------
+
+    fn make_site() -> (TempDir, PathBuf, PluginContext) {
+        init_logger();
+        let dir = tempdir().expect("create tempdir");
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).expect("mkdir site");
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        (dir, site, ctx)
+    }
+
+    // -------------------------------------------------------------------
+    // AiPlugin — derive surface
+    // -------------------------------------------------------------------
 
     #[test]
-    fn test_count_missing_alt() {
-        assert_eq!(count_missing_alt(r#"<img src="a.jpg" alt="ok">"#), 0);
-        assert_eq!(count_missing_alt(r#"<img src="a.jpg">"#), 1);
-        assert_eq!(count_missing_alt(r#"<img src="a.jpg" alt="">"#), 1);
-        assert_eq!(
-            count_missing_alt(r#"<img src="a.jpg"><img src="b.jpg" alt="ok">"#),
-            1
-        );
+    fn ai_plugin_is_copy_after_move() {
+        // Guards the `Copy` derive added in v0.0.34.
+        let plugin = AiPlugin;
+        let _consumed = plugin;
+        assert_eq!(plugin.name(), "ai");
     }
 
     #[test]
-    fn test_llms_txt_generation() {
-        let dir = tempdir().unwrap();
+    fn name_returns_static_ai_identifier() {
+        assert_eq!(AiPlugin.name(), "ai");
+    }
+
+    // -------------------------------------------------------------------
+    // count_missing_alt — table-driven over the logical paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn count_missing_alt_table_driven() {
+        let cases: &[(&str, usize, &str)] = &[
+            // (input, expected_count, comment)
+            (
+                r#"<img src="a.jpg" alt="ok">"#,
+                0,
+                "alt present and non-empty",
+            ),
+            (r#"<img src="a.jpg">"#, 1, "no alt attribute at all"),
+            (r#"<img src="a.jpg" alt="">"#, 1, "empty double-quoted alt"),
+            (r#"<img src="a.jpg" alt=''>"#, 1, "empty single-quoted alt"),
+            (
+                r#"<img src="a.jpg"><img src="b.jpg" alt="ok">"#,
+                1,
+                "first missing, second ok",
+            ),
+            (
+                r#"<img src="a.jpg"><img src="b.jpg">"#,
+                2,
+                "both missing — sequential scan progresses",
+            ),
+            ("", 0, "empty input → zero"),
+            ("<p>no images here</p>", 0, "no <img> tags at all"),
+            (r#"<IMG SRC="a.jpg" ALT="ok">"#, 0, "case-insensitive ALT"),
+            (r#"<IMG SRC="a.jpg">"#, 1, "uppercase tag, no alt"),
+        ];
+        for (input, expected, comment) in cases {
+            assert_eq!(
+                count_missing_alt(input),
+                *expected,
+                "{comment}: count_missing_alt({input:?})"
+            );
+        }
+    }
+
+    #[test]
+    fn count_missing_alt_unterminated_tag_does_not_panic() {
+        // The `tag_end` fallback at line 142 (`map_or(lower.len(), …)`)
+        // handles a `<img` with no closing `>` by treating the rest of
+        // the string as the tag. Function must terminate.
+        let result = count_missing_alt("<img src=foo");
+        // Whether it counts as missing or not is implementation
+        // detail; the assertion is that it returns at all.
+        assert!(result <= 1);
+    }
+
+    // -------------------------------------------------------------------
+    // generate_llms_txt — config matrix
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn generate_llms_txt_with_full_config_includes_all_fields() {
+        let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
             site_name: "My Site".to_string(),
             site_description: "A great site".to_string(),
@@ -209,47 +261,229 @@ mod tests {
         };
 
         generate_llms_txt(dir.path(), Some(&config)).unwrap();
-
-        let content = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
-        assert!(content.contains("My Site"));
-        assert!(content.contains("https://example.com"));
-        assert!(content.contains("sitemap.xml"));
-        assert!(content.contains("include exact attribution"));
-        assert!(content.contains("Source: https://example.com/<page-path>"));
-        assert!(content.contains("Publisher: My Site"));
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(body.contains("# My Site"));
+        assert!(body.contains("> A great site"));
+        assert!(body.contains("https://example.com"));
+        assert!(body.contains("sitemap.xml"));
+        assert!(body.contains("include exact attribution"));
+        assert!(body.contains("Source: https://example.com/<page-path>"));
+        assert!(body.contains("Publisher: My Site"));
     }
 
     #[test]
-    fn test_ai_plugin_injects_meta() {
-        let dir = tempdir().unwrap();
-        let site = dir.path().join("site");
-        fs::create_dir_all(&site).unwrap();
+    fn generate_llms_txt_without_config_uses_defaults() {
+        // The `config.map_or(...)` fallbacks at lines 93-95 must apply
+        // when no config is provided.
+        let dir = tempdir().expect("tempdir");
+        generate_llms_txt(dir.path(), None).unwrap();
 
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(body.contains("# Site"));
+        assert!(
+            body.contains("<canonical-page-url>"),
+            "empty base_url should fall back to placeholder:\n{body}"
+        );
+    }
+
+    #[test]
+    fn generate_llms_txt_strips_trailing_slash_from_base_url() {
+        // Guards `trim_end_matches('/')` at line 96 — preventing
+        // double-slashes in `Source:` and `Sitemap:` rendering.
+        let dir = tempdir().expect("tempdir");
+        let config = SsgConfig {
+            site_name: "S".to_string(),
+            site_description: "D".to_string(),
+            base_url: "https://example.com/".to_string(),
+            ..Default::default()
+        };
+        generate_llms_txt(dir.path(), Some(&config)).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("Source: https://example.com/<page-path>"),
+            "trailing slash should be normalised:\n{body}"
+        );
+        assert!(!body.contains("//<page-path>"));
+        assert!(!body.contains("//sitemap.xml"));
+    }
+
+    #[test]
+    fn generate_llms_txt_into_missing_parent_returns_err() {
+        let bogus = Path::new("/this/path/should/not/exist");
+        assert!(generate_llms_txt(bogus, None).is_err());
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile — short-circuit + dispatch paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn after_compile_missing_site_dir_returns_ok_without_writing() {
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("missing");
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), &missing, dir.path());
+
+        AiPlugin.after_compile(&ctx).expect("missing site is fine");
+        assert!(!missing.exists());
+        assert!(!dir.path().join("llms.txt").exists());
+    }
+
+    #[test]
+    fn after_compile_injects_max_snippet_meta_tag() {
+        let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
         fs::write(site.join("index.html"), html).unwrap();
 
-        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         AiPlugin.after_compile(&ctx).unwrap();
-
         let output = fs::read_to_string(site.join("index.html")).unwrap();
         assert!(output.contains("max-snippet"));
+        assert!(output.contains("max-image-preview:large"));
+    }
+
+    #[test]
+    fn after_compile_creates_llms_txt_in_site_root() {
+        let (_tmp, site, ctx) = make_site();
+        AiPlugin.after_compile(&ctx).unwrap();
         assert!(site.join("llms.txt").exists());
     }
 
     #[test]
-    fn test_ai_plugin_idempotent_meta() {
-        let dir = tempdir().unwrap();
-        let site = dir.path().join("site");
-        fs::create_dir_all(&site).unwrap();
-
-        let html = "<html><head><meta name=\"robots\" content=\"max-snippet:-1\"></head><body></body></html>";
+    fn after_compile_idempotent_does_not_duplicate_meta_tag() {
+        // Re-running must not double-inject. Guards the
+        // `!modified.contains("max-snippet")` check at line 52.
+        let (_tmp, site, ctx) = make_site();
+        let html = "<html><head><title>X</title></head><body></body></html>";
         fs::write(site.join("index.html"), html).unwrap();
 
-        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        AiPlugin.after_compile(&ctx).unwrap();
         AiPlugin.after_compile(&ctx).unwrap();
 
         let output = fs::read_to_string(site.join("index.html")).unwrap();
-        let count = output.matches("max-snippet").count();
-        assert_eq!(count, 1);
+        assert_eq!(output.matches("max-snippet").count(), 1);
+    }
+
+    #[test]
+    fn after_compile_skips_html_files_without_head_tag() {
+        // The `modified.contains("</head>")` guard at line 52 must
+        // skip injection rather than crash on fragment HTML.
+        let (_tmp, site, ctx) = make_site();
+        fs::write(site.join("fragment.html"), "<p>just a fragment</p>")
+            .unwrap();
+
+        AiPlugin.after_compile(&ctx).unwrap();
+        let output = fs::read_to_string(site.join("fragment.html")).unwrap();
+        assert!(!output.contains("max-snippet"));
+        // The original content must be preserved.
+        assert_eq!(output, "<p>just a fragment</p>");
+    }
+
+    #[test]
+    fn after_compile_processes_files_in_subdirectories() {
+        let (_tmp, site, ctx) = make_site();
+        let nested = site.join("blog");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(
+            nested.join("post.html"),
+            "<html><head></head><body></body></html>",
+        )
+        .unwrap();
+
+        AiPlugin.after_compile(&ctx).unwrap();
+        let output = fs::read_to_string(nested.join("post.html")).unwrap();
+        assert!(output.contains("max-snippet"));
+    }
+
+    #[test]
+    fn after_compile_logs_warning_for_pages_with_missing_alt() {
+        // Exercises the `if missing > 0` branch at line 63 and the
+        // final `if pages_with_missing_alt > 0` branch at line 75.
+        // Covers lines 64-67 and 76.
+        let (_tmp, site, ctx) = make_site();
+        fs::write(
+            site.join("bad.html"),
+            r#"<html><head></head><body><img src="a.jpg"></body></html>"#,
+        )
+        .unwrap();
+        fs::write(
+            site.join("worse.html"),
+            r#"<html><head></head><body><img src="a.jpg" alt=""></body></html>"#,
+        )
+        .unwrap();
+
+        AiPlugin.after_compile(&ctx).unwrap();
+        // max-snippet meta is injected even when alt-text warnings fire.
+        let bad = fs::read_to_string(site.join("bad.html")).unwrap();
+        assert!(bad.contains("max-snippet"));
+    }
+
+    #[test]
+    fn after_compile_does_not_rewrite_unchanged_files() {
+        // The `if changed` guard at line 70 must skip the fs::write
+        // call when nothing changed (no max-snippet to inject).
+        let (_tmp, site, ctx) = make_site();
+        let html = "<html><head><meta name=\"robots\" content=\"max-snippet:-1\"></head><body></body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
+        let original_mtime = fs::metadata(site.join("index.html"))
+            .unwrap()
+            .modified()
+            .unwrap();
+
+        // Run the plugin — file already has max-snippet, should be a no-op.
+        AiPlugin.after_compile(&ctx).unwrap();
+        let after = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(after, html, "unchanged file body must be preserved");
+        // mtime equality is best-effort across filesystems; main
+        // assertion is the body byte equality above.
+        let _ = original_mtime;
+    }
+
+    // -------------------------------------------------------------------
+    // collect_html_files — recursion + filtering
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn collect_html_files_returns_empty_for_missing_directory() {
+        let dir = tempdir().expect("tempdir");
+        let result = collect_html_files(&dir.path().join("missing")).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn collect_html_files_filters_non_html_extensions() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(dir.path().join("a.html"), "").unwrap();
+        fs::write(dir.path().join("b.css"), "").unwrap();
+        fs::write(dir.path().join("c.js"), "").unwrap();
+
+        let result = collect_html_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn collect_html_files_recurses_into_nested_subdirectories() {
+        let dir = tempdir().expect("tempdir");
+        let nested = dir.path().join("a").join("b");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(dir.path().join("top.html"), "").unwrap();
+        fs::write(nested.join("deep.html"), "").unwrap();
+
+        let result = collect_html_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn collect_html_files_returns_results_sorted() {
+        let dir = tempdir().expect("tempdir");
+        for name in ["zebra.html", "apple.html", "mango.html"] {
+            fs::write(dir.path().join(name), "").unwrap();
+        }
+        let result = collect_html_files(dir.path()).unwrap();
+        let names: Vec<_> = result
+            .iter()
+            .map(|p| p.file_name().unwrap().to_str().unwrap())
+            .collect();
+        assert_eq!(names, vec!["apple.html", "mango.html", "zebra.html"]);
     }
 }

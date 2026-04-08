@@ -145,7 +145,7 @@
             <a class="navbar-brand p-0 me-0 me-lg-2" aria-label="logo" href="/">
                 <img alt="Logo of Kaishi, a starter template for static sites" class="d-inline-block align-top"
                     title="Logo of Kaishi, a starter template for static sites" height="33" loading="lazy"
-                    src="https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" width="100">
+                    src="https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" width="100">
             </a>
             <span itemprop="name">Kaishi</span>
             <button aria-label="Toggle navigation" aria-controls="navbarSupportedContent" aria-expanded="false"
@@ -170,7 +170,7 @@
         <img alt="MacBook Pro on white surface" class="fade-in position-absolute top-0 start-0 w-100 h-100"
             title="MacBook Pro on white surface" aria-hidden="false" data-has-animated="true" data-show-type="fade-in"
             height="398" loading="lazy"
-            src="https://cloudcdn.pro/stock/images/banners/ash-from-modern-afflatus-NQ6Lh81BTRs.webp"
+            src="https://cloudcdn.pro/stocks/images/ash-from-modern-afflatus-NQ6Lh81BTRs.webp"
             style="object-fit:cover;z-index:-1;" width="1440">
         <div class="text-center text-theme center mx-auto"
             style="z-index:1;background:#0000009e;width:100vw;height:100vh">
@@ -185,9 +185,8 @@
             <h2>Language Selector</h2>
             <p>Select your preferred language below to explore Kaishi, a Static Site Generator starter
                 template.</p>
-            <div class="locale-selector text-center">
-                <a href="/en/" class="btn btn-primary">English 🇬🇧</a>
-                <a href="/fr/" class="btn btn-secondary">Français 🇫🇷</a>
+            <div class="locale-selector text-center d-flex flex-wrap justify-content-center">
+{{LANGUAGE_LINKS}}
             </div>
         </div>
     </main>
@@ -215,7 +214,7 @@
           "@type": "ImageObject",
           "height": "2048",
           "width": "2048",
-          "url": "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg"
+          "url": "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg"
         },
         "mainEntityOfPage": {
           "@type": "WebPage",

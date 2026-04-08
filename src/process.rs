@@ -177,7 +177,7 @@ fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
             let content = fs::read_to_string(&path)?;
             let processed_content = process_frontmatter(&content)?;
             fs::write(&path, processed_content)?;
@@ -200,8 +200,7 @@ fn process_frontmatter(content: &str) -> Result<String, ProcessError> {
             // Add an HTML comment to preserve frontmatter for metadata processing
             // while preventing it from appearing in the rendered output
             Ok(format!(
-                "---\n{}\n---\n<!--frontmatter-processed-->\n{}",
-                frontmatter, main_content
+                "---\n{frontmatter}\n---\n<!--frontmatter-processed-->\n{main_content}"
             ))
         }
         _ => Ok(content.to_string()), // Return unchanged if no frontmatter found

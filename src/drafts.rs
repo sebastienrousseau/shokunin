@@ -19,7 +19,7 @@ use std::{
 /// In `before_compile`, scans content files for `draft: true` in
 /// frontmatter and renames them to `.md.draft` so staticdatagen
 /// skips them. In `after_compile`, restores the originals.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct DraftPlugin {
     include_drafts: bool,
 }
@@ -28,13 +28,14 @@ impl DraftPlugin {
     /// Creates a new `DraftPlugin`.
     ///
     /// If `include_drafts` is true, draft files are left in place.
-    pub fn new(include_drafts: bool) -> Self {
+    #[must_use]
+    pub const fn new(include_drafts: bool) -> Self {
         Self { include_drafts }
     }
 }
 
 impl Plugin for DraftPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "drafts"
     }
 
@@ -56,8 +57,7 @@ impl Plugin for DraftPlugin {
 
         if hidden > 0 {
             log::info!(
-                "[drafts] Hidden {} draft file(s) (use --drafts to include)",
-                hidden
+                "[drafts] Hidden {hidden} draft file(s) (use --drafts to include)"
             );
         }
         Ok(())
@@ -109,126 +109,386 @@ fn is_draft(path: &Path) -> Result<bool> {
 }
 
 fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack: Vec<(PathBuf, usize)> = vec![(dir.to_path_buf(), 0)];
-    while let Some((current, depth)) = stack.pop() {
-        if depth > MAX_DIR_DEPTH || !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push((path, depth + 1));
-            } else if path.extension().is_some_and(|e| e == "md") {
-                files.push(path);
-            }
-        }
-    }
-    Ok(files)
+    crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
 }
 
 fn collect_draft_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack: Vec<(PathBuf, usize)> = vec![(dir.to_path_buf(), 0)];
-    while let Some((current, depth)) = stack.pop() {
-        if depth > MAX_DIR_DEPTH || !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push((path, depth + 1));
-            } else if path.extension().is_some_and(|e| e == "draft") {
-                files.push(path);
-            }
-        }
-    }
-    Ok(files)
+    crate::walk::walk_files_bounded_depth(dir, "draft", MAX_DIR_DEPTH)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
+    use crate::test_support::init_logger;
+    use std::path::PathBuf;
+    use tempfile::{tempdir, TempDir};
 
-    #[test]
-    fn test_is_draft_true() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("post.md");
-        fs::write(&path, "---\ntitle: Draft\ndraft: true\n---\n# Content\n")
-            .unwrap();
-        assert!(is_draft(&path).unwrap());
-    }
+    // -------------------------------------------------------------------
+    // Test fixtures
+    // -------------------------------------------------------------------
 
-    #[test]
-    fn test_is_draft_false() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("post.md");
-        fs::write(&path, "---\ntitle: Published\n---\n# Content\n").unwrap();
-        assert!(!is_draft(&path).unwrap());
-    }
-
-    #[test]
-    fn test_is_draft_no_frontmatter() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("plain.md");
-        fs::write(&path, "# No frontmatter\n").unwrap();
-        assert!(!is_draft(&path).unwrap());
-    }
-
-    #[test]
-    fn test_draft_plugin_hides_and_restores() {
-        let dir = tempdir().unwrap();
+    /// Builds `<root>/content` and returns the temp dir guard, the
+    /// content path, and a `PluginContext` rooted at it.
+    fn make_content_layout() -> (TempDir, PathBuf, PluginContext) {
+        init_logger();
+        let dir = tempdir().expect("create tempdir");
         let content = dir.path().join("content");
-        fs::create_dir_all(&content).unwrap();
-
-        fs::write(
-            content.join("draft.md"),
-            "---\ntitle: Draft\ndraft: true\n---\nDraft content",
-        )
-        .unwrap();
-        fs::write(
-            content.join("published.md"),
-            "---\ntitle: Published\n---\nPublished content",
-        )
-        .unwrap();
-
-        let plugin = DraftPlugin::new(false);
+        fs::create_dir_all(&content).expect("mkdir content");
         let ctx =
             PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        (dir, content, ctx)
+    }
 
-        // before_compile hides drafts
-        plugin.before_compile(&ctx).unwrap();
+    /// Writes a Markdown file with the given frontmatter draft flag.
+    fn write_md(dir: &Path, name: &str, draft_value: Option<&str>) {
+        let body = match draft_value {
+            Some(v) => format!("---\ntitle: T\ndraft: {v}\n---\nbody"),
+            None => "---\ntitle: T\n---\nbody".to_string(),
+        };
+        fs::write(dir.join(name), body).expect("write md");
+    }
+
+    // -------------------------------------------------------------------
+    // Constructor + derive surface
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn new_table_driven_constructs_plugin_with_supplied_flag() {
+        let cases = [(true, true), (false, false)];
+        for (input, expected) in cases {
+            let plugin = DraftPlugin::new(input);
+            assert_eq!(
+                plugin.include_drafts, expected,
+                "include_drafts({input}) should be {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn draft_plugin_is_copy_after_move() {
+        // Guards the `Copy` derive added in v0.0.34.
+        let plugin = DraftPlugin::new(false);
+        let _consumed = plugin;
+        assert_eq!(plugin.name(), "drafts");
+    }
+
+    #[test]
+    fn name_returns_static_drafts_identifier() {
+        assert_eq!(DraftPlugin::new(false).name(), "drafts");
+        assert_eq!(DraftPlugin::new(true).name(), "drafts");
+    }
+
+    // -------------------------------------------------------------------
+    // is_draft — table-driven over every YAML truthy spelling
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn is_draft_table_driven_truthy_values_return_true() {
+        let cases: &[&str] = &[
+            "---\ntitle: T\ndraft: true\n---\n",
+            "---\ntitle: T\ndraft: True\n---\n",
+            "---\ntitle: T\ndraft: TRUE\n---\n",
+            "---\ntitle: T\ndraft: yes\n---\n",
+            // leading/trailing whitespace on the line is trimmed
+            "---\ntitle: T\n  draft: true  \n---\n",
+        ];
+        let dir = tempdir().expect("tempdir");
+        for (i, body) in cases.iter().enumerate() {
+            let path = dir.path().join(format!("d{i}.md"));
+            fs::write(&path, body).unwrap();
+            assert!(
+                is_draft(&path).unwrap(),
+                "case {i} {body:?} should be detected as draft"
+            );
+        }
+    }
+
+    #[test]
+    fn is_draft_table_driven_falsy_values_return_false() {
+        let cases: &[&str] = &[
+            // explicit false
+            "---\ntitle: T\ndraft: false\n---\n",
+            // unrecognised value
+            "---\ntitle: T\ndraft: maybe\n---\n",
+            // missing field entirely
+            "---\ntitle: T\n---\n",
+            // YAML 1.2 strict — `True` is not the same as `true`
+            // in many parsers; we accept it (covered above) but
+            // `tRue` and `Yes` are NOT in the accepted list.
+            "---\ntitle: T\ndraft: tRue\n---\n",
+            "---\ntitle: T\ndraft: Yes\n---\n",
+        ];
+        let dir = tempdir().expect("tempdir");
+        for (i, body) in cases.iter().enumerate() {
+            let path = dir.path().join(format!("p{i}.md"));
+            fs::write(&path, body).unwrap();
+            assert!(
+                !is_draft(&path).unwrap(),
+                "case {i} {body:?} should NOT be detected as draft"
+            );
+        }
+    }
+
+    #[test]
+    fn is_draft_no_frontmatter_returns_false() {
+        // The `!content.starts_with("---")` early return at line 88.
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("plain.md");
+        fs::write(&path, "# No frontmatter\nJust prose.\n").unwrap();
+        assert!(!is_draft(&path).unwrap());
+    }
+
+    #[test]
+    fn is_draft_unterminated_frontmatter_returns_false() {
+        // The `if let Some(end) = ...find("---")` branch at line 93
+        // must take the implicit `None` path when the closing `---`
+        // is missing — function should return Ok(false), not error.
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("unterminated.md");
+        fs::write(&path, "---\ntitle: T\ndraft: true\nno closing fence here\n")
+            .unwrap();
+        assert!(!is_draft(&path).unwrap());
+    }
+
+    #[test]
+    fn is_draft_empty_file_returns_false() {
+        let dir = tempdir().expect("tempdir");
+        let path = dir.path().join("empty.md");
+        fs::write(&path, "").unwrap();
+        assert!(!is_draft(&path).unwrap());
+    }
+
+    #[test]
+    fn is_draft_missing_file_returns_err() {
+        let dir = tempdir().expect("tempdir");
+        let result = is_draft(&dir.path().join("does-not-exist.md"));
+        assert!(result.is_err());
+    }
+
+    // -------------------------------------------------------------------
+    // before_compile — short-circuit paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn before_compile_with_include_drafts_does_not_rename_anything() {
+        let (_tmp, content, ctx) = make_content_layout();
+        write_md(&content, "draft.md", Some("true"));
+        write_md(&content, "published.md", None);
+
+        DraftPlugin::new(true).before_compile(&ctx).unwrap();
+        assert!(content.join("draft.md").exists());
+        assert!(!content.join("draft.md.draft").exists());
+        assert!(content.join("published.md").exists());
+    }
+
+    #[test]
+    fn before_compile_missing_content_dir_returns_ok() {
+        // The `!ctx.content_dir.exists()` short-circuit at line 43.
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("missing-content");
+        let ctx =
+            PluginContext::new(&missing, dir.path(), dir.path(), dir.path());
+
+        DraftPlugin::new(false)
+            .before_compile(&ctx)
+            .expect("missing content dir is not an error");
+        assert!(!missing.exists());
+    }
+
+    #[test]
+    fn before_compile_renames_only_drafts_leaves_published_intact() {
+        let (_tmp, content, ctx) = make_content_layout();
+        write_md(&content, "draft.md", Some("true"));
+        write_md(&content, "published.md", None);
+
+        DraftPlugin::new(false).before_compile(&ctx).unwrap();
         assert!(!content.join("draft.md").exists());
         assert!(content.join("draft.md.draft").exists());
         assert!(content.join("published.md").exists());
-
-        // after_compile restores drafts
-        plugin.after_compile(&ctx).unwrap();
-        assert!(content.join("draft.md").exists());
-        assert!(!content.join("draft.md.draft").exists());
     }
 
     #[test]
-    fn test_draft_plugin_include_drafts() {
-        let dir = tempdir().unwrap();
-        let content = dir.path().join("content");
-        fs::create_dir_all(&content).unwrap();
+    fn before_compile_recurses_into_subdirectories() {
+        // collect_md_files walks the tree — drafts in nested dirs
+        // must also be hidden.
+        let (_tmp, content, ctx) = make_content_layout();
+        let nested = content.join("blog").join("2026");
+        fs::create_dir_all(&nested).unwrap();
+        write_md(&nested, "secret.md", Some("true"));
+        write_md(&content, "live.md", None);
 
-        fs::write(
-            content.join("draft.md"),
-            "---\ntitle: Draft\ndraft: true\n---\n",
-        )
-        .unwrap();
+        DraftPlugin::new(false).before_compile(&ctx).unwrap();
+        assert!(nested.join("secret.md.draft").exists());
+        assert!(!nested.join("secret.md").exists());
+        assert!(content.join("live.md").exists());
+    }
 
-        let plugin = DraftPlugin::new(true);
+    #[test]
+    fn before_compile_no_drafts_yields_no_renames() {
+        let (_tmp, content, ctx) = make_content_layout();
+        write_md(&content, "a.md", None);
+        write_md(&content, "b.md", Some("false"));
+
+        DraftPlugin::new(false).before_compile(&ctx).unwrap();
+        assert!(content.join("a.md").exists());
+        assert!(content.join("b.md").exists());
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile — restoration paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn after_compile_with_include_drafts_short_circuits() {
+        // The `self.include_drafts` short-circuit at line 67 must not
+        // attempt to restore anything.
+        let (_tmp, content, ctx) = make_content_layout();
+        // Pre-place a .draft file to prove it is NOT touched.
+        fs::write(content.join("ghost.md.draft"), "---\n---\n").unwrap();
+
+        DraftPlugin::new(true).after_compile(&ctx).unwrap();
+        assert!(content.join("ghost.md.draft").exists());
+        assert!(!content.join("ghost.md").exists());
+    }
+
+    #[test]
+    fn after_compile_missing_content_dir_returns_ok() {
+        let dir = tempdir().expect("tempdir");
+        let missing = dir.path().join("missing");
         let ctx =
-            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+            PluginContext::new(&missing, dir.path(), dir.path(), dir.path());
+        DraftPlugin::new(false).after_compile(&ctx).unwrap();
+    }
 
+    #[test]
+    fn after_compile_restores_draft_extension_to_md() {
+        let (_tmp, content, ctx) = make_content_layout();
+        fs::write(content.join("post.md.draft"), "---\n---\n").unwrap();
+
+        DraftPlugin::new(false).after_compile(&ctx).unwrap();
+        assert!(content.join("post.md").exists());
+        assert!(!content.join("post.md.draft").exists());
+    }
+
+    #[test]
+    fn after_compile_does_not_overwrite_existing_original() {
+        // The `if !original.exists()` guard at line 75 must skip the
+        // rename when an original-named file is already present.
+        // Otherwise we'd silently clobber user content.
+        let (_tmp, content, ctx) = make_content_layout();
+        fs::write(content.join("post.md"), "USER WROTE THIS").unwrap();
+        fs::write(content.join("post.md.draft"), "STALE DRAFT").unwrap();
+
+        DraftPlugin::new(false).after_compile(&ctx).unwrap();
+        let body = fs::read_to_string(content.join("post.md")).unwrap();
+        assert_eq!(
+            body, "USER WROTE THIS",
+            "existing original must not be clobbered"
+        );
+        assert!(
+            content.join("post.md.draft").exists(),
+            "stale draft is left in place when original exists"
+        );
+    }
+
+    #[test]
+    fn before_and_after_round_trip_restores_original_content() {
+        // End-to-end: hide a draft, then restore it, and prove the
+        // file is byte-identical to before.
+        let (_tmp, content, ctx) = make_content_layout();
+        let payload = "---\ntitle: T\ndraft: true\n---\nDRAFT BODY";
+        fs::write(content.join("d.md"), payload).unwrap();
+
+        let plugin = DraftPlugin::new(false);
         plugin.before_compile(&ctx).unwrap();
-        // Draft should still be there
-        assert!(content.join("draft.md").exists());
+        plugin.after_compile(&ctx).unwrap();
+
+        let restored = fs::read_to_string(content.join("d.md")).unwrap();
+        assert_eq!(restored, payload);
+    }
+
+    // -------------------------------------------------------------------
+    // collect_md_files / collect_draft_files — recursion + filtering
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn collect_md_files_returns_empty_for_missing_directory() {
+        let dir = tempdir().expect("tempdir");
+        let result = collect_md_files(&dir.path().join("missing")).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn collect_md_files_filters_non_md_extensions() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(dir.path().join("a.md"), "").unwrap();
+        fs::write(dir.path().join("b.txt"), "").unwrap();
+        fs::write(dir.path().join("c.html"), "").unwrap();
+
+        let result = collect_md_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn collect_md_files_recurses_into_nested_subdirectories() {
+        let dir = tempdir().expect("tempdir");
+        let nested = dir.path().join("a").join("b");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(dir.path().join("top.md"), "").unwrap();
+        fs::write(nested.join("deep.md"), "").unwrap();
+
+        let result = collect_md_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn collect_draft_files_filters_non_draft_extensions() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(dir.path().join("a.md.draft"), "").unwrap();
+        fs::write(dir.path().join("b.md"), "").unwrap();
+
+        let result = collect_draft_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn collect_draft_files_respects_max_dir_depth_guard() {
+        // The `depth > MAX_DIR_DEPTH` continue at line 135 is only
+        // reached with a tree deeper than the limit. Closes line 136.
+        let dir = tempdir().expect("tempdir");
+        let mut current = dir.path().to_path_buf();
+        for i in 0..MAX_DIR_DEPTH + 2 {
+            current = current.join(format!("d{i}"));
+            fs::create_dir_all(&current).unwrap();
+            fs::write(current.join("p.md.draft"), "").unwrap();
+        }
+        let result = collect_draft_files(dir.path()).unwrap();
+        // At most MAX_DIR_DEPTH+1 files (depths 0..=MAX) survive.
+        assert!(result.len() <= MAX_DIR_DEPTH + 1);
+    }
+
+    #[test]
+    fn collect_md_files_respects_max_dir_depth_guard() {
+        let dir = tempdir().expect("tempdir");
+        let mut current = dir.path().to_path_buf();
+        for i in 0..MAX_DIR_DEPTH + 2 {
+            current = current.join(format!("d{i}"));
+            fs::create_dir_all(&current).unwrap();
+            fs::write(current.join("p.md"), "").unwrap();
+        }
+        let result = collect_md_files(dir.path()).unwrap();
+        assert!(result.len() <= MAX_DIR_DEPTH + 1);
+    }
+
+    #[test]
+    fn collect_draft_files_recurses_into_nested_subdirectories() {
+        let dir = tempdir().expect("tempdir");
+        let nested = dir.path().join("a");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(dir.path().join("top.md.draft"), "").unwrap();
+        fs::write(nested.join("nested.md.draft"), "").unwrap();
+
+        let result = collect_draft_files(dir.path()).unwrap();
+        assert_eq!(result.len(), 2);
     }
 }

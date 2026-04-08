@@ -1,45 +1,42 @@
 name: CI
-
 on:
   push:
-    branches: [main]
-    paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
+    branches: [main, feat/**]
   pull_request:
-    branches: [main]
-    paths-ignore: ["**.md", "LICENSE-*", "docs/**"]
-  workflow_dispatch:
-    inputs:
-      use_github_hosted:
-        description: Use GitHub-hosted runners (incurs billed minutes)
-        required: false
-        default: false
-        type: boolean
-      full_checks:
-        description: Run expensive checks (coverage + cross-platform)
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 jobs:
   ci:
     uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
     with:
-      rust-version: stable
+      rust-version: 'stable'
+      run-coverage: true
+      # Pedantic/nursery clippy lints are configured at `warn` level in
+      # Cargo.toml as advisory cleanup tracks. The shared rust-ci.yml
+      # runs `cargo clippy --all-targets -- -D warnings`, which would
+      # escalate every advisory warning to an error and fail CI on
+      # ~560 pre-existing pedantic violations (mostly in test code).
+      # Clippy is still run locally; fixes land in dedicated cleanup
+      # PRs rather than gating every release.
       run-clippy: false
-      run-fmt: true
-      # rust-ci audit/coverage jobs run on ubuntu-latest; disable by default for strict zero billed minutes.
-      run-audit: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted }}
-      run-coverage: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && inputs.full_checks }}
-      run-cross-platform: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && inputs.full_checks }}
-      coverage-exclude: 'crates/*'
-      runner: ${{ github.event_name == 'workflow_dispatch' && inputs.use_github_hosted && 'ubuntu-latest' || 'self-hosted' }}
-      timeout-minutes: 20
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
+    with:
+      language: rust
+      # Override default 'medium' — actions/dependency-review-action
+      # only accepts critical/high/moderate/low (upstream bug in
+      # pipelines/security.yml).
+      severity-threshold: moderate
+
+  docs:
+    if: github.ref == 'refs/heads/main'
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
+    with:
+      type: rust
+      redirect-crate: ssg

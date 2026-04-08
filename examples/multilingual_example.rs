@@ -7,19 +7,52 @@
 //! This example demonstrates how to generate a multilingual static site
 //! with a language selector at the root of the `public` directory.
 
-use anyhow::Context;
 use anyhow::Result;
 use http_handle::Server;
 use ssg::plugin::{PluginContext, PluginManager};
 use ssg::search::SearchPlugin;
 use ssg::seo::SeoPlugin;
 use staticdatagen::compiler::service::compile;
-use std::fs::{self, write};
+use std::fs;
 use std::path::Path;
+
+/// Supported locales as (code, native name) pairs.
+/// Matches the language set offered on bankstatementparser.com.
+const LANGUAGES: &[(&str, &str)] = &[
+    ("en", "English"),
+    ("fr", "Français"),
+    ("ar", "العربية"),
+    ("bn", "বাংলা"),
+    ("cs", "Čeština"),
+    ("de", "Deutsch"),
+    ("es", "Español"),
+    ("ha", "Hausa"),
+    ("he", "עברית"),
+    ("hi", "हिन्दी"),
+    ("id", "Indonesia"),
+    ("it", "Italiano"),
+    ("ja", "日本語"),
+    ("ko", "한국어"),
+    ("nl", "Nederlands"),
+    ("pl", "Polski"),
+    ("pt", "Português"),
+    ("ro", "Română"),
+    ("ru", "Русский"),
+    ("sv", "Svenska"),
+    ("th", "ไทย"),
+    ("tl", "Filipino"),
+    ("tr", "Türkçe"),
+    ("uk", "Українська"),
+    ("vi", "Tiếng Việt"),
+    ("yo", "Yorùbá"),
+    ("zh", "简体中文"),
+    ("zh-tw", "繁體中文"),
+];
 
 fn main() -> Result<()> {
     // Define supported languages
-    let languages = vec!["en", "fr"];
+    let languages: Vec<&str> =
+        LANGUAGES.iter().map(|(code, _)| *code).collect();
 
     // Root directory for public files
     let public_root = Path::new("./examples/public");
@@ -36,14 +69,13 @@ fn main() -> Result<()> {
         let template_dir = Path::new("./examples/templates").join(lang);
 
         // Call the compile function to generate the website
-        println!("    🔍 Compiling content for language: {}...", lang);
+        println!("    🔍 Compiling content for language: {lang}...");
         match compile(&build_dir, &content_dir, &site_dir, &template_dir) {
-            Ok(_) => println!(
-                "    ✅ Successfully compiled static site for language: {}",
-                lang
+            Ok(()) => println!(
+                "    ✅ Successfully compiled static site for language: {lang}"
             ),
             Err(e) => {
-                println!("    ❌ Error compiling site for {}: {:?}", lang, e);
+                println!("    ❌ Error compiling site for {lang}: {e:?}");
                 return Err(e);
             }
         }
@@ -62,27 +94,15 @@ fn main() -> Result<()> {
         println!("    🔌 Plugins complete for {lang}");
     }
 
-    // Copy shared assets (manifest.json, rss.xml) to root so
-    // absolute paths emitted by staticdatagen resolve correctly.
-    for asset in &[
-        "manifest.json",
-        "rss.xml",
-        "robots.txt",
-        "sitemap.xml",
-        "search-index.json",
-    ] {
-        // Prefer the English version as the root copy
-        let src = public_root.join("en").join(asset);
-        if src.exists() {
-            let dst = public_root.join(asset);
-            if !dst.exists() {
-                let _ = fs::copy(&src, &dst)?;
-            }
-        }
+    // Promote English to the site root: copy every file from `public/en/`
+    // into `public/` so that `/` serves English directly. Other locales remain
+    // at `/<lang>/`. This mirrors the convention used by sites like
+    // bankstatementparser.com where the default language has no path prefix.
+    let en_root = public_root.join("en");
+    if en_root.exists() {
+        copy_dir_recursive(&en_root, public_root)?;
+        println!("    ✅ Promoted English to site root");
     }
-
-    // Generate the root `index.html` with language links
-    generate_language_selector(public_root, &languages)?;
 
     // Serve the root public directory
     let server = Server::new("127.0.0.1:3000", public_root.to_str().unwrap());
@@ -92,35 +112,22 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-/// Generates a root `index.html` file using the `templates/selector.html` template
-fn generate_language_selector(
-    public_root: &Path,
-    languages: &[&str],
-) -> Result<()> {
-    // Read the selector.html template
-    let template_path = Path::new("./examples/templates/selector.html");
-    let template = fs::read_to_string(template_path)
-        .context("Failed to read selector.html template")?;
-
-    // Replace the placeholder with the language links
-    let mut language_links = String::new();
-    for lang in languages {
-        let link = format!(
-            "<li><a href=\"./{}/\">{}</a></li>\n",
-            lang,
-            lang.to_uppercase()
-        );
-        language_links.push_str(&link);
+/// Recursively copies every file from `src` into `dst`, creating `dst` and
+/// any intermediate directories as needed. Existing files in `dst` are
+/// overwritten so that promoting a locale to the site root is idempotent.
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
     }
-    let output_html = template.replace("{{LANGUAGE_LINKS}}", &language_links);
-
-    // Write the generated HTML to `public/index.html`
-    let index_path = public_root.join("index.html");
-    write(index_path, output_html)
-        .context("Failed to write language selector index.html")?;
-    println!(
-        "    ✅ Generated language selector at root index.html using template"
-    );
-
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursive(&entry.path(), &dst_path)?;
+        } else {
+            let _ = fs::copy(entry.path(), &dst_path)?;
+        }
+    }
     Ok(())
 }

@@ -23,7 +23,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// A single entry in the search index.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SearchEntry {
     /// Page title extracted from `<title>` or first `<h1>`.
     pub title: String,
@@ -95,11 +95,13 @@ impl SearchIndex {
     }
 
     /// Number of indexed pages.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Returns true if the index has no entries.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -120,7 +122,7 @@ impl SearchIndex {
 pub struct SearchPlugin;
 
 impl Plugin for SearchPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "search"
     }
 
@@ -268,8 +270,7 @@ fn truncate(s: &str, max: usize) -> String {
         .char_indices()
         .take(max)
         .last()
-        .map(|(i, c)| i + c.len_utf8())
-        .unwrap_or(0);
+        .map_or(0, |(i, c)| i + c.len_utf8());
     let truncated = &s[..byte_pos];
     if let Some(last_space) = truncated.rfind(' ') {
         truncated[..last_space].to_string()
@@ -278,28 +279,9 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
-/// Collect all `.html` files under `dir` (iterative, bounded).
+/// Collect all `.html` files under `dir` (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-
-    while let Some(current) = stack.pop() {
-        if files.len() >= MAX_INDEX_ENTRIES {
-            break;
-        }
-        let entries = fs::read_dir(&current)
-            .with_context(|| format!("cannot read {}", current.display()))?;
-        for entry in entries {
-            let path = entry?.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-
-    Ok(files)
+    crate::walk::walk_files_bounded_count(dir, "html", MAX_INDEX_ENTRIES)
 }
 
 /// Inject the search UI script into an HTML file.
@@ -334,9 +316,9 @@ fn inject_search_ui(path: &Path) -> Result<()> {
 /// The self-contained search widget (HTML + CSS + JS).
 ///
 /// Includes a fixed search button in the top-right corner (like pacs008.com's
-/// DocSearch bar) that opens a full-screen search modal. Also responds to
+/// `DocSearch` bar) that opens a full-screen search modal. Also responds to
 /// `Ctrl+K` / `Cmd+K`.
-const SEARCH_WIDGET_SCRIPT: &str = r##"
+const SEARCH_WIDGET_SCRIPT: &str = r#"
 <!-- SSG Search Widget -->
 <div id="ssg-search-widget">
 <style>
@@ -436,7 +418,7 @@ if(e.key==='Enter'){e.preventDefault();var items=results.querySelectorAll('.ssg-
 })();
 </script>
 </div>
-"##;
+"#;
 
 #[cfg(test)]
 mod tests {
@@ -706,6 +688,122 @@ mod tests {
         let parsed: SearchEntry = serde_json::from_str(&json)?;
         assert_eq!(entry, parsed);
         Ok(())
+    }
+
+    // -------------------------------------------------------------------
+    // Targeted edge-case coverage
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn search_plugin_after_compile_empty_index_short_circuits() -> Result<()> {
+        // Line 136: `if index.is_empty() { return Ok(()) }`. Need a
+        // site with HTML files that produce zero entries — easiest:
+        // a site with only a stylesheet (collect_html_files returns
+        // empty, build returns empty index).
+        let tmp = tempdir()?;
+        fs::write(tmp.path().join("style.css"), "body{}")?;
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        SearchPlugin.after_compile(&ctx)?;
+        // No search-index.json should have been written.
+        assert!(!tmp.path().join("search-index.json").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn extract_title_empty_title_falls_back_to_h1() {
+        // Line 167 false branch: title trimmed is empty, so we fall
+        // through to the h1 fallback at lines 172-180.
+        let html = "<html><head><title>   </title></head><body><h1>Heading One</h1></body></html>";
+        assert_eq!(extract_title(html), "Heading One");
+    }
+
+    #[test]
+    fn extract_title_no_title_tag_falls_back_to_h1() {
+        // Lines 178-179: the h1 fallback Some-Some success path.
+        let html = "<html><body><h1>From H1</h1></body></html>";
+        assert_eq!(extract_title(html), "From H1");
+    }
+
+    #[test]
+    fn extract_title_h1_with_attributes_works() {
+        // Verifies the `find('>')` step at line 174 handles attrs.
+        let html = r#"<html><body><h1 class="title">Attrs</h1></body></html>"#;
+        assert_eq!(extract_title(html), "Attrs");
+    }
+
+    #[test]
+    fn extract_title_no_title_no_h1_returns_empty() {
+        let html = "<html><body><p>just a paragraph</p></body></html>";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
+    fn extract_title_unterminated_title_falls_back_to_h1() {
+        // <title> open without close — `find("</title>")` returns
+        // None, the outer `if let` body exits, and the function
+        // proceeds to the <h1> fallback.
+        let html =
+            "<html><head><title>Open<body><h1>Fallback</h1></body></html>";
+        let result = extract_title(html);
+        assert_eq!(result, "Fallback");
+    }
+
+    #[test]
+    fn extract_title_unterminated_h1_returns_empty() {
+        // <h1> open without `>` and without `</h1>` — both inner
+        // `if let`s return None, function returns "".
+        let html = "<html><body><h1 attr=\"open";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
+    fn extract_headings_unterminated_h_tag_breaks_inner_loop() {
+        // Line 204: the `break` when no `</hN>` close tag is found.
+        let html = "<html><body><h1>Has close</h1><h2>no close tag";
+        let headings = extract_headings(html);
+        // The first heading is captured; the unterminated one
+        // breaks out of the inner loop without panicking.
+        assert!(headings.contains(&"Has close".to_string()));
+    }
+
+    #[test]
+    fn extract_headings_unterminated_open_tag_breaks_outer() {
+        // Line 207: the `break` when `<h1` has no `>`. Build a
+        // pathological string that contains `<h1` but never `>`
+        // afterwards.
+        let html = "<h1 attr=\"unterminated";
+        let headings = extract_headings(html);
+        assert!(headings.is_empty());
+    }
+
+    #[test]
+    fn extract_text_unterminated_strip_tag_breaks() {
+        // Line 225: the `break` in the strip loop when a tag opener
+        // exists but no matching close. extract_text strips
+        // <script>/<style>/etc. blocks; an unterminated <script>
+        // hits the inner break.
+        let html = "<html><body><script>unterminated<p>visible</p>";
+        let _ = extract_text(html);
+    }
+
+    #[test]
+    fn truncate_no_space_falls_back_to_byte_cut() {
+        // Line 278: `else { truncated.to_string() }` when there is
+        // no space within the first `max` characters.
+        let result = truncate("oneverylongwordwithnospacesatall", 10);
+        // Returns the byte-truncated string (no space to break on).
+        assert_eq!(result, "oneverylon");
+    }
+
+    #[test]
+    fn truncate_short_string_returned_unchanged() {
+        // Line 266 true branch: input shorter than max returns as-is.
+        assert_eq!(truncate("short", 100), "short");
     }
 
     #[test]

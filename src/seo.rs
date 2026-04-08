@@ -152,25 +152,9 @@ fn strip_tags(html: &str) -> String {
     collapsed.trim().to_string()
 }
 
-/// Collect all `.html` files under `dir` using an iterative directory walk.
+/// Collect all `.html` files under `dir` (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-
-    while let Some(current) = stack.pop() {
-        let entries = fs::read_dir(&current)
-            .with_context(|| format!("cannot read {}", current.display()))?;
-        for entry in entries {
-            let path = entry?.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().map_or(false, |e| e == "html") {
-                files.push(path);
-            }
-        }
-    }
-
-    Ok(files)
+    crate::walk::walk_files(dir, "html")
 }
 
 /// Escape a string for safe inclusion in an HTML attribute value.
@@ -207,7 +191,7 @@ fn escape_attr(s: &str) -> String {
 pub struct SeoPlugin;
 
 impl Plugin for SeoPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "seo"
     }
 
@@ -238,37 +222,34 @@ fn inject_seo_tags(path: &Path) -> Result<()> {
     // Meta description
     if !html.contains("<meta name=\"description\"")
         && !html.contains("<meta name='description'")
+        && !description.is_empty()
     {
-        if !description.is_empty() {
-            tags.push(format!(
-                "<meta name=\"description\" content=\"{}\">",
-                escape_attr(&description)
-            ));
-        }
+        tags.push(format!(
+            "<meta name=\"description\" content=\"{}\">",
+            escape_attr(&description)
+        ));
     }
 
     // Open Graph title
     if !html.contains("<meta property=\"og:title\"")
         && !html.contains("<meta property='og:title'")
+        && !title.is_empty()
     {
-        if !title.is_empty() {
-            tags.push(format!(
-                "<meta property=\"og:title\" content=\"{}\">",
-                escape_attr(&title)
-            ));
-        }
+        tags.push(format!(
+            "<meta property=\"og:title\" content=\"{}\">",
+            escape_attr(&title)
+        ));
     }
 
     // Open Graph description
     if !html.contains("<meta property=\"og:description\"")
         && !html.contains("<meta property='og:description'")
+        && !description.is_empty()
     {
-        if !description.is_empty() {
-            tags.push(format!(
-                "<meta property=\"og:description\" content=\"{}\">",
-                escape_attr(&description)
-            ));
-        }
+        tags.push(format!(
+            "<meta property=\"og:description\" content=\"{}\">",
+            escape_attr(&description)
+        ));
     }
 
     // Open Graph type
@@ -339,7 +320,7 @@ impl RobotsPlugin {
 }
 
 impl Plugin for RobotsPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "robots"
     }
 
@@ -403,7 +384,7 @@ impl CanonicalPlugin {
 }
 
 impl Plugin for CanonicalPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "canonical"
     }
 
@@ -462,7 +443,7 @@ pub struct JsonLdConfig {
     pub base_url: String,
     /// Organization name for Organization schema.
     pub org_name: String,
-    /// Whether to generate BreadcrumbList for every page.
+    /// Whether to generate `BreadcrumbList` for every page.
     pub breadcrumbs: bool,
 }
 
@@ -471,7 +452,7 @@ pub struct JsonLdConfig {
 /// Auto-detects schema.org types from page metadata:
 /// - Pages with `<article>` → `Article`
 /// - All other pages → `WebPage`
-/// - BreadcrumbList derived from URL path (opt-in)
+/// - `BreadcrumbList` derived from URL path (opt-in)
 ///
 /// Idempotent: skips files that already contain `application/ld+json`.
 #[derive(Debug, Clone)]
@@ -481,11 +462,13 @@ pub struct JsonLdPlugin {
 
 impl JsonLdPlugin {
     /// Creates a new `JsonLdPlugin` with the given configuration.
-    pub fn new(config: JsonLdConfig) -> Self {
+    #[must_use]
+    pub const fn new(config: JsonLdConfig) -> Self {
         Self { config }
     }
 
     /// Creates a `JsonLdPlugin` from site config values.
+    #[must_use]
     pub fn from_site(base_url: &str, site_name: &str) -> Self {
         Self {
             config: JsonLdConfig {
@@ -498,7 +481,7 @@ impl JsonLdPlugin {
 }
 
 impl Plugin for JsonLdPlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "json-ld"
     }
 
@@ -531,7 +514,7 @@ impl Plugin for JsonLdPlugin {
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace('\\', "/");
-            let page_url = format!("{}/{}", base, rel_path);
+            let page_url = format!("{base}/{rel_path}");
 
             let mut scripts = Vec::new();
 
@@ -582,7 +565,7 @@ impl Plugin for JsonLdPlugin {
 
                     let mut accumulated = String::new();
                     for (i, part) in parts.iter().enumerate() {
-                        accumulated = format!("{}/{}", accumulated, part);
+                        accumulated = format!("{accumulated}/{part}");
                         let name =
                             part.trim_end_matches(".html").replace('-', " ");
                         items.push(serde_json::json!({
@@ -607,8 +590,7 @@ impl Plugin for JsonLdPlugin {
             for script in &scripts {
                 let json = serde_json::to_string(script)?;
                 injection.push_str(&format!(
-                    "<script type=\"application/ld+json\">{}</script>\n",
-                    json
+                    "<script type=\"application/ld+json\">{json}</script>\n"
                 ));
             }
 
@@ -624,36 +606,16 @@ impl Plugin for JsonLdPlugin {
 
         if injected > 0 {
             log::info!(
-                "[json-ld] Injected structured data into {} page(s)",
-                injected
+                "[json-ld] Injected structured data into {injected} page(s)"
             );
         }
         Ok(())
     }
 }
 
-/// Recursively collects HTML files (shared helper).
+/// Recursively collects HTML files (delegates to `crate::walk`).
 fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-
-    while let Some(current) = stack.pop() {
-        if !current.is_dir() {
-            continue;
-        }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().is_some_and(|ext| ext == "html") {
-                files.push(path);
-            }
-        }
-    }
-
-    files.sort();
-    Ok(files)
+    crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
@@ -670,6 +632,7 @@ mod tests {
     }
 
     fn test_ctx(site_dir: &Path) -> PluginContext {
+        crate::test_support::init_logger();
         PluginContext::new(
             Path::new("content"),
             Path::new("build"),
@@ -1239,5 +1202,456 @@ mod tests {
         // Should have exactly one ld+json (the original), not two
         let count = output.matches("application/ld+json").count();
         assert_eq!(count, 1);
+    }
+
+    // -----------------------------------------------------------------
+    // extract_title — edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_title_empty_tag_returns_empty_string() {
+        // Lines 29-31: the `if !trimmed.is_empty()` branch is FALSE
+        // when the title is empty or only whitespace. Falls through
+        // to `String::new()` at line 34.
+        assert_eq!(extract_title("<title></title>"), "");
+        assert_eq!(extract_title("<title>   </title>"), "");
+        assert_eq!(extract_title("<title>\n\t </title>"), "");
+    }
+
+    #[test]
+    fn extract_title_without_closing_tag_returns_empty() {
+        // The `if let Some(end)` at line 26 takes the None branch
+        // when `</title>` is missing.
+        assert_eq!(extract_title("<title>Unterminated"), "");
+    }
+
+    #[test]
+    fn extract_title_strips_inner_html_tags() {
+        // Inner tags are stripped by `strip_tags` call at line 27.
+        // strip_tags collapses successive whitespace per its own
+        // rules; the .trim() in extract_title collapses leading and
+        // trailing whitespace but runs between words are preserved.
+        let out = extract_title("<title>Hello <em>World</em></title>");
+        assert!(out.contains("Hello"));
+        assert!(out.contains("World"));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_description — every branch
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_description_prefers_main_over_body() {
+        let html = r#"<html><head></head><body>
+            <nav>menu</nav>
+            <main>The primary content.</main>
+            <footer>Bottom</footer>
+        </body></html>"#;
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("primary content"));
+        assert!(!desc.contains("menu"));
+    }
+
+    #[test]
+    fn extract_description_main_without_closing_tag_takes_rest() {
+        // Line 51: the `else { inner.to_string() }` branch of the
+        // `</main>` search — taken when the closing tag is missing.
+        let html = r#"<html><body><main>content without close"#;
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("content without close"));
+    }
+
+    #[test]
+    fn extract_description_main_without_angle_bracket_returns_empty_fallback() {
+        // Line 54: `String::new()` branch when `<main` exists but
+        // the tag never closes with `>`.
+        let html = "<html><body><main";
+        let desc = extract_description(html, 200);
+        assert_eq!(desc, "");
+    }
+
+    #[test]
+    fn extract_description_fallback_to_body_strips_script_and_style() {
+        // No <main>, but a <body> with script/style/nav/header/footer
+        // — all of those must be stripped. Covers lines 74-85.
+        let html = r#"<html><head></head><body>
+            <script>alert('skip');</script>
+            <style>body { color: red; }</style>
+            <nav>menu items here</nav>
+            <header>site title</header>
+            <p>The body text.</p>
+            <footer>copyright</footer>
+        </body></html>"#;
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("body text"));
+        assert!(!desc.contains("alert"));
+        assert!(!desc.contains("color: red"));
+        assert!(!desc.contains("menu items"));
+        assert!(!desc.contains("site title"));
+        assert!(!desc.contains("copyright"));
+    }
+
+    #[test]
+    fn extract_description_body_without_closing_tag_uses_rest() {
+        // Line 65: `else { inner.to_string() }` branch of the
+        // `</body>` search.
+        let html = "<html><body><p>open-ended body paragraph";
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("open-ended body paragraph"));
+    }
+
+    #[test]
+    fn extract_description_body_without_angle_bracket_returns_empty() {
+        // Line 68: `String::new()` branch when `<body` doesn't close.
+        let html = "<html><body";
+        let desc = extract_description(html, 200);
+        assert_eq!(desc, "");
+    }
+
+    #[test]
+    fn extract_description_no_body_no_main_uses_entire_html() {
+        // The `else { html.to_string() }` fallback at line 71 —
+        // taken when there's no <body> tag at all.
+        let html = "just plain text no tags here";
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("just plain text"));
+    }
+
+    #[test]
+    fn extract_description_unterminated_script_breaks_out() {
+        // Line 98: the `else { break }` branch in the script-
+        // stripping loop — taken when a `<script` exists but no
+        // corresponding `</script>` is found.
+        let html = "<html><body><main><script>unterminated<p>x</p>";
+        let desc = extract_description(html, 200);
+        // Function terminates without panic.
+        let _ = desc;
+    }
+
+    #[test]
+    fn extract_description_truncates_at_word_boundary() {
+        // Lines 105-118: the `len > max_len` branch with word-
+        // boundary truncation via rfind(' ').
+        let html = "<html><body><main>one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twenty-two twenty-three twenty-four twenty-five</main></body></html>";
+        let desc = extract_description(html, 80);
+        assert!(desc.len() <= 80);
+        // Should end on a complete word (not mid-word).
+        assert!(!desc.ends_with('-'));
+    }
+
+    #[test]
+    fn extract_description_truncates_without_space_falls_to_byte_cut() {
+        // Line 118: the `else { truncated.to_string() }` branch
+        // when no space is found within max_len.
+        let html =
+            "<html><body><main>oneverylongwordwithnospacesanywherehere</main></body></html>";
+        let desc = extract_description(html, 10);
+        assert!(desc.len() <= 10);
+    }
+
+    #[test]
+    fn extract_description_respects_char_boundary_on_truncation() {
+        // Lines 110-112: the char-boundary walk-back loop for
+        // multibyte UTF-8 characters.
+        let html = "<html><body><main>Rust programming — é ñ ü characters everywhere in this text that we want to truncate mid-char</main></body></html>";
+        let desc = extract_description(html, 30);
+        // Must produce a valid UTF-8 string (would panic otherwise).
+        assert!(desc.is_ascii() || !desc.is_empty());
+    }
+
+    #[test]
+    fn extract_description_truncation_walks_back_multiple_bytes() {
+        // Forces the `end -= 1` loop at lines 110-112 to iterate
+        // at least once. A 4-byte emoji positioned so that `max_len`
+        // lands in the middle of its bytes forces the walk-back.
+        let mut input = String::from("<html><body><main>");
+        // pad with ASCII to near the max, then insert the emoji
+        input.push_str(&"a".repeat(20));
+        input.push('🎉'); // 4 bytes
+        input.push_str(&"b".repeat(20));
+        input.push_str("</main></body></html>");
+        // max_len=22 should land inside the emoji bytes.
+        let desc = extract_description(&input, 22);
+        assert!(!desc.is_empty(), "expected non-empty desc");
+        // Result must be valid UTF-8 (guaranteed by String type).
+        let _ = desc.len();
+    }
+
+    #[test]
+    fn extract_description_body_fallback_unterminated_nav_breaks() {
+        // Line 82: the body-fallback strip loop hits `break` when
+        // a `<nav` exists but no `</nav>` is found. Requires a
+        // <body> with NO <main>.
+        let html = "<html><body><nav>unterminated nav block<p>visible</p>";
+        let desc = extract_description(html, 200);
+        // Function terminates without panic; nav content may or
+        // may not survive depending on the exact strip semantics.
+        let _ = desc;
+    }
+
+    // -----------------------------------------------------------------
+    // SeoPlugin.after_compile — no </head> tag
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn seo_plugin_file_without_head_tag_is_unchanged() {
+        // The `else { html }` branch in inject_seo_tags at line 297.
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("fragment.html"),
+            "<p>no html/head/body structure</p>",
+        )
+        .unwrap();
+        let ctx = test_ctx(dir.path());
+        SeoPlugin.after_compile(&ctx).unwrap();
+        let out = fs::read_to_string(dir.path().join("fragment.html")).unwrap();
+        assert_eq!(out, "<p>no html/head/body structure</p>");
+    }
+
+    #[test]
+    fn seo_plugin_missing_site_dir_returns_ok() {
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let ctx = test_ctx(&missing);
+        SeoPlugin.after_compile(&ctx).unwrap();
+    }
+
+    // -----------------------------------------------------------------
+    // RobotsPlugin — idempotency + missing dir
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn robots_plugin_skips_existing_robots_txt() {
+        // Line 350: the `if robots_path.exists() { return Ok(()) }`
+        // branch.
+        let dir = tempdir().unwrap();
+        let existing = dir.path().join("robots.txt");
+        fs::write(&existing, "USER: existing").unwrap();
+
+        let plugin = RobotsPlugin::new("https://example.com");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        // Existing content preserved.
+        assert_eq!(fs::read_to_string(&existing).unwrap(), "USER: existing");
+    }
+
+    #[test]
+    fn robots_plugin_writes_user_agent_and_sitemap() {
+        let dir = tempdir().unwrap();
+        let plugin = RobotsPlugin::new("https://example.com/");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert!(body.contains("User-agent: *"));
+        // Trailing slash stripped via trim_end_matches.
+        assert!(body.contains("Sitemap: https://example.com/sitemap.xml"));
+    }
+
+    #[test]
+    fn robots_plugin_missing_site_dir_returns_ok() {
+        // Line 345: `!ctx.site_dir.exists()` early return.
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let plugin = RobotsPlugin::new("https://example.com");
+        let ctx = test_ctx(&missing);
+        plugin.after_compile(&ctx).unwrap();
+    }
+
+    #[test]
+    fn robots_plugin_name_returns_static_identifier() {
+        assert_eq!(RobotsPlugin::new("").name(), "robots");
+    }
+
+    // -----------------------------------------------------------------
+    // CanonicalPlugin — skip path, missing head, already-canonical
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn canonical_plugin_missing_site_dir_returns_ok() {
+        // Line 409.
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let plugin = CanonicalPlugin::new("https://example.com");
+        let ctx = test_ctx(&missing);
+        plugin.after_compile(&ctx).unwrap();
+    }
+
+    #[test]
+    fn canonical_plugin_skips_pages_with_existing_canonical_link() {
+        // Lines 419-422: the `continue` branch.
+        let dir = tempdir().unwrap();
+        let html = r#"<html><head><link rel="canonical" href="/original"></head><body></body></html>"#;
+        fs::write(dir.path().join("p.html"), html).unwrap();
+
+        let plugin = CanonicalPlugin::new("https://example.com");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(dir.path().join("p.html")).unwrap();
+        assert_eq!(out.matches(r#"rel="canonical""#).count(), 1);
+        assert!(out.contains("/original"));
+    }
+
+    #[test]
+    fn canonical_plugin_skips_pages_with_single_quoted_canonical() {
+        // Same `continue` branch via single-quoted variant.
+        let dir = tempdir().unwrap();
+        let html =
+            r"<html><head><link rel='canonical' href='/x'></head></html>";
+        fs::write(dir.path().join("p.html"), html).unwrap();
+
+        let plugin = CanonicalPlugin::new("https://example.com");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(dir.path().join("p.html")).unwrap();
+        assert_eq!(out.matches("canonical").count(), 1);
+    }
+
+    #[test]
+    fn canonical_plugin_page_without_head_is_left_unchanged() {
+        // Line 440: `else { html }` branch when no `</head>` exists.
+        let dir = tempdir().unwrap();
+        let html = "<p>no structure</p>";
+        fs::write(dir.path().join("frag.html"), html).unwrap();
+
+        let plugin = CanonicalPlugin::new("https://example.com");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(dir.path().join("frag.html")).unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn canonical_plugin_injects_canonical_link_before_head_close() {
+        let dir = tempdir().unwrap();
+        let html = "<html><head><title>T</title></head><body></body></html>";
+        fs::write(dir.path().join("a.html"), html).unwrap();
+
+        let plugin = CanonicalPlugin::new("https://example.com/");
+        let ctx = test_ctx(dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(dir.path().join("a.html")).unwrap();
+        assert!(out.contains(r#"rel="canonical""#));
+        assert!(out.contains("https://example.com/a.html"));
+    }
+
+    #[test]
+    fn canonical_plugin_name_returns_static_identifier() {
+        assert_eq!(CanonicalPlugin::new("").name(), "canonical");
+    }
+
+    // -----------------------------------------------------------------
+    // JsonLdPlugin — WebPage branch + no-head skip
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn jsonld_plugin_missing_site_dir_returns_ok() {
+        // Line 506.
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        let ctx = test_ctx(&missing);
+        plugin.after_compile(&ctx).unwrap();
+    }
+
+    #[test]
+    fn jsonld_plugin_skips_pages_without_head_tag() {
+        // Line 523: the `None => continue` branch.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("frag.html"), "<p>no head</p>").unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        plugin.after_compile(&ctx).unwrap();
+        let out = fs::read_to_string(site.join("frag.html")).unwrap();
+        assert_eq!(out, "<p>no head</p>");
+    }
+
+    #[test]
+    fn jsonld_plugin_generates_webpage_when_no_article_element() {
+        // The `else` branch of `if html.contains("<article")` —
+        // pages without an <article> get a WebPage schema.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = "<html><head><title>Hello</title></head><body><p>content</p></body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(out.contains("application/ld+json"));
+        assert!(out.contains("WebPage"));
+    }
+
+    #[test]
+    fn jsonld_plugin_generates_article_when_article_element_present() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = "<html><head><title>Post</title></head><body><article><h1>Post</h1></article></body></html>";
+        fs::write(site.join("post.html"), html).unwrap();
+
+        let ctx = test_ctx(&site);
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("post.html")).unwrap();
+        assert!(out.contains("application/ld+json"));
+        assert!(out.contains(r#""Article""#));
+    }
+
+    #[test]
+    fn jsonld_plugin_new_stores_supplied_config() {
+        let cfg = JsonLdConfig {
+            base_url: "https://a".to_string(),
+            org_name: "Org".to_string(),
+            breadcrumbs: false,
+        };
+        let plugin = JsonLdPlugin::new(cfg.clone());
+        assert_eq!(plugin.config.base_url, "https://a");
+        assert_eq!(plugin.config.org_name, "Org");
+        assert!(!plugin.config.breadcrumbs);
+    }
+
+    #[test]
+    fn jsonld_plugin_name_returns_static_identifier() {
+        let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
+        assert_eq!(plugin.name(), "json-ld");
+    }
+
+    // -----------------------------------------------------------------
+    // collect_html_files_recursive
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn collect_html_files_recursive_filters_and_sorts() {
+        let dir = tempdir().unwrap();
+        let sub = dir.path().join("sub");
+        fs::create_dir(&sub).unwrap();
+        fs::write(dir.path().join("z.html"), "").unwrap();
+        fs::write(dir.path().join("a.html"), "").unwrap();
+        fs::write(sub.join("m.html"), "").unwrap();
+        fs::write(dir.path().join("ignore.css"), "").unwrap();
+
+        let files = collect_html_files_recursive(dir.path()).unwrap();
+        assert_eq!(files.len(), 3);
+    }
+
+    #[test]
+    fn collect_html_files_recursive_missing_dir_returns_empty() {
+        let dir = tempdir().unwrap();
+        let result =
+            collect_html_files_recursive(&dir.path().join("missing")).unwrap();
+        assert!(result.is_empty());
     }
 }

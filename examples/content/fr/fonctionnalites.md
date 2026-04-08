@@ -5,7 +5,7 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Mur carrelé vert et noir" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://cloudcdn.pro/stock/images/banners/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+banner: "https://cloudcdn.pro/stocks/images/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
 cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
@@ -16,7 +16,7 @@ description: "Tout ce dont vous avez besoin pour créer un site web époustoufla
 download: "" ## L'URL de téléchargement pour le produit.
 format-detection: "telephone=no" ## La détection de format du site.
 hreflang: "fr" ## La langue hreflang du site. (par défaut : en-gb)
-icon: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'icône du site au format SVG.
+icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## L'icône du site au format SVG.
 id: "https://kaishi.fr" ## L'ID du site.
 image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif de l'image du site.
 image_height: "630" ## La hauteur de l'image du site.
@@ -29,7 +29,7 @@ locale: "fr_FR" ## La locale du site.
 logo_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## Le texte alternatif du logo du site.
 logo_height: "33" ## La hauteur du logo du site.
 logo_width: "100" ## La largeur du logo du site.
-logo: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## Le logo du site au format SVG.
+logo: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## Le logo du site au format SVG.
 name: "Kaishi" ## Le nom du site. (max 64 caractères)
 permalink: "https://kaishi.fr/features" ## L'URL du site.
 rating: "general" ## L'évaluation du site.
@@ -57,7 +57,7 @@ news_title: "Fonctionnalités" ## Le titre de la page. (max 64 caractères)
 atom_link: https://kaishi.fr/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.33)"
+generator: "SSG (version 0.0.34)"
 item_description: Flux RSS pour le site
 item_guid: "https://kaishi.fr/fonctionnalites/index.html"
 item_link: "https://kaishi.fr/fonctionnalites/index.html"
@@ -86,7 +86,7 @@ msapplication-navbutton-color: "rgb(0,102,204)"
 twitter_card: "summary" ## Le type de carte Twitter.
 twitter_creator: "janedoe" ## Le créateur de la carte Twitter.
 twitter_description: "Tout ce dont vous avez besoin pour créer un site web époustouflant." ## La description de la carte Twitter.
-twitter_image: "https://cloudcdn.pro/kaishi/images/logos/kaishi.svg" ## L'image de la carte Twitter.
+twitter_image: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## L'image de la carte Twitter.
 twitter_image_alt: "Logo de Kaishi, un modèle de démarrage pour sites statiques" ## L'alternative texte de l'image de la carte Twitter.
 twitter_site: "janedoe" ## Le site Twitter associé.
 twitter_title: "Kaishi, un modèle de démarrage pour Static Site Generator" ## Le titre de la carte Twitter.

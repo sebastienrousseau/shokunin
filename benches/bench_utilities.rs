@@ -7,8 +7,9 @@
 //! This module contains performance benchmarks for critical operations
 //! in the static site generator, including file operations and content processing.
 
-use criterion::{black_box, Criterion};
+use criterion::Criterion;
 use staticdatagen::utilities::directory::directory;
+use std::hint::black_box;
 use tempfile::TempDir;
 
 /**

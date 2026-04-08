@@ -17,6 +17,7 @@ use std::path::Path;
 /// The returned schema follows the JSON Schema Draft-07 specification
 /// and includes type information, descriptions, and default values for
 /// every configuration field.
+#[must_use]
 pub fn generate_schema() -> Value {
     json!({
         "$schema": "https://json-schema.org/draft-07/schema#",
@@ -91,10 +92,18 @@ pub fn generate_schema() -> Value {
 /// # Errors
 ///
 /// Returns an [`io::Error`] if the file cannot be created or written.
+///
+/// # Panics
+///
+/// Cannot panic in practice: `generate_schema()` builds a hand-authored
+/// `serde_json::Value` tree containing only strings, booleans, arrays
+/// and objects — no `f32`/`f64` NaNs — which `to_string_pretty` cannot
+/// fail to serialize. The `expect` exists only to satisfy the type
+/// system without forcing callers to handle an unreachable `Err`.
 pub fn write_schema(path: &Path) -> io::Result<()> {
     let schema = generate_schema();
     let content = serde_json::to_string_pretty(&schema)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .expect("hand-authored Schema is always serializable");
     fs::write(path, content)
 }
 
