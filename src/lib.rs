@@ -3111,6 +3111,38 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
+    fn build_serve_address_rejects_invalid_utf8_path() {
+        // Covers lines 571-573: the to_str().ok_or_else closure that
+        // fires when the path contains invalid UTF-8 byte sequences.
+        // On Unix we can construct such a path via OsStr::from_bytes.
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        let invalid_bytes = b"/tmp/site_\xff_invalid";
+        let path = Path::new(OsStr::from_bytes(invalid_bytes));
+        let err = build_serve_address(path).unwrap_err();
+        assert!(format!("{err:?}").contains("invalid UTF-8"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn serve_site_shim_propagates_invalid_utf8_path_error() {
+        // Covers the body of `pub fn serve_site` (lines 605-607).
+        // We can't actually start a server, so we use the same
+        // invalid-UTF-8 path trick to make build_serve_address bail
+        // BEFORE HttpTransport::start is called. This exercises the
+        // function's body and the error-propagation path through
+        // serve_site_with.
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        let invalid = b"/tmp/\xfe\xfe_bad";
+        let path = Path::new(OsStr::from_bytes(invalid));
+        let err = serve_site(path).unwrap_err();
+        assert!(format!("{err:?}").contains("invalid UTF-8"));
+    }
+
+    #[test]
     fn serve_site_with_recording_transport_records_addr_and_root() {
         let transport = RecordingTransport::default();
         serve_site_with(Path::new("./public"), &transport).unwrap();
