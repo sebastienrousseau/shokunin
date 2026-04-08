@@ -107,7 +107,130 @@ impl SearchIndex {
     }
 }
 
+/// Localizable strings shown in the search widget UI.
+///
+/// All fields are plain text. They are HTML-escaped when substituted into
+/// attributes/text and JS-escaped when substituted into the inline script
+/// (for the "no results" message). Build a value with one of the bundled
+/// constructors ([`SearchLabels::english`], [`SearchLabels::french`],
+/// [`SearchLabels::for_locale`]) or construct your own for any locale.
+#[derive(Debug, Clone)]
+pub struct SearchLabels {
+    /// Visible text on the trigger button (e.g. "Search").
+    pub button_text: String,
+    /// `aria-label` of the trigger button.
+    pub button_aria: String,
+    /// `aria-label` of the modal dialog.
+    pub modal_aria: String,
+    /// Placeholder text inside the input field.
+    pub input_placeholder: String,
+    /// `aria-label` of the input field.
+    pub input_aria: String,
+    /// Footer hint text shown next to the `Esc` key.
+    pub footer_close: String,
+    /// Footer hint text shown next to the up/down arrow keys.
+    pub footer_navigate: String,
+    /// Footer hint text shown next to the `Enter` key.
+    pub footer_open: String,
+    /// Message shown when a query has no matches. The literal `{query}`
+    /// is replaced with the typed query at runtime.
+    pub no_results: String,
+}
+
+/// Compact per-locale strings used by [`SearchLabels::for_locale`].
+struct LocaleEntry {
+    button: &'static str,
+    placeholder: &'static str,
+    close: &'static str,
+    navigate: &'static str,
+    open: &'static str,
+    no_results: &'static str,
+}
+
+/// Translations for the locales bundled with the search widget.
+const LOCALE_TABLE: &[(&str, LocaleEntry)] = &[
+    ("en", LocaleEntry { button: "Search",     placeholder: "Search documentation...",                close: "close",     navigate: "navigate",   open: "open",     no_results: "No results for \u{201c}{query}\u{201d}" }),
+    ("fr", LocaleEntry { button: "Rechercher", placeholder: "Rechercher dans la documentation...",    close: "fermer",    navigate: "naviguer",   open: "ouvrir",   no_results: "Aucun r\u{e9}sultat pour \u{ab}\u{a0}{query}\u{a0}\u{bb}" }),
+    ("ar", LocaleEntry { button: "بحث",        placeholder: "ابحث في الوثائق...",                      close: "إغلاق",     navigate: "تنقل",        open: "فتح",      no_results: "لا توجد نتائج لـ «{query}»" }),
+    ("bn", LocaleEntry { button: "অনুসন্ধান",  placeholder: "ডকুমেন্টেশন অনুসন্ধান করুন...",          close: "বন্ধ",      navigate: "নেভিগেট",     open: "খুলুন",    no_results: "{query} এর জন্য কোনো ফলাফল নেই" }),
+    ("cs", LocaleEntry { button: "Hledat",     placeholder: "Prohledat dokumentaci...",               close: "zav\u{159}\u{ed}t", navigate: "proch\u{e1}zet", open: "otev\u{159}\u{ed}t", no_results: "\u{17d}\u{e1}dn\u{e9} v\u{fd}sledky pro \u{201e}{query}\u{201c}" }),
+    ("de", LocaleEntry { button: "Suchen",     placeholder: "Dokumentation durchsuchen...",           close: "schlie\u{df}en", navigate: "navigieren", open: "\u{f6}ffnen", no_results: "Keine Ergebnisse f\u{fc}r \u{201e}{query}\u{201c}" }),
+    ("es", LocaleEntry { button: "Buscar",     placeholder: "Buscar en la documentaci\u{f3}n...",    close: "cerrar",    navigate: "navegar",    open: "abrir",    no_results: "Sin resultados para \u{ab}{query}\u{bb}" }),
+    ("ha", LocaleEntry { button: "Bincike",    placeholder: "Bincika takardun...",                    close: "rufe",      navigate: "kewaya",     open: "bu\u{6b}e", no_results: "Babu sakamako don \u{201c}{query}\u{201d}" }),
+    ("he", LocaleEntry { button: "חיפוש",      placeholder: "חפש בתיעוד...",                          close: "סגור",       navigate: "נווט",        open: "פתח",      no_results: "אין תוצאות עבור «{query}»" }),
+    ("hi", LocaleEntry { button: "खोजें",       placeholder: "दस्तावेज़ खोजें...",                      close: "बंद करें",   navigate: "नेविगेट",     open: "खोलें",    no_results: "{query} के लिए कोई परिणाम नहीं" }),
+    ("id", LocaleEntry { button: "Cari",       placeholder: "Cari dokumentasi...",                    close: "tutup",     navigate: "navigasi",   open: "buka",     no_results: "Tidak ada hasil untuk \u{201c}{query}\u{201d}" }),
+    ("it", LocaleEntry { button: "Cerca",      placeholder: "Cerca nella documentazione...",          close: "chiudi",    navigate: "naviga",     open: "apri",     no_results: "Nessun risultato per \u{ab}{query}\u{bb}" }),
+    ("ja", LocaleEntry { button: "検索",        placeholder: "ドキュメントを検索...",                     close: "閉じる",    navigate: "移動",        open: "開く",     no_results: "「{query}」の結果はありません" }),
+    ("ko", LocaleEntry { button: "검색",        placeholder: "문서 검색...",                              close: "닫기",       navigate: "탐색",        open: "열기",     no_results: "«{query}»에 대한 결과가 없습니다" }),
+    ("nl", LocaleEntry { button: "Zoeken",     placeholder: "Documentatie doorzoeken...",             close: "sluiten",   navigate: "navigeren",  open: "openen",   no_results: "Geen resultaten voor \u{201c}{query}\u{201d}" }),
+    ("pl", LocaleEntry { button: "Szukaj",     placeholder: "Przeszukaj dokumentacj\u{119}...",      close: "zamknij",   navigate: "nawiguj",    open: "otw\u{f3}rz", no_results: "Brak wynik\u{f3}w dla \u{201e}{query}\u{201d}" }),
+    ("pt", LocaleEntry { button: "Pesquisar",  placeholder: "Pesquisar na documenta\u{e7}\u{e3}o...", close: "fechar",  navigate: "navegar",    open: "abrir",    no_results: "Sem resultados para \u{ab}{query}\u{bb}" }),
+    ("ro", LocaleEntry { button: "Caut\u{103}", placeholder: "Caut\u{103} \u{ee}n documenta\u{21b}ie...", close: "\u{ee}nchide", navigate: "navigheaz\u{103}", open: "deschide", no_results: "Niciun rezultat pentru \u{201e}{query}\u{201d}" }),
+    ("ru", LocaleEntry { button: "Поиск",      placeholder: "Поиск по документации...",               close: "закрыть",   navigate: "навигация",  open: "открыть",  no_results: "Нет результатов для «{query}»" }),
+    ("sv", LocaleEntry { button: "S\u{f6}k",  placeholder: "S\u{f6}k i dokumentationen...",         close: "st\u{e4}ng", navigate: "navigera", open: "\u{f6}ppna", no_results: "Inga resultat f\u{f6}r \u{201d}{query}\u{201d}" }),
+    ("th", LocaleEntry { button: "ค้นหา",       placeholder: "ค้นหาเอกสาร...",                          close: "ปิด",        navigate: "นำทาง",       open: "เปิด",      no_results: "ไม่พบผลลัพธ์สำหรับ \u{201c}{query}\u{201d}" }),
+    ("tl", LocaleEntry { button: "Maghanap",   placeholder: "Maghanap sa dokumentasyon...",           close: "isara",     navigate: "mag-navigate", open: "buksan", no_results: "Walang resulta para sa \u{201c}{query}\u{201d}" }),
+    ("tr", LocaleEntry { button: "Ara",        placeholder: "Belgelerde ara...",                      close: "kapat",     navigate: "gezin",      open: "a\u{e7}", no_results: "\u{201c}{query}\u{201d} i\u{e7}in sonu\u{e7} yok" }),
+    ("uk", LocaleEntry { button: "Пошук",      placeholder: "Пошук у документації...",                close: "закрити",   navigate: "навігація",  open: "відкрити", no_results: "Немає результатів для «{query}»" }),
+    ("vi", LocaleEntry { button: "T\u{ec}m ki\u{1ebf}m", placeholder: "T\u{ec}m trong t\u{e0}i li\u{1ec7}u...", close: "\u{111}\u{f3}ng", navigate: "\u{111}i\u{1ec1}u h\u{1b0}\u{1edb}ng", open: "m\u{1edf}", no_results: "Kh\u{f4}ng c\u{f3} k\u{1ebf}t qu\u{1ea3} cho \u{201c}{query}\u{201d}" }),
+    ("yo", LocaleEntry { button: "Wáàwáà",     placeholder: "Ṣàwárí ìwé...",                           close: "pa",        navigate: "lọ kiri",    open: "ṣí",       no_results: "Kò sí àbájáde fún \u{201c}{query}\u{201d}" }),
+    ("zh", LocaleEntry { button: "搜索",        placeholder: "搜索文档...",                              close: "关闭",       navigate: "导航",        open: "打开",     no_results: "「{query}」没有匹配结果" }),
+    ("zh-tw", LocaleEntry { button: "搜尋",     placeholder: "搜尋文件...",                              close: "關閉",       navigate: "瀏覽",        open: "開啟",     no_results: "「{query}」找不到結果" }),
+];
+
+impl SearchLabels {
+    /// English (default) labels.
+    pub fn english() -> Self {
+        Self::for_locale("en")
+    }
+
+    /// French labels.
+    pub fn french() -> Self {
+        Self::for_locale("fr")
+    }
+
+    /// Build labels for a known locale code (ISO 639-1, plus `zh-tw`).
+    ///
+    /// Lookup is case-insensitive. Falls back to English if the code is not
+    /// in the bundled table.
+    pub fn for_locale(code: &str) -> Self {
+        let key = code.to_ascii_lowercase();
+        let entry = LOCALE_TABLE
+            .iter()
+            .find(|(c, _)| *c == key)
+            .map(|(_, e)| e)
+            .unwrap_or_else(|| {
+                &LOCALE_TABLE
+                    .iter()
+                    .find(|(c, _)| *c == "en")
+                    .expect("en entry must exist")
+                    .1
+            });
+        Self {
+            button_text: entry.button.into(),
+            button_aria: entry.button.into(),
+            modal_aria: entry.button.into(),
+            input_placeholder: entry.placeholder.into(),
+            input_aria: entry.button.into(),
+            footer_close: entry.close.into(),
+            footer_navigate: entry.navigate.into(),
+            footer_open: entry.open.into(),
+            no_results: entry.no_results.into(),
+        }
+    }
+}
+
+impl Default for SearchLabels {
+    fn default() -> Self {
+        Self::english()
+    }
+}
+
 /// Plugin that generates a search index and injects client-side search UI.
+///
+/// The unit form uses [`SearchLabels::english`] for the modal copy. To render
+/// the widget in another language, construct a [`LocalizedSearchPlugin`].
 ///
 /// # Example
 ///
@@ -127,29 +250,68 @@ impl Plugin for SearchPlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
-
-        let index = SearchIndex::build(&ctx.site_dir)?;
-        if index.is_empty() {
-            return Ok(());
-        }
-
-        index.write(&ctx.site_dir)?;
-
-        // Inject search UI into all HTML files
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        for path in &html_files {
-            inject_search_ui(path)?;
-        }
-
-        println!(
-            "[search] Indexed {} pages, search-index.json written",
-            index.len()
-        );
-        Ok(())
+        run_search(ctx, &SearchLabels::english())
     }
+}
+
+/// Variant of [`SearchPlugin`] that injects the widget with caller-supplied
+/// localized [`SearchLabels`].
+///
+/// # Example
+///
+/// ```rust
+/// use ssg::plugin::PluginManager;
+/// use ssg::search::{LocalizedSearchPlugin, SearchLabels};
+///
+/// let mut pm = PluginManager::new();
+/// pm.register(LocalizedSearchPlugin::new(SearchLabels::french()));
+/// ```
+#[derive(Debug, Clone)]
+pub struct LocalizedSearchPlugin {
+    labels: SearchLabels,
+}
+
+impl LocalizedSearchPlugin {
+    /// Create a new localized search plugin with the given labels.
+    pub fn new(labels: SearchLabels) -> Self {
+        Self { labels }
+    }
+}
+
+impl Plugin for LocalizedSearchPlugin {
+    fn name(&self) -> &'static str {
+        "search"
+    }
+
+    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+        run_search(ctx, &self.labels)
+    }
+}
+
+/// Shared body for [`SearchPlugin`] and [`LocalizedSearchPlugin`].
+fn run_search(ctx: &PluginContext, labels: &SearchLabels) -> Result<()> {
+    if !ctx.site_dir.exists() {
+        return Ok(());
+    }
+
+    let index = SearchIndex::build(&ctx.site_dir)?;
+    if index.is_empty() {
+        return Ok(());
+    }
+
+    index.write(&ctx.site_dir)?;
+
+    let html_files = collect_html_files(&ctx.site_dir)?;
+    let script = build_widget_script(labels);
+    for path in &html_files {
+        inject_search_ui(path, &script)?;
+    }
+
+    println!(
+        "[search] Indexed {} pages, search-index.json written",
+        index.len()
+    );
+    Ok(())
 }
 
 // =====================================================================
@@ -292,15 +454,13 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 /// 3. Performs case-insensitive substring matching on title + content
 /// 4. Displays results with highlighted snippets
 /// 5. Activates on `Ctrl+K` / `Cmd+K`
-fn inject_search_ui(path: &Path) -> Result<()> {
+fn inject_search_ui(path: &Path, script: &str) -> Result<()> {
     let html = fs::read_to_string(path)
         .with_context(|| format!("cannot read {}", path.display()))?;
 
     if html.contains("ssg-search-widget") {
         return Ok(()); // Already injected
     }
-
-    let script = SEARCH_WIDGET_SCRIPT;
 
     let injected = if let Some(pos) = html.rfind("</body>") {
         format!("{}{}{}", &html[..pos], script, &html[pos..])
@@ -311,6 +471,64 @@ fn inject_search_ui(path: &Path) -> Result<()> {
     fs::write(path, injected)
         .with_context(|| format!("cannot write {}", path.display()))?;
     Ok(())
+}
+
+/// Render [`SEARCH_WIDGET_SCRIPT`] (a template) with the given labels.
+///
+/// HTML attribute / text values are HTML-escaped; the `no_results` string is
+/// also JS-escaped because it ends up inside a single-quoted JS string literal.
+fn build_widget_script(labels: &SearchLabels) -> String {
+    let no_results_with_expr = html_escape(&labels.no_results)
+        .replace("{query}", "&ldquo;\'+esc(q)+\'&rdquo;");
+
+    SEARCH_WIDGET_SCRIPT
+        .replace("{{SSG_BTN_ARIA}}", &html_escape(&labels.button_aria))
+        .replace("{{SSG_BTN_TEXT}}", &html_escape(&labels.button_text))
+        .replace("{{SSG_MODAL_ARIA}}", &html_escape(&labels.modal_aria))
+        .replace(
+            "{{SSG_INPUT_PLACEHOLDER}}",
+            &html_escape(&labels.input_placeholder),
+        )
+        .replace("{{SSG_INPUT_ARIA}}", &html_escape(&labels.input_aria))
+        .replace("{{SSG_FOOTER_CLOSE}}", &html_escape(&labels.footer_close))
+        .replace(
+            "{{SSG_FOOTER_NAVIGATE}}",
+            &html_escape(&labels.footer_navigate),
+        )
+        .replace("{{SSG_FOOTER_OPEN}}", &html_escape(&labels.footer_open))
+        .replace("{{SSG_NO_RESULTS}}", &js_escape(&no_results_with_expr))
+}
+
+/// Minimal HTML escaper covering the characters that matter inside attribute
+/// values and text nodes.
+fn html_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+/// Escape a string so it is safe to embed inside a single-quoted JS literal.
+fn js_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '\'' => out.push_str("\\\'"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            _ => out.push(ch),
+        }
+    }
+    out
 }
 
 /// The self-contained search widget (HTML + CSS + JS).
@@ -374,20 +592,20 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 [data-theme="dark"] .ssg-search-footer kbd{background:#374151;border-color:#4b5563}
 </style>
 <!-- Search trigger button -->
-<button id="ssg-search-btn" type="button" aria-label="Search">
+<button id="ssg-search-btn" type="button" aria-label="{{SSG_BTN_ARIA}}">
 <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-<span>Search</span>
+<span>{{SSG_BTN_TEXT}}</span>
 <kbd>K</kbd>
 </button>
 <!-- Search modal -->
-<div id="ssg-search-overlay" role="dialog" aria-label="Search">
+<div id="ssg-search-overlay" role="dialog" aria-label="{{SSG_MODAL_ARIA}}">
 <div id="ssg-search-box">
 <div id="ssg-search-header">
 <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-<input id="ssg-search-input" type="search" placeholder="Search documentation..." autocomplete="off" aria-label="Search query"/>
+<input id="ssg-search-input" type="search" placeholder="{{SSG_INPUT_PLACEHOLDER}}" autocomplete="off" aria-label="{{SSG_INPUT_ARIA}}"/>
 </div>
 <div id="ssg-search-results"></div>
-<div class="ssg-search-footer"><span><kbd>Esc</kbd> close</span><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span><span><kbd>Enter</kbd> open</span></div>
+<div class="ssg-search-footer"><span><kbd>Esc</kbd> {{SSG_FOOTER_CLOSE}}</span><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> {{SSG_FOOTER_NAVIGATE}}</span><span><kbd>Enter</kbd> {{SSG_FOOTER_OPEN}}</span></div>
 </div>
 </div>
 <script>
@@ -405,7 +623,7 @@ function snippet(content,q,len){len=len||150;if(!q)return esc(content.substring(
 function search(q){if(!idx||!q){results.innerHTML='';return}q=q.trim();if(!q){results.innerHTML='';return}var ql=q.toLowerCase(),hits=[];
 for(var i=0;i<idx.length&&hits.length<20;i++){var e=idx[i],s=0;if(e.title.toLowerCase().indexOf(ql)>=0)s+=10;if(e.content.toLowerCase().indexOf(ql)>=0)s+=5;for(var h=0;h<e.headings.length;h++){if(e.headings[h].toLowerCase().indexOf(ql)>=0){s+=3;break}}if(s>0)hits.push({entry:e,score:s})}
 hits.sort(function(a,b){return b.score-a.score});
-if(!hits.length){results.innerHTML='<div class="ssg-no-results">No results for &ldquo;'+esc(q)+'&rdquo;</div>';return}
+if(!hits.length){results.innerHTML='<div class="ssg-no-results">{{SSG_NO_RESULTS}}</div>';return}
 var html='';for(var j=0;j<hits.length;j++){var e=hits[j].entry;html+='<a class="ssg-result" href="'+esc(e.url)+'">'+'<div class="ssg-result-title">'+highlight(e.title,q)+'</div>'+'<div class="ssg-result-snippet">'+snippet(e.content,q)+'</div></a>'}
 results.innerHTML=html;active=-1}
 function nav(dir){var items=results.querySelectorAll('.ssg-result');if(!items.length)return;if(active>=0&&items[active])items[active].classList.remove('active');active+=dir;if(active<0)active=items.length-1;if(active>=items.length)active=0;items[active].classList.add('active');items[active].scrollIntoView({block:'nearest'})}
@@ -597,7 +815,8 @@ mod tests {
         let path = tmp.path().join("page.html");
         fs::write(&path, "<html><body><p>Hello</p></body></html>")?;
 
-        inject_search_ui(&path)?;
+        let script = build_widget_script(&SearchLabels::english());
+        inject_search_ui(&path, &script)?;
 
         let result = fs::read_to_string(&path)?;
         assert!(result.contains("ssg-search-widget"));
@@ -612,10 +831,11 @@ mod tests {
         let path = tmp.path().join("page.html");
         fs::write(&path, "<html><body><p>Hi</p></body></html>")?;
 
-        inject_search_ui(&path)?;
+        let script = build_widget_script(&SearchLabels::english());
+        inject_search_ui(&path, &script)?;
         let first = fs::read_to_string(&path)?;
 
-        inject_search_ui(&path)?;
+        inject_search_ui(&path, &script)?;
         let second = fs::read_to_string(&path)?;
 
         assert_eq!(first, second); // No double injection
@@ -902,7 +1122,8 @@ mod tests {
         fs::write(&path, "<html><p>No body tag here</p></html>")?;
 
         // Act
-        inject_search_ui(&path)?;
+        let script = build_widget_script(&SearchLabels::english());
+        inject_search_ui(&path, &script)?;
 
         // Assert
         let result = fs::read_to_string(&path)?;

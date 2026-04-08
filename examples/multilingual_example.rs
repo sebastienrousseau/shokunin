@@ -10,7 +10,7 @@
 use anyhow::Result;
 use http_handle::Server;
 use ssg::plugin::{PluginContext, PluginManager};
-use ssg::search::SearchPlugin;
+use ssg::search::{LocalizedSearchPlugin, SearchLabels};
 use ssg::seo::SeoPlugin;
 use staticdatagen::compiler::service::compile;
 use std::fs;
@@ -83,7 +83,9 @@ fn main() -> Result<()> {
         // Run plugins (SEO + Search) for this language
         let mut plugins = PluginManager::new();
         plugins.register(SeoPlugin);
-        plugins.register(SearchPlugin);
+        plugins.register(LocalizedSearchPlugin::new(
+            SearchLabels::for_locale(lang),
+        ));
         let ctx = PluginContext::new(
             &content_dir,
             &build_dir,
