@@ -3189,6 +3189,100 @@ mod tests {
     }
 
     #[test]
+    fn execute_build_pipeline_succeeds_against_real_example_fixtures(
+    ) -> Result<()> {
+        // Uses the in-tree examples/content/en + examples/templates/en
+        // fixtures (which are known to compile successfully — same
+        // fixtures that power `cargo run --example plugins`). This
+        // is the only way to cover execute_build_pipeline's success
+        // continuation at lines 409-419 (after compile_site returns
+        // Ok). Skipped if the fixtures aren't present.
+        let cwd = env::current_dir()?;
+        let content = cwd.join("examples/content/en");
+        let template = cwd.join("examples/templates/en");
+        if !content.exists() || !template.exists() {
+            eprintln!(
+                "skipping: examples/content/en not present in {}",
+                cwd.display()
+            );
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let mut config = SsgConfig::default();
+        config.content_dir = content.clone();
+        config.template_dir = template.clone();
+        config.output_dir = temp.path().join("public");
+        config.site_name = "pipeline-success-test".to_string();
+        config.base_url = "http://localhost".to_string();
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: None,
+        };
+
+        let (plugins, ctx, build_dir, site_dir) =
+            build_pipeline(&config, &opts);
+
+        // Success path: every line in execute_build_pipeline is hit.
+        execute_build_pipeline(
+            &plugins,
+            &ctx,
+            &build_dir,
+            &config.content_dir,
+            &site_dir,
+            &config.template_dir,
+            opts.quiet,
+        )?;
+
+        assert!(
+            site_dir.exists() || build_dir.exists(),
+            "expected build/site dir to exist after successful pipeline"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn execute_build_pipeline_verbose_success_hits_println_arm() -> Result<()> {
+        // Same fixture but with quiet=false, to cover lines 412-418
+        // (the `if !quiet { println!(...) }` arm).
+        let cwd = env::current_dir()?;
+        let content = cwd.join("examples/content/en");
+        let template = cwd.join("examples/templates/en");
+        if !content.exists() || !template.exists() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let mut config = SsgConfig::default();
+        config.content_dir = content;
+        config.template_dir = template;
+        config.output_dir = temp.path().join("public");
+        config.site_name = "verbose-success".to_string();
+        config.base_url = "http://localhost".to_string();
+
+        let opts = RunOptions {
+            quiet: false,
+            include_drafts: false,
+            deploy_target: None,
+        };
+
+        let (plugins, ctx, build_dir, site_dir) =
+            build_pipeline(&config, &opts);
+        execute_build_pipeline(
+            &plugins,
+            &ctx,
+            &build_dir,
+            &config.content_dir,
+            &site_dir,
+            &config.template_dir,
+            opts.quiet,
+        )?;
+        Ok(())
+    }
+
+    #[test]
     fn execute_build_pipeline_verbose_propagates_compile_errors() -> Result<()>
     {
         // Same as above with quiet=false to cover the `if !quiet`

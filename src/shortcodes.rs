@@ -112,23 +112,42 @@ fn expand_block_shortcode(input: &str, name: &str) -> String {
 }
 
 /// Expands inline shortcodes like `{{< youtube id="..." >}}`.
+///
+/// Safe for non-ASCII input: byte-level slicing is guarded by
+/// `is_char_boundary` and fallthrough characters are iterated via
+/// `char_indices()` so multi-byte codepoints (emoji, `©`, etc.) are
+/// preserved verbatim rather than truncated mid-byte.
 fn expand_inline_shortcodes(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
     let mut pos = 0;
-    let bytes = input.as_bytes();
 
     while pos < input.len() {
-        if pos + 3 < input.len() && &input[pos..pos + 3] == "{{<" {
+        // The opening marker "{{<" is pure ASCII so byte-level
+        // comparison is safe *as long as pos lands on a char
+        // boundary*. Guard with is_char_boundary to be explicit.
+        if input.is_char_boundary(pos)
+            && pos + 3 <= input.len()
+            && input.as_bytes()[pos] == b'{'
+            && input.as_bytes()[pos + 1] == b'{'
+            && input.as_bytes()[pos + 2] == b'<'
+        {
             if let Some(end) = input[pos..].find(">}}") {
-                let tag = &input[pos + 3..pos + end].trim();
+                let tag = input[pos + 3..pos + end].trim();
                 let html = render_inline_shortcode(tag);
                 result.push_str(&html);
                 pos += end + 3;
                 continue;
             }
         }
-        result.push(bytes[pos] as char);
-        pos += 1;
+        // Fallthrough: push the next full codepoint, not just one
+        // byte — this handles multi-byte UTF-8 characters cleanly.
+        let remaining = &input[pos..];
+        if let Some(c) = remaining.chars().next() {
+            result.push(c);
+            pos += c.len_utf8();
+        } else {
+            break;
+        }
     }
 
     result
