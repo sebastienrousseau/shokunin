@@ -144,7 +144,8 @@ pub fn expand_gfm(input: &str) -> String {
             if !in_fence {
                 in_fence = true;
                 fence_marker = Some(marker);
-            } else if fence_marker.is_some_and(|m| line.trim_start().starts_with(m))
+            } else if fence_marker
+                .is_some_and(|m| line.trim_start().starts_with(m))
             {
                 in_fence = false;
                 fence_marker = None;
@@ -166,10 +167,7 @@ pub fn expand_gfm(input: &str) -> String {
         if i + 1 < lines.len() && is_table_header(line, lines[i + 1]) {
             let end = find_table_end(&lines, i);
             let block = lines[i..end].join("\n");
-            out.push_str(&render_with_options(
-                &block,
-                Options::ENABLE_TABLES,
-            ));
+            out.push_str(&render_with_options(&block, Options::ENABLE_TABLES));
             out.push('\n');
             i = end;
             continue;
@@ -217,9 +215,7 @@ fn needs_expansion(body: &str) -> bool {
 /// Detects whether `body` contains any GFM table block.
 fn has_table(body: &str) -> bool {
     let lines: Vec<&str> = body.lines().collect();
-    lines
-        .windows(2)
-        .any(|w| is_table_header(w[0], w[1]))
+    lines.windows(2).any(|w| is_table_header(w[0], w[1]))
 }
 
 /// Returns the fence marker (` ``` ` or `~~~`) if `line` opens or
@@ -251,8 +247,7 @@ fn is_separator_row(line: &str) -> bool {
     if !t.contains('-') || !t.contains('|') {
         return false;
     }
-    t.chars()
-        .all(|c| matches!(c, '|' | '-' | ':' | ' ' | '\t'))
+    t.chars().all(|c| matches!(c, '|' | '-' | ':' | ' ' | '\t'))
 }
 
 /// Returns the index *just past* the last contiguous table line.
@@ -495,8 +490,7 @@ mod tests {
 
     #[test]
     fn expand_gfm_preserves_frontmatter_unchanged() {
-        let input =
-            "---\ntitle: Test\n---\n~~strike~~ this\n";
+        let input = "---\ntitle: Test\n---\n~~strike~~ this\n";
         let out = expand_gfm(input);
         assert!(out.starts_with("---\ntitle: Test\n---\n"));
         assert!(out.contains("<del>strike</del>"));
@@ -528,18 +522,11 @@ mod tests {
             "---\ntitle: Test\n---\n~~old~~ new\n",
         )
         .unwrap();
-        fs::write(
-            content.join("untouched.md"),
-            "# Plain\n\nNothing fancy.\n",
-        )
-        .unwrap();
+        fs::write(content.join("untouched.md"), "# Plain\n\nNothing fancy.\n")
+            .unwrap();
 
-        let ctx = PluginContext::new(
-            &content,
-            dir.path(),
-            dir.path(),
-            dir.path(),
-        );
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
         MarkdownExtPlugin.before_compile(&ctx).unwrap();
 
         let post = fs::read_to_string(content.join("post.md")).unwrap();

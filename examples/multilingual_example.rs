@@ -83,9 +83,9 @@ fn main() -> Result<()> {
         // Run plugins (SEO + Search) for this language
         let mut plugins = PluginManager::new();
         plugins.register(SeoPlugin);
-        plugins.register(LocalizedSearchPlugin::new(
-            SearchLabels::for_locale(lang),
-        ));
+        plugins.register(LocalizedSearchPlugin::new(SearchLabels::for_locale(
+            lang,
+        )));
         let ctx = PluginContext::new(
             &content_dir,
             &build_dir,
