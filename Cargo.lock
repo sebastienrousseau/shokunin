@@ -4816,6 +4816,7 @@ dependencies = [
  "log",
  "once_cell",
  "openssl",
+ "pulldown-cmark",
  "rayon",
  "serde",
  "serde_json",

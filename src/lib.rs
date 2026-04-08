@@ -75,6 +75,8 @@ pub mod highlight;
 pub mod image_plugin;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
+pub mod markdown_ext;
 /// Pagination for listing pages.
 pub mod pagination;
 /// Lifecycle hook plugin system.
