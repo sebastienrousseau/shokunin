@@ -10,6 +10,15 @@ build: ## Build the project.
 	@echo "Building all project components..."
 	@cargo build --all
 
+# Remove build artifacts and stray logs from the working tree.
+.PHONY: clean
+clean: ## Remove build artifacts and stray logs.
+	@echo "Cleaning build artifacts..."
+	@cargo clean
+	@rm -rf examples/build examples/public public/ build/
+	@rm -f site.log site_generation.log
+	@echo "Done."
+
 # Lint the project with stringent rules using Clippy, install Clippy if not present.
 .PHONY: lint
 lint: ensure-clippy ## Lint the project with Clippy.

@@ -427,10 +427,14 @@ pub(crate) fn execute_build_pipeline(
 /// and starts a local dev server. This function blocks indefinitely
 /// while the server is running.
 pub async fn run() -> Result<()> {
+    // Parse CLI arguments first so that `--help` and `--version`
+    // short-circuit *before* the logger emits its banner. clap exits
+    // the process for those flags, so we never reach the lines below.
+    let matches = Cli::build().get_matches();
+
     initialize_logging()?;
     info!("Starting site generation process");
 
-    let matches = Cli::build().get_matches();
     let config = SsgConfig::from_matches(&matches)?;
     let opts = RunOptions::from_matches(&matches);
 
@@ -537,9 +541,9 @@ fn register_default_plugins(
 /// Pluggable transport that drives the dev server.
 ///
 /// Production code uses [`HttpTransport`] (a thin wrapper around
-/// `http_handle::Server`); tests use [`NoopTransport`] which records
-/// the call without actually binding a port. The trait exists so
-/// every line of `serve_site` is unit-testable.
+/// `http_handle::Server`); tests use a test-only `NoopTransport` which
+/// records the call without actually binding a port. The trait exists
+/// so every line of `serve_site` is unit-testable.
 pub trait ServeTransport {
     /// Start serving `root` on `addr`. Implementations may block.
     ///

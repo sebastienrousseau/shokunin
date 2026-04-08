@@ -14,7 +14,7 @@ description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
 """
 homepage = "https://shokunin.one"       # The project's homepage
-documentation = "https://shokunin.one/documentation/index.html" # Doc URL
+documentation = "https://docs.rs/ssg" # Doc URL
 repository = "https://github.com/sebastienrousseau/shokunin"
 readme = "README.md"                    # The README file
 build = "build.rs"                      # The build script

@@ -30,25 +30,45 @@ make deny        # Check dependencies for security/license issues
 
 ## Signed commits
 
-All commits must be signed. Configure Git to sign commits with either GPG or SSH:
+All **commits and tags** must be signed. We accept SSH (recommended) or GPG signatures. Unsigned PRs are blocked by branch protection on `main`.
+
+### One-time setup
 
 ```bash
-# SSH signing (recommended)
+# SSH signing — works on macOS, Linux, WSL and Windows (Git for Windows)
 git config --global gpg.format ssh
 git config --global user.signingkey ~/.ssh/id_ed25519.pub
 git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+```
 
-# Or GPG signing
+Then register the same key on GitHub: **Settings → SSH and GPG keys → New SSH key → Key type: Signing Key**.
+
+Prefer GPG?
+
+```bash
 git config --global commit.gpgsign true
+git config --global tag.gpgsign true
 git config --global user.signingkey YOUR_GPG_KEY_ID
 ```
 
-Verify your setup:
+### Per-repo defaults
 
 ```bash
-echo "test" | git commit --allow-empty -S -m "test signing"
-git log --show-signature -1
+cd shokunin
+git config commit.gpgsign true
+git config tag.gpgsign true
 ```
+
+### Verify
+
+```bash
+git commit -S --allow-empty -m "chore: signature smoke test"
+git log --show-signature -1
+# Expect: Good "git" signature for <your email>
+```
+
+> **Tip:** with `commit.gpgsign = true` set globally you never need to remember the `-S` flag.
 
 ## Architecture
 

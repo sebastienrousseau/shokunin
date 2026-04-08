@@ -20,6 +20,18 @@
 
 ## Install
 
+### Prerequisites
+
+| Platform | Setup |
+| :--- | :--- |
+| **macOS** | `brew install rustup-init && rustup-init -y`, or follow [rustup.rs](https://rustup.rs/) |
+| **Linux / WSL** | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
+| **Windows (native)** | Download [`rustup-init.exe`](https://win.rustup.rs/). Native build is supported; the `make` targets below require Git Bash or WSL |
+
+SSG requires **Rust 1.74.0 or later** (pinned in `rust-toolchain.toml`). Verify with `rustc --version`.
+
+### Crate
+
 ```bash
 cargo install ssg
 ```
@@ -30,8 +42,6 @@ Or add as a library dependency:
 [dependencies]
 ssg = "0.0.35"
 ```
-
-You need [Rust](https://rustup.rs/) 1.74.0 or later. Works on macOS, Linux, and Windows.
 
 ---
 
@@ -56,7 +66,7 @@ graph TD
     C --> D[Compile: staticdatagen]
     D --> E[Plugin Pipeline]
     E --> F[Minify / Optimize / Deploy]
-    D --> G[Dev Server: Warp]
+    D --> G[Dev Server: http_handle / Warp]
     B --> H[File Watcher]
     H -->|changed files| C
 ```
@@ -77,7 +87,7 @@ graph TD
 | **Caching** | Content fingerprinting via `.ssg-cache.json` for fast rebuilds |
 | **Config** | TOML config files with JSON Schema for IDE autocomplete (`ssg.schema.json`) |
 | **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits |
-| **CI** | Multi-platform test matrix (macOS, Linux, Windows), cargo audit, cargo deny, SBOM generation |
+| **CI** | Shared `rust-ci.yml` pipeline on `stable` toolchain, plus `cargo audit`, `cargo deny`, dependency review and SBOM generation |
 
 ---
 
@@ -97,15 +107,19 @@ graph TD
 Usage: ssg [OPTIONS]
 
 Options:
-  -f, --config <FILE>   Configuration file path
-  -n, --new <NAME>      Create new project
-  -c, --content <DIR>   Content directory
-  -o, --output <DIR>    Output directory
-  -t, --template <DIR>  Template directory
-  -s, --serve <DIR>     Development server directory
-  -w, --watch           Watch for changes
-  -h, --help            Print help
-  -V, --version         Print version
+  -f, --config <FILE>    Configuration file path
+  -n, --new <NAME>       Create new project
+  -c, --content <DIR>    Content directory
+  -o, --output <DIR>     Output directory
+  -t, --template <DIR>   Template directory
+  -s, --serve <DIR>      Development server directory
+  -w, --watch            Watch for changes and rebuild
+      --drafts           Include draft pages in the build
+      --deploy <TARGET>  Generate deployment config (netlify, vercel, cloudflare, github)
+  -q, --quiet            Suppress non-error output
+      --verbose          Show detailed build information
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 
 When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
@@ -117,36 +131,50 @@ When no flags are provided, sensible defaults are used (`content/`, `public/`, `
 ## First 5 Minutes
 
 ```bash
-# 1. Install
-cargo install ssg
+# 1 — Install
+cargo install ssg                       # macOS / Linux / Windows
 
-# 2. Create a site
+# 2 — Scaffold + build a brand-new site
 ssg -n mysite -c content -o build -t templates
 
-# 3. Or run the examples
+# 3 — Or build from source and run the bundled examples
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
-cargo run --example basic
-cargo run --example quickstart
-cargo run --example multilingual
+cargo build                             # ~2 min cold, < 10 s incremental
+cargo test --lib                        # 741 tests, ~8 s on M-series Mac
+cargo run --example basic               # minimal site
+cargo run --example quickstart          # opinionated defaults
+cargo run --example plugins             # plugin pipeline walk-through
+cargo run --example multilingual        # 28 locales + localized search
 ```
+
+> On **WSL/Linux** the same commands work verbatim. On **native Windows**, replace `make` targets with their `cargo` equivalents (see [*Development*](#development)).
 
 ---
 
 ## Library Usage
 
 ```rust,no_run
+// The simplest path: delegate to ssg's own pipeline.
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    ssg::run().await
+}
+```
+
+If you only want the compile primitive (no plugin pipeline, no dev server), depend on [`staticdatagen`](https://crates.io/crates/staticdatagen) directly:
+
+```rust,no_run
 use staticdatagen::compiler::service::compile;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
-    let build_dir = Path::new("build");
-    let content_dir = Path::new("content");
-    let site_dir = Path::new("public");
-    let template_dir = Path::new("templates");
-
-    compile(build_dir, content_dir, site_dir, template_dir)?;
-    println!("Site generated successfully!");
+    compile(
+        Path::new("build"),
+        Path::new("content"),
+        Path::new("public"),
+        Path::new("templates"),
+    )?;
     Ok(())
 }
 ```
@@ -218,9 +246,9 @@ if changed.is_empty() {
 | :--- | :--- |
 | **Release binary** | ~5 MB (stripped, LTO) |
 | **Unsafe code** | 0 blocks — `#![forbid(unsafe_code)]` enforced |
-| **Test suite** | 342 tests in < 2 seconds |
-| **Dependencies** | 19 direct, all audited |
-| **Coverage** | 98% library line coverage |
+| **Test suite** | **741 lib tests** — verified `cargo test --lib` on `feat/v0.0.35`, runs in ~8 s on M-series Mac |
+| **Dependencies** | Audited via `cargo audit` and `cargo deny check` (run `make deny` to reproduce) |
+| **Coverage** | ~98 % line coverage, measured with `cargo llvm-cov` |
 
 ---
 
@@ -267,9 +295,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 <details>
 <summary><b>Test coverage</b></summary>
 
-- **342 total tests** (197 unit + 23 doc-tests + 36 integration + 86 `serde_yml`)
-- **98% library line coverage** measured with cargo-llvm-cov
-- **Multi-platform CI** — macOS, Ubuntu, Windows (stable + nightly)
+- **741 lib tests** plus integration + fault-injection suites
+- **~98 % library line coverage** measured with cargo-llvm-cov
+- CI runs on the shared `rust-ci.yml` pipeline (`stable` toolchain)
 </details>
 
 ---
