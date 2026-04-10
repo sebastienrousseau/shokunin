@@ -1,9 +1,23 @@
 name: portability
 
+# Cost-aware CI strategy:
+#
+#   Per push / PR  → Linux + stable only      (~2 min, ~$0.008/run)
+#   Weekly         → 3-OS × 2-toolchain full  (catches MSRV + Windows/macOS regressions)
+#   Release tags   → full matrix              (gate before publish)
+#
+# This cuts per-push cost ~6× vs the previous "always full matrix" approach.
+# Windows runners are 2× the Linux rate and Rust cold-builds take 10-15 min;
+# running them weekly instead of per-push saves ~$50-100/month at moderate
+# push frequency.
+
 on:
   push:
     branches: [main, feat/**]
+    tags: ["v*"]
   pull_request:
+  schedule:
+    - cron: "0 6 * * 1"        # Every Monday 06:00 UTC
 
 permissions:
   contents: read
@@ -13,43 +27,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  matrix:
+  # ── Fast gate (every push / PR) ────────────────────────────────────
+  quick:
+    name: linux · stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: quick-linux }
+
+      - name: Build
+        run: cargo build --all-targets --locked
+
+      - name: Test
+        run: cargo test --lib --locked
+
+      - name: Doc
+        env: { RUSTDOCFLAGS: -D warnings }
+        run: cargo doc --no-deps -p ssg
+
+  # ── Full matrix (weekly + release tags only) ───────────────────────
+  full:
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
     name: ${{ matrix.os }} · ${{ matrix.toolchain }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest    # proxy for Linux + WSL2 (same kernel ABI)
-          - macos-latest     # Darwin / Apple Silicon
-          - windows-latest   # native Windows
-        toolchain:
-          - stable
-          - "1.88"           # MSRV declared in Cargo.toml
+        os:        [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, "1.88"]
+        exclude:
+          # Already covered by the "quick" job above
+          - os: ubuntu-latest
+            toolchain: stable
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
 
-      - name: Install Rust ${{ matrix.toolchain }}
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: portability-${{ matrix.os }}-${{ matrix.toolchain }}
+          shared-key: full-${{ matrix.os }}-${{ matrix.toolchain }}
 
-      - name: Build (all targets)
+      - name: Build
         run: cargo build --all-targets --locked
 
-      - name: Test (lib)
+      - name: Test
         run: cargo test --lib --locked
 
-      - name: Doc (deny warnings)
-        env:
-          RUSTDOCFLAGS: -D warnings
+      - name: Doc
+        env: { RUSTDOCFLAGS: -D warnings }
         run: cargo doc --no-deps -p ssg
