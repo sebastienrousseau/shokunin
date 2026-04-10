@@ -6,7 +6,7 @@ Welcome! We're thrilled that you're interested in contributing to SSG. Whether y
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.74.0 or later
+- [Rust](https://rustup.rs/) 1.88.0 or later
 - Git with commit signing configured (see below)
 
 ### Getting started

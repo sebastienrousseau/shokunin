@@ -28,7 +28,7 @@
 | **Linux / WSL** | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | **Windows (native)** | Download [`rustup-init.exe`](https://win.rustup.rs/). Native build is supported; the `make` targets below require Git Bash or WSL |
 
-SSG requires **Rust 1.74.0 or later** (pinned in `rust-toolchain.toml`). Verify with `rustc --version`.
+SSG requires **Rust 1.88.0 or later** (pinned in `rust-toolchain.toml`). Verify with `rustc --version`.
 
 ### Crate
 

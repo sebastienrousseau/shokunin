@@ -25,7 +25,7 @@ jobs:
           - windows-latest   # native Windows
         toolchain:
           - stable
-          - "1.74"           # MSRV declared in Cargo.toml
+          - "1.88"           # MSRV declared in Cargo.toml
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -8,7 +8,7 @@ name = "ssg"                            # The name of the library
 version = "0.0.35"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
-rust-version = "1.74.0"                 # Minimum supported Rust version (required by clap 4.x)
+rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
