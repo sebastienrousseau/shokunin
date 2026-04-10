@@ -29,6 +29,12 @@ hooks: ## Install the project's git hooks under .githooks/.
 	@chmod +x .githooks/pre-commit 2>/dev/null || true
 	@echo "✓ Git hooks installed (.githooks/)."
 
+# Generate and open API documentation locally.
+.PHONY: doc
+doc: ## Generate API docs and open in browser.
+	@echo "Generating API documentation..."
+	@RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg --open
+
 # Build the project including all workspace members.
 .PHONY: build
 build: ## Build the project.

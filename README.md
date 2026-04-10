@@ -18,6 +18,22 @@
 
 ---
 
+## Contents
+
+- [Install](#install) — prerequisites, crate, library dependency
+- [Overview](#overview) — what SSG does
+- [Architecture](#architecture) — build pipeline diagram
+- [Features](#features) — capability matrix
+- [The CLI](#the-cli) — flags and usage
+- [First 5 Minutes](#first-5-minutes) — clone → tests passing
+- [Library Usage](#library-usage) — `ssg::run()`, plugins, incremental builds
+- [Benchmarks](#benchmarks) — binary size, test suite, coverage
+- [Development](#development) — make targets, contributing
+- [What's Included](#whats-included) — modules, security, tests
+- [License](#license)
+
+---
+
 ## Install
 
 ### Prerequisites
@@ -348,8 +364,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 
 ---
 
+## Code of Conduct
+
+Please read our [Code of Conduct](.github/CODE-OF-CONDUCT.md) before participating in the project.
+
 ## License
 
 Dual-licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) or [MIT](https://opensource.org/licenses/MIT), at your option.
 
-<p align="right"><a href="#static-site-generator-ssg">Back to Top</a></p>
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+<p align="right"><a href="#contents">Back to Top</a></p>

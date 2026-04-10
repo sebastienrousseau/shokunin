@@ -106,6 +106,39 @@ src/
   drafts.rs         — Draft content filtering plugin
 ```
 
+### Plugin lifecycle
+
+Every build runs the plugin pipeline in this order:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CLI as ssg::run()
+    participant PM as PluginManager
+    participant P as Plugin (×N)
+    participant SDG as staticdatagen::compile
+    participant SRV as serve_site
+
+    CLI->>PM: run_before_compile(&ctx)
+    PM->>P: before_compile(&ctx)
+    Note right of P: TeraPlugin emits .meta.json sidecars<br/>MarkdownExtPlugin pre-processes GFM<br/>DraftPlugin filters draft pages
+
+    CLI->>SDG: compile(build, content, site, template)
+    SDG-->>CLI: Vec&lt;FileData&gt;
+
+    CLI->>PM: run_after_compile(&ctx)
+    PM->>P: after_compile(&ctx)
+    Note right of P: SeoPlugin · JsonLdPlugin · CanonicalPlugin<br/>RobotsPlugin · MinifyPlugin · SearchPlugin<br/>AccessibilityPlugin · HighlightPlugin
+
+    CLI->>PM: run_on_serve(&ctx)
+    PM->>P: on_serve(&ctx)
+    Note right of P: LiveReloadPlugin injects WS script
+
+    CLI->>SRV: serve_site(site_dir)
+```
+
+Implement whichever hooks your plugin needs — the others default to no-ops.
+
 ### Writing a Plugin
 
 ```rust
