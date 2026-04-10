@@ -13,7 +13,7 @@ license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
 A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
 """
-homepage = "https://shokunin.one"       # The project's homepage
+homepage = "https://github.com/sebastienrousseau/shokunin" # The project's homepage
 documentation = "https://docs.rs/ssg" # Doc URL
 repository = "https://github.com/sebastienrousseau/shokunin"
 readme = "README.md"                    # The README file

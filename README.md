@@ -199,7 +199,7 @@ fn main() -> anyhow::Result<()> {
 <details>
 <summary><b>Plugin example</b></summary>
 
-```rust
+```rust,no_run
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
 use anyhow::Result;
 use std::path::Path;
@@ -215,17 +215,20 @@ impl Plugin for LogPlugin {
     }
 }
 
-let mut pm = PluginManager::new();
-pm.register(LogPlugin);
-pm.register(ssg::plugins::MinifyPlugin);
+fn main() -> Result<()> {
+    let mut pm = PluginManager::new();
+    pm.register(LogPlugin);
+    pm.register(ssg::plugins::MinifyPlugin);
 
-let ctx = PluginContext::new(
-    Path::new("content"),
-    Path::new("build"),
-    Path::new("public"),
-    Path::new("templates"),
-);
-pm.run_after_compile(&ctx).unwrap();
+    let ctx = PluginContext::new(
+        Path::new("content"),
+        Path::new("build"),
+        Path::new("public"),
+        Path::new("templates"),
+    );
+    pm.run_after_compile(&ctx)?;
+    Ok(())
+}
 ```
 
 </details>
@@ -288,13 +291,34 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 <details>
 <summary><b>Core modules</b></summary>
 
-- **cmd** — CLI argument parsing, configuration management, input validation
-- **process** — Directory creation, frontmatter preprocessing, site compilation
-- **plugin** — Trait-based plugin system with lifecycle hooks
+- **cmd** — CLI argument parsing, `SsgConfig`, input validation
+- **process** — Argument-driven site processing and directory creation
+- **lib** — Orchestrator: `run()` → plugin pipeline → compile → serve
+- **plugin** — `Plugin` trait with `before_compile`, `after_compile`, `on_serve` hooks
 - **plugins** — Built-in `MinifyPlugin`, `ImageOptiPlugin`, `DeployPlugin`
 - **cache** — Content fingerprinting for incremental builds
 - **watch** — Polling-based file watcher for live rebuild
 - **schema** — JSON Schema generator for configuration
+- **scaffold** — Project scaffolding (`ssg --new`)
+- **frontmatter** — Frontmatter extraction and `.meta.json` sidecar support
+- **tera_engine** — Tera templating engine integration
+- **tera_plugin** — Tera template rendering plugin
+- **seo** — `SeoPlugin`, `JsonLdPlugin`, `CanonicalPlugin`, `RobotsPlugin`
+- **search** — Client-side search index generation + localized `SearchLabels`
+- **accessibility** — Automated WCAG checker and ARIA validation
+- **ai** — AI-readiness content hooks (alt-text validation, `llms.txt`)
+- **deploy** — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
+- **assets** — Asset fingerprinting and SRI hash generation
+- **highlight** — Syntax highlighting plugin for code blocks
+- **shortcodes** — Shortcode expansion (youtube, gist, figure, admonitions)
+- **markdown_ext** — GFM extensions (tables, strikethrough, task lists)
+- **image_plugin** — Image optimization with WebP output and responsive `srcset`
+- **livereload** — WebSocket live-reload injection
+- **pagination** — Pagination plugin for listing pages
+- **taxonomy** — Taxonomy generation (tags, categories)
+- **drafts** — Draft content filtering plugin
+- **stream** — High-performance streaming file processor
+- **walk** — Shared bounded directory walkers
 </details>
 
 <details>

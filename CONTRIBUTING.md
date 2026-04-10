@@ -75,23 +75,35 @@ git log --show-signature -1
 ```
 src/
   lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
-  cmd.rs            — CLI parsing and SsgConfig
+  lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
+  main.rs           — Binary entry point (delegates to lib::run)
+  cmd.rs            — CLI parsing, SsgConfig, input validation
+  process.rs        — Argument-driven site processing + directory creation
   plugin.rs         — Plugin trait + PluginManager
+  plugins.rs        — Built-in MinifyPlugin, ImageOptiPlugin, DeployPlugin
   frontmatter.rs    — Frontmatter extraction + .meta.json sidecars
   tera_engine.rs    — Tera template engine wrapper
   tera_plugin.rs    — Tera rendering plugin
   seo.rs            — SeoPlugin, JsonLdPlugin, CanonicalPlugin, RobotsPlugin
   ai.rs             — AI readiness (llms.txt, meta tags, alt validation)
   accessibility.rs  — WCAG checker + ARIA validation
-  search.rs         — Client-side search index generation
+  search.rs         — Client-side search index + localized SearchLabels
   highlight.rs      — Syntax highlighting for code blocks
   shortcodes.rs     — Shortcode expansion (youtube, gist, figure, admonitions)
+  markdown_ext.rs   — GFM extensions (tables, strikethrough, task lists)
+  image_plugin.rs   — Image optimization (WebP, responsive srcset)
   assets.rs         — Asset fingerprinting + SRI hashes
   deploy.rs         — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
+  scaffold.rs       — Project scaffolding (ssg --new)
+  schema.rs         — JSON Schema generator for configuration
   cache.rs          — Incremental build cache
   stream.rs         — High-performance streaming I/O
-  watch.rs          — File watcher for live rebuild
+  walk.rs           — Shared bounded directory walkers
+  watch.rs          — Polling-based file watcher for live rebuild
   livereload.rs     — WebSocket live-reload injection
+  pagination.rs     — Pagination plugin for listing pages
+  taxonomy.rs       — Taxonomy generation (tags, categories)
+  drafts.rs         — Draft content filtering plugin
 ```
 
 ### Writing a Plugin
