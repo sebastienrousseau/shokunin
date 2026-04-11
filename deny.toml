@@ -5,6 +5,7 @@
 # ISC: used by some transitive deps
 # BSD-2-Clause/BSD-3-Clause: used by some transitive deps
 # Unicode-3.0: used by unicode data crates
+# Zlib: used by foldhash (OSI-approved, FSF-free, permissive)
 allow = [
     "MIT",
     "Apache-2.0",
@@ -19,6 +20,7 @@ allow = [
     "CC0-1.0",
     "MITNFA",
     "AGPL-3.0-only",
+    "Zlib",
 ]
 
 [bans]
@@ -42,7 +44,6 @@ ignore = [
     "RUSTSEC-2024-0320", # yaml-rust (unmaintained) — via syntect/comrak
     "RUSTSEC-2024-0436", # paste (unmaintained) — via dtt
     "RUSTSEC-2025-0057", # fxhash (unmaintained) — via selectors/scraper
-    "RUSTSEC-2025-0068", # serde_yml — patched locally, transitive via staticdatagen
     "RUSTSEC-2025-0119", # number_prefix (unmaintained) — via indicatif
     "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
 ]
