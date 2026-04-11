@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.35] - 2026-04-10
+## [0.0.35] - 2026-04-11
 
 ### Added
 
@@ -42,9 +42,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uses a transparent `::after` hit-area extension.
 - **`docs/README.md`** — explains the gitignored `docs/` build-target
   directory.
+- **Criterion benchmark suite** — `benches/bench_site_generation.rs`
+  measures end-to-end compile throughput at 10, 50, and 100 pages.
+  `make bench` target added to Makefile.
+- **`CHANGELOG.md`** — Keep a Changelog format with full release notes.
+- **README Table of Contents** — 11-item jump index at the top.
+- **Code of Conduct** linked from README.
+- **`make doc`** — generates API documentation with `-D warnings` and
+  opens in browser.
+- **Mermaid plugin lifecycle diagram** in CONTRIBUTING.md.
 
 ### Changed
 
+- **Rayon-parallelised plugin pipeline** — `SearchPlugin`,
+  `SeoPlugin`, `CanonicalPlugin`, and `JsonLdPlugin` now use
+  `par_iter().try_for_each()` instead of sequential `for` loops for
+  HTML file injection. `AtomicUsize` replaces mutable counters.
+- **`warp` dependency removed** — `handle_server()` now uses
+  `http_handle::Server` via `tokio::task::spawn_blocking`. Cargo.lock
+  shrank by 292 lines. Direct deps: 25 → 24.
+
+- **CI pipelines pinned to SHA** — all shared workflow refs and GitHub
+  Actions pinned to immutable commit SHAs instead of mutable `@main` /
+  `@v4` / `@stable` tags. Eliminates supply-chain risk.
+- **`.editorconfig`** expanded with `[*.{json,toml}]` and `[*.html]`
+  rules at indent 2.
 - **MSRV** bumped from 1.74.0 to **1.88.0** (deps had silently escalated).
 - **README** rewritten: test count (342→741), CLI reference (10→14 flags),
   cross-platform prerequisites table, library example uses `ssg::run()`,
@@ -79,6 +101,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   values, making text invisible; now context-aware (light: `#595960`,
   dark: `#cccccf`).
 - **PR template** — added signed-commit checklist item.
+- **Search locale isolation** — widget now fetches
+  `/<lang>/search-index.json` per locale instead of always loading the
+  English root index. Result URLs are prefixed with the locale path.
+- **Search hero content indexed** — `extract_text()` no longer strips
+  `<header>` blocks, so hero taglines and subtitles are searchable.
+- **Search JS scoping crash** — `lm` and `lp` locale variables hoisted
+  from `load()` to the outer IIFE scope; eliminates `ReferenceError`
+  that silently crashed the search function on every keystroke.
+- **`cargo deny check licenses`** — added Zlib to allow list (used by
+  `foldhash`); removed stale RUSTSEC-2025-0068 ignore.
+- **RUSTSEC-2026-0097** (rand 0.8.5 unsound) acknowledged in both
+  `.cargo/audit.toml` and `deny.toml` — transitive via `phf_generator`,
+  SSG never calls `rand::rng()` directly.
+- **Unused import** in `quickstart_example.rs` removed.
 
 ### Removed
 

@@ -280,22 +280,28 @@ if changed.is_empty() {
 
 | Metric | Value |
 | :--- | :--- |
-| **Release binary** | ~5 MB (stripped, LTO) |
+| **Release binary** | ~23 MB (unstripped), ~5 MB stripped with LTO |
 | **Unsafe code** | 0 blocks — `#![forbid(unsafe_code)]` enforced |
-| **Test suite** | **741 lib tests** — verified `cargo test --lib` on `feat/v0.0.35`, runs in ~8 s on M-series Mac |
-| **Dependencies** | Audited via `cargo audit` and `cargo deny check` (run `make deny` to reproduce) |
+| **Test suite** | **741 lib** + 33 doc + integration tests. Run `make bench` for Criterion site-generation benchmarks (10/50/100 pages) |
+| **Dependencies** | 24 direct, audited via `cargo audit` and `cargo deny check` (run `make deny` to reproduce). All CI refs pinned to SHA. |
 | **Coverage** | ~98 % line coverage, measured with `cargo llvm-cov` |
+| **Plugin pipeline** | Rayon-parallelised: search, SEO, canonical, and JSON-LD injection all use `par_iter` |
 
 ---
 
 ## Development
 
 ```bash
+make init         # One-command bootstrap (rustfmt + clippy + cargo-deny + hooks + build)
 make build        # Build the project
 make test         # Run all tests
+make bench        # Run performance benchmarks (Criterion)
 make lint         # Lint with Clippy
 make format       # Format with rustfmt
 make deny         # Check licenses and advisories
+make doc          # Generate API docs and open in browser
+make clean        # Remove build artifacts and stray logs
+make hooks        # Install the signed-commit git hook
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guidelines.
