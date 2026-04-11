@@ -24,9 +24,15 @@
 # - RUSTSEC-2024-0320  yaml-rust (unmaintained)
 #     Transitive via syntect -> mdx-gen -> html-generator -> staticdatagen.
 #
+# - RUSTSEC-2026-0097  rand 0.8.5 (unsound with custom logger + rand::rng())
+#     Transitive via phf_generator -> selectors -> scraper -> staticdatagen.
+#     SSG never calls rand::rng() directly; the only caller path is
+#     phf_codegen at build time. No patched 0.8.x release available yet
+#     (advisory filed 2026-04-09).
+#
 # TODO: re-audit once staticdatagen, frontmatter-gen, mdx-gen, syntect,
 # tera, scraper, and indicatif have all updated their dependency
-# closures upstream.
+# closures upstream. Remove RUSTSEC-2026-0097 when rand >= 0.8.6 ships.
 ignore = [
     "RUSTSEC-2024-0320",
     "RUSTSEC-2024-0436",
@@ -34,4 +40,5 @@ ignore = [
     "RUSTSEC-2025-0068",
     "RUSTSEC-2025-0119",
     "RUSTSEC-2025-0141",
+    "RUSTSEC-2026-0097",
 ]

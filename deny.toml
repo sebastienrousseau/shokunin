@@ -46,4 +46,5 @@ ignore = [
     "RUSTSEC-2025-0057", # fxhash (unmaintained) — via selectors/scraper
     "RUSTSEC-2025-0119", # number_prefix (unmaintained) — via indicatif
     "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
+    "RUSTSEC-2026-0097", # rand 0.8.5 (unsound w/ custom logger) — via phf_generator, no 0.8.6 fix yet
 ]
