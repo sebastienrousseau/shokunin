@@ -614,7 +614,7 @@ var idx=null,overlay=document.getElementById('ssg-search-overlay'),
 input=document.getElementById('ssg-search-input'),
 results=document.getElementById('ssg-search-results'),
 btn=document.getElementById('ssg-search-btn'),active=-1;
-function load(){if(idx)return Promise.resolve();return fetch('/search-index.json').then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
+function load(){if(idx)return Promise.resolve();var lm=location.pathname.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//);var sp=lm?'/'+lm[1]+'/search-index.json':'/search-index.json';return fetch(sp).then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
 function open(){load().then(function(){overlay.classList.add('active');input.value='';results.innerHTML='';input.focus();active=-1})}
 function close(){overlay.classList.remove('active');active=-1}
 function highlight(text,q){if(!q)return esc(text);var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');return esc(text).replace(re,'<mark>$1</mark>')}
