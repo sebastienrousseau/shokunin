@@ -4,7 +4,8 @@ crates/serde_yml/target/
 build/
 
 # Generated output
-/docs/
+/docs/*
+!/docs/README.md
 /examples/public/
 /mysite/
 /output/

@@ -12,6 +12,7 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
+use rayon::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -201,9 +202,9 @@ impl Plugin for SeoPlugin {
         }
 
         let html_files = collect_html_files(&ctx.site_dir)?;
-        for path in &html_files {
-            inject_seo_tags(path)?;
-        }
+        html_files
+            .par_iter()
+            .try_for_each(|path| inject_seo_tags(path))?;
 
         Ok(())
     }
@@ -395,19 +396,20 @@ impl Plugin for CanonicalPlugin {
 
         let html_files = collect_html_files(&ctx.site_dir)?;
         let base = self.base_url.trim_end_matches('/');
+        let site_dir = &ctx.site_dir;
 
-        for path in &html_files {
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
             let html = fs::read_to_string(path)
                 .with_context(|| format!("cannot read {}", path.display()))?;
 
             if html.contains("<link rel=\"canonical\"")
                 || html.contains("<link rel='canonical'")
             {
-                continue;
+                return Ok(());
             }
 
             let rel_path = path
-                .strip_prefix(&ctx.site_dir)
+                .strip_prefix(site_dir)
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace('\\', "/");
@@ -426,7 +428,8 @@ impl Plugin for CanonicalPlugin {
 
             fs::write(path, result)
                 .with_context(|| format!("cannot write {}", path.display()))?;
-        }
+            Ok(())
+        })?;
 
         Ok(())
     }
@@ -491,26 +494,27 @@ impl Plugin for JsonLdPlugin {
         }
 
         let html_files = collect_html_files_recursive(&ctx.site_dir)?;
-        let mut injected = 0usize;
+        let injected = std::sync::atomic::AtomicUsize::new(0);
         let base = self.config.base_url.trim_end_matches('/');
+        let site_dir = &ctx.site_dir;
 
-        for path in &html_files {
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
             let html = fs::read_to_string(path)?;
 
             // Skip if already has JSON-LD
             if html.contains("application/ld+json") {
-                continue;
+                return Ok(());
             }
 
             let head_pos = match html.find("</head>") {
                 Some(p) => p,
-                None => continue,
+                None => return Ok(()),
             };
 
             let title = extract_title(&html);
             let description = extract_description(&html, 160);
             let rel_path = path
-                .strip_prefix(&ctx.site_dir)
+                .strip_prefix(site_dir)
                 .unwrap_or(path)
                 .to_string_lossy()
                 .replace('\\', "/");
@@ -601,12 +605,14 @@ impl Plugin for JsonLdPlugin {
                 &html[head_pos..]
             );
             fs::write(path, result)?;
-            injected += 1;
-        }
+            let _ = injected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            Ok(())
+        })?;
 
-        if injected > 0 {
+        let count = injected.load(std::sync::atomic::Ordering::Relaxed);
+        if count > 0 {
             log::info!(
-                "[json-ld] Injected structured data into {injected} page(s)"
+                "[json-ld] Injected structured data into {count} page(s)"
             );
         }
         Ok(())

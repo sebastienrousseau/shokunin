@@ -60,7 +60,7 @@ news_title: "Kaishi, một mẫu khởi đầu cho trình tạo trang tĩnh" ## 
 atom_link: https://kaishi.vn/rss.xml
 category: "Công nghệ"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (phiên bản 0.0.34)"
+generator: "SSG (phiên bản 0.0.35)"
 item_description: Nguồn cấp RSS cho trang web
 item_guid: "https://kaishi.vn"
 item_link: "https://kaishi.vn"

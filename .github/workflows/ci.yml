@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
     with:
       rust-version: 'stable'
       run-coverage: true
@@ -26,7 +26,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   security:
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
     with:
       language: rust
       # Override default 'medium' — actions/dependency-review-action
@@ -36,7 +36,7 @@ jobs:
 
   docs:
     if: github.ref == 'refs/heads/main'
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
     with:
       type: rust
       redirect-crate: ssg

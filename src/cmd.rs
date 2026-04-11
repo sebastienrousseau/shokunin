@@ -46,7 +46,31 @@ use url::Url;
 /// Default port for the local development server.
 pub const DEFAULT_PORT: u16 = 8000;
 /// Default host for the local development server.
+///
+/// Loopback by default. WSL2 users whose Windows host can't reach the
+/// distro on `127.0.0.1` (and Codespaces / dev-containers users binding
+/// outside their network namespace) should set `SSG_HOST=0.0.0.0` and
+/// let [`resolve_host`] pick it up. The same applies to `SSG_PORT`.
 pub const DEFAULT_HOST: &str = "127.0.0.1";
+
+/// Resolve the dev-server host, preferring `$SSG_HOST` over [`DEFAULT_HOST`].
+///
+/// Returns the value of the `SSG_HOST` environment variable if set and
+/// non-empty; otherwise returns the compiled-in default.
+pub fn resolve_host() -> String {
+    std::env::var("SSG_HOST")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| DEFAULT_HOST.to_string())
+}
+
+/// Resolve the dev-server port, preferring `$SSG_PORT` over [`DEFAULT_PORT`].
+pub fn resolve_port() -> u16 {
+    std::env::var("SSG_PORT")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(DEFAULT_PORT)
+}
 /// Reserved names that cannot be used as paths on Windows systems.
 pub const RESERVED_NAMES: &[&str] =
     &["con", "aux", "nul", "prn", "com1", "lpt1"];

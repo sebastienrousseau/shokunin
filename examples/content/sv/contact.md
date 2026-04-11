@@ -61,7 +61,7 @@ news_title: "Kontakta oss" ## Sidans titel. (max 64 tecken)
 atom_link: https://kaishi.se/contact/rss.xml
 category: "Teknik"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-flöde för kontaktsidan på Kaishi-webbplatsen.
 item_guid: "https://kaishi.se/contact/index.html"
 item_link: "https://kaishi.se/contact/index.html"

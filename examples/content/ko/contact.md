@@ -61,7 +61,7 @@ news_title: "문의하기" ## 페이지의 제목. (최대 64자)
 atom_link: https://kaishi.kr/contact/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kaishi 웹사이트 문의 페이지의 RSS 피드입니다.
 item_guid: "https://kaishi.kr/contact/index.html"
 item_link: "https://kaishi.kr/contact/index.html"

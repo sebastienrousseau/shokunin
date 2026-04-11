@@ -60,7 +60,7 @@ news_title: "Kaishi, een starttemplate voor een statische sitegenerator" ## De t
 atom_link: https://kaishi.nl/rss.xml
 category: "Technologie"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-feed voor de site
 item_guid: "https://kaishi.nl"
 item_link: "https://kaishi.nl"

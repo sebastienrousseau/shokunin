@@ -75,6 +75,8 @@ pub mod highlight;
 pub mod image_plugin;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
+pub mod markdown_ext;
 /// Pagination for listing pages.
 pub mod pagination;
 /// Lifecycle hook plugin system.
@@ -425,10 +427,14 @@ pub(crate) fn execute_build_pipeline(
 /// and starts a local dev server. This function blocks indefinitely
 /// while the server is running.
 pub async fn run() -> Result<()> {
+    // Parse CLI arguments first so that `--help` and `--version`
+    // short-circuit *before* the logger emits its banner. clap exits
+    // the process for those flags, so we never reach the lines below.
+    let matches = Cli::build().get_matches();
+
     initialize_logging()?;
     info!("Starting site generation process");
 
-    let matches = Cli::build().get_matches();
     let config = SsgConfig::from_matches(&matches)?;
     let opts = RunOptions::from_matches(&matches);
 
@@ -535,9 +541,9 @@ fn register_default_plugins(
 /// Pluggable transport that drives the dev server.
 ///
 /// Production code uses [`HttpTransport`] (a thin wrapper around
-/// `http_handle::Server`); tests use [`NoopTransport`] which records
-/// the call without actually binding a port. The trait exists so
-/// every line of `serve_site` is unit-testable.
+/// `http_handle::Server`); tests use a test-only `NoopTransport` which
+/// records the call without actually binding a port. The trait exists
+/// so every line of `serve_site` is unit-testable.
 pub trait ServeTransport {
     /// Start serving `root` on `addr`. Implementations may block.
     ///
@@ -1159,12 +1165,26 @@ pub async fn handle_server(
 
     prepare_serve_dir(paths, serve_dir).await?;
 
-    println!("\nStarting server at http://127.0.0.1:8000");
+    let host = cmd::resolve_host();
+    let port = cmd::resolve_port();
+    let addr = format!("{host}:{port}");
+
+    println!("\nStarting server at http://{addr}");
     println!("Serving content from: {}", serve_dir.display());
 
-    warp::serve(warp::fs::dir(serve_dir.clone()))
-        .run(([127, 0, 0, 1], 8000))
-        .await;
+    let dir = serve_dir
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("serve dir contains invalid UTF-8"))?
+        .to_string();
+    let bind = addr.clone();
+
+    // Run the blocking http_handle server on a dedicated thread so the
+    // async runtime doesn't starve.
+    tokio::task::spawn_blocking(move || {
+        let server = Server::new(&bind, &dir);
+        let _ = server.start();
+    })
+    .await?;
     Ok(())
 }
 
@@ -2740,10 +2760,9 @@ mod tests {
 
     #[test]
     fn test_copy_dir_with_progress_nonexistent_source() {
-        let result = copy_dir_with_progress(
-            Path::new("/nonexistent/source"),
-            Path::new("/tmp/dst"),
-        );
+        let dst = env::temp_dir().join("ssg_copy_dir_dst");
+        let result =
+            copy_dir_with_progress(Path::new("/nonexistent/source"), &dst);
         assert!(result.is_err());
     }
 
@@ -3218,7 +3237,7 @@ mod tests {
         use std::ffi::OsStr;
         use std::os::unix::ffi::OsStrExt;
 
-        let invalid_bytes = b"/tmp/site_\xff_invalid";
+        let invalid_bytes = b"site_\xff_invalid";
         let path = Path::new(OsStr::from_bytes(invalid_bytes));
         let err = build_serve_address(path).unwrap_err();
         assert!(format!("{err:?}").contains("invalid UTF-8"));
@@ -3235,7 +3254,7 @@ mod tests {
         // serve_site_with.
         use std::ffi::OsStr;
         use std::os::unix::ffi::OsStrExt;
-        let invalid = b"/tmp/\xfe\xfe_bad";
+        let invalid = b"\xfe\xfe_bad";
         let path = Path::new(OsStr::from_bytes(invalid));
         let err = serve_site(path).unwrap_err();
         assert!(format!("{err:?}").contains("invalid UTF-8"));

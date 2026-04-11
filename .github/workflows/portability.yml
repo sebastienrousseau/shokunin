@@ -1,0 +1,88 @@
+name: portability
+
+# Cost-aware CI strategy:
+#
+#   Per push / PR  → Linux + stable only      (~2 min, ~$0.008/run)
+#   Weekly         → 3-OS × 2-toolchain full  (catches MSRV + Windows/macOS regressions)
+#   Release tags   → full matrix              (gate before publish)
+#
+# This cuts per-push cost ~6× vs the previous "always full matrix" approach.
+# Windows runners are 2× the Linux rate and Rust cold-builds take 10-15 min;
+# running them weekly instead of per-push saves ~$50-100/month at moderate
+# push frequency.
+
+on:
+  push:
+    branches: [main, feat/**]
+    tags: ["v*"]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"        # Every Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Fast gate (every push / PR) ────────────────────────────────────
+  quick:
+    name: linux · stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with: { shared-key: quick-linux }
+
+      - name: Build
+        run: cargo build --all-targets --locked
+
+      - name: Test
+        run: cargo test --lib --locked
+
+      - name: Doc
+        env: { RUSTDOCFLAGS: -D warnings }
+        run: cargo doc --no-deps -p ssg
+
+  # ── Full matrix (weekly + release tags only) ───────────────────────
+  full:
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+    name: ${{ matrix.os }} · ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:        [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, "1.88"]
+        exclude:
+          # Already covered by the "quick" job above
+          - os: ubuntu-latest
+            toolchain: stable
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with: { persist-credentials: false }
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          shared-key: full-${{ matrix.os }}-${{ matrix.toolchain }}
+
+      - name: Build
+        run: cargo build --all-targets --locked
+
+      - name: Test
+        run: cargo test --lib --locked
+
+      - name: Doc
+        env: { RUSTDOCFLAGS: -D warnings }
+        run: cargo doc --no-deps -p ssg

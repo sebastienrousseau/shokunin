@@ -60,7 +60,7 @@ news_title: "Kaishi, Samfurin Farko na Static Site Generator" ## Take na shafin.
 atom_link: https://kaishi.ng/rss.xml
 category: "Fasaha"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed don shafin
 item_guid: "https://kaishi.ng"
 item_link: "https://kaishi.ng"

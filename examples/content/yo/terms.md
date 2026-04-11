@@ -60,7 +60,7 @@ news_title: "Àwọn Ọ̀rọ̀"
 atom_link: https://kaishi.com.ng/rss.xml
 category: "Ìmọ̀-ẹ̀rọ"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed fún ojú òpó náà
 item_guid: "https://kaishi.com.ng/terms/index.html"
 item_link: "https://kaishi.com.ng/terms/index.html"

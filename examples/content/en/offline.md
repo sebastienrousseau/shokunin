@@ -60,7 +60,7 @@ news_title: "Offline" ## The title of the page. (max 64 characters)
 atom_link: https://kaishi.one/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed for the site
 item_guid: "https://kaishi.one/offline/index.html"
 item_link: "https://kaishi.one/offline/index.html"

@@ -60,7 +60,7 @@ news_title: "Taggar" ## Sidans titel. (max 64 tecken)
 atom_link: https://kaishi.se/rss.xml
 category: "Teknik"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-flöde för webbplatsen
 item_guid: "https://kaishi.se/tags/index.html"
 item_link: "https://kaishi.se/tags/index.html"

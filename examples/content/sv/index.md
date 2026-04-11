@@ -60,7 +60,7 @@ news_title: "Kaishi, en startmall för statisk webbplatsgenerator" ## Sidans tit
 atom_link: https://kaishi.se/rss.xml
 category: "Teknik"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-flöde för webbplatsen
 item_guid: "https://kaishi.se"
 item_link: "https://kaishi.se"

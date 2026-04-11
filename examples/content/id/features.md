@@ -58,7 +58,7 @@ news_title: "Fitur" ## Judul halaman. (maks. 64 karakter)
 atom_link: https://kaishi.id/rss.xml
 category: "Teknologi"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versi 0.0.34)"
+generator: "SSG (versi 0.0.35)"
 item_description: Feed RSS untuk situs
 item_guid: "https://kaishi.id/features/index.html"
 item_link: "https://kaishi.id/features/index.html"

@@ -6,7 +6,7 @@ Welcome! We're thrilled that you're interested in contributing to SSG. Whether y
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.74.0 or later
+- [Rust](https://rustup.rs/) 1.88.0 or later
 - Git with commit signing configured (see below)
 
 ### Getting started
@@ -30,49 +30,114 @@ make deny        # Check dependencies for security/license issues
 
 ## Signed commits
 
-All commits must be signed. Configure Git to sign commits with either GPG or SSH:
+All **commits and tags** must be signed. We accept SSH (recommended) or GPG signatures. Unsigned PRs are blocked by branch protection on `main`.
+
+### One-time setup
 
 ```bash
-# SSH signing (recommended)
+# SSH signing — works on macOS, Linux, WSL and Windows (Git for Windows)
 git config --global gpg.format ssh
 git config --global user.signingkey ~/.ssh/id_ed25519.pub
 git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+```
 
-# Or GPG signing
+Then register the same key on GitHub: **Settings → SSH and GPG keys → New SSH key → Key type: Signing Key**.
+
+Prefer GPG?
+
+```bash
 git config --global commit.gpgsign true
+git config --global tag.gpgsign true
 git config --global user.signingkey YOUR_GPG_KEY_ID
 ```
 
-Verify your setup:
+### Per-repo defaults
 
 ```bash
-echo "test" | git commit --allow-empty -S -m "test signing"
-git log --show-signature -1
+cd shokunin
+git config commit.gpgsign true
+git config tag.gpgsign true
 ```
+
+### Verify
+
+```bash
+git commit -S --allow-empty -m "chore: signature smoke test"
+git log --show-signature -1
+# Expect: Good "git" signature for <your email>
+```
+
+> **Tip:** with `commit.gpgsign = true` set globally you never need to remember the `-S` flag.
 
 ## Architecture
 
 ```
 src/
   lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
-  cmd.rs            — CLI parsing and SsgConfig
+  lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
+  main.rs           — Binary entry point (delegates to lib::run)
+  cmd.rs            — CLI parsing, SsgConfig, input validation
+  process.rs        — Argument-driven site processing + directory creation
   plugin.rs         — Plugin trait + PluginManager
+  plugins.rs        — Built-in MinifyPlugin, ImageOptiPlugin, DeployPlugin
   frontmatter.rs    — Frontmatter extraction + .meta.json sidecars
   tera_engine.rs    — Tera template engine wrapper
   tera_plugin.rs    — Tera rendering plugin
   seo.rs            — SeoPlugin, JsonLdPlugin, CanonicalPlugin, RobotsPlugin
   ai.rs             — AI readiness (llms.txt, meta tags, alt validation)
   accessibility.rs  — WCAG checker + ARIA validation
-  search.rs         — Client-side search index generation
+  search.rs         — Client-side search index + localized SearchLabels
   highlight.rs      — Syntax highlighting for code blocks
   shortcodes.rs     — Shortcode expansion (youtube, gist, figure, admonitions)
+  markdown_ext.rs   — GFM extensions (tables, strikethrough, task lists)
+  image_plugin.rs   — Image optimization (WebP, responsive srcset)
   assets.rs         — Asset fingerprinting + SRI hashes
   deploy.rs         — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
+  scaffold.rs       — Project scaffolding (ssg --new)
+  schema.rs         — JSON Schema generator for configuration
   cache.rs          — Incremental build cache
   stream.rs         — High-performance streaming I/O
-  watch.rs          — File watcher for live rebuild
+  walk.rs           — Shared bounded directory walkers
+  watch.rs          — Polling-based file watcher for live rebuild
   livereload.rs     — WebSocket live-reload injection
+  pagination.rs     — Pagination plugin for listing pages
+  taxonomy.rs       — Taxonomy generation (tags, categories)
+  drafts.rs         — Draft content filtering plugin
 ```
+
+### Plugin lifecycle
+
+Every build runs the plugin pipeline in this order:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CLI as ssg::run()
+    participant PM as PluginManager
+    participant P as Plugin (×N)
+    participant SDG as staticdatagen::compile
+    participant SRV as serve_site
+
+    CLI->>PM: run_before_compile(&ctx)
+    PM->>P: before_compile(&ctx)
+    Note right of P: TeraPlugin emits .meta.json sidecars<br/>MarkdownExtPlugin pre-processes GFM<br/>DraftPlugin filters draft pages
+
+    CLI->>SDG: compile(build, content, site, template)
+    SDG-->>CLI: Vec&lt;FileData&gt;
+
+    CLI->>PM: run_after_compile(&ctx)
+    PM->>P: after_compile(&ctx)
+    Note right of P: SeoPlugin · JsonLdPlugin · CanonicalPlugin<br/>RobotsPlugin · MinifyPlugin · SearchPlugin<br/>AccessibilityPlugin · HighlightPlugin
+
+    CLI->>PM: run_on_serve(&ctx)
+    PM->>P: on_serve(&ctx)
+    Note right of P: LiveReloadPlugin injects WS script
+
+    CLI->>SRV: serve_site(site_dir)
+```
+
+Implement whichever hooks your plugin needs — the others default to no-ops.
 
 ### Writing a Plugin
 

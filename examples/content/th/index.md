@@ -60,7 +60,7 @@ news_title: "Kaishi เทมเพลตเริ่มต้นสำหรั
 atom_link: https://kaishi.co.th/rss.xml
 category: "เทคโนโลยี"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed สำหรับเว็บไซต์
 item_guid: "https://kaishi.co.th"
 item_link: "https://kaishi.co.th"

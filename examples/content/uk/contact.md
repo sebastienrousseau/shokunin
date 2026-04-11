@@ -61,7 +61,7 @@ news_title: "Зв'яжіться з нами" ## Заголовок сторін
 atom_link: https://kaishi.ua/contact/rss.xml
 category: "Технології"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS-стрічка для контактної сторінки сайту Kaishi.
 item_guid: "https://kaishi.ua/contact/index.html"
 item_link: "https://kaishi.ua/contact/index.html"

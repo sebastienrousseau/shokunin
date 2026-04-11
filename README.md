@@ -13,12 +13,40 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.34-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.35-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
 
+## Contents
+
+- [Install](#install) — prerequisites, crate, library dependency
+- [Overview](#overview) — what SSG does
+- [Architecture](#architecture) — build pipeline diagram
+- [Features](#features) — capability matrix
+- [The CLI](#the-cli) — flags and usage
+- [First 5 Minutes](#first-5-minutes) — clone → tests passing
+- [Library Usage](#library-usage) — `ssg::run()`, plugins, incremental builds
+- [Benchmarks](#benchmarks) — binary size, test suite, coverage
+- [Development](#development) — make targets, contributing
+- [What's Included](#whats-included) — modules, security, tests
+- [License](#license)
+
+---
+
 ## Install
+
+### Prerequisites
+
+| Platform | Setup |
+| :--- | :--- |
+| **macOS** | `brew install rustup-init && rustup-init -y`, or follow [rustup.rs](https://rustup.rs/) |
+| **Linux / WSL** | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
+| **Windows (native)** | Download [`rustup-init.exe`](https://win.rustup.rs/). Native build is supported; the `make` targets below require Git Bash or WSL |
+
+SSG requires **Rust 1.88.0 or later** (pinned in `rust-toolchain.toml`). Verify with `rustc --version`.
+
+### Crate
 
 ```bash
 cargo install ssg
@@ -28,10 +56,8 @@ Or add as a library dependency:
 
 ```toml
 [dependencies]
-ssg = "0.0.34"
+ssg = "0.0.35"
 ```
-
-You need [Rust](https://rustup.rs/) 1.74.0 or later. Works on macOS, Linux, and Windows.
 
 ---
 
@@ -56,7 +82,7 @@ graph TD
     C --> D[Compile: staticdatagen]
     D --> E[Plugin Pipeline]
     E --> F[Minify / Optimize / Deploy]
-    D --> G[Dev Server: Warp]
+    D --> G[Dev Server: http_handle]
     B --> H[File Watcher]
     H -->|changed files| C
 ```
@@ -77,7 +103,7 @@ graph TD
 | **Caching** | Content fingerprinting via `.ssg-cache.json` for fast rebuilds |
 | **Config** | TOML config files with JSON Schema for IDE autocomplete (`ssg.schema.json`) |
 | **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits |
-| **CI** | Multi-platform test matrix (macOS, Linux, Windows), cargo audit, cargo deny, SBOM generation |
+| **CI** | Shared `rust-ci.yml` pipeline on `stable` toolchain, plus `cargo audit`, `cargo deny`, dependency review and SBOM generation |
 
 ---
 
@@ -97,15 +123,19 @@ graph TD
 Usage: ssg [OPTIONS]
 
 Options:
-  -f, --config <FILE>   Configuration file path
-  -n, --new <NAME>      Create new project
-  -c, --content <DIR>   Content directory
-  -o, --output <DIR>    Output directory
-  -t, --template <DIR>  Template directory
-  -s, --serve <DIR>     Development server directory
-  -w, --watch           Watch for changes
-  -h, --help            Print help
-  -V, --version         Print version
+  -f, --config <FILE>    Configuration file path
+  -n, --new <NAME>       Create new project
+  -c, --content <DIR>    Content directory
+  -o, --output <DIR>     Output directory
+  -t, --template <DIR>   Template directory
+  -s, --serve <DIR>      Development server directory
+  -w, --watch            Watch for changes and rebuild
+      --drafts           Include draft pages in the build
+      --deploy <TARGET>  Generate deployment config (netlify, vercel, cloudflare, github)
+  -q, --quiet            Suppress non-error output
+      --verbose          Show detailed build information
+  -h, --help             Print help
+  -V, --version          Print version
 ```
 
 When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
@@ -117,36 +147,67 @@ When no flags are provided, sensible defaults are used (`content/`, `public/`, `
 ## First 5 Minutes
 
 ```bash
-# 1. Install
-cargo install ssg
+# 1 — Install
+cargo install ssg                       # macOS / Linux / Windows
 
-# 2. Create a site
+# 2 — Scaffold + build a brand-new site
 ssg -n mysite -c content -o build -t templates
 
-# 3. Or run the examples
+# 3 — Or build from source and run the bundled examples
 git clone https://github.com/sebastienrousseau/shokunin.git
 cd shokunin
-cargo run --example basic
-cargo run --example quickstart
-cargo run --example multilingual
+cargo build                             # ~2 min cold, < 10 s incremental
+cargo test --lib                        # 741 tests, ~8 s on M-series Mac
+cargo run --example basic               # minimal site
+cargo run --example quickstart          # opinionated defaults
+cargo run --example plugins             # plugin pipeline walk-through
+cargo run --example multilingual        # 28 locales + localized search
 ```
+
+> On **WSL/Linux** the same commands work verbatim. On **native Windows**, replace `make` targets with their `cargo` equivalents (see [*Development*](#development)).
+
+### One-command bootstrap
+
+```bash
+make init       # detects platform, installs rustfmt + clippy + cargo-deny,
+                # wires up the signed-commit git hook, and runs cargo build
+```
+
+### WSL2 troubleshooting
+
+The bundled dev server binds to `127.0.0.1:3000` (or `:8000` for the CLI). On WSL2, that loopback is reachable from your Windows host as long as `localhostForwarding` is enabled (the default since the Microsoft Store version of WSL). If your browser can't reach the site, override the bind address with environment variables — no code changes needed:
+
+```bash
+SSG_HOST=0.0.0.0 SSG_PORT=8080 cargo run --example multilingual
+```
+
+The same vars work for `ssg --serve`. Use `0.0.0.0` for Codespaces, dev-containers, and any remote-dev setup where the listener needs to be reachable from outside its network namespace.
 
 ---
 
 ## Library Usage
 
 ```rust,no_run
+// The simplest path: delegate to ssg's own pipeline.
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    ssg::run().await
+}
+```
+
+If you only want the compile primitive (no plugin pipeline, no dev server), depend on [`staticdatagen`](https://crates.io/crates/staticdatagen) directly:
+
+```rust,no_run
 use staticdatagen::compiler::service::compile;
 use std::path::Path;
 
 fn main() -> anyhow::Result<()> {
-    let build_dir = Path::new("build");
-    let content_dir = Path::new("content");
-    let site_dir = Path::new("public");
-    let template_dir = Path::new("templates");
-
-    compile(build_dir, content_dir, site_dir, template_dir)?;
-    println!("Site generated successfully!");
+    compile(
+        Path::new("build"),
+        Path::new("content"),
+        Path::new("public"),
+        Path::new("templates"),
+    )?;
     Ok(())
 }
 ```
@@ -154,7 +215,7 @@ fn main() -> anyhow::Result<()> {
 <details>
 <summary><b>Plugin example</b></summary>
 
-```rust
+```rust,no_run
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
 use anyhow::Result;
 use std::path::Path;
@@ -170,17 +231,20 @@ impl Plugin for LogPlugin {
     }
 }
 
-let mut pm = PluginManager::new();
-pm.register(LogPlugin);
-pm.register(ssg::plugins::MinifyPlugin);
+fn main() -> Result<()> {
+    let mut pm = PluginManager::new();
+    pm.register(LogPlugin);
+    pm.register(ssg::plugins::MinifyPlugin);
 
-let ctx = PluginContext::new(
-    Path::new("content"),
-    Path::new("build"),
-    Path::new("public"),
-    Path::new("templates"),
-);
-pm.run_after_compile(&ctx).unwrap();
+    let ctx = PluginContext::new(
+        Path::new("content"),
+        Path::new("build"),
+        Path::new("public"),
+        Path::new("templates"),
+    );
+    pm.run_after_compile(&ctx)?;
+    Ok(())
+}
 ```
 
 </details>
@@ -216,22 +280,28 @@ if changed.is_empty() {
 
 | Metric | Value |
 | :--- | :--- |
-| **Release binary** | ~5 MB (stripped, LTO) |
+| **Release binary** | ~23 MB (unstripped), ~5 MB stripped with LTO |
 | **Unsafe code** | 0 blocks — `#![forbid(unsafe_code)]` enforced |
-| **Test suite** | 342 tests in < 2 seconds |
-| **Dependencies** | 19 direct, all audited |
-| **Coverage** | 98% library line coverage |
+| **Test suite** | **741 lib** + 33 doc + integration tests. Run `make bench` for Criterion site-generation benchmarks (10/50/100 pages) |
+| **Dependencies** | 24 direct, audited via `cargo audit` and `cargo deny check` (run `make deny` to reproduce). All CI refs pinned to SHA. |
+| **Coverage** | ~98 % line coverage, measured with `cargo llvm-cov` |
+| **Plugin pipeline** | Rayon-parallelised: search, SEO, canonical, and JSON-LD injection all use `par_iter` |
 
 ---
 
 ## Development
 
 ```bash
+make init         # One-command bootstrap (rustfmt + clippy + cargo-deny + hooks + build)
 make build        # Build the project
 make test         # Run all tests
+make bench        # Run performance benchmarks (Criterion)
 make lint         # Lint with Clippy
 make format       # Format with rustfmt
 make deny         # Check licenses and advisories
+make doc          # Generate API docs and open in browser
+make clean        # Remove build artifacts and stray logs
+make hooks        # Install the signed-commit git hook
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guidelines.
@@ -243,13 +313,34 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 <details>
 <summary><b>Core modules</b></summary>
 
-- **cmd** — CLI argument parsing, configuration management, input validation
-- **process** — Directory creation, frontmatter preprocessing, site compilation
-- **plugin** — Trait-based plugin system with lifecycle hooks
+- **cmd** — CLI argument parsing, `SsgConfig`, input validation
+- **process** — Argument-driven site processing and directory creation
+- **lib** — Orchestrator: `run()` → plugin pipeline → compile → serve
+- **plugin** — `Plugin` trait with `before_compile`, `after_compile`, `on_serve` hooks
 - **plugins** — Built-in `MinifyPlugin`, `ImageOptiPlugin`, `DeployPlugin`
 - **cache** — Content fingerprinting for incremental builds
 - **watch** — Polling-based file watcher for live rebuild
 - **schema** — JSON Schema generator for configuration
+- **scaffold** — Project scaffolding (`ssg --new`)
+- **frontmatter** — Frontmatter extraction and `.meta.json` sidecar support
+- **tera_engine** — Tera templating engine integration
+- **tera_plugin** — Tera template rendering plugin
+- **seo** — `SeoPlugin`, `JsonLdPlugin`, `CanonicalPlugin`, `RobotsPlugin`
+- **search** — Client-side search index generation + localized `SearchLabels`
+- **accessibility** — Automated WCAG checker and ARIA validation
+- **ai** — AI-readiness content hooks (alt-text validation, `llms.txt`)
+- **deploy** — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
+- **assets** — Asset fingerprinting and SRI hash generation
+- **highlight** — Syntax highlighting plugin for code blocks
+- **shortcodes** — Shortcode expansion (youtube, gist, figure, admonitions)
+- **markdown_ext** — GFM extensions (tables, strikethrough, task lists)
+- **image_plugin** — Image optimization with WebP output and responsive `srcset`
+- **livereload** — WebSocket live-reload injection
+- **pagination** — Pagination plugin for listing pages
+- **taxonomy** — Taxonomy generation (tags, categories)
+- **drafts** — Draft content filtering plugin
+- **stream** — High-performance streaming file processor
+- **walk** — Shared bounded directory walkers
 </details>
 
 <details>
@@ -267,9 +358,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 <details>
 <summary><b>Test coverage</b></summary>
 
-- **342 total tests** (197 unit + 23 doc-tests + 36 integration + 86 `serde_yml`)
-- **98% library line coverage** measured with cargo-llvm-cov
-- **Multi-platform CI** — macOS, Ubuntu, Windows (stable + nightly)
+- **741 lib tests** plus integration + fault-injection suites
+- **~98 % library line coverage** measured with cargo-llvm-cov
+- CI runs on the shared `rust-ci.yml` pipeline (`stable` toolchain)
 </details>
 
 ---
@@ -279,8 +370,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guideli
 
 ---
 
+## Code of Conduct
+
+Please read our [Code of Conduct](.github/CODE-OF-CONDUCT.md) before participating in the project.
+
 ## License
 
 Dual-licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) or [MIT](https://opensource.org/licenses/MIT), at your option.
 
-<p align="right"><a href="#static-site-generator-ssg">Back to Top</a></p>
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+<p align="right"><a href="#contents">Back to Top</a></p>

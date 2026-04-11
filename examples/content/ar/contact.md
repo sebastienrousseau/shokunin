@@ -61,7 +61,7 @@ news_title: "اتصل بنا" ## عنوان الصفحة. (بحد أقصى 64 ح
 atom_link: https://kaishi.sa/contact/rss.xml
 category: "التقنية"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: تغذية RSS لصفحة الاتصال الخاصة بموقع Kaishi.
 item_guid: "https://kaishi.sa/contact/index.html"
 item_link: "https://kaishi.sa/contact/index.html"

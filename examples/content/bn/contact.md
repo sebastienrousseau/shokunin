@@ -61,7 +61,7 @@ news_title: "আমাদের সাথে যোগাযোগ করুন"
 atom_link: https://kaishi.bd/contact/rss.xml
 category: "প্রযুক্তি"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kaishi ওয়েবসাইটের যোগাযোগ পৃষ্ঠার জন্য RSS ফিড।
 item_guid: "https://kaishi.bd/contact/index.html"
 item_link: "https://kaishi.bd/contact/index.html"

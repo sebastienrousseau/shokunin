@@ -60,7 +60,7 @@ news_title: "Kaishi، قالب بداية لمنشئ المواقع الثابت
 atom_link: https://kaishi.sa/rss.xml
 category: "التقنية"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: تغذية RSS للموقع
 item_guid: "https://kaishi.sa"
 item_link: "https://kaishi.sa"

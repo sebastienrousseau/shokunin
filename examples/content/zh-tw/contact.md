@@ -61,7 +61,7 @@ news_title: "聯絡我們" ## 頁面的標題。(最多 64 個字元)
 atom_link: https://kaishi.tw/contact/rss.xml
 category: "科技"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: Kaishi 網站聯絡頁面的 RSS 訂閱。
 item_guid: "https://kaishi.tw/contact/index.html"
 item_link: "https://kaishi.tw/contact/index.html"

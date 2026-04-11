@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn config_accessors() {
-        let dir = PathBuf::from("/tmp/fake");
+        let dir = std::env::temp_dir().join("ssg_watch_fake");
         let interval = Duration::from_millis(500);
         let cfg = WatchConfig::new(dir.clone(), interval);
         assert_eq!(cfg.directory(), dir.as_path());
@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     fn nonexistent_directory_errors() {
-        let dir = PathBuf::from("/tmp/ssg_watch_test_nonexistent_99999");
+        let dir = std::env::temp_dir().join("ssg_watch_test_nonexistent_99999");
         let _ = fs::remove_dir_all(&dir);
 
         let cfg = WatchConfig::new(dir, Duration::from_millis(50));
@@ -534,7 +534,7 @@ mod tests {
     #[test]
     fn watch_config_default_values() {
         // Arrange
-        let dir = PathBuf::from("/tmp/watch_defaults");
+        let dir = std::env::temp_dir().join("ssg_watch_defaults");
         let poll = Duration::from_secs(2);
         let debounce = Duration::from_millis(100);
 
@@ -543,7 +543,7 @@ mod tests {
 
         // Assert — verify the values we passed are stored correctly
         assert_eq!(cfg.poll_interval(), Duration::from_secs(2));
-        assert_eq!(cfg.directory(), Path::new("/tmp/watch_defaults"));
+        assert_eq!(cfg.directory(), dir.as_path());
         // Debounce is not part of WatchConfig; confirm poll is distinct
         assert_ne!(cfg.poll_interval(), debounce);
     }

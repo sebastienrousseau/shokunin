@@ -512,8 +512,9 @@ mod tests {
 
     #[test]
     fn test_stream_copy_nonexistent_source() {
+        let dst = std::env::temp_dir().join("ssg_stream_copy_out");
         let result =
-            stream_copy(Path::new("/nonexistent"), Path::new("/tmp/out"));
+            stream_copy(Path::new("/definitely-does-not-exist-ssg"), &dst);
         assert!(result.is_err());
     }
 

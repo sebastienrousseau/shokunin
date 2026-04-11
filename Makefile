@@ -4,11 +4,57 @@
 .PHONY: all
 all: help ## Display this help.
 
+# One-command bootstrap. Detects the host OS, installs missing toolchain
+# components via rustup, and wires up the project's git hooks. Re-running
+# this target on a fresh clone is a no-op for anything already in place.
+.PHONY: init
+init: ## Bootstrap a clean clone (rustfmt + clippy + hooks + first build).
+	@echo "==> Detecting platform..."
+	@printf "    host: " ; uname -s
+	@command -v rustup >/dev/null 2>&1 || { \
+	    echo "ERROR: rustup not found. Install from https://rustup.rs/"; \
+	    exit 1; \
+	}
+	@rustup show active-toolchain
+	@rustup component add rustfmt clippy 2>/dev/null || true
+	@command -v cargo-deny >/dev/null 2>&1 || cargo install cargo-deny
+	@$(MAKE) -s hooks
+	@cargo build --quiet
+	@echo "==> Bootstrap complete. Run 'make test' to verify."
+
+# Install the project-managed git hooks (signed-commit guard, etc).
+.PHONY: hooks
+hooks: ## Install the project's git hooks under .githooks/.
+	@git config core.hooksPath .githooks
+	@chmod +x .githooks/pre-commit 2>/dev/null || true
+	@echo "✓ Git hooks installed (.githooks/)."
+
+# Run the Criterion benchmark suite.
+.PHONY: bench
+bench: ## Run performance benchmarks (Criterion).
+	@echo "Running benchmarks..."
+	@cargo bench --bench bench
+
+# Generate and open API documentation locally.
+.PHONY: doc
+doc: ## Generate API docs and open in browser.
+	@echo "Generating API documentation..."
+	@RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg --open
+
 # Build the project including all workspace members.
 .PHONY: build
 build: ## Build the project.
 	@echo "Building all project components..."
 	@cargo build --all
+
+# Remove build artifacts and stray logs from the working tree.
+.PHONY: clean
+clean: ## Remove build artifacts and stray logs.
+	@echo "Cleaning build artifacts..."
+	@cargo clean
+	@rm -rf examples/build examples/public public/ build/
+	@rm -f site.log site_generation.log
+	@echo "Done."
 
 # Lint the project with stringent rules using Clippy, install Clippy if not present.
 .PHONY: lint

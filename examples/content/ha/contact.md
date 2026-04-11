@@ -61,7 +61,7 @@ news_title: "Tuntube Mu" ## Take na shafin. (iyakar haruffa 64)
 atom_link: https://kaishi.ng/contact/rss.xml
 category: "Fasaha"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: RSS feed don shafin tuntuba na shafin Kaishi.
 item_guid: "https://kaishi.ng/contact/index.html"
 item_link: "https://kaishi.ng/contact/index.html"

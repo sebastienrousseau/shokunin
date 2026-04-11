@@ -1,6 +1,23 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+//! Argument-driven site processing.
+//!
+//! Bridges the parsed [`clap::ArgMatches`] from `cmd::Cli` to the build
+//! pipeline orchestrated in [`crate::run`]. Responsibilities:
+//!
+//! - Resolve content / output / template directories from CLI flags or
+//!   configuration files, applying sensible defaults when callers omit
+//!   them.
+//! - Create build and site directories on disk, ensuring distinct paths
+//!   so `staticdatagen::compile` can finalise output by renaming.
+//! - Pre-process front-matter for every page in the content tree before
+//!   the compiler is invoked.
+//!
+//! Most binaries should call [`crate::run`] rather than this module
+//! directly; the helpers here are exposed for tests and embedders that
+//! need a smaller building block than the full pipeline.
+
 use anyhow::Result;
 use clap::ArgMatches;
 use std::{fs, path::Path};

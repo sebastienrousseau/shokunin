@@ -60,7 +60,7 @@ news_title: "Kaishi, תבנית התחלה למחולל אתרים סטטיים"
 atom_link: https://kaishi.co.il/rss.xml
 category: "טכנולוגיה"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: הזנת RSS עבור האתר
 item_guid: "https://kaishi.co.il"
 item_link: "https://kaishi.co.il"

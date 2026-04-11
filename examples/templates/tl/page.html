@@ -3,7 +3,6 @@
 <head>
   <meta charset="{{charset}}" />
   <link rel="preconnect" href="https://cloudcdn.pro" crossorigin />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{title}}</title>
   {{primary}}
   {{opengraph}}
@@ -25,11 +24,11 @@
   <link rel="manifest" href="/tl/manifest.json" />
   <link rel="alternate" type="application/rss+xml" href="/tl/rss.xml" />
   <style>
-:root{--vp-bg:#fff;--vp-bs:#f6f6f7;--vp-ba:#f6f6f7;--vp-t1:rgba(60,60,67);--vp-t2:rgba(60,60,67,.78);--vp-t3:rgba(60,60,67,.56);--vp-br:#3451b2;--vp-bl:#3a5ccc;--vp-bd:rgba(60,60,67,.12);--vp-nh:64px}
-[data-theme="dark"]{--vp-bg:#1b1b1f;--vp-bs:#202127;--vp-ba:#161618;--vp-t1:rgba(255,255,245,.86);--vp-t2:rgba(235,235,245,.6);--vp-t3:rgba(235,235,245,.38);--vp-br:#a8b1ff;--vp-bl:#c3c9ff;--vp-bd:rgba(84,84,89,.48)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--vp-bg:#1b1b1f;--vp-bs:#202127;--vp-ba:#161618;--vp-t1:rgba(255,255,245,.86);--vp-t2:rgba(235,235,245,.6);--vp-t3:rgba(235,235,245,.38);--vp-br:#a8b1ff;--vp-bl:#c3c9ff;--vp-bd:rgba(84,84,89,.48)}}
+:root{--vp-bg:#fff;--vp-bs:#f6f6f7;--vp-ba:#f6f6f7;--vp-t1:#3c3c43;--vp-t2:#4a4a52;--vp-t3:#595960;--vp-br:#166534;--vp-bl:#14532d;--vp-bd:rgba(60,60,67,.24);--vp-nh:64px}
+[data-theme="dark"]{--vp-bg:#1b1b1f;--vp-bs:#202127;--vp-ba:#161618;--vp-t1:#f5f5f7;--vp-t2:#cccccf;--vp-t3:#a1a1a8;--vp-br:#86efac;--vp-bl:#bbf7d0;--vp-bd:rgba(180,180,190,.32)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--vp-bg:#1b1b1f;--vp-bs:#202127;--vp-ba:#161618;--vp-t1:#f5f5f7;--vp-t2:#cccccf;--vp-t3:#a1a1a8;--vp-br:#86efac;--vp-bl:#bbf7d0;--vp-bd:rgba(180,180,190,.32)}}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}}
 body{font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.7;color:var(--vp-t1);background:var(--vp-bg)}
 a{color:var(--vp-br);text-decoration:none}
 a:hover{color:var(--vp-bl)}
@@ -70,10 +69,10 @@ pre code{background:none;padding:0}
 .theme-switch .sun-svg,.theme-switch .moon-svg{position:absolute;top:3px;width:14px;height:14px;stroke:var(--vp-t3);stroke-width:2;fill:none}
 .theme-switch .sun-svg{left:3px}
 .theme-switch .moon-svg{right:3px}
-.menu-toggle{display:none;background:none;border:1px solid var(--vp-bd);border-radius:6px;padding:4px 6px;cursor:pointer;color:var(--vp-t1)}
+.menu-toggle{display:none;background:none;border:1px solid var(--vp-bd);border-radius:6px;padding:4px 6px;cursor:pointer;color:var(--vp-t1)}.lang-btn,.menu-toggle{min-width:44px;min-height:44px}.theme-switch{position:relative}.theme-switch::after{content:'';position:absolute;inset:-11px;}
 .menu-toggle svg{width:20px;height:20px;stroke:currentColor;stroke-width:2;fill:none}
 .hero{padding:calc(var(--vp-nh) + 60px) 24px 80px;text-align:center;max-width:960px;margin:0 auto}
-.hero-name{font-size:clamp(2rem,5vw,3.5rem);font-weight:700;line-height:1.1;background:linear-gradient(120deg,var(--vp-br) 30%,#41d1ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem}
+.hero-name{font-size:clamp(2rem,5vw,3.5rem);font-weight:700;line-height:1.1;background:linear-gradient(120deg,var(--vp-br) 30%,#4ade80);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1rem}
 .hero-tagline{font-size:clamp(1rem,2vw,1.25rem);color:var(--vp-t2);line-height:1.6;max-width:560px;margin:0 auto 2rem}
 .hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .btn-brand,.btn-alt,.btn-submit{display:inline-flex;align-items:center;padding:10px 24px;border-radius:20px;font-size:15px;cursor:pointer;border:none}
@@ -134,7 +133,7 @@ pre code{background:none;padding:0}
   <nav class="nav" id="mainNav" itemscope itemtype="http://schema.org/SiteNavigationElement" aria-label="Pangunahing nabigasyon">
     <div class="nav-inner">
       <a class="nav-brand" href="/tl/" aria-label="{{logo_alt}} - Tahanan">
-        <img width="{{logo_width}}" height="{{logo_height}}" src="{{logo}}" alt="{{logo_alt}}" />
+        <img width="{{logo_width}}" height="{{logo_height}}" src="{{logo}}" alt="{{logo_alt}}" loading="lazy" decoding="async" />
         <span itemprop="name">{{name}}</span>
       </a>
       <button class="nav-search" type="button" aria-label="Maghanap">
@@ -143,7 +142,7 @@ pre code{background:none;padding:0}
         <kbd>&#8984;K</kbd>
       </button>
       <div class="nav-links" id="navLinks">
-        <ul class="navbar-nav ms-auto mb-2 mb-lg-0"><li class="nav-item"><a class="text-uppercase p-2" title="Makipag-ugnayan sa Amin" aria-label="Makipag-ugnayan sa Amin" href="/contact/index.html">Makipag-ugnayan sa Amin</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Tampok" aria-label="Mga Tampok" href="/features/index.html">Mga Tampok</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Post" aria-label="Mga Post" href="/posts/index.html">Mga Post</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mag-explore ayon sa tag" aria-label="Mag-explore ayon sa tag" href="/tags/index.html">Mag-explore ayon sa tag</a></li></ul>
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0"><li class="nav-item"><a class="text-uppercase p-2" title="Mga Tampok" aria-label="Mga Tampok" href="/features/index.html">Mga Tampok</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Post" aria-label="Mga Post" href="/posts/index.html">Mga Post</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mag-explore ayon sa tag" aria-label="Mag-explore ayon sa tag" href="/tags/index.html">Mag-explore ayon sa tag</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Makipag-ugnayan sa Amin" aria-label="Makipag-ugnayan sa Amin" href="/contact/index.html">Makipag-ugnayan sa Amin</a></li></ul>
       </div>
       <div class="nav-controls">
         <div style="position:relative">
@@ -192,7 +191,7 @@ pre code{background:none;padding:0}
     </div>
   </nav>
   <div class="mobile-menu" id="mobileMenu" role="navigation" aria-label="Mobile na nabigasyon">
-    <ul class="navbar-nav ms-auto mb-2 mb-lg-0"><li class="nav-item"><a class="text-uppercase p-2" title="Makipag-ugnayan sa Amin" aria-label="Makipag-ugnayan sa Amin" href="/contact/index.html">Makipag-ugnayan sa Amin</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Tampok" aria-label="Mga Tampok" href="/features/index.html">Mga Tampok</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Post" aria-label="Mga Post" href="/posts/index.html">Mga Post</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mag-explore ayon sa tag" aria-label="Mag-explore ayon sa tag" href="/tags/index.html">Mag-explore ayon sa tag</a></li></ul>
+    <ul class="navbar-nav ms-auto mb-2 mb-lg-0"><li class="nav-item"><a class="text-uppercase p-2" title="Mga Tampok" aria-label="Mga Tampok" href="/features/index.html">Mga Tampok</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mga Post" aria-label="Mga Post" href="/posts/index.html">Mga Post</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Mag-explore ayon sa tag" aria-label="Mag-explore ayon sa tag" href="/tags/index.html">Mag-explore ayon sa tag</a></li><li class="nav-item"><a class="text-uppercase p-2" title="Makipag-ugnayan sa Amin" aria-label="Makipag-ugnayan sa Amin" href="/contact/index.html">Makipag-ugnayan sa Amin</a></li></ul>
     <div class="mobile-lang">
       <a href="/" hreflang="en" lang="en"><span class="flag">🇬🇧</span> English</a>
       <a href="/fr/" hreflang="fr" lang="fr"><span class="flag">🇫🇷</span> Français</a>
@@ -228,6 +227,7 @@ pre code{background:none;padding:0}
     <div class="breadcrumb">
       <a href="/tl/">Tahanan</a><span>&gt;</span><span>{{title}}</span>
     </div>
+    <h1 class="page-title">{{title}}</h1>
     <div class="content">{{content}}</div>
   </main>
   <footer class="footer" id="footer" aria-label="Talampakan">
@@ -255,7 +255,7 @@ pre code{background:none;padding:0}
     {"@context":"http://schema.org/","@type":"BlogPosting","headline":"{{title}}","datePublished":"{{last_build_date}}","dateModified":"{{item_pub_date}}","description":"{{description}}","image":{"@type":"ImageObject","height":"2048","width":"2048","url":"{{logo}}"},"mainEntityOfPage":{"@type":"WebPage","@id":"{{id}}","name":"{{subtitle}}"},"author":"{{author}}","copyrightHolder":{"@type":"Person","@id":"{{author}}"},"copyrightYear":"{{copyright}}","creator":{"@type":"Person","@id":"{{author}}"},"inLanguage":"{{language}}","name":"{{name}}","publisher":{"@type":"Person","@id":"{{author}}"}}
   </script>
   <script>
-(function(){var r=document.documentElement,sw=document.getElementById('themeToggle'),lt=document.getElementById('langToggle'),ld=document.getElementById('langDropdown'),mt=document.querySelector('.menu-toggle'),mm=document.getElementById('mobileMenu');function setTheme(v){r.setAttribute('data-theme',v);localStorage.setItem('vitepress-theme-appearance',v);if(v==='dark')sw.classList.add('dark');else sw.classList.remove('dark')}var saved=localStorage.getItem('vitepress-theme-appearance');if(saved)setTheme(saved);else if(matchMedia('(prefers-color-scheme:dark)').matches)setTheme('dark');var ns=document.querySelector('.nav-search');if(ns)ns.addEventListener('click',function(){var b=document.getElementById('ssg-search-btn');if(b){b.click()}else{var o=document.getElementById('ssg-search-overlay');if(o){o.classList.add('active');var inp=document.getElementById('ssg-search-input');if(inp){inp.value='';inp.focus()}}}});sw.addEventListener('click',function(){setTheme(r.getAttribute('data-theme')==='dark'?'light':'dark')});if(lt)lt.addEventListener('click',function(e){e.stopPropagation();ld.classList.toggle('open')});document.addEventListener('click',function(){if(ld)ld.classList.remove('open')});if(mt)mt.addEventListener('click',function(){var ex=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',!ex);mm.classList.toggle('open')});document.querySelectorAll('.navbar-nav').forEach(function(ul){var order=['Mga Tampok','Mga Post','Mga Tag','Kontak'],items=Array.from(ul.querySelectorAll('.nav-item'));items.sort(function(a,b){var at=a.textContent.trim(),bt=b.textContent.trim();return order.indexOf(at)-order.indexOf(bt)});items.forEach(function(li){ul.appendChild(li)})});var lp=location.pathname.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//);if(lp){var pfx='/'+lp[1];document.querySelectorAll('a[href^="/"]').forEach(function(a){var h=a.getAttribute('href');if(h&&h.charAt(0)==='/'&&h!=='/'&&!/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//.test(h)){a.setAttribute('href',pfx+h)}})}})();
+(function(){var r=document.documentElement,sw=document.getElementById('themeToggle'),lt=document.getElementById('langToggle'),ld=document.getElementById('langDropdown'),mt=document.querySelector('.menu-toggle'),mm=document.getElementById('mobileMenu');function setTheme(v){r.setAttribute('data-theme',v);localStorage.setItem('vitepress-theme-appearance',v);if(v==='dark')sw.classList.add('dark');else sw.classList.remove('dark')}var saved=localStorage.getItem('vitepress-theme-appearance');if(saved)setTheme(saved);else if(matchMedia('(prefers-color-scheme:dark)').matches)setTheme('dark');var ns=document.querySelector('.nav-search');if(ns)ns.addEventListener('click',function(){var b=document.getElementById('ssg-search-btn');if(b){b.click()}else{var o=document.getElementById('ssg-search-overlay');if(o){o.classList.add('active');var inp=document.getElementById('ssg-search-input');if(inp){inp.value='';inp.focus()}}}});sw.addEventListener('click',function(){setTheme(r.getAttribute('data-theme')==='dark'?'light':'dark')});if(lt)lt.addEventListener('click',function(e){e.stopPropagation();ld.classList.toggle('open')});document.addEventListener('click',function(){if(ld)ld.classList.remove('open')});if(mt)mt.addEventListener('click',function(){var ex=this.getAttribute('aria-expanded')==='true';this.setAttribute('aria-expanded',!ex);mm.classList.toggle('open')});var lp=location.pathname.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//);if(lp){var pfx='/'+lp[1];document.querySelectorAll('a[href^="/"]').forEach(function(a){var h=a.getAttribute('href');if(h&&h.charAt(0)==='/'&&h!=='/'&&!/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//.test(h)){a.setAttribute('href',pfx+h)}})}var _p=location.pathname,_m=_p.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//),_src=_m?_m[1]:'en',_rest=_m?_p.slice(_m[0].length):_p.replace(/^\//,'');if(_src==='fr')_rest=_rest.replace(/^articles\//,'posts/').replace(/^fonctionnalites\//,'features/');document.querySelectorAll('a[hreflang]').forEach(function(a){var _t=a.getAttribute('hreflang'),_r=_rest;if(_t==='fr')_r=_r.replace(/^posts\//,'articles/').replace(/^features\//,'fonctionnalites/');a.setAttribute('href',_t==='en'?'/'+_r:'/'+_t+'/'+_r)});})();
   </script>
 </body>
 </html>

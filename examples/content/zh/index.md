@@ -60,7 +60,7 @@ news_title: "Kaishi,一个静态网站生成器入门模板" ## 页面标题。(
 atom_link: https://kaishi.cn/rss.xml
 category: "技术"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: 本站的 RSS 订阅源
 item_guid: "https://kaishi.cn"
 item_link: "https://kaishi.cn"

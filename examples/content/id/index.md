@@ -60,7 +60,7 @@ news_title: "Kaishi, Templat Awal Static Site Generator" ## Judul halaman. (maks
 atom_link: https://kaishi.id/rss.xml
 category: "Teknologi"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (versi 0.0.34)"
+generator: "SSG (versi 0.0.35)"
 item_description: Feed RSS untuk situs
 item_guid: "https://kaishi.id"
 item_link: "https://kaishi.id"

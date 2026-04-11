@@ -60,7 +60,7 @@ news_title: "Kaishi,靜態網站產生器入門範本" ## 頁面的標題。(最
 atom_link: https://kaishi.tw/rss.xml
 category: "科技"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.34)"
+generator: "SSG (version 0.0.35)"
 item_description: 網站的 RSS 訂閱
 item_guid: "https://kaishi.tw"
 item_link: "https://kaishi.tw"
