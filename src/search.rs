@@ -18,6 +18,7 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -303,9 +304,9 @@ fn run_search(ctx: &PluginContext, labels: &SearchLabels) -> Result<()> {
 
     let html_files = collect_html_files(&ctx.site_dir)?;
     let script = build_widget_script(labels);
-    for path in &html_files {
-        inject_search_ui(path, &script)?;
-    }
+    html_files
+        .par_iter()
+        .try_for_each(|path| inject_search_ui(path, &script))?;
 
     println!(
         "[search] Indexed {} pages, search-index.json written",

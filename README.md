@@ -82,7 +82,7 @@ graph TD
     C --> D[Compile: staticdatagen]
     D --> E[Plugin Pipeline]
     E --> F[Minify / Optimize / Deploy]
-    D --> G[Dev Server: http_handle / Warp]
+    D --> G[Dev Server: http_handle]
     B --> H[File Watcher]
     H -->|changed files| C
 ```

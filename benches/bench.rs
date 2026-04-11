@@ -9,6 +9,8 @@ use criterion::Criterion;
 
 /// This is a module for benchmarking file operations.
 mod bench_file;
+/// End-to-end site generation benchmarks at varying page counts.
+mod bench_site_generation;
 /// This is a module for benchmarking yaml operations.
 mod bench_utilities;
 
@@ -22,6 +24,7 @@ criterion::criterion_group! {
     targets =
         bench_file::bench_file,
         bench_utilities::bench_utilities,
+        bench_site_generation::bench_site_generation,
 }
 
 // Run benchmarks

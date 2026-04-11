@@ -29,6 +29,12 @@ hooks: ## Install the project's git hooks under .githooks/.
 	@chmod +x .githooks/pre-commit 2>/dev/null || true
 	@echo "✓ Git hooks installed (.githooks/)."
 
+# Run the Criterion benchmark suite.
+.PHONY: bench
+bench: ## Run performance benchmarks (Criterion).
+	@echo "Running benchmarks..."
+	@cargo bench --bench bench
+
 # Generate and open API documentation locally.
 .PHONY: doc
 doc: ## Generate API docs and open in browser.

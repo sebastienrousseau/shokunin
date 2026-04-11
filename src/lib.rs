@@ -1165,12 +1165,26 @@ pub async fn handle_server(
 
     prepare_serve_dir(paths, serve_dir).await?;
 
-    println!("\nStarting server at http://127.0.0.1:8000");
+    let host = cmd::resolve_host();
+    let port = cmd::resolve_port();
+    let addr = format!("{host}:{port}");
+
+    println!("\nStarting server at http://{addr}");
     println!("Serving content from: {}", serve_dir.display());
 
-    warp::serve(warp::fs::dir(serve_dir.clone()))
-        .run(([127, 0, 0, 1], 8000))
-        .await;
+    let dir = serve_dir
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("serve dir contains invalid UTF-8"))?
+        .to_string();
+    let bind = addr.clone();
+
+    // Run the blocking http_handle server on a dedicated thread so the
+    // async runtime doesn't starve.
+    tokio::task::spawn_blocking(move || {
+        let server = Server::new(&bind, &dir);
+        let _ = server.start();
+    })
+    .await?;
     Ok(())
 }
 
