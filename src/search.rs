@@ -375,9 +375,10 @@ fn extract_headings(html: &str) -> Vec<String> {
 
 /// Extract visible text from HTML, stripping all tags.
 fn extract_text(html: &str) -> String {
-    // Remove <script>, <style>, <nav>, <header>, <footer> blocks
+    // Remove non-content blocks. Note: <header> is intentionally kept
+    // so hero taglines / subtitles are searchable.
     let mut clean = html.to_string();
-    for tag in &["script", "style", "nav", "header", "footer", "head"] {
+    for tag in &["script", "style", "nav", "footer", "head"] {
         let open = format!("<{tag}");
         let close = format!("</{tag}>");
         while let Some(start) = clean.find(&open) {
@@ -624,7 +625,7 @@ function search(q){if(!idx||!q){results.innerHTML='';return}q=q.trim();if(!q){re
 for(var i=0;i<idx.length&&hits.length<20;i++){var e=idx[i],s=0;if(e.title.toLowerCase().indexOf(ql)>=0)s+=10;if(e.content.toLowerCase().indexOf(ql)>=0)s+=5;for(var h=0;h<e.headings.length;h++){if(e.headings[h].toLowerCase().indexOf(ql)>=0){s+=3;break}}if(s>0)hits.push({entry:e,score:s})}
 hits.sort(function(a,b){return b.score-a.score});
 if(!hits.length){results.innerHTML='<div class="ssg-no-results">{{SSG_NO_RESULTS}}</div>';return}
-var html='';for(var j=0;j<hits.length;j++){var e=hits[j].entry;html+='<a class="ssg-result" href="'+esc(e.url)+'">'+'<div class="ssg-result-title">'+highlight(e.title,q)+'</div>'+'<div class="ssg-result-snippet">'+snippet(e.content,q)+'</div></a>'}
+var lp=lm?'/'+lm[1]:'';var html='';for(var j=0;j<hits.length;j++){var e=hits[j].entry;html+='<a class="ssg-result" href="'+esc(lp+e.url)+'">'+'<div class="ssg-result-title">'+highlight(e.title,q)+'</div>'+'<div class="ssg-result-snippet">'+snippet(e.content,q)+'</div></a>'}
 results.innerHTML=html;active=-1}
 function nav(dir){var items=results.querySelectorAll('.ssg-result');if(!items.length)return;if(active>=0&&items[active])items[active].classList.remove('active');active+=dir;if(active<0)active=items.length-1;if(active>=items.length)active=0;items[active].classList.add('active');items[active].scrollIntoView({block:'nearest'})}
 btn.addEventListener('click',function(){open()});
