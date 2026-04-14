@@ -1,12 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 name: portability
 
 # Cost-aware CI strategy:
 #
-#   Per push / PR  → Linux + stable only      (~2 min, ~$0.008/run)
+#   Per push / PR  → Linux + stable only      (~1 min, ~$0.004/run)
 #   Weekly         → 3-OS × 2-toolchain full  (catches MSRV + Windows/macOS regressions)
 #   Release tags   → full matrix              (gate before publish)
 #
-# This cuts per-push cost ~6× vs the previous "always full matrix" approach.
 # Windows runners are 2× the Linux rate and Rust cold-builds take 10-15 min;
 # running them weekly instead of per-push saves ~$50-100/month at moderate
 # push frequency.
@@ -17,7 +18,7 @@ on:
     tags: ["v*"]
   pull_request:
   schedule:
-    - cron: "0 6 * * 1"        # Every Monday 06:00 UTC
+    - cron: "0 6 * * 1" # Every Monday 06:00 UTC
 
 permissions:
   contents: read
@@ -26,19 +27,30 @@ concurrency:
   group: portability-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0" # Skip debug info → faster builds, smaller cache
+
 jobs:
   # ── Fast gate (every push / PR) ────────────────────────────────────
   quick:
     name: linux · stable
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
-        with: { shared-key: quick-linux }
+        with:
+          shared-key: quick-linux
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build
         run: cargo build --all-targets --locked
@@ -55,18 +67,21 @@ jobs:
     if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
     name: ${{ matrix.os }} · ${{ matrix.toolchain }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os:        [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         toolchain: [stable, "1.88"]
         exclude:
-          # Already covered by the "quick" job above
           - os: ubuntu-latest
             toolchain: stable
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
@@ -76,6 +91,7 @@ jobs:
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         with:
           shared-key: full-${{ matrix.os }}-${{ matrix.toolchain }}
+          save-if: ${{ github.event_name == 'schedule' }}
 
       - name: Build
         run: cargo build --all-targets --locked
@@ -86,3 +102,37 @@ jobs:
       - name: Doc
         env: { RUSTDOCFLAGS: -D warnings }
         run: cargo doc --no-deps -p ssg
+
+  # ── Static musl binary (weekly + release tags only) ────────────────
+  musl:
+    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/v')
+    name: linux · musl static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          show-progress: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Install musl tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+        with:
+          shared-key: musl
+          save-if: ${{ github.event_name == 'schedule' }}
+
+      - name: Build static binary
+        run: cargo build --release --target x86_64-unknown-linux-musl --locked
+
+      - name: Verify static linking
+        run: |
+          file target/x86_64-unknown-linux-musl/release/ssg
+          ldd target/x86_64-unknown-linux-musl/release/ssg 2>&1 | grep -q "not a dynamic executable" \
+            && echo "✓ Fully static" || echo "⚠ Dynamic deps found"

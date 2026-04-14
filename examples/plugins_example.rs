@@ -2,10 +2,31 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Plugin pipeline example
+//! # Plugins Example — Plugin pipeline lifecycle demonstration
 //!
-//! Demonstrates the full SSG plugin ecosystem: compile a site, then
-//! run SEO, search, minification, and live-reload plugins in sequence.
+//! ## What this example demonstrates
+//!
+//! - **Lifecycle hooks** — `before_compile`, `after_compile`, and `on_serve` in action
+//! - **22 built-in plugins** — how SEO, search, minify, and live-reload compose together
+//! - **Incremental build cache** — skips work when no content has changed
+//!
+//! ## When to use this pattern
+//!
+//! Use this example when you want to understand the plugin API internals before
+//! authoring your own plugin or customising the pipeline ordering.
+//!
+//! ## Run it
+//!
+//! ```sh
+//! cargo run --release --example plugins_example
+//! ```
+//!
+//! This example does not start a server — it is a pipeline demonstration only.
+//!
+//! ## What makes this different from other examples
+//!
+//! Unlike `quickstart` which just uses plugins, this example walks through
+//! each lifecycle stage so you can see exactly where each plugin runs.
 
 use anyhow::Result;
 use ssg::cache::BuildCache;
@@ -89,7 +110,7 @@ fn main() -> Result<()> {
     let index_path = site_dir.join("search-index.json");
     if index_path.exists() {
         let size = fs::metadata(&index_path)?.len();
-        println!("  🔍 Search index: {} bytes", size);
+        println!("  🔍 Search index: {size} bytes");
     }
     let robots_path = site_dir.join("robots.txt");
     if robots_path.exists() {

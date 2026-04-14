@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 char
 banner_alt: "Green And Black Tiled Wall" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## The banner of the site.
 cdn: "https://cloudcdn.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)

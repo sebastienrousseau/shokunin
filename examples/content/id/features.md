@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.id (Jane Doe)" ## Penulis halaman. (maks. 64 karakter)
 banner_alt: "Dinding Berubin Hijau dan Hitam" ## Teks alternatif banner situs.
 banner_height: "398" ## Tinggi banner situs.
 banner_width: "1440" ## Lebar banner situs.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Banner situs.
 cdn: "https://cloudcdn.pro" ## CDN situs.
 changefreq: "weekly" ## Frekuensi perubahan situs.
 charset: "utf-8" ## Charset situs. (default: utf-8)

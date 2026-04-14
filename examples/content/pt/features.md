@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.pt (Jane Doe)" ## O autor da página. (máx. 64 caracte
 banner_alt: "Parede em mosaico verde e preto" ## O texto alternativo do banner do site.
 banner_height: "398" ## A altura do banner do site.
 banner_width: "1440" ## A largura do banner do site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## O banner do site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## O banner do site.
 cdn: "https://cloudcdn.pro" ## O CDN do site.
 changefreq: "weekly" ## A frequência de alteração do site.
 charset: "utf-8" ## A codificação de caracteres do site. (predefinição: utf-8)

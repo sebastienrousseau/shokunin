@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
-  "name": "shokunin (Rust)",
+  "name": "static-site-generator (Rust)",
   "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},

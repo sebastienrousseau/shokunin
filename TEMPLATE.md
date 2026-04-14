@@ -1,5 +1,6 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 <!-- markdownlint-disable MD033 MD041 -->
-<img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg"
+<img src="https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg"
 alt="SSG logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
@@ -29,19 +30,19 @@ SSG is a high-performance static site generator (SSG) engineered in Rust that pr
 - Advanced SEO optimization
 - Type-safe operations with comprehensive error handling
 
-[00]: https://shokunin.one
+[00]: https://static-site-generator.one
 [01]: https://lib.rs/crates/ssg
-[02]: https://github.com/sebastienrousseau/shokunin/issues
+[02]: https://github.com/sebastienrousseau/static-site-generator/issues
 [03]: https://crates.io/crates/ssg
 [04]: https://docs.rs/ssg
-[05]: https://github.com/sebastienrousseau/shokunin/blob/main/CONTRIBUTING.md
-[06]: https://codecov.io/gh/sebastienrousseau/shokunin
-[07]: https://github.com/sebastienrousseau/shokunin/actions?query=branch%3Amain
+[05]: https://github.com/sebastienrousseau/static-site-generator/blob/main/CONTRIBUTING.md
+[06]: https://codecov.io/gh/sebastienrousseau/static-site-generator
+[07]: https://github.com/sebastienrousseau/static-site-generator/actions?query=branch%3Amain
 [08]: https://www.rust-lang.org/
-[09]: https://github.com/sebastienrousseau/shokunin
+[09]: https://github.com/sebastienrousseau/static-site-generator
 
-[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/release.yml?branch=main&style=for-the-badge&logo=github
-[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&token=wAcpid8YEt&logo=codecov
+[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/static-site-generator/release.yml?branch=main&style=for-the-badge&logo=github
+[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&token=wAcpid8YEt&logo=codecov
 [crates-badge]: https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust
 [docs-badge]: https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 [github-badge]: https://img.shields.io/badge/github-sebastienrousseau/ssg-8da0cb?style=for-the-badge&labelColor=555555&logo=github

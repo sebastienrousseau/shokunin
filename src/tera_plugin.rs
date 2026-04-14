@@ -75,12 +75,10 @@ impl Plugin for TeraPlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        let engine = if let Some(e) = TeraEngine::init(self.config.clone())? {
-            e
-        } else {
+        let Some(engine) = TeraEngine::init(self.config.clone())? else {
             log::info!(
-                "[tera] No templates at {:?}, skipping",
-                self.config.template_dir
+                "[tera] No templates at {}, skipping",
+                self.config.template_dir.display()
             );
             return Ok(());
         };
@@ -131,7 +129,10 @@ impl Plugin for TeraPlugin {
                     rendered += 1;
                 }
                 Err(e) => {
-                    log::warn!("[tera] Failed to render {html_path:?}: {e}");
+                    log::warn!(
+                        "[tera] Failed to render {}: {e}",
+                        html_path.display()
+                    );
                 }
             }
         }
@@ -197,7 +198,7 @@ mod tests {
         (dir, content, build, site, templates)
     }
 
-    /// Builds an SsgConfig suitable for with_config. The paths all
+    /// Builds an `SsgConfig` suitable for `with_config`. The paths all
     /// point at subdirs of the supplied root.
     fn make_config(root: &Path) -> SsgConfig {
         SsgConfig {
@@ -210,6 +211,7 @@ mod tests {
             output_dir: root.join("build"),
             template_dir: root.join("templates"),
             serve_dir: None,
+            i18n: None,
         }
     }
 
@@ -279,6 +281,7 @@ mod tests {
             output_dir: dir.path().join("build"),
             template_dir: dir.path().join("templates"),
             serve_dir: None,
+            i18n: None,
         };
 
         let content_dir = config.content_dir.clone();

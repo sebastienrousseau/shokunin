@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn test_cname_empty() {
         let options = CnameData {
-            cname: "".to_string(),
+            cname: String::new(),
         };
 
         let output = cname(&options);

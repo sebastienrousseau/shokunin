@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.id (Jane Doe)" ## Penulis halaman. (maks. 64 karakter)
 banner_alt: "Dinding Berubin Hijau dan Hitam" ## Teks alternatif banner situs.
 banner_height: "398" ## Tinggi banner situs.
 banner_width: "1440" ## Lebar banner situs.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner situs.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Banner situs.
 cdn: "https://cloudcdn.pro" ## CDN situs.
 changefreq: "weekly" ## Frekuensi perubahan situs.
 charset: "utf-8" ## Charset situs. (default: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport si
 news_genres: "Blog" ## Genre situs. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "templat awal kaishi, static site generator, generator situs statis, templat awal, bootstrap, bootstrap css, bootstrap javascript, content security policy, tag meta open graph, bilah navigasi responsif, tag meta schema.org" ## Kata kunci situs. (dipisahkan koma, maks. 10 kata kunci)
 news_language: "id" ## Bahasa situs. (default: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Lokasi gambar situs.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Lokasi gambar situs.
 news_loc: "https://kaishi.id" ## Lokasi situs.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Tanggal publikasi situs.
 news_publication_name: "Kaishi" ## Nama publikasi berita situs.
@@ -167,4 +167,4 @@ Sesuaikan templat agar sesuai dengan kebutuhan spesifik Anda. Kemungkinannya tak
 
 Dengan rangkaian templat awal kami, Anda memiliki fondasi yang kokoh untuk membangun sesuatu yang unik dan disesuaikan dengan kebutuhan spesifik Anda. Selami dan mulailah berkreasi!
 
-[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>

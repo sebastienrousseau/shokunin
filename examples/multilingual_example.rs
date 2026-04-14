@@ -2,10 +2,31 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Multilingual Static Site Generator Example
+//! # Multilingual Example — 28-locale i18n showcase
 //!
-//! This example demonstrates how to generate a multilingual static site
-//! with a language selector at the root of the `public` directory.
+//! ## What this example demonstrates
+//!
+//! - **Per-locale search index + hreflang** — each language gets its own index and SEO tags
+//! - **Auto-generated language switcher** — all 28 locales rendered at the site root
+//! - **Accept-Language negotiation + `x-default` fallback** — browser picks the right locale
+//!
+//! ## When to use this pattern
+//!
+//! Use this example when shipping a site that must serve many languages with
+//! correct SEO signals and a graceful fallback for unsupported locales.
+//!
+//! ## Run it
+//!
+//! ```sh
+//! cargo run --release --example multilingual_example
+//! ```
+//!
+//! Then open <http://127.0.0.1:3000> in your browser.
+//!
+//! ## What makes this different from other examples
+//!
+//! Unlike `blog` which is single-language, this example generates 28 parallel
+//! locale trees with hreflang wiring and automatic language negotiation.
 
 use anyhow::Result;
 use http_handle::Server;
@@ -60,7 +81,7 @@ fn main() -> Result<()> {
 
     // Generate sites for all languages
     for lang in &languages {
-        println!("Processing language: {}", lang);
+        println!("Processing language: {lang}");
 
         // Define paths specific to the language
         let build_dir = Path::new("./examples/build").join(lang);
@@ -94,6 +115,28 @@ fn main() -> Result<()> {
         );
         plugins.run_after_compile(&ctx)?;
         println!("    🔌 Plugins complete for {lang}");
+    }
+
+    // Run the I18nPlugin once over the whole site to inject hreflang
+    // links, generate per-locale sitemaps, and replace the
+    // <!-- ssg:lang-switcher --> marker with a full 28-locale switcher.
+    {
+        use ssg::i18n::{I18nConfig, I18nPlugin, UrlPrefixStrategy};
+        let i18n_cfg = I18nConfig {
+            default_locale: "en".to_string(),
+            locales: languages.iter().map(|s| (*s).to_string()).collect(),
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let i18n_plugin = I18nPlugin::new(i18n_cfg);
+        let ctx = PluginContext::new(
+            Path::new("./examples/content"),
+            Path::new("./examples/build"),
+            public_root,
+            Path::new("./examples/templates"),
+        );
+        use ssg::plugin::Plugin;
+        i18n_plugin.after_compile(&ctx)?;
+        println!("    🌍 I18nPlugin injected hreflang + language switcher");
     }
 
     // Promote English to the site root: copy every file from `public/en/`

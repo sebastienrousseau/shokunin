@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.in (जेन डो)" ## पृष्ठ का ले
 banner_alt: "सफ़ेद सतह पर MacBook Pro" ## साइट का बैनर alt।
 banner_height: "398" ## साइट के बैनर की ऊँचाई।
 banner_width: "1440" ## साइट के बैनर की चौड़ाई।
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## साइट का बैनर।
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## साइट का बैनर।
 cdn: "https://cloudcdn.pro" ## साइट का CDN।
 changefreq: "weekly" ## साइट का changefreq।
 charset: "utf-8" ## साइट का charset। (डिफ़ॉल्ट: utf-8)
@@ -50,7 +50,7 @@ news_genres: "Blog" ## साइट के genres। (PressRelease|Satire|Blog|O
 news_keywords: "kaishi, स्थैतिक साइट जनरेटर, स्थैतिक साइट जनरेटर, मिनिमलिस्ट वेबसाइट टेम्पलेट, आधुनिक वेबसाइट टेम्पलेट, रिस्पॉन्सिव वेबसाइट टेम्पलेट, वेबसाइट स्टार्टर टेम्पलेट, फ्रीलांस क्रिएटिव, स्टार्टअप संस्थापक, छोटे व्यवसाय के मालिक, ऑनलाइन उपस्थिति" ## साइट के कीवर्ड। (अल्पविराम से अलग, अधिकतम 10 कीवर्ड)
 news_language: "hi" ## साइट की भाषा। (डिफ़ॉल्ट: en)
 news_loc: "https://kaishi.in" ## साइट का loc।
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## साइट का image loc।
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## साइट का image loc।
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## साइट की प्रकाशन तिथि।
 news_publication_name: "Kaishi" ## साइट का news publication name।
 news_title: "टैग" ## पृष्ठ का शीर्षक। (अधिकतम 64 वर्ण)

@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.nl (Jane Doe)" ## De auteur van de pagina. (max 64 teke
 banner_alt: "Groen en zwart betegelde muur" ## De alt-tekst van de banner van de site.
 banner_height: "398" ## De hoogte van de banner van de site.
 banner_width: "1440" ## De breedte van de banner van de site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De banner van de site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## De banner van de site.
 cdn: "https://cloudcdn.pro" ## De CDN van de site.
 changefreq: "weekly" ## De wijzigingsfrequentie van de site.
 charset: "utf-8" ## De tekenset van de site. (standaard: utf-8)

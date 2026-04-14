@@ -1,9 +1,91 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.36] - 2026-04-13
+
+### Added
+
+- **Post-processing pipeline** — new `postprocess` module with 5 plugins that
+  repair `staticdatagen` output: `SitemapFixPlugin` (duplicate XML declarations,
+  double-slash URLs, per-page lastmod), `NewsSitemapFixPlugin` (placeholder
+  replacement, `<news:keywords>`), `RssAggregatePlugin` (feed aggregation with
+  enclosures, categories, language, lastBuildDate, copyright),
+  `ManifestFixPlugin` (word-boundary-safe truncation), `HtmlFixPlugin` (JSON-LD
+  date conversion, HTTPS context, broken img repair).
+- **Content schema validation** — new `content` module with `ContentSchema`,
+  `FieldDef`, TOML schema loader, compile-time frontmatter validation, and
+  `--validate` CLI flag for schema-only checks. 62 tests.
+- **Responsive image pipeline** — `ImageOptimizationPlugin` now emits
+  `<picture>` elements with AVIF/WebP `<source>` tags, responsive `srcset` at
+  320/640/1024/1440, `loading="lazy" decoding="async"` by default,
+  `fetchpriority="high"` → `loading="eager"`, width/height from source metadata.
+- **i18n routing** — new `i18n` module with `I18nPlugin`, automatic hreflang
+  injection for multi-locale pages, `x-default` support, per-locale sitemaps
+  with `xhtml:link` alternates, `generate_lang_switcher_html()` helper.
+- **Parallel plugin pipeline** — `MinifyPlugin` and `SearchIndex::build`
+  converted to `par_iter()`. New `--jobs N` CLI flag for Rayon thread count.
+- **Benchmark suite** — Criterion benchmarks for 10–10K synthetic pages,
+  `benchmarks/README.md` with cross-SSG comparison instructions, `BENCHMARKS.md`
+  template.
+- **Accessibility CI** — `.github/workflows/a11y.yml` with pa11y WCAG 2.1 AA
+  scanning, `make a11y` target.
+- **SBOM + CI hardening** — `.github/workflows/sbom.yml` with CycloneDX
+  generation and Sigstore build provenance attestation.
+- **Multi-platform release workflow** — `.github/workflows/release.yml` builds 5
+  targets on `v*` tags: Linux glibc, Linux musl (static), macOS ARM64, macOS
+  Intel, Windows. SHA256 checksums, GitHub Release, crates.io publish.
+- **Install script** — `scripts/install.sh` auto-detects OS/arch, downloads
+  correct binary, verifies checksum, installs to `~/.local/bin`.
+- **Homebrew formula** — `Formula/ssg.rb` for `brew install`.
+- **SPDX license headers** — added to all 60+ source files.
+- **Deploy security headers** — `Content-Security-Policy` and
+  `Strict-Transport-Security` (HSTS) added to Netlify/Vercel/Cloudflare configs.
+- **Enhanced SEO plugin** — full OG suite (og:url, og:image, og:image:width/
+  height, og:locale), full Twitter Card suite (summary_large_image for
+  articles), JSON-LD Article/WebPage with datePublished, dateModified, author
+  as Person entity, image as ImageObject, inLanguage.
+- **Canonical URL replacement** — `CanonicalPlugin` now replaces template
+  placeholders with correct `base_url + path` instead of skipping existing tags.
+
+### Changed
+
+- **Renamed** all references from "Shokunin" to "Static Site Generator".
+- **Dependencies reduced** from 25 → 21 direct deps: `once_cell` → `OnceLock`,
+  `dtt` → `chrono`, `colored` → ANSI codes, `uuid` moved to dev-deps.
+- **Tokio features trimmed** from `["full"]` to `["fs", "rt-multi-thread",
+  "macros", "time"]` — removes 8 unused subsystems.
+- **MSRV** synced between `build.rs` (was 1.74) and `Cargo.toml` (1.88).
+- **Dev server** only starts when `--serve` is explicitly requested (was
+  blocking unconditionally after every build, breaking CI).
+- **Accessibility checker** recognises `alt=""` with `role="presentation"` and
+  bare `alt` attribute (minified) as valid decorative images.
+- **Template contrast** — WCAG AAA colours: `--vp-t3` → `#545458`/`#a1a1aa`,
+  `--vp-br` → `#1a3a8a`, links underlined for colour-blind distinguishability.
+- **Musl static binary** — added to CI portability matrix (weekly + release).
+- **`deny.toml`** — removed stale `CC0-1.0` and `Unicode-DFS-2016` entries.
+
+### Fixed
+
+- **Sitemap** — duplicate XML declarations, double-slash URLs, stale lastmod.
+- **News sitemap** — "Unnamed Publication" / "Untitled Article" placeholders
+  replaced with real frontmatter data.
+- **RSS feed** — root feed now aggregates all article items (was single
+  self-referencing entry).
+- **OG/Twitter tags** — empty on non-index pages due to comment-marker
+  detection instead of actual `<meta>` tag checks.
+- **JSON-LD dates** — RFC 2822 → ISO 8601 conversion.
+- **JSON-LD @context** — `http://schema.org/` → `https://schema.org`.
+- **Manifest.json** — description truncated mid-word at 120 chars.
+- **Markdown .class= syntax** — `<p src=` injected into `<img>` tags.
+- **Lighthouse scores** — A11y 91→100, SEO 85→100 on generated output.
+- **CI** — a11y workflow cancellation, Chrome sandbox flags, mold linker
+  config incompatibility with CI runners.
 
 ## [0.0.35] - 2026-04-11
 
@@ -75,7 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CONTRIBUTING.md** architecture tree synced to all 30 modules; signed-tag
   enforcement; per-platform setup instructions.
 - **`Cargo.toml`** `documentation` URL → `https://docs.rs/ssg` (was dead
-  `shokunin.one`); `homepage` → GitHub repository URL.
+  `static-site-generator.one`); `homepage` → GitHub repository URL.
 - **`ssg --help`** no longer leaks `[INFO]` log lines (logger init moved
   below `Cli::build().get_matches()`).
 - **Portability CI** split into fast gate (1 job/push) + full matrix
@@ -126,12 +208,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.34] - 2025-04-04
 
-See [release notes](https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.34).
+See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.34).
 
 ## [0.0.33] - 2025-02-04
 
-See [release notes](https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.33).
+See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
-[0.0.35]: https://github.com/sebastienrousseau/shokunin/compare/v0.0.34...v0.0.35
-[0.0.34]: https://github.com/sebastienrousseau/shokunin/compare/v0.0.33...v0.0.34
-[0.0.33]: https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.33
+[0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
+[0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
+[0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34
+[0.0.33]: https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33

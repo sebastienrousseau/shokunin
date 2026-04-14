@@ -53,6 +53,6 @@ mod tests {
         let file_path = dir.as_ref().join(name);
         let mut file =
             File::create(file_path).expect("Failed to create test file");
-        write!(file, "{}", content).expect("Failed to write to test file");
+        write!(file, "{content}").expect("Failed to write to test file");
     }
 }

@@ -34,68 +34,89 @@ impl Plugin for FingerprintPlugin {
             return Ok(());
         }
 
-        // Collect and hash all CSS/JS files
         let assets = collect_assets(&ctx.site_dir)?;
         if assets.is_empty() {
             return Ok(());
         }
 
-        let mut manifest: HashMap<String, AssetInfo> = HashMap::new();
+        let manifest = fingerprint_assets(&assets, &ctx.site_dir)?;
 
-        for asset_path in &assets {
-            let content = fs::read(asset_path)?;
-            let hash = sha256_hex(&content);
-            let short_hash = &hash[..8];
-
-            // Build fingerprinted filename
-            let stem =
-                asset_path.file_stem().unwrap_or_default().to_string_lossy();
-            let ext =
-                asset_path.extension().unwrap_or_default().to_string_lossy();
-            let new_name = format!("{stem}.{short_hash}.{ext}");
-            let new_path = asset_path.with_file_name(&new_name);
-
-            // Compute SRI hash (base64 of full SHA-256)
-            let sri = format!("sha256-{}", base64_encode(&content));
-
-            // Rename file
-            fs::rename(asset_path, &new_path)
-                .with_context(|| format!("Failed to rename {asset_path:?}"))?;
-
-            // Store mapping: relative old path → relative new path
-            let rel_old = asset_path
-                .strip_prefix(&ctx.site_dir)
-                .unwrap_or(asset_path)
-                .to_string_lossy()
-                .replace('\\', "/");
-            let rel_new = new_path
-                .strip_prefix(&ctx.site_dir)
-                .unwrap_or(&new_path)
-                .to_string_lossy()
-                .replace('\\', "/");
-
-            let _ = manifest.insert(
-                rel_old,
-                AssetInfo {
-                    fingerprinted: rel_new,
-                    sri,
-                },
-            );
-        }
-
-        // Rewrite HTML files
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        for html_path in &html_files {
-            let html = fs::read_to_string(html_path)?;
-            let rewritten = rewrite_asset_refs(&html, &manifest);
-            if rewritten != html {
-                fs::write(html_path, rewritten)?;
-            }
-        }
+        rewrite_html_references(&ctx.site_dir, &manifest)?;
 
         log::info!("[fingerprint] Processed {} asset(s)", manifest.len());
         Ok(())
     }
+}
+
+/// Fingerprints all asset files: computes hash, renames, and builds the manifest.
+fn fingerprint_assets(
+    assets: &[PathBuf],
+    site_dir: &Path,
+) -> Result<HashMap<String, AssetInfo>> {
+    let mut manifest = HashMap::new();
+
+    for asset_path in assets {
+        let info = fingerprint_file(asset_path, site_dir)?;
+        let _ = manifest.insert(info.0, info.1);
+    }
+
+    Ok(manifest)
+}
+
+/// Fingerprints a single asset file: hash, rename, return (`old_rel`, `AssetInfo`).
+fn fingerprint_file(
+    asset_path: &Path,
+    site_dir: &Path,
+) -> Result<(String, AssetInfo)> {
+    let content = fs::read(asset_path)?;
+    let hash = sha256_hex(&content);
+    let short_hash = &hash[..8];
+
+    let stem = asset_path.file_stem().unwrap_or_default().to_string_lossy();
+    let ext = asset_path.extension().unwrap_or_default().to_string_lossy();
+    let new_name = format!("{stem}.{short_hash}.{ext}");
+    let new_path = asset_path.with_file_name(&new_name);
+
+    let sri = format!("sha256-{}", base64_encode(&content));
+
+    fs::rename(asset_path, &new_path).with_context(|| {
+        format!("Failed to rename {}", asset_path.display())
+    })?;
+
+    let rel_old = asset_path
+        .strip_prefix(site_dir)
+        .unwrap_or(asset_path)
+        .to_string_lossy()
+        .replace('\\', "/");
+    let rel_new = new_path
+        .strip_prefix(site_dir)
+        .unwrap_or(&new_path)
+        .to_string_lossy()
+        .replace('\\', "/");
+
+    Ok((
+        rel_old,
+        AssetInfo {
+            fingerprinted: rel_new,
+            sri,
+        },
+    ))
+}
+
+/// Rewrites HTML files to use fingerprinted asset references.
+fn rewrite_html_references(
+    site_dir: &Path,
+    manifest: &HashMap<String, AssetInfo>,
+) -> Result<()> {
+    let html_files = collect_html_files(site_dir)?;
+    for html_path in &html_files {
+        let html = fs::read_to_string(html_path)?;
+        let rewritten = rewrite_asset_refs(&html, manifest);
+        if rewritten != html {
+            fs::write(html_path, rewritten)?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
@@ -204,7 +225,7 @@ mod tests {
         // Fingerprinted file should exist
         let entries: Vec<_> = fs::read_dir(&site)
             .unwrap()
-            .filter_map(|e| e.ok())
+            .filter_map(std::result::Result::ok)
             .filter(|e| {
                 e.path()
                     .file_name()

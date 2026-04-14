@@ -36,41 +36,11 @@ impl Plugin for AiPlugin {
             return Ok(());
         }
 
-        // Generate llms.txt
         generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
 
-        // Inject AI-friendly meta tags and validate images
         let html_files = collect_html_files(&ctx.site_dir)?;
-        let mut pages_with_missing_alt = 0usize;
-
-        for path in &html_files {
-            let html = fs::read_to_string(path)?;
-            let mut modified = html.clone();
-            let mut changed = false;
-
-            // Inject max-snippet meta for AI citation eligibility
-            if !modified.contains("max-snippet") && modified.contains("</head>")
-            {
-                let tag = "<meta name=\"robots\" content=\"max-snippet:-1, max-image-preview:large, max-video-preview:-1\">\n";
-                if let Some(pos) = modified.find("</head>") {
-                    modified.insert_str(pos, tag);
-                    changed = true;
-                }
-            }
-
-            // Check for images without alt text
-            let missing = count_missing_alt(&modified);
-            if missing > 0 {
-                let rel =
-                    path.strip_prefix(&ctx.site_dir).unwrap_or(path).display();
-                log::warn!("[ai] {missing} image(s) missing alt text in {rel}");
-                pages_with_missing_alt += 1;
-            }
-
-            if changed {
-                fs::write(path, modified)?;
-            }
-        }
+        let pages_with_missing_alt =
+            process_html_for_ai(&html_files, &ctx.site_dir)?;
 
         if pages_with_missing_alt > 0 {
             log::warn!(
@@ -79,6 +49,57 @@ impl Plugin for AiPlugin {
         }
 
         Ok(())
+    }
+}
+
+/// Processes HTML files: injects max-snippet meta tags and checks for missing alt text.
+fn process_html_for_ai(
+    html_files: &[PathBuf],
+    site_dir: &Path,
+) -> Result<usize> {
+    let mut pages_with_missing_alt = 0usize;
+
+    for path in html_files {
+        let html = fs::read_to_string(path)?;
+        let modified = inject_max_snippet(&html);
+
+        check_alt_text(path, &modified, site_dir, &mut pages_with_missing_alt);
+
+        if modified != html {
+            fs::write(path, modified)?;
+        }
+    }
+
+    Ok(pages_with_missing_alt)
+}
+
+/// Injects the max-snippet meta tag before `</head>` if not already present.
+fn inject_max_snippet(html: &str) -> String {
+    if html.contains("max-snippet") || !html.contains("</head>") {
+        return html.to_string();
+    }
+    let tag = "<meta name=\"robots\" content=\"max-snippet:-1, max-image-preview:large, max-video-preview:-1\">\n";
+    if let Some(pos) = html.find("</head>") {
+        let mut modified = html.to_string();
+        modified.insert_str(pos, tag);
+        modified
+    } else {
+        html.to_string()
+    }
+}
+
+/// Checks for missing alt text and logs a warning if found.
+fn check_alt_text(
+    path: &Path,
+    html: &str,
+    site_dir: &Path,
+    counter: &mut usize,
+) {
+    let missing = count_missing_alt(html);
+    if missing > 0 {
+        let rel = path.strip_prefix(site_dir).unwrap_or(path).display();
+        log::warn!("[ai] {missing} image(s) missing alt text in {rel}");
+        *counter += 1;
     }
 }
 
@@ -186,7 +207,7 @@ mod tests {
     fn ai_plugin_is_copy_after_move() {
         // Guards the `Copy` derive added in v0.0.34.
         let plugin = AiPlugin;
-        let _consumed = plugin;
+        let _copy = plugin;
         assert_eq!(plugin.name(), "ai");
     }
 

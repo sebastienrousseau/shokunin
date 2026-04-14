@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn render_inline_shortcode_youtube_missing_id_emits_comment() {
         // Line 146: the `if id.is_empty()` branch.
-        let result = expand_shortcodes(r#"{{< youtube >}}"#);
+        let result = expand_shortcodes(r"{{< youtube >}}");
         assert!(result.contains("<!-- youtube: missing id -->"));
     }
 

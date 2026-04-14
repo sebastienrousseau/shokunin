@@ -10,624 +10,25 @@
 //! - `RobotsPlugin` — Generates a `robots.txt` file.
 //! - `CanonicalPlugin` — Injects `<link rel="canonical">` tags.
 
-use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
-use rayon::prelude::*;
-use std::fs;
-use std::path::{Path, PathBuf};
-
-// =====================================================================
-// Helper functions
-// =====================================================================
-
-/// Extract the page title from the `<title>` tag.
-fn extract_title(html: &str) -> String {
-    if let Some(start) = html.find("<title>") {
-        let after = &html[start + 7..];
-        if let Some(end) = after.find("</title>") {
-            let title = strip_tags(&after[..end]);
-            let trimmed = title.trim();
-            if !trimmed.is_empty() {
-                return trimmed.to_string();
-            }
-        }
-    }
-    String::new()
-}
-
-/// Extract plain text from the page content, strip tags, and truncate to
-/// `max_len` characters.
-///
-/// Prefers `<main>` content if present. Falls back to `<body>` with nav,
-/// header, footer, script, and style blocks removed.
-fn extract_description(html: &str, max_len: usize) -> String {
-    // Try to extract from <main> first — this is the actual page content
-    let content = if let Some(start) = html.find("<main") {
-        let after = &html[start..];
-        if let Some(gt) = after.find('>') {
-            let inner = &after[gt + 1..];
-            if let Some(end) = inner.find("</main>") {
-                inner[..end].to_string()
-            } else {
-                inner.to_string()
-            }
-        } else {
-            String::new()
-        }
-    } else {
-        // Fall back to <body> with non-content elements stripped
-        let body = if let Some(start) = html.find("<body") {
-            let after = &html[start..];
-            if let Some(gt) = after.find('>') {
-                let inner = &after[gt + 1..];
-                if let Some(end) = inner.find("</body>") {
-                    inner[..end].to_string()
-                } else {
-                    inner.to_string()
-                }
-            } else {
-                String::new()
-            }
-        } else {
-            html.to_string()
-        };
-
-        let mut clean = body;
-        for tag in &["script", "style", "nav", "header", "footer"] {
-            let open = format!("<{tag}");
-            let close = format!("</{tag}>");
-            while let Some(start) = clean.find(&open) {
-                if let Some(end) = clean[start..].find(&close) {
-                    clean.replace_range(start..start + end + close.len(), " ");
-                } else {
-                    break;
-                }
-            }
-        }
-        clean
-    };
-
-    // Strip remaining HTML tags from <main> content too
-    let mut clean = content;
-    for tag in &["script", "style"] {
-        let open = format!("<{tag}");
-        let close = format!("</{tag}>");
-        while let Some(start) = clean.find(&open) {
-            if let Some(end) = clean[start..].find(&close) {
-                clean.replace_range(start..start + end + close.len(), " ");
-            } else {
-                break;
-            }
-        }
-    }
-
-    let text = strip_tags(&clean);
-    let trimmed = text.trim();
-    if trimmed.len() <= max_len {
-        trimmed.to_string()
-    } else {
-        // Find a char boundary at or before max_len
-        let mut end = max_len;
-        while end > 0 && !trimmed.is_char_boundary(end) {
-            end -= 1;
-        }
-        let truncated = &trimmed[..end];
-        // Truncate at word boundary
-        if let Some(last_space) = truncated.rfind(' ') {
-            truncated[..last_space].to_string()
-        } else {
-            truncated.to_string()
-        }
-    }
-}
-
-/// Remove all HTML tags and collapse whitespace.
-fn strip_tags(html: &str) -> String {
-    let mut result = String::with_capacity(html.len());
-    let mut in_tag = false;
-    for ch in html.chars() {
-        match ch {
-            '<' => in_tag = true,
-            '>' => {
-                in_tag = false;
-                result.push(' ');
-            }
-            _ if !in_tag => result.push(ch),
-            _ => {}
-        }
-    }
-    // Collapse whitespace
-    let mut collapsed = String::with_capacity(result.len());
-    let mut prev_space = false;
-    for ch in result.chars() {
-        if ch.is_whitespace() {
-            if !prev_space {
-                collapsed.push(' ');
-                prev_space = true;
-            }
-        } else {
-            collapsed.push(ch);
-            prev_space = false;
-        }
-    }
-    collapsed.trim().to_string()
-}
-
-/// Collect all `.html` files under `dir` (delegates to `crate::walk`).
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "html")
-}
-
-/// Escape a string for safe inclusion in an HTML attribute value.
-fn escape_attr(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('"', "&quot;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-}
-
-// =====================================================================
-// SeoPlugin
-// =====================================================================
-
-/// Injects missing SEO meta tags into HTML files.
-///
-/// After compilation, this plugin scans all HTML files in the site
-/// directory and adds any missing meta tags for description, Open Graph
-/// (title, description, type), and Twitter Card.
-///
-/// The plugin is idempotent — it checks for existing tags before
-/// injecting and will not duplicate them.
-///
-/// # Example
-///
-/// ```rust
-/// use ssg::plugin::PluginManager;
-/// use ssg::seo::SeoPlugin;
-///
-/// let mut pm = PluginManager::new();
-/// pm.register(SeoPlugin);
-/// ```
-#[derive(Debug, Clone, Copy)]
-pub struct SeoPlugin;
-
-impl Plugin for SeoPlugin {
-    fn name(&self) -> &'static str {
-        "seo"
-    }
-
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
-
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        html_files
-            .par_iter()
-            .try_for_each(|path| inject_seo_tags(path))?;
-
-        Ok(())
-    }
-}
-
-/// Inject missing SEO meta tags into a single HTML file.
-fn inject_seo_tags(path: &Path) -> Result<()> {
-    let html = fs::read_to_string(path)
-        .with_context(|| format!("cannot read {}", path.display()))?;
-
-    let mut tags = Vec::new();
-
-    let title = extract_title(&html);
-    let description = extract_description(&html, 160);
-
-    // Meta description
-    if !html.contains("<meta name=\"description\"")
-        && !html.contains("<meta name='description'")
-        && !description.is_empty()
-    {
-        tags.push(format!(
-            "<meta name=\"description\" content=\"{}\">",
-            escape_attr(&description)
-        ));
-    }
-
-    // Open Graph title
-    if !html.contains("<meta property=\"og:title\"")
-        && !html.contains("<meta property='og:title'")
-        && !title.is_empty()
-    {
-        tags.push(format!(
-            "<meta property=\"og:title\" content=\"{}\">",
-            escape_attr(&title)
-        ));
-    }
-
-    // Open Graph description
-    if !html.contains("<meta property=\"og:description\"")
-        && !html.contains("<meta property='og:description'")
-        && !description.is_empty()
-    {
-        tags.push(format!(
-            "<meta property=\"og:description\" content=\"{}\">",
-            escape_attr(&description)
-        ));
-    }
-
-    // Open Graph type
-    if !html.contains("<meta property=\"og:type\"")
-        && !html.contains("<meta property='og:type'")
-    {
-        tags.push(
-            "<meta property=\"og:type\" content=\"website\">".to_string(),
-        );
-    }
-
-    // Twitter card
-    if !html.contains("<meta name=\"twitter:card\"")
-        && !html.contains("<meta name='twitter:card'")
-    {
-        tags.push(
-            "<meta name=\"twitter:card\" content=\"summary\">".to_string(),
-        );
-    }
-
-    if tags.is_empty() {
-        return Ok(());
-    }
-
-    let injection = tags.join("\n");
-    let result = if let Some(pos) = html.find("</head>") {
-        format!("{}{}\n{}", &html[..pos], injection, &html[pos..])
-    } else {
-        html
-    };
-
-    fs::write(path, result)
-        .with_context(|| format!("cannot write {}", path.display()))?;
-    Ok(())
-}
-
-// =====================================================================
-// RobotsPlugin
-// =====================================================================
-
-/// Generates a `robots.txt` file in the site directory.
-///
-/// The file allows all user agents and references the sitemap at
-/// `{base_url}/sitemap.xml`. If a `robots.txt` already exists, it is
-/// not overwritten.
-///
-/// # Example
-///
-/// ```rust
-/// use ssg::plugin::PluginManager;
-/// use ssg::seo::RobotsPlugin;
-///
-/// let mut pm = PluginManager::new();
-/// pm.register(RobotsPlugin::new("https://example.com"));
-/// ```
-#[derive(Debug, Clone)]
-pub struct RobotsPlugin {
-    base_url: String,
-}
-
-impl RobotsPlugin {
-    /// Creates a new `RobotsPlugin` with the given base URL.
-    pub fn new(base_url: impl Into<String>) -> Self {
-        Self {
-            base_url: base_url.into(),
-        }
-    }
-}
-
-impl Plugin for RobotsPlugin {
-    fn name(&self) -> &'static str {
-        "robots"
-    }
-
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
-
-        let robots_path = ctx.site_dir.join("robots.txt");
-        if robots_path.exists() {
-            return Ok(());
-        }
-
-        let content = format!(
-            "User-agent: *\nAllow: /\nSitemap: {}/sitemap.xml\n",
-            self.base_url.trim_end_matches('/')
-        );
-
-        fs::write(&robots_path, content).with_context(|| {
-            format!("cannot write {}", robots_path.display())
-        })?;
-
-        Ok(())
-    }
-}
-
-// =====================================================================
-// CanonicalPlugin
-// =====================================================================
-
-/// Injects `<link rel="canonical">` tags into HTML files.
-///
-/// For each HTML file missing a canonical link, this plugin computes
-/// the canonical URL from the base URL and the file's relative path,
-/// then injects the tag before `</head>`.
-///
-/// The plugin is idempotent — it will not add a duplicate canonical
-/// link if one already exists.
-///
-/// # Example
-///
-/// ```rust
-/// use ssg::plugin::PluginManager;
-/// use ssg::seo::CanonicalPlugin;
-///
-/// let mut pm = PluginManager::new();
-/// pm.register(CanonicalPlugin::new("https://example.com"));
-/// ```
-#[derive(Debug, Clone)]
-pub struct CanonicalPlugin {
-    base_url: String,
-}
-
-impl CanonicalPlugin {
-    /// Creates a new `CanonicalPlugin` with the given base URL.
-    pub fn new(base_url: impl Into<String>) -> Self {
-        Self {
-            base_url: base_url.into(),
-        }
-    }
-}
-
-impl Plugin for CanonicalPlugin {
-    fn name(&self) -> &'static str {
-        "canonical"
-    }
-
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
-
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        let base = self.base_url.trim_end_matches('/');
-        let site_dir = &ctx.site_dir;
-
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
-            let html = fs::read_to_string(path)
-                .with_context(|| format!("cannot read {}", path.display()))?;
-
-            if html.contains("<link rel=\"canonical\"")
-                || html.contains("<link rel='canonical'")
-            {
-                return Ok(());
-            }
-
-            let rel_path = path
-                .strip_prefix(site_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .replace('\\', "/");
-
-            let canonical_url = format!("{base}/{rel_path}");
-            let tag = format!(
-                "<link rel=\"canonical\" href=\"{}\">",
-                escape_attr(&canonical_url)
-            );
-
-            let result = if let Some(pos) = html.find("</head>") {
-                format!("{}{}\n{}", &html[..pos], tag, &html[pos..])
-            } else {
-                html
-            };
-
-            fs::write(path, result)
-                .with_context(|| format!("cannot write {}", path.display()))?;
-            Ok(())
-        })?;
-
-        Ok(())
-    }
-}
-
-// =====================================================================
-// JSON-LD Structured Data Plugin
-// =====================================================================
-
-/// Configuration for the JSON-LD structured data plugin.
-#[derive(Debug, Clone)]
-pub struct JsonLdConfig {
-    /// Base URL of the site (for absolute URLs in JSON-LD).
-    pub base_url: String,
-    /// Organization name for Organization schema.
-    pub org_name: String,
-    /// Whether to generate `BreadcrumbList` for every page.
-    pub breadcrumbs: bool,
-}
-
-/// Injects JSON-LD structured data into HTML files.
-///
-/// Auto-detects schema.org types from page metadata:
-/// - Pages with `<article>` → `Article`
-/// - All other pages → `WebPage`
-/// - `BreadcrumbList` derived from URL path (opt-in)
-///
-/// Idempotent: skips files that already contain `application/ld+json`.
-#[derive(Debug, Clone)]
-pub struct JsonLdPlugin {
-    config: JsonLdConfig,
-}
-
-impl JsonLdPlugin {
-    /// Creates a new `JsonLdPlugin` with the given configuration.
-    #[must_use]
-    pub const fn new(config: JsonLdConfig) -> Self {
-        Self { config }
-    }
-
-    /// Creates a `JsonLdPlugin` from site config values.
-    #[must_use]
-    pub fn from_site(base_url: &str, site_name: &str) -> Self {
-        Self {
-            config: JsonLdConfig {
-                base_url: base_url.to_string(),
-                org_name: site_name.to_string(),
-                breadcrumbs: true,
-            },
-        }
-    }
-}
-
-impl Plugin for JsonLdPlugin {
-    fn name(&self) -> &'static str {
-        "json-ld"
-    }
-
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
-
-        let html_files = collect_html_files_recursive(&ctx.site_dir)?;
-        let injected = std::sync::atomic::AtomicUsize::new(0);
-        let base = self.config.base_url.trim_end_matches('/');
-        let site_dir = &ctx.site_dir;
-
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
-            let html = fs::read_to_string(path)?;
-
-            // Skip if already has JSON-LD
-            if html.contains("application/ld+json") {
-                return Ok(());
-            }
-
-            let head_pos = match html.find("</head>") {
-                Some(p) => p,
-                None => return Ok(()),
-            };
-
-            let title = extract_title(&html);
-            let description = extract_description(&html, 160);
-            let rel_path = path
-                .strip_prefix(site_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .replace('\\', "/");
-            let page_url = format!("{base}/{rel_path}");
-
-            let mut scripts = Vec::new();
-
-            // Determine type: Article if <article> present, else WebPage
-            if html.contains("<article") {
-                let article = serde_json::json!({
-                    "@context": "https://schema.org",
-                    "@type": "Article",
-                    "headline": title,
-                    "description": description,
-                    "url": page_url,
-                    "mainEntityOfPage": {
-                        "@type": "WebPage",
-                        "@id": page_url
-                    },
-                    "publisher": {
-                        "@type": "Organization",
-                        "name": self.config.org_name
-                    }
-                });
-                scripts.push(article);
-            } else {
-                let webpage = serde_json::json!({
-                    "@context": "https://schema.org",
-                    "@type": "WebPage",
-                    "name": title,
-                    "description": description,
-                    "url": page_url
-                });
-                scripts.push(webpage);
-            }
-
-            // BreadcrumbList
-            if self.config.breadcrumbs {
-                let parts: Vec<&str> = rel_path
-                    .trim_matches('/')
-                    .split('/')
-                    .filter(|p| !p.is_empty() && *p != "index.html")
-                    .collect();
-
-                if !parts.is_empty() {
-                    let mut items = vec![serde_json::json!({
-                        "@type": "ListItem",
-                        "position": 1,
-                        "name": "Home",
-                        "item": format!("{}/", base)
-                    })];
-
-                    let mut accumulated = String::new();
-                    for (i, part) in parts.iter().enumerate() {
-                        accumulated = format!("{accumulated}/{part}");
-                        let name =
-                            part.trim_end_matches(".html").replace('-', " ");
-                        items.push(serde_json::json!({
-                            "@type": "ListItem",
-                            "position": i + 2,
-                            "name": name,
-                            "item": format!("{}{}", base, accumulated)
-                        }));
-                    }
-
-                    let breadcrumb = serde_json::json!({
-                        "@context": "https://schema.org",
-                        "@type": "BreadcrumbList",
-                        "itemListElement": items
-                    });
-                    scripts.push(breadcrumb);
-                }
-            }
-
-            // Inject all JSON-LD scripts before </head>
-            let mut injection = String::new();
-            for script in &scripts {
-                let json = serde_json::to_string(script)?;
-                injection.push_str(&format!(
-                    "<script type=\"application/ld+json\">{json}</script>\n"
-                ));
-            }
-
-            let result = format!(
-                "{}{}{}",
-                &html[..head_pos],
-                injection,
-                &html[head_pos..]
-            );
-            fs::write(path, result)?;
-            let _ = injected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            Ok(())
-        })?;
-
-        let count = injected.load(std::sync::atomic::Ordering::Relaxed);
-        if count > 0 {
-            log::info!(
-                "[json-ld] Injected structured data into {count} page(s)"
-            );
-        }
-        Ok(())
-    }
-}
-
-/// Recursively collects HTML files (delegates to `crate::walk`).
-fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "html")
-}
+mod canonical;
+mod helpers;
+mod jsonld;
+mod robots;
+mod seo_plugin;
+
+pub use canonical::CanonicalPlugin;
+pub use jsonld::{JsonLdConfig, JsonLdPlugin};
+pub use robots::RobotsPlugin;
+pub use seo_plugin::SeoPlugin;
 
 #[cfg(test)]
 mod tests {
+    use super::helpers::*;
     use super::*;
-    use crate::plugin::PluginManager;
+    use crate::plugin::{Plugin, PluginContext};
+    use anyhow::Result;
+    use std::fs;
+    use std::path::Path;
     use tempfile::tempdir;
 
     fn make_html(title: &str, body: &str) -> String {
@@ -925,6 +326,7 @@ mod tests {
 
     #[test]
     fn test_all_plugins_register() {
+        use crate::plugin::PluginManager;
         let mut pm = PluginManager::new();
         pm.register(SeoPlugin);
         pm.register(RobotsPlugin::new("https://example.com"));
@@ -1216,9 +618,6 @@ mod tests {
 
     #[test]
     fn extract_title_empty_tag_returns_empty_string() {
-        // Lines 29-31: the `if !trimmed.is_empty()` branch is FALSE
-        // when the title is empty or only whitespace. Falls through
-        // to `String::new()` at line 34.
         assert_eq!(extract_title("<title></title>"), "");
         assert_eq!(extract_title("<title>   </title>"), "");
         assert_eq!(extract_title("<title>\n\t </title>"), "");
@@ -1226,17 +625,11 @@ mod tests {
 
     #[test]
     fn extract_title_without_closing_tag_returns_empty() {
-        // The `if let Some(end)` at line 26 takes the None branch
-        // when `</title>` is missing.
         assert_eq!(extract_title("<title>Unterminated"), "");
     }
 
     #[test]
     fn extract_title_strips_inner_html_tags() {
-        // Inner tags are stripped by `strip_tags` call at line 27.
-        // strip_tags collapses successive whitespace per its own
-        // rules; the .trim() in extract_title collapses leading and
-        // trailing whitespace but runs between words are preserved.
         let out = extract_title("<title>Hello <em>World</em></title>");
         assert!(out.contains("Hello"));
         assert!(out.contains("World"));
@@ -1248,11 +641,11 @@ mod tests {
 
     #[test]
     fn extract_description_prefers_main_over_body() {
-        let html = r#"<html><head></head><body>
+        let html = r"<html><head></head><body>
             <nav>menu</nav>
             <main>The primary content.</main>
             <footer>Bottom</footer>
-        </body></html>"#;
+        </body></html>";
         let desc = extract_description(html, 200);
         assert!(desc.contains("primary content"));
         assert!(!desc.contains("menu"));
@@ -1260,17 +653,13 @@ mod tests {
 
     #[test]
     fn extract_description_main_without_closing_tag_takes_rest() {
-        // Line 51: the `else { inner.to_string() }` branch of the
-        // `</main>` search — taken when the closing tag is missing.
-        let html = r#"<html><body><main>content without close"#;
+        let html = r"<html><body><main>content without close";
         let desc = extract_description(html, 200);
         assert!(desc.contains("content without close"));
     }
 
     #[test]
     fn extract_description_main_without_angle_bracket_returns_empty_fallback() {
-        // Line 54: `String::new()` branch when `<main` exists but
-        // the tag never closes with `>`.
         let html = "<html><body><main";
         let desc = extract_description(html, 200);
         assert_eq!(desc, "");
@@ -1278,16 +667,14 @@ mod tests {
 
     #[test]
     fn extract_description_fallback_to_body_strips_script_and_style() {
-        // No <main>, but a <body> with script/style/nav/header/footer
-        // — all of those must be stripped. Covers lines 74-85.
-        let html = r#"<html><head></head><body>
+        let html = r"<html><head></head><body>
             <script>alert('skip');</script>
             <style>body { color: red; }</style>
             <nav>menu items here</nav>
             <header>site title</header>
             <p>The body text.</p>
             <footer>copyright</footer>
-        </body></html>"#;
+        </body></html>";
         let desc = extract_description(html, 200);
         assert!(desc.contains("body text"));
         assert!(!desc.contains("alert"));
@@ -1299,8 +686,6 @@ mod tests {
 
     #[test]
     fn extract_description_body_without_closing_tag_uses_rest() {
-        // Line 65: `else { inner.to_string() }` branch of the
-        // `</body>` search.
         let html = "<html><body><p>open-ended body paragraph";
         let desc = extract_description(html, 200);
         assert!(desc.contains("open-ended body paragraph"));
@@ -1308,7 +693,6 @@ mod tests {
 
     #[test]
     fn extract_description_body_without_angle_bracket_returns_empty() {
-        // Line 68: `String::new()` branch when `<body` doesn't close.
         let html = "<html><body";
         let desc = extract_description(html, 200);
         assert_eq!(desc, "");
@@ -1316,8 +700,6 @@ mod tests {
 
     #[test]
     fn extract_description_no_body_no_main_uses_entire_html() {
-        // The `else { html.to_string() }` fallback at line 71 —
-        // taken when there's no <body> tag at all.
         let html = "just plain text no tags here";
         let desc = extract_description(html, 200);
         assert!(desc.contains("just plain text"));
@@ -1325,30 +707,21 @@ mod tests {
 
     #[test]
     fn extract_description_unterminated_script_breaks_out() {
-        // Line 98: the `else { break }` branch in the script-
-        // stripping loop — taken when a `<script` exists but no
-        // corresponding `</script>` is found.
         let html = "<html><body><main><script>unterminated<p>x</p>";
         let desc = extract_description(html, 200);
-        // Function terminates without panic.
         let _ = desc;
     }
 
     #[test]
     fn extract_description_truncates_at_word_boundary() {
-        // Lines 105-118: the `len > max_len` branch with word-
-        // boundary truncation via rfind(' ').
         let html = "<html><body><main>one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twenty-two twenty-three twenty-four twenty-five</main></body></html>";
         let desc = extract_description(html, 80);
         assert!(desc.len() <= 80);
-        // Should end on a complete word (not mid-word).
         assert!(!desc.ends_with('-'));
     }
 
     #[test]
     fn extract_description_truncates_without_space_falls_to_byte_cut() {
-        // Line 118: the `else { truncated.to_string() }` branch
-        // when no space is found within max_len.
         let html =
             "<html><body><main>oneverylongwordwithnospacesanywherehere</main></body></html>";
         let desc = extract_description(html, 10);
@@ -1357,41 +730,27 @@ mod tests {
 
     #[test]
     fn extract_description_respects_char_boundary_on_truncation() {
-        // Lines 110-112: the char-boundary walk-back loop for
-        // multibyte UTF-8 characters.
         let html = "<html><body><main>Rust programming — é ñ ü characters everywhere in this text that we want to truncate mid-char</main></body></html>";
         let desc = extract_description(html, 30);
-        // Must produce a valid UTF-8 string (would panic otherwise).
         assert!(desc.is_ascii() || !desc.is_empty());
     }
 
     #[test]
     fn extract_description_truncation_walks_back_multiple_bytes() {
-        // Forces the `end -= 1` loop at lines 110-112 to iterate
-        // at least once. A 4-byte emoji positioned so that `max_len`
-        // lands in the middle of its bytes forces the walk-back.
         let mut input = String::from("<html><body><main>");
-        // pad with ASCII to near the max, then insert the emoji
         input.push_str(&"a".repeat(20));
         input.push('🎉'); // 4 bytes
         input.push_str(&"b".repeat(20));
         input.push_str("</main></body></html>");
-        // max_len=22 should land inside the emoji bytes.
         let desc = extract_description(&input, 22);
         assert!(!desc.is_empty(), "expected non-empty desc");
-        // Result must be valid UTF-8 (guaranteed by String type).
         let _ = desc.len();
     }
 
     #[test]
     fn extract_description_body_fallback_unterminated_nav_breaks() {
-        // Line 82: the body-fallback strip loop hits `break` when
-        // a `<nav` exists but no `</nav>` is found. Requires a
-        // <body> with NO <main>.
         let html = "<html><body><nav>unterminated nav block<p>visible</p>";
         let desc = extract_description(html, 200);
-        // Function terminates without panic; nav content may or
-        // may not survive depending on the exact strip semantics.
         let _ = desc;
     }
 
@@ -1401,7 +760,6 @@ mod tests {
 
     #[test]
     fn seo_plugin_file_without_head_tag_is_unchanged() {
-        // The `else { html }` branch in inject_seo_tags at line 297.
         let dir = tempdir().unwrap();
         fs::write(
             dir.path().join("fragment.html"),
@@ -1428,8 +786,6 @@ mod tests {
 
     #[test]
     fn robots_plugin_skips_existing_robots_txt() {
-        // Line 350: the `if robots_path.exists() { return Ok(()) }`
-        // branch.
         let dir = tempdir().unwrap();
         let existing = dir.path().join("robots.txt");
         fs::write(&existing, "USER: existing").unwrap();
@@ -1438,7 +794,6 @@ mod tests {
         let ctx = test_ctx(dir.path());
         plugin.after_compile(&ctx).unwrap();
 
-        // Existing content preserved.
         assert_eq!(fs::read_to_string(&existing).unwrap(), "USER: existing");
     }
 
@@ -1451,13 +806,11 @@ mod tests {
 
         let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
         assert!(body.contains("User-agent: *"));
-        // Trailing slash stripped via trim_end_matches.
         assert!(body.contains("Sitemap: https://example.com/sitemap.xml"));
     }
 
     #[test]
     fn robots_plugin_missing_site_dir_returns_ok() {
-        // Line 345: `!ctx.site_dir.exists()` early return.
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing");
         let plugin = RobotsPlugin::new("https://example.com");
@@ -1476,7 +829,6 @@ mod tests {
 
     #[test]
     fn canonical_plugin_missing_site_dir_returns_ok() {
-        // Line 409.
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing");
         let plugin = CanonicalPlugin::new("https://example.com");
@@ -1485,8 +837,7 @@ mod tests {
     }
 
     #[test]
-    fn canonical_plugin_skips_pages_with_existing_canonical_link() {
-        // Lines 419-422: the `continue` branch.
+    fn canonical_plugin_replaces_existing_canonical_with_correct_url() {
         let dir = tempdir().unwrap();
         let html = r#"<html><head><link rel="canonical" href="/original"></head><body></body></html>"#;
         fs::write(dir.path().join("p.html"), html).unwrap();
@@ -1497,12 +848,11 @@ mod tests {
 
         let out = fs::read_to_string(dir.path().join("p.html")).unwrap();
         assert_eq!(out.matches(r#"rel="canonical""#).count(), 1);
-        assert!(out.contains("/original"));
+        assert!(out.contains("https://example.com/p.html"));
     }
 
     #[test]
     fn canonical_plugin_skips_pages_with_single_quoted_canonical() {
-        // Same `continue` branch via single-quoted variant.
         let dir = tempdir().unwrap();
         let html =
             r"<html><head><link rel='canonical' href='/x'></head></html>";
@@ -1518,7 +868,6 @@ mod tests {
 
     #[test]
     fn canonical_plugin_page_without_head_is_left_unchanged() {
-        // Line 440: `else { html }` branch when no `</head>` exists.
         let dir = tempdir().unwrap();
         let html = "<p>no structure</p>";
         fs::write(dir.path().join("frag.html"), html).unwrap();
@@ -1557,7 +906,6 @@ mod tests {
 
     #[test]
     fn jsonld_plugin_missing_site_dir_returns_ok() {
-        // Line 506.
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing");
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
@@ -1567,7 +915,6 @@ mod tests {
 
     #[test]
     fn jsonld_plugin_skips_pages_without_head_tag() {
-        // Line 523: the `None => continue` branch.
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
@@ -1582,8 +929,6 @@ mod tests {
 
     #[test]
     fn jsonld_plugin_generates_webpage_when_no_article_element() {
-        // The `else` branch of `if html.contains("<article")` —
-        // pages without an <article> get a WebPage schema.
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
@@ -1623,7 +968,7 @@ mod tests {
             org_name: "Org".to_string(),
             breadcrumbs: false,
         };
-        let plugin = JsonLdPlugin::new(cfg.clone());
+        let plugin = JsonLdPlugin::new(cfg);
         assert_eq!(plugin.config.base_url, "https://a");
         assert_eq!(plugin.config.org_name, "Org");
         assert!(!plugin.config.breadcrumbs);
@@ -1659,5 +1004,271 @@ mod tests {
         let result =
             collect_html_files_recursive(&dir.path().join("missing")).unwrap();
         assert!(result.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // has_meta_tag — name= and property= variants
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn has_meta_tag_detects_name_double_quote() {
+        let html = r#"<meta name="description" content="hello">"#;
+        assert!(has_meta_tag(html, "description"));
+    }
+
+    #[test]
+    fn has_meta_tag_detects_name_single_quote() {
+        let html = "<meta name='description' content='hello'>";
+        assert!(has_meta_tag(html, "description"));
+    }
+
+    #[test]
+    fn has_meta_tag_detects_property_double_quote() {
+        let html = r#"<meta property="og:title" content="T">"#;
+        assert!(has_meta_tag(html, "og:title"));
+    }
+
+    #[test]
+    fn has_meta_tag_detects_property_single_quote() {
+        let html = "<meta property='og:title' content='T'>";
+        assert!(has_meta_tag(html, "og:title"));
+    }
+
+    #[test]
+    fn has_meta_tag_returns_false_when_absent() {
+        let html = "<html><head></head></html>";
+        assert!(!has_meta_tag(html, "description"));
+    }
+
+    #[test]
+    fn has_meta_tag_ignores_comment_markers() {
+        let html = "<!-- # Start Open Graph / Facebook Meta Tags -->\n\
+                     <!-- # End Open Graph / Facebook Meta Tags -->";
+        assert!(!has_meta_tag(html, "og:title"));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_canonical
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_canonical_finds_url() {
+        let html = r#"<link rel="canonical" href="https://example.com/page">"#;
+        assert_eq!(extract_canonical(html), "https://example.com/page");
+    }
+
+    #[test]
+    fn extract_canonical_returns_empty_when_missing() {
+        let html = "<html><head><title>No canonical</title></head></html>";
+        assert_eq!(extract_canonical(html), "");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_existing_meta — name and property attributes
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_existing_meta_name_variant() {
+        let html = r#"<meta name="author" content="Alice">"#;
+        assert_eq!(extract_existing_meta(html, "author"), "Alice");
+    }
+
+    #[test]
+    fn extract_existing_meta_property_variant() {
+        let html =
+            r#"<meta property="article:published_time" content="2026-01-01">"#;
+        assert_eq!(
+            extract_existing_meta(html, "article:published_time"),
+            "2026-01-01"
+        );
+    }
+
+    #[test]
+    fn extract_existing_meta_single_quote_variant() {
+        let html = "<meta name='author' content='Bob'>";
+        assert_eq!(extract_existing_meta(html, "author"), "Bob");
+    }
+
+    #[test]
+    fn extract_existing_meta_returns_empty_when_absent() {
+        let html = "<html><head></head></html>";
+        assert_eq!(extract_existing_meta(html, "author"), "");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_meta_author
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_meta_author_from_meta_tag() {
+        let html = r#"<meta name="author" content="Jane Doe">"#;
+        assert_eq!(extract_meta_author(html), "Jane Doe");
+    }
+
+    #[test]
+    fn extract_meta_author_from_class_author_span() {
+        let html = r#"<span class="author">John Smith</span>"#;
+        assert_eq!(extract_meta_author(html), "John Smith");
+    }
+
+    #[test]
+    fn extract_meta_author_strips_by_prefix() {
+        let html = r#"<span class="author">by Alice Wonder</span>"#;
+        assert_eq!(extract_meta_author(html), "Alice Wonder");
+    }
+
+    #[test]
+    fn extract_meta_author_returns_empty_when_absent() {
+        let html = "<html><body><p>No author</p></body></html>";
+        assert_eq!(extract_meta_author(html), "");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_date_from_html (JSON-LD)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_date_from_html_finds_date_published() {
+        let html = r#"<script type="application/ld+json">{"datePublished":"2026-03-15"}</script>"#;
+        assert_eq!(
+            extract_date_from_html(html, "datePublished"),
+            Some("2026-03-15".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_date_from_html_returns_none_when_absent() {
+        let html = "<html><body></body></html>";
+        assert_eq!(extract_date_from_html(html, "datePublished"), None);
+    }
+
+    // -----------------------------------------------------------------
+    // extract_meta_date
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_meta_date_from_published_time() {
+        let html =
+            r#"<meta property="article:published_time" content="2026-06-01">"#;
+        assert_eq!(extract_meta_date(html), Some("2026-06-01".to_string()));
+    }
+
+    #[test]
+    fn extract_meta_date_from_time_datetime() {
+        let html = r#"<time datetime="2026-07-04">July 4</time>"#;
+        assert_eq!(extract_meta_date(html), Some("2026-07-04".to_string()));
+    }
+
+    #[test]
+    fn extract_meta_date_returns_none_when_absent() {
+        let html = "<html><body><p>No date</p></body></html>";
+        assert_eq!(extract_meta_date(html), None);
+    }
+
+    // -----------------------------------------------------------------
+    // extract_html_lang
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_html_lang_double_quotes() {
+        let html = r#"<html lang="fr-FR"><head></head></html>"#;
+        assert_eq!(extract_html_lang(html), "fr-FR");
+    }
+
+    #[test]
+    fn extract_html_lang_single_quotes() {
+        let html = "<html lang='de-DE'><head></head></html>";
+        assert_eq!(extract_html_lang(html), "de-DE");
+    }
+
+    #[test]
+    fn extract_html_lang_missing_returns_empty() {
+        let html = "<html><head></head></html>";
+        assert_eq!(extract_html_lang(html), "");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_first_content_image
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_first_content_image_from_main() {
+        let html = r#"<html><body><main><img src="/img/hero.jpg"></main></body></html>"#;
+        assert_eq!(extract_first_content_image(html), "/img/hero.jpg");
+    }
+
+    #[test]
+    fn extract_first_content_image_from_article() {
+        let html = r#"<html><body><article><img src="/img/post.png"></article></body></html>"#;
+        assert_eq!(extract_first_content_image(html), "/img/post.png");
+    }
+
+    #[test]
+    fn extract_first_content_image_no_image_returns_empty() {
+        let html = "<html><body><main><p>No images</p></main></body></html>";
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    #[test]
+    fn extract_first_content_image_no_main_or_article_returns_empty() {
+        let html = r#"<html><body><div><img src="/img/sidebar.jpg"></div></body></html>"#;
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    // -----------------------------------------------------------------
+    // inject_seo_tags — article page triggers summary_large_image
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn inject_seo_tags_article_page_uses_large_image_card() -> Result<()> {
+        let tmp = tempdir()?;
+        let html = "<html><head><title>Blog Post</title></head>\
+                     <body><article><p>Article content</p></article></body></html>";
+        fs::write(tmp.path().join("post.html"), html)?;
+
+        let ctx = test_ctx(tmp.path());
+        SeoPlugin.after_compile(&ctx)?;
+
+        let result = fs::read_to_string(tmp.path().join("post.html"))?;
+        assert!(
+            result.contains("content=\"summary_large_image\""),
+            "article pages should use summary_large_image twitter card"
+        );
+        assert!(
+            result.contains("content=\"article\""),
+            "article pages should use og:type=article"
+        );
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // CanonicalPlugin — replaces existing canonicals
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn canonical_plugin_replaces_not_skips_existing() -> Result<()> {
+        let tmp = tempdir()?;
+        let html = r#"<html><head><link rel="canonical" href="https://old.com/wrong"></head><body></body></html>"#;
+        fs::write(tmp.path().join("page.html"), html)?;
+
+        let plugin = CanonicalPlugin::new("https://correct.com");
+        let ctx = test_ctx(tmp.path());
+        plugin.after_compile(&ctx)?;
+
+        let result = fs::read_to_string(tmp.path().join("page.html"))?;
+        assert!(
+            result.contains("https://correct.com/page.html"),
+            "canonical should be replaced with correct URL"
+        );
+        assert!(
+            !result.contains("https://old.com/wrong"),
+            "old canonical should be removed"
+        );
+        assert_eq!(
+            result.matches("canonical").count(),
+            1,
+            "should have exactly one canonical link"
+        );
+        Ok(())
     }
 }

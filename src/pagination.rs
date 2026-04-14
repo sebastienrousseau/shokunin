@@ -64,106 +64,30 @@ impl Plugin for PaginationPlugin {
             return Ok(());
         }
 
-        // Collect all pages with dates from sidecars
-        let sidecars = collect_json_files(&sidecar_dir)?;
-        let mut entries = Vec::new();
-
-        for sidecar_path in &sidecars {
-            let content = fs::read_to_string(sidecar_path)?;
-            let meta: HashMap<String, serde_json::Value> =
-                match serde_json::from_str(&content) {
-                    Ok(m) => m,
-                    Err(_) => continue,
-                };
-
-            let title = meta
-                .get("title")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Untitled")
-                .to_string();
-            let date = meta
-                .get("date")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-
-            // Only paginate pages that have dates (blog posts)
-            if date.is_empty() {
-                continue;
-            }
-
-            let rel = sidecar_path
-                .strip_prefix(&sidecar_dir)
-                .unwrap_or(sidecar_path)
-                .with_extension("")
-                .with_extension("html");
-            let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
-
-            entries.push(PageEntry { title, url, date });
-        }
-
+        let mut entries = collect_page_entries(&sidecar_dir)?;
         if entries.is_empty() {
             return Ok(());
         }
 
-        // Sort by date descending
         entries.sort_by(|a, b| b.date.cmp(&a.date));
 
         let total_pages = entries.len().div_ceil(self.per_page);
-
         if total_pages <= 1 {
             return Ok(());
         }
 
-        // Generate /page/N/index.html for pages 2..=total
         let page_dir = ctx.site_dir.join("page");
-
         for page_num in 2..=total_pages {
             let start = (page_num - 1) * self.per_page;
             let end = (start + self.per_page).min(entries.len());
             let page_entries = &entries[start..end];
 
-            let dir = page_dir.join(page_num.to_string());
-            fs::create_dir_all(&dir)?;
-
-            let prev_url = if page_num == 2 {
-                "/".to_string()
-            } else {
-                format!("/page/{}/", page_num - 1)
-            };
-            let next_url = if page_num < total_pages {
-                Some(format!("/page/{}/", page_num + 1))
-            } else {
-                None
-            };
-
-            let mut html = format!(
-                "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
-                 <meta charset=\"utf-8\">\
-                 <title>Page {page_num} of {total_pages}</title></head>\n\
-                 <body>\n<main>\n\
-                 <h1>Page {page_num} of {total_pages}</h1>\n<ul>\n",
-            );
-
-            for entry in page_entries {
-                html.push_str(&format!(
-                    "<li><a href=\"{}\">{}</a> <time>{}</time></li>\n",
-                    entry.url, entry.title, entry.date
-                ));
-            }
-
-            html.push_str("</ul>\n<nav aria-label=\"Pagination\">\n");
-            html.push_str(&format!(
-                "<a href=\"{prev_url}\" rel=\"prev\">&larr; Previous</a>\n"
-            ));
-            if let Some(next) = &next_url {
-                html.push_str(&format!(
-                    "<a href=\"{next}\" rel=\"next\">Next &rarr;</a>\n"
-                ));
-            }
-            html.push_str("</nav>\n</main>\n</body>\n</html>\n");
-
-            fs::write(dir.join("index.html"), html)?;
+            write_pagination_page(
+                &page_dir,
+                page_num,
+                total_pages,
+                page_entries,
+            )?;
         }
 
         log::info!(
@@ -174,6 +98,105 @@ impl Plugin for PaginationPlugin {
         );
         Ok(())
     }
+}
+
+/// Collects page entries with dates from sidecar JSON files.
+fn collect_page_entries(sidecar_dir: &Path) -> Result<Vec<PageEntry>> {
+    let sidecars = collect_json_files(sidecar_dir)?;
+    let mut entries = Vec::new();
+
+    for sidecar_path in &sidecars {
+        if let Some(entry) = parse_page_entry(sidecar_path, sidecar_dir) {
+            entries.push(entry);
+        }
+    }
+
+    Ok(entries)
+}
+
+/// Parses a single sidecar JSON file into a `PageEntry`, if it has a date.
+fn parse_page_entry(
+    sidecar_path: &Path,
+    sidecar_dir: &Path,
+) -> Option<PageEntry> {
+    let content = fs::read_to_string(sidecar_path).ok()?;
+    let meta: HashMap<String, serde_json::Value> =
+        serde_json::from_str(&content).ok()?;
+
+    let title = meta
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Untitled")
+        .to_string();
+    let date = meta
+        .get("date")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    if date.is_empty() {
+        return None;
+    }
+
+    let rel = sidecar_path
+        .strip_prefix(sidecar_dir)
+        .unwrap_or(sidecar_path)
+        .with_extension("")
+        .with_extension("html");
+    let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+
+    Some(PageEntry { title, url, date })
+}
+
+/// Writes a single pagination page to disk.
+fn write_pagination_page(
+    page_dir: &Path,
+    page_num: usize,
+    total_pages: usize,
+    page_entries: &[PageEntry],
+) -> Result<()> {
+    let dir = page_dir.join(page_num.to_string());
+    fs::create_dir_all(&dir)?;
+
+    let prev_url = if page_num == 2 {
+        "/".to_string()
+    } else {
+        format!("/page/{}/", page_num - 1)
+    };
+    let next_url = if page_num < total_pages {
+        Some(format!("/page/{}/", page_num + 1))
+    } else {
+        None
+    };
+
+    let mut html = format!(
+        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
+         <meta charset=\"utf-8\">\
+         <title>Page {page_num} of {total_pages}</title></head>\n\
+         <body>\n<main>\n\
+         <h1>Page {page_num} of {total_pages}</h1>\n<ul>\n",
+    );
+
+    for entry in page_entries {
+        html.push_str(&format!(
+            "<li><a href=\"{}\">{}</a> <time>{}</time></li>\n",
+            entry.url, entry.title, entry.date
+        ));
+    }
+
+    html.push_str("</ul>\n<nav aria-label=\"Pagination\">\n");
+    html.push_str(&format!(
+        "<a href=\"{prev_url}\" rel=\"prev\">&larr; Previous</a>\n"
+    ));
+    if let Some(next) = &next_url {
+        html.push_str(&format!(
+            "<a href=\"{next}\" rel=\"next\">Next &rarr;</a>\n"
+        ));
+    }
+    html.push_str("</nav>\n</main>\n</body>\n</html>\n");
+
+    fs::write(dir.join("index.html"), html)?;
+    Ok(())
 }
 
 fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -287,7 +310,7 @@ mod tests {
     fn pagination_plugin_is_copy_after_move() {
         // Guards the `Copy` derive added in v0.0.34.
         let plugin = PaginationPlugin::with_per_page(3);
-        let _consumed = plugin;
+        let _copy = plugin;
         assert_eq!(plugin.per_page, 3);
     }
 

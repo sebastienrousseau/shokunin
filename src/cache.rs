@@ -82,14 +82,14 @@ impl BuildCache {
             });
         }
 
-        fail::fail_point!("cache::read", |_| {
+        fail_point!("cache::read", |_| {
             anyhow::bail!("injected: cache::read")
         });
         let data = fs::read_to_string(cache_path).with_context(|| {
             format!("failed to read cache file: {}", cache_path.display())
         })?;
 
-        fail::fail_point!("cache::parse", |_| {
+        fail_point!("cache::parse", |_| {
             anyhow::bail!("injected: cache::parse")
         });
         let mut cache: Self =
@@ -118,7 +118,7 @@ impl BuildCache {
     pub fn save(&self) -> Result<()> {
         let json = serde_json::to_string_pretty(self)
             .context("failed to serialize cache")?;
-        fail::fail_point!("cache::write", |_| {
+        fail_point!("cache::write", |_| {
             anyhow::bail!("injected: cache::write")
         });
         fs::write(&self.cache_path, json).with_context(|| {

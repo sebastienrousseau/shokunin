@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.cn (Jane Doe)" ## 页面作者。(最多 64 个字符)
 banner_alt: "绿黑相间的瓷砖墙" ## 网站横幅替代文本。
 banner_height: "398" ## 网站横幅高度。
 banner_width: "1440" ## 网站横幅宽度。
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 网站横幅图片。
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## 网站横幅图片。
 cdn: "https://cloudcdn.pro" ## 网站 CDN。
 changefreq: "weekly" ## 网站更新频率。
 charset: "utf-8" ## 网站字符集。(默认:utf-8)

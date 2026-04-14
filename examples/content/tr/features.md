@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.com.tr (Jane Doe)" ## Sayfanın yazarı. (en fazla 64 k
 banner_alt: "Yeşil ve Siyah Fayanslı Duvar" ## Sitenin banner alternatif metni.
 banner_height: "398" ## Sitenin banner yüksekliği.
 banner_width: "1440" ## Sitenin banner genişliği.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Sitenin banner'ı.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Sitenin banner'ı.
 cdn: "https://cloudcdn.pro" ## Sitenin CDN'i.
 changefreq: "weekly" ## Sitenin değişiklik sıklığı.
 charset: "utf-8" ## Sitenin karakter kümesi. (varsayılan: utf-8)

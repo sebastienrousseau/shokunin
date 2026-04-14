@@ -11,7 +11,7 @@
 /target/
 build
 Icon?
-shokunin.log
+static-site-generator.log
 src/.DS_Store
 tarpaulin-report.html
 Cargo.lock

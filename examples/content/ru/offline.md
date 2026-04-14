@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ru (Джейн Доу)" ## Автор страницы.
 banner_alt: "MacBook Pro на белой поверхности" ## Альтернативный текст баннера сайта.
 banner_height: "398" ## Высота баннера сайта.
 banner_width: "1440" ## Ширина баннера сайта.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Баннер сайта.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Баннер сайта.
 cdn: "https://cloudcdn.pro" ## CDN сайта.
 changefreq: "weekly" ## Частота изменений сайта.
 charset: "utf-8" ## Кодировка сайта. (по умолчанию: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport с
 news_genres: "Blog" ## Жанры сайта. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, Static Site Generator, генератор статических сайтов, минималистичный шаблон сайта, современный шаблон сайта, адаптивный шаблон сайта, стартовый шаблон сайта, фрилансер-креатив, основатель стартапа, владелец малого бизнеса, онлайн-присутствие" ## Ключевые слова сайта. (через запятую, макс. 10 ключевых слов)
 news_language: "ru" ## Язык сайта. (по умолчанию: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## URL изображения сайта.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## URL изображения сайта.
 news_loc: "https://kaishi.ru" ## URL сайта.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Дата публикации сайта.
 news_publication_name: "Kaishi" ## Название публикации новостей сайта.

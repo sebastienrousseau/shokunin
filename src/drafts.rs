@@ -168,7 +168,7 @@ mod tests {
     fn draft_plugin_is_copy_after_move() {
         // Guards the `Copy` derive added in v0.0.34.
         let plugin = DraftPlugin::new(false);
-        let _consumed = plugin;
+        let _copy = plugin;
         assert_eq!(plugin.name(), "drafts");
     }
 

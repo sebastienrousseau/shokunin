@@ -1,3 +1,6 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 /// A representation of YAML's `!Tag` syntax.
 pub mod tagged;
 

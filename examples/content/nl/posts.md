@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.nl (Jane Doe)" ## De auteur van de pagina. (max 64 teke
 banner_alt: "Groen en zwart betegelde muur" ## De alt-tekst van de banner van de site.
 banner_height: "398" ## De hoogte van de banner van de site.
 banner_width: "1440" ## De breedte van de banner van de site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De banner van de site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## De banner van de site.
 cdn: "https://cloudcdn.pro" ## De CDN van de site.
 changefreq: "weekly" ## De wijzigingsfrequentie van de site.
 charset: "utf-8" ## De tekenset van de site. (standaard: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## De viewport
 news_genres: "Blog" ## De genres van de site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi starttemplates, statische sitegenerator, static site generator, starttemplates, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta-tags, responsieve navigatiebalk, schema.org meta-tags" ## De trefwoorden van de site. (kommagescheiden, max 10 trefwoorden)
 news_language: "nl" ## De taal van de site. (standaard: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## De image loc van de site.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## De image loc van de site.
 news_loc: "https://kaishi.nl" ## De loc van de site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## De publicatiedatum van de site.
 news_publication_name: "Kaishi" ## De naam van de nieuwspublicatie van de site.
@@ -169,4 +169,4 @@ Pas templates aan om aan uw specifieke behoeften te voldoen. De mogelijkheden zi
 
 Met ons assortiment starttemplates heeft u een solide basis om iets unieks te bouwen dat is afgestemd op uw specifieke vereisten. Duik erin en begin met creëren!
 
-[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>

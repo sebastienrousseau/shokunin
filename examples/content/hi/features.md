@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.in (जेन डो)" ## पृष्ठ का ले
 banner_alt: "हरी और काली टाइलों वाली दीवार" ## साइट का बैनर alt।
 banner_height: "398" ## साइट के बैनर की ऊँचाई।
 banner_width: "1440" ## साइट के बैनर की चौड़ाई।
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## साइट का बैनर।
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## साइट का बैनर।
 cdn: "https://cloudcdn.pro" ## साइट का CDN।
 changefreq: "weekly" ## साइट का changefreq।
 charset: "utf-8" ## साइट का charset। (डिफ़ॉल्ट: utf-8)

@@ -1,12 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Build artifacts
 /target/
 crates/serde_yml/target/
 build/
+*.build-tmp/
 
 # Generated output
 /docs/*
 !/docs/README.md
+!/docs/guide/
 /examples/public/
+/examples/build/
 /mysite/
 /output/
 /pdfs/
@@ -25,7 +30,14 @@ tarpaulin-report.html
 # IDE / OS
 *.DS_Store
 /.vscode/
+/.idea/
 Icon?
 
 # Backups
 /backup_dir/
+
+# Local overrides
+/fixes.txt
+/examples/landing/public/
+/examples/portfolio/public/
+/examples/docs/public/

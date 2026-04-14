@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.jp (Jane Doe)" ## ページの著者。(最大64文字)
 banner_alt: "緑と黒のタイル張りの壁" ## サイトのバナー代替テキスト。
 banner_height: "398" ## サイトのバナーの高さ。
 banner_width: "1440" ## サイトのバナーの幅。
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## サイトのバナー。
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## サイトのバナー。
 cdn: "https://cloudcdn.pro" ## サイトのCDN。
 changefreq: "weekly" ## サイトの更新頻度。
 charset: "utf-8" ## サイトの文字セット。(デフォルト: utf-8)

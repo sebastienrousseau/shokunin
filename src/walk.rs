@@ -31,7 +31,7 @@ use std::{
 ///
 /// Sorted output, no recursion (uses an explicit stack), no depth or
 /// count bounds. Returns `Ok(Vec::new())` if `dir` does not exist.
-pub(crate) fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
+pub fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
@@ -57,7 +57,7 @@ pub(crate) fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 /// Extension matching is **case-insensitive** so `IMG.JPG` and
 /// `img.jpg` are both collected when `extensions` contains `"jpg"`.
 /// Sorted output.
-pub(crate) fn walk_files_multi(
+pub fn walk_files_multi(
     dir: &Path,
     extensions: &[&str],
 ) -> Result<Vec<PathBuf>> {
@@ -89,7 +89,7 @@ pub(crate) fn walk_files_multi(
 /// Subdirectories beyond `max_depth` are silently skipped. Used by
 /// content walkers that respect [`crate::MAX_DIR_DEPTH`] as a guard
 /// against pathological symlink loops.
-pub(crate) fn walk_files_bounded_depth(
+pub fn walk_files_bounded_depth(
     dir: &Path,
     extension: &str,
     max_depth: usize,
@@ -120,7 +120,7 @@ pub(crate) fn walk_files_bounded_depth(
 ///
 /// Used by `livereload` (50 000 file cap) and similar fast-path
 /// walkers that need a bounded latency upper bound.
-pub(crate) fn walk_files_bounded_count(
+pub fn walk_files_bounded_count(
     dir: &Path,
     extension: &str,
     max_files: usize,

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 [advisories]
 # All ignored advisories below are *unmaintained-crate* warnings on
 # transitive dependencies that this repository does not own. They are

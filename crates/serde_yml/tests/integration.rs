@@ -1,3 +1,6 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::{Deserialize, Serialize};
 use serde_yml::{
     from_reader, from_slice, from_str, from_value, to_string,

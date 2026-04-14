@@ -5,7 +5,7 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Plante à feuilles vertes" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://cloudcdn.pro/stocks/images/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## La bannière du site.
 cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
@@ -48,7 +48,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport
 news_genres: "Blog" ## Les genres du site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, Static Site Generator, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les mots-clés du site. (séparés par des virgules, max 10 mots-clés)
 news_language: "fr" ## La langue du site. (par défaut : en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL de l'image du site.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## L'URL de l'image du site.
 news_loc: "https://kaishi.fr" ## L'URL du site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La date de publication du site.
 news_publication_name: "Kaishi" ## Le nom de la publication de nouvelles du site.

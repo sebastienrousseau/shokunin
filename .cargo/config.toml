@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 [build]
 # Use fewer codegen-units in dev to reduce intermediate artifacts on disk
 # (override the 256 in Cargo.toml which generates massive target dirs)
@@ -10,3 +12,17 @@ split-debuginfo = "unpacked"
 
 [net]
 git-fetch-with-cli = true
+
+# ---------------------------------------------------------------------------
+# Platform-specific linker overrides (opt-in)
+# ---------------------------------------------------------------------------
+# Uncomment to use mold on Linux for ~2-5x faster linking.
+# Install: apt install mold (Debian/Ubuntu) or pacman -S mold (Arch)
+#
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+#
+# [target.aarch64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]

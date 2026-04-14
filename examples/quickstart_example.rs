@@ -1,21 +1,41 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-// examples/basic_site.rs
-//! # Basic Site Generation Example
+//! # Quickstart Example — Full plugin pipeline, production-ready template
 //!
-//! This example demonstrates how to use the Static Site Generator (SSG)
-//! to create a basic static website. It showcases:
+//! ## What this example demonstrates
 //!
-//! - Basic configuration setup
-//! - Directory structure validation
-//! - Site generation process
-//! - Error handling
-//! - Progress logging
+//! - **SEO + JSON-LD + canonical** — search-engine-ready metadata out of the box
+//! - **Search index + accessibility report** — client-side search and WCAG checks
+//! - **HTML/CSS/JS minification** — optimised output assets on every build
+//!
+//! ## When to use this pattern
+//!
+//! Use this example as the starting template for most real-world projects —
+//! it wires together the plugins you typically want enabled from day one.
+//!
+//! ## Run it
+//!
+//! ```sh
+//! cargo run --release --example quickstart_example
+//! ```
+//!
+//! Then open <http://127.0.0.1:3000> in your browser.
+//!
+//! ## What makes this different from other examples
+//!
+//! Unlike `basic` which skips plugins entirely, this example composes the
+//! SEO, search, accessibility, and minification plugins into a single pipeline.
 
 use anyhow::{Context, Result};
-use dtt::datetime::DateTime;
 use http_handle::Server;
-use ssg::{cmd::SsgConfig, verify_and_copy_files, Paths};
-use staticdatagen::compiler::service::compile;
+use ssg::{
+    cmd::SsgConfig,
+    execute_build_pipeline,
+    plugin::{PluginContext, PluginManager},
+    Paths,
+};
 use std::{
     fs::{self, File},
     io::Write,
@@ -30,7 +50,7 @@ struct SiteGenerator {
 }
 
 impl SiteGenerator {
-    /// Creates a new SiteGenerator instance with the specified configuration
+    /// Creates a new `SiteGenerator` instance with the specified configuration
     ///
     /// # Arguments
     ///
@@ -39,7 +59,7 @@ impl SiteGenerator {
     ///
     /// # Returns
     ///
-    /// * `Result<Self>` - The configured SiteGenerator or an error
+    /// * `Result<Self>` - The configured `SiteGenerator` or an error
     fn new(site_name: &str, base_url: &str) -> Result<Self> {
         // Create log file
         let log_file = File::create("site_generation.log")
@@ -47,7 +67,7 @@ impl SiteGenerator {
 
         // Ensure directories exist before configuration validation
         let base_dir = PathBuf::from("examples");
-        let content_dir = base_dir.join("content");
+        let content_dir = base_dir.join("content").join("en");
         let output_dir = base_dir.join("build");
         let template_dir = base_dir.join("templates");
         let site_dir = base_dir.join("public");
@@ -102,7 +122,7 @@ impl SiteGenerator {
             ("template", &self.config.template_dir),
         ] {
             fs::create_dir_all(path).with_context(|| {
-                format!("Failed to create {} directory", name)
+                format!("Failed to create {name} directory")
             })?;
             self.log_message(&format!(
                 "Ensured {} directory at: {}",
@@ -115,52 +135,73 @@ impl SiteGenerator {
 
     /// Logs a message with timestamp to the log file
     fn log_message(&self, message: &str) -> Result<()> {
-        let date = DateTime::new();
-        writeln!(&self.log_file, "[{}] INFO process: {}", date, message)
+        let date = ssg::now_iso();
+        writeln!(&self.log_file, "[{date}] INFO process: {message}")
             .context("Failed to write to log file")?;
 
-        println!("{}", message);
+        println!("{message}");
         Ok(())
     }
 
-    /// Generates the static site
-    /// Generates the static site
-    fn generate(&mut self) -> Result<()> {
+    /// Generates the static site using the full plugin pipeline.
+    fn generate(&self) -> Result<()> {
         self.log_message(&format!(
             "Starting generation for site: {}",
             self.config.site_name
         ))?;
 
-        // Prepare directories - this ensures they exist but doesn't delete them
+        // Prepare directories
         self.prepare_directories()?;
 
-        // Compile the site
-        self.log_message("Compiling site...")?;
-        compile(
+        // Build plugin context with config for SEO/canonical/search
+        let ctx = PluginContext::with_config(
+            &self.config.content_dir,
+            &self.config.output_dir,
+            &self.paths.site,
+            &self.config.template_dir,
+            self.config.clone(),
+        );
+
+        // Register the default plugin pipeline
+        let mut plugins = PluginManager::new();
+        plugins.register(ssg::shortcodes::ShortcodePlugin);
+        #[cfg(feature = "tera-templates")]
+        plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
+            &self.config.template_dir,
+        ));
+        plugins.register(ssg::postprocess::SitemapFixPlugin);
+        plugins.register(ssg::postprocess::NewsSitemapFixPlugin);
+        plugins.register(ssg::postprocess::RssAggregatePlugin);
+        plugins.register(ssg::postprocess::AtomFeedPlugin);
+        plugins.register(ssg::postprocess::ManifestFixPlugin);
+        plugins.register(ssg::postprocess::HtmlFixPlugin);
+        plugins.register(ssg::highlight::HighlightPlugin::default());
+        plugins.register(ssg::seo::SeoPlugin);
+        plugins.register(ssg::seo::JsonLdPlugin::from_site(
+            &self.config.base_url,
+            &self.config.site_name,
+        ));
+        plugins.register(ssg::seo::CanonicalPlugin::new(
+            self.config.base_url.clone(),
+        ));
+        plugins.register(ssg::seo::RobotsPlugin::new(
+            self.config.base_url.clone(),
+        ));
+        plugins.register(ssg::search::SearchPlugin);
+        plugins.register(ssg::accessibility::AccessibilityPlugin);
+        plugins.register(ssg::plugins::MinifyPlugin);
+
+        // Run the full pipeline: before_compile → compile → after_compile
+        self.log_message("Compiling site with full plugin pipeline...")?;
+        execute_build_pipeline(
+            &plugins,
+            &ctx,
             &self.config.output_dir,
             &self.config.content_dir,
             &self.paths.site,
             &self.config.template_dir,
-        )
-        .context("Failed to compile site")?;
-
-        self.log_message("Site compilation completed")?;
-
-        // First ensure the build directory exists
-        if !self.config.output_dir.exists() {
-            fs::create_dir_all(&self.config.output_dir)
-                .context("Failed to create build directory")?;
-
-            self.log_message(&format!(
-                "Created build directory at: {}",
-                self.config.output_dir.display()
-            ))?;
-        }
-
-        // Copy static files
-        self.log_message("Copying static files...")?;
-        verify_and_copy_files(&self.config.output_dir, &self.paths.site)
-            .context("Failed to copy static files")?;
+            false,
+        )?;
 
         self.log_message(&format!(
             "Site generated successfully at: {}",
@@ -187,16 +228,19 @@ impl SiteGenerator {
         // Create a new server with an address and document root
         let server = Server::new("127.0.0.1:3000", example_root.as_str());
 
-        // Start the server
-        let _ = server.start();
+        println!("❯ Server is now running at http://127.0.0.1:3000");
+        println!("  Document root: {example_root}");
+        println!("  Press Ctrl+C to stop the server.");
+
+        // Start the server (blocks until stopped)
+        server.start().context("Failed to start dev server")?;
 
         Ok(())
     }
 }
 
 fn main() -> Result<()> {
-    let mut generator =
-        SiteGenerator::new("basic-site", "http://127.0.0.1:3000")?;
+    let generator = SiteGenerator::new("basic-site", "http://127.0.0.1:3000")?;
 
     // Generate the site
     generator.generate()?;
@@ -213,15 +257,17 @@ mod tests {
 
     #[test]
     fn test_site_generator_creation() -> Result<()> {
-        let generator = SiteGenerator::new("test-site", "127.0.0.1:3000")?;
+        let generator =
+            SiteGenerator::new("test-site", "http://127.0.0.1:3000")?;
         assert_eq!(generator.config.site_name, "test-site");
-        assert_eq!(generator.config.base_url, "127.0.0.1:3000");
+        assert_eq!(generator.config.base_url, "http://127.0.0.1:3000");
         Ok(())
     }
 
     #[test]
     fn test_directory_preparation() -> Result<()> {
-        let generator = SiteGenerator::new("test-site", "127.0.0.1:3000")?;
+        let generator =
+            SiteGenerator::new("test-site", "http://127.0.0.1:3000")?;
         generator.prepare_directories()?;
 
         assert!(generator.config.content_dir.exists());

@@ -193,7 +193,7 @@ fn collect_files_bounded(dir: &Path) -> Result<Vec<PathBuf>> {
 /// Inner walker accepting an explicit limit.
 ///
 /// Extracted so unit tests can exercise the saturation `break`
-/// branches without allocating MAX_BATCH_SIZE (100k) files on disk.
+/// branches without allocating `MAX_BATCH_SIZE` (100k) files on disk.
 fn collect_files_bounded_with_limit(
     dir: &Path,
     limit: usize,
@@ -260,6 +260,7 @@ where
 ///
 /// Creates `n` temporary files and streams them through `stream_copy`.
 /// Returns the measured throughput in files/second.
+#[cfg(any(test, feature = "benchmark"))]
 pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
     let tmp = tempfile::tempdir().context("cannot create temp dir")?;
     let src = tmp.path().join("src");
@@ -367,7 +368,7 @@ mod tests {
             fs::write(src.join(format!("f{i}.txt")), format!("data {i}"))?;
         }
 
-        let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+        let result = process_batch(&src, &dst, stream_copy)?;
         assert_eq!(result.files_processed, 10);
         assert!(result.bytes_written > 0);
         assert!(result.throughput > 0.0);
@@ -381,7 +382,7 @@ mod tests {
         let dst = tmp.path().join("dst");
         fs::create_dir_all(&src)?;
 
-        let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+        let result = process_batch(&src, &dst, stream_copy)?;
         assert_eq!(result.files_processed, 0);
         Ok(())
     }
@@ -396,7 +397,7 @@ mod tests {
         fs::write(src.join("sub/mid.txt"), "mid")?;
         fs::write(src.join("sub/deep/leaf.txt"), "leaf")?;
 
-        let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+        let result = process_batch(&src, &dst, stream_copy)?;
         assert_eq!(result.files_processed, 3);
         assert_eq!(fs::read_to_string(dst.join("sub/deep/leaf.txt"))?, "leaf");
         Ok(())
@@ -618,7 +619,7 @@ mod tests {
         fs::create_dir_all(&src)?;
 
         // Act
-        let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+        let result = process_batch(&src, &dst, stream_copy)?;
 
         // Assert
         assert_eq!(result.files_processed, 0);

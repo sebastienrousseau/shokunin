@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.pl (Jane Doe)" ## Autor strony. (maks. 64 znaki)
 banner_alt: "Zielono-czarna wykafelkowana ściana" ## Tekst alternatywny banera witryny.
 banner_height: "398" ## Wysokość banera witryny.
 banner_width: "1440" ## Szerokość banera witryny.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Baner witryny.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Baner witryny.
 cdn: "https://cloudcdn.pro" ## CDN witryny.
 changefreq: "weekly" ## Częstotliwość zmian witryny.
 charset: "utf-8" ## Kodowanie znaków witryny. (domyślnie: utf-8)

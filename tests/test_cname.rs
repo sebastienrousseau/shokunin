@@ -19,8 +19,7 @@ mod tests {
         let cname_data = result.unwrap();
         assert!(
             cname_data.contains("example.com"),
-            "Expected generated data to contain 'example.com', got: {}",
-            cname_data
+            "Expected generated data to contain 'example.com', got: {cname_data}"
         );
     }
 

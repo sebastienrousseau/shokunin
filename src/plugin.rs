@@ -38,11 +38,109 @@
 //! ```
 
 use crate::cmd::SsgConfig;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::{
-    fmt,
+    collections::HashMap,
+    fmt, fs,
     path::{Path, PathBuf},
 };
+
+// =====================================================================
+// Content-addressed plugin cache
+// =====================================================================
+
+const CACHE_FILENAME: &str = ".ssg-plugin-cache.json";
+
+/// Content-addressed cache that tracks file hashes so plugins can skip
+/// unchanged files across incremental builds.
+///
+/// Stores `path → content_hash` mappings and persists to
+/// `.ssg-plugin-cache.json` in the site directory.
+#[derive(Debug, Clone, Default)]
+pub struct PluginCache {
+    entries: HashMap<PathBuf, u64>,
+}
+
+impl PluginCache {
+    /// Creates an empty cache.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+        }
+    }
+
+    /// Loads a cache from `site_dir/.ssg-plugin-cache.json`.
+    ///
+    /// Returns an empty cache if the file does not exist or cannot be
+    /// parsed.
+    #[must_use]
+    pub fn load(site_dir: &Path) -> Self {
+        let path = site_dir.join(CACHE_FILENAME);
+        if !path.exists() {
+            return Self::new();
+        }
+        let Ok(content) = fs::read_to_string(&path) else {
+            return Self::new();
+        };
+        let Ok(map) = serde_json::from_str::<HashMap<String, u64>>(&content)
+        else {
+            return Self::new();
+        };
+        Self {
+            entries: map
+                .into_iter()
+                .map(|(k, v)| (PathBuf::from(k), v))
+                .collect(),
+        }
+    }
+
+    /// Persists the cache to `site_dir/.ssg-plugin-cache.json`.
+    pub fn save(&self, site_dir: &Path) -> Result<()> {
+        let path = site_dir.join(CACHE_FILENAME);
+        let serialisable: HashMap<String, u64> = self
+            .entries
+            .iter()
+            .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
+            .collect();
+        let json = serde_json::to_string_pretty(&serialisable)
+            .context("failed to serialise plugin cache")?;
+        fs::write(&path, json)
+            .with_context(|| format!("cannot write {}", path.display()))?;
+        Ok(())
+    }
+
+    /// Returns `true` if the file at `path` has changed since the last
+    /// time it was recorded, or if it has never been recorded.
+    pub fn has_changed(&self, path: &Path) -> bool {
+        let Ok(content) = fs::read(path) else {
+            return true;
+        };
+        let current = Self::hash_bytes(&content);
+        match self.entries.get(path) {
+            Some(&cached) => cached != current,
+            None => true,
+        }
+    }
+
+    /// Records the current content hash for `path`.
+    pub fn update(&mut self, path: &Path) {
+        if let Ok(content) = fs::read(path) {
+            let hash = Self::hash_bytes(&content);
+            let _ = self.entries.insert(path.to_path_buf(), hash);
+        }
+    }
+
+    /// Simple FNV-1a 64-bit hash of a byte slice.
+    fn hash_bytes(data: &[u8]) -> u64 {
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for &byte in data {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x0100_0000_01b3);
+        }
+        hash
+    }
+}
 
 /// Context passed to plugin hooks with paths and configuration.
 #[derive(Debug, Clone)]
@@ -57,6 +155,8 @@ pub struct PluginContext {
     pub template_dir: PathBuf,
     /// Site configuration (`base_url`, `site_name`, language, etc.).
     pub config: Option<SsgConfig>,
+    /// Content-addressed plugin cache for incremental builds.
+    pub cache: Option<PluginCache>,
 }
 
 impl PluginContext {
@@ -74,6 +174,7 @@ impl PluginContext {
             site_dir: site_dir.to_path_buf(),
             template_dir: template_dir.to_path_buf(),
             config: None,
+            cache: None,
         }
     }
 
@@ -92,6 +193,7 @@ impl PluginContext {
             site_dir: site_dir.to_path_buf(),
             template_dir: template_dir.to_path_buf(),
             config: Some(config),
+            cache: None,
         }
     }
 }
@@ -290,7 +392,7 @@ mod tests {
     }
 
     impl Plugin for FailPlugin {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "fail-plugin"
         }
         fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
@@ -317,7 +419,7 @@ mod tests {
     struct NoopPlugin;
 
     impl Plugin for NoopPlugin {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "noop"
         }
     }
@@ -484,7 +586,7 @@ mod tests {
     #[test]
     fn test_plugin_context_debug() {
         let ctx = test_ctx();
-        let debug = format!("{:?}", ctx);
+        let debug = format!("{ctx:?}");
         assert!(debug.contains("content"));
         assert!(debug.contains("build"));
     }
@@ -493,8 +595,227 @@ mod tests {
     fn test_plugin_manager_debug() {
         let mut pm = PluginManager::new();
         pm.register(NoopPlugin);
-        let debug = format!("{:?}", pm);
+        let debug = format!("{pm:?}");
         assert!(debug.contains("NoopPlugin"));
+    }
+
+    // -----------------------------------------------------------------
+    // PluginCache tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_new_is_empty() {
+        let cache = PluginCache::new();
+        assert!(cache.entries.is_empty());
+    }
+
+    #[test]
+    fn test_cache_has_changed_on_missing_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("hello.txt");
+        fs::write(&file, "hello").unwrap();
+
+        let cache = PluginCache::new();
+        assert!(cache.has_changed(&file), "New file should count as changed");
+    }
+
+    #[test]
+    fn test_cache_has_changed_detects_unchanged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("hello.txt");
+        fs::write(&file, "hello").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&file);
+        assert!(
+            !cache.has_changed(&file),
+            "File should not be changed after update"
+        );
+    }
+
+    #[test]
+    fn test_cache_has_changed_detects_modification() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("hello.txt");
+        fs::write(&file, "hello").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&file);
+
+        // Modify the file
+        fs::write(&file, "world").unwrap();
+        assert!(
+            cache.has_changed(&file),
+            "Modified file should be detected as changed"
+        );
+    }
+
+    #[test]
+    fn test_cache_persistence_save_load() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("data.txt");
+        fs::write(&file, "content").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&file);
+        cache.save(tmp.path()).unwrap();
+
+        // Verify the cache file exists
+        let cache_path = tmp.path().join(CACHE_FILENAME);
+        assert!(cache_path.exists(), "Cache file should be persisted");
+
+        // Load it back
+        let loaded = PluginCache::load(tmp.path());
+        assert!(
+            !loaded.has_changed(&file),
+            "Loaded cache should still recognise unchanged file"
+        );
+    }
+
+    #[test]
+    fn test_cache_load_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = PluginCache::load(tmp.path());
+        assert!(cache.entries.is_empty());
+    }
+
+    #[test]
+    fn test_cache_has_changed_nonexistent_file() {
+        let cache = PluginCache::new();
+        assert!(
+            cache.has_changed(Path::new("/nonexistent/file.txt")),
+            "Nonexistent file should count as changed"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // PluginCache: save/load round-trip, hash determinism, empty cache
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_save_load_round_trip_with_multiple_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f1 = tmp.path().join("one.txt");
+        let f2 = tmp.path().join("two.txt");
+        fs::write(&f1, "alpha").unwrap();
+        fs::write(&f2, "beta").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&f1);
+        cache.update(&f2);
+        cache.save(tmp.path()).unwrap();
+
+        let loaded = PluginCache::load(tmp.path());
+        assert!(!loaded.has_changed(&f1));
+        assert!(!loaded.has_changed(&f2));
+    }
+
+    #[test]
+    fn test_cache_empty_save_load() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = PluginCache::new();
+        cache.save(tmp.path()).unwrap();
+
+        let loaded = PluginCache::load(tmp.path());
+        assert!(loaded.entries.is_empty());
+    }
+
+    #[test]
+    fn test_cache_hash_bytes_determinism() {
+        let data = b"hello world";
+        let h1 = PluginCache::hash_bytes(data);
+        let h2 = PluginCache::hash_bytes(data);
+        assert_eq!(h1, h2, "same input must produce same hash");
+    }
+
+    #[test]
+    fn test_cache_hash_bytes_different_inputs() {
+        let h1 = PluginCache::hash_bytes(b"aaa");
+        let h2 = PluginCache::hash_bytes(b"bbb");
+        assert_ne!(h1, h2, "different inputs should produce different hashes");
+    }
+
+    #[test]
+    fn test_cache_hash_bytes_empty() {
+        // Empty input should return the FNV offset basis
+        let h = PluginCache::hash_bytes(b"");
+        assert_eq!(h, 0xcbf2_9ce4_8422_2325);
+    }
+
+    #[test]
+    fn test_cache_has_changed_after_file_modification() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("data.txt");
+        fs::write(&f, "version1").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&f);
+        assert!(!cache.has_changed(&f));
+
+        // Modify file content
+        fs::write(&f, "version2").unwrap();
+        assert!(cache.has_changed(&f));
+
+        // Update cache, should no longer be changed
+        cache.update(&f);
+        assert!(!cache.has_changed(&f));
+    }
+
+    #[test]
+    fn test_cache_load_corrupt_json() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache_path = tmp.path().join(CACHE_FILENAME);
+        fs::write(&cache_path, "this is not json").unwrap();
+
+        let loaded = PluginCache::load(tmp.path());
+        assert!(
+            loaded.entries.is_empty(),
+            "corrupt JSON should yield empty cache"
+        );
+    }
+
+    #[test]
+    fn test_cache_update_nonexistent_file_is_noop() {
+        let mut cache = PluginCache::new();
+        cache.update(Path::new("/nonexistent/file.txt"));
+        assert!(cache.entries.is_empty());
+    }
+
+    #[test]
+    fn test_cache_default_is_empty() {
+        let cache = PluginCache::default();
+        assert!(cache.entries.is_empty());
+    }
+
+    #[test]
+    fn test_cache_clone() {
+        let tmp = tempfile::tempdir().unwrap();
+        let f = tmp.path().join("x.txt");
+        fs::write(&f, "x").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&f);
+
+        let cloned = cache.clone();
+        assert!(!cloned.has_changed(&f));
+    }
+
+    #[test]
+    fn test_plugin_context_with_config() {
+        let config = SsgConfig::builder()
+            .site_name("test".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            Path::new("c"),
+            Path::new("b"),
+            Path::new("s"),
+            Path::new("t"),
+            config,
+        );
+        assert!(ctx.config.is_some());
+        assert_eq!(ctx.config.unwrap().site_name, "test");
     }
 
     #[test]

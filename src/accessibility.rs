@@ -99,10 +99,10 @@ impl Plugin for AccessibilityPlugin {
 
         if report.total_issues > 0 {
             log::warn!(
-                "[a11y] {} issue(s) across {} page(s). Report: {:?}",
+                "[a11y] {} issue(s) across {} page(s). Report: {}",
                 report.total_issues,
                 report.pages.len(),
-                report_path
+                report_path.display()
             );
         } else {
             log::info!(
@@ -140,6 +140,39 @@ fn check_page(html: &str) -> Vec<AccessibilityIssue> {
     issues
 }
 
+/// Returns `true` if the `<img>` tag has any form of `alt` attribute.
+fn has_valid_alt(tag: &str) -> bool {
+    let has_alt_eq = tag.contains("alt=");
+    let has_alt_bare = !has_alt_eq
+        && (tag.contains(" alt ")
+            || tag.contains(" alt>")
+            || tag.ends_with(" alt"));
+    has_alt_eq || has_alt_bare
+}
+
+/// Returns `true` if the `<img>` tag has an empty or missing-value alt.
+fn has_empty_alt(tag: &str) -> bool {
+    let has_alt_eq = tag.contains("alt=");
+    let has_alt_bare = !has_alt_eq
+        && (tag.contains(" alt ")
+            || tag.contains(" alt>")
+            || tag.ends_with(" alt"));
+    tag.contains("alt=\"\"")
+        || tag.contains("alt=''")
+        || has_alt_bare
+        || (has_alt_eq && !tag.contains("alt=\"") && !tag.contains("alt='"))
+}
+
+/// Returns `true` if the `<img>` tag is marked as decorative via ARIA roles.
+fn is_decorative_img(tag: &str) -> bool {
+    tag.contains("role=\"presentation\"")
+        || tag.contains("role=\"none\"")
+        || tag.contains("role='presentation'")
+        || tag.contains("role='none'")
+        || tag.contains("role=presentation")
+        || tag.contains("role=none")
+}
+
 /// WCAG 1.1.1: Every <img> must have a non-empty alt attribute.
 fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let lower = html.to_lowercase();
@@ -150,12 +183,9 @@ fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
             lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
         let tag = &lower[abs..tag_end];
 
-        // Check for alt attribute
-        let has_alt = tag.contains("alt=");
-        let empty_alt = tag.contains("alt=\"\"") || tag.contains("alt=''");
-
-        if !has_alt || empty_alt {
-            // Extract src for the message
+        if !has_valid_alt(tag)
+            || (has_empty_alt(tag) && !is_decorative_img(tag))
+        {
             let src = extract_attr_value(&html[abs..tag_end], "src")
                 .unwrap_or_default();
             issues.push(AccessibilityIssue {
@@ -411,7 +441,7 @@ mod tests {
             <main><h1>Title</h1><h2>Sub</h2>
             <img src="x.jpg" alt="Photo"></main></body></html>"#;
         let issues = check_page(html);
-        assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
+        assert!(issues.is_empty(), "Expected no issues, got: {issues:?}");
     }
 
     // -------------------------------------------------------------------
@@ -547,7 +577,7 @@ mod tests {
     #[test]
     fn extract_attr_value_single_quoted() {
         // Lines 311-313: the single-quote branch.
-        let result = extract_attr_value(r#"<a href='/bar'>"#, "href");
+        let result = extract_attr_value(r"<a href='/bar'>", "href");
         assert_eq!(result, Some("/bar".to_string()));
     }
 
@@ -555,13 +585,13 @@ mod tests {
     fn extract_attr_value_unquoted() {
         // Lines 315-318: the no-quote fallback branch, terminated by
         // whitespace or `>`.
-        let result = extract_attr_value(r#"<a href=/baz>"#, "href");
+        let result = extract_attr_value(r"<a href=/baz>", "href");
         assert_eq!(result, Some("/baz".to_string()));
     }
 
     #[test]
     fn extract_attr_value_missing_attribute_returns_none() {
-        let result = extract_attr_value(r#"<a>"#, "href");
+        let result = extract_attr_value(r"<a>", "href");
         assert!(result.is_none());
     }
 

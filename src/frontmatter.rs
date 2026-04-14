@@ -30,7 +30,7 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
 
     for md_path in &md_files {
         let content = fs::read_to_string(md_path)
-            .with_context(|| format!("Failed to read {md_path:?}"))?;
+            .with_context(|| format!("Failed to read {}", md_path.display()))?;
 
         let meta = match frontmatter_gen::extract(&content) {
             Ok((fm, _body)) => frontmatter_to_json(&fm),
@@ -65,8 +65,9 @@ pub fn read_sidecar(
         return Ok(None);
     }
 
-    let content = fs::read_to_string(&sidecar)
-        .with_context(|| format!("Failed to read sidecar {sidecar:?}"))?;
+    let content = fs::read_to_string(&sidecar).with_context(|| {
+        format!("Failed to read sidecar {}", sidecar.display())
+    })?;
     let meta: HashMap<String, serde_json::Value> =
         serde_json::from_str(&content)?;
     Ok(Some(meta))
@@ -124,8 +125,10 @@ fn fm_value_to_json(value: &frontmatter_gen::Value) -> serde_json::Value {
             serde_json::Value::Object(map)
         }
         frontmatter_gen::Value::Null => serde_json::Value::Null,
-        // Fallback for any other variant
-        _ => serde_json::Value::String(format!("{value:?}")),
+        // Fallback for tagged values
+        frontmatter_gen::Value::Tagged(..) => {
+            serde_json::Value::String(format!("{value:?}"))
+        }
     }
 }
 

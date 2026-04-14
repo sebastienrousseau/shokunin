@@ -73,6 +73,11 @@ const SECURITY_HEADERS: &[(&str, &str)] = &[
         "Permissions-Policy",
         "camera=(), microphone=(), geolocation=()",
     ),
+    (
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'",
+    ),
+    ("Strict-Transport-Security", "max-age=31536000; includeSubDomains"),
 ];
 
 fn generate_netlify(site_dir: &std::path::Path) -> Result<()> {
@@ -217,7 +222,7 @@ mod tests {
         // Verifies the `Copy` derive is in effect: the binding remains
         // usable after being passed by value.
         let target = DeployTarget::Netlify;
-        let _consumed = target;
+        let _copy = target;
         assert_eq!(target, DeployTarget::Netlify);
     }
 
@@ -266,7 +271,7 @@ mod tests {
     #[test]
     fn deploy_plugin_is_copy_after_move() {
         let plugin = DeployPlugin::new(DeployTarget::Vercel);
-        let _consumed = plugin;
+        let _copy = plugin;
         assert_eq!(plugin.name(), "deploy");
     }
 

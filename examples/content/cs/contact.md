@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.cz (Jane Doe)" ## Autor stránky. (max. 64 znaků)
 banner_alt: "les plný zelených stromů" ## Alternativní text banneru webu.
 banner_height: "398" ## Výška banneru webu.
 banner_width: "1440" ## Šířka banneru webu.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner webu.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Banner webu.
 cdn: "https://cloudcdn.pro" ## CDN webu.
 changefreq: "weekly" ## Frekvence změn webu.
 charset: "utf-8" ## Znaková sada webu. (výchozí: utf-8)
@@ -50,7 +50,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport we
 news_genres: "Blog" ## Žánry webu. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, generátor statických webů, generátor statických stránek, minimalistická šablona webu, moderní šablona webu, responzivní šablona webu, startovací šablona webu, kreativec na volné noze, zakladatel startupu, majitel malé firmy, online prezentace" ## Klíčová slova webu. (oddělená čárkami, max. 10 klíčových slov)
 news_language: "cs" ## Jazyk webu. (výchozí: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Umístění obrázku webu.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Umístění obrázku webu.
 news_loc: "https://kaishi.cz" ## URL webu.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Datum publikace webu.
 news_publication_name: "Kaishi" ## Název publikace webu.

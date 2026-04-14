@@ -188,7 +188,7 @@ mod tests {
         let files = vec![
             FileData {
                 name: "empty.md".to_string(),
-                content: "".to_string(),
+                content: String::new(),
                 ..Default::default()
             },
             FileData {
@@ -210,8 +210,8 @@ mod tests {
         let mut files = vec![];
         for i in 0..100 {
             files.push(FileData {
-                name: format!("very/deeply/nested/path/structure/file{}.md", i),
-                content: format!("Content {}", i),
+                name: format!("very/deeply/nested/path/structure/file{i}.md"),
+                content: format!("Content {i}"),
                 ..Default::default()
             });
         }

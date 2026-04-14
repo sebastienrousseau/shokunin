@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.com.ng (Jane Doe)" ## Olùkọ̀wé ojú ewé náà.
 banner_alt: "Ògiri aláwọ̀ ewé àti dúdú tí a fi tile ṣe" ## Àpèjúwe banner.
 banner_height: "398"
 banner_width: "1440"
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp"
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>"
 cdn: "https://cloudcdn.pro"
 changefreq: "weekly"
 charset: "utf-8"
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 news_genres: "Blog"
 news_keywords: "àwòṣe ìbẹ̀rẹ̀ kaishi, Static Site Generator, àwòṣe ìbẹ̀rẹ̀, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, àká ìrìnkiri responsive, schema.org meta tags"
 news_language: "yo"
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp"
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>"
 news_loc: "https://kaishi.com.ng"
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT"
 news_publication_name: "Kaishi"
@@ -160,4 +160,4 @@ Kíkọ́ ojú òpó wẹ́ẹ̀bù láti ibẹ̀rẹ̀ lè jẹ́ iṣẹ́ tí
 
 Pẹ̀lú àkójọ àwọn àwòṣe ìbẹ̀rẹ̀ wa, o ní ìpìlẹ̀ tí ó dúró ṣinṣin láti kọ́ ohun tí ó ṣọ̀tọ̀ tí ó sì baamu fún ohun tí o nílò ní pàtó. Wọlé kí o sì bẹ̀rẹ̀ sí ṣẹ̀dá!
 
-[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>

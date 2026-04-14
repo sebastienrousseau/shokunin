@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.pt (Jane Doe)" ## O autor da página. (máx. 64 caracte
 banner_alt: "MacBook Pro sobre superfície branca" ## O texto alternativo do banner do site.
 banner_height: "398" ## A altura do banner do site.
 banner_width: "1440" ## A largura do banner do site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## O banner do site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## O banner do site.
 cdn: "https://cloudcdn.pro" ## O CDN do site.
 changefreq: "weekly" ## A frequência de alteração do site.
 charset: "utf-8" ## A codificação de caracteres do site. (predefinição: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport 
 news_genres: "Blog" ## Os géneros do site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, gerador de sítios estáticos, gerador de sites estáticos, modelo de site minimalista, modelo de site moderno, modelo de site responsivo, modelo inicial de site, criativo freelancer, fundador de startup, pequeno empresário, presença online" ## As palavras-chave do site. (separadas por vírgula, máx. 10 palavras-chave)
 news_language: "pt" ## O idioma do site. (predefinição: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## A localização da imagem do site.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## A localização da imagem do site.
 news_loc: "https://kaishi.pt" ## A localização do site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## A data de publicação do site.
 news_publication_name: "Kaishi" ## O nome da publicação de notícias do site.

@@ -1,0 +1,23 @@
+{
+    "version": "0.0.36",
+    "description": "Fast, SEO-optimised static site generator built in Rust",
+    "homepage": "https://github.com/sebastienrousseau/shokunin",
+    "license": "MIT|Apache-2.0",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/sebastienrousseau/shokunin/releases/download/v0.0.36/ssg-v0.0.36-x86_64-pc-windows-msvc.zip",
+            "hash": ""
+        }
+    },
+    "bin": "ssg.exe",
+    "checkver": {
+        "github": "https://github.com/sebastienrousseau/shokunin"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/sebastienrousseau/shokunin/releases/download/v$version/ssg-v$version-x86_64-pc-windows-msvc.zip"
+            }
+        }
+    }
+}

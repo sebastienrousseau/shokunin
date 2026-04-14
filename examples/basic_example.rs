@@ -2,66 +2,106 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! This is a main function for a simple static site generator (ssg) example.
-//! It is intended to demonstrate how to use the `ssg` library to generate a
-//! static website from Markdown files.
+//! # Basic Example — Minimal single-locale site with search
 //!
-//! This example demonstrates the process of compiling and generating the static
-//! website from markdown files. It makes use of the `ssg::compiler::compile`
-//! function from the `ssg` library, and standard Rust libraries for handling
-//! paths and errors.
+//! ## What this example demonstrates
 //!
-//! The `main` function below defines the paths to the various directories
-//! involved in the website generation process, then calls the `compile`
-//! function to generate the website.
+//! - **Direct compile** — invokes `staticdatagen::compiler::service::compile`
+//! - **Functional search** — registers `SearchPlugin` so `Ctrl+K` works
+//! - **Single-locale layout** — strips the language dropdown for a clean UI
+//!
+//! ## When to use this pattern
+//!
+//! Use this example as the smallest functional starting point: one language,
+//! one binary, one server. No SEO meta-injection, no JSON-LD, no a11y report.
+//!
+//! ## Run it
+//!
+//! ```sh
+//! cargo run --release --example basic_example
+//! ```
+//!
+//! Then open <http://127.0.0.1:3000> in your browser.
+//!
+//! ## What makes this different from other examples
+//!
+//! Unlike `quickstart` which wires the full pipeline (SEO + JSON-LD + a11y +
+//! minify), `basic` registers only the search plugin and a CSS-injection step
+//! that hides the language dropdown so the UI matches the single-locale intent.
 
-// Import the required libraries and modules.
 use anyhow::Result;
 use http_handle::Server;
+use ssg::plugin::{PluginContext, PluginManager};
+use ssg::search::SearchPlugin;
 use staticdatagen::compiler::service::compile;
-use std::path::Path;
+use std::{fs, path::Path};
 
 fn main() -> Result<()> {
-    // Define the paths to the build, site, source and template directories.
-
-    // The build directory.
-    // This is where the generated website will be placed temporarily before
-    // being moved to the site directory.
     let build_dir = Path::new("./examples/build");
-
-    // The site directory.
-    // This is where the final generated website will be placed.
     let site_dir = Path::new("./examples/public");
-
-    // The content directory.
-    // This is where the source content files are located (e.g., Markdown files).
-    // These files will be converted into HTML files in the build process.
     let content_dir = Path::new("./examples/content/en");
+    let template_dir = Path::new("./examples/templates");
 
-    // The template directory.
-    // This is where the HTML template files are located.
-    // These templates are used to structure the content from the Markdown files.
-    let template_dir = Path::new("./examples/templates/en");
-
-    // Call the compile function to generate the website.
-    // The function takes the paths defined above as arguments and will
-    // throw an error if anything goes wrong during the compilation process.
+    // 1. Compile content → HTML
     match compile(build_dir, content_dir, site_dir, template_dir) {
-        Ok(_) => println!("    ✅ Successfully compiled static site"),
-        Err(e) => println!("    ❌ Error compiling site: {:?}", e),
+        Ok(()) => println!("    ✅ Successfully compiled static site"),
+        Err(e) => {
+            println!("    ❌ Error compiling site: {e:?}");
+            return Err(e);
+        }
     }
 
-    // compile(build_path, content_path, site_path, template_path)?;
+    // 2. Run only the SearchPlugin so the search UI actually works
+    let mut plugins = PluginManager::new();
+    plugins.register(SearchPlugin);
+    let ctx =
+        PluginContext::new(content_dir, build_dir, site_dir, template_dir);
+    plugins.run_after_compile(&ctx)?;
+    println!("    🔍 Search index generated");
 
-    // Serve the generated website locally.
+    // 3. Hide the language dropdown — basic is single-locale, so the
+    //    icon serves no purpose. Inject a small CSS rule into every page.
+    hide_language_icon(site_dir)?;
+    println!("    🌐 Language dropdown hidden (single-locale site)");
+
+    // 4. Serve
     let example_root: String = site_dir.to_str().unwrap().to_string();
-
-    // Create a new server with an address and document root
     let server = Server::new("127.0.0.1:3000", example_root.as_str());
 
-    // Start the server
-    let _ = server.start();
+    println!("\n❯ Server is now running at http://127.0.0.1:3000");
+    println!("  Document root: {example_root}");
+    println!("  Press Ctrl+C to stop the server.");
 
-    // If everything goes well, return Ok.
+    server.start().map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(())
+}
+
+/// Injects a tiny `<style>` block before `</head>` that hides the language
+/// dropdown trigger and its menu. Idempotent.
+fn hide_language_icon(site_dir: &Path) -> Result<()> {
+    const MARKER: &str = "/* ssg-basic: hide lang */";
+    const STYLE: &str =
+        "<style>/* ssg-basic: hide lang */.lang-btn,.lang-dropdown,.mobile-lang{display:none!important}</style>";
+
+    fn walk(dir: &Path, marker: &str, style: &str) -> Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, marker, style)?;
+            } else if path.extension().is_some_and(|e| e == "html") {
+                let html = fs::read_to_string(&path)?;
+                if html.contains(marker) {
+                    continue;
+                }
+                if let Some(pos) = html.find("</head>") {
+                    let new_html =
+                        format!("{}{}{}", &html[..pos], style, &html[pos..]);
+                    fs::write(&path, new_html)?;
+                }
+            }
+        }
+        Ok(())
+    }
+    walk(site_dir, MARKER, STYLE)
 }

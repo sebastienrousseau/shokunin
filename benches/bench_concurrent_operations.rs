@@ -42,7 +42,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
-        )
+        );
     });
 
     // Benchmark medium files (1MB each)
@@ -53,7 +53,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
-        )
+        );
     });
 
     // Benchmark large files (10MB each)
@@ -64,7 +64,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
-        )
+        );
     });
 
     group.finish();
@@ -91,7 +91,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
         b.iter_with_setup(setup_regular_files, |path| {
             verify_file_safety(&path).unwrap();
             black_box(());
-        })
+        });
     });
 
     // Benchmark nested directory verification
@@ -99,7 +99,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
         b.iter_with_setup(setup_nested_directories, |(src, dst)| {
             verify_and_copy_files(&src, &dst).unwrap();
             black_box(());
-        })
+        });
     });
 
     // Benchmark mixed content verification
@@ -107,7 +107,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
         b.iter_with_setup(setup_mixed_content, |(src, dst)| {
             verify_and_copy_files(&src, &dst).unwrap();
             black_box(());
-        })
+        });
     });
 
     group.finish();
@@ -124,7 +124,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
 ///
 /// # Returns
 ///
-/// * Tuple of (source PathBuf, destination PathBuf)
+/// * Tuple of (source `PathBuf`, destination `PathBuf`)
 fn setup_test_files(count: u32, size: u64) -> (PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
@@ -135,7 +135,7 @@ fn setup_test_files(count: u32, size: u64) -> (PathBuf, PathBuf) {
 
     // Create test files
     for i in 0..count {
-        let file_path = src_dir.join(format!("file_{}.txt", i));
+        let file_path = src_dir.join(format!("file_{i}.txt"));
         let mut file = File::create(&file_path).unwrap();
 
         // Create file of specified size
@@ -150,7 +150,7 @@ fn setup_test_files(count: u32, size: u64) -> (PathBuf, PathBuf) {
 ///
 /// # Returns
 ///
-/// * PathBuf to the test file
+/// * `PathBuf` to the test file
 fn setup_regular_files() -> PathBuf {
     let temp_dir = tempdir().unwrap();
     let file_path = temp_dir.path().join("test.txt");
@@ -162,7 +162,7 @@ fn setup_regular_files() -> PathBuf {
 ///
 /// # Returns
 ///
-/// * Tuple of (source PathBuf, destination PathBuf)
+/// * Tuple of (source `PathBuf`, destination `PathBuf`)
 fn setup_nested_directories() -> (PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
@@ -170,12 +170,12 @@ fn setup_nested_directories() -> (PathBuf, PathBuf) {
 
     // Create nested directory structure
     for i in 0..5 {
-        let nested_dir = src_dir.join(format!("level_{}", i));
+        let nested_dir = src_dir.join(format!("level_{i}"));
         fs::create_dir_all(&nested_dir).unwrap();
 
         for j in 0..3 {
-            let file_path = nested_dir.join(format!("file_{}.txt", j));
-            fs::write(file_path, format!("content {}_{}", i, j)).unwrap();
+            let file_path = nested_dir.join(format!("file_{j}.txt"));
+            fs::write(file_path, format!("content {i}_{j}")).unwrap();
         }
     }
 
@@ -186,7 +186,7 @@ fn setup_nested_directories() -> (PathBuf, PathBuf) {
 ///
 /// # Returns
 ///
-/// * Tuple of (source PathBuf, destination PathBuf)
+/// * Tuple of (source `PathBuf`, destination `PathBuf`)
 fn setup_mixed_content() -> (PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
@@ -196,19 +196,19 @@ fn setup_mixed_content() -> (PathBuf, PathBuf) {
     fs::create_dir_all(&src_dir).unwrap();
     for i in 0..5 {
         fs::write(
-            src_dir.join(format!("root_{}.txt", i)),
-            format!("root content {}", i),
+            src_dir.join(format!("root_{i}.txt")),
+            format!("root content {i}"),
         )
         .unwrap();
     }
 
     // Create mixed nested structure
     for i in 0..3 {
-        let sub_dir = src_dir.join(format!("dir_{}", i));
+        let sub_dir = src_dir.join(format!("dir_{i}"));
         fs::create_dir_all(&sub_dir).unwrap();
 
         // Mixed files and empty directories
-        fs::write(sub_dir.join("content.txt"), format!("dir content {}", i))
+        fs::write(sub_dir.join("content.txt"), format!("dir content {i}"))
             .unwrap();
         fs::create_dir_all(sub_dir.join("empty")).unwrap();
     }
@@ -247,13 +247,13 @@ mod tests {
 
         // Verify directory structure
         for i in 0..5 {
-            let dir = src.join(format!("level_{}", i));
+            let dir = src.join(format!("level_{i}"));
             assert!(dir.exists());
             assert!(dir.is_dir());
 
             // Verify files in each directory
             for j in 0..3 {
-                let file = dir.join(format!("file_{}.txt", j));
+                let file = dir.join(format!("file_{j}.txt"));
                 assert!(file.exists());
                 assert!(file.is_file());
             }
@@ -267,12 +267,12 @@ mod tests {
 
         // Verify root files
         for i in 0..5 {
-            assert!(src.join(format!("root_{}.txt", i)).exists());
+            assert!(src.join(format!("root_{i}.txt")).exists());
         }
 
         // Verify directories and their content
         for i in 0..3 {
-            let dir = src.join(format!("dir_{}", i));
+            let dir = src.join(format!("dir_{i}"));
             assert!(dir.exists());
             assert!(dir.join("content.txt").exists());
             assert!(dir.join("empty").exists());

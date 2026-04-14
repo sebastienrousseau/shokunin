@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ro (Jane Doe)" ## Autorul paginii. (max. 64 de caracter
 banner_alt: "Perete cu plăci verzi și negre" ## Textul alternativ al bannerului site-ului.
 banner_height: "398" ## Înălțimea bannerului site-ului.
 banner_width: "1440" ## Lățimea bannerului site-ului.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Bannerul site-ului.
 cdn: "https://cloudcdn.pro" ## CDN-ul site-ului.
 changefreq: "weekly" ## Frecvența de actualizare a site-ului.
 charset: "utf-8" ## Setul de caractere al site-ului. (implicit: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul 
 news_genres: "Blog" ## Genurile site-ului. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "șabloane de bază kaishi, generator de site-uri statice, generator de site-uri statice, șabloane de bază, bootstrap, bootstrap css, bootstrap javascript, politică de securitate a conținutului, metaetichete open graph, bară de navigare responsivă, metaetichete schema.org" ## Cuvintele-cheie ale site-ului. (separate prin virgulă, max. 10 cuvinte-cheie)
 news_language: "ro" ## Limba site-ului. (implicit: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Locația imaginii site-ului.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Locația imaginii site-ului.
 news_loc: "https://kaishi.ro" ## Locația site-ului.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Data publicării site-ului.
 news_publication_name: "Kaishi" ## Numele publicației site-ului.
@@ -172,4 +172,4 @@ Personalizați șabloanele pentru a se potrivi nevoilor dumneavoastră specifice
 
 Cu gama noastră de șabloane de bază, aveți o fundație solidă pentru a construi ceva unic și adaptat cerințelor dumneavoastră specifice. Treceți la treabă și începeți să creați!
 
-[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>

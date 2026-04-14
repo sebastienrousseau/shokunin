@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ng (Jane Doe)" ## Marubucin shafin. (iyakar haruffa 64)
 banner_alt: "daji cike da bishiyoyi kore masu yawa" ## Rubutun madadin banner na shafin.
 banner_height: "398" ## Tsawon banner na shafin.
 banner_width: "1440" ## Fadin banner na shafin.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner na shafin.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Banner na shafin.
 cdn: "https://cloudcdn.pro" ## CDN na shafin.
 changefreq: "weekly" ## Yawan canjin shafin.
 charset: "utf-8" ## Tsarin haruffa na shafin. (na asali: utf-8)
@@ -50,7 +50,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport na
 news_genres: "Blog" ## Nau'ikan shafin. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, static site generator, mai samar da shafuka masu tsaye, samfurin shafi mai sauki, samfurin shafi na zamani, samfurin shafi mai dacewa, samfurin farko na shafi, mai kirkire-kirkire mai zaman kansa, wanda ya kafa startup, mai karamin kasuwanci, kasancewar kan layi" ## Kalmomin bincike na shafin. (ana raba su da waƙafi, iyakar 10)
 news_language: "ha" ## Harshen shafin. (na asali: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Wurin hoto na shafin.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Wurin hoto na shafin.
 news_loc: "https://kaishi.ng" ## Wurin shafin.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Ranar buga shafin.
 news_publication_name: "Kaishi" ## Sunan buga labarai na shafin.

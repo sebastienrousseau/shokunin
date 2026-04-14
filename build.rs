@@ -1,3 +1,6 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! This build script checks if the current Rustc version is at least the
 //! minimum required version.
 //! If the current Rustc version is less than the minimum required version,
@@ -44,7 +47,7 @@ use std::process;
 /// }
 /// ```
 fn main() {
-    let min_version = "1.74";
+    let min_version = "1.88";
 
     if !matches!(version_check::is_min_version(min_version), Some(true)) {
         eprintln!("'ssg' requires Rustc version >= {min_version}");

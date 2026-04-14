@@ -1,9 +1,9 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-//! Tests for the tags module in StaticDataGen, ensuring correct tagging logic
-//! and data handling.
-
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+//! Tests for the tags module in `StaticDataGen`, ensuring correct tagging logic
+//! and data handling.
 
 use std::{
     collections::HashMap,
@@ -15,6 +15,7 @@ use std::{
 use staticdatagen::models::data::{FileData, PageData, TagsData};
 
 /// Generates a tag list from the given `FileData` and metadata, and returns it as a `HashMap`.
+#[must_use]
 pub fn generate_tags(
     file: &FileData,
     metadata: &HashMap<String, String>,
@@ -24,12 +25,12 @@ pub fn generate_tags(
     let file_content = &file.content;
 
     // Extract target tags from metadata if available.
-    let default_tags = String::from("");
+    let default_tags = String::new();
     let target_tags: Vec<&str> = metadata
         .get("tags")
         .unwrap_or(&default_tags)
         .split(',')
-        .map(|s| s.trim())
+        .map(str::trim)
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -62,6 +63,7 @@ pub fn generate_tags(
 }
 
 /// Creates a `TagsData` struct populated with metadata.
+#[must_use]
 pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
     TagsData {
         dates: metadata.get("date").cloned().unwrap_or_default(),
@@ -73,6 +75,7 @@ pub fn create_tags_data(metadata: &HashMap<String, String>) -> TagsData {
 }
 
 /// Generates the HTML content for displaying tags and their associated pages.
+#[must_use]
 pub fn generate_tags_html(
     global_tags_data: &HashMap<String, Vec<PageData>>,
 ) -> String {
@@ -83,13 +86,11 @@ pub fn generate_tags_html(
     keys.sort();
 
     // First, calculate the total number of posts
-    let total_posts: usize =
-        global_tags_data.values().map(|pages| pages.len()).sum();
+    let total_posts: usize = global_tags_data.values().map(Vec::len).sum();
 
     // Add an h2 element for the total number of posts
     html_content.push_str(&format!(
-        "<h2 class=\"featured-tags\" id=\"h2-featured-tags\" tabindex=\"0\">Featured Tags ({})</h2>",
-        total_posts
+        "<h2 class=\"featured-tags\" id=\"h2-featured-tags\" tabindex=\"0\">Featured Tags ({total_posts})</h2>"
     ));
 
     // Loop through each tag and its associated pages
@@ -104,7 +105,7 @@ pub fn generate_tags_html(
             to_title_case(tag),
             count
         ));
-        for page in pages.iter() {
+        for page in pages {
             html_content.push_str(&format!(
                 "<li>{}: <a href=\"{}\">{}</a> - <strong>{}</strong></li>\n",
                 page.date, page.permalink, page.title, page.description
@@ -261,7 +262,7 @@ mod tests {
             ..Default::default()
         };
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("tags".to_string(), "".to_string());
+        let _ = metadata.insert("tags".to_string(), String::new());
 
         let tags_data_map = generate_tags(&file_data, &metadata);
 
@@ -312,8 +313,7 @@ mod tests {
         let special_tag = "special!tag🙂";
         let file_data = FileData {
             content: format!(
-                "This is a test with a special tag: {}",
-                special_tag
+                "This is a test with a special tag: {special_tag}"
             ),
             ..Default::default()
         };
@@ -331,8 +331,7 @@ mod tests {
     fn test_generate_tags_extremely_large_number_of_tags() {
         // Test case for an extremely large number of tags
         let mut metadata = HashMap::new();
-        let tags: Vec<String> =
-            (1..=1000).map(|i| format!("tag{}", i)).collect();
+        let tags: Vec<String> = (1..=1000).map(|i| format!("tag{i}")).collect();
         let file_data = FileData {
             content: "This is a test".to_string(),
             ..Default::default()

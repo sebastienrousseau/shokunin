@@ -29,9 +29,8 @@
 /// ### Exit Codes
 /// - Returns `0` if site generation is successful.
 /// - Returns a non-zero status code if an error occurs.
-#[tokio::main]
-async fn main() {
-    match ssg::run().await {
+fn main() {
+    match ssg::run() {
         Ok(()) => println!("Site generated successfully."),
         Err(e) => {
             eprintln!("Program encountered an error: {e}");

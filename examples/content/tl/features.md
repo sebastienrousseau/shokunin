@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ph (Jane Doe)" ## Ang may-akda ng pahina. (max 64 na ka
 banner_alt: "Berde at Itim na Tiled na Pader" ## Ang banner alt ng site.
 banner_height: "398" ## Ang taas ng banner ng site.
 banner_width: "1440" ## Ang lapad ng banner ng site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Ang banner ng site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Ang banner ng site.
 cdn: "https://cloudcdn.pro" ## Ang CDN ng site.
 changefreq: "weekly" ## Ang changefreq ng site.
 charset: "utf-8" ## Ang charset ng site. (default: utf-8)

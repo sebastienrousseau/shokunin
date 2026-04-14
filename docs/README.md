@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # `docs/`
 
 This directory is a **build target**, not a source tree.

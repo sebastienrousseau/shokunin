@@ -5,7 +5,7 @@ author: "jane.doe@kaishi.fr (Jane Doe)" ## L'auteur de la page. (max 64 caractè
 banner_alt: "Mur carrelé vert et noir" ## L'alternative texte de la bannière du site.
 banner_height: "398" ## La hauteur de la bannière du site.
 banner_width: "1440" ## La largeur de la bannière du site.
-banner: "https://cloudcdn.pro/stocks/images/patrick-fore-850jTF12RSQ.webp" ## La bannière du site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## La bannière du site.
 cdn: "https://cloudcdn.pro" ## Le CDN du site.
 changefreq: "weekly" ## La fréquence de changement du site.
 charset: "utf-8" ## Le jeu de caractères du site. (par défaut : utf-8)
