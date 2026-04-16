@@ -179,16 +179,12 @@ fn main() -> Result<()> {
     // ---------------------------------------------------------------
     // 6. Print build summary
     // ---------------------------------------------------------------
-    let page_count = fs::read_dir(&site_dir)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .filter(|e| {
-                    e.path().extension().is_some_and(|ext| ext == "html")
-                })
-                .count()
-        })
-        .unwrap_or(0);
+    let page_count = fs::read_dir(&site_dir).map_or(0, |entries| {
+        entries
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().extension().is_some_and(|ext| ext == "html"))
+            .count()
+    });
 
     println!("\n=== Build Summary ===");
     println!("  Pages built:   {page_count}");
