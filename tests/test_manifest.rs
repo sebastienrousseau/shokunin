@@ -1,3 +1,21 @@
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::needless_pass_by_value,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::module_name_repetitions,
+    clippy::needless_raw_string_hashes,
+    clippy::redundant_clone,
+    clippy::redundant_closure,
+    clippy::redundant_closure_for_method_calls,
+    clippy::single_char_pattern,
+    clippy::needless_late_init,
+    clippy::if_then_some_else_none,
+    clippy::must_use_candidate
+)]
 //! Tests for generating web app manifest data from metadata using the new `StaticDataGen` approach.
 
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
