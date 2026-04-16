@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Intel, Windows. SHA256 checksums, GitHub Release, crates.io publish.
 - **Install script** — `scripts/install.sh` auto-detects OS/arch, downloads
   correct binary, verifies checksum, installs to `~/.local/bin`.
-- **Homebrew formula** — `Formula/ssg.rb` for `brew install`.
+- **Homebrew formula** — `packaging/homebrew/ssg.rb` for `brew install`.
 - **SPDX license headers** — added to all 60+ source files.
 - **Deploy security headers** — `Content-Security-Policy` and
   `Strict-Transport-Security` (HSTS) added to Netlify/Vercel/Cloudflare configs.
@@ -86,6 +86,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lighthouse scores** — A11y 91→100, SEO 85→100 on generated output.
 - **CI** — a11y workflow cancellation, Chrome sandbox flags, mold linker
   config incompatibility with CI runners.
+
+### Added (continued — 2026-04-16)
+
+- **8 polished examples with distinct brand identities** — every example now
+  ships as a real-feeling clone-and-edit template:
+  - `basic` — *Aria Studio* (independent design studio, single-page layout)
+  - `blog` — *Threshold* (accessibility journal, 3 substantive posts on EAA /
+    WCAG / typography, working tags + posts aggregation)
+  - `quickstart` — *Heron Coffee* (small London roastery + 3 journal posts
+    demonstrating the full 16-plugin pipeline against realistic content)
+  - `docs` — *Polaris* (generic developer-tool docs template — Welcome /
+    Getting Started / Configuration / API reference / Release notes / Support)
+  - `landing` — *Meridian Systems* (compliance-grade software for regulated
+    industries; rich body copy, real client list, zero-JS verification)
+  - `portfolio` — *Maya Okafor* (independent UX researcher, 3 detailed case
+    studies: Field Notes Collective, Linden Editions, Polaris Maps)
+  - `multilingual` — 6 priority locales (EN/FR/ES/DE/JA/AR) rewritten with a
+    real i18n product narrative ("Write once, ship in 28 languages")
+  - `plugins` — annotated lifecycle walkthrough, own dirs, root templates
+- **Comprehensive regression test suite** — `+140 tests` across 3 new files:
+  - `tests/example_outputs.rs` (19 tests) — runs every example end-to-end +
+    11 negative validator tests proving the validators catch what they claim
+  - `tests/plugin_contracts.rs` (8 tests) — lifecycle ordering, plugin
+    idempotency (HtmlFix + ManifestFix), HtmlFix→Minify ordering, SVG data-URL
+    preservation
+  - `tests/schema_validation.rs` (8 tests) — `validate_with_schema` contract:
+    valid pages pass, missing fields fail, unknown enum values fail, missing
+    schema file tolerated, multiple errors aggregated, legacy `validate_only`
+    path still works
+- **Coverage gate** — `.github/workflows/ci.yml` enforces region ≥95.0%, line
+  ≥97.0%, function ≥95.0%. Lib coverage measured at 95.22% / 97.46% / 95.79%.
+- **`validate_with_schema(content_dir, schema_path)` API** — schema can now
+  live outside `content_dir`, avoiding `staticdatagen::compile`'s read-every-
+  file behaviour that previously blocked the docs example schema validation.
+- **Browser-compat fixes in `HtmlFixPlugin`** — removes empty `<link
+  rel="preload" href>` tags; injects modern `mobile-web-app-capable` meta
+  alongside the deprecated apple variant.
+- **`ManifestFixPlugin` empty-icon filtering** — drops icon entries whose `src`
+  is empty (Chrome would otherwise log a manifest icon download error).
+- **Mobile-menu desktop fix** — added `.mobile-menu{display:none}` to base CSS
+  in all 6 shared templates; previously the rule lived only inside
+  `@media(max-width:768px)` so the menu rendered as a duplicate nav on desktop.
+- **Mobile nav alignment fix** — added `.nav-controls{margin-left:auto}` to the
+  `@media(max-width:768px)` block so theme switch + hamburger sit flush right
+  when `.nav-search` is hidden.
+
+### Changed (continued — 2026-04-16)
+
+- **Folder hierarchy consolidated**:
+  - `Formula/` + `pkg/{arch,deb,scoop,winget,PUBLISHING.md}` →
+    `packaging/{homebrew,arch,deb,scoop,winget,PUBLISHING.md}`
+  - `template/tera` → `templates/tera` (singular `template/` removed)
+  - `benchmarks/README.md` → `benches/README.md` (benchmarks/ removed)
+  - Empty root `content/`, `templates/`, `public/`, `build/` removed
+- **CI workflows consolidated 7 → 3**:
+  - `ci.yml` (PR gate; lint → test ×3 OS · examples · coverage · audit
+    in parallel; <5 min wall time target)
+  - `scheduled.yml` (weekly + tag; portability matrix, musl static, pa11y,
+    SBOM)
+  - `release.yml` (tag; build × 5 platforms + GHCR + GPG + AUR + crates.io)
+- **Release pipeline expanded** — adds `.rpm` (cargo-generate-rpm), macOS
+  `.pkg` (pkgbuild), Windows `.msi` (cargo-wix), multi-arch GHCR container
+  (`ghcr.io/sebastienrousseau/static-site-generator:vX.Y.Z` + `:latest`),
+  AUR push (gated on `AUR_SSH_KEY` secret), GPG detached signatures (gated
+  on `GPG_PRIVATE_KEY` secret).
+- **Cache files relocated** — `.ssg-cache.json` + `.ssg-plugins-cache.json`
+  moved from repo root → `target/.ssg-cache/{ssg,plugins}.json`.
+- **Clippy re-enabled** — `cargo clippy --lib -- -D warnings` is now CI-gated;
+  tests/examples allow `unwrap_used` + `expect_used` via documented
+  workspace-wide `[lints.clippy]` allowance list. Lib has 0 warnings.
+- **`Dockerfile` added** — two-stage build (cargo + debian-slim runtime) for
+  the GHCR multi-arch image.
+- **`Cargo.toml` packaging metadata** — `[package.metadata.generate-rpm]` for
+  RPM asset list, `[package.metadata.wix]` for MSI installer config.
+
+### Fixed (continued — 2026-04-16)
+
+- **A11y false positive** — `check_img_alt` previously truncated `<img>` tags
+  at the first `>` character inside an SVG `data:` URL in `src=`, causing
+  spurious `<img> missing alt text: (no src)` reports. New quote-aware
+  `find_tag_end()` respects attribute quoting.
+- **Schema validation silently passing** — docs example reported "all pages
+  valid" without actually validating because schema was outside `content_dir`
+  (where the legacy `validate_only` looked). New API + relocated schema fix it.
+- **Nav clutter on single-page templates** — `basic` example trims Posts/Tags
+  nav items + footer Resources column + hero CTAs via `:has()` CSS injection.
+- **Stray repo artifacts removed** — `*.log`, `fixes.txt`, `.DS_Store`,
+  `public.build-tmp/` purged from working tree (already gitignored).
 
 ## [0.0.35] - 2026-04-11
 
