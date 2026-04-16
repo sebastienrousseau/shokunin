@@ -117,14 +117,17 @@ security_encryption: "https://kaishi.fr/encryption" ## Le cryptage de la page.
 
 ---
 
-## Vue d'ensemble
+## Écrivez une fois, publiez en 28 langues
 
-**Kaishi** est un modèle de démarrage minimaliste et moderne pour le [Static Site Generator ⧉][0], conçu pour les professionnels qui valorisent la simplicité et l'élégance.
+**Kaishi** est le modèle de démarrage qui propulse des sites produits devant se lire parfaitement en français, japonais, arabe, mandarin, et 24 autres langues — sans aucun runtime JavaScript. Markdown d'abord, sans framework, rendu côté serveur, il livre du HTML que n'importe quel navigateur peut lire sur n'importe quel appareil.
 
-Avec sa mise en page propre et dynamique, Kaishi offre une solution polyvalente et conviviale pour ceux qui souhaitent mettre en valeur leur travail et leurs services en ligne. Construit sur une base réactive, ce modèle est idéal pour les professionnels sans compétences en codage ou en design.
+## Conçu pour les produits internationaux
 
-Que vous soyez un créatif indépendant, un fondateur de startup ou un propriétaire de petite entreprise, les modèles prêts à l'emploi et réactifs de Kaishi offrent la base parfaite pour votre présence en ligne. Avec son design minimaliste, Kaishi est le modèle de site idéal pour des sites web modernes et professionnels.
+- **28 locales prêtes à l'emploi** — dont 4 langues écrites de droite à gauche, 7 systèmes CJK, et 17 variantes en alphabet latin
+- **hreflang + x-default câblés** — les moteurs de recherche voient chaque locale, chaque page, chaque variante
+- **Recherche, sitemap et flux par locale** — `/fr/search-index.json`, `/de/sitemap.xml`, etc.
+- **Négociation Accept-Language** — `/` redirige vers la locale préférée du visiteur, avec repli gracieux
 
-Cette page est un exemple pour le Static Site Generator. Vous pouvez l'utiliser comme modèle pour votre site web ou blog. Elle utilise un modèle Markdown pour le contenu et un thème HTML personnalisé pour la mise en page.
+## Essayez le sélecteur de langue
 
-[0]: https://static-site-generator.com/
+Utilisez le sélecteur de langue en haut à droite (ou la liste en bas de chaque page) pour voir ce contenu dans l'une des 28 langues prises en charge. L'URL change ; le contenu reste synchronisé.

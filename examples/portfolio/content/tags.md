@@ -2,15 +2,15 @@
 
 # Front Matter (YAML)
 
-author: "jane@example.com (Jane Doe)"
-banner_alt: "Jane Doe Tags"
+author: "jane@example.com (Maya Okafor)"
+banner_alt: "Maya Okafor Tags"
 banner_height: "398"
 banner_width: "1440"
 banner: ""
 cdn: "https://cloudcdn.pro"
 changefreq: "weekly"
 charset: "utf-8"
-copyright: "Copyright © 2024-2026 Jane Doe. All rights reserved."
+copyright: "Copyright © 2024-2026 Maya Okafor. All rights reserved."
 date: "April 15, 2026"
 description: "Browse portfolio content by tag"
 download: ""
@@ -18,7 +18,7 @@ format-detection: "telephone=no"
 hreflang: "en"
 icon: ""
 id: "https://janedoe.example.com/tags"
-image_alt: "Jane Doe portrait"
+image_alt: "Maya Okafor portrait"
 image_height: "630"
 image_width: "1200"
 image: ""
@@ -26,11 +26,11 @@ keywords: "tags, portfolio, projects, skills"
 language: "en-GB"
 layout: "page"
 locale: "en_GB"
-logo_alt: "Jane Doe logo"
+logo_alt: "Maya Okafor logo"
 logo_height: "33"
 logo_width: "100"
 logo: ""
-name: "Jane Doe"
+name: "Maya Okafor"
 permalink: "https://janedoe.example.com/tags"
 rating: "general"
 referrer: "no-referrer"
@@ -51,7 +51,7 @@ news_language: "en"
 news_image_loc: ""
 news_loc: "https://janedoe.example.com/tags"
 news_publication_date: "Wed, 15 Apr 2026 00:00:00 GMT"
-news_publication_name: "Jane Doe"
+news_publication_name: "Maya Okafor"
 news_title: "Explore by Tag"
 
 # RSS - The RSS feed front matter (YAML).
@@ -59,17 +59,17 @@ atom_link: https://janedoe.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
 generator: "SSG (version 0.0.36)"
-item_description: RSS feed for Jane Doe's portfolio
+item_description: RSS feed for Maya Okafor's portfolio
 item_guid: "https://janedoe.example.com/tags/index.html"
 item_link: "https://janedoe.example.com/tags/index.html"
 item_pub_date: "Wed, 15 Apr 2026 00:00:00 GMT"
 item_title: "Explore by Tag"
 last_build_date: "Wed, 15 Apr 2026 00:00:00 GMT"
-managing_editor: jane@example.com (Jane Doe)
+managing_editor: jane@example.com (Maya Okafor)
 pub_date: "Wed, 15 Apr 2026 00:00:00 GMT"
 ttl: "60"
 type: "website"
-webmaster: jane@example.com (Jane Doe)
+webmaster: jane@example.com (Maya Okafor)
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait"
@@ -77,7 +77,7 @@ apple_touch_icon_sizes: "192x192"
 apple-mobile-web-app-capable: "yes"
 apple-mobile-web-app-status-bar-inset: "black"
 apple-mobile-web-app-status-bar-style: "black-translucent"
-apple-mobile-web-app-title: "Jane Doe"
+apple-mobile-web-app-title: "Maya Okafor"
 apple-touch-fullscreen: "yes"
 
 # MS Application - The MS Application front matter (YAML).
@@ -88,7 +88,7 @@ twitter_card: "summary"
 twitter_creator: "janedoe"
 twitter_description: "Browse portfolio content by tag"
 twitter_image: ""
-twitter_image_alt: "Jane Doe portrait"
+twitter_image_alt: "Maya Okafor portrait"
 twitter_site: "janedoe"
 twitter_title: "Explore by Tag"
 twitter_url: "https://janedoe.example.com/tags"

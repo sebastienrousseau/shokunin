@@ -128,14 +128,17 @@ security_encryption: "https://kaishi.de/encryption" ## Die Verschlüsselung der 
 
 ---
 
-## Überblick
+## Einmal schreiben, in 28 Sprachen veröffentlichen
 
-**Kaishi** ist eine minimalistische und moderne Starter-Vorlage für den [SSG Static Site Generator ⧉][0], die für Profis entwickelt wurde, die Schlichtheit und Eleganz schätzen.
+**Kaishi** ist die Starter-Vorlage hinter Produkt-Websites, die in Deutsch, Japanisch, Arabisch, Mandarin und 24 weiteren Sprachen einwandfrei lesbar sein müssen — ganz ohne JavaScript-Laufzeit. Markdown-first, ohne Framework, serverseitig gerendert: liefert HTML, das jeder Browser auf jedem Gerät lesen kann.
 
-Mit ihrem klaren und dynamischen Layout bietet Kaishi eine vielseitige und benutzerfreundliche Lösung für alle, die ihre Arbeit und Dienstleistungen online präsentieren möchten. Auf einem responsiven Framework aufgebaut, ist diese Vorlage ideal für Profis ohne Programmier- oder Designkenntnisse.
+## Für globale Produkte gebaut
 
-Ob Sie freiberuflicher Kreativer, Startup-Gründer oder Kleinunternehmer sind: Die einsatzbereiten und responsiven Starter-Vorlagen von Kaishi bieten die perfekte Grundlage für Ihre Online-Präsenz. Mit ihrem minimalistischen Design ist Kaishi die ultimative Website-Starter-Vorlage für moderne und professionelle Websites.
+- **28 Sprachen out of the box** — darunter 4 von rechts nach links geschriebene Sprachen, 7 CJK-Schriftsysteme und 17 lateinische Varianten
+- **hreflang + x-default fertig verdrahtet** — Suchmaschinen sehen jede Sprache, jede Seite, jede Variante
+- **Suche, Sitemap und Feed pro Sprache** — `/fr/search-index.json`, `/de/sitemap.xml` usw.
+- **Accept-Language-Verhandlung** — `/` leitet zur bevorzugten Sprache des Besuchers weiter, mit graziösem Fallback
 
-Diese Seite ist ein Beispiel für den SSG Static Site Generator. Sie können sie als Vorlage für Ihre Website oder Ihren Blog verwenden. Sie nutzt eine Markdown-Vorlage für die Inhalte und ein eigenes HTML-Theme für das Layout.
+## Probieren Sie den Sprachwechsler
 
-[0]: https://static-site-generator.com/
+Verwenden Sie den Sprachwechsler oben rechts (oder die Liste am Fuß jeder Seite), um diesen Inhalt in einer der 28 unterstützten Sprachen zu sehen. Die URL ändert sich; der Inhalt bleibt synchron.

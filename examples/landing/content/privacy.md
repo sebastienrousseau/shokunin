@@ -2,23 +2,23 @@
 
 # Front Matter (YAML)
 
-author: "hello@acme.example.com (Acme Corp)"
-banner_alt: "Acme Corp privacy policy"
+author: "hello@meridian-systems.com (Meridian Systems)"
+banner_alt: "Meridian Systems privacy policy"
 banner_height: "398"
 banner_width: "1440"
 banner: ""
 cdn: "https://cloudcdn.pro"
 changefreq: "monthly"
 charset: "utf-8"
-copyright: "Copyright © 2024-2026 Acme Corp. All rights reserved."
+copyright: "Copyright © 2024-2026 Meridian Systems. All rights reserved."
 date: "April 15, 2026"
-description: "How Acme Corp handles your data"
+description: "How Meridian Systems handles your data"
 download: ""
 format-detection: "telephone=no"
 hreflang: "en"
 icon: ""
-id: "https://acme.example.com/privacy"
-image_alt: "Acme Corp logo"
+id: "https://meridian-systems.com/privacy"
+image_alt: "Meridian Systems logo"
 image_height: "630"
 image_width: "1200"
 image: ""
@@ -26,12 +26,12 @@ keywords: "privacy policy, data protection, no cookies, no tracking, GDPR"
 language: "en-GB"
 layout: "page"
 locale: "en_GB"
-logo_alt: "Acme Corp logo"
+logo_alt: "Meridian Systems logo"
 logo_height: "33"
 logo_width: "100"
 logo: ""
-name: "Acme Corp"
-permalink: "https://acme.example.com/privacy"
+name: "Meridian Systems"
+permalink: "https://meridian-systems.com/privacy"
 rating: "general"
 referrer: "no-referrer"
 revisit-after: "7 days"
@@ -41,7 +41,7 @@ subtitle: "Privacy Policy"
 theme-color: "0, 102, 204"
 tags: "privacy, data protection, GDPR, no cookies, no tracking"
 title: "Privacy Policy"
-url: "https://acme.example.com"
+url: "https://meridian-systems.com"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
 # News - The News SiteMap front matter (YAML).
@@ -49,27 +49,27 @@ news_genres: "Blog"
 news_keywords: "privacy, data protection"
 news_language: "en"
 news_image_loc: ""
-news_loc: "https://acme.example.com/privacy"
+news_loc: "https://meridian-systems.com/privacy"
 news_publication_date: "Wed, 15 Apr 2026 00:00:00 GMT"
-news_publication_name: "Acme Corp"
+news_publication_name: "Meridian Systems"
 news_title: "Privacy Policy"
 
 # RSS - The RSS feed front matter (YAML).
-atom_link: https://acme.example.com/rss.xml
+atom_link: https://meridian-systems.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
 generator: "SSG (version 0.0.36)"
-item_description: RSS feed for Acme Corp
-item_guid: "https://acme.example.com/privacy/index.html"
-item_link: "https://acme.example.com/privacy/index.html"
+item_description: RSS feed for Meridian Systems
+item_guid: "https://meridian-systems.com/privacy/index.html"
+item_link: "https://meridian-systems.com/privacy/index.html"
 item_pub_date: "Wed, 15 Apr 2026 00:00:00 GMT"
 item_title: "Privacy Policy"
 last_build_date: "Wed, 15 Apr 2026 00:00:00 GMT"
-managing_editor: hello@acme.example.com (Acme Corp)
+managing_editor: hello@meridian-systems.com (Meridian Systems)
 pub_date: "Wed, 15 Apr 2026 00:00:00 GMT"
 ttl: "60"
 type: "website"
-webmaster: hello@acme.example.com (Acme Corp)
+webmaster: hello@meridian-systems.com (Meridian Systems)
 
 # Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait"
@@ -77,7 +77,7 @@ apple_touch_icon_sizes: "192x192"
 apple-mobile-web-app-capable: "yes"
 apple-mobile-web-app-status-bar-inset: "black"
 apple-mobile-web-app-status-bar-style: "black-translucent"
-apple-mobile-web-app-title: "Acme Corp"
+apple-mobile-web-app-title: "Meridian Systems"
 apple-touch-fullscreen: "yes"
 
 # MS Application - The MS Application front matter (YAML).
@@ -85,17 +85,17 @@ msapplication-navbutton-color: "rgb(0,102,204)"
 
 # Twitter Card - The Twitter Card front matter (YAML).
 twitter_card: "summary"
-twitter_creator: "acmecorp"
-twitter_description: "How Acme Corp handles your data"
+twitter_creator: "meridiansystems"
+twitter_description: "How Meridian Systems handles your data"
 twitter_image: ""
-twitter_image_alt: "Acme Corp logo"
-twitter_site: "acmecorp"
+twitter_image_alt: "Meridian Systems logo"
+twitter_site: "meridiansystems"
 twitter_title: "Privacy Policy"
-twitter_url: "https://acme.example.com/privacy"
+twitter_url: "https://meridian-systems.com/privacy"
 
 # Humans.txt - The Humans.txt front matter (YAML).
-author_website: "https://acme.example.com"
-author_twitter: "@acmecorp"
+author_website: "https://meridian-systems.com"
+author_twitter: "@meridiansystems"
 author_location: "London, UK"
 thanks: "Thanks for reading!"
 site_last_updated: "2026-04-15"
@@ -107,6 +107,6 @@ site_software: "SSG, Rust"
 
 # Privacy Policy
 
-Acme Corp respects your privacy. We collect no personal data through this website. No cookies, no tracking, no JavaScript.
+Meridian Systems respects your privacy. We collect no personal data through this website. No cookies, no tracking, no JavaScript.
 
 Last updated: 2026-04-15

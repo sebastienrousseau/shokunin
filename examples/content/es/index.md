@@ -128,24 +128,17 @@ security_encryption: "https://kaishi.es/encryption" ## El cifrado de la página.
 
 ---
 
-## Visión general
+## Escribe una vez, publica en 28 idiomas
 
-**Kaishi** es una plantilla de inicio minimalista y moderna para [generadores de sitios estáticos SSG ⧉][0],
-diseñada para profesionales que valoran la simplicidad y la elegancia.
+**Kaishi** es la plantilla base detrás de sitios de producto que deben leerse perfectamente en español, japonés, árabe, mandarín y otros 24 idiomas — sin necesidad de un runtime JavaScript. Markdown primero, sin framework, renderizado en servidor, entrega HTML que cualquier navegador puede leer en cualquier dispositivo.
 
-Con su diseño limpio y dinámico, Kaishi ofrece una solución versátil y fácil de
-usar para quienes desean mostrar su trabajo y servicios en línea. Construida sobre
-una base adaptable, esta plantilla es ideal para profesionales sin conocimientos
-de programación o diseño.
+## Diseñado para productos globales
 
-Tanto si eres un creativo freelance, como si eres fundador de una startup o
-propietario de una pequeña empresa, los sitios web listos para usar y las plantillas
-de inicio adaptables de Kaishi proporcionan la base perfecta para tu presencia en
-línea. Con su diseño minimalista, Kaishi es la plantilla de inicio web definitiva
-para sitios web modernos y profesionales.
+- **28 locales listos para usar** — incluidos 4 idiomas de derecha a izquierda, 7 sistemas CJK y 17 variantes en alfabeto latino
+- **hreflang + x-default cableados** — los buscadores ven cada locale, cada página, cada variante
+- **Búsqueda, sitemap y feed por locale** — `/fr/search-index.json`, `/de/sitemap.xml`, etc.
+- **Negociación Accept-Language** — `/` redirige al locale preferido del visitante, con respaldo elegante
 
-Esta página es un ejemplo del generador de sitios estáticos SSG. Puedes usarla
-como plantilla para tu sitio web o blog. Utiliza una plantilla Markdown para el
-contenido y un tema HTML personalizado para la maquetación.
+## Prueba el selector de idioma
 
-[0]: https://static-site-generator.com/
+Usa el selector de idioma en la esquina superior derecha (o la lista al pie de cualquier página) para ver este contenido en cualquiera de los 28 idiomas admitidos. La URL cambia; el contenido se mantiene sincronizado.

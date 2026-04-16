@@ -163,7 +163,15 @@ fn main() -> Result<()> {
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(3000);
     let bind = format!("{host}:{port}");
-    let server = Server::new(&bind, public_root.to_str().unwrap());
+    // Build the server with a Permissions-Policy header that opts the
+    // page out of the Topics API. Suppresses the "Browsing Topics API
+    // removed" Chrome console message in dev mode.
+    let server = Server::builder()
+        .address(&bind)
+        .document_root(public_root.to_str().unwrap())
+        .custom_header("Permissions-Policy", "browsing-topics=()")
+        .build()
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
     println!("Serving site at http://{bind}");
     let _ = server.start();
 

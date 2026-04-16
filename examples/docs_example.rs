@@ -2,37 +2,58 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-//! # Docs Example — Documentation portal with content schema validation
+//! # Docs Example — Generic developer-tool documentation template
 //!
-//! ## What this example demonstrates
+//! ## What this example is
 //!
-//! - **Schema-validated frontmatter** — enforces required `title`, `description`, `category` fields
-//! - **TOML-driven schema** — `content.schema.toml` declares the enum of valid categories
-//! - **Build-time failures** — invalid docs break the build, never ship
+//! A neutral, opinionated **documentation template** you can clone and
+//! adapt for any developer tool, library, or API. The placeholder content
+//! is "Polaris" — a fictional CLI/API tool — so nothing in the example
+//! commits you to a specific domain.
 //!
-//! ## When to use this pattern
+//! ## What's in the template
 //!
-//! Use this example for documentation portals where every page must carry
-//! consistent metadata for navigation, search, and category listings.
+//! - **Welcome / overview** — what the tool is, what's in the docs
+//! - **Getting started** — install + first-request walkthrough
+//! - **Configuration reference** — every option in a scannable table
+//! - **API reference** — endpoint table + request/response examples
+//! - **Release notes** — chronological changelog page
+//! - **Browse by topic** — auto-aggregated tag index
+//! - **Contact / support** — routing for unanswered questions
+//! - **Privacy** — short, honest data-handling statement
+//!
+//! ## What it also demonstrates
+//!
+//! - **Schema-validated frontmatter** — enforces required fields via
+//!   `content.schema.toml`, so invalid docs break the build, never ship
+//! - **Full plugin pipeline** — the same 16 plugins as `quickstart`
+//!
+//! ## What to edit
+//!
+//! - `examples/docs/content/*.md` — replace the placeholder Polaris copy
+//! - `examples/docs_example.rs` — change `site_name`, `site_title`,
+//!   `site_description` in the `SsgConfig::builder()` call
+//! - Frontmatter `name` / `subtitle` on `index.md` for the hero copy
 //!
 //! ## Run it
 //!
 //! ```sh
-//! cargo run --release --example docs_example
+//! cargo run --release --example docs
 //! ```
 //!
 //! Then open <http://127.0.0.1:3000> in your browser.
 //!
-//! ## What makes this different from other examples
+//! ## How this differs from `blog`
 //!
-//! Unlike `blog` which accepts any frontmatter, this example fails the build
-//! whenever a document is missing required fields or uses an unknown category.
+//! `blog` is content-led (chronological posts with tags). `docs` is
+//! reference-led (stable pages organised by topic, with strict
+//! frontmatter validation so docs stay scannable as the team grows).
 
 use anyhow::{Context, Result};
 use http_handle::Server;
 use ssg::{
     cmd::SsgConfig,
-    content::validate_only,
+    content::validate_with_schema,
     execute_build_pipeline,
     plugin::{PluginContext, PluginManager},
     Paths,
@@ -43,10 +64,10 @@ fn main() -> Result<()> {
     // ---------------------------------------------------------------
     // 1. Set up directories
     // ---------------------------------------------------------------
-    let base_dir = PathBuf::from("examples");
-    let content_dir = base_dir.join("docs").join("content");
+    let base_dir = PathBuf::from("examples").join("docs");
+    let content_dir = base_dir.join("content");
     let output_dir = base_dir.join("build");
-    let template_dir = base_dir.join("templates");
+    let template_dir = PathBuf::from("examples").join("templates");
     let site_dir = base_dir.join("public");
 
     fs::create_dir_all(&content_dir)?;
@@ -61,9 +82,14 @@ fn main() -> Result<()> {
 
     // ---------------------------------------------------------------
     // 2. Validate content schemas before building
+    //
+    // The schema lives at examples/docs/content.schema.toml — *outside*
+    // content/ — because staticdatagen::compile reads every file in
+    // content_dir and would fail to parse the schema TOML as Markdown.
     // ---------------------------------------------------------------
+    let schema_path = base_dir.join("content.schema.toml");
     println!("Validating content schemas...");
-    match validate_only(&content_dir) {
+    match validate_with_schema(&content_dir, &schema_path) {
         Ok(()) => println!("Schema validation: all pages valid, 0 errors"),
         Err(e) => {
             eprintln!("Schema validation failed: {e}");
@@ -75,14 +101,15 @@ fn main() -> Result<()> {
     // 3. Build configuration
     // ---------------------------------------------------------------
     let config = SsgConfig::builder()
-        .site_name("ssg-docs".to_string())
+        .site_name("polaris-docs".to_string())
         .base_url("http://127.0.0.1:3000".to_string())
         .content_dir(content_dir.clone())
         .output_dir(output_dir.clone())
         .template_dir(template_dir.clone())
-        .site_title("SSG Documentation".to_string())
+        .site_title("Polaris Documentation".to_string())
         .site_description(
-            "Official documentation for the Static Site Generator".to_string(),
+            "Documentation template for any developer tool, library, or API"
+                .to_string(),
         )
         .language("en-GB".to_string())
         .build()
@@ -145,6 +172,10 @@ fn main() -> Result<()> {
     )?;
     println!("Build complete.");
 
+    // Single-locale build: hide the language dropdown the templates
+    // hardcode for the multilingual example.
+    hide_language_icon(&site_dir)?;
+
     // ---------------------------------------------------------------
     // 6. Print build summary
     // ---------------------------------------------------------------
@@ -192,7 +223,15 @@ fn main() -> Result<()> {
         .context("Failed to convert site path to string")?
         .to_string();
 
-    let server = Server::new("127.0.0.1:3000", doc_root.as_str());
+    // Build the server with a Permissions-Policy header that opts the
+    // page out of the Topics API. Suppresses the "Browsing Topics API
+    // removed" Chrome console message in dev mode.
+    let server = Server::builder()
+        .address("127.0.0.1:3000")
+        .document_root(doc_root.as_str())
+        .custom_header("Permissions-Policy", "browsing-topics=()")
+        .build()
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     println!("Server running at http://127.0.0.1:3000");
     println!("Document root: {doc_root}");
@@ -201,4 +240,36 @@ fn main() -> Result<()> {
     server.start().context("Failed to start dev server")?;
 
     Ok(())
+}
+
+/// Injects a tiny `<style>` block before `</head>` that hides the language
+/// dropdown trigger and its menu. Idempotent. Used by single-locale examples
+/// to suppress the language switcher the shared template hardcodes for the
+/// multilingual demo.
+fn hide_language_icon(site_dir: &std::path::Path) -> Result<()> {
+    const MARKER: &str = "/* ssg-single-locale: hide lang */";
+    const STYLE: &str =
+        "<style>/* ssg-single-locale: hide lang */.lang-btn,.lang-dropdown,.mobile-lang{display:none!important}</style>";
+
+    fn walk(dir: &std::path::Path, marker: &str, style: &str) -> Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, marker, style)?;
+            } else if path.extension().is_some_and(|e| e == "html") {
+                let html = fs::read_to_string(&path)?;
+                if html.contains(marker) {
+                    continue;
+                }
+                if let Some(pos) = html.find("</head>") {
+                    let new_html =
+                        format!("{}{}{}", &html[..pos], style, &html[pos..]);
+                    fs::write(&path, new_html)?;
+                }
+            }
+        }
+        Ok(())
+    }
+    walk(site_dir, MARKER, STYLE)
 }

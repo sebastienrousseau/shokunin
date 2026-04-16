@@ -2,31 +2,51 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-//! # Quickstart Example — Full plugin pipeline, production-ready template
+//! # Quickstart Example — Heron Coffee small-business starter
 //!
-//! ## What this example demonstrates
+//! ## What this example is
 //!
-//! - **SEO + JSON-LD + canonical** — search-engine-ready metadata out of the box
-//! - **Search index + accessibility report** — client-side search and WCAG checks
-//! - **HTML/CSS/JS minification** — optimised output assets on every build
+//! A complete, **clone-and-edit** small-business site styled as a fictional
+//! London coffee roastery (*Heron Coffee*). Real-feeling copy, three
+//! journal posts with tags, working contact / privacy / 404 / offline.
+//! Wires the **full 16-plugin pipeline** so you get SEO, JSON-LD,
+//! canonical URLs, sitemaps, RSS + Atom feeds, search, accessibility
+//! report, and minification with no further configuration.
 //!
-//! ## When to use this pattern
+//! ## What you get
 //!
-//! Use this example as the starting template for most real-world projects —
-//! it wires together the plugins you typically want enabled from day one.
+//! - **Polished homepage** — hero, this-week's-roasts, location, journal teaser
+//! - **3 substantive journal posts** with their own frontmatter tags so the
+//!   tags page auto-aggregates a real index
+//! - **Curated `/posts/` listing** that links to each post with descriptions
+//! - **Real `/contact/` page** with cafe address, wholesale, subscriptions
+//! - **Generated artifacts**: sitemap.xml, news-sitemap.xml, rss.xml,
+//!   atom.xml, manifest.json, robots.txt, search-index.json,
+//!   accessibility-report.json
+//!
+//! ## What to edit to repurpose
+//!
+//! 1. `examples/quickstart/content/index.md` — homepage hero + sections
+//! 2. `examples/quickstart/content/{post-name}.md` — individual posts
+//! 3. `examples/quickstart/content/{contact,privacy}.md` — supporting pages
+//! 4. `SiteGenerator::new()` in `examples/quickstart_example.rs` — site
+//!    name, title, description
 //!
 //! ## Run it
 //!
 //! ```sh
-//! cargo run --release --example quickstart_example
+//! cargo run --release --example quickstart
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3000>.
 //!
-//! ## What makes this different from other examples
+//! ## How this differs from `basic`
 //!
-//! Unlike `basic` which skips plugins entirely, this example composes the
-//! SEO, search, accessibility, and minification plugins into a single pipeline.
+//! `basic` is a single-page studio template: one fixed page tree, the
+//! minimum plugins needed for clean output. `quickstart` is the
+//! **kitchen-sink starter** — every plugin you'd typically want from day
+//! one is wired up, and the demo content shows the full pipeline working
+//! against a real-feeling site.
 
 use anyhow::{Context, Result};
 use http_handle::Server;
@@ -60,16 +80,22 @@ impl SiteGenerator {
     /// # Returns
     ///
     /// * `Result<Self>` - The configured `SiteGenerator` or an error
-    fn new(site_name: &str, base_url: &str) -> Result<Self> {
+    fn new(_site_name: &str, _base_url: &str) -> Result<Self> {
+        // The example overrides the caller-supplied identifiers with its
+        // own opinionated branding (Heron Coffee — a small London
+        // roastery) so the output looks like a real site, not a generic
+        // demo. Replace these strings to repurpose the starter.
+        let site_name = "heron-coffee";
+        let base_url = "http://127.0.0.1:3000";
         // Create log file
         let log_file = File::create("site_generation.log")
             .context("Failed to create log file")?;
 
         // Ensure directories exist before configuration validation
-        let base_dir = PathBuf::from("examples");
-        let content_dir = base_dir.join("content").join("en");
+        let base_dir = PathBuf::from("examples").join("quickstart");
+        let content_dir = base_dir.join("content");
         let output_dir = base_dir.join("build");
-        let template_dir = base_dir.join("templates");
+        let template_dir = PathBuf::from("examples").join("templates");
         let site_dir = base_dir.join("public");
 
         fs::create_dir_all(&content_dir)
@@ -92,8 +118,14 @@ impl SiteGenerator {
             .content_dir(content_dir.clone())
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
-            .site_title("Basic SSG Site".to_string())
-            .site_description("A basic static site built with SSG".to_string())
+            .site_title(
+                "Heron Coffee — single-origin roaster, Bermondsey".to_string(),
+            )
+            .site_description(
+                "Heron Coffee — single-origin coffee roasted on Druid \
+                 Street every Tuesday morning"
+                    .to_string(),
+            )
             .language("en-GB".to_string())
             .build()
             .context("Failed to build configuration")?;
@@ -226,7 +258,15 @@ impl SiteGenerator {
             .to_string();
 
         // Create a new server with an address and document root
-        let server = Server::new("127.0.0.1:3000", example_root.as_str());
+        // Build the server with a Permissions-Policy header that opts the
+        // page out of the Topics API. Suppresses the "Browsing Topics API
+        // removed" Chrome console message in dev mode.
+        let server = Server::builder()
+            .address("127.0.0.1:3000")
+            .document_root(example_root.as_str())
+            .custom_header("Permissions-Policy", "browsing-topics=()")
+            .build()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
         println!("❯ Server is now running at http://127.0.0.1:3000");
         println!("  Document root: {example_root}");
@@ -239,11 +279,51 @@ impl SiteGenerator {
     }
 }
 
+/// Injects a tiny `<style>` block before `</head>` that hides the language
+/// dropdown trigger and its menu. Idempotent. Used by single-locale examples
+/// to suppress the language switcher the shared template hardcodes for the
+/// multilingual demo.
+fn hide_language_icon(site_dir: &std::path::Path) -> Result<()> {
+    const MARKER: &str = "/* ssg-single-locale: hide lang */";
+    const STYLE: &str =
+        "<style>/* ssg-single-locale: hide lang */.lang-btn,.lang-dropdown,.mobile-lang{display:none!important}</style>";
+
+    fn walk(dir: &std::path::Path, marker: &str, style: &str) -> Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, marker, style)?;
+            } else if path.extension().is_some_and(|e| e == "html") {
+                let html = fs::read_to_string(&path)?;
+                if html.contains(marker) {
+                    continue;
+                }
+                if let Some(pos) = html.find("</head>") {
+                    let new_html =
+                        format!("{}{}{}", &html[..pos], style, &html[pos..]);
+                    fs::write(&path, new_html)?;
+                }
+            }
+        }
+        Ok(())
+    }
+    walk(site_dir, MARKER, STYLE)
+}
+
 fn main() -> Result<()> {
-    let generator = SiteGenerator::new("basic-site", "http://127.0.0.1:3000")?;
+    // The site_name and base_url passed here are overridden inside
+    // SiteGenerator::new() for the demo branding. Replace them and the
+    // hard-coded values inside `new()` to repurpose this starter.
+    let generator =
+        SiteGenerator::new("heron-coffee", "http://127.0.0.1:3000")?;
 
     // Generate the site
     generator.generate()?;
+
+    // Single-locale build: hide the language dropdown the templates
+    // hardcode for the multilingual example.
+    hide_language_icon(&generator.paths.site)?;
 
     // Serve the site (this will block until the server is stopped)
     generator.serve()?;

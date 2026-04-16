@@ -75,14 +75,18 @@ impl LandingSiteGenerator {
         let site_dir = fs::canonicalize(site_dir.clone()).unwrap_or(site_dir);
 
         let config = SsgConfig::builder()
-            .site_name("acme-landing".to_string())
+            .site_name("meridian-systems".to_string())
             .base_url("http://127.0.0.1:3000".to_string())
             .content_dir(content_dir.clone())
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
-            .site_title("Acme Corp — Enterprise Solutions".to_string())
+            .site_title(
+                "Meridian Systems — Compliance-grade software".to_string(),
+            )
             .site_description(
-                "Secure, accessible, and compliant enterprise software"
+                "Compliance-grade software for regulated industries: \
+                 clinical trials, public procurement, financial \
+                 reconciliation"
                     .to_string(),
             )
             .language("en-GB".to_string())
@@ -271,7 +275,15 @@ impl LandingSiteGenerator {
             .context("Failed to convert site path to string")?
             .to_string();
 
-        let server = Server::new("127.0.0.1:3000", root.as_str());
+        // Build the server with a Permissions-Policy header that opts the
+        // page out of the Topics API. Suppresses the "Browsing Topics API
+        // removed" Chrome console message in dev mode.
+        let server = Server::builder()
+            .address("127.0.0.1:3000")
+            .document_root(root.as_str())
+            .custom_header("Permissions-Policy", "browsing-topics=()")
+            .build()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
 
         println!("Server running at http://127.0.0.1:3000");
         println!("  Document root: {root}");
@@ -281,6 +293,38 @@ impl LandingSiteGenerator {
 
         Ok(())
     }
+}
+
+/// Injects a tiny `<style>` block before `</head>` that hides the language
+/// dropdown trigger and its menu. Idempotent. Used by single-locale examples
+/// to suppress the language switcher the shared template hardcodes for the
+/// multilingual demo.
+fn hide_language_icon(site_dir: &std::path::Path) -> Result<()> {
+    const MARKER: &str = "/* ssg-single-locale: hide lang */";
+    const STYLE: &str =
+        "<style>/* ssg-single-locale: hide lang */.lang-btn,.lang-dropdown,.mobile-lang{display:none!important}</style>";
+
+    fn walk(dir: &std::path::Path, marker: &str, style: &str) -> Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, marker, style)?;
+            } else if path.extension().is_some_and(|e| e == "html") {
+                let html = fs::read_to_string(&path)?;
+                if html.contains(marker) {
+                    continue;
+                }
+                if let Some(pos) = html.find("</head>") {
+                    let new_html =
+                        format!("{}{}{}", &html[..pos], style, &html[pos..]);
+                    fs::write(&path, new_html)?;
+                }
+            }
+        }
+        Ok(())
+    }
+    walk(site_dir, MARKER, STYLE)
 }
 
 /// Collect all `.html` files under a directory.
@@ -303,6 +347,10 @@ fn main() -> Result<()> {
 
     // Build the site
     generator.generate()?;
+
+    // Single-locale build: hide the language dropdown the templates
+    // hardcode for the multilingual example.
+    hide_language_icon(&generator.paths.site)?;
 
     // Post-build analysis
     println!("\n--- Post-Build Analysis ---");
