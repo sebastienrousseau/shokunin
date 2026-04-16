@@ -12,7 +12,7 @@
 
 set -eu
 
-REPO="sebastienrousseau/shokunin"
+REPO="sebastienrousseau/static-site-generator"
 BINARY="ssg"
 INSTALL_DIR="${SSG_INSTALL:-$HOME/.local/bin}"
 

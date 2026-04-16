@@ -51,7 +51,7 @@ Auto-detects your OS and architecture, downloads the correct binary from GitHub 
 **Homebrew (macOS / Linux):**
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/Formula/ssg.rb
+brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
 ```
 
 **Cargo (any platform with Rust):**
@@ -67,7 +67,7 @@ cargo install ssg
 sudo dpkg -i ssg_0.0.36_amd64.deb
 ```
 
-Or build it yourself with `pkg/deb/build.sh`.
+Or build it yourself with `packaging/deb/build.sh`.
 
 **Arch Linux (AUR):**
 
@@ -76,12 +76,12 @@ Or build it yourself with `pkg/deb/build.sh`.
 yay -S ssg
 ```
 
-Or build manually with the PKGBUILD in `pkg/arch/`.
+Or build manually with the PKGBUILD in `packaging/arch/`.
 
 **Windows (Scoop):**
 
 ```powershell
-scoop bucket add ssg https://github.com/sebastienrousseau/shokunin
+scoop bucket add ssg https://github.com/sebastienrousseau/static-site-generator
 scoop install ssg
 ```
 

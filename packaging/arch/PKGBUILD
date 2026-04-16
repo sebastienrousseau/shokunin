@@ -4,7 +4,7 @@ pkgver=0.0.36
 pkgrel=1
 pkgdesc='Fast, SEO-optimised static site generator built in Rust'
 arch=('x86_64' 'aarch64')
-url='https://github.com/sebastienrousseau/shokunin'
+url='https://github.com/sebastienrousseau/static-site-generator'
 license=('MIT' 'Apache-2.0')
 depends=('gcc-libs')
 makedepends=('rust' 'cargo')
@@ -12,12 +12,12 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
-    cd "shokunin-$pkgver"
+    cd "static-site-generator-$pkgver"
     cargo build --release --locked
 }
 
 package() {
-    cd "shokunin-$pkgver"
+    cd "static-site-generator-$pkgver"
     install -Dm755 "target/release/ssg" "$pkgdir/usr/bin/ssg"
     install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
     install -Dm644 LICENSE-APACHE "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"

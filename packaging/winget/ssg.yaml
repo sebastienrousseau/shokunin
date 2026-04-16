@@ -4,10 +4,10 @@ PackageName: SSG
 Publisher: Sebastien Rousseau
 License: MIT OR Apache-2.0
 ShortDescription: Fast, SEO-optimised static site generator built in Rust
-PackageUrl: https://github.com/sebastienrousseau/shokunin
+PackageUrl: https://github.com/sebastienrousseau/static-site-generator
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/sebastienrousseau/shokunin/releases/download/v0.0.36/ssg-v0.0.36-x86_64-pc-windows-msvc.zip
+    InstallerUrl: https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.36/ssg-v0.0.36-x86_64-pc-windows-msvc.zip
     InstallerType: zip
     InstallerSha256: ""
 ManifestVersion: 1.6.0

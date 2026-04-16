@@ -21,7 +21,7 @@ Maintainer: Sebastien Rousseau <contact@sebastienrousseau.com>
 Description: Fast, SEO-optimised static site generator
  SSG generates static websites from Markdown content with built-in
  SEO, accessibility compliance, and i18n support. Built in Rust.
-Homepage: https://github.com/sebastienrousseau/shokunin
+Homepage: https://github.com/sebastienrousseau/static-site-generator
 EOF
 
 dpkg-deb --build "$PKG"

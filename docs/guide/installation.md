@@ -26,7 +26,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ## Homebrew (macOS / Linux)
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/Formula/ssg.rb
+brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
 ```
 
 ## Cargo
@@ -48,7 +48,7 @@ sudo dpkg -i ssg_0.0.36_amd64.deb
 Or build the `.deb` yourself:
 
 ```sh
-./pkg/deb/build.sh
+./packaging/deb/build.sh
 ```
 
 ## Arch Linux (AUR / PKGBUILD)
@@ -62,18 +62,18 @@ yay -S ssg
 Or build manually with the PKGBUILD:
 
 ```sh
-cd pkg/arch
+cd packaging/arch
 makepkg -si
 ```
 
 ## Windows (Scoop)
 
 ```powershell
-scoop bucket add ssg https://github.com/sebastienrousseau/shokunin
+scoop bucket add ssg https://github.com/sebastienrousseau/static-site-generator
 scoop install ssg
 ```
 
-The Scoop manifest lives at `pkg/scoop/ssg.json`.
+The Scoop manifest lives at `packaging/scoop/ssg.json`.
 
 ## Windows (winget)
 
@@ -81,7 +81,7 @@ The Scoop manifest lives at `pkg/scoop/ssg.json`.
 winget install sebastienrousseau.ssg
 ```
 
-The winget manifest lives at `pkg/winget/ssg.yaml`.
+The winget manifest lives at `packaging/winget/ssg.yaml`.
 
 ## Windows (Manual)
 
