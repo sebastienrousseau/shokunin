@@ -1,22 +1,53 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Release pipeline. Triggered by `git tag v<version> && git push --tags`.
+#
+# Output artifacts (all signed with SHA256, sigstore attestation, and
+# detached GPG signature where the GPG_PRIVATE_KEY secret is set):
+#
+#   Linux glibc x86_64       ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz
+#                            ssg_X.Y.Z_amd64.deb
+#                            ssg-X.Y.Z-1.x86_64.rpm
+#   Linux musl x86_64        ssg-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz
+#   macOS Apple Silicon      ssg-vX.Y.Z-aarch64-apple-darwin.tar.gz
+#                            ssg-X.Y.Z-aarch64.pkg
+#   macOS Intel              ssg-vX.Y.Z-x86_64-apple-darwin.tar.gz
+#                            ssg-X.Y.Z-x86_64.pkg
+#   Windows MSVC x86_64      ssg-vX.Y.Z-x86_64-pc-windows-msvc.zip
+#                            ssg-X.Y.Z-x86_64.msi
+#   Container                ghcr.io/sebastienrousseau/static-site-generator:vX.Y.Z
+#                            ghcr.io/sebastienrousseau/static-site-generator:latest
+#   AUR                      static-site-generator-X.Y.Z (gated on AUR_SSH_KEY secret)
+#   crates.io                ssg X.Y.Z
+#
+# Secrets used:
+#   GITHUB_TOKEN              built-in        (release upload, GHCR push)
+#   CARGO_REGISTRY_TOKEN      required         (crates.io publish)
+#   GPG_PRIVATE_KEY           optional         (artifact signatures — skipped if absent)
+#   GPG_PASSPHRASE            optional         (companion to GPG_PRIVATE_KEY)
+#   AUR_SSH_KEY               optional         (AUR publish — skipped if absent)
+
 name: Release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
   id-token: write
   attestations: write
+  packages: write
 
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  # ── Build + per-platform package (Linux .deb/.rpm, macOS .pkg, Windows .msi) ──
   build:
-    name: ${{ matrix.target }}
+    name: build · ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -26,6 +57,7 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
+            pkg: deb_rpm
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             archive: tar.gz
@@ -33,28 +65,28 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: tar.gz
+            pkg: macos
+            arch: aarch64
           - target: x86_64-apple-darwin
             os: macos-13
             archive: tar.gz
+            pkg: macos
+            arch: x86_64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
+            pkg: msi
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 1
-          show-progress: false
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
 
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          targets: ${{ matrix.target }}
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: "${{ matrix.target }}" }
 
-      - name: Install musl tools
-        if: matrix.musl
+      - if: matrix.musl
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
+      - uses: Swatinem/rust-cache@v2
         with:
           shared-key: release-${{ matrix.target }}
           save-if: false
@@ -62,7 +94,8 @@ jobs:
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: Package (Unix)
+      # ── Generic archive ─────────────────────────────────────────
+      - name: Archive (Unix)
         if: matrix.archive == 'tar.gz'
         run: |
           BIN=target/${{ matrix.target }}/release/ssg
@@ -70,9 +103,8 @@ jobs:
           chmod +x "$BIN"
           tar czf "$ARCHIVE" -C "$(dirname "$BIN")" "$(basename "$BIN")"
           shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
-          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
 
-      - name: Package (Windows)
+      - name: Archive (Windows)
         if: matrix.archive == 'zip'
         shell: pwsh
         run: |
@@ -81,42 +113,198 @@ jobs:
           Compress-Archive -Path $BIN -DestinationPath $ARCHIVE
           $hash = (Get-FileHash $ARCHIVE -Algorithm SHA256).Hash.ToLower()
           "$hash  $ARCHIVE" | Out-File -Encoding ascii "$ARCHIVE.sha256"
-          echo "ARCHIVE=$ARCHIVE" >> $env:GITHUB_ENV
 
-      - name: Build .deb package
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+      # ── Linux: .deb + .rpm ──────────────────────────────────────
+      - name: Build .deb
+        if: matrix.pkg == 'deb_rpm'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           cp target/${{ matrix.target }}/release/ssg target/release/ssg
-          sh pkg/deb/build.sh "$VERSION" amd64
-          echo "DEB=ssg_${VERSION}_amd64.deb" >> "$GITHUB_ENV"
+          sh packaging/deb/build.sh "$VERSION" amd64
+          shasum -a 256 ssg_${VERSION}_amd64.deb > ssg_${VERSION}_amd64.deb.sha256
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - name: Install cargo-generate-rpm
+        if: matrix.pkg == 'deb_rpm'
+        run: cargo install cargo-generate-rpm --locked
+
+      - name: Build .rpm
+        if: matrix.pkg == 'deb_rpm'
+        run: |
+          cargo generate-rpm --target ${{ matrix.target }}
+          mv target/generate-rpm/*.rpm . || true
+          for rpm in *.rpm; do
+            [ -f "$rpm" ] && shasum -a 256 "$rpm" > "$rpm.sha256"
+          done
+
+      # ── macOS: .pkg ─────────────────────────────────────────────
+      - name: Build .pkg (macOS)
+        if: matrix.pkg == 'macos'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p root/usr/local/bin
+          cp target/${{ matrix.target }}/release/ssg root/usr/local/bin/
+          chmod +x root/usr/local/bin/ssg
+          PKG="ssg-${VERSION}-${{ matrix.arch }}.pkg"
+          pkgbuild --root root \
+            --identifier com.sebastienrousseau.ssg \
+            --version "${VERSION}" \
+            --install-location / \
+            "$PKG"
+          shasum -a 256 "$PKG" > "$PKG.sha256"
+
+      # ── Windows: .msi ───────────────────────────────────────────
+      - name: Install cargo-wix
+        if: matrix.pkg == 'msi'
+        run: cargo install cargo-wix --locked
+
+      - name: Build .msi (Windows)
+        if: matrix.pkg == 'msi'
+        shell: pwsh
+        run: |
+          # cargo-wix expects a wix/main.wxs template; if absent, generate one.
+          if (-not (Test-Path "wix/main.wxs")) { cargo wix init --force }
+          cargo wix --no-build --target ${{ matrix.target }} --output ssg-${env:GITHUB_REF_NAME}-x86_64.msi
+          $msi = "ssg-${env:GITHUB_REF_NAME}-x86_64.msi"
+          $hash = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()
+          "$hash  $msi" | Out-File -Encoding ascii "$msi.sha256"
+
+      # ── Upload everything this matrix entry produced ────────────
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: ssg-${{ matrix.target }}
           path: |
-            ssg-*.${{ matrix.archive }}
-            ssg-*.${{ matrix.archive }}.sha256
-            ${{ env.DEB }}
+            ssg-*.tar.gz
+            ssg-*.tar.gz.sha256
+            ssg-*.zip
+            ssg-*.zip.sha256
+            ssg_*.deb
+            ssg_*.deb.sha256
+            ssg-*.rpm
+            ssg-*.rpm.sha256
+            ssg-*.pkg
+            ssg-*.pkg.sha256
+            ssg-*.msi
+            ssg-*.msi.sha256
+          if-no-files-found: ignore
           retention-days: 7
 
-  publish:
-    name: GitHub Release + crates.io
+  # ── GHCR container image ────────────────────────────────────────
+  ghcr:
+    name: ghcr · linux/amd64,arm64
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/sebastienrousseau/static-site-generator:${{ github.ref_name }}
+            ghcr.io/sebastienrousseau/static-site-generator:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── GPG sign all release artifacts ──────────────────────────────
+  gpg-sign:
+    name: gpg sign · all artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts, merge-multiple: true }
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Sign every release artifact
+        run: |
+          set -euo pipefail
+          for f in artifacts/*.tar.gz artifacts/*.zip artifacts/*.deb \
+                   artifacts/*.rpm artifacts/*.pkg artifacts/*.msi; do
+            [ -f "$f" ] || continue
+            gpg --batch --yes --armor --detach-sign "$f"
+          done
+          ls -la artifacts/*.asc
+
+      - name: Upload signatures
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpg-signatures
+          path: artifacts/*.asc
+          retention-days: 7
+
+  # ── AUR publish (gated on AUR_SSH_KEY secret) ───────────────────
+  aur:
+    name: aur · publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: ${{ secrets.AUR_SSH_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - name: Configure SSH for AUR
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+      - name: Update PKGBUILD pkgver and push
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          # The Arch package name (`ssg`, set in PKGBUILD) governs the AUR
+          # repository URL — not the GitHub repo name. Repo: aur/ssg.git.
+          git clone ssh://aur@aur.archlinux.org/ssg.git aur-repo \
+            -c core.sshCommand="ssh -i ~/.ssh/aur"
+          cp packaging/arch/PKGBUILD aur-repo/PKGBUILD
+          cd aur-repo
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          # Generate .SRCINFO via Arch container so we don't need makepkg locally
+          docker run --rm -v "$(pwd):/pkg" archlinux:latest \
+            bash -c 'cd /pkg && pacman -Sy --noconfirm base-devel && \
+                     useradd -m b && chown -R b /pkg && \
+                     su b -c "makepkg --printsrcinfo > .SRCINFO"'
+          git config user.email "release-bot@example.com"
+          git config user.name  "Release Bot"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Release ${VERSION}"
+          git push -c core.sshCommand="ssh -i ~/.ssh/aur"
+
+  # ── GitHub Release + crates.io publish ──────────────────────────
+  publish:
+    name: github release · crates.io
+    needs: [build, ghcr]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          persist-credentials: false
-          fetch-depth: 1
-          show-progress: false
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          path: artifacts
-          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts, merge-multiple: true }
 
       - name: List artifacts
         run: find artifacts -type f | sort
@@ -128,14 +316,14 @@ jobs:
           cat > /tmp/release-body.md << 'BODY'
           ## Install
 
+          **Homebrew (macOS / Linux):**
+          ```sh
+          brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+          ```
+
           **One-liner (macOS / Linux):**
           ```sh
           curl -fsSL https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/scripts/install.sh | sh
-          ```
-
-          **Homebrew (macOS / Linux):**
-          ```sh
-          brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/Formula/ssg.rb
           ```
 
           **Cargo (any platform with Rust):**
@@ -143,7 +331,44 @@ jobs:
           cargo install ssg
           ```
 
-          **Manual download:** see assets below. Each archive contains a single `ssg` binary. SHA256 checksums are provided for verification.
+          **Debian / Ubuntu:**
+          ```sh
+          sudo apt install ./ssg_*_amd64.deb
+          ```
+
+          **Fedora / RHEL:**
+          ```sh
+          sudo rpm -i ssg-*.rpm
+          ```
+
+          **macOS (.pkg installer):**
+          ```sh
+          sudo installer -pkg ssg-*.pkg -target /
+          ```
+
+          **Windows (MSI):** download `ssg-*.msi`, double-click to install.
+
+          **Arch Linux (AUR):**
+          ```sh
+          yay -S static-site-generator
+          ```
+
+          **Container (GHCR):**
+          ```sh
+          docker pull ghcr.io/sebastienrousseau/static-site-generator:latest
+          ```
+
+          ---
+
+          ## Verify
+
+          Each archive ships a `.sha256` checksum. Where the maintainer has
+          published a GPG key, a `.asc` detached signature is also provided.
+
+          ```sh
+          shasum -a 256 -c ssg-*.tar.gz.sha256
+          gpg --verify ssg-*.tar.gz.asc ssg-*.tar.gz   # if .asc present
+          ```
 
           ---
 
@@ -156,11 +381,17 @@ jobs:
             artifacts/*
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        uses: actions/attest-build-provenance@v2
         with:
-          subject-path: artifacts/*.tar.gz,artifacts/*.zip
+          subject-path: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/*.deb
+            artifacts/*.rpm
+            artifacts/*.pkg
+            artifacts/*.msi
 
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Publish to crates.io
         env:

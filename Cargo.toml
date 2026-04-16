@@ -150,7 +150,7 @@ frontmatter-gen = "0.0.5"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.75", features = ["vendored"] }
+openssl = { version = "0.10.77", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
@@ -308,6 +308,22 @@ many_single_char_names = "allow"             # Short names are fine in small sco
 unwrap_used = "warn"                         # Warn on unwrap to encourage error handling
 expect_used = "warn"                         # Warn on expect to encourage error handling
 
+## Stylistic noise — silenced workspace-wide (mostly fires in test code).
+## These are Pedantic/Nursery suggestions that don't affect correctness:
+redundant_closure = "allow"                  # `|x| f(x)` vs `f` — not always interchangeable for borrows
+redundant_closure_for_method_calls = "allow" # Same as above
+redundant_clone = "allow"                    # `.clone()` is sometimes load-bearing for ownership
+needless_raw_string_hashes = "allow"         # `r#"..."#` vs `r"..."` — preserve hashes for safety against future edits
+uninlined_format_args = "allow"              # `{name}` vs `name=name` — both are fine
+single_char_pattern = "allow"                # `.find('x')` vs `.find("x")` — single-char pattern is the faster form
+range_plus_one = "allow"                     # `..n+1` vs `..=n` — index-based code is clearer with the former
+format_in_format_args = "allow"              # Inline `format!()` is sometimes clearer
+manual_assert = "allow"                      # `if cond { panic!(); }` vs `assert!(!cond)` — readability call
+ignored_unit_patterns = "allow"              # `_ = expr` is sometimes clearer than `let _ = expr`
+unnecessary_map_or = "allow"                 # `.map_or(false, |x| x == y)` vs `==Some(&y)` — map_or is clearer for Option<&T>
+default_trait_access = "allow"               # `Arc::<T>::new(Default::default())` vs `Arc::default()` — both are fine
+literal_string_with_formatting_args = "allow" # Test data containing `{n}` shouldn't trigger this; pure data string
+
 # -----------------------------------------------------------------------------
 # Profiles
 # -----------------------------------------------------------------------------
@@ -348,6 +364,29 @@ opt-level = 0                               # No optimizations in test builds
 overflow-checks = true                      # Enable overflow checks for tests
 rpath = false                               # Disable rpath generation
 strip = false                               # Do not strip symbols in test builds
+
+# -----------------------------------------------------------------------------
+# Packaging metadata
+# -----------------------------------------------------------------------------
+
+# cargo-generate-rpm — used by .github/workflows/release.yml to produce
+# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
+    { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
+    { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
+    { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
+]
+
+# cargo-wix — used to produce a Windows MSI installer. Generates
+# `wix/main.wxs` lazily on first build via `cargo wix init --force` if
+# the template is absent.
+[package.metadata.wix]
+upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
+path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
+license      = false
+eula         = false
 
 # -----------------------------------------------------------------------------
 # Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
