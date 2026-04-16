@@ -41,11 +41,14 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-        with: { components: rustfmt, clippy }
+        with:
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: lint }
+        with:
+          shared-key: lint
 
       - name: cargo fmt
         run: cargo fmt --all -- --check
@@ -74,10 +77,12 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: test-${{ matrix.os }} }
+        with:
+          shared-key: test-${{ matrix.os }}
 
       - name: Lib unit tests
         run: cargo test --lib --features test-fault-injection
@@ -106,10 +111,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: examples }
+        with:
+          shared-key: examples
       - name: Build all examples
         run: cargo build --examples --quiet
       - name: Validator regression suite
@@ -124,11 +131,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-        with: { components: llvm-tools-preview }
+        with:
+          components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: coverage }
+        with:
+          shared-key: coverage
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
       - name: Run coverage (lib + integration, exclude heavy examples)
@@ -170,10 +180,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: audit }
+        with:
+          shared-key: audit
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check

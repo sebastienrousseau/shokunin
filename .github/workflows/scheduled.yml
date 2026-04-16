@@ -47,9 +47,11 @@ jobs:
         toolchain: [stable, "1.88"]
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-        with: { toolchain: "${{ matrix.toolchain }}" }
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: scheduled-${{ matrix.os }}-${{ matrix.toolchain }}
@@ -67,12 +69,15 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
-        with: { targets: x86_64-unknown-linux-musl }
+        with:
+          targets: x86_64-unknown-linux-musl
       - run: sudo apt-get update && sudo apt-get install -y musl-tools
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: musl }
+        with:
+          shared-key: musl
       - run: cargo build --release --target x86_64-unknown-linux-musl --locked
       - name: Verify static linking
         run: |
@@ -91,12 +96,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: a11y }
+        with:
+          shared-key: a11y
       - uses: actions/setup-node@v4
-        with: { node-version: "22" }
+        with:
+          node-version: "22"
       - run: npm install -g pa11y
 
       - name: Build SSG
@@ -170,7 +178,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:

@@ -45,6 +45,33 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  # ── Detect optional secrets so downstream jobs can gate on them ────
+  # GitHub forbids `secrets.*` in job-level `if:`, so this job exposes
+  # the existence of GPG / AUR secrets as boolean outputs.
+  secrets-presence:
+    name: detect optional secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      has_gpg: ${{ steps.check.outputs.has_gpg }}
+      has_aur: ${{ steps.check.outputs.has_aur }}
+    steps:
+      - id: check
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          if [ -n "$GPG_PRIVATE_KEY" ]; then
+            echo "has_gpg=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_gpg=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -n "$AUR_SSH_KEY" ]; then
+            echo "has_aur=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_aur=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ── Build + per-platform package (Linux .deb/.rpm, macOS .pkg, Windows .msi) ──
   build:
     name: build · ${{ matrix.target }}
@@ -68,7 +95,7 @@ jobs:
             pkg: macos
             arch: aarch64
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-15-intel
             archive: tar.gz
             pkg: macos
             arch: x86_64
@@ -78,10 +105,12 @@ jobs:
             pkg: msi
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
 
       - uses: dtolnay/rust-toolchain@stable
-        with: { targets: "${{ matrix.target }}" }
+        with:
+          targets: ${{ matrix.target }}
 
       - if: matrix.musl
         run: sudo apt-get update && sudo apt-get install -y musl-tools
@@ -119,9 +148,9 @@ jobs:
         if: matrix.pkg == 'deb_rpm'
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          cp target/${{ matrix.target }}/release/ssg target/release/ssg
+          cp "target/${{ matrix.target }}/release/ssg" target/release/ssg
           sh packaging/deb/build.sh "$VERSION" amd64
-          shasum -a 256 ssg_${VERSION}_amd64.deb > ssg_${VERSION}_amd64.deb.sha256
+          shasum -a 256 "ssg_${VERSION}_amd64.deb" > "ssg_${VERSION}_amd64.deb.sha256"
 
       - name: Install cargo-generate-rpm
         if: matrix.pkg == 'deb_rpm'
@@ -200,7 +229,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -223,13 +253,15 @@ jobs:
   # ── GPG sign all release artifacts ──────────────────────────────
   gpg-sign:
     name: gpg sign · all artifacts
-    needs: build
+    needs: [build, secrets-presence]
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    if: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+    if: ${{ needs.secrets-presence.outputs.has_gpg == 'true' }}
     steps:
       - uses: actions/download-artifact@v4
-        with: { path: artifacts, merge-multiple: true }
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
@@ -257,13 +289,14 @@ jobs:
   # ── AUR publish (gated on AUR_SSH_KEY secret) ───────────────────
   aur:
     name: aur · publish
-    needs: build
+    needs: [build, secrets-presence]
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: ${{ secrets.AUR_SSH_KEY != '' }}
+    if: ${{ needs.secrets-presence.outputs.has_aur == 'true' }}
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
       - name: Configure SSH for AUR
         run: |
           mkdir -p ~/.ssh
@@ -301,10 +334,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
 
       - uses: actions/download-artifact@v4
-        with: { path: artifacts, merge-multiple: true }
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: List artifacts
         run: find artifacts -type f | sort
