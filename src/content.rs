@@ -497,7 +497,25 @@ impl Plugin for ContentValidationPlugin {
 /// validation failure.
 pub fn validate_only(content_dir: &Path) -> Result<()> {
     let schema_path = content_dir.join("content.schema.toml");
-    let schemas = load_schemas(&schema_path)?;
+    validate_with_schema(content_dir, &schema_path)
+}
+
+/// Validates every `.md` file under `content_dir` against the schema at
+/// `schema_path`.
+///
+/// Use this entry point when the schema must live *outside* `content_dir`
+/// — for example, because `staticdatagen::compile` reads every file in
+/// `content_dir` and would fail to parse a non-Markdown schema file as
+/// content.
+///
+/// # Errors
+/// Returns `Err` if the schema can't be loaded or any content file fails
+/// validation.
+pub fn validate_with_schema(
+    content_dir: &Path,
+    schema_path: &Path,
+) -> Result<()> {
+    let schemas = load_schemas(schema_path)?;
 
     if schemas.is_empty() {
         println!("No content schemas found in {}", schema_path.display());

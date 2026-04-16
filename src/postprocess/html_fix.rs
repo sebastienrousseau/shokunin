@@ -80,6 +80,14 @@ fn apply_html_fixes(html: &str) -> String {
         modified = fix_literal_class_syntax(&modified);
     }
 
+    if needs_mobile_web_app_capable_meta(&modified) {
+        modified = inject_mobile_web_app_capable_meta(&modified);
+    }
+
+    if has_empty_preload(&modified) {
+        modified = remove_empty_preload_links(&modified);
+    }
+
     modified
 }
 
@@ -92,6 +100,155 @@ fn needs_schema_context_fix(html: &str) -> bool {
 /// Returns `true` if the HTML contains literal `.class=` syntax to fix.
 fn needs_class_syntax_fix(html: &str) -> bool {
     html.contains(".class=&quot;") || html.contains(".class=\"")
+}
+
+/// Returns `true` if the HTML appears to contain a `<link rel="preload">`
+/// tag whose `href` is empty or absent. Chrome logs
+/// "<link rel=preload> has an invalid href value" for these. The check
+/// is intentionally cheap; `remove_empty_preload_links` does the precise
+/// per-tag work only if this returns `true`.
+fn has_empty_preload(html: &str) -> bool {
+    // The cheapest signal of "preload + no real href" is `href` followed
+    // immediately by space or `>` (bare attribute) anywhere in the same
+    // document, *and* a preload link somewhere too. False positives just
+    // trigger the precise rewriter, which is idempotent.
+    let has_preload = html.contains("rel=preload")
+        || html.contains("rel=\"preload\"")
+        || html.contains("rel='preload'");
+    let has_empty_href = html.contains("href=\"\"")
+        || html.contains("href=''")
+        || html.contains(" href ")
+        || html.contains(" href>")
+        || html.contains(" href/>");
+    has_preload && has_empty_href
+}
+
+/// Removes any `<link>` tag that declares `rel="preload"` and has an empty
+/// or missing `href`. Idempotent.
+pub(super) fn remove_empty_preload_links(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut cursor = 0;
+    while cursor < html.len() {
+        // Find the next `<link` (case-insensitive) starting at cursor.
+        let Some(rel_offset) =
+            html[cursor..].to_ascii_lowercase().find("<link")
+        else {
+            out.push_str(&html[cursor..]);
+            break;
+        };
+        let tag_start = cursor + rel_offset;
+        out.push_str(&html[cursor..tag_start]);
+
+        // Walk forward to the closing `>`, respecting quoted attribute values.
+        let bytes = html.as_bytes();
+        let mut j = tag_start;
+        let mut quote: Option<u8> = None;
+        while j < bytes.len() {
+            let b = bytes[j];
+            match quote {
+                Some(q) if b == q => quote = None,
+                Some(_) => {}
+                None => match b {
+                    b'"' | b'\'' => quote = Some(b),
+                    b'>' => break,
+                    _ => {}
+                },
+            }
+            j += 1;
+        }
+        let tag_end = (j + 1).min(html.len());
+        let tag = &html[tag_start..tag_end];
+        let lower = tag.to_ascii_lowercase();
+        let is_preload = lower.contains("rel=\"preload\"")
+            || lower.contains("rel='preload'")
+            || lower.contains("rel=preload");
+        let has_real_href = href_is_present_and_non_empty(&lower);
+        // Drop only empty-href preload tags; keep everything else.
+        if !is_preload || has_real_href {
+            out.push_str(tag);
+        }
+        cursor = tag_end;
+    }
+    out
+}
+
+/// Returns `true` if a (lowercased) tag string has a `href` attribute that
+/// is present and non-empty. Tolerates double, single, and unquoted forms.
+fn href_is_present_and_non_empty(lower_tag: &str) -> bool {
+    if lower_tag.contains("href=\"\"") || lower_tag.contains("href=''") {
+        return false;
+    }
+    let Some(idx) = lower_tag.find("href") else {
+        return false;
+    };
+    // Must be followed by `=`, possibly with surrounding whitespace.
+    let after = lower_tag[idx + 4..].trim_start();
+    let Some(rest) = after.strip_prefix('=') else {
+        return false;
+    };
+    let rest = rest.trim_start();
+    match rest.chars().next() {
+        None | Some('>') => false,
+        Some('"') => rest.len() > 1 && !rest.starts_with("\"\""),
+        Some('\'') => rest.len() > 1 && !rest.starts_with("''"),
+        Some(c) if c.is_whitespace() => false,
+        Some(_) => true,
+    }
+}
+
+/// Returns `true` if the HTML emits the legacy
+/// `apple-mobile-web-app-capable` meta but lacks the modern
+/// `mobile-web-app-capable` meta that Chrome now requires. Tolerates
+/// quoted, single-quoted, or unquoted attribute values (post-minify HTML
+/// often drops quotes around short values like `yes`).
+fn needs_mobile_web_app_capable_meta(html: &str) -> bool {
+    let has_legacy = html.contains("apple-mobile-web-app-capable");
+    let has_modern = find_modern_mobile_web_app_capable(html).is_some();
+    has_legacy && !has_modern
+}
+
+/// Returns the byte offset of a `name=...mobile-web-app-capable...` meta
+/// attribute that is **not** the apple variant, or `None` if none found.
+fn find_modern_mobile_web_app_capable(html: &str) -> Option<usize> {
+    // Search for the bare attribute name in any of the three quoting
+    // styles, then verify it isn't preceded by `apple-` (which would make
+    // it the legacy variant).
+    let needles = [
+        "name=\"mobile-web-app-capable\"",
+        "name='mobile-web-app-capable'",
+        "name=mobile-web-app-capable",
+    ];
+    for n in &needles {
+        if let Some(pos) = html.find(n) {
+            return Some(pos);
+        }
+    }
+    None
+}
+
+/// Injects `<meta name="mobile-web-app-capable" content="yes">` immediately
+/// after the legacy Apple variant so installed-PWA support works in Chrome
+/// without console deprecation warnings. Handles minified HTML where the
+/// `name=` attribute may be unquoted and may appear after `content=`.
+pub(super) fn inject_mobile_web_app_capable_meta(html: &str) -> String {
+    let modern = "<meta name=\"mobile-web-app-capable\" content=\"yes\">";
+    // Find the apple-variant attribute name. Tolerate quoted/unquoted forms.
+    let candidates = [
+        "name=\"apple-mobile-web-app-capable\"",
+        "name='apple-mobile-web-app-capable'",
+        "name=apple-mobile-web-app-capable",
+    ];
+    let name_pos = candidates.iter().find_map(|n| html.find(n));
+    let Some(name_pos) = name_pos else {
+        return html.to_string();
+    };
+    // Walk forward to the next `>` that closes this <meta> tag.
+    let after = &html[name_pos..];
+    let Some(rel_close) = after.find('>') else {
+        return html.to_string();
+    };
+    let insert_at = name_pos + rel_close + 1;
+    format!("{}{modern}{}", &html[..insert_at], &html[insert_at..])
 }
 
 /// Fix JSON-LD date fields from RFC 2822 to ISO 8601.
@@ -414,5 +571,74 @@ mod tests {
         let input = r#"<img src="img.jpg"> some text"#;
         let result = fix_literal_class_syntax(input);
         assert_eq!(result, input, "No .class= should leave input unchanged");
+    }
+
+    // -----------------------------------------------------------------
+    // inject_mobile_web_app_capable_meta
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_inject_mobile_web_app_capable_meta_added() {
+        let input = r#"<head><meta name="apple-mobile-web-app-capable" content="yes"></head>"#;
+        let result = inject_mobile_web_app_capable_meta(input);
+        assert!(
+            result.contains(
+                r#"<meta name="mobile-web-app-capable" content="yes">"#
+            ),
+            "modern meta should be injected, got: {result}"
+        );
+        assert!(
+            result.contains(
+                r#"<meta name="apple-mobile-web-app-capable" content="yes">"#
+            ),
+            "legacy meta must remain for backwards compatibility"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // remove_empty_preload_links
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_remove_empty_preload_drops_bare_href() {
+        let input = r#"<head><link as=image fetchpriority=high href rel=preload type=image/webp><title>x</title></head>"#;
+        let result = remove_empty_preload_links(input);
+        assert!(
+            !result.contains("rel=preload"),
+            "empty preload should be removed, got: {result}"
+        );
+        assert!(result.contains("<title>x</title>"), "rest preserved");
+    }
+
+    #[test]
+    fn test_remove_empty_preload_drops_quoted_empty_href() {
+        let input = r#"<link rel="preload" href="" as="image">"#;
+        let result = remove_empty_preload_links(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_remove_empty_preload_keeps_valid_preload() {
+        let input = r#"<link rel="preload" href="/banner.webp" as="image">"#;
+        let result = remove_empty_preload_links(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_remove_empty_preload_preserves_utf8() {
+        let input = r#"<title>日本語</title><link rel=preload href as=image><p>テスト</p>"#;
+        let result = remove_empty_preload_links(input);
+        assert!(result.contains("日本語"));
+        assert!(result.contains("テスト"));
+        assert!(!result.contains("rel=preload"));
+    }
+
+    #[test]
+    fn test_apply_html_fixes_idempotent_on_modern_meta() {
+        let input = r#"<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"></head>"#;
+        let result = apply_html_fixes(input);
+        // Should not double-inject when modern meta already exists.
+        let count = result.matches("name=\"mobile-web-app-capable\"").count();
+        assert_eq!(count, 1, "no duplicate injection, got: {result}");
     }
 }

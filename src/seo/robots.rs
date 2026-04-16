@@ -63,3 +63,90 @@ impl Plugin for RobotsPlugin {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    fn ctx(site: &Path) -> PluginContext {
+        PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            site,
+            Path::new("templates"),
+        )
+    }
+
+    #[test]
+    fn name_is_stable() {
+        // Plugin name is part of the public contract — log lines and
+        // PluginManager APIs key off it. Pin the value.
+        assert_eq!(RobotsPlugin::new("https://x.example").name(), "robots");
+    }
+
+    #[test]
+    fn new_accepts_string_or_str() {
+        // Both `&str` and `String` should work via `impl Into<String>`.
+        let _from_str = RobotsPlugin::new("https://a.example");
+        let _from_string = RobotsPlugin::new(String::from("https://b.example"));
+    }
+
+    #[test]
+    fn writes_robots_txt_when_missing() {
+        let dir = tempdir().unwrap();
+        let plugin = RobotsPlugin::new("https://example.com");
+        plugin.after_compile(&ctx(dir.path())).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert_eq!(
+            body,
+            "User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml\n"
+        );
+    }
+
+    #[test]
+    fn trims_trailing_slash_from_base_url() {
+        let dir = tempdir().unwrap();
+        let plugin = RobotsPlugin::new("https://example.com/");
+        plugin.after_compile(&ctx(dir.path())).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert!(
+            body.contains("Sitemap: https://example.com/sitemap.xml\n"),
+            "trailing slash on base_url should be trimmed before joining \
+             /sitemap.xml, got: {body}"
+        );
+        assert!(
+            !body.contains("//sitemap.xml"),
+            "should not produce double-slash"
+        );
+    }
+
+    #[test]
+    fn does_not_overwrite_existing_robots_txt() {
+        let dir = tempdir().unwrap();
+        let custom = "User-agent: GPTBot\nDisallow: /\n";
+        fs::write(dir.path().join("robots.txt"), custom).unwrap();
+
+        let plugin = RobotsPlugin::new("https://example.com");
+        plugin.after_compile(&ctx(dir.path())).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert_eq!(body, custom, "existing robots.txt must be left untouched");
+    }
+
+    #[test]
+    fn no_op_when_site_dir_missing() {
+        // Site dir doesn't exist — plugin must succeed silently.
+        let dir = tempdir().unwrap();
+        let nonexistent = dir.path().join("nope");
+        let plugin = RobotsPlugin::new("https://example.com");
+        plugin.after_compile(&ctx(&nonexistent)).unwrap();
+        assert!(
+            !nonexistent.join("robots.txt").exists(),
+            "plugin should not create files in a missing site dir"
+        );
+    }
+}

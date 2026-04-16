@@ -112,3 +112,120 @@ const _: () = {
     assert!(MAX_CONFIG_SIZE > 0);
     assert!(MAX_CONFIG_SIZE <= 10 * 1024 * 1024); // Max 10MB
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Mutex-protected env-var setter so concurrent tests don't race.
+    /// `cargo test` runs tests in parallel by default; without serialisation
+    /// the env-var assertions below would interleave nondeterministically.
+    fn with_env<F: FnOnce()>(key: &str, value: Option<&str>, f: F) {
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let prev = std::env::var(key).ok();
+        match value {
+            Some(v) => std::env::set_var(key, v),
+            None => std::env::remove_var(key),
+        }
+        f();
+        match prev {
+            Some(v) => std::env::set_var(key, v),
+            None => std::env::remove_var(key),
+        }
+    }
+
+    #[test]
+    fn resolve_host_returns_default_when_env_unset() {
+        with_env("SSG_HOST", None, || {
+            assert_eq!(resolve_host(), DEFAULT_HOST);
+        });
+    }
+
+    #[test]
+    fn resolve_host_returns_env_value_when_set() {
+        with_env("SSG_HOST", Some("0.0.0.0"), || {
+            assert_eq!(resolve_host(), "0.0.0.0");
+        });
+    }
+
+    #[test]
+    fn resolve_host_returns_default_when_env_empty() {
+        // Empty string should fall through to the default — matters for
+        // shells that export `SSG_HOST=` to "unset" without `unset`.
+        with_env("SSG_HOST", Some(""), || {
+            assert_eq!(resolve_host(), DEFAULT_HOST);
+        });
+    }
+
+    #[test]
+    fn resolve_port_returns_default_when_env_unset() {
+        with_env("SSG_PORT", None, || {
+            assert_eq!(resolve_port(), DEFAULT_PORT);
+        });
+    }
+
+    #[test]
+    fn resolve_port_returns_env_value_when_set() {
+        with_env("SSG_PORT", Some("8080"), || {
+            assert_eq!(resolve_port(), 8080);
+        });
+    }
+
+    #[test]
+    fn resolve_port_returns_default_when_env_unparseable() {
+        with_env("SSG_PORT", Some("not-a-number"), || {
+            assert_eq!(resolve_port(), DEFAULT_PORT);
+        });
+    }
+
+    #[test]
+    fn default_config_returns_lazily_initialised_singleton() {
+        let a = default_config();
+        let b = default_config();
+        // Same Arc pointer — confirms OnceLock is being reused.
+        assert!(Arc::ptr_eq(a, b));
+        assert_eq!(a.site_name, DEFAULT_SITE_NAME);
+        assert_eq!(a.site_title, DEFAULT_SITE_TITLE);
+        assert_eq!(a.language, "en-GB");
+        assert_eq!(a.content_dir, PathBuf::from("content"));
+        assert_eq!(a.output_dir, PathBuf::from("public"));
+        assert_eq!(a.template_dir, PathBuf::from("templates"));
+        assert!(a.serve_dir.is_none());
+        assert!(a.i18n.is_none());
+    }
+
+    #[test]
+    fn default_config_base_url_uses_default_host_and_port() {
+        let cfg = default_config();
+        assert!(
+            cfg.base_url.contains(DEFAULT_HOST),
+            "base_url should embed DEFAULT_HOST: {}",
+            cfg.base_url
+        );
+        assert!(
+            cfg.base_url.contains(&DEFAULT_PORT.to_string()),
+            "base_url should embed DEFAULT_PORT: {}",
+            cfg.base_url
+        );
+    }
+
+    #[test]
+    fn reserved_names_are_lowercase_and_non_empty() {
+        assert!(!RESERVED_NAMES.is_empty());
+        for name in RESERVED_NAMES {
+            assert!(!name.is_empty(), "reserved name should be non-empty");
+            assert_eq!(
+                *name,
+                name.to_lowercase(),
+                "reserved name should be lowercase: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn max_config_size_is_one_megabyte() {
+        assert_eq!(MAX_CONFIG_SIZE, 1024 * 1024);
+    }
+}

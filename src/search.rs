@@ -206,11 +206,15 @@ impl SearchLabels {
         let key = code.to_ascii_lowercase();
         let entry = LOCALE_TABLE.iter().find(|(c, _)| *c == key).map_or_else(
             || {
-                &LOCALE_TABLE
+                // `LOCALE_TABLE` is a hand-authored constant array that
+                // always contains the `en` entry; the `expect` is a
+                // type-system formality, not a runtime risk.
+                #[allow(clippy::expect_used)]
+                let en = LOCALE_TABLE
                     .iter()
                     .find(|(c, _)| *c == "en")
-                    .expect("en entry must exist")
-                    .1
+                    .expect("en entry must exist in LOCALE_TABLE");
+                &en.1
             },
             |(_, e)| e,
         );
@@ -1346,5 +1350,74 @@ mod tests {
     fn search_labels_default_is_english() {
         let labels = SearchLabels::default();
         assert_eq!(labels.button_text, "Search");
+    }
+
+    #[test]
+    fn search_labels_english_constructor() {
+        let labels = SearchLabels::english();
+        assert_eq!(labels.button_text, "Search");
+        assert_eq!(
+            SearchLabels::english().input_placeholder,
+            labels.input_placeholder
+        );
+    }
+
+    #[test]
+    fn search_labels_french_constructor() {
+        let labels = SearchLabels::french();
+        assert_eq!(labels.button_text, "Rechercher");
+    }
+
+    #[test]
+    fn localized_search_plugin_new_keeps_supplied_labels() {
+        let labels = SearchLabels::french();
+        let p = LocalizedSearchPlugin::new(labels.clone());
+        assert_eq!(p.labels.button_text, "Rechercher");
+    }
+
+    #[test]
+    fn localized_search_plugin_name_is_search() {
+        let p = LocalizedSearchPlugin::new(SearchLabels::default());
+        assert_eq!(p.name(), "search");
+    }
+
+    #[test]
+    fn localized_search_plugin_no_op_when_site_missing() -> Result<()> {
+        let dir = tempdir().unwrap();
+        let nope = dir.path().join("nope");
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            &nope,
+            Path::new("t"),
+        );
+        LocalizedSearchPlugin::new(SearchLabels::default())
+            .after_compile(&ctx)?;
+        Ok(())
+    }
+
+    #[test]
+    fn localized_search_plugin_writes_index_with_localized_labels() -> Result<()>
+    {
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head><title>P</title></head><body>x</body></html>",
+        )?;
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            dir.path(),
+            Path::new("t"),
+        );
+        LocalizedSearchPlugin::new(SearchLabels::french())
+            .after_compile(&ctx)?;
+        let html = fs::read_to_string(dir.path().join("page.html"))?;
+        // Localized button text should appear in the injected widget.
+        assert!(
+            html.contains("Rechercher"),
+            "French label 'Rechercher' should appear in injected UI"
+        );
+        Ok(())
     }
 }

@@ -257,3 +257,183 @@ pub fn prepare_serve_dir(paths: &Paths, serve_dir: &PathBuf) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+    use tempfile::tempdir;
+
+    /// Test transport that records `(addr, root)` and never blocks.
+    #[derive(Default)]
+    struct RecordingTransport {
+        calls: Arc<Mutex<Vec<(String, String)>>>,
+        fail: bool,
+    }
+
+    impl ServeTransport for RecordingTransport {
+        fn start(&self, addr: &str, root: &str) -> Result<()> {
+            self.calls
+                .lock()
+                .unwrap()
+                .push((addr.to_string(), root.to_string()));
+            if self.fail {
+                Err(anyhow!("synthetic transport failure"))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    #[test]
+    fn build_serve_address_formats_addr_and_returns_root() {
+        let dir = tempdir().unwrap();
+        let (addr, root) = build_serve_address(dir.path()).unwrap();
+        assert!(
+            addr.contains(cmd::DEFAULT_HOST),
+            "addr should contain default host: {addr}"
+        );
+        assert!(
+            addr.contains(&cmd::DEFAULT_PORT.to_string()),
+            "addr should contain default port: {addr}"
+        );
+        assert_eq!(root, dir.path().to_str().unwrap());
+    }
+
+    #[test]
+    fn serve_site_with_invokes_transport_with_resolved_address() {
+        let dir = tempdir().unwrap();
+        let transport = RecordingTransport::default();
+        let calls = transport.calls.clone();
+        serve_site_with(dir.path(), &transport).unwrap();
+        let recorded = calls.lock().unwrap().clone();
+        assert_eq!(recorded.len(), 1);
+        let (addr, root) = &recorded[0];
+        assert!(addr.contains(cmd::DEFAULT_HOST));
+        assert_eq!(root, dir.path().to_str().unwrap());
+    }
+
+    #[test]
+    fn serve_site_with_propagates_transport_errors() {
+        let dir = tempdir().unwrap();
+        let transport = RecordingTransport {
+            calls: Default::default(),
+            fail: true,
+        };
+        let err = serve_site_with(dir.path(), &transport).unwrap_err();
+        assert!(
+            err.to_string().contains("synthetic transport failure"),
+            "transport error should bubble up, got: {err}"
+        );
+    }
+
+    #[test]
+    fn http_transport_implements_serve_transport() {
+        // Smoke test that HttpTransport satisfies the trait. We don't
+        // actually call .start() here because that would bind a port.
+        let _t: &dyn ServeTransport = &HttpTransport;
+    }
+
+    #[test]
+    fn generate_locale_redirect_creates_index_with_marker() {
+        let dir = tempdir().unwrap();
+        generate_locale_redirect(
+            dir.path(),
+            &["en".to_string(), "fr".to_string(), "de".to_string()],
+            "en",
+        )
+        .unwrap();
+
+        let index = dir.path().join("index.html");
+        assert!(index.exists(), "index.html should be written");
+
+        let html = fs::read_to_string(&index).unwrap();
+        assert!(html.contains("<!-- ssg-locale-redirect -->"));
+        assert!(html.contains("\"en\""));
+        assert!(html.contains("\"fr\""));
+        assert!(html.contains("\"de\""));
+        assert!(html.contains("/en/")); // default fallback
+    }
+
+    #[test]
+    fn generate_locale_redirect_overwrites_own_marker() {
+        let dir = tempdir().unwrap();
+
+        // First call writes the file.
+        generate_locale_redirect(dir.path(), &["en".to_string()], "en")
+            .unwrap();
+        let first = fs::read_to_string(dir.path().join("index.html")).unwrap();
+
+        // Second call with different locales must overwrite.
+        generate_locale_redirect(
+            dir.path(),
+            &["en".to_string(), "fr".to_string()],
+            "en",
+        )
+        .unwrap();
+        let second = fs::read_to_string(dir.path().join("index.html")).unwrap();
+
+        assert_ne!(first, second);
+        assert!(second.contains("\"fr\""));
+    }
+
+    #[test]
+    fn generate_locale_redirect_preserves_user_index_html() {
+        // If the user wrote their own index.html (no marker), don't overwrite.
+        let dir = tempdir().unwrap();
+        let user_html = "<html><body>my hand-written page</body></html>";
+        fs::write(dir.path().join("index.html"), user_html).unwrap();
+
+        generate_locale_redirect(dir.path(), &["en".to_string()], "en")
+            .unwrap();
+
+        let after = fs::read_to_string(dir.path().join("index.html")).unwrap();
+        assert_eq!(
+            after, user_html,
+            "user-authored index.html must not be overwritten"
+        );
+    }
+
+    #[test]
+    fn prepare_serve_dir_creates_dir_when_missing() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("a.html"), "x").unwrap();
+
+        let serve = dir.path().join("serve-out");
+        let paths = Paths {
+            site: site.clone(),
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+
+        prepare_serve_dir(&paths, &serve).unwrap();
+
+        assert!(serve.exists(), "serve dir should be created");
+        assert!(
+            serve.join("a.html").exists(),
+            "files should be copied from site to serve dir"
+        );
+    }
+
+    #[test]
+    fn prepare_serve_dir_skips_copy_when_serve_equals_site() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("a.html"), "x").unwrap();
+
+        let paths = Paths {
+            site: site.clone(),
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+
+        // serve_dir == site — should not re-copy (no-op).
+        prepare_serve_dir(&paths, &site).unwrap();
+        assert!(site.join("a.html").exists());
+    }
+}

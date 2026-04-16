@@ -173,14 +173,37 @@ fn is_decorative_img(tag: &str) -> bool {
         || tag.contains("role=none")
 }
 
+/// Returns the absolute end index (one past the closing `>`) of the HTML
+/// tag that starts at `tag_start`. Skips `>` characters that occur inside
+/// double- or single-quoted attribute values so that inline SVG `data:`
+/// URLs in `src` attributes don't truncate the tag prematurely.
+fn find_tag_end(html: &str, tag_start: usize) -> usize {
+    let bytes = html.as_bytes();
+    let mut i = tag_start;
+    let mut quote: Option<u8> = None;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None => match b {
+                b'"' | b'\'' => quote = Some(b),
+                b'>' => return i + 1,
+                _ => {}
+            },
+        }
+        i += 1;
+    }
+    bytes.len()
+}
+
 /// WCAG 1.1.1: Every <img> must have a non-empty alt attribute.
 fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let lower = html.to_lowercase();
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end =
-            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let tag_end = find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
 
         if !has_valid_alt(tag)
@@ -397,6 +420,19 @@ mod tests {
         let html = r#"<html lang="en"><head></head><body><main><img src="photo.jpg" alt="A photo"></main></body></html>"#;
         let issues = check_page(html);
         assert!(!issues.iter().any(|i| i.criterion == "1.1.1"));
+    }
+
+    #[test]
+    fn test_img_alt_with_inline_svg_data_url() {
+        // Regression: a `>` inside an SVG data URL in `src` previously
+        // truncated the tag and the parser missed the `alt` attribute,
+        // raising a false `<img> missing alt text: (no src)` issue.
+        let html = r#"<html lang="en"><head></head><body><main><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10'/></svg>" alt="Banner" width="10" height="10"></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "1.1.1"),
+            "SVG-data-url img with valid alt should not raise 1.1.1, got: {issues:?}"
+        );
     }
 
     #[test]

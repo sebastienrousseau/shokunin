@@ -143,7 +143,8 @@ fn expand_inline_shortcodes(input: &str) -> String {
         // byte — this handles multi-byte UTF-8 characters cleanly.
         // The `chars().next()` is guaranteed to be `Some` because
         // the loop guard `pos < input.len()` ensures the suffix is
-        // non-empty, so an `unwrap` here cannot panic.
+        // non-empty, so an `expect` here cannot panic.
+        #[allow(clippy::expect_used)]
         let c = input[pos..]
             .chars()
             .next()

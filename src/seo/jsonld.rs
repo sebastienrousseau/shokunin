@@ -314,3 +314,297 @@ impl Plugin for JsonLdPlugin {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    fn ctx(site: &Path) -> PluginContext {
+        PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            site,
+            Path::new("templates"),
+        )
+    }
+
+    fn cfg() -> JsonLdConfig {
+        JsonLdConfig {
+            base_url: "https://example.com".to_string(),
+            org_name: "Example Org".to_string(),
+            breadcrumbs: true,
+        }
+    }
+
+    #[test]
+    fn name_is_stable() {
+        let p = JsonLdPlugin::new(cfg());
+        assert_eq!(p.name(), "json-ld");
+    }
+
+    #[test]
+    fn from_site_constructs_with_breadcrumbs_enabled() {
+        let p = JsonLdPlugin::from_site("https://x.example", "X");
+        assert_eq!(p.config.base_url, "https://x.example");
+        assert_eq!(p.config.org_name, "X");
+        assert!(p.config.breadcrumbs);
+    }
+
+    // ── build_article_jsonld ───────────────────────────────────
+
+    #[test]
+    fn article_includes_author_when_provided() {
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "Jane",
+            "",
+            None,
+            None,
+            "en",
+        );
+        assert_eq!(v["author"]["name"], "Jane");
+        assert_eq!(v["author"]["@type"], "Person");
+    }
+
+    #[test]
+    fn article_omits_author_when_empty() {
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "",
+            "",
+            None,
+            None,
+            "en",
+        );
+        assert!(v.get("author").is_none());
+    }
+
+    #[test]
+    fn article_includes_image_when_url_present() {
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "",
+            "https://x/img.png",
+            None,
+            None,
+            "en",
+        );
+        assert_eq!(v["image"]["@type"], "ImageObject");
+        assert_eq!(v["image"]["url"], "https://x/img.png");
+    }
+
+    #[test]
+    fn article_uses_date_published_for_date_modified_fallback() {
+        let dp = "2025-01-01".to_string();
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "",
+            "",
+            Some(&dp),
+            None,
+            "en",
+        );
+        assert_eq!(v["datePublished"], "2025-01-01");
+        assert_eq!(
+            v["dateModified"], "2025-01-01",
+            "missing dateModified should fall back to datePublished"
+        );
+    }
+
+    #[test]
+    fn article_keeps_distinct_date_modified() {
+        let dp = "2025-01-01".to_string();
+        let dm = "2025-06-15".to_string();
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "",
+            "",
+            Some(&dp),
+            Some(&dm),
+            "en",
+        );
+        assert_eq!(v["datePublished"], "2025-01-01");
+        assert_eq!(v["dateModified"], "2025-06-15");
+    }
+
+    #[test]
+    fn article_defaults_lang_to_en_when_empty() {
+        let v = build_article_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Org",
+            "",
+            "",
+            None,
+            None,
+            "",
+        );
+        assert_eq!(v["inLanguage"], "en");
+    }
+
+    // ── build_webpage_jsonld ───────────────────────────────────
+
+    #[test]
+    fn webpage_includes_author_image_date_when_present() {
+        let dp = "2025-01-01".to_string();
+        let v = build_webpage_jsonld(
+            "T",
+            "D",
+            "https://x/p",
+            "Jane",
+            "https://x/i.png",
+            Some(&dp),
+            "fr",
+        );
+        assert_eq!(v["@type"], "WebPage");
+        assert_eq!(v["author"]["name"], "Jane");
+        assert_eq!(v["image"]["url"], "https://x/i.png");
+        assert_eq!(v["datePublished"], "2025-01-01");
+        assert_eq!(v["inLanguage"], "fr");
+    }
+
+    #[test]
+    fn webpage_omits_optional_fields_when_empty() {
+        let v = build_webpage_jsonld("T", "D", "https://x/p", "", "", None, "");
+        assert!(v.get("author").is_none());
+        assert!(v.get("image").is_none());
+        assert!(v.get("datePublished").is_none());
+        assert_eq!(v["inLanguage"], "en");
+    }
+
+    // ── build_breadcrumb_jsonld ────────────────────────────────
+
+    #[test]
+    fn breadcrumb_returns_none_for_root_path() {
+        // Just `index.html` (or empty path) → no breadcrumb chain.
+        assert!(build_breadcrumb_jsonld("https://x", "/").is_none());
+        assert!(build_breadcrumb_jsonld("https://x", "index.html").is_none());
+    }
+
+    #[test]
+    fn breadcrumb_builds_chain_for_nested_path() {
+        let v = build_breadcrumb_jsonld("https://x", "blog/my-post/index.html")
+            .expect("should produce breadcrumb for nested path");
+        assert_eq!(v["@type"], "BreadcrumbList");
+        let items = v["itemListElement"].as_array().unwrap();
+        assert_eq!(items.len(), 3); // Home + blog + my-post
+        assert_eq!(items[0]["name"], "Home");
+        assert_eq!(items[1]["name"], "blog");
+        assert_eq!(items[2]["name"], "my post"); // hyphens → spaces
+    }
+
+    #[test]
+    fn breadcrumb_handles_html_extension_in_part_name() {
+        let v = build_breadcrumb_jsonld("https://x", "page.html").unwrap();
+        let items = v["itemListElement"].as_array().unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[1]["name"], "page");
+    }
+
+    // ── build_jsonld_scripts ───────────────────────────────────
+
+    #[test]
+    fn build_scripts_picks_article_when_article_tag_present() {
+        let html = r#"<html><head><title>Post</title></head>
+            <body><article>content</article></body></html>"#;
+        let scripts =
+            build_jsonld_scripts(html, "https://x", "p/", "Org", false);
+        assert_eq!(scripts[0]["@type"], "Article");
+    }
+
+    #[test]
+    fn build_scripts_picks_webpage_when_no_article_tag() {
+        let html = "<html><head><title>P</title></head><body>x</body></html>";
+        let scripts =
+            build_jsonld_scripts(html, "https://x", "p/", "Org", false);
+        assert_eq!(scripts[0]["@type"], "WebPage");
+    }
+
+    #[test]
+    fn build_scripts_includes_breadcrumb_when_enabled() {
+        let html = "<html><head><title>P</title></head><body>x</body></html>";
+        let scripts =
+            build_jsonld_scripts(html, "https://x", "blog/post/", "Org", true);
+        assert!(
+            scripts.iter().any(|s| s["@type"] == "BreadcrumbList"),
+            "breadcrumb should be present when enabled and path nested"
+        );
+    }
+
+    #[test]
+    fn build_scripts_skips_breadcrumb_when_disabled() {
+        let html = "<html><head><title>P</title></head><body>x</body></html>";
+        let scripts =
+            build_jsonld_scripts(html, "https://x", "blog/post/", "Org", false);
+        assert!(!scripts.iter().any(|s| s["@type"] == "BreadcrumbList"));
+    }
+
+    // ── after_compile end-to-end ───────────────────────────────
+
+    #[test]
+    fn after_compile_no_op_when_site_missing() {
+        let dir = tempdir().unwrap();
+        let nope = dir.path().join("nope");
+        JsonLdPlugin::new(cfg()).after_compile(&ctx(&nope)).unwrap();
+    }
+
+    #[test]
+    fn after_compile_injects_jsonld_into_html() {
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("index.html"),
+            "<html><head><title>X</title></head><body>x</body></html>",
+        )
+        .unwrap();
+        JsonLdPlugin::new(cfg())
+            .after_compile(&ctx(dir.path()))
+            .unwrap();
+        let after = fs::read_to_string(dir.path().join("index.html")).unwrap();
+        assert!(after.contains("application/ld+json"));
+        assert!(after.contains("\"@type\":\"WebPage\""));
+    }
+
+    #[test]
+    fn after_compile_skips_files_with_existing_jsonld() {
+        let dir = tempdir().unwrap();
+        let html = r#"<html><head><script type="application/ld+json">{"@type":"X"}</script><title>X</title></head></html>"#;
+        fs::write(dir.path().join("p.html"), html).unwrap();
+        JsonLdPlugin::new(cfg())
+            .after_compile(&ctx(dir.path()))
+            .unwrap();
+        let after = fs::read_to_string(dir.path().join("p.html")).unwrap();
+        // Only one JSON-LD block — no duplicate injected.
+        assert_eq!(after.matches("application/ld+json").count(), 1);
+        assert!(after.contains(r#"{"@type":"X"}"#));
+    }
+
+    #[test]
+    fn after_compile_skips_files_without_head_tag() {
+        let dir = tempdir().unwrap();
+        let raw = "<!doctype html><html><body>only</body></html>";
+        fs::write(dir.path().join("frag.html"), raw).unwrap();
+        JsonLdPlugin::new(cfg())
+            .after_compile(&ctx(dir.path()))
+            .unwrap();
+        let after = fs::read_to_string(dir.path().join("frag.html")).unwrap();
+        assert_eq!(after, raw);
+    }
+}
