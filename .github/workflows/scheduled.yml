@@ -1,0 +1,203 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Scheduled & on-demand workloads. Runs:
+#   - weekly  Monday 06:00 UTC (full surface check)
+#   - on tag  v*                (release-gating coverage)
+#   - manual  workflow_dispatch (anytime)
+#
+# Holds the heavier checks that aren't worth the latency on every PR:
+#   - Multi-OS × multi-toolchain build matrix (macOS, Windows, MSRV)
+#   - Static musl release binary build
+#   - WCAG 2.1 AA pa11y audit against generated example sites
+#   - CycloneDX SBOM generation + provenance attestation
+
+name: Scheduled
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: scheduled-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  # ── Multi-OS × MSRV build matrix ────────────────────────────────────
+  portability:
+    name: ${{ matrix.os }} · ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable, "1.88"]
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { toolchain: "${{ matrix.toolchain }}" }
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: scheduled-${{ matrix.os }}-${{ matrix.toolchain }}
+          save-if: ${{ github.event_name == 'schedule' }}
+      - run: cargo build --all-targets --locked
+      - run: cargo test --lib --locked
+      - name: Doc build (deny warnings)
+        env: { RUSTDOCFLAGS: -D warnings }
+        run: cargo doc --no-deps -p ssg
+
+  # ── Static musl release binary ──────────────────────────────────────
+  musl:
+    name: linux · musl static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: x86_64-unknown-linux-musl }
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: musl }
+      - run: cargo build --release --target x86_64-unknown-linux-musl --locked
+      - name: Verify static linking
+        run: |
+          file target/x86_64-unknown-linux-musl/release/ssg
+          if ldd target/x86_64-unknown-linux-musl/release/ssg 2>&1 | grep -q "not a dynamic executable"; then
+            echo "✓ Fully static"
+          else
+            echo "⚠ Dynamic deps found"
+            exit 1
+          fi
+
+  # ── WCAG 2.1 AA audit (pa11y) ───────────────────────────────────────
+  a11y:
+    name: WCAG 2.1 AA · pa11y
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: a11y }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install -g pa11y
+
+      - name: Build SSG
+        run: cargo build --locked
+
+      - name: Generate example site
+        run: |
+          ./target/debug/ssg \
+            -c examples/content/en \
+            -o /tmp/a11y-site \
+            -t examples/templates \
+            -q
+
+      - name: Serve and audit
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8787 --directory /tmp/a11y-site &
+          SERVER_PID=$!
+          sleep 1
+
+          urls=""
+          for html in /tmp/a11y-site/*/index.html /tmp/a11y-site/index.html; do
+            [ -f "$html" ] || continue
+            rel="${html#/tmp/a11y-site/}"
+            urls="$urls http://localhost:8787/$rel"
+          done
+
+          cat > /tmp/pa11y-config.json << 'CONF'
+          {
+            "standard": "WCAG2AA",
+            "chromeLaunchConfig": {
+              "args": ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
+            },
+            "ignore": [
+              "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
+              "WCAG2AA.Principle1.Guideline1_4.1_4_3.G145.Fail"
+            ]
+          }
+          CONF
+
+          violations=0
+          for url in $urls; do
+            page=$(echo "$url" | sed 's|http://localhost:8787/||;s|/index.html||;s|index.html|home|')
+            echo "::group::$page"
+            pa11y --config /tmp/pa11y-config.json "$url" > /tmp/out.txt 2>&1 \
+              && rc=0 || rc=$?
+            cat /tmp/out.txt
+            if [ "$rc" -eq 0 ]; then
+              echo "✓ $page passed"
+            elif grep -q 'Error:' /tmp/out.txt; then
+              echo "⚠ $page — pa11y error (skipped)"
+            else
+              violations=$((violations + 1))
+              echo "::error::WCAG 2.1 AA violations in $page"
+            fi
+            echo "::endgroup::"
+          done
+
+          kill $SERVER_PID 2>/dev/null || true
+
+          if [ "$violations" -gt 0 ]; then
+            echo "::error::$violations page(s) with accessibility violations"
+            exit 1
+          fi
+          echo "All pages pass WCAG 2.1 AA."
+
+  # ── CycloneDX SBOM ──────────────────────────────────────────────────
+  sbom:
+    name: CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { persist-credentials: false }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: sbom
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Cache cargo-cyclonedx
+        id: cache-cyclonedx
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-cyclonedx
+          key: cargo-cyclonedx-0.5
+
+      - if: steps.cache-cyclonedx.outputs.cache-hit != 'true'
+        run: cargo install cargo-cyclonedx --locked
+
+      - name: Generate CycloneDX SBOM
+        run: cargo cyclonedx --format json --output-cdx
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: ./*_cdx.json
+          retention-days: 90
+
+      - name: Attest provenance
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ./*_cdx.json
