@@ -157,7 +157,7 @@ where
             fs::create_dir_all(parent)?;
         }
 
-        let src_size = fs::metadata(src_path).map(|m| m.len()).unwrap_or(0);
+        let src_size = fs::metadata(src_path).map_or(0, |m| m.len());
         let written = processor(src_path, &dst_path)?;
 
         bytes_read += src_size;
