@@ -153,12 +153,12 @@ pub mod shortcodes;
 pub mod stream;
 /// Taxonomy generation (tags, categories).
 pub mod taxonomy;
-/// Tera templating engine integration.
-#[cfg(feature = "tera-templates")]
-pub mod tera_engine;
-/// Tera template rendering plugin.
-#[cfg(feature = "tera-templates")]
-pub mod tera_plugin;
+/// Template engine integration (MiniJinja).
+#[cfg(feature = "templates")]
+pub mod template_engine;
+/// Template rendering plugin.
+#[cfg(feature = "templates")]
+pub mod template_plugin;
 /// File-watching for live rebuild.
 pub mod watch;
 /// Re-exports

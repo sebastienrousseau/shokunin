@@ -182,9 +182,9 @@ pub fn register_default_plugins(
     plugins.register(drafts::DraftPlugin::new(include_drafts));
     plugins.register(shortcodes::ShortcodePlugin);
 
-    // Tera templating (must run first in after_compile)
-    #[cfg(feature = "tera-templates")]
-    plugins.register(crate::tera_plugin::TeraPlugin::from_template_dir(
+    // Template engine (must run first in after_compile)
+    #[cfg(feature = "templates")]
+    plugins.register(crate::template_plugin::TemplatePlugin::from_template_dir(
         &config.template_dir,
     ));
 
