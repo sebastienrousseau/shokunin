@@ -10,6 +10,7 @@
 FROM rust:1.88-slim AS builder
 
 WORKDIR /usr/src/ssg
+# hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*

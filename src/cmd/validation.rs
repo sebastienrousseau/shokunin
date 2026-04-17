@@ -137,6 +137,7 @@ pub(super) fn validate_path_safety(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_os = "windows"))]
     use clap::Command;
     use tempfile::tempdir;
 
