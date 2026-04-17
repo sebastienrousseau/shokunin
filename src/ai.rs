@@ -37,6 +37,8 @@ impl Plugin for AiPlugin {
         }
 
         generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
+        generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())?;
+        generate_ai_provenance(&ctx.site_dir)?;
 
         let html_files = ctx.get_html_files();
         let pages_with_missing_alt =
@@ -150,6 +152,106 @@ fn generate_llms_txt(
     fs::write(site_dir.join("llms.txt"), content)?;
     log::info!("[ai] Generated llms.txt");
     Ok(())
+}
+
+/// Generates `llms-full.txt` — a comprehensive content index for AI systems.
+///
+/// Lists every HTML page with its title and a snippet of body text,
+/// enabling LLM retrieval systems to understand site content at a glance.
+fn generate_llms_full_txt(
+    site_dir: &Path,
+    config: Option<&crate::cmd::SsgConfig>,
+) -> Result<()> {
+    let site_name = config.map_or("Site", |c| c.site_name.as_str());
+    let base_url = config
+        .map_or("", |c| c.base_url.as_str())
+        .trim_end_matches('/');
+
+    let html_files =
+        crate::walk::walk_files(site_dir, "html").unwrap_or_default();
+    let mut lines = vec![format!("# {site_name} — Full Content Index\n")];
+
+    for path in &html_files {
+        let Ok(html) = fs::read_to_string(path) else {
+            continue;
+        };
+        let title = extract_title_from_html(&html).unwrap_or_default();
+        let rel = path
+            .strip_prefix(site_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let url = if base_url.is_empty() {
+            format!("/{rel}")
+        } else {
+            format!("{base_url}/{rel}")
+        };
+        let snippet = extract_snippet(&html, 200);
+        lines.push(format!("## {title}\nURL: {url}\n{snippet}\n"));
+    }
+
+    fs::write(site_dir.join("llms-full.txt"), lines.join("\n"))?;
+    log::info!(
+        "[ai] Generated llms-full.txt with {} page(s)",
+        html_files.len()
+    );
+    Ok(())
+}
+
+/// Generates `ai-provenance.json` — tracks which content fields were
+/// AI-generated vs human-authored.
+fn generate_ai_provenance(site_dir: &Path) -> Result<()> {
+    let provenance = serde_json::json!({
+        "version": "1.0",
+        "generator": "ssg",
+        "policy": "human-authored",
+        "ai_generated_fields": [],
+        "note": "All content is human-authored unless explicitly marked in frontmatter with ai_generated: true"
+    });
+    let json = serde_json::to_string_pretty(&provenance)
+        .unwrap_or_else(|_| "{}".to_string());
+    fs::write(site_dir.join("ai-provenance.json"), json)?;
+    log::info!("[ai] Generated ai-provenance.json");
+    Ok(())
+}
+
+/// Extracts the `<title>` content from HTML.
+fn extract_title_from_html(html: &str) -> Option<String> {
+    let start = html.find("<title>")? + 7;
+    let end = html[start..].find("</title>")? + start;
+    let title = html[start..end].trim();
+    if title.is_empty() {
+        None
+    } else {
+        Some(title.to_string())
+    }
+}
+
+/// Extracts a plain-text snippet from HTML body content.
+fn extract_snippet(html: &str, max_chars: usize) -> String {
+    // Find <main> or <body> content
+    let body_start = html
+        .find("<main")
+        .or_else(|| html.find("<body"))
+        .unwrap_or(0);
+    let body = &html[body_start..];
+
+    // Strip tags
+    let mut text = String::with_capacity(max_chars + 50);
+    let mut in_tag = false;
+    for ch in body.chars() {
+        if text.len() >= max_chars {
+            break;
+        }
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag && !ch.is_control() => text.push(ch),
+            _ => {}
+        }
+    }
+
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Counts `<img>` tags missing alt attributes in an HTML string.

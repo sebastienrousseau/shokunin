@@ -162,6 +162,10 @@ pub fn execute_build_pipeline(
 
     plugins.run_after_compile(&ctx)?;
 
+    // Fused transform pass: read each HTML once → pipe through all
+    // transform plugins → write once. Eliminates redundant I/O.
+    plugins.run_fused_transforms(&ctx)?;
+
     // Rebuild and save cache: snapshot all HTML files in site_dir
     if let Some(ref mut cache) = ctx.cache {
         if let Ok(files) = walk::walk_files(site_dir, "html") {

@@ -566,12 +566,23 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 #ssg-search-header svg{width:20px;height:20px;stroke:#9ca3af;fill:none;stroke-width:2;flex-shrink:0}
 #ssg-search-input{flex:1;padding:16px 12px;font-size:16px;border:none;outline:none;background:transparent}
 #ssg-search-results{max-height:50vh;overflow-y:auto}
+#ssg-sr-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
 .ssg-result{display:block;padding:12px 20px;text-decoration:none;color:#111;border-bottom:1px solid #f3f4f6;transition:background .1s}
 .ssg-result:hover,.ssg-result.active{background:#ecfdf5}
 .ssg-result-title{font-weight:600;font-size:15px;margin-bottom:3px}
 .ssg-result-snippet{font-size:13px;color:#595960;line-height:1.5}
 .ssg-result-snippet mark{background:#fef08a;color:inherit;border-radius:2px;padding:0 2px}
 .ssg-no-results{padding:32px 20px;text-align:center;color:#595960;font-size:14px}
+.ssg-no-results[role="status"]{}
+/* Forced-colours / Windows High Contrast Mode */
+@media(forced-colors:active){
+#ssg-search-btn{border:1px solid ButtonText}
+#ssg-search-btn:focus{outline:2px solid Highlight}
+#ssg-search-input{border:1px solid CanvasText}
+#ssg-search-input:focus{outline:2px solid Highlight}
+.ssg-result:focus,.ssg-result.active{outline:2px solid Highlight}
+.ssg-result-snippet mark{background:Highlight;color:HighlightText}
+}
 .ssg-search-footer{display:flex;gap:16px;padding:10px 20px;font-size:12px;color:#595960;border-top:1px solid #e5e7eb;justify-content:flex-end}
 .ssg-search-footer kbd{font-family:inherit;font-size:11px;padding:1px 5px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:3px}
 /* ── Dark mode (media query + data-theme attribute) ── */
@@ -617,7 +628,8 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
 <input id="ssg-search-input" type="search" placeholder="{{SSG_INPUT_PLACEHOLDER}}" autocomplete="off" aria-label="{{SSG_INPUT_ARIA}}"/>
 </div>
-<div id="ssg-search-results"></div>
+<div id="ssg-search-results" aria-live="polite"></div>
+<div id="ssg-sr-status" role="status" aria-live="polite" aria-atomic="true"></div>
 <div class="ssg-search-footer"><span><kbd>Esc</kbd> {{SSG_FOOTER_CLOSE}}</span><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> {{SSG_FOOTER_NAVIGATE}}</span><span><kbd>Enter</kbd> {{SSG_FOOTER_OPEN}}</span></div>
 </div>
 </div>
@@ -638,9 +650,10 @@ function snippet(content,q,len){len=len||150;if(!q)return esc(content.substring(
 function search(q){if(!idx||!q){results.innerHTML='';return}q=q.trim();if(!q){results.innerHTML='';return}var ql=q.toLowerCase(),hits=[];
 for(var i=0;i<idx.length&&hits.length<20;i++){var e=idx[i],s=0;if(e.title.toLowerCase().indexOf(ql)>=0)s+=10;if(e.content.toLowerCase().indexOf(ql)>=0)s+=5;for(var h=0;h<e.headings.length;h++){if(e.headings[h].toLowerCase().indexOf(ql)>=0){s+=3;break}}if(s>0)hits.push({entry:e,score:s})}
 hits.sort(function(a,b){return b.score-a.score});
-if(!hits.length){results.innerHTML='<div class="ssg-no-results">{{SSG_NO_RESULTS}}</div>';return}
+var sr=document.getElementById('ssg-sr-status');
+if(!hits.length){results.innerHTML='<div class="ssg-no-results" role="status">{{SSG_NO_RESULTS}}</div>';if(sr)sr.textContent='No results found';return}
 var html='';for(var j=0;j<hits.length;j++){var e=hits[j].entry;html+='<a class="ssg-result" href="'+esc(lp+e.url)+'">'+'<div class="ssg-result-title">'+highlight(e.title,q)+'</div>'+'<div class="ssg-result-snippet">'+snippet(e.content,q)+'</div></a>'}
-results.innerHTML=html;active=-1}
+results.innerHTML=html;active=-1;if(sr)sr.textContent=hits.length+' result'+(hits.length===1?'':'s')+' found'}
 function nav(dir){var items=results.querySelectorAll('.ssg-result');if(!items.length)return;if(active>=0&&items[active])items[active].classList.remove('active');active+=dir;if(active<0)active=items.length-1;if(active>=items.length)active=0;items[active].classList.add('active');items[active].scrollIntoView({block:'nearest'})}
 btn.addEventListener('click',function(){open()});
 input.addEventListener('input',function(){search(this.value)});

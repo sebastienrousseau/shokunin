@@ -255,6 +255,30 @@ pub trait Plugin: fmt::Debug + Send + Sync {
         Ok(())
     }
 
+    /// Per-file HTML transform hook — called once per HTML file during
+    /// the fused transform pass.
+    ///
+    /// Receives the current HTML content and returns the (possibly modified)
+    /// HTML. The default implementation returns the input unchanged.
+    ///
+    /// Plugins that implement this hook avoid redundant file I/O — the
+    /// pipeline reads each HTML file once, pipes it through all plugins'
+    /// `transform_html` hooks, then writes the result once.
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        Ok(html.to_string())
+    }
+
+    /// Returns `true` if this plugin implements `transform_html`.
+    /// Override to `true` to opt in to the fused transform pass.
+    fn has_transform(&self) -> bool {
+        false
+    }
+
     /// Called before the development server starts serving files.
     ///
     /// Use this hook to inject dev-mode scripts, set up live-reload,
@@ -365,6 +389,50 @@ impl PluginManager {
                     e
                 )
             })?;
+        }
+        Ok(())
+    }
+
+    /// Runs the fused HTML transform pass: reads each HTML file once,
+    /// pipes through all plugins with `has_transform() == true`, writes once.
+    ///
+    /// This eliminates N separate read/write cycles (where N = number of
+    /// transform plugins) per HTML file.
+    pub fn run_fused_transforms(&self, ctx: &PluginContext) -> Result<()> {
+        use rayon::prelude::*;
+
+        let transform_plugins: Vec<_> =
+            self.plugins.iter().filter(|p| p.has_transform()).collect();
+
+        if transform_plugins.is_empty() {
+            return Ok(());
+        }
+
+        let html_files = ctx.get_html_files();
+        let transformed = std::sync::atomic::AtomicUsize::new(0);
+
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
+            let original = fs::read_to_string(path)?;
+            let mut html = original.clone();
+
+            for plugin in &transform_plugins {
+                html = plugin.transform_html(&html, path, ctx)?;
+            }
+
+            if html != original {
+                fs::write(path, &html)?;
+                let _ = transformed
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(())
+        })?;
+
+        let count = transformed.load(std::sync::atomic::Ordering::Relaxed);
+        if count > 0 {
+            log::info!(
+                "[pipeline] Fused transform: {count} file(s), {} plugin(s)",
+                transform_plugins.len()
+            );
         }
         Ok(())
     }

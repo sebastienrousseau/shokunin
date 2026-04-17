@@ -124,6 +124,8 @@ pub mod image_plugin;
 pub mod islands;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// Local LLM content augmentation plugin.
+pub mod llm;
 /// Logging infrastructure.
 pub mod logging;
 /// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
