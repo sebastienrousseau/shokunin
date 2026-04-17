@@ -198,6 +198,19 @@ fn render_inline_shortcode(tag: &str) -> String {
             html.push_str("</figure>");
             html
         }
+        "island" => {
+            let component = parts.get("component").map_or("", String::as_str);
+            let hydrate = parts.get("hydrate").map_or("visible", String::as_str);
+            let props = parts.get("props").map_or("{}", String::as_str);
+            if component.is_empty() {
+                return "<!-- island: missing component -->".to_string();
+            }
+            format!(
+                "<ssg-island component=\"{component}\" hydrate=\"{hydrate}\" props='{props}'>\
+                 <template shadowrootmode=\"open\"><slot></slot></template>\
+                 </ssg-island>"
+            )
+        }
         _ => format!("<!-- unknown shortcode: {name} -->"),
     }
 }
