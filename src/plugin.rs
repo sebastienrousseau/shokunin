@@ -157,6 +157,8 @@ pub struct PluginContext {
     pub config: Option<SsgConfig>,
     /// Content-addressed plugin cache for incremental builds.
     pub cache: Option<PluginCache>,
+    /// Memory budget for streaming compilation.
+    pub memory_budget: Option<crate::streaming::MemoryBudget>,
 }
 
 impl PluginContext {
@@ -175,6 +177,7 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: None,
             cache: None,
+            memory_budget: None,
         }
     }
 
@@ -194,6 +197,7 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: Some(config),
             cache: None,
+            memory_budget: None,
         }
     }
 }
