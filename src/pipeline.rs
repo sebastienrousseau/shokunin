@@ -10,7 +10,7 @@ use staticdatagen::compile;
 
 use crate::cmd::SsgConfig;
 use crate::{
-    accessibility, ai, assets, content, deploy, drafts, highlight, i18n,
+    accessibility, ai, assets, content, csp, deploy, drafts, highlight, i18n,
     livereload, pagination, plugin, plugins as plugins_mod, postprocess,
     search, seo, shortcodes, taxonomy, walk,
 };
@@ -230,6 +230,9 @@ pub fn register_default_plugins(
             plugins.register(i18n::I18nPlugin::new(i18n_cfg.clone()));
         }
     }
+
+    // CSP hardening: extract inline styles/scripts to external files with SRI
+    plugins.register(csp::CspPlugin);
 
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);

@@ -103,6 +103,8 @@ pub mod cache;
 pub mod cmd;
 /// Typed content collections with frontmatter schema validation.
 pub mod content;
+/// Content Security Policy hardening: inline extraction + SRI.
+pub mod csp;
 /// Deployment adapter generation.
 pub mod deploy;
 /// Draft content filtering.
