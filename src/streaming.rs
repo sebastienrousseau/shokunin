@@ -176,9 +176,7 @@ pub fn should_stream(
         return true;
     }
 
-    let count = walk::walk_files(content_dir, "md")
-        .map(|f| f.len())
-        .unwrap_or(0);
+    let count = walk::walk_files(content_dir, "md").map_or(0, |f| f.len());
 
     count > budget.batch_size
 }
