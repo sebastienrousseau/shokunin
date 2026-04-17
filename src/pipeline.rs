@@ -135,14 +135,21 @@ pub fn execute_build_pipeline(
 
     // Use streaming compilation for large sites when --max-memory is set
     // or the site exceeds the default batch size.
-    let budget = ctx.memory_budget.unwrap_or_else(streaming::MemoryBudget::default_budget);
+    let budget = ctx
+        .memory_budget
+        .unwrap_or_else(streaming::MemoryBudget::default_budget);
     let explicitly_set = ctx.memory_budget.is_some();
 
     if streaming::should_stream(content_dir, &budget, explicitly_set) {
         let batches = streaming::batched_content_files(content_dir, &budget)?;
         for (i, batch) in batches.iter().enumerate() {
             streaming::compile_batch(
-                batch, content_dir, build_dir, site_dir, template_dir, i,
+                batch,
+                content_dir,
+                build_dir,
+                site_dir,
+                template_dir,
+                i,
             )?;
         }
     } else {
@@ -209,9 +216,11 @@ pub fn register_default_plugins(
 
     // Template engine (must run first in after_compile)
     #[cfg(feature = "templates")]
-    plugins.register(crate::template_plugin::TemplatePlugin::from_template_dir(
-        &config.template_dir,
-    ));
+    plugins.register(
+        crate::template_plugin::TemplatePlugin::from_template_dir(
+            &config.template_dir,
+        ),
+    );
 
     // Post-processing fixes for staticdatagen output (run early,
     // before SEO plugins read/modify the HTML)

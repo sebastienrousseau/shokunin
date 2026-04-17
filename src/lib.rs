@@ -117,11 +117,11 @@ pub mod fs_ops;
 pub mod highlight;
 /// Internationalisation: hreflang injection, per-locale sitemaps, lang switcher.
 pub mod i18n;
-/// Interactive islands — lazy-hydrating Web Components.
-pub mod islands;
 /// Image optimization with WebP and responsive srcset.
 #[cfg(feature = "image-optimization")]
 pub mod image_plugin;
+/// Interactive islands — lazy-hydrating Web Components.
+pub mod islands;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
 /// Logging infrastructure.

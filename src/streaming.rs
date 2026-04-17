@@ -204,7 +204,10 @@ mod tests {
     #[test]
     fn memory_budget_minimum_batch_size() {
         let budget = MemoryBudget::from_mb(0);
-        assert!(budget.batch_size >= 10, "batch size should have a floor of 10");
+        assert!(
+            budget.batch_size >= 10,
+            "batch size should have a floor of 10"
+        );
     }
 
     #[test]
@@ -225,10 +228,17 @@ mod tests {
         fs::create_dir_all(&content).unwrap();
 
         for i in 0..25 {
-            fs::write(content.join(format!("page{i}.md")), format!("# Page {i}")).unwrap();
+            fs::write(
+                content.join(format!("page{i}.md")),
+                format!("# Page {i}"),
+            )
+            .unwrap();
         }
 
-        let budget = MemoryBudget { max_bytes: 0, batch_size: 10 };
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 10,
+        };
         let batches = batched_content_files(&content, &budget).unwrap();
 
         assert_eq!(batches.len(), 3); // 10 + 10 + 5

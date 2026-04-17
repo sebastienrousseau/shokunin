@@ -35,7 +35,7 @@ impl Default for TemplateConfig {
     }
 }
 
-/// Wraps MiniJinja and provides site-generation-specific rendering.
+/// Wraps `MiniJinja` and provides site-generation-specific rendering.
 #[cfg(feature = "templates")]
 #[derive(Debug)]
 pub struct TemplateEngine {
@@ -84,8 +84,10 @@ impl TemplateEngine {
         site_globals: &HashMap<String, serde_json::Value>,
     ) -> Result<String> {
         // Build page context
-        let mut page: serde_json::Map<String, serde_json::Value> =
-            frontmatter.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let mut page: serde_json::Map<String, serde_json::Value> = frontmatter
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         let _ = page.insert(
             "content".to_string(),
             serde_json::Value::String(page_content.to_string()),
@@ -93,14 +95,14 @@ impl TemplateEngine {
 
         // Build the full render context
         let mut ctx = serde_json::Map::new();
-        let _ = ctx.insert(
-            "page".to_string(),
-            serde_json::Value::Object(page),
-        );
+        let _ = ctx.insert("page".to_string(), serde_json::Value::Object(page));
         let _ = ctx.insert(
             "site".to_string(),
             serde_json::Value::Object(
-                site_globals.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                site_globals
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
             ),
         );
 
@@ -201,9 +203,7 @@ impl TemplateEngine {
             let value: Option<serde_json::Value> = match ext.as_str() {
                 "toml" => toml::from_str::<serde_json::Value>(&content).ok(),
                 "json" => serde_json::from_str(&content).ok(),
-                "yml" | "yaml" => {
-                    serde_json::from_str(&content).ok()
-                }
+                "yml" | "yaml" => serde_json::from_str(&content).ok(),
                 _ => None,
             };
 

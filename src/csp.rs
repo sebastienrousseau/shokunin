@@ -10,10 +10,7 @@
 use crate::plugin::{Plugin, PluginContext};
 use crate::walk;
 use anyhow::Result;
-use std::{
-    fs,
-    path::Path,
-};
+use std::{fs, path::Path};
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
 ///
@@ -42,8 +39,8 @@ impl Plugin for CspPlugin {
         }
 
         let csp_dir = ctx.site_dir.join("_csp");
-        let html_files = walk::walk_files(&ctx.site_dir, "html")
-            .unwrap_or_default();
+        let html_files =
+            walk::walk_files(&ctx.site_dir, "html").unwrap_or_default();
 
         if html_files.is_empty() {
             return Ok(());
@@ -85,7 +82,9 @@ fn extract_inline_blocks(
     let mut count = 0;
 
     // Extract <style>…</style> blocks
-    while let Some((before, content, after)) = find_inline_block(&result, "style") {
+    while let Some((before, content, after)) =
+        find_inline_block(&result, "style")
+    {
         let hash = fnv_hash(content.as_bytes());
         let filename = format!("{hash:016x}.css");
         let file_path = csp_dir.join(&filename);
@@ -139,7 +138,10 @@ fn extract_inline_blocks(
 
 /// Finds the first inline `<style>…</style>` block and returns
 /// `(html_before, style_content, html_after)`.
-fn find_inline_block<'a>(html: &'a str, tag: &str) -> Option<(&'a str, &'a str, &'a str)> {
+fn find_inline_block<'a>(
+    html: &'a str,
+    tag: &str,
+) -> Option<(&'a str, &'a str, &'a str)> {
     let open = format!("<{tag}>");
     let close = format!("</{tag}>");
 
@@ -183,7 +185,8 @@ fn find_inline_script(html: &str) -> Option<(String, String, String)> {
 
         let content_start = tag_end + 1;
         let close_tag = "</script>";
-        let content_end = html[content_start..].find(close_tag)? + content_start;
+        let content_end =
+            html[content_start..].find(close_tag)? + content_start;
         let end = content_end + close_tag.len();
 
         let content = &html[content_start..content_end];
@@ -202,8 +205,7 @@ fn find_inline_script(html: &str) -> Option<(String, String, String)> {
 
 /// Removes `'unsafe-inline'` from CSP `<meta>` tags in HTML.
 fn remove_unsafe_inline_from_csp(html: &str) -> String {
-    html.replace("'unsafe-inline'", "")
-        .replace("  ;", " ;")
+    html.replace("'unsafe-inline'", "").replace("  ;", " ;")
 }
 
 /// FNV-1a 64-bit hash.
@@ -244,7 +246,8 @@ mod tests {
 
     #[test]
     fn extract_script_block() {
-        let html = "<html><body><script>console.log('hi');</script></body></html>";
+        let html =
+            "<html><body><script>console.log('hi');</script></body></html>";
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
@@ -285,7 +288,8 @@ mod tests {
 
     #[test]
     fn skips_external_scripts() {
-        let html = r#"<html><body><script src="/app.js"></script></body></html>"#;
+        let html =
+            r#"<html><body><script src="/app.js"></script></body></html>"#;
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
@@ -341,12 +345,7 @@ mod tests {
         )
         .unwrap();
 
-        let ctx = PluginContext::new(
-            dir.path(),
-            dir.path(),
-            &site,
-            dir.path(),
-        );
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         CspPlugin.after_compile(&ctx).unwrap();
 
         let output = fs::read_to_string(site.join("index.html")).unwrap();

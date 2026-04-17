@@ -20,11 +20,7 @@
 use crate::plugin::{Plugin, PluginContext};
 use crate::walk;
 use anyhow::Result;
-use std::{
-    collections::BTreeSet,
-    fs,
-    path::Path,
-};
+use std::{collections::BTreeSet, fs, path::Path};
 
 /// Plugin that enables interactive islands via Web Components.
 #[derive(Debug, Clone, Copy)]
@@ -40,8 +36,8 @@ impl Plugin for IslandPlugin {
             return Ok(());
         }
 
-        let html_files = walk::walk_files(&ctx.site_dir, "html")
-            .unwrap_or_default();
+        let html_files =
+            walk::walk_files(&ctx.site_dir, "html").unwrap_or_default();
 
         // Scan all HTML files for <ssg-island component="..."> references
         let mut components = BTreeSet::new();
@@ -64,7 +60,8 @@ impl Plugin for IslandPlugin {
         fs::create_dir_all(&islands_dir)?;
 
         // Copy user-provided island bundles from source islands/ dir
-        let source_islands = ctx.content_dir
+        let source_islands = ctx
+            .content_dir
             .parent()
             .unwrap_or(&ctx.content_dir)
             .join("islands");
@@ -140,7 +137,8 @@ fn inject_island_loader(path: &Path) -> Result<()> {
         return Ok(()); // Already injected
     }
 
-    let script = "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
+    let script =
+        "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
 
     let output = if let Some(pos) = html.rfind("</body>") {
         format!("{}{script}{}", &html[..pos], &html[pos..])
@@ -154,8 +152,8 @@ fn inject_island_loader(path: &Path) -> Result<()> {
 
 /// The `<ssg-island>` custom element loader.
 ///
-/// - `hydrate="visible"`: loads when element enters viewport (IntersectionObserver)
-/// - `hydrate="idle"`: loads during browser idle time (requestIdleCallback)
+/// - `hydrate="visible"`: loads when element enters viewport (`IntersectionObserver`)
+/// - `hydrate="idle"`: loads during browser idle time (`requestIdleCallback`)
 /// - `hydrate="interaction"`: loads on first click/focus/hover
 const ISLAND_LOADER_JS: &str = r#"/**
  * SSG Island — lazy-hydrating Web Component loader.
@@ -237,7 +235,8 @@ mod tests {
 
     #[test]
     fn extract_components_empty_html() {
-        let components = extract_island_components("<html><body></body></html>");
+        let components =
+            extract_island_components("<html><body></body></html>");
         assert!(components.is_empty());
     }
 
@@ -293,7 +292,11 @@ mod tests {
         fs::create_dir_all(&islands_src).unwrap();
 
         // Write a user island bundle
-        fs::write(islands_src.join("counter.js"), "export default (el, props) => {};").unwrap();
+        fs::write(
+            islands_src.join("counter.js"),
+            "export default (el, props) => {};",
+        )
+        .unwrap();
 
         // Write HTML with an island
         fs::write(
@@ -301,12 +304,7 @@ mod tests {
             "<html><body><ssg-island component=\"counter\" hydrate=\"visible\"></ssg-island></body></html>",
         ).unwrap();
 
-        let ctx = PluginContext::new(
-            &content,
-            dir.path(),
-            &site,
-            dir.path(),
-        );
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
         IslandPlugin.after_compile(&ctx).unwrap();
 
         // Check manifest was created

@@ -333,7 +333,8 @@ mod tests {
 
     #[test]
     fn from_template_dir_nests_under_tera_subdirectory() {
-        let plugin = TemplatePlugin::from_template_dir(Path::new("/my/templates"));
+        let plugin =
+            TemplatePlugin::from_template_dir(Path::new("/my/templates"));
         assert!(plugin.config.template_dir.ends_with("templates/tera"));
     }
 

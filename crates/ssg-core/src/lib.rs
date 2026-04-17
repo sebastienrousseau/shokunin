@@ -33,7 +33,7 @@ use std::collections::HashMap;
 /// ```
 #[must_use]
 pub fn compile_markdown(input: &str) -> String {
-    use pulldown_cmark::{Options, Parser, html};
+    use pulldown_cmark::{html, Options, Parser};
 
     let options = Options::ENABLE_TABLES
         | Options::ENABLE_STRIKETHROUGH
@@ -58,7 +58,9 @@ pub fn compile_markdown(input: &str) -> String {
 /// assert_eq!(fm.get("title").and_then(|v| v.as_str()), Some("Hello"));
 /// assert!(body.contains("# Body"));
 /// ```
-pub fn parse_frontmatter(input: &str) -> (HashMap<String, serde_json::Value>, String) {
+pub fn parse_frontmatter(
+    input: &str,
+) -> (HashMap<String, serde_json::Value>, String) {
     let trimmed = input.trim_start();
 
     // TOML frontmatter: +++...+++
@@ -69,7 +71,9 @@ pub fn parse_frontmatter(input: &str) -> (HashMap<String, serde_json::Value>, St
             if let Ok(value) = toml::from_str::<serde_json::Value>(fm_str) {
                 if let Some(map) = value.as_object() {
                     return (
-                        map.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                        map.iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect(),
                         body.to_string(),
                     );
                 }
@@ -117,7 +121,10 @@ pub fn parse_frontmatter(input: &str) -> (HashMap<String, serde_json::Value>, St
         if let Some(end_pos) = end {
             let fm_str = &trimmed[..end_pos];
             let body = &trimmed[end_pos..];
-            if let Ok(map) = serde_json::from_str::<HashMap<String, serde_json::Value>>(fm_str) {
+            if let Ok(map) = serde_json::from_str::<
+                HashMap<String, serde_json::Value>,
+            >(fm_str)
+            {
                 return (map, body.to_string());
             }
         }
@@ -129,7 +136,9 @@ pub fn parse_frontmatter(input: &str) -> (HashMap<String, serde_json::Value>, St
 /// Compile a complete page: parse frontmatter, render Markdown to HTML.
 ///
 /// Returns `(frontmatter, html_body)`.
-pub fn compile_page(input: &str) -> Result<(HashMap<String, serde_json::Value>, String)> {
+pub fn compile_page(
+    input: &str,
+) -> Result<(HashMap<String, serde_json::Value>, String)> {
     let (frontmatter, body) = parse_frontmatter(input);
     let html = compile_markdown(&body);
     Ok((frontmatter, html))
@@ -190,14 +199,17 @@ mod tests {
 
     #[test]
     fn parse_frontmatter_yaml() {
-        let (fm, body) = parse_frontmatter("---\ntitle: Hello\ndate: 2026-01-01\n---\n# Body");
+        let (fm, body) = parse_frontmatter(
+            "---\ntitle: Hello\ndate: 2026-01-01\n---\n# Body",
+        );
         assert_eq!(fm.get("title").and_then(|v| v.as_str()), Some("Hello"));
         assert!(body.contains("# Body"));
     }
 
     #[test]
     fn parse_frontmatter_toml() {
-        let (fm, body) = parse_frontmatter("+++\ntitle = \"Hello\"\n+++\n# Body");
+        let (fm, body) =
+            parse_frontmatter("+++\ntitle = \"Hello\"\n+++\n# Body");
         assert_eq!(fm.get("title").and_then(|v| v.as_str()), Some("Hello"));
         assert!(body.contains("# Body"));
     }
