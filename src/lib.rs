@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/static-site-generator/images/favicon.ico",

@@ -1,0 +1,52 @@
+name: "\U0001F4DA Document"
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  document:
+    name: Build & deploy docs
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate documentation
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+          echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
+
+      - name: Write CNAME file
+        run: echo 'doc.static-site-generator.com' > ./target/doc/CNAME
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: target/doc
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          publish_branch: gh-pages
+          cname: true
+          commit_message: "Deploy documentation at ${{ github.sha }}"
+          user_name: github-actions
+          user_email: actions@users.noreply.github.com
