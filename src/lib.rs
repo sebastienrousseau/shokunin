@@ -532,6 +532,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-only: invalid paths behave differently on Windows
     #[test]
     fn test_create_directories_failure() {
         let invalid_paths = Paths {
@@ -592,6 +593,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-only: invalid paths behave differently on Windows
     #[test]
     fn test_handle_server_failure() {
         let temp_dir = tempdir().unwrap();
@@ -625,6 +627,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-only: invalid paths behave differently on Windows
     #[test]
     fn test_create_directories_partial_failure() {
         let temp_dir = tempdir().unwrap();
@@ -943,6 +946,7 @@ mod tests {
     }
 
     /// Tests copying with invalid destination
+    #[cfg(not(target_os = "windows"))] // Unix-only: invalid paths behave differently on Windows
     #[test]
     fn test_copy_invalid_destination_async() -> Result<()> {
         let src_dir = tempdir()?;
@@ -1660,6 +1664,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-only: invalid paths behave differently on Windows
     #[test]
     fn test_copy_dir_with_progress_destination_creation_failure() {
         let src_dir = tempdir().unwrap();
