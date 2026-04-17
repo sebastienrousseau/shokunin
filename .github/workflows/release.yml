@@ -329,7 +329,9 @@ jobs:
   # ── GitHub Release + crates.io publish ──────────────────────────
   publish:
     name: github release · crates.io
-    needs: [build, ghcr]
+    needs: [build]
+    # GHCR is best-effort (multi-arch builds can be flaky); don't gate
+    # the GitHub Release or crates.io publish on it.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

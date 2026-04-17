@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
-# Two-stage build: cargo-chef for cached dependency layer, then
-# debian-slim runtime with the static-site-generator binary.
+# Two-stage build: compile with the full Rust toolchain, then copy the
+# binary into a minimal Debian runtime image.
 #
 # Image: ghcr.io/sebastienrousseau/static-site-generator
 # Built and pushed by .github/workflows/release.yml on every `v*` tag.
@@ -10,28 +10,16 @@
 FROM rust:1.88-slim AS builder
 
 WORKDIR /usr/src/ssg
+
 # hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends pkg-config libssl-dev \
  && rm -rf /var/lib/apt/lists/*
 
-# Copy manifests first so the dependency layer caches across changes
-# to source files only.
-COPY Cargo.toml Cargo.lock build.rs rust-toolchain.toml ./
-COPY crates/serde_yml/Cargo.toml crates/serde_yml/Cargo.toml
-RUN mkdir -p src crates/serde_yml/src \
- && echo "fn main() {}" > src/main.rs \
- && echo "pub fn _stub() {}" > crates/serde_yml/src/lib.rs \
- && cargo build --release --locked --bin ssg \
- && rm -rf src crates/serde_yml/src
-
-# Now copy the real source and rebuild only the bin target.
-COPY src ./src
-COPY crates ./crates
-COPY benches ./benches
-COPY templates ./templates
-COPY themes ./themes
-RUN touch src/main.rs && cargo build --release --locked --bin ssg
+# Copy everything and build. No dep-caching trick — the workspace's
+# [patch.crates-io] section makes skeleton builds unreliable.
+COPY . .
+RUN cargo build --release --locked --bin ssg
 
 # ── Stage 2: runtime ───────────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
@@ -42,6 +30,7 @@ LABEL org.opencontainers.image.source="https://github.com/sebastienrousseau/stat
 LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
 LABEL org.opencontainers.image.authors="Sebastien Rousseau <contact@sebastienrousseau.com>"
 
+# hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates libssl3 \
  && rm -rf /var/lib/apt/lists/* \
