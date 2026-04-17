@@ -138,6 +138,142 @@ impl LlmPlugin {
             results,
         })
     }
+
+    /// Audits and rewrites failing Markdown files via LLM refinement.
+    ///
+    /// For each file that exceeds `target_grade`:
+    /// 1. Extracts the prose body (strips frontmatter)
+    /// 2. Sends it to the LLM with a simplification prompt
+    /// 3. If the refined version scores better, writes it back
+    ///    (preserving the original frontmatter)
+    /// 4. If `dry_run`, prints the diff without writing
+    ///
+    /// Returns the number of files rewritten.
+    pub fn audit_and_fix(
+        content_dir: &Path,
+        config: &LlmConfig,
+    ) -> Result<usize> {
+        if !is_ollama_available(&config.endpoint) {
+            log::warn!(
+                "[llm] Ollama not reachable at {}, skipping auto-fix",
+                config.endpoint
+            );
+            return Ok(0);
+        }
+
+        let report = Self::audit_all(content_dir, config.target_grade)?;
+        let failing: Vec<_> =
+            report.results.iter().filter(|r| !r.passes).collect();
+
+        if failing.is_empty() {
+            log::info!(
+                "[llm] All {} file(s) pass grade {:.0}",
+                report.total_files,
+                config.target_grade
+            );
+            return Ok(0);
+        }
+
+        log::info!(
+            "[llm] {} file(s) exceed grade {:.0}, attempting refinement",
+            failing.len(),
+            config.target_grade
+        );
+
+        let mut rewritten = 0usize;
+
+        for result in &failing {
+            let path = content_dir.join(&result.path);
+            let original = fs::read_to_string(&path)?;
+            let (frontmatter_block, body) = split_frontmatter(&original);
+            let body_trimmed = body.trim();
+
+            if body_trimmed.is_empty() {
+                continue;
+            }
+
+            let prompt = format!(
+                "Rewrite this Markdown content at a 6th-grade reading level. \
+                 Rules:\n\
+                 - Max 20 words per sentence\n\
+                 - Max 4 sentences per paragraph\n\
+                 - Use simple, common words\n\
+                 - Keep ALL facts, numbers, dates, and code blocks exactly the same\n\
+                 - Keep ALL Markdown headings (#, ##, ###) and formatting\n\
+                 - Return ONLY the rewritten Markdown, nothing else\n\n\
+                 {body_trimmed}"
+            );
+
+            if let Some(refined) = generate_with_refinement(
+                &config.endpoint,
+                &config.model,
+                &prompt,
+                config.target_grade,
+                config.max_refinement_attempts,
+            ) {
+                let refined_audit = ReadabilityAudit::analyze(&refined);
+                let original_audit = ReadabilityAudit::analyze(body_trimmed);
+
+                if refined_audit.grade_level < original_audit.grade_level {
+                    if config.dry_run {
+                        log::info!(
+                            "[llm] [dry-run] {}: grade {:.1} → {:.1}",
+                            result.path,
+                            original_audit.grade_level,
+                            refined_audit.grade_level
+                        );
+                    } else {
+                        // Reassemble: frontmatter + refined body
+                        let output =
+                            format!("{frontmatter_block}\n{refined}\n");
+                        fs::write(&path, output)?;
+                        log::info!(
+                            "[llm] Rewrote {}: grade {:.1} → {:.1}",
+                            result.path,
+                            original_audit.grade_level,
+                            refined_audit.grade_level
+                        );
+                        rewritten += 1;
+                    }
+                } else {
+                    log::warn!(
+                        "[llm] Could not improve {}: grade {:.1} (refined: {:.1})",
+                        result.path,
+                        original_audit.grade_level,
+                        refined_audit.grade_level
+                    );
+                }
+            }
+        }
+
+        Ok(rewritten)
+    }
+}
+
+/// Splits content into `(frontmatter_block, body)`.
+///
+/// The frontmatter block includes delimiters so it can be
+/// reassembled verbatim. Returns `("", content)` if no
+/// frontmatter is found.
+fn split_frontmatter(content: &str) -> (String, String) {
+    let trimmed = content.trim_start();
+    let leading_ws = &content[..content.len() - trimmed.len()];
+
+    for delim in ["---", "+++"] {
+        if let Some(rest) = trimmed.strip_prefix(delim) {
+            if let Some(end) = rest.find(delim) {
+                let fm_end = delim.len() + end + delim.len();
+                let frontmatter = &trimmed[..fm_end];
+                let body = &trimmed[fm_end..];
+                return (
+                    format!("{leading_ws}{frontmatter}"),
+                    body.to_string(),
+                );
+            }
+        }
+    }
+
+    (String::new(), content.to_string())
 }
 
 /// Strips YAML/TOML frontmatter from Markdown content.
@@ -794,6 +930,48 @@ mod tests {
     fn strip_frontmatter_none() {
         let input = "Just plain content.";
         assert_eq!(strip_frontmatter(input), input);
+    }
+
+    #[test]
+    fn split_frontmatter_preserves_delimiters() {
+        let input = "---\ntitle: Hello\ndate: 2026-01-01\n---\n\n# Body text";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.starts_with("---"));
+        assert!(fm.ends_with("---"));
+        assert!(fm.contains("title: Hello"));
+        assert!(body.contains("# Body text"));
+    }
+
+    #[test]
+    fn split_frontmatter_toml_preserves() {
+        let input = "+++\ntitle = \"Hello\"\n+++\nBody.";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.starts_with("+++"));
+        assert!(body.contains("Body."));
+    }
+
+    #[test]
+    fn split_frontmatter_no_frontmatter() {
+        let input = "Just plain content.";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.is_empty());
+        assert_eq!(body, input);
+    }
+
+    #[test]
+    fn audit_and_fix_skips_when_ollama_unavailable() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("test.md"), "---\ntitle: T\n---\nSimple text.")
+            .unwrap();
+
+        let config = LlmConfig {
+            endpoint: "http://localhost:99999".to_string(),
+            ..LlmConfig::default()
+        };
+        let result = LlmPlugin::audit_and_fix(&content, &config).unwrap();
+        assert_eq!(result, 0);
     }
 
     #[test]
