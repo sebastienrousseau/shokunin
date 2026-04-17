@@ -164,21 +164,26 @@ fn livereload_script(port: u16) -> String {
     if(indicator){{indicator.remove();indicator=null;}}
   }}
   function connect(){{
-    var ws=new WebSocket(url);
-    ws.onopen=function(){{delay=1000;hideIndicator();}};
-    ws.onmessage=function(e){{if(e.data==='reload')location.reload();}};
-    ws.onclose=function(){{
-      showIndicator();
-      var d=delay;
-      delay=Math.min(delay*2,maxDelay);
-      setTimeout(connect,d);
-    }};
-    ws.onerror=function(){{ws.close();}};
+    try{{
+      var ws=new WebSocket(url);
+      ws.onopen=function(){{delay=1000;hideIndicator();}};
+      ws.onmessage=function(e){{if(e.data==='reload')location.reload();}};
+      ws.onclose=function(){{
+        var d=delay;
+        delay=Math.min(delay*2,maxDelay);
+        setTimeout(connect,d);
+      }};
+      ws.onerror=function(){{}};
+    }}catch(e){{}}
   }}
-  if(document.readyState==='loading'){{
-    document.addEventListener('DOMContentLoaded',connect);
-  }}else{{
-    connect();
+  // Only connect in development (localhost) and limit retries
+  // to avoid console error spam when the WS server is not running
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname==='0.0.0.0'){{
+    if(document.readyState==='loading'){{
+      document.addEventListener('DOMContentLoaded',connect);
+    }}else{{
+      connect();
+    }}
   }}
 }})();
 </script>

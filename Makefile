@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Makefile using cargo for managing builds and dependencies in a Rust project.
 
 # Default target executed when no arguments are given to make.
@@ -34,6 +36,16 @@ hooks: ## Install the project's git hooks under .githooks/.
 bench: ## Run performance benchmarks (Criterion).
 	@echo "Running benchmarks..."
 	@cargo bench --bench bench
+
+# Run automated accessibility checks against generated HTML.
+.PHONY: a11y
+a11y: build ## Run pa11y accessibility audit on example site.
+	@echo "Generating example site..."
+	@cargo run --release -- -c examples/content/en -o /tmp/ssg-a11y -t examples/templates
+	@echo "Running pa11y (WCAG 2.1 AA)..."
+	@for f in /tmp/ssg-a11y/*/index.html /tmp/ssg-a11y/index.html; do \
+		[ -f "$$f" ] && npx pa11y --standard WCAG2AA "file://$$f" || true; \
+	done
 
 # Generate and open API documentation locally.
 .PHONY: doc

@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ro (Jane Doe)" ## Autorul paginii. (max. 64 de caracter
 banner_alt: "Perete cu plăci verzi și negre" ## Textul alternativ al bannerului site-ului.
 banner_height: "398" ## Înălțimea bannerului site-ului.
 banner_width: "1440" ## Lățimea bannerului site-ului.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Bannerul site-ului.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Bannerul site-ului.
 cdn: "https://cloudcdn.pro" ## CDN-ul site-ului.
 changefreq: "weekly" ## Frecvența de actualizare a site-ului.
 charset: "utf-8" ## Setul de caractere al site-ului. (implicit: utf-8)

@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.ng (Jane Doe)" ## Marubucin shafin. (iyakar haruffa 64)
 banner_alt: "Bangon Tiled Kore da Baƙi" ## Rubutun madadin banner na shafin.
 banner_height: "398" ## Tsawon banner na shafin.
 banner_width: "1440" ## Fadin banner na shafin.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Banner na shafin.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Banner na shafin.
 cdn: "https://cloudcdn.pro" ## CDN na shafin.
 changefreq: "weekly" ## Yawan canjin shafin.
 charset: "utf-8" ## Tsarin haruffa na shafin. (na asali: utf-8)

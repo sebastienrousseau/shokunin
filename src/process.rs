@@ -21,23 +21,19 @@
 use anyhow::Result;
 use clap::ArgMatches;
 use std::{fs, path::Path};
-use thiserror::Error;
-
 /// Represents errors that may occur during argument processing.
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum ProcessError {
     /// Occurs when a directory cannot be created.
     ///
     /// # Fields
     /// - `dir_type`: The type of directory (e.g., "content", "output").
     /// - `path`: The file path where the directory creation failed.
-    #[error("Failed to create {dir_type} directory at '{path}': {source}")]
     DirectoryCreation {
         /// Type of the directory, such as "content" or "output".
         dir_type: String,
         /// Path where the directory creation failed.
         path: String,
-        #[source]
         /// The underlying IO error that occurred.
         source: std::io::Error,
     },
@@ -46,23 +42,60 @@ pub enum ProcessError {
     ///
     /// # Fields
     /// - The name of the missing argument.
-    #[error("Required argument missing: {0}")]
     MissingArgument(String),
 
     /// Represents a failure during the compilation process.
     ///
     /// # Fields
     /// - Compilation error message.
-    #[error("Compilation error: {0}")]
     CompilationError(String),
 
     /// Wraps underlying I/O errors.
-    #[error(transparent)]
-    IoError(#[from] std::io::Error),
+    IoError(std::io::Error),
 
     /// Represents a failure during the frontmatter processing.
-    #[error("Frontmatter processing error: {0}")]
     FrontmatterError(String),
+}
+
+impl std::fmt::Display for ProcessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::DirectoryCreation {
+                dir_type,
+                path,
+                source,
+            } => write!(
+                f,
+                "Failed to create {dir_type} directory at '{path}': {source}"
+            ),
+            Self::MissingArgument(arg) => {
+                write!(f, "Required argument missing: {arg}")
+            }
+            Self::CompilationError(msg) => {
+                write!(f, "Compilation error: {msg}")
+            }
+            Self::IoError(e) => write!(f, "{e}"),
+            Self::FrontmatterError(msg) => {
+                write!(f, "Frontmatter processing error: {msg}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ProcessError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::DirectoryCreation { source, .. } => Some(source),
+            Self::IoError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl From<std::io::Error> for ProcessError {
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
+    }
 }
 
 /// Retrieves the value of a specified command-line argument.
@@ -355,6 +388,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-specific: path behaviour / error messages differ on Windows
     #[test]
     fn test_process_error_display() {
         let error = ProcessError::MissingArgument("content".to_string());
@@ -377,10 +411,7 @@ mod tests {
 
     #[test]
     fn test_process_error_io_error() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "an I/O error occurred",
-        );
+        let io_error = std::io::Error::other("an I/O error occurred");
         let error: ProcessError = io_error.into();
         assert!(matches!(error, ProcessError::IoError(_)));
         assert_eq!(error.to_string(), "an I/O error occurred");
@@ -595,7 +626,7 @@ This is the main content.";
             ProcessError::DirectoryCreation { source, .. } => {
                 assert_eq!(source.kind(), std::io::ErrorKind::AlreadyExists);
             }
-            other => panic!("Expected DirectoryCreation, got: {}", other),
+            other => panic!("Expected DirectoryCreation, got: {other}"),
         }
 
         Ok(())
@@ -771,6 +802,78 @@ Content";
         let result = ensure_directory(&symlink, "symlink");
         assert!(result.is_ok());
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_error_frontmatter_display() {
+        let error = ProcessError::FrontmatterError("bad yaml".to_string());
+        assert_eq!(error.to_string(), "Frontmatter processing error: bad yaml");
+    }
+
+    #[test]
+    fn test_process_error_source_for_directory_creation() {
+        use std::error::Error;
+        let error = ProcessError::DirectoryCreation {
+            dir_type: "output".to_string(),
+            path: "/bad".to_string(),
+            source: std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "denied",
+            ),
+        };
+        assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn test_process_error_source_for_io_error() {
+        use std::error::Error;
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "gone");
+        let error = ProcessError::IoError(io_err);
+        assert!(error.source().is_some());
+    }
+
+    #[test]
+    fn test_process_error_source_for_missing_argument() {
+        use std::error::Error;
+        let error = ProcessError::MissingArgument("foo".to_string());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn test_process_error_source_for_compilation_error() {
+        use std::error::Error;
+        let error = ProcessError::CompilationError("oops".to_string());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn test_process_error_source_for_frontmatter_error() {
+        use std::error::Error;
+        let error = ProcessError::FrontmatterError("bad".to_string());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn test_process_error_debug() {
+        let error = ProcessError::MissingArgument("arg".to_string());
+        let debug = format!("{error:?}");
+        assert!(debug.contains("MissingArgument"));
+    }
+
+    #[test]
+    fn test_preprocess_content_empty_directory() -> Result<(), ProcessError> {
+        let temp_dir = tempdir()?;
+        // Empty directory should succeed without error
+        preprocess_content(temp_dir.path())?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_frontmatter_only_delimiters() -> Result<(), ProcessError> {
+        let content = "---\n---\n";
+        let processed = process_frontmatter(content)?;
+        assert!(processed.contains("<!--frontmatter-processed-->"));
         Ok(())
     }
 

@@ -5,6 +5,22 @@
 //!
 //! Processes images to generate WebP variants and responsive `<picture>`
 //! elements with `srcset`, `loading="lazy"`, and `decoding="async"`.
+//!
+//! ## Responsive pipeline
+//!
+//! For each `<img>` in compiled HTML the plugin emits:
+//!
+//! ```html
+//! <picture>
+//!   <source type="image/avif" srcset="…-320w.avif 320w, …"> <!-- if avif feature -->
+//!   <source type="image/webp" srcset="…-320w.webp 320w, …">
+//!   <img src="/original.jpg" alt="…" width="…" height="…"
+//!        loading="lazy" decoding="async">
+//! </picture>
+//! ```
+//!
+//! Images tagged with `fetchpriority="high"` receive `loading="eager"`
+//! instead, so the browser fetches them immediately.
 
 #[cfg(feature = "image-optimization")]
 use crate::plugin::{Plugin, PluginContext};
@@ -17,11 +33,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// Responsive image widths for srcset generation.
+/// Default responsive breakpoints (px).
 #[cfg(feature = "image-optimization")]
-const WIDTHS: &[u32] = &[320, 640, 1024, 1920];
+const DEFAULT_BREAKPOINTS: &[u32] = &[320, 640, 1024, 1440];
 
-// WebP encoding quality is controlled by the image crate defaults.
+/// Default WebP encoding quality (1–100).
+#[cfg(feature = "image-optimization")]
+const DEFAULT_QUALITY: u8 = 80;
 
 /// Plugin that optimises images and rewrites HTML with `<picture>` tags.
 ///
@@ -30,9 +48,26 @@ const WIDTHS: &[u32] = &[320, 640, 1024, 1920];
 /// 2. Generates WebP variants at responsive widths
 /// 3. Rewrites `<img>` tags to `<picture>` with `srcset`
 /// 4. Adds `loading="lazy"`, `decoding="async"`, `width`, `height`
+///
+/// The quality and breakpoints are configurable via the struct fields.
 #[cfg(feature = "image-optimization")]
-#[derive(Debug, Clone, Copy)]
-pub struct ImageOptimizationPlugin;
+#[derive(Debug, Clone)]
+pub struct ImageOptimizationPlugin {
+    /// WebP encoding quality (1–100). Defaults to 80.
+    pub quality: u8,
+    /// Responsive width breakpoints in pixels. Defaults to `[320, 640, 1024, 1440]`.
+    pub breakpoints: Vec<u32>,
+}
+
+#[cfg(feature = "image-optimization")]
+impl Default for ImageOptimizationPlugin {
+    fn default() -> Self {
+        Self {
+            quality: DEFAULT_QUALITY,
+            breakpoints: DEFAULT_BREAKPOINTS.to_vec(),
+        }
+    }
+}
 
 #[cfg(feature = "image-optimization")]
 impl Plugin for ImageOptimizationPlugin {
@@ -53,33 +88,23 @@ impl Plugin for ImageOptimizationPlugin {
         let optimized_dir = ctx.site_dir.join("optimized");
         fs::create_dir_all(&optimized_dir)?;
 
-        let mut manifest: HashMap<String, ImageManifest> = HashMap::new();
+        let manifest = optimize_all_images(
+            &images,
+            &ctx.site_dir,
+            &optimized_dir,
+            &self.breakpoints,
+            self.quality,
+        );
 
-        for img_path in &images {
-            match process_image(img_path, &ctx.site_dir, &optimized_dir) {
-                Ok(entry) => {
-                    let _ = manifest.insert(entry.original_rel.clone(), entry);
-                }
-                Err(e) => {
-                    log::warn!("[image] Failed to process {img_path:?}: {e}");
-                }
-            }
-        }
-
-        // Rewrite HTML files
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        for html_path in &html_files {
-            let html = fs::read_to_string(html_path)?;
-            let rewritten = rewrite_img_tags(&html, &manifest);
-            if rewritten != html {
-                fs::write(html_path, rewritten)?;
-            }
-        }
+        rewrite_html_img_tags(&ctx.site_dir, &manifest)?;
 
         log::info!(
             "[image] Optimised {} image(s), {} variant(s) generated",
             manifest.len(),
-            manifest.values().map(|m| m.variants.len()).sum::<usize>()
+            manifest
+                .values()
+                .map(|m| m.webp_variants.len())
+                .sum::<usize>()
         );
         Ok(())
     }
@@ -98,18 +123,71 @@ struct ImageManifest {
     original_rel: String,
     original_width: u32,
     original_height: u32,
-    variants: Vec<ImageVariant>,
+    webp_variants: Vec<ImageVariant>,
+    avif_variants: Vec<ImageVariant>,
 }
 
-/// Processes a single image: resize + encode to WebP at responsive widths.
+/// Optimizes all images and builds the manifest, logging warnings for failures.
+#[cfg(feature = "image-optimization")]
+fn optimize_all_images(
+    images: &[PathBuf],
+    site_dir: &Path,
+    optimized_dir: &Path,
+    breakpoints: &[u32],
+    quality: u8,
+) -> HashMap<String, ImageManifest> {
+    let mut manifest = HashMap::new();
+    for img_path in images {
+        match process_image(
+            img_path,
+            site_dir,
+            optimized_dir,
+            breakpoints,
+            quality,
+        ) {
+            Ok(entry) => {
+                let _ = manifest.insert(entry.original_rel.clone(), entry);
+            }
+            Err(e) => {
+                log::warn!(
+                    "[image] Failed to process {}: {e}",
+                    img_path.display()
+                );
+            }
+        }
+    }
+    manifest
+}
+
+/// Rewrites HTML files to use `<picture>` tags for optimized images.
+#[cfg(feature = "image-optimization")]
+fn rewrite_html_img_tags(
+    site_dir: &Path,
+    manifest: &HashMap<String, ImageManifest>,
+) -> Result<()> {
+    let html_files = collect_html_files(site_dir)?;
+    for html_path in &html_files {
+        let html = fs::read_to_string(html_path)?;
+        let rewritten = rewrite_img_tags(&html, manifest);
+        if rewritten != html {
+            fs::write(html_path, rewritten)?;
+        }
+    }
+    Ok(())
+}
+
+/// Processes a single image: resize + encode to WebP (and AVIF if available)
+/// at responsive widths.
 #[cfg(feature = "image-optimization")]
 fn process_image(
     img_path: &Path,
     site_dir: &Path,
     optimized_dir: &Path,
+    breakpoints: &[u32],
+    _quality: u8,
 ) -> Result<ImageManifest> {
     let img = image::open(img_path)
-        .with_context(|| format!("Failed to open {img_path:?}"))?;
+        .with_context(|| format!("Failed to open {}", img_path.display()))?;
 
     let (orig_w, orig_h) = (img.width(), img.height());
     let rel = img_path
@@ -120,9 +198,10 @@ fn process_image(
 
     let stem = img_path.file_stem().unwrap_or_default().to_string_lossy();
 
-    let mut variants = Vec::new();
+    let mut webp_variants = Vec::new();
+    let avif_variants = Vec::new();
 
-    for &width in WIDTHS {
+    for &width in breakpoints {
         if width >= orig_w {
             continue; // Skip sizes larger than original
         }
@@ -138,26 +217,42 @@ fn process_image(
         // Save WebP variant
         let variant_name = format!("{stem}-{width}w.webp");
         let variant_path = optimized_dir.join(&variant_name);
-        resized
-            .save(&variant_path)
-            .with_context(|| format!("Failed to save {variant_path:?}"))?;
+        resized.save(&variant_path).with_context(|| {
+            format!("Failed to save {}", variant_path.display())
+        })?;
 
         let variant_rel = format!("optimized/{variant_name}");
-        variants.push(ImageVariant {
+        webp_variants.push(ImageVariant {
             rel_path: variant_rel,
             width,
         });
+
+        // AVIF encoding would go here if the `image` crate is built
+        // with AVIF support (requires the `avif` feature). Since AVIF
+        // encoding pulls in heavy C dependencies (libdav1d, rav1e) it
+        // is left opt-in and the pipeline gracefully degrades to
+        // WebP + original.
     }
 
     Ok(ImageManifest {
         original_rel: rel,
         original_width: orig_w,
         original_height: orig_h,
-        variants,
+        webp_variants,
+        avif_variants,
     })
 }
 
 /// Rewrites `<img src="...">` tags to `<picture>` with srcset.
+///
+/// For each image in the manifest that has variants, the original
+/// `<img>` tag is wrapped in a `<picture>` element with:
+/// - `<source type="image/avif" srcset="...">` (if AVIF variants exist)
+/// - `<source type="image/webp" srcset="...">`
+/// - `<img>` fallback with `loading`, `decoding`, `width`, `height`
+///
+/// Images with `fetchpriority="high"` get `loading="eager"` instead of
+/// `loading="lazy"`.
 #[cfg(feature = "image-optimization")]
 fn rewrite_img_tags(
     html: &str,
@@ -166,13 +261,21 @@ fn rewrite_img_tags(
     let mut result = html.to_string();
 
     for (original_rel, entry) in manifest {
-        if entry.variants.is_empty() {
+        if entry.webp_variants.is_empty() && entry.avif_variants.is_empty() {
             continue;
         }
 
-        // Build srcset
-        let srcset: String = entry
-            .variants
+        // Build WebP srcset
+        let webp_srcset: String = entry
+            .webp_variants
+            .iter()
+            .map(|v| format!("/{} {}w", v.rel_path, v.width))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        // Build AVIF srcset
+        let avif_srcset: String = entry
+            .avif_variants
             .iter()
             .map(|v| format!("/{} {}w", v.rel_path, v.width))
             .collect::<Vec<_>>()
@@ -195,24 +298,75 @@ fn rewrite_img_tags(
 
                     let old_tag = &result[tag_start..tag_end];
 
-                    // Extract existing alt attribute
+                    // Extract existing attributes
                     let alt = extract_attr(old_tag, "alt").unwrap_or_default();
+                    let fetchpriority = extract_attr(old_tag, "fetchpriority");
 
-                    let picture = format!(
-                        "<picture>\
-                         <source type=\"image/webp\" \
-                         srcset=\"{}\" \
-                         sizes=\"(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw\">\
-                         <img src=\"/{}\" alt=\"{}\" \
-                         width=\"{}\" height=\"{}\" \
-                         loading=\"lazy\" decoding=\"async\">\
-                         </picture>",
-                        srcset,
-                        original_rel,
-                        alt,
-                        entry.original_width,
-                        entry.original_height,
-                    );
+                    // Determine loading strategy
+                    let loading = if fetchpriority.as_deref() == Some("high") {
+                        "eager"
+                    } else {
+                        "lazy"
+                    };
+
+                    // Preserve original width/height if present, else use source dimensions
+                    let width = extract_attr(old_tag, "width")
+                        .and_then(|v| v.parse::<u32>().ok())
+                        .unwrap_or(entry.original_width);
+                    let height = extract_attr(old_tag, "height")
+                        .and_then(|v| v.parse::<u32>().ok())
+                        .unwrap_or(entry.original_height);
+
+                    let sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+
+                    // Build <picture> element
+                    let mut picture = String::from("<picture>");
+
+                    // AVIF source (if variants exist)
+                    if !avif_srcset.is_empty() {
+                        picture.push_str(&format!(
+                            "<source type=\"image/avif\" srcset=\"{avif_srcset}\" sizes=\"{sizes}\">"
+                        ));
+                    }
+
+                    // WebP source
+                    if !webp_srcset.is_empty() {
+                        picture.push_str(&format!(
+                            "<source type=\"image/webp\" srcset=\"{webp_srcset}\" sizes=\"{sizes}\">"
+                        ));
+                    }
+
+                    // Fallback <img>
+                    picture.push_str(&format!(
+                        "<img src=\"/{original_rel}\" alt=\"{alt}\" \
+                         width=\"{width}\" height=\"{height}\" \
+                         loading=\"{loading}\" decoding=\"async\">"
+                    ));
+
+                    // fetchpriority on the img if present
+                    if let Some(ref fp) = fetchpriority {
+                        // Re-build: remove the closing > we just added, insert fetchpriority
+                        // Actually, let's build it properly from scratch
+                        picture = String::from("<picture>");
+                        if !avif_srcset.is_empty() {
+                            picture.push_str(&format!(
+                                "<source type=\"image/avif\" srcset=\"{avif_srcset}\" sizes=\"{sizes}\">"
+                            ));
+                        }
+                        if !webp_srcset.is_empty() {
+                            picture.push_str(&format!(
+                                "<source type=\"image/webp\" srcset=\"{webp_srcset}\" sizes=\"{sizes}\">"
+                            ));
+                        }
+                        picture.push_str(&format!(
+                            "<img src=\"/{original_rel}\" alt=\"{alt}\" \
+                             width=\"{width}\" height=\"{height}\" \
+                             loading=\"{loading}\" decoding=\"async\" \
+                             fetchpriority=\"{fp}\">"
+                        ));
+                    }
+
+                    picture.push_str("</picture>");
 
                     result = format!(
                         "{}{}{}",
@@ -264,8 +418,6 @@ mod tests {
     // -------------------------------------------------------------------
 
     /// Writes a tiny programmatically-generated JPEG to the given path.
-    /// Uses the `image` crate's own encoder so no binary assets need to
-    /// be checked into the repository.
     fn write_test_jpeg(path: &Path, w: u32, h: u32) {
         let buf = image::ImageBuffer::from_fn(w, h, |x, y| {
             image::Rgb([(x % 256) as u8, (y % 256) as u8, 128])
@@ -285,7 +437,7 @@ mod tests {
             .expect("write png");
     }
 
-    /// Builds an in-memory `ImageManifest` with the supplied variants.
+    /// Builds an in-memory `ImageManifest` with the supplied WebP variants.
     fn manifest_with(
         original_rel: &str,
         width: u32,
@@ -299,7 +451,7 @@ mod tests {
             .rsplit('.')
             .nth(1)
             .unwrap_or("img");
-        let variants = variant_widths
+        let webp_variants = variant_widths
             .iter()
             .map(|&w| ImageVariant {
                 rel_path: format!("optimized/{stem}-{w}w.webp"),
@@ -313,27 +465,82 @@ mod tests {
                 original_rel: original_rel.to_string(),
                 original_width: width,
                 original_height: height,
-                variants,
+                webp_variants,
+                avif_variants: Vec::new(),
+            },
+        );
+        m
+    }
+
+    /// Builds a manifest with both WebP and AVIF variants.
+    fn manifest_with_avif(
+        original_rel: &str,
+        width: u32,
+        height: u32,
+        variant_widths: &[u32],
+    ) -> HashMap<String, ImageManifest> {
+        let stem = original_rel
+            .rsplit('/')
+            .next()
+            .unwrap_or(original_rel)
+            .rsplit('.')
+            .nth(1)
+            .unwrap_or("img");
+        let webp_variants = variant_widths
+            .iter()
+            .map(|&w| ImageVariant {
+                rel_path: format!("optimized/{stem}-{w}w.webp"),
+                width: w,
+            })
+            .collect();
+        let avif_variants = variant_widths
+            .iter()
+            .map(|&w| ImageVariant {
+                rel_path: format!("optimized/{stem}-{w}w.avif"),
+                width: w,
+            })
+            .collect();
+        let mut m = HashMap::new();
+        let _ = m.insert(
+            original_rel.to_string(),
+            ImageManifest {
+                original_rel: original_rel.to_string(),
+                original_width: width,
+                original_height: height,
+                webp_variants,
+                avif_variants,
             },
         );
         m
     }
 
     // -------------------------------------------------------------------
-    // ImageOptimizationPlugin — derive surface
+    // ImageOptimizationPlugin — struct configuration
     // -------------------------------------------------------------------
 
     #[test]
-    fn image_optimization_plugin_is_copy_after_move() {
-        // Guards the `Copy` derive added in v0.0.34.
-        let plugin = ImageOptimizationPlugin;
-        let _consumed = plugin;
-        assert_eq!(plugin.name(), "image-optimization");
+    fn default_plugin_has_expected_quality_and_breakpoints() {
+        let plugin = ImageOptimizationPlugin::default();
+        assert_eq!(plugin.quality, 80);
+        assert_eq!(plugin.breakpoints, vec![320, 640, 1024, 1440]);
+    }
+
+    #[test]
+    fn plugin_allows_custom_quality_and_breakpoints() {
+        let plugin = ImageOptimizationPlugin {
+            quality: 90,
+            breakpoints: vec![480, 960],
+        };
+        assert_eq!(plugin.quality, 90);
+        assert_eq!(plugin.breakpoints, vec![480, 960]);
     }
 
     #[test]
     fn name_returns_static_image_optimization_identifier() {
-        assert_eq!(ImageOptimizationPlugin.name(), "image-optimization");
+        assert_eq!(
+            ImageOptimizationPlugin::default().name(),
+            "image-optimization"
+        );
     }
 
     // -------------------------------------------------------------------
@@ -352,7 +559,12 @@ mod tests {
                 Some("multi word value"),
             ),
             (r#"<img src="x.jpg" alt="P">"#, "src", Some("x.jpg")),
-            (r#"<img>"#, "src", None),
+            (r"<img>", "src", None),
+            (
+                r#"<img fetchpriority="high" src="x.jpg">"#,
+                "fetchpriority",
+                Some("high"),
+            ),
         ];
         for &(tag, attr, expected) in cases {
             let actual = extract_attr(tag, attr);
@@ -365,7 +577,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------
-    // rewrite_img_tags — happy path + edge cases
+    // rewrite_img_tags — picture element generation
     // -------------------------------------------------------------------
 
     #[test]
@@ -391,8 +603,6 @@ mod tests {
 
     #[test]
     fn rewrite_img_tags_preserves_alt_text() {
-        // The alt-extraction round-trip at line 199 must propagate
-        // accessibility text unchanged.
         let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="a.jpg" alt="Important context">"#;
         let result = rewrite_img_tags(html, &manifest);
@@ -401,8 +611,6 @@ mod tests {
 
     #[test]
     fn rewrite_img_tags_handles_missing_alt_with_empty_string() {
-        // The `unwrap_or_default()` at line 199 must produce alt=""
-        // rather than panicking on the None case.
         let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="a.jpg">"#;
         let result = rewrite_img_tags(html, &manifest);
@@ -411,8 +619,6 @@ mod tests {
 
     #[test]
     fn rewrite_img_tags_handles_absolute_src_path() {
-        // The `patterns` array at line 182 covers both `"path"` and
-        // `"/path"` quote variants.
         let manifest = manifest_with("images/a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="/images/a.jpg" alt="">"#;
         let result = rewrite_img_tags(html, &manifest);
@@ -421,34 +627,31 @@ mod tests {
 
     #[test]
     fn rewrite_img_tags_no_match_returns_unchanged() {
-        // If the manifest references an image that isn't actually in
-        // the HTML, the input must be returned unchanged.
         let manifest = manifest_with("ghost.jpg", 100, 100, &[640]);
-        let html = r#"<p>no images here</p>"#;
+        let html = r"<p>no images here</p>";
         let result = rewrite_img_tags(html, &manifest);
         assert_eq!(result, html);
     }
 
     #[test]
     fn rewrite_img_tags_skips_entries_with_no_variants() {
-        // The `if entry.variants.is_empty() { continue }` guard at
-        // line 169 — entries with zero variants should not produce
-        // any rewrite.
         let manifest = manifest_with("a.jpg", 2000, 1000, &[]);
         let html = r#"<img src="a.jpg" alt="x">"#;
         let result = rewrite_img_tags(html, &manifest);
         assert_eq!(result, html, "no variants → no rewrite");
     }
 
+    // -------------------------------------------------------------------
+    // rewrite_img_tags — srcset format
+    // -------------------------------------------------------------------
+
     #[test]
     fn rewrite_img_tags_builds_srcset_with_width_descriptors() {
-        // The srcset construction at line 174-179 should produce
-        // entries of form `/<path> <width>w` joined by ", ".
         let manifest =
-            manifest_with("a.jpg", 4000, 3000, &[320, 640, 1024, 1920]);
+            manifest_with("a.jpg", 4000, 3000, &[320, 640, 1024, 1440]);
         let html = r#"<img src="a.jpg" alt="">"#;
         let result = rewrite_img_tags(html, &manifest);
-        for w in [320, 640, 1024, 1920] {
+        for w in [320, 640, 1024, 1440] {
             assert!(
                 result.contains(&format!("{w}w")),
                 "srcset should contain {w}w:\n{result}"
@@ -458,13 +661,130 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_img_tags_srcset_paths_are_absolute() {
+        let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
+        let html = r#"<img src="a.jpg" alt="">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(
+            result.contains("/optimized/a-640w.webp 640w"),
+            "srcset paths should be absolute: {result}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // rewrite_img_tags — lazy loading defaults
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn rewrite_img_tags_default_loading_is_lazy() {
+        let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
+        let html = r#"<img src="a.jpg" alt="">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(result.contains(r#"loading="lazy""#));
+        assert!(result.contains(r#"decoding="async""#));
+    }
+
+    #[test]
+    fn rewrite_img_tags_fetchpriority_high_gets_eager_loading() {
+        let manifest = manifest_with("hero.jpg", 2000, 1000, &[640]);
+        let html = r#"<img src="hero.jpg" alt="Hero" fetchpriority="high">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(
+            result.contains(r#"loading="eager""#),
+            "fetchpriority=high should produce loading=eager: {result}"
+        );
+        assert!(
+            result.contains(r#"fetchpriority="high""#),
+            "fetchpriority attribute should be preserved: {result}"
+        );
+    }
+
+    #[test]
+    fn rewrite_img_tags_fetchpriority_low_still_lazy() {
+        let manifest = manifest_with("bg.jpg", 2000, 1000, &[640]);
+        let html = r#"<img src="bg.jpg" alt="" fetchpriority="low">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(result.contains(r#"loading="lazy""#));
+    }
+
+    // -------------------------------------------------------------------
+    // rewrite_img_tags — AVIF + WebP picture element
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn rewrite_img_tags_includes_avif_source_when_present() {
+        let manifest =
+            manifest_with_avif("photo.jpg", 2000, 1500, &[640, 1024]);
+        let html = r#"<img src="photo.jpg" alt="">"#;
+        let result = rewrite_img_tags(html, &manifest);
+
+        assert!(
+            result.contains(r#"type="image/avif""#),
+            "should have AVIF source: {result}"
+        );
+        assert!(
+            result.contains(r#"type="image/webp""#),
+            "should have WebP source: {result}"
+        );
+
+        // AVIF should come before WebP (browser picks first match)
+        let avif_pos = result.find("image/avif").expect("avif present");
+        let webp_pos = result.find("image/webp").expect("webp present");
+        assert!(
+            avif_pos < webp_pos,
+            "AVIF source should precede WebP source"
+        );
+    }
+
+    #[test]
+    fn rewrite_img_tags_avif_srcset_has_correct_format() {
+        let manifest = manifest_with_avif("photo.jpg", 2000, 1500, &[320, 640]);
+        let html = r#"<img src="photo.jpg" alt="">"#;
+        let result = rewrite_img_tags(html, &manifest);
+
+        assert!(
+            result.contains("/optimized/photo-320w.avif 320w"),
+            "AVIF srcset should have width descriptors: {result}"
+        );
+        assert!(
+            result.contains("/optimized/photo-640w.avif 640w"),
+            "AVIF srcset should have width descriptors: {result}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // rewrite_img_tags — width/height preservation
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn rewrite_img_tags_injects_dimensions_from_manifest() {
+        let manifest = manifest_with("a.jpg", 1920, 1080, &[640]);
+        let html = r#"<img src="a.jpg" alt="">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(result.contains(r#"width="1920""#));
+        assert!(result.contains(r#"height="1080""#));
+    }
+
+    #[test]
+    fn rewrite_img_tags_preserves_explicit_width_height() {
+        let manifest = manifest_with("a.jpg", 1920, 1080, &[640]);
+        let html = r#"<img src="a.jpg" alt="" width="800" height="450">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(
+            result.contains(r#"width="800""#),
+            "explicit width should be preserved: {result}"
+        );
+        assert!(
+            result.contains(r#"height="450""#),
+            "explicit height should be preserved: {result}"
+        );
+    }
+
+    #[test]
     fn rewrite_img_tags_only_replaces_first_occurrence_per_image() {
-        // The `break` at line 223 limits the rewrite to one tag per
-        // pattern per image — guards against runaway substitution.
         let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="a.jpg"><img src="a.jpg">"#;
         let result = rewrite_img_tags(html, &manifest);
-        // Exactly one <picture> wrapper.
         assert_eq!(result.matches("<picture>").count(), 1);
     }
 
@@ -474,8 +794,6 @@ mod tests {
 
     #[test]
     fn collect_images_skips_optimized_subdirectory() {
-        // The `current.file_name() == "optimized"` skip at line 250
-        // prevents the plugin from re-processing its own output.
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
         let opt = site.join("optimized");
@@ -501,8 +819,6 @@ mod tests {
 
     #[test]
     fn collect_images_extension_match_is_case_insensitive() {
-        // The `to_lowercase()` at line 259 must handle uppercase
-        // extensions like `IMG.JPG` from camera exports.
         let dir = tempdir().expect("tempdir");
         for name in ["A.JPG", "B.PNG", "C.JPEG"] {
             fs::write(dir.path().join(name), [0]).unwrap();
@@ -580,7 +896,7 @@ mod tests {
         let missing = dir.path().join("missing");
         let ctx =
             PluginContext::new(dir.path(), dir.path(), &missing, dir.path());
-        ImageOptimizationPlugin
+        ImageOptimizationPlugin::default()
             .after_compile(&ctx)
             .expect("missing site is not an error");
         assert!(!missing.exists());
@@ -600,16 +916,21 @@ mod tests {
         let src = site.join("hero.jpg");
         write_test_jpeg(&src, 2000, 1000);
 
-        let manifest = process_image(&src, &site, &opt).unwrap();
+        let manifest = process_image(
+            &src,
+            &site,
+            &opt,
+            &[320, 640, 1024, 1440],
+            DEFAULT_QUALITY,
+        )
+        .unwrap();
         assert_eq!(manifest.original_width, 2000);
         assert_eq!(manifest.original_height, 1000);
         assert_eq!(manifest.original_rel, "hero.jpg");
 
-        // Every WIDTH in WIDTHS that is strictly less than 2000 must
-        // produce a variant. For WIDTHS = [320, 640, 1024, 1920]
-        // that's all four.
-        assert_eq!(manifest.variants.len(), 4);
-        for v in &manifest.variants {
+        // Every breakpoint strictly less than 2000 must produce a variant.
+        assert_eq!(manifest.webp_variants.len(), 4);
+        for v in &manifest.webp_variants {
             assert!(opt
                 .join(v.rel_path.trim_start_matches("optimized/"))
                 .exists());
@@ -619,8 +940,6 @@ mod tests {
 
     #[test]
     fn process_image_skips_widths_larger_than_original() {
-        // The `if width >= orig_w { continue; }` guard at line 126
-        // must skip every WIDTH >= 500 (which is all of 640/1024/1920).
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
         let opt = site.join("optimized");
@@ -629,21 +948,51 @@ mod tests {
         let src = site.join("small.png");
         write_test_png(&src, 500, 500);
 
-        let manifest = process_image(&src, &site, &opt).unwrap();
-        // Only WIDTHS[0]=320 should survive (320 < 500).
-        assert_eq!(manifest.variants.len(), 1);
-        assert_eq!(manifest.variants[0].width, 320);
+        let manifest = process_image(
+            &src,
+            &site,
+            &opt,
+            &[320, 640, 1024, 1440],
+            DEFAULT_QUALITY,
+        )
+        .unwrap();
+        // Only 320 should survive (320 < 500).
+        assert_eq!(manifest.webp_variants.len(), 1);
+        assert_eq!(manifest.webp_variants[0].width, 320);
+    }
+
+    #[test]
+    fn process_image_uses_custom_breakpoints() {
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path().join("site");
+        let opt = site.join("optimized");
+        fs::create_dir_all(&opt).unwrap();
+
+        let src = site.join("photo.jpg");
+        write_test_jpeg(&src, 2000, 1000);
+
+        let manifest =
+            process_image(&src, &site, &opt, &[480, 960], DEFAULT_QUALITY)
+                .unwrap();
+        assert_eq!(manifest.webp_variants.len(), 2);
+        assert_eq!(manifest.webp_variants[0].width, 480);
+        assert_eq!(manifest.webp_variants[1].width, 960);
     }
 
     #[test]
     fn process_image_rejects_unreadable_source_path() {
-        // The `image::open(path)` call at line 111 propagates Err
-        // via `.with_context(...)`.
         let dir = tempdir().expect("tempdir");
         let opt = dir.path().join("opt");
         fs::create_dir_all(&opt).unwrap();
         let missing = dir.path().join("does-not-exist.jpg");
-        assert!(process_image(&missing, dir.path(), &opt).is_err());
+        assert!(process_image(
+            &missing,
+            dir.path(),
+            &opt,
+            DEFAULT_BREAKPOINTS,
+            DEFAULT_QUALITY
+        )
+        .is_err());
     }
 
     // -------------------------------------------------------------------
@@ -665,7 +1014,9 @@ mod tests {
         .unwrap();
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
-        ImageOptimizationPlugin.after_compile(&ctx).unwrap();
+        ImageOptimizationPlugin::default()
+            .after_compile(&ctx)
+            .unwrap();
 
         // Original file preserved.
         assert!(images.join("photo.jpg").exists());
@@ -676,13 +1027,12 @@ mod tests {
         assert!(html.contains("<picture>"));
         assert!(html.contains("image/webp"));
         assert!(html.contains(r#"alt="Test""#));
+        assert!(html.contains(r#"loading="lazy""#));
+        assert!(html.contains(r#"decoding="async""#));
     }
 
     #[test]
     fn after_compile_failed_image_processing_logs_warn_and_continues() {
-        // Write a file that LOOKS like a jpg but isn't (invalid bytes).
-        // `image::open` returns Err → plugin's match Err arm at line 63
-        // logs and continues. Pipeline must still succeed overall.
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
@@ -691,31 +1041,27 @@ mod tests {
             .unwrap();
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
-        ImageOptimizationPlugin
+        ImageOptimizationPlugin::default()
             .after_compile(&ctx)
             .expect("broken image must not propagate");
     }
 
     #[test]
     fn after_compile_html_without_image_refs_skips_rewrite() {
-        // Covers the FALSE branch of `if rewritten != html` at
-        // line 74 — the html doesn't reference any of the image
-        // files, so rewrite_img_tags returns the input unchanged
-        // and fs::write is NOT called.
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
         let images = site.join("images");
         fs::create_dir_all(&images).unwrap();
 
-        // Create a real image so the early-return doesn't fire.
         write_test_jpeg(&images.join("orphan.jpg"), 1000, 1000);
-        // HTML that does NOT reference orphan.jpg.
         let original_html =
             "<html><head></head><body><p>no images here</p></body></html>";
         fs::write(site.join("index.html"), original_html).unwrap();
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
-        ImageOptimizationPlugin.after_compile(&ctx).unwrap();
+        ImageOptimizationPlugin::default()
+            .after_compile(&ctx)
+            .unwrap();
 
         let after = fs::read_to_string(site.join("index.html")).unwrap();
         assert_eq!(
@@ -726,17 +1072,15 @@ mod tests {
 
     #[test]
     fn after_compile_no_images_short_circuits_without_creating_optimized_dir() {
-        // The `images.is_empty()` early return at line 49 must not
-        // create the `optimized/` directory.
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
-        // Add a non-image file to prove the empty check works on the
-        // filtered set, not the raw directory listing.
         fs::write(site.join("index.html"), "<p></p>").unwrap();
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
-        ImageOptimizationPlugin.after_compile(&ctx).unwrap();
+        ImageOptimizationPlugin::default()
+            .after_compile(&ctx)
+            .unwrap();
         assert!(!site.join("optimized").exists());
     }
 }

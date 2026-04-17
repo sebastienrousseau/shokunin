@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.se (Jane Doe)" ## Sidans författare. (max 64 tecken)
 banner_alt: "Grön och svart kaklad vägg" ## Webbplatsens banner alt-text.
 banner_height: "398" ## Webbplatsens bannerhöjd.
 banner_width: "1440" ## Webbplatsens bannerbredd.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Webbplatsens banner.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Webbplatsens banner.
 cdn: "https://cloudcdn.pro" ## Webbplatsens CDN.
 changefreq: "weekly" ## Webbplatsens ändringsfrekvens.
 charset: "utf-8" ## Webbplatsens teckenuppsättning. (standard: utf-8)

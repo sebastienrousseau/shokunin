@@ -2,16 +2,51 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Plugin pipeline example
+//! # Plugins Example — Annotated lifecycle walkthrough
 //!
-//! Demonstrates the full SSG plugin ecosystem: compile a site, then
-//! run SEO, search, minification, and live-reload plugins in sequence.
+//! ## What this example is
+//!
+//! A **developer reference**, not a starter template. It walks through every
+//! stage of the SSG plugin pipeline so you can see exactly when each
+//! lifecycle hook fires, in what order plugins run, and what each one
+//! produces.
+//!
+//! ## What it demonstrates
+//!
+//! - **Lifecycle hooks** — `before_compile`, `after_compile`, and `on_serve`
+//!   in the order they actually execute
+//! - **Plugin composition** — SEO + canonical + robots + search + minify +
+//!   live-reload, with the *order* annotated (minify runs last so it sees
+//!   final HTML)
+//! - **Incremental build cache** — `BuildCache::changed_files()` skips work
+//!   when no content has changed
+//!
+//! ## When to use this pattern
+//!
+//! When you want to understand the plugin API internals before authoring
+//! your own plugin or customising the pipeline ordering. Read the source
+//! alongside the console output as a teaching pair.
+//!
+//! ## When NOT to use this pattern
+//!
+//! When you want a clone-and-edit site. Use `examples/quickstart` instead
+//! (production-ready starter) or `examples/basic` (small studio template).
+//!
+//! ## Run it
+//!
+//! ```sh
+//! cargo run --release --example plugins
+//! ```
+//!
+//! This example does not start a server — it is a pipeline demonstration
+//! only. Inspect `examples/plugins/public/` after running.
 
 use anyhow::Result;
 use ssg::cache::BuildCache;
 use ssg::livereload::LiveReloadPlugin;
 use ssg::plugin::{PluginContext, PluginManager};
 use ssg::plugins::MinifyPlugin;
+use ssg::postprocess::{HtmlFixPlugin, ManifestFixPlugin};
 use ssg::search::SearchPlugin;
 use ssg::seo::{CanonicalPlugin, RobotsPlugin, SeoPlugin};
 use staticdatagen::compiler::service::compile;
@@ -19,19 +54,34 @@ use std::fs;
 use std::path::Path;
 
 fn main() -> Result<()> {
-    let build_dir = Path::new("./examples/build");
-    let site_dir = Path::new("./examples/public");
-    let content_dir = Path::new("./examples/content/en");
-    let template_dir = Path::new("./examples/templates/en");
-    let cache_path = Path::new(".ssg-cache.json");
+    let build_dir = Path::new("./examples/plugins/build");
+    let site_dir = Path::new("./examples/plugins/public");
+    let content_dir = Path::new("./examples/plugins/content");
+    let template_dir = Path::new("./examples/templates");
+    // Cache file lives under `target/` so it doesn't pollute the repo root.
+    let cache_dir = Path::new("target/.ssg-cache");
+    fs::create_dir_all(cache_dir)?;
+    let cache_path = &cache_dir.join("plugins.json");
+
+    // Ensure per-example output directories exist before compile.
+    fs::create_dir_all(build_dir)?;
+    fs::create_dir_all(site_dir)?;
 
     // ── Step 1: Incremental build check ──────────────────────────
+    //
+    // Force a rebuild when the output dir is empty, even if the cache
+    // says no source files changed — otherwise a clean checkout (or a
+    // test run that wiped public/) would silently produce no output.
     let mut cache = BuildCache::load(cache_path)?;
     let changed = cache.changed_files(content_dir)?;
+    let output_missing = !site_dir.join("index.html").exists();
 
-    if changed.is_empty() {
+    if changed.is_empty() && !output_missing {
         println!("  ✅ No content changes detected — skipping build");
     } else {
+        if output_missing && changed.is_empty() {
+            println!("  🔨 Output missing — forcing rebuild");
+        }
         println!("  🔨 {} file(s) changed — rebuilding", changed.len());
         for path in &changed {
             println!("     ↳ {}", path.display());
@@ -56,6 +106,12 @@ fn main() -> Result<()> {
     let base_url = "https://example.com";
 
     let mut plugins = PluginManager::new();
+
+    // Cleanup bundle — browser-compat fixes (modern PWA meta, drop empty
+    // preloads, drop empty manifest icons). Run early so subsequent
+    // plugins see clean HTML.
+    plugins.register(HtmlFixPlugin);
+    plugins.register(ManifestFixPlugin);
 
     // SEO bundle — inject meta tags, canonical URLs, robots.txt
     plugins.register(SeoPlugin);
@@ -89,7 +145,7 @@ fn main() -> Result<()> {
     let index_path = site_dir.join("search-index.json");
     if index_path.exists() {
         let size = fs::metadata(&index_path)?.len();
-        println!("  🔍 Search index: {} bytes", size);
+        println!("  🔍 Search index: {size} bytes");
     }
     let robots_path = site_dir.join("robots.txt");
     if robots_path.exists() {

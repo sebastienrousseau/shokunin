@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+target/
+.git/
+.github/
+.claude/
+examples/*/build/
+examples/*/public/
+examples/public/
+examples/build/
+*.log
+*.DS_Store

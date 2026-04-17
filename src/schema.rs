@@ -102,6 +102,10 @@ pub fn generate_schema() -> Value {
 /// system without forcing callers to handle an unreachable `Err`.
 pub fn write_schema(path: &Path) -> io::Result<()> {
     let schema = generate_schema();
+    // The hand-authored Schema contains only strings/arrays/objects (no
+    // NaN floats), so `to_string_pretty` cannot fail. The `expect` is a
+    // type-system formality, not a runtime risk.
+    #[allow(clippy::expect_used)]
     let content = serde_json::to_string_pretty(&schema)
         .expect("hand-authored Schema is always serializable");
     fs::write(path, content)

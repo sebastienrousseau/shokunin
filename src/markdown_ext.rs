@@ -72,7 +72,7 @@ impl Plugin for MarkdownExtPlugin {
 
         let mut transformed = 0usize;
         for path in &files {
-            fail::fail_point!("markdown_ext::read", |_| {
+            fail_point!("markdown_ext::read", |_| {
                 anyhow::bail!("injected: markdown_ext::read")
             });
             let raw = fs::read_to_string(path).with_context(|| {
@@ -81,7 +81,7 @@ impl Plugin for MarkdownExtPlugin {
 
             let new = expand_gfm(&raw);
             if new != raw {
-                fail::fail_point!("markdown_ext::write", |_| {
+                fail_point!("markdown_ext::write", |_| {
                     anyhow::bail!("injected: markdown_ext::write")
                 });
                 fs::write(path, &new).with_context(|| {
@@ -139,17 +139,8 @@ pub fn expand_gfm(input: &str) -> String {
     while i < lines.len() {
         let line = lines[i];
 
-        // Track fenced code blocks so we never transform inside them.
         if let Some(marker) = detect_fence(line) {
-            if !in_fence {
-                in_fence = true;
-                fence_marker = Some(marker);
-            } else if fence_marker
-                .is_some_and(|m| line.trim_start().starts_with(m))
-            {
-                in_fence = false;
-                fence_marker = None;
-            }
+            update_fence_state(&mut in_fence, &mut fence_marker, marker, line);
             out.push_str(line);
             out.push('\n');
             i += 1;
@@ -163,41 +154,56 @@ pub fn expand_gfm(input: &str) -> String {
             continue;
         }
 
-        // Table block?
-        if i + 1 < lines.len() && is_table_header(line, lines[i + 1]) {
-            let end = find_table_end(&lines, i);
-            let block = lines[i..end].join("\n");
-            out.push_str(&render_with_options(&block, Options::ENABLE_TABLES));
-            out.push('\n');
-            i = end;
-            continue;
-        }
-
-        // Task list block?
-        if is_task_list_line(line) {
-            let end = find_task_list_end(&lines, i);
-            let block = lines[i..end].join("\n");
-            out.push_str(&render_with_options(
-                &block,
-                Options::ENABLE_TASKLISTS,
-            ));
-            out.push('\n');
-            i = end;
-            continue;
-        }
-
-        // Otherwise: inline strikethrough only.
-        out.push_str(&apply_strikethrough(line));
-        out.push('\n');
-        i += 1;
+        i = process_gfm_line(&lines, i, &mut out);
     }
 
-    // Preserve a trailing newline if the original body had one.
     if !body.ends_with('\n') && out.ends_with('\n') {
         let _ = out.pop();
     }
 
     out
+}
+
+/// Updates fence tracking state when a fence marker is encountered.
+fn update_fence_state<'a>(
+    in_fence: &mut bool,
+    fence_marker: &mut Option<&'a str>,
+    marker: &'a str,
+    line: &str,
+) {
+    if !*in_fence {
+        *in_fence = true;
+        *fence_marker = Some(marker);
+    } else if fence_marker.is_some_and(|m| line.trim_start().starts_with(m)) {
+        *in_fence = false;
+        *fence_marker = None;
+    }
+}
+
+/// Processes a single non-fenced line, detecting tables, task lists, or
+/// applying strikethrough. Returns the new line index.
+fn process_gfm_line(lines: &[&str], i: usize, out: &mut String) -> usize {
+    let line = lines[i];
+
+    if i + 1 < lines.len() && is_table_header(line, lines[i + 1]) {
+        let end = find_table_end(lines, i);
+        let block = lines[i..end].join("\n");
+        out.push_str(&render_with_options(&block, Options::ENABLE_TABLES));
+        out.push('\n');
+        return end;
+    }
+
+    if is_task_list_line(line) {
+        let end = find_task_list_end(lines, i);
+        let block = lines[i..end].join("\n");
+        out.push_str(&render_with_options(&block, Options::ENABLE_TASKLISTS));
+        out.push('\n');
+        return end;
+    }
+
+    out.push_str(&apply_strikethrough(line));
+    out.push('\n');
+    i + 1
 }
 
 /// Returns `true` if `body` contains any GFM-specific syntax that this

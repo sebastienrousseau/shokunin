@@ -1,5 +1,7 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 <p align="center">
-  <img src="https://cloudcdn.pro/shokunin/images/logos/shokunin.svg" alt="SSG logo" width="128" />
+  <img src="https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg" alt="SSG logo" width="128" />
 </p>
 
 <h1 align="center">Static Site Generator (SSG)</h1>
@@ -9,54 +11,125 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sebastienrousseau/shokunin/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/shokunin/test.yml?style=for-the-badge&logo=github" alt="Build" /></a>
+  <a href="https://github.com/sebastienrousseau/static-site-generator/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/static-site-generator/ci.yml?style=for-the-badge&logo=github" alt="Build" /></a>
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
-  <a href="https://codecov.io/gh/sebastienrousseau/shokunin"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/shokunin?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.35-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.36-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
 
 ## Contents
 
-- [Install](#install) — prerequisites, crate, library dependency
+- [Install](#install) — one-liner, Homebrew, Cargo, apt, AUR, Scoop, winget
+- [Quick Start](#quick-start) — scaffold a site in 30 seconds
 - [Overview](#overview) — what SSG does
 - [Architecture](#architecture) — build pipeline diagram
-- [Features](#features) — capability matrix
+- [Features](#features) — v0.0.36 capability matrix
 - [The CLI](#the-cli) — flags and usage
-- [First 5 Minutes](#first-5-minutes) — clone → tests passing
-- [Library Usage](#library-usage) — `ssg::run()`, plugins, incremental builds
+- [Library Usage](#library-usage) — `ssg::run()`, plugins, schemas
 - [Benchmarks](#benchmarks) — binary size, test suite, coverage
 - [Development](#development) — make targets, contributing
-- [What's Included](#whats-included) — modules, security, tests
+- [What's Included](#whats-included) — all 36 modules
 - [License](#license)
 
 ---
 
 ## Install
 
-### Prerequisites
+### Quick install (prebuilt binary)
 
-| Platform | Setup |
-| :--- | :--- |
-| **macOS** | `brew install rustup-init && rustup-init -y`, or follow [rustup.rs](https://rustup.rs/) |
-| **Linux / WSL** | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
-| **Windows (native)** | Download [`rustup-init.exe`](https://win.rustup.rs/). Native build is supported; the `make` targets below require Git Bash or WSL |
+**macOS / Linux — one command:**
 
-SSG requires **Rust 1.88.0 or later** (pinned in `rust-toolchain.toml`). Verify with `rustc --version`.
+```sh
+curl -fsSL https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/scripts/install.sh | sh
+```
 
-### Crate
+Auto-detects your OS and architecture, downloads the correct binary from GitHub Releases, verifies the SHA256 checksum, and installs to `~/.local/bin`.
 
-```bash
+**Homebrew (macOS / Linux):**
+
+```sh
+brew install --formula https://raw.githubusercontent.com/sebastienrousseau/static-site-generator/main/packaging/homebrew/ssg.rb
+```
+
+**Cargo (any platform with Rust):**
+
+```sh
 cargo install ssg
 ```
 
-Or add as a library dependency:
+**Debian / Ubuntu (apt):**
+
+```sh
+# Download the .deb from the latest release, then:
+sudo dpkg -i ssg_0.0.36_amd64.deb
+```
+
+Or build it yourself with `packaging/deb/build.sh`.
+
+**Arch Linux (AUR):**
+
+```sh
+# Using an AUR helper (e.g. yay):
+yay -S ssg
+```
+
+Or build manually with the PKGBUILD in `packaging/arch/`.
+
+**Windows (Scoop):**
+
+```powershell
+scoop bucket add ssg https://github.com/sebastienrousseau/static-site-generator
+scoop install ssg
+```
+
+**Windows (winget):**
+
+```powershell
+winget install sebastienrousseau.ssg
+```
+
+**Windows (manual):** download the `.zip` from the [latest release](https://github.com/sebastienrousseau/static-site-generator/releases/latest), extract `ssg.exe`, and add it to your `PATH`.
+
+### Use as a library
 
 ```toml
 [dependencies]
-ssg = "0.0.35"
+ssg = "0.0.36"
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/sebastienrousseau/static-site-generator.git
+cd static-site-generator
+make init    # installs toolchain, hooks, builds
+cargo test --lib
+```
+
+Requires **Rust 1.88.0+** (pinned in `rust-toolchain.toml`).
+
+---
+
+## Quick Start
+
+```bash
+# 1 — Install
+cargo install ssg
+
+# 2 — Scaffold a new site
+ssg -n mysite -c content -o build -t templates
+
+# 3 — Build with custom content
+ssg -c content -o public -t templates
+
+# 4 — Validate content schemas (no build)
+ssg --validate -c content
+
+# 5 — Development server
+ssg -c content -o public -t templates -s public
 ```
 
 ---
@@ -65,11 +138,12 @@ ssg = "0.0.35"
 
 SSG generates static websites from Markdown content, YAML frontmatter, and HTML templates. It compiles everything into production-ready HTML with built-in SEO metadata, accessibility compliance, and feed generation. The plugin system handles the rest.
 
-- **Zero-cost performance** through Rust's ownership model and parallel file operations
-- **Incremental builds** with content fingerprinting — only changed files are reprocessed
-- **File watching** with automatic rebuild on content changes
-- **Plugin architecture** with lifecycle hooks for custom processing
-- **WCAG 2.1 Level AA** accessibility compliance in generated output
+- **Zero-cost performance** — Rust ownership model, Rayon-parallelised plugins
+- **Incremental builds** — content fingerprinting via `.ssg-cache.json`
+- **File watching** — automatic rebuild on content changes
+- **22-plugin pipeline** — SEO, a11y, i18n, search, images, JSON-LD, RSS, sitemaps
+- **WCAG 2.1 Level AA** — accessibility compliance validated on every build
+- **Lighthouse 100** — SEO and accessibility scores on generated output
 
 ---
 
@@ -78,13 +152,15 @@ SSG generates static websites from Markdown content, YAML frontmatter, and HTML 
 ```mermaid
 graph TD
     A[Content: Markdown + YAML] --> B{SSG CLI}
-    B --> C[Incremental Cache]
+    B --> V[Content Schema Validation]
+    V --> C[Incremental Cache]
     C --> D[Compile: staticdatagen]
-    D --> E[Plugin Pipeline]
-    E --> F[Minify / Optimize / Deploy]
-    D --> G[Dev Server: http_handle]
+    D --> E[Post-Processing Fixes]
+    E --> F[Plugin Pipeline: 22 plugins]
+    F --> G[Output: HTML + RSS + Sitemap + JSON-LD]
     B --> H[File Watcher]
     H -->|changed files| C
+    B -->|--serve| S[Dev Server + Live Reload]
 ```
 
 ---
@@ -93,31 +169,24 @@ graph TD
 
 | | |
 | :--- | :--- |
-| **Performance** | Parallel file operations with Rayon, iterative traversal with depth bounds, incremental builds |
-| **Content** | Markdown, YAML frontmatter, JSON, TOML. Atom and RSS feed generation |
-| **SEO** | Meta tags, Open Graph, sitemaps, structured data, canonical URLs |
-| **Accessibility** | Automatic WCAG 2.1 Level AA compliance |
-| **Theming** | Custom HTML templates with variable substitution |
-| **Plugins** | Lifecycle hooks: `before_compile`, `after_compile`, `on_serve`. Built-in minify, image-opti, deploy |
-| **Watch mode** | Polling-based file watcher with configurable interval |
-| **Caching** | Content fingerprinting via `.ssg-cache.json` for fast rebuilds |
-| **Config** | TOML config files with JSON Schema for IDE autocomplete (`ssg.schema.json`) |
-| **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits |
-| **CI** | Shared `rust-ci.yml` pipeline on `stable` toolchain, plus `cargo audit`, `cargo deny`, dependency review and SBOM generation |
+| **Performance** | Parallel file operations with Rayon `par_iter`, iterative traversal with depth bounds, incremental builds, `--jobs N` thread control |
+| **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation |
+| **SEO** | Meta description, Open Graph (title, description, type, url, image, image:width/height, locale), Twitter Cards (`summary_large_image` for articles), canonical URLs, robots.txt, sitemaps with per-page lastmod |
+| **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author (Person entity), image (`ImageObject`), inLanguage, `BreadcrumbList` |
+| **Syndication** | RSS 2.0 with enclosures, categories, language, lastBuildDate, copyright. Google News sitemap with keywords |
+| **Accessibility** | Automatic WCAG 2.1 AA validation on every build. Decorative image detection (`role="presentation"`). Heading hierarchy, link text, ARIA landmarks |
+| **i18n** | Hreflang injection for multi-locale sites, `x-default` support, per-locale sitemaps with `xhtml:link` alternates, language switcher HTML helper |
+| **Images** | Responsive `<picture>` with AVIF/WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention via width/height from source metadata |
+| **Templates** | Tera engine with inheritance, loops, conditionals, custom filters. 7 bundled templates + 3 themes (minimal, docs, full) |
+| **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `⌘K` shortcut |
+| **Plugins** | Lifecycle hooks: `before_compile`, `after_compile`, `on_serve`. 22 built-in plugins |
+| **Deployment** | One-command config for Netlify, Vercel, Cloudflare Pages, GitHub Pages. CSP + HSTS security headers |
+| **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits, `CycloneDX` SBOM, Sigstore attestation |
+| **CI** | Automated multi-platform releases (Linux glibc/musl, macOS ARM64/Intel, Windows), pa11y accessibility audits, cargo audit/deny |
 
 ---
 
 ## The CLI
-
-| Command | What it does |
-| :--- | :--- |
-| `ssg -n mysite -c content -o build -t templates` | Generate a site from source directories |
-| `ssg --config config.toml` | Load configuration from a TOML file |
-| `ssg --serve public` | Serve from a specific directory |
-| `ssg --watch` | Watch content for changes and rebuild |
-
-<details>
-<summary><b>Full CLI reference</b></summary>
 
 ```text
 Usage: ssg [OPTIONS]
@@ -128,8 +197,10 @@ Options:
   -c, --content <DIR>    Content directory
   -o, --output <DIR>     Output directory
   -t, --template <DIR>   Template directory
-  -s, --serve <DIR>      Development server directory
+  -s, --serve <DIR>      Start development server
   -w, --watch            Watch for changes and rebuild
+  -j, --jobs <N>         Rayon thread count (default: num_cpus)
+      --validate         Validate content schemas and exit
       --drafts           Include draft pages in the build
       --deploy <TARGET>  Generate deployment config (netlify, vercel, cloudflare, github)
   -q, --quiet            Suppress non-error output
@@ -138,50 +209,12 @@ Options:
   -V, --version          Print version
 ```
 
-When no flags are provided, sensible defaults are used (`content/`, `public/`, `templates/`).
+### Environment variables
 
-</details>
-
----
-
-## First 5 Minutes
-
-```bash
-# 1 — Install
-cargo install ssg                       # macOS / Linux / Windows
-
-# 2 — Scaffold + build a brand-new site
-ssg -n mysite -c content -o build -t templates
-
-# 3 — Or build from source and run the bundled examples
-git clone https://github.com/sebastienrousseau/shokunin.git
-cd shokunin
-cargo build                             # ~2 min cold, < 10 s incremental
-cargo test --lib                        # 741 tests, ~8 s on M-series Mac
-cargo run --example basic               # minimal site
-cargo run --example quickstart          # opinionated defaults
-cargo run --example plugins             # plugin pipeline walk-through
-cargo run --example multilingual        # 28 locales + localized search
-```
-
-> On **WSL/Linux** the same commands work verbatim. On **native Windows**, replace `make` targets with their `cargo` equivalents (see [*Development*](#development)).
-
-### One-command bootstrap
-
-```bash
-make init       # detects platform, installs rustfmt + clippy + cargo-deny,
-                # wires up the signed-commit git hook, and runs cargo build
-```
-
-### WSL2 troubleshooting
-
-The bundled dev server binds to `127.0.0.1:3000` (or `:8000` for the CLI). On WSL2, that loopback is reachable from your Windows host as long as `localhostForwarding` is enabled (the default since the Microsoft Store version of WSL). If your browser can't reach the site, override the bind address with environment variables — no code changes needed:
-
-```bash
-SSG_HOST=0.0.0.0 SSG_PORT=8080 cargo run --example multilingual
-```
-
-The same vars work for `ssg --serve`. Use `0.0.0.0` for Codespaces, dev-containers, and any remote-dev setup where the listener needs to be reachable from outside its network namespace.
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `SSG_HOST` | `127.0.0.1` | Dev server bind address (use `0.0.0.0` for WSL2/Codespaces) |
+| `SSG_PORT` | `3000` | Dev server port |
 
 ---
 
@@ -189,26 +222,8 @@ The same vars work for `ssg --serve`. Use `0.0.0.0` for Codespaces, dev-containe
 
 ```rust,no_run
 // The simplest path: delegate to ssg's own pipeline.
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    ssg::run().await
-}
-```
-
-If you only want the compile primitive (no plugin pipeline, no dev server), depend on [`staticdatagen`](https://crates.io/crates/staticdatagen) directly:
-
-```rust,no_run
-use staticdatagen::compiler::service::compile;
-use std::path::Path;
-
 fn main() -> anyhow::Result<()> {
-    compile(
-        Path::new("build"),
-        Path::new("content"),
-        Path::new("public"),
-        Path::new("templates"),
-    )?;
-    Ok(())
+    ssg::run()
 }
 ```
 
@@ -250,6 +265,35 @@ fn main() -> Result<()> {
 </details>
 
 <details>
+<summary><b>Content schema validation</b></summary>
+
+Create `content/content.schema.toml`:
+
+```toml
+[[schemas]]
+name = "post"
+
+[[schemas.fields]]
+name = "title"
+type = "string"
+required = true
+
+[[schemas.fields]]
+name = "date"
+type = "date"
+required = true
+
+[[schemas.fields]]
+name = "draft"
+type = "bool"
+default = "false"
+```
+
+Pages with `schema = "post"` in their frontmatter are validated at compile time. Run `ssg --validate` for schema-only checks.
+
+</details>
+
+<details>
 <summary><b>Incremental build example</b></summary>
 
 ```rust,no_run
@@ -266,7 +310,6 @@ if changed.is_empty() {
     println!("No changes detected, skipping build.");
 } else {
     println!("Rebuilding {} changed files", changed.len());
-    // ... run build ...
     cache.update(content_dir).unwrap();
     cache.save().unwrap();
 }
@@ -280,99 +323,93 @@ if changed.is_empty() {
 
 | Metric | Value |
 | :--- | :--- |
-| **Release binary** | ~23 MB (unstripped), ~5 MB stripped with LTO |
+| **Release binary** | ~23 MB stripped with LTO |
 | **Unsafe code** | 0 blocks — `#![forbid(unsafe_code)]` enforced |
-| **Test suite** | **741 lib** + 33 doc + integration tests. Run `make bench` for Criterion site-generation benchmarks (10/50/100 pages) |
-| **Dependencies** | 24 direct, audited via `cargo audit` and `cargo deny check` (run `make deny` to reproduce). All CI refs pinned to SHA. |
-| **Coverage** | ~98 % line coverage, measured with `cargo llvm-cov` |
-| **Plugin pipeline** | Rayon-parallelised: search, SEO, canonical, and JSON-LD injection all use `par_iter` |
+| **Test suite** | **848 lib** + 34 doc tests |
+| **Dependencies** | 21 direct (down from 25 in v0.0.35) |
+| **Coverage** | ~98 % line coverage |
+| **Plugin pipeline** | 22 plugins, Rayon-parallelised |
+| **Build** | `cargo build`: ~2 min cold, <10 s incremental |
+| **MSRV** | Rust 1.88.0 |
 
 ---
 
 ## Development
 
 ```bash
-make init         # One-command bootstrap (rustfmt + clippy + cargo-deny + hooks + build)
+make init         # Bootstrap (rustfmt + clippy + cargo-deny + hooks + build)
 make build        # Build the project
 make test         # Run all tests
-make bench        # Run performance benchmarks (Criterion)
+make bench        # Run Criterion benchmarks
 make lint         # Lint with Clippy
 make format       # Format with rustfmt
 make deny         # Check licenses and advisories
 make doc          # Generate API docs and open in browser
+make a11y         # Run pa11y accessibility audit on example site
 make clean        # Remove build artifacts and stray logs
 make hooks        # Install the signed-commit git hook
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for signed commits and PR guidelines.
 
 ---
 
 ## What's Included
 
 <details>
-<summary><b>Core modules</b></summary>
+<summary><b>All 36 modules</b></summary>
 
-- **cmd** — CLI argument parsing, `SsgConfig`, input validation
-- **process** — Argument-driven site processing and directory creation
-- **lib** — Orchestrator: `run()` → plugin pipeline → compile → serve
-- **plugin** — `Plugin` trait with `before_compile`, `after_compile`, `on_serve` hooks
-- **plugins** — Built-in `MinifyPlugin`, `ImageOptiPlugin`, `DeployPlugin`
-- **cache** — Content fingerprinting for incremental builds
-- **watch** — Polling-based file watcher for live rebuild
-- **schema** — JSON Schema generator for configuration
-- **scaffold** — Project scaffolding (`ssg --new`)
-- **frontmatter** — Frontmatter extraction and `.meta.json` sidecar support
-- **tera_engine** — Tera templating engine integration
-- **tera_plugin** — Tera template rendering plugin
-- **seo** — `SeoPlugin`, `JsonLdPlugin`, `CanonicalPlugin`, `RobotsPlugin`
-- **search** — Client-side search index generation + localized `SearchLabels`
-- **accessibility** — Automated WCAG checker and ARIA validation
-- **ai** — AI-readiness content hooks (alt-text validation, `llms.txt`)
-- **deploy** — Deployment adapters (Netlify, Vercel, Cloudflare, GitHub Pages)
-- **assets** — Asset fingerprinting and SRI hash generation
-- **highlight** — Syntax highlighting plugin for code blocks
-- **shortcodes** — Shortcode expansion (youtube, gist, figure, admonitions)
-- **markdown_ext** — GFM extensions (tables, strikethrough, task lists)
-- **image_plugin** — Image optimization with WebP output and responsive `srcset`
-- **livereload** — WebSocket live-reload injection
-- **pagination** — Pagination plugin for listing pages
-- **taxonomy** — Taxonomy generation (tags, categories)
-- **drafts** — Draft content filtering plugin
-- **stream** — High-performance streaming file processor
-- **walk** — Shared bounded directory walkers
+| Module | Purpose |
+| :--- | :--- |
+| **cmd** | CLI argument parsing, `SsgConfig`, input validation |
+| **process** | Directory creation and site processing |
+| **lib** | Orchestrator: `run()` → pipeline → compile → serve |
+| **plugin** | `Plugin` trait with lifecycle hooks |
+| **plugins** | `MinifyPlugin`, `ImageOptiPlugin`, `DeployPlugin` |
+| **postprocess** | `SitemapFixPlugin`, `NewsSitemapFixPlugin`, `RssAggregatePlugin`, `ManifestFixPlugin`, `HtmlFixPlugin` |
+| **seo** | `SeoPlugin`, `JsonLdPlugin`, `CanonicalPlugin`, `RobotsPlugin` |
+| **content** | `ContentSchema`, `ContentValidationPlugin`, `--validate` |
+| **i18n** | `I18nPlugin`, hreflang injection, per-locale sitemaps |
+| **search** | Full-text index, search UI, 28 locale translations |
+| **accessibility** | WCAG checker, ARIA validation, decorative image detection |
+| **`image_plugin`** | `<picture>` with AVIF/WebP, responsive srcset |
+| **ai** | AI-readiness hooks, alt-text validation, `llms.txt` |
+| **deploy** | Netlify, Vercel, Cloudflare Pages, GitHub Pages adapters |
+| **assets** | Asset fingerprinting and SRI hash generation |
+| **highlight** | Syntax highlighting for code blocks |
+| **shortcodes** | youtube, gist, figure, admonition expansion |
+| **`markdown_ext`** | GFM tables, strikethrough, task lists |
+| **livereload** | WebSocket live-reload injection (dev only) |
+| **pagination** | Pagination plugin for listing pages |
+| **taxonomy** | Tag and category index generation |
+| **drafts** | Draft content filtering |
+| **frontmatter** | Frontmatter extraction and `.meta.json` sidecars |
+| **`tera_engine`** | Tera templating engine integration |
+| **`tera_plugin`** | Tera template rendering plugin |
+| **cache** | Content fingerprinting for incremental builds |
+| **watch** | Polling-based file watcher |
+| **schema** | JSON Schema generator for configuration |
+| **scaffold** | Project scaffolding (`ssg --new`) |
+| **stream** | High-performance streaming file processor |
+| **walk** | Shared bounded directory walkers |
+
 </details>
 
 <details>
 <summary><b>Security and compliance</b></summary>
 
-- **`#![forbid(unsafe_code)]`** across the entire codebase
-- **Path traversal prevention** with `..` detection and symlink rejection
-- **File size limits** (10 MB per file) and directory depth bounds (128 levels)
-- **`cargo audit`** with zero warnings — all advisories tracked in `.cargo/audit.toml`
-- **`cargo deny`** — license, advisory, ban, and source checks all pass
-- **SBOM** generated as a release artifact
-- **Signed commits** enforced via SSH ED25519
-</details>
+- `#![forbid(unsafe_code)]` across the entire codebase
+- Path traversal prevention with `..` detection and symlink rejection
+- File size limits (10 MB per file) and directory depth bounds (128 levels)
+- `cargo audit` with zero warnings
+- `cargo deny` — license, advisory, ban, and source checks
+- `CycloneDX` SBOM generated as release artifact with Sigstore attestation
+- SPDX license headers on all source files
+- Signed commits enforced via SSH ED25519
 
-<details>
-<summary><b>Test coverage</b></summary>
-
-- **741 lib tests** plus integration + fault-injection suites
-- **~98 % library line coverage** measured with cargo-llvm-cov
-- CI runs on the shared `rust-ci.yml` pipeline (`stable` toolchain)
 </details>
 
 ---
-
-**THE ARCHITECT** ᛫ [Sebastien Rousseau](https://sebastienrousseau.com)
-**THE ENGINE** ᛞ [EUXIS](https://euxis.co) ᛫ Enterprise Unified Execution Intelligence System
-
----
-
-## Code of Conduct
-
-Please read our [Code of Conduct](.github/CODE-OF-CONDUCT.md) before participating in the project.
 
 ## License
 

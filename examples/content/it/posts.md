@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.it (Jane Doe)" ## L'autore della pagina. (max 64 caratt
 banner_alt: "Muro piastrellato verde e nero" ## Il testo alternativo del banner del sito.
 banner_height: "398" ## L'altezza del banner del sito.
 banner_width: "1440" ## La larghezza del banner del sito.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Il banner del sito.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Il banner del sito.
 cdn: "https://cloudcdn.pro" ## La CDN del sito.
 changefreq: "weekly" ## La frequenza di aggiornamento del sito.
 charset: "utf-8" ## Il set di caratteri del sito. (predefinito: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Il viewport
 news_genres: "Blog" ## I generi del sito. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "template di partenza kaishi, generatore di siti statici, template di partenza, bootstrap, bootstrap css, bootstrap javascript, content security policy, meta tag open graph, barra di navigazione responsive, meta tag schema.org" ## Le parole chiave del sito. (separate da virgole, max 10 parole chiave)
 news_language: "it" ## La lingua del sito. (predefinito: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## L'URL dell'immagine del sito.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## L'URL dell'immagine del sito.
 news_loc: "https://kaishi.it" ## L'URL del sito.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La data di pubblicazione del sito.
 news_publication_name: "Kaishi" ## Il nome della pubblicazione di notizie del sito.
@@ -167,4 +167,4 @@ Personalizza i template per adattarli alle tue esigenze specifiche. Le possibili
 
 Con la nostra gamma di template di partenza hai una base solida per costruire qualcosa di unico e su misura per le tue esigenze specifiche. Immergiti e inizia a creare!
 
-[00]: https://cloudcdn.pro/stocks/images/johannes-plenio-6XUA5KQ9-1k.webp
+[00]: data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>

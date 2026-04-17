@@ -1,42 +1,194 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Primary CI gate. Runs on every push/PR. Wall-time target: <5 min.
+#
+# Phase order (cancel-on-failure):
+#   1. lint        — fmt + clippy (~1 min)        BLOCKS everything
+#   2. test        — lib + integration in matrix  PARALLEL after lint
+#   3. examples    — heavy end-to-end builds      PARALLEL after lint
+#   4. coverage    — gate at 95% region floor      PARALLEL after lint
+#   5. audit       — cargo-deny supply chain      PARALLEL after lint
+#
+# Heavy / scheduled work (a11y, sbom, full multi-OS portability matrix)
+# lives in scheduled.yml.
+
 name: CI
+
 on:
   push:
-    branches: [main, feat/**]
+    branches: [main, "feat/**"]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  RUST_BACKTRACE: short
+  COVERAGE_REGIONS_FLOOR: "95.0"
+  COVERAGE_LINES_FLOOR: "97.0"
+  COVERAGE_FUNCTIONS_FLOOR: "94.5"
+
 jobs:
-  ci:
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
-    with:
-      rust-version: 'stable'
-      run-coverage: true
-      # Pedantic/nursery clippy lints are configured at `warn` level in
-      # Cargo.toml as advisory cleanup tracks. The shared rust-ci.yml
-      # runs `cargo clippy --all-targets -- -D warnings`, which would
-      # escalate every advisory warning to an error and fail CI on
-      # ~560 pre-existing pedantic violations (mostly in test code).
-      # Clippy is still run locally; fixes land in dedicated cleanup
-      # PRs rather than gating every release.
-      run-clippy: false
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  # ── Phase 1: lint (blocks downstream) ───────────────────────────────
+  lint:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: lint
 
-  security:
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
-    with:
-      language: rust
-      # Override default 'medium' — actions/dependency-review-action
-      # only accepts critical/high/moderate/low (upstream bug in
-      # pipelines/security.yml).
-      severity-threshold: moderate
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
 
-  docs:
-    if: github.ref == 'refs/heads/main'
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@47ed7767be5273aef0bbc60c6f6c16aba5fb6f59 # pin to main 2026-04-11
-    with:
-      type: rust
-      redirect-crate: ssg
+      - name: cargo clippy (lib — strict)
+        run: cargo clippy --lib --all-features -- -D warnings
+
+      - name: cargo clippy (tests + examples)
+        # Tests/examples allow `unwrap`/`expect` for brevity — see Cargo.toml
+        # `[lints.clippy]` for the full allowance rationale.
+        run: |
+          cargo clippy --lib --tests --examples --all-features -- \
+            -D warnings \
+            -A clippy::unwrap_used \
+            -A clippy::expect_used
+
+  # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
+  test:
+    name: test · ${{ matrix.os }}
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: test-${{ matrix.os }}
+
+      - name: Lib unit tests
+        shell: bash
+        run: cargo test --lib --features test-fault-injection
+
+      - name: Integration tests (excluding heavy examples)
+        shell: bash
+        run: |
+          cargo test --test regression \
+                     --test fault_injection \
+                     --test schema_validation \
+                     --test plugin_contracts \
+                     --test test_navigation \
+                     --test test_tags \
+                     --test test_manifest \
+                     --test test_human \
+                     --test test_json \
+                     --test test_uuid \
+                     --test test_file \
+                     --test test_cname \
+                     --features test-fault-injection
+
+  # ── Phase 2b: end-to-end examples (Linux only — heavy I/O) ──────────
+  examples:
+    name: example outputs
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: examples
+      - name: Build all examples
+        run: cargo build --examples --quiet
+      - name: Validator regression suite
+        # `--test-threads=1` because examples bind 127.0.0.1:3000.
+        run: cargo test --test example_outputs -- --test-threads=1
+
+  # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
+  coverage:
+    name: coverage gate
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: coverage
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Run coverage (lib + integration, exclude heavy examples)
+        run: |
+          cargo llvm-cov --lib --features test-fault-injection \
+            --no-report --quiet
+          cargo llvm-cov report --summary-only
+          cargo llvm-cov report --lcov --output-path coverage.lcov
+      - name: Enforce coverage floor
+        run: |
+          set -euo pipefail
+          summary=$(cargo llvm-cov report --json --summary-only)
+          regions=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['regions']['percent'])")
+          lines=$(echo   "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
+          fns=$(echo     "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['functions']['percent'])")
+          echo "regions=${regions}%  lines=${lines}%  functions=${fns}%"
+          ok=1
+          python3 -c "import sys; sys.exit(0 if float('$regions') >= float('$COVERAGE_REGIONS_FLOOR') else 1)" \
+            || { echo "::error::regions ${regions}% < floor ${COVERAGE_REGIONS_FLOOR}%"; ok=0; }
+          python3 -c "import sys; sys.exit(0 if float('$lines')   >= float('$COVERAGE_LINES_FLOOR')   else 1)" \
+            || { echo "::error::lines ${lines}% < floor ${COVERAGE_LINES_FLOOR}%"; ok=0; }
+          python3 -c "import sys; sys.exit(0 if float('$fns')     >= float('$COVERAGE_FUNCTIONS_FLOOR') else 1)" \
+            || { echo "::error::functions ${fns}% < floor ${COVERAGE_FUNCTIONS_FLOOR}%"; ok=0; }
+          [ "$ok" = "1" ]
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.lcov
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ── Phase 2d: supply chain audit ────────────────────────────────────
+  audit:
+    name: cargo-deny
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: audit
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      - name: Run cargo-deny check
+        run: cargo deny check

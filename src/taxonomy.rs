@@ -14,6 +14,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// A mapping from taxonomy term to a list of (title, URL) pairs.
+type TaxonomyMap = HashMap<String, Vec<(String, String)>>;
+
 /// A taxonomy term with its associated pages.
 #[derive(Debug, Clone)]
 pub struct TaxonomyTerm {
@@ -46,62 +49,8 @@ impl Plugin for TaxonomyPlugin {
             return Ok(());
         }
 
-        let sidecars = collect_json_files(&sidecar_dir)?;
-        let mut tags: HashMap<String, Vec<(String, String)>> = HashMap::new();
-        let mut categories: HashMap<String, Vec<(String, String)>> =
-            HashMap::new();
+        let (tags, categories) = collect_taxonomy_entries(&sidecar_dir)?;
 
-        for sidecar_path in &sidecars {
-            let content = fs::read_to_string(sidecar_path)?;
-            let meta: HashMap<String, serde_json::Value> =
-                match serde_json::from_str(&content) {
-                    Ok(m) => m,
-                    Err(_) => continue,
-                };
-
-            let title = meta
-                .get("title")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Untitled")
-                .to_string();
-
-            // Derive URL from sidecar path
-            let rel = sidecar_path
-                .strip_prefix(&sidecar_dir)
-                .unwrap_or(sidecar_path)
-                .with_extension("")
-                .with_extension("html");
-            let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
-
-            // Extract tags
-            if let Some(tag_arr) = meta.get("tags") {
-                if let Some(arr) = tag_arr.as_array() {
-                    for tag in arr {
-                        if let Some(t) = tag.as_str() {
-                            tags.entry(t.to_string())
-                                .or_default()
-                                .push((title.clone(), url.clone()));
-                        }
-                    }
-                }
-            }
-
-            // Extract categories
-            if let Some(cat_arr) = meta.get("categories") {
-                if let Some(arr) = cat_arr.as_array() {
-                    for cat in arr {
-                        if let Some(c) = cat.as_str() {
-                            categories
-                                .entry(c.to_string())
-                                .or_default()
-                                .push((title.clone(), url.clone()));
-                        }
-                    }
-                }
-            }
-        }
-
-        // Generate taxonomy pages
         if !tags.is_empty() {
             generate_taxonomy_pages(&ctx.site_dir, "tags", &tags)?;
             log::info!("[taxonomy] Generated {} tag page(s)", tags.len());
@@ -117,6 +66,64 @@ impl Plugin for TaxonomyPlugin {
 
         Ok(())
     }
+}
+
+/// Extracts string terms from a JSON array value into the given map.
+fn extract_terms_from_array(
+    value: &serde_json::Value,
+    map: &mut HashMap<String, Vec<(String, String)>>,
+    title: &str,
+    url: &str,
+) {
+    if let Some(arr) = value.as_array() {
+        for item in arr {
+            if let Some(s) = item.as_str() {
+                map.entry(s.to_string())
+                    .or_default()
+                    .push((title.to_string(), url.to_string()));
+            }
+        }
+    }
+}
+
+/// Collects taxonomy entries (tags and categories) from sidecar JSON files.
+fn collect_taxonomy_entries(
+    sidecar_dir: &Path,
+) -> Result<(TaxonomyMap, TaxonomyMap)> {
+    let sidecars = collect_json_files(sidecar_dir)?;
+    let mut tags: TaxonomyMap = HashMap::new();
+    let mut categories: TaxonomyMap = HashMap::new();
+
+    for sidecar_path in &sidecars {
+        let content = fs::read_to_string(sidecar_path)?;
+        let meta: HashMap<String, serde_json::Value> =
+            match serde_json::from_str(&content) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+
+        let title = meta
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Untitled")
+            .to_string();
+
+        let rel = sidecar_path
+            .strip_prefix(sidecar_dir)
+            .unwrap_or(sidecar_path)
+            .with_extension("")
+            .with_extension("html");
+        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+
+        if let Some(tag_arr) = meta.get("tags") {
+            extract_terms_from_array(tag_arr, &mut tags, &title, &url);
+        }
+        if let Some(cat_arr) = meta.get("categories") {
+            extract_terms_from_array(cat_arr, &mut categories, &title, &url);
+        }
+    }
+
+    Ok((tags, categories))
 }
 
 /// Generates index and term pages for a taxonomy.
@@ -306,7 +313,7 @@ mod tests {
     fn taxonomy_plugin_is_copy_after_move() {
         // Guards the `Copy` derive added in v0.0.34.
         let plugin = TaxonomyPlugin;
-        let _consumed = plugin;
+        let _copy = plugin;
         assert_eq!(plugin.name(), "taxonomy");
     }
 
@@ -677,7 +684,7 @@ mod tests {
             slug: "rust".to_string(),
             pages: vec![("Hello".to_string(), "/hello.html".to_string())],
         };
-        let copy = term.clone();
+        let copy = term;
         assert_eq!(copy.name, "Rust");
         assert_eq!(copy.slug, "rust");
         assert_eq!(copy.pages.len(), 1);

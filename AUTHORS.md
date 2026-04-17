@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # Authors
 
 * [Sebastien Rousseau](mailto:sebastian.rousseau@gmail.com) (Original Contributor)

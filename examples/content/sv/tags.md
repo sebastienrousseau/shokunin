@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.se (Jane Doe)" ## Sidans författare. (max 64 tecken)
 banner_alt: "MacBook Pro på vit yta" ## Webbplatsens banner alt-text.
 banner_height: "398" ## Webbplatsens bannerhöjd.
 banner_width: "1440" ## Webbplatsens bannerbredd.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Webbplatsens banner.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Webbplatsens banner.
 cdn: "https://cloudcdn.pro" ## Webbplatsens CDN.
 changefreq: "weekly" ## Webbplatsens ändringsfrekvens.
 charset: "utf-8" ## Webbplatsens teckenuppsättning. (standard: utf-8)
@@ -50,7 +50,7 @@ news_genres: "Blog" ## Webbplatsens genrer. (PressRelease|Satire|Blog|OpEd|Opini
 news_keywords: "kaishi, statisk webbplatsgenerator, statisk webbplatsgenerator, minimalistisk webbmall, modern webbmall, responsiv webbmall, startmall för webbplats, frilansande kreatör, startup-grundare, småföretagare, närvaro online" ## Webbplatsens nyckelord. (kommaseparerade, max 10 nyckelord)
 news_language: "sv" ## Webbplatsens språk. (standard: en)
 news_loc: "https://kaishi.se" ## Webbplatsens loc.
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Webbplatsens bild-loc.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Webbplatsens bild-loc.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Webbplatsens publiceringsdatum.
 news_publication_name: "Kaishi" ## Webbplatsens nyhetspubliceringsnamn.
 news_title: "Taggar" ## Sidans titel. (max 64 tecken)

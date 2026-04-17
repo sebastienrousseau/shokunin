@@ -170,15 +170,15 @@ fn verify_and_copy_files_rejects_nonexistent() {
     assert!(result.is_err());
 }
 
-#[tokio::test]
-async fn verify_and_copy_files_async_copies() -> Result<()> {
+#[test]
+fn verify_and_copy_files_async_copies() -> Result<()> {
     let tmp = tempdir()?;
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
     fs::create_dir_all(&src)?;
     fs::write(src.join("x.txt"), "x")?;
 
-    ssg::verify_and_copy_files_async(&src, &dst).await?;
+    ssg::verify_and_copy_files_async(&src, &dst)?;
     assert_eq!(fs::read_to_string(dst.join("x.txt"))?, "x");
     Ok(())
 }
@@ -257,7 +257,7 @@ fn log_initialization_writes() -> Result<()> {
     let tmp = tempdir()?;
     let path = tmp.path().join("init.log");
     let mut f = fs::File::create(&path)?;
-    let date = dtt::datetime::DateTime::new();
+    let date = ssg::now_iso();
     log_initialization(&mut f, &date)?;
     let content = fs::read_to_string(&path)?;
     assert!(content.contains("INFO"));
@@ -269,7 +269,7 @@ fn log_arguments_writes() -> Result<()> {
     let tmp = tempdir()?;
     let path = tmp.path().join("args.log");
     let mut f = fs::File::create(&path)?;
-    let date = dtt::datetime::DateTime::new();
+    let date = ssg::now_iso();
     log_arguments(&mut f, &date)?;
     let content = fs::read_to_string(&path)?;
     assert!(content.contains("process"));
@@ -686,7 +686,7 @@ fn process_batch_copies_all_files() -> Result<()> {
         fs::write(src.join(format!("f{i}.txt")), format!("data{i}"))?;
     }
 
-    let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+    let result = process_batch(&src, &dst, stream_copy)?;
     assert_eq!(result.files_processed, 20);
     assert!(result.throughput > 0.0);
     Ok(())
@@ -937,7 +937,7 @@ fn e2e_stream_batch_with_hash_verification() -> Result<()> {
         fs::write(src.join(format!("f{i}.txt")), format!("content-{i}"))?;
     }
 
-    let result = process_batch(&src, &dst, |s, d| stream_copy(s, d))?;
+    let result = process_batch(&src, &dst, stream_copy)?;
     assert_eq!(result.files_processed, 50);
 
     // Verify content integrity via hash
@@ -979,7 +979,7 @@ fn e2e_full_directory_lifecycle() -> Result<()> {
     // Log
     let mut log =
         create_log_file(tmp.path().join("build.log").to_str().unwrap())?;
-    let date = dtt::datetime::DateTime::new();
+    let date = ssg::now_iso();
     log_initialization(&mut log, &date)?;
     log_arguments(&mut log, &date)?;
 

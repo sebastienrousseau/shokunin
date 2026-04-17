@@ -1,9 +1,179 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.0.36] - 2026-04-13
+
+### Added
+
+- **Post-processing pipeline** — new `postprocess` module with 5 plugins that
+  repair `staticdatagen` output: `SitemapFixPlugin` (duplicate XML declarations,
+  double-slash URLs, per-page lastmod), `NewsSitemapFixPlugin` (placeholder
+  replacement, `<news:keywords>`), `RssAggregatePlugin` (feed aggregation with
+  enclosures, categories, language, lastBuildDate, copyright),
+  `ManifestFixPlugin` (word-boundary-safe truncation), `HtmlFixPlugin` (JSON-LD
+  date conversion, HTTPS context, broken img repair).
+- **Content schema validation** — new `content` module with `ContentSchema`,
+  `FieldDef`, TOML schema loader, compile-time frontmatter validation, and
+  `--validate` CLI flag for schema-only checks. 62 tests.
+- **Responsive image pipeline** — `ImageOptimizationPlugin` now emits
+  `<picture>` elements with AVIF/WebP `<source>` tags, responsive `srcset` at
+  320/640/1024/1440, `loading="lazy" decoding="async"` by default,
+  `fetchpriority="high"` → `loading="eager"`, width/height from source metadata.
+- **i18n routing** — new `i18n` module with `I18nPlugin`, automatic hreflang
+  injection for multi-locale pages, `x-default` support, per-locale sitemaps
+  with `xhtml:link` alternates, `generate_lang_switcher_html()` helper.
+- **Parallel plugin pipeline** — `MinifyPlugin` and `SearchIndex::build`
+  converted to `par_iter()`. New `--jobs N` CLI flag for Rayon thread count.
+- **Benchmark suite** — Criterion benchmarks for 10–10K synthetic pages,
+  `benchmarks/README.md` with cross-SSG comparison instructions, `BENCHMARKS.md`
+  template.
+- **Accessibility CI** — `.github/workflows/a11y.yml` with pa11y WCAG 2.1 AA
+  scanning, `make a11y` target.
+- **SBOM + CI hardening** — `.github/workflows/sbom.yml` with CycloneDX
+  generation and Sigstore build provenance attestation.
+- **Multi-platform release workflow** — `.github/workflows/release.yml` builds 5
+  targets on `v*` tags: Linux glibc, Linux musl (static), macOS ARM64, macOS
+  Intel, Windows. SHA256 checksums, GitHub Release, crates.io publish.
+- **Install script** — `scripts/install.sh` auto-detects OS/arch, downloads
+  correct binary, verifies checksum, installs to `~/.local/bin`.
+- **Homebrew formula** — `packaging/homebrew/ssg.rb` for `brew install`.
+- **SPDX license headers** — added to all 60+ source files.
+- **Deploy security headers** — `Content-Security-Policy` and
+  `Strict-Transport-Security` (HSTS) added to Netlify/Vercel/Cloudflare configs.
+- **Enhanced SEO plugin** — full OG suite (og:url, og:image, og:image:width/
+  height, og:locale), full Twitter Card suite (summary_large_image for
+  articles), JSON-LD Article/WebPage with datePublished, dateModified, author
+  as Person entity, image as ImageObject, inLanguage.
+- **Canonical URL replacement** — `CanonicalPlugin` now replaces template
+  placeholders with correct `base_url + path` instead of skipping existing tags.
+
+### Changed
+
+- **Renamed** all references from "Shokunin" to "Static Site Generator".
+- **Dependencies reduced** from 25 → 21 direct deps: `once_cell` → `OnceLock`,
+  `dtt` → `chrono`, `colored` → ANSI codes, `uuid` moved to dev-deps.
+- **Tokio features trimmed** from `["full"]` to `["fs", "rt-multi-thread",
+  "macros", "time"]` — removes 8 unused subsystems.
+- **MSRV** synced between `build.rs` (was 1.74) and `Cargo.toml` (1.88).
+- **Dev server** only starts when `--serve` is explicitly requested (was
+  blocking unconditionally after every build, breaking CI).
+- **Accessibility checker** recognises `alt=""` with `role="presentation"` and
+  bare `alt` attribute (minified) as valid decorative images.
+- **Template contrast** — WCAG AAA colours: `--vp-t3` → `#545458`/`#a1a1aa`,
+  `--vp-br` → `#1a3a8a`, links underlined for colour-blind distinguishability.
+- **Musl static binary** — added to CI portability matrix (weekly + release).
+- **`deny.toml`** — removed stale `CC0-1.0` and `Unicode-DFS-2016` entries.
+
+### Fixed
+
+- **Sitemap** — duplicate XML declarations, double-slash URLs, stale lastmod.
+- **News sitemap** — "Unnamed Publication" / "Untitled Article" placeholders
+  replaced with real frontmatter data.
+- **RSS feed** — root feed now aggregates all article items (was single
+  self-referencing entry).
+- **OG/Twitter tags** — empty on non-index pages due to comment-marker
+  detection instead of actual `<meta>` tag checks.
+- **JSON-LD dates** — RFC 2822 → ISO 8601 conversion.
+- **JSON-LD @context** — `http://schema.org/` → `https://schema.org`.
+- **Manifest.json** — description truncated mid-word at 120 chars.
+- **Markdown .class= syntax** — `<p src=` injected into `<img>` tags.
+- **Lighthouse scores** — A11y 91→100, SEO 85→100 on generated output.
+- **CI** — a11y workflow cancellation, Chrome sandbox flags, mold linker
+  config incompatibility with CI runners.
+
+### Added (continued — 2026-04-16)
+
+- **8 polished examples with distinct brand identities** — every example now
+  ships as a real-feeling clone-and-edit template:
+  - `basic` — *Aria Studio* (independent design studio, single-page layout)
+  - `blog` — *Threshold* (accessibility journal, 3 substantive posts on EAA /
+    WCAG / typography, working tags + posts aggregation)
+  - `quickstart` — *Heron Coffee* (small London roastery + 3 journal posts
+    demonstrating the full 16-plugin pipeline against realistic content)
+  - `docs` — *Polaris* (generic developer-tool docs template — Welcome /
+    Getting Started / Configuration / API reference / Release notes / Support)
+  - `landing` — *Meridian Systems* (compliance-grade software for regulated
+    industries; rich body copy, real client list, zero-JS verification)
+  - `portfolio` — *Maya Okafor* (independent UX researcher, 3 detailed case
+    studies: Field Notes Collective, Linden Editions, Polaris Maps)
+  - `multilingual` — 6 priority locales (EN/FR/ES/DE/JA/AR) rewritten with a
+    real i18n product narrative ("Write once, ship in 28 languages")
+  - `plugins` — annotated lifecycle walkthrough, own dirs, root templates
+- **Comprehensive regression test suite** — `+140 tests` across 3 new files:
+  - `tests/example_outputs.rs` (19 tests) — runs every example end-to-end +
+    11 negative validator tests proving the validators catch what they claim
+  - `tests/plugin_contracts.rs` (8 tests) — lifecycle ordering, plugin
+    idempotency (HtmlFix + ManifestFix), HtmlFix→Minify ordering, SVG data-URL
+    preservation
+  - `tests/schema_validation.rs` (8 tests) — `validate_with_schema` contract:
+    valid pages pass, missing fields fail, unknown enum values fail, missing
+    schema file tolerated, multiple errors aggregated, legacy `validate_only`
+    path still works
+- **Coverage gate** — `.github/workflows/ci.yml` enforces region ≥95.0%, line
+  ≥97.0%, function ≥95.0%. Lib coverage measured at 95.22% / 97.46% / 95.79%.
+- **`validate_with_schema(content_dir, schema_path)` API** — schema can now
+  live outside `content_dir`, avoiding `staticdatagen::compile`'s read-every-
+  file behaviour that previously blocked the docs example schema validation.
+- **Browser-compat fixes in `HtmlFixPlugin`** — removes empty `<link
+  rel="preload" href>` tags; injects modern `mobile-web-app-capable` meta
+  alongside the deprecated apple variant.
+- **`ManifestFixPlugin` empty-icon filtering** — drops icon entries whose `src`
+  is empty (Chrome would otherwise log a manifest icon download error).
+- **Mobile-menu desktop fix** — added `.mobile-menu{display:none}` to base CSS
+  in all 6 shared templates; previously the rule lived only inside
+  `@media(max-width:768px)` so the menu rendered as a duplicate nav on desktop.
+- **Mobile nav alignment fix** — added `.nav-controls{margin-left:auto}` to the
+  `@media(max-width:768px)` block so theme switch + hamburger sit flush right
+  when `.nav-search` is hidden.
+
+### Changed (continued — 2026-04-16)
+
+- **Folder hierarchy consolidated**:
+  - `Formula/` + `pkg/{arch,deb,scoop,winget,PUBLISHING.md}` →
+    `packaging/{homebrew,arch,deb,scoop,winget,PUBLISHING.md}`
+  - `template/tera` → `templates/tera` (singular `template/` removed)
+  - `benchmarks/README.md` → `benches/README.md` (benchmarks/ removed)
+  - Empty root `content/`, `templates/`, `public/`, `build/` removed
+- **CI workflows consolidated 7 → 3**:
+  - `ci.yml` (PR gate; lint → test ×3 OS · examples · coverage · audit
+    in parallel; <5 min wall time target)
+  - `scheduled.yml` (weekly + tag; portability matrix, musl static, pa11y,
+    SBOM)
+  - `release.yml` (tag; build × 5 platforms + GHCR + GPG + AUR + crates.io)
+- **Release pipeline expanded** — adds `.rpm` (cargo-generate-rpm), macOS
+  `.pkg` (pkgbuild), Windows `.msi` (cargo-wix), multi-arch GHCR container
+  (`ghcr.io/sebastienrousseau/static-site-generator:vX.Y.Z` + `:latest`),
+  AUR push (gated on `AUR_SSH_KEY` secret), GPG detached signatures (gated
+  on `GPG_PRIVATE_KEY` secret).
+- **Cache files relocated** — `.ssg-cache.json` + `.ssg-plugins-cache.json`
+  moved from repo root → `target/.ssg-cache/{ssg,plugins}.json`.
+- **Clippy re-enabled** — `cargo clippy --lib -- -D warnings` is now CI-gated;
+  tests/examples allow `unwrap_used` + `expect_used` via documented
+  workspace-wide `[lints.clippy]` allowance list. Lib has 0 warnings.
+- **`Dockerfile` added** — two-stage build (cargo + debian-slim runtime) for
+  the GHCR multi-arch image.
+- **`Cargo.toml` packaging metadata** — `[package.metadata.generate-rpm]` for
+  RPM asset list, `[package.metadata.wix]` for MSI installer config.
+
+### Fixed (continued — 2026-04-16)
+
+- **A11y false positive** — `check_img_alt` previously truncated `<img>` tags
+  at the first `>` character inside an SVG `data:` URL in `src=`, causing
+  spurious `<img> missing alt text: (no src)` reports. New quote-aware
+  `find_tag_end()` respects attribute quoting.
+- **Schema validation silently passing** — docs example reported "all pages
+  valid" without actually validating because schema was outside `content_dir`
+  (where the legacy `validate_only` looked). New API + relocated schema fix it.
+- **Nav clutter on single-page templates** — `basic` example trims Posts/Tags
+  nav items + footer Resources column + hero CTAs via `:has()` CSS injection.
+- **Stray repo artifacts removed** — `*.log`, `fixes.txt`, `.DS_Store`,
+  `public.build-tmp/` purged from working tree (already gitignored).
 
 ## [0.0.35] - 2026-04-11
 
@@ -75,7 +245,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CONTRIBUTING.md** architecture tree synced to all 30 modules; signed-tag
   enforcement; per-platform setup instructions.
 - **`Cargo.toml`** `documentation` URL → `https://docs.rs/ssg` (was dead
-  `shokunin.one`); `homepage` → GitHub repository URL.
+  `static-site-generator.one`); `homepage` → GitHub repository URL.
 - **`ssg --help`** no longer leaks `[INFO]` log lines (logger init moved
   below `Cli::build().get_matches()`).
 - **Portability CI** split into fast gate (1 job/push) + full matrix
@@ -126,12 +296,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.34] - 2025-04-04
 
-See [release notes](https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.34).
+See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.34).
 
 ## [0.0.33] - 2025-02-04
 
-See [release notes](https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.33).
+See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
-[0.0.35]: https://github.com/sebastienrousseau/shokunin/compare/v0.0.34...v0.0.35
-[0.0.34]: https://github.com/sebastienrousseau/shokunin/compare/v0.0.33...v0.0.34
-[0.0.33]: https://github.com/sebastienrousseau/shokunin/releases/tag/v0.0.33
+[0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
+[0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
+[0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34
+[0.0.33]: https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33

@@ -1,17 +1,18 @@
+# Per-example output directories (content/ is tracked; build/ and public/ are not)
+**/build/
+**/public/
+
+# OS / IDE / tooling
 *.DS_Store
 *.profraw
 *.log
 /.vscode/
-/docs/
-/examples/public/
+Icon?
+
+# Legacy entries (kept for backwards compat with checkouts before v0.0.36)
 /mysite/
 /output/
 /pdfs/
-/public/
 /target/
-build
-Icon?
-shokunin.log
-src/.DS_Store
 tarpaulin-report.html
 Cargo.lock

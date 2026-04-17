@@ -147,10 +147,8 @@ fn inject_css_link(html: &str) -> String {
 }
 
 /// Generates a CSS theme for syntax highlighting.
-fn generate_highlight_css(theme: &str) -> String {
-    match theme {
-        "github" | _ => {
-            r#"/* Syntax highlighting — GitHub-inspired theme */
+fn generate_highlight_css(_theme: &str) -> String {
+    r#"/* Syntax highlighting — GitHub-inspired theme */
 pre.highlight {
   background: #f6f8fa;
   border: 1px solid #d0d7de;
@@ -174,9 +172,7 @@ pre.highlight code {
   }
 }
 "#
-            .to_string()
-        }
-    }
+    .to_string()
 }
 
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {

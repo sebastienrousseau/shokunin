@@ -1,12 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 # Build artifacts
 /target/
 crates/serde_yml/target/
 build/
+*.build-tmp/
 
 # Generated output
 /docs/*
 !/docs/README.md
+!/docs/guide/
 /examples/public/
+/examples/build/
 /mysite/
 /output/
 /pdfs/
@@ -25,7 +30,31 @@ tarpaulin-report.html
 # IDE / OS
 *.DS_Store
 /.vscode/
+/.idea/
 Icon?
 
 # Backups
 /backup_dir/
+
+# Local overrides
+/fixes.txt
+
+# Per-example output and build dirs (every example writes to its own)
+/examples/landing/public/
+/examples/landing/build/
+/examples/portfolio/public/
+/examples/portfolio/build/
+/examples/docs/public/
+/examples/docs/build/
+/examples/basic/public/
+/examples/basic/build/
+/examples/blog/public/
+/examples/blog/build/
+/examples/quickstart/public/
+/examples/quickstart/build/
+/examples/plugins/public/
+/examples/plugins/build/
+
+# Legacy cache locations (cache now lives under target/.ssg-cache/)
+/.ssg-cache.json
+/.ssg-plugins-cache.json

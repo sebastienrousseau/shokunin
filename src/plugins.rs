@@ -11,7 +11,9 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
+use rayon::prelude::*;
 use std::fs;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Minifies HTML files by removing unnecessary whitespace.
 ///
@@ -39,28 +41,40 @@ impl Plugin for MinifyPlugin {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
-        let mut count = 0usize;
-        for entry in fs::read_dir(&ctx.site_dir)? {
-            let path = entry?.path();
-            if path.extension().is_some_and(|e| e == "html") {
-                fail::fail_point!("plugins::minify-read", |_| {
-                    anyhow::bail!("injected: plugins::minify-read")
-                });
-                let content = fs::read_to_string(&path).with_context(|| {
-                    format!("Failed to read {}", path.display())
-                })?;
-                let minified = minify_html(&content);
-                fail::fail_point!("plugins::minify-write", |_| {
-                    anyhow::bail!("injected: plugins::minify-write")
-                });
-                fs::write(&path, &minified).with_context(|| {
-                    format!("Failed to write {}", path.display())
-                })?;
-                count += 1;
-            }
-        }
-        if count > 0 {
-            println!("[minify] Processed {count} HTML files");
+
+        let cache = ctx.cache.as_ref();
+
+        // Collect HTML files (top-level only, matching previous behaviour).
+        let html_files: Vec<_> = fs::read_dir(&ctx.site_dir)?
+            .filter_map(std::result::Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "html"))
+            .filter(|p| cache.is_none_or(|c| c.has_changed(p)))
+            .collect();
+
+        let count = AtomicUsize::new(0);
+
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
+            fail_point!("plugins::minify-read", |_| {
+                anyhow::bail!("injected: plugins::minify-read")
+            });
+            let content = fs::read_to_string(path).with_context(|| {
+                format!("Failed to read {}", path.display())
+            })?;
+            let minified = minify_html(&content);
+            fail_point!("plugins::minify-write", |_| {
+                anyhow::bail!("injected: plugins::minify-write")
+            });
+            fs::write(path, &minified).with_context(|| {
+                format!("Failed to write {}", path.display())
+            })?;
+            let _ = count.fetch_add(1, Ordering::Relaxed);
+            Ok(())
+        })?;
+
+        let total = count.load(Ordering::Relaxed);
+        if total > 0 {
+            println!("[minify] Processed {total} HTML files");
         }
         Ok(())
     }

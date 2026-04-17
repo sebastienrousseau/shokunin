@@ -1,3 +1,6 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -12,8 +15,14 @@
 //!
 //! Measures end-to-end compile performance at varying page counts to
 //! track regressions and compare against external SSGs.
+//!
+//! Default tiers (run in CI):
+//!   - 10, 50, 100, `1_000`, `10_000` pages
+//!
+//! Heavy tiers (uncomment for local profiling):
+//!   - `50_000`, `100_000` pages
 
-use criterion::Criterion;
+use criterion::{BenchmarkId, Criterion};
 use std::fs;
 use std::hint::black_box;
 use std::path::Path;
@@ -120,8 +129,9 @@ fn bench_compile(c: &mut Criterion, n: usize, label: &str) {
                 if src_tpl.exists() {
                     for entry in fs::read_dir(src_tpl).unwrap() {
                         let entry = entry.unwrap();
-                        fs::copy(entry.path(), tpl.join(entry.file_name()))
-                            .unwrap();
+                        let _ =
+                            fs::copy(entry.path(), tpl.join(entry.file_name()))
+                                .unwrap();
                     }
                 }
 
@@ -137,9 +147,73 @@ fn bench_compile(c: &mut Criterion, n: usize, label: &str) {
     });
 }
 
+/// Parameterised benchmark group across multiple page counts.
+fn bench_compile_group(c: &mut Criterion) {
+    let mut group = c.benchmark_group("site_generation");
+
+    // CI-friendly tiers
+    for &n in &[10, 50, 100, 1_000, 10_000] {
+        let _ = group.bench_with_input(
+            BenchmarkId::new("compile", n),
+            &n,
+            |b, &n| {
+                b.iter_with_setup(
+                    || {
+                        let tmp = TempDir::new().unwrap();
+                        let content = tmp.path().join("content");
+                        let build = tmp.path().join("build");
+                        let site = tmp.path().join("site");
+                        let tpl = tmp.path().join("templates");
+
+                        generate_pages(&content, n);
+
+                        fs::create_dir_all(&tpl).unwrap();
+                        let src_tpl = Path::new("examples/templates/en");
+                        if src_tpl.exists() {
+                            for entry in fs::read_dir(src_tpl).unwrap() {
+                                let entry = entry.unwrap();
+                                let _ = fs::copy(
+                                    entry.path(),
+                                    tpl.join(entry.file_name()),
+                                )
+                                .unwrap();
+                            }
+                        }
+
+                        (tmp, content, build, site, tpl)
+                    },
+                    |(_tmp, content, build, site, tpl)| {
+                        let result = staticdatagen::compiler::service::compile(
+                            &build, &content, &site, &tpl,
+                        );
+                        let _ = black_box(result);
+                    },
+                );
+            },
+        );
+    }
+
+    // Heavy tiers -- uncomment for local profiling (too slow for CI):
+    // for &n in &[50_000, 100_000] {
+    //     group.sample_size(10);
+    //     group.bench_with_input(
+    //         BenchmarkId::new("compile", n),
+    //         &n,
+    //         |b, &n| { /* same body as above */ },
+    //     );
+    // }
+
+    group.finish();
+}
+
 /// Entry point for site generation benchmarks.
-pub(crate) fn bench_site_generation(c: &mut Criterion) {
+#[allow(unreachable_pub)]
+pub fn bench_site_generation(c: &mut Criterion) {
+    // Legacy individual benchmarks (kept for backwards compatibility)
     bench_compile(c, 10, "compile 10 pages");
     bench_compile(c, 50, "compile 50 pages");
     bench_compile(c, 100, "compile 100 pages");
+
+    // Parameterised group with 1K and 10K tiers
+    bench_compile_group(c);
 }

@@ -584,6 +584,35 @@ mod tests {
     }
 
     #[test]
+    fn scan_directory_nonexistent_returns_empty_map() {
+        // Covers the `if dir.is_dir()` false branch in scan_directory.
+        // A non-existent directory returns an empty map, not an error.
+        let dir = PathBuf::from("/nonexistent_ssg_watch_test_dir");
+        let cfg = WatchConfig::new(dir, Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("should succeed");
+        assert_eq!(watcher.tracked_file_count(), 0);
+    }
+
+    #[test]
+    fn watch_config_clone() {
+        let dir = std::env::temp_dir().join("ssg_watch_clone");
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(100));
+        let cloned = cfg;
+        assert_eq!(cloned.directory(), dir.as_path());
+        assert_eq!(cloned.poll_interval(), Duration::from_millis(100));
+    }
+
+    #[test]
+    fn file_watcher_debug_output() {
+        let dir = tmp_dir("debug_out");
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+        let debug = format!("{watcher:?}");
+        assert!(debug.contains("FileWatcher"));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn file_watcher_nested_directory() {
         // Arrange
         let dir = tmp_dir("nested_watch");

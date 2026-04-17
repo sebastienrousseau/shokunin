@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.it (Jane Doe)" ## L'autore della pagina. (max 64 caratt
 banner_alt: "Muro piastrellato verde e nero" ## Il testo alternativo del banner del sito.
 banner_height: "398" ## L'altezza del banner del sito.
 banner_width: "1440" ## La larghezza del banner del sito.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Il banner del sito.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Il banner del sito.
 cdn: "https://cloudcdn.pro" ## La CDN del sito.
 changefreq: "weekly" ## La frequenza di aggiornamento del sito.
 charset: "utf-8" ## Il set di caratteri del sito. (predefinito: utf-8)

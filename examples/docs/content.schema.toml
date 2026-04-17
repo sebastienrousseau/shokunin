@@ -1,0 +1,23 @@
+[[schemas]]
+name = "doc"
+
+[[schemas.fields]]
+name = "title"
+type = "string"
+required = true
+
+[[schemas.fields]]
+name = "description"
+type = "string"
+required = true
+
+[[schemas.fields]]
+name = "category"
+type = "enum(welcome,getting-started,guides,api-reference,release-notes,support,legal,system)"
+required = true
+
+[[schemas.fields]]
+name = "order"
+type = "integer"
+required = false
+default = "99"

@@ -1,4 +1,22 @@
-//! Tests for generating web app manifest data from metadata using the new StaticDataGen approach.
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    clippy::needless_pass_by_value,
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    clippy::module_name_repetitions,
+    clippy::needless_raw_string_hashes,
+    clippy::redundant_clone,
+    clippy::redundant_closure,
+    clippy::redundant_closure_for_method_calls,
+    clippy::single_char_pattern,
+    clippy::needless_late_init,
+    clippy::if_then_some_else_none,
+    clippy::must_use_candidate
+)]
+//! Tests for generating web app manifest data from metadata using the new `StaticDataGen` approach.
 
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -46,10 +64,10 @@ impl ManifestGenerator {
         // Transform #xxxxxx into rgb(#xxxxxx) if it starts with '#'.
         let theme_color = match metadata.get("theme-color") {
             Some(color) if color.starts_with('#') => {
-                format!("rgb({})", color)
+                format!("rgb({color})")
             }
             Some(other) => other.clone(), // If it's already something else, use it as-is.
-            None => "".to_string(),
+            None => String::new(),
         };
 
         // Build a JSON object that matches test expectations.
@@ -159,7 +177,7 @@ mod tests {
     #[test]
     fn test_create_manifest_data_with_invalid_metadata_types() {
         let mut metadata = HashMap::new();
-        let _ = metadata.insert("name".to_string(), "".to_string()); // Empty name
+        let _ = metadata.insert("name".to_string(), String::new()); // Empty name
 
         let manifest_json = create_manifest_data(&metadata).expect(
             "Expected manifest generation to succeed with invalid data",

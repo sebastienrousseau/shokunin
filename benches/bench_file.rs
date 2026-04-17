@@ -27,8 +27,8 @@ use std::path::PathBuf;
 /// ```text
 /// add function      time: [10.123 µs 10.234 µs 10.345 µs]
 /// ```
-#[allow(dead_code)]
-pub(crate) fn bench_file(c: &mut Criterion) {
+#[allow(dead_code, unreachable_pub)]
+pub fn bench_file(c: &mut Criterion) {
     let path = PathBuf::from("content");
     let _ = c.bench_function("add function", |b| {
         b.iter(|| {
@@ -39,10 +39,10 @@ pub(crate) fn bench_file(c: &mut Criterion) {
                     let _ = black_box(data);
                 }
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    eprintln!("Error: {e}");
                 }
             }
-        })
+        });
     });
 }
 

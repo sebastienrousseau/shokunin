@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.one (Jane Doe)" ## The author of the page. (max 64 char
 banner_alt: "MacBook Pro on white surface" ## The banner alt of the site.
 banner_height: "398" ## The banner height of the site.
 banner_width: "1440" ## The banner width of the site.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The banner of the site.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## The banner of the site.
 cdn: "https://cloudcdn.pro" ## The CDN of the site.
 changefreq: "weekly" ## The changefreq of the site.
 charset: "utf-8" ## The charset of the site. (default: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewpor
 news_genres: "Blog" ## The genres of the site. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The keywords of the site. (comma separated, max 10 keywords)
 news_language: "en" ## The language of the site. (default: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## The image loc of the site.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## The image loc of the site.
 news_loc: "https://kaishi.one" ## The loc of the site.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## The publication date of the site.
 news_publication_name: "Kaishi" ## The news publication name of the site.
@@ -128,24 +128,17 @@ security_encryption: "https://kaishi.one/encryption" ## The encryption of the pa
 
 ---
 
-## Overview
+## Write once, ship in 28 languages
 
-**Kaishi** is a minimalist and modern [SSG static site generator ⧉][0]
-starter template designed for professionals who value simplicity and elegance.
+**Kaishi** is the starter template behind product sites that need to read perfectly in English, Japanese, Arabic, Mandarin, and 24 other languages — without a JavaScript runtime. Markdown-first, framework-free, and server-rendered, it ships HTML that any browser can read on any device.
 
-With its clean and dynamic layout, Kaishi offers a versatile and user-friendly
-solution for those looking to showcase their work and services online. Built on
-a responsive framework, this template is ideal for professionals without coding
-or design skills.
+## Built for global products
 
-Whether you're a freelance creative, a startup founder, or a small business
-owner. Kaishi's ready-to-use website and responsive starter templates provide
-the perfect foundation for your online presence. With its minimalist design,
-Kaishi is the ultimate website starter template for modern and professional
-websites.
+- **28 locales out of the box** — including 4 right-to-left languages, 7 CJK scripts, and 17 Latin-script variants
+- **hreflang + x-default wired in** — search engines see every locale, every page, every variant
+- **Per-locale search, sitemap, and feed** — `/fr/search-index.json`, `/de/sitemap.xml`, etc.
+- **Accept-Language negotiation** — `/` redirects to the visitor's preferred locale, falls back gracefully
 
-This page is an example for the SSG static site generator. You
-can use it as a template for your website or blog. It uses a markdown template
-for the content and a custom HTML theme for the layout.
+## Try the language switcher
 
-[0]: https://static-site-generator.com/
+Use the language switcher in the top-right (or the list at the bottom of any page) to see this content in any of the 28 supported languages. The URL changes; the content stays in sync.

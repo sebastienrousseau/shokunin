@@ -57,30 +57,34 @@ impl SearchIndex {
     /// `.html` file, and returns the populated index.
     pub fn build(site_dir: &Path) -> Result<Self> {
         let html_files = collect_html_files(site_dir)?;
-        let mut entries =
-            Vec::with_capacity(html_files.len().min(MAX_INDEX_ENTRIES));
+        let capped: Vec<_> =
+            html_files.into_iter().take(MAX_INDEX_ENTRIES).collect();
 
-        for path in html_files.iter().take(MAX_INDEX_ENTRIES) {
-            let html = fs::read_to_string(path)
-                .with_context(|| format!("cannot read {}", path.display()))?;
+        let entries: Vec<SearchEntry> = capped
+            .par_iter()
+            .map(|path| -> Result<SearchEntry> {
+                let html = fs::read_to_string(path).with_context(|| {
+                    format!("cannot read {}", path.display())
+                })?;
 
-            let rel_url = path
-                .strip_prefix(site_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .replace('\\', "/");
+                let rel_url = path
+                    .strip_prefix(site_dir)
+                    .unwrap_or(path)
+                    .to_string_lossy()
+                    .replace('\\', "/");
 
-            let title = extract_title(&html);
-            let headings = extract_headings(&html);
-            let content = extract_text(&html);
+                let title = extract_title(&html);
+                let headings = extract_headings(&html);
+                let content = extract_text(&html);
 
-            entries.push(SearchEntry {
-                title,
-                url: format!("/{rel_url}"),
-                content: truncate(&content, MAX_CONTENT_LENGTH),
-                headings,
-            });
-        }
+                Ok(SearchEntry {
+                    title,
+                    url: format!("/{rel_url}"),
+                    content: truncate(&content, MAX_CONTENT_LENGTH),
+                    headings,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(Self { entries })
     }
@@ -97,13 +101,13 @@ impl SearchIndex {
 
     /// Number of indexed pages.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Returns true if the index has no entries.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 }
@@ -182,11 +186,13 @@ const LOCALE_TABLE: &[(&str, LocaleEntry)] = &[
 
 impl SearchLabels {
     /// English (default) labels.
+    #[must_use]
     pub fn english() -> Self {
         Self::for_locale("en")
     }
 
     /// French labels.
+    #[must_use]
     pub fn french() -> Self {
         Self::for_locale("fr")
     }
@@ -195,19 +201,23 @@ impl SearchLabels {
     ///
     /// Lookup is case-insensitive. Falls back to English if the code is not
     /// in the bundled table.
+    #[must_use]
     pub fn for_locale(code: &str) -> Self {
         let key = code.to_ascii_lowercase();
-        let entry = LOCALE_TABLE
-            .iter()
-            .find(|(c, _)| *c == key)
-            .map(|(_, e)| e)
-            .unwrap_or_else(|| {
-                &LOCALE_TABLE
+        let entry = LOCALE_TABLE.iter().find(|(c, _)| *c == key).map_or_else(
+            || {
+                // `LOCALE_TABLE` is a hand-authored constant array that
+                // always contains the `en` entry; the `expect` is a
+                // type-system formality, not a runtime risk.
+                #[allow(clippy::expect_used)]
+                let en = LOCALE_TABLE
                     .iter()
                     .find(|(c, _)| *c == "en")
-                    .expect("en entry must exist")
-                    .1
-            });
+                    .expect("en entry must exist in LOCALE_TABLE");
+                &en.1
+            },
+            |(_, e)| e,
+        );
         Self {
             button_text: entry.button.into(),
             button_aria: entry.button.into(),
@@ -274,7 +284,8 @@ pub struct LocalizedSearchPlugin {
 
 impl LocalizedSearchPlugin {
     /// Create a new localized search plugin with the given labels.
-    pub fn new(labels: SearchLabels) -> Self {
+    #[must_use]
+    pub const fn new(labels: SearchLabels) -> Self {
         Self { labels }
     }
 }
@@ -1214,6 +1225,199 @@ mod tests {
             index.entries.iter().map(|e| e.url.as_str()).collect();
         assert!(urls.iter().any(|u| u.contains("docs/guide/advanced")));
         assert!(urls.iter().any(|u| u.contains("index.html")));
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // SearchIndex::build — parallel path with multiple HTML files
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn search_index_build_parallel_with_many_files() -> Result<()> {
+        let tmp = tempdir()?;
+        for i in 0..10 {
+            fs::write(
+                tmp.path().join(format!("page{i}.html")),
+                make_html(
+                    &format!("Page {i}"),
+                    &format!("<p>Content for page {i}</p>"),
+                ),
+            )?;
+        }
+
+        let index = SearchIndex::build(tmp.path())?;
+        assert_eq!(index.len(), 10);
+
+        // Verify all pages are indexed
+        for i in 0..10 {
+            let title = format!("Page {i}");
+            assert!(
+                index.entries.iter().any(|e| e.title == title),
+                "missing entry for {title}"
+            );
+        }
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // extract_headings — h1 through h6
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_headings_all_levels() {
+        let html = "\
+            <h1>One</h1>\
+            <h2>Two</h2>\
+            <h3>Three</h3>\
+            <h4>Four</h4>\
+            <h5>Five</h5>\
+            <h6>Six</h6>";
+        let h = extract_headings(html);
+        assert_eq!(h, vec!["One", "Two", "Three", "Four", "Five", "Six"]);
+    }
+
+    #[test]
+    fn extract_headings_empty_heading_skipped() {
+        let html = "<h1></h1><h2>Real Heading</h2>";
+        let h = extract_headings(html);
+        assert_eq!(h, vec!["Real Heading"]);
+    }
+
+    // -----------------------------------------------------------------
+    // truncate — word boundary and short content
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn truncate_at_word_boundary_exact() {
+        // truncate(s, 13) takes first 13 chars "one two three"
+        // then finds last space at position 7, truncating to "one two"
+        let result = truncate("one two three four five", 13);
+        assert_eq!(result, "one two");
+    }
+
+    #[test]
+    fn truncate_content_shorter_than_limit() {
+        let input = "short text";
+        assert_eq!(truncate(input, 1000), "short text");
+    }
+
+    #[test]
+    fn truncate_exact_length_returns_unchanged() {
+        let input = "exact";
+        assert_eq!(truncate(input, 5), "exact");
+    }
+
+    // -----------------------------------------------------------------
+    // SearchLabels::for_locale
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn search_labels_for_locale_french() {
+        let labels = SearchLabels::for_locale("fr");
+        assert_eq!(labels.button_text, "Rechercher");
+        assert!(labels.input_placeholder.contains("Rechercher"));
+        assert_eq!(labels.footer_close, "fermer");
+    }
+
+    #[test]
+    fn search_labels_for_locale_german() {
+        let labels = SearchLabels::for_locale("de");
+        assert_eq!(labels.button_text, "Suchen");
+        assert_eq!(labels.footer_open, "\u{f6}ffnen"); // öffnen
+    }
+
+    #[test]
+    fn search_labels_for_locale_unknown_falls_back_to_english() {
+        let labels = SearchLabels::for_locale("xx");
+        assert_eq!(labels.button_text, "Search");
+        assert!(labels.input_placeholder.contains("Search"));
+        assert_eq!(labels.footer_close, "close");
+    }
+
+    #[test]
+    fn search_labels_for_locale_case_insensitive() {
+        let labels = SearchLabels::for_locale("FR");
+        assert_eq!(labels.button_text, "Rechercher");
+    }
+
+    #[test]
+    fn search_labels_for_locale_zh_tw() {
+        let labels = SearchLabels::for_locale("zh-tw");
+        assert_eq!(labels.button_text, "搜尋");
+    }
+
+    #[test]
+    fn search_labels_default_is_english() {
+        let labels = SearchLabels::default();
+        assert_eq!(labels.button_text, "Search");
+    }
+
+    #[test]
+    fn search_labels_english_constructor() {
+        let labels = SearchLabels::english();
+        assert_eq!(labels.button_text, "Search");
+        assert_eq!(
+            SearchLabels::english().input_placeholder,
+            labels.input_placeholder
+        );
+    }
+
+    #[test]
+    fn search_labels_french_constructor() {
+        let labels = SearchLabels::french();
+        assert_eq!(labels.button_text, "Rechercher");
+    }
+
+    #[test]
+    fn localized_search_plugin_new_keeps_supplied_labels() {
+        let labels = SearchLabels::french();
+        let p = LocalizedSearchPlugin::new(labels.clone());
+        assert_eq!(p.labels.button_text, "Rechercher");
+    }
+
+    #[test]
+    fn localized_search_plugin_name_is_search() {
+        let p = LocalizedSearchPlugin::new(SearchLabels::default());
+        assert_eq!(p.name(), "search");
+    }
+
+    #[test]
+    fn localized_search_plugin_no_op_when_site_missing() -> Result<()> {
+        let dir = tempdir().unwrap();
+        let nope = dir.path().join("nope");
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            &nope,
+            Path::new("t"),
+        );
+        LocalizedSearchPlugin::new(SearchLabels::default())
+            .after_compile(&ctx)?;
+        Ok(())
+    }
+
+    #[test]
+    fn localized_search_plugin_writes_index_with_localized_labels() -> Result<()>
+    {
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head><title>P</title></head><body>x</body></html>",
+        )?;
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            dir.path(),
+            Path::new("t"),
+        );
+        LocalizedSearchPlugin::new(SearchLabels::french())
+            .after_compile(&ctx)?;
+        let html = fs::read_to_string(dir.path().join("page.html"))?;
+        // Localized button text should appear in the injected widget.
+        assert!(
+            html.contains("Rechercher"),
+            "French label 'Rechercher' should appear in injected UI"
+        );
         Ok(())
     }
 }

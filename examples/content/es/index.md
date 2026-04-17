@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.es (Jane Doe)" ## El autor de la página. (máx. 64 car
 banner_alt: "MacBook Pro sobre superficie blanca" ## El texto alternativo del banner del sitio.
 banner_height: "398" ## La altura del banner del sitio.
 banner_width: "1440" ## La anchura del banner del sitio.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## El banner del sitio.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## El banner del sitio.
 cdn: "https://cloudcdn.pro" ## La CDN del sitio.
 changefreq: "weekly" ## La frecuencia de cambio del sitio.
 charset: "utf-8" ## El conjunto de caracteres del sitio. (por defecto: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## La ventana 
 news_genres: "Blog" ## Los géneros del sitio. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, generador de sitios estáticos, plantilla web minimalista, plantilla web moderna, plantilla web adaptable, plantilla de inicio web, creativo freelance, fundador de startup, propietario de pequeña empresa, presencia en línea" ## Las palabras clave del sitio. (separadas por comas, máx. 10 palabras)
 news_language: "es" ## El idioma del sitio. (por defecto: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## La ubicación de la imagen del sitio.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## La ubicación de la imagen del sitio.
 news_loc: "https://kaishi.es" ## La URL del sitio.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## La fecha de publicación del sitio.
 news_publication_name: "Kaishi" ## El nombre de la publicación de noticias del sitio.
@@ -128,24 +128,17 @@ security_encryption: "https://kaishi.es/encryption" ## El cifrado de la página.
 
 ---
 
-## Visión general
+## Escribe una vez, publica en 28 idiomas
 
-**Kaishi** es una plantilla de inicio minimalista y moderna para [generadores de sitios estáticos SSG ⧉][0],
-diseñada para profesionales que valoran la simplicidad y la elegancia.
+**Kaishi** es la plantilla base detrás de sitios de producto que deben leerse perfectamente en español, japonés, árabe, mandarín y otros 24 idiomas — sin necesidad de un runtime JavaScript. Markdown primero, sin framework, renderizado en servidor, entrega HTML que cualquier navegador puede leer en cualquier dispositivo.
 
-Con su diseño limpio y dinámico, Kaishi ofrece una solución versátil y fácil de
-usar para quienes desean mostrar su trabajo y servicios en línea. Construida sobre
-una base adaptable, esta plantilla es ideal para profesionales sin conocimientos
-de programación o diseño.
+## Diseñado para productos globales
 
-Tanto si eres un creativo freelance, como si eres fundador de una startup o
-propietario de una pequeña empresa, los sitios web listos para usar y las plantillas
-de inicio adaptables de Kaishi proporcionan la base perfecta para tu presencia en
-línea. Con su diseño minimalista, Kaishi es la plantilla de inicio web definitiva
-para sitios web modernos y profesionales.
+- **28 locales listos para usar** — incluidos 4 idiomas de derecha a izquierda, 7 sistemas CJK y 17 variantes en alfabeto latino
+- **hreflang + x-default cableados** — los buscadores ven cada locale, cada página, cada variante
+- **Búsqueda, sitemap y feed por locale** — `/fr/search-index.json`, `/de/sitemap.xml`, etc.
+- **Negociación Accept-Language** — `/` redirige al locale preferido del visitante, con respaldo elegante
 
-Esta página es un ejemplo del generador de sitios estáticos SSG. Puedes usarla
-como plantilla para tu sitio web o blog. Utiliza una plantilla Markdown para el
-contenido y un tema HTML personalizado para la maquetación.
+## Prueba el selector de idioma
 
-[0]: https://static-site-generator.com/
+Usa el selector de idioma en la esquina superior derecha (o la lista al pie de cualquier página) para ver este contenido en cualquiera de los 28 idiomas admitidos. La URL cambia; el contenido se mantiene sincronizado.

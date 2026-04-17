@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.de (Jane Doe)" ## Der Autor der Seite. (max. 64 Zeichen
 banner_alt: "MacBook Pro auf weißer Oberfläche" ## Der Banner-Alternativtext der Website.
 banner_height: "398" ## Die Banner-Höhe der Website.
 banner_width: "1440" ## Die Banner-Breite der Website.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Das Banner der Website.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Das Banner der Website.
 cdn: "https://cloudcdn.pro" ## Das CDN der Website.
 changefreq: "weekly" ## Die Änderungshäufigkeit der Website.
 charset: "utf-8" ## Der Zeichensatz der Website. (Standard: utf-8)
@@ -49,7 +49,7 @@ viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Der Viewpor
 news_genres: "Blog" ## Die Genres der Website. (PressRelease|Satire|Blog|OpEd|Opinion|UserGenerated)
 news_keywords: "kaishi, Static Site Generator, statischer Website-Generator, minimalistische Website-Vorlage, moderne Website-Vorlage, responsive Website-Vorlage, Starter-Website-Vorlage, freiberuflicher Kreativer, Startup-Gründer, Kleinunternehmer, Online-Präsenz" ## Die Schlüsselwörter der Website. (kommagetrennt, max. 10 Schlüsselwörter)
 news_language: "de" ## Die Sprache der Website. (Standard: en)
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## Die Bild-URL der Website.
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## Die Bild-URL der Website.
 news_loc: "https://kaishi.de" ## Die URL der Website.
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## Das Veröffentlichungsdatum der Website.
 news_publication_name: "Kaishi" ## Der Name der Nachrichtenpublikation der Website.

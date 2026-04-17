@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.kr (Jane Doe)" ## 페이지의 작성자. (최대 64자
 banner_alt: "녹색과 검은색 타일 벽" ## 사이트의 배너 대체 텍스트.
 banner_height: "398" ## 사이트의 배너 높이.
 banner_width: "1440" ## 사이트의 배너 너비.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## 사이트의 배너.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## 사이트의 배너.
 cdn: "https://cloudcdn.pro" ## 사이트의 CDN.
 changefreq: "weekly" ## 사이트의 변경 빈도.
 charset: "utf-8" ## 사이트의 문자 집합. (기본값: utf-8)

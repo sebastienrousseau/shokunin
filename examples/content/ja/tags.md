@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.jp (Jane Doe)" ## ページの著者。(最大64文字)
 banner_alt: "白い面の上の MacBook Pro" ## サイトのバナー代替テキスト。
 banner_height: "398" ## サイトのバナーの高さ。
 banner_width: "1440" ## サイトのバナーの幅。
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## サイトのバナー。
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## サイトのバナー。
 cdn: "https://cloudcdn.pro" ## サイトのCDN。
 changefreq: "weekly" ## サイトの更新頻度。
 charset: "utf-8" ## サイトの文字セット。(デフォルト: utf-8)
@@ -50,7 +50,7 @@ news_genres: "Blog" ## サイトのジャンル。(PressRelease|Satire|Blog|OpEd
 news_keywords: "kaishi, static site generator, 静的サイトジェネレーター, ミニマルなウェブサイトテンプレート, モダンなウェブサイトテンプレート, レスポンシブウェブサイトテンプレート, スターターウェブサイトテンプレート, フリーランスクリエイター, スタートアップ創業者, 中小企業オーナー, オンラインプレゼンス" ## サイトのキーワード。(カンマ区切り、最大10個)
 news_language: "ja" ## サイトの言語。(デフォルト: en)
 news_loc: "https://kaishi.jp" ## サイトの位置。
-news_image_loc: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## サイトの画像の位置。
+news_image_loc: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## サイトの画像の位置。
 news_publication_date: "Wed, 01 Jan 2025 01:01:01 GMT" ## サイトの公開日。
 news_publication_name: "Kaishi" ## ニュース出版物名。
 news_title: "タグ" ## ページのタイトル。(最大64文字)

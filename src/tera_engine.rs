@@ -63,8 +63,8 @@ impl TeraEngine {
 
         let mut tera = tera::Tera::new(&glob).with_context(|| {
             format!(
-                "Failed to load Tera templates from {:?}",
-                config.template_dir
+                "Failed to load Tera templates from {}",
+                config.template_dir.display()
             )
         })?;
 
@@ -174,9 +174,8 @@ impl TeraEngine {
             return data;
         }
 
-        let entries = match std::fs::read_dir(&data_dir) {
-            Ok(e) => e,
-            Err(_) => return data,
+        let Ok(entries) = std::fs::read_dir(&data_dir) else {
+            return data;
         };
 
         for entry in entries.flatten() {
@@ -196,9 +195,8 @@ impl TeraEngine {
                 .to_string_lossy()
                 .to_lowercase();
 
-            let content = match std::fs::read_to_string(&path) {
-                Ok(c) => c,
-                Err(_) => continue,
+            let Ok(content) = std::fs::read_to_string(&path) else {
+                continue;
             };
 
             let value: Option<serde_json::Value> = match ext.as_str() {
@@ -500,7 +498,7 @@ mod tests {
         // Add a minimal template that references the custom global.
         fs::write(
             dir.path().join("tera").join("branded.html"),
-            r#"<p>{{ brand }}</p>"#,
+            r"<p>{{ brand }}</p>",
         )
         .unwrap();
 
@@ -537,7 +535,7 @@ mod tests {
         // Only write a `base.html`, NOT a `page.html`.
         fs::write(
             tera_dir.join("base.html"),
-            r#"<!DOCTYPE html><html><body>{% block content %}{% endblock %}</body></html>"#,
+            r"<!DOCTYPE html><html><body>{% block content %}{% endblock %}</body></html>",
         )
         .unwrap();
 
@@ -657,7 +655,7 @@ mod tests {
         fs::write(
             tera_dir.join("broken.html"),
             // `nonexistent_filter` doesn't exist → render fails.
-            r#"{{ page.title | nonexistent_filter }}"#,
+            r"{{ page.title | nonexistent_filter }}",
         )
         .unwrap();
 

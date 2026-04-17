@@ -6,7 +6,7 @@ author: "jane.doe@kaishi.co.il (Jane Doe)" ## מחבר העמוד. (עד 64 תו
 banner_alt: "קיר מרוצף בירוק ושחור" ## טקסט חלופי של באנר האתר.
 banner_height: "398" ## גובה הבאנר של האתר.
 banner_width: "1440" ## רוחב הבאנר של האתר.
-banner: "https://cloudcdn.pro/stocks/images/bernardo-lorena-ponte-cEp2Tow6XKk.webp" ## הבאנר של האתר.
+banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>" ## הבאנר של האתר.
 cdn: "https://cloudcdn.pro" ## ה-CDN של האתר.
 changefreq: "weekly" ## תדירות העדכון של האתר.
 charset: "utf-8" ## קידוד התווים של האתר. (ברירת מחדל: utf-8)

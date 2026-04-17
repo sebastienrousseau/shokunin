@@ -1,0 +1,102 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
+# Configuration
+
+SSG is configured via a TOML file (`ssg.toml`), CLI flags, or environment variables.
+
+## ssg.toml Fields
+
+```toml
+# Required
+site_name = "mysite"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+
+# Site metadata
+base_url = "https://example.com"
+site_title = "My Site"
+site_description = "A fast static site"
+language = "en"
+
+# Optional: dev server directory
+serve_dir = "public"
+
+# Optional: i18n (see i18n guide)
+[i18n]
+default_locale = "en"
+locales = ["en", "fr", "de"]
+url_prefix = "sub_path"   # or "sub_domain"
+```
+
+### Field Reference
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `site_name` | String | Yes | Project name, used by `--new` scaffolding |
+| `content_dir` | Path | Yes | Directory containing Markdown content |
+| `output_dir` | Path | Yes | Directory for generated output |
+| `template_dir` | Path | Yes | Directory containing Tera templates |
+| `serve_dir` | Path | No | Directory served by the dev server |
+| `base_url` | URL | Yes | Canonical base URL for the site |
+| `site_title` | String | Yes | Displayed in templates and meta tags |
+| `site_description` | String | Yes | Used in meta description and feeds |
+| `language` | String | Yes | BCP 47 language code (e.g. `en`, `fr`) |
+| `i18n` | Table | No | Multi-locale configuration (see [i18n](i18n.md)) |
+
+## CLI Flag Overrides
+
+CLI flags override `ssg.toml` values:
+
+```sh
+ssg -f ssg.toml -o dist   # overrides output_dir to "dist"
+```
+
+See [CLI Reference](cli.md) for all flags.
+
+## Environment Variables
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `SSG_HOST` | `127.0.0.1` | Dev server bind address. Set to `0.0.0.0` for WSL2 or Codespaces. |
+| `SSG_PORT` | `3000` | Dev server port |
+
+## JSON Schema
+
+SSG can generate a JSON Schema for the configuration format using the `schema` module. This enables editor autocompletion and validation in IDEs that support JSON Schema for TOML (e.g. via `taplo`).
+
+The schema covers all top-level fields and the `[i18n]` section.
+
+## Configuration Precedence
+
+1. **CLI flags** (highest priority)
+2. **Configuration file** (`ssg.toml` via `-f`)
+3. **Built-in defaults** (lowest priority)
+
+## Validation
+
+SSG validates all configuration at startup:
+
+- Paths are checked for safety (no `..` traversal, no symlinks)
+- URLs are validated for correct format
+- Config file size is capped to prevent abuse
+- Missing required directories produce clear error messages
+
+## Example: Minimal Config
+
+```toml
+site_name = "blog"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+base_url = "https://blog.example.com"
+site_title = "My Blog"
+site_description = "Thoughts and tutorials"
+language = "en"
+```
+
+## Next Steps
+
+- [Content](content.md) — frontmatter and Markdown authoring
+- [i18n](i18n.md) — multi-locale configuration
+- [CLI Reference](cli.md) — all flags and environment variables

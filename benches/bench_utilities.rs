@@ -20,8 +20,8 @@ use tempfile::TempDir;
  *
  * * `c` - A reference to a `Criterion` object, which is used to define and run benchmarks.
  */
-#[allow(dead_code)]
-pub(crate) fn bench_utilities(c: &mut Criterion) {
+#[allow(dead_code, unreachable_pub)]
+pub fn bench_utilities(c: &mut Criterion) {
     // Creates a temporary directory and gets its path.
     let tempdir = TempDir::new().unwrap();
     let dir = tempdir.path().join("test_dir");
@@ -33,7 +33,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
             let result = directory(black_box(&dir), black_box("test_dir"));
             // Asserts that the result is Ok, indicating that the directory was created successfully.
             assert!(result.is_ok());
-        })
+        });
     });
 
     // Benchmarks checking if a directory exists.
@@ -43,7 +43,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
             let result = dir.exists();
             // Asserts that the result is true, indicating that the directory exists.
             assert!(result);
-        })
+        });
     });
 
     // Benchmarks checking if a directory is a directory.
@@ -53,7 +53,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
             let result = dir.is_dir();
             // Asserts that the result is true, indicating that the directory is a directory.
             assert!(result);
-        })
+        });
     });
 
     // Benchmarks checking if a non-existent directory does not exist.
@@ -66,7 +66,7 @@ pub(crate) fn bench_utilities(c: &mut Criterion) {
                 let result = non_existent_dir.exists();
                 // Asserts that the result is false, indicating that the non-existent directory does not exist.
                 assert!(!result);
-            })
+            });
         },
     );
 }

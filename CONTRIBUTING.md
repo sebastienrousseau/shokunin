@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 # Contributing to SSG
 
 Welcome! We're thrilled that you're interested in contributing to SSG. Whether you're looking to report a bug, suggest a feature, or submit code, this guide will help you get started.
@@ -12,8 +14,8 @@ Welcome! We're thrilled that you're interested in contributing to SSG. Whether y
 ### Getting started
 
 ```bash
-git clone https://github.com/sebastienrousseau/shokunin.git
-cd shokunin
+git clone https://github.com/sebastienrousseau/static-site-generator.git
+cd static-site-generator
 cargo build
 cargo test
 ```
@@ -21,11 +23,16 @@ cargo test
 ### Useful commands
 
 ```bash
+make init        # Bootstrap (rustfmt + clippy + cargo-deny + hooks + build)
 make build       # Build the project
 make test        # Run all tests
+make bench       # Run Criterion benchmarks
 make lint        # Lint with Clippy
 make format      # Format code with rustfmt
 make deny        # Check dependencies for security/license issues
+make doc         # Generate API docs and open in browser
+make a11y        # Run accessibility audit on example site
+make clean       # Remove build artifacts
 ```
 
 ## Signed commits
@@ -55,7 +62,7 @@ git config --global user.signingkey YOUR_GPG_KEY_ID
 ### Per-repo defaults
 
 ```bash
-cd shokunin
+cd static-site-generator
 git config commit.gpgsign true
 git config tag.gpgsign true
 ```
@@ -163,12 +170,12 @@ impl Plugin for MyPlugin {
 
 ### Reporting bugs
 
-- Open an [issue](https://github.com/sebastienrousseau/shokunin/issues/new) with a descriptive title.
+- Open an [issue](https://github.com/sebastienrousseau/static-site-generator/issues/new) with a descriptive title.
 - Include steps to reproduce, expected vs actual behavior, and your OS/Rust version.
 
 ### Suggesting features
 
-- Open an [issue](https://github.com/sebastienrousseau/shokunin/issues/new) describing the use case and proposed solution.
+- Open an [issue](https://github.com/sebastienrousseau/static-site-generator/issues/new) describing the use case and proposed solution.
 
 ### Submitting code
 

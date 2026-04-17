@@ -99,10 +99,10 @@ impl Plugin for AccessibilityPlugin {
 
         if report.total_issues > 0 {
             log::warn!(
-                "[a11y] {} issue(s) across {} page(s). Report: {:?}",
+                "[a11y] {} issue(s) across {} page(s). Report: {}",
                 report.total_issues,
                 report.pages.len(),
-                report_path
+                report_path.display()
             );
         } else {
             log::info!(
@@ -140,22 +140,75 @@ fn check_page(html: &str) -> Vec<AccessibilityIssue> {
     issues
 }
 
+/// Returns `true` if the `<img>` tag has any form of `alt` attribute.
+fn has_valid_alt(tag: &str) -> bool {
+    let has_alt_eq = tag.contains("alt=");
+    let has_alt_bare = !has_alt_eq
+        && (tag.contains(" alt ")
+            || tag.contains(" alt>")
+            || tag.ends_with(" alt"));
+    has_alt_eq || has_alt_bare
+}
+
+/// Returns `true` if the `<img>` tag has an empty or missing-value alt.
+fn has_empty_alt(tag: &str) -> bool {
+    let has_alt_eq = tag.contains("alt=");
+    let has_alt_bare = !has_alt_eq
+        && (tag.contains(" alt ")
+            || tag.contains(" alt>")
+            || tag.ends_with(" alt"));
+    tag.contains("alt=\"\"")
+        || tag.contains("alt=''")
+        || has_alt_bare
+        || (has_alt_eq && !tag.contains("alt=\"") && !tag.contains("alt='"))
+}
+
+/// Returns `true` if the `<img>` tag is marked as decorative via ARIA roles.
+fn is_decorative_img(tag: &str) -> bool {
+    tag.contains("role=\"presentation\"")
+        || tag.contains("role=\"none\"")
+        || tag.contains("role='presentation'")
+        || tag.contains("role='none'")
+        || tag.contains("role=presentation")
+        || tag.contains("role=none")
+}
+
+/// Returns the absolute end index (one past the closing `>`) of the HTML
+/// tag that starts at `tag_start`. Skips `>` characters that occur inside
+/// double- or single-quoted attribute values so that inline SVG `data:`
+/// URLs in `src` attributes don't truncate the tag prematurely.
+fn find_tag_end(html: &str, tag_start: usize) -> usize {
+    let bytes = html.as_bytes();
+    let mut i = tag_start;
+    let mut quote: Option<u8> = None;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None => match b {
+                b'"' | b'\'' => quote = Some(b),
+                b'>' => return i + 1,
+                _ => {}
+            },
+        }
+        i += 1;
+    }
+    bytes.len()
+}
+
 /// WCAG 1.1.1: Every <img> must have a non-empty alt attribute.
 fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     let lower = html.to_lowercase();
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end =
-            lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let tag_end = find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
 
-        // Check for alt attribute
-        let has_alt = tag.contains("alt=");
-        let empty_alt = tag.contains("alt=\"\"") || tag.contains("alt=''");
-
-        if !has_alt || empty_alt {
-            // Extract src for the message
+        if !has_valid_alt(tag)
+            || (has_empty_alt(tag) && !is_decorative_img(tag))
+        {
             let src = extract_attr_value(&html[abs..tag_end], "src")
                 .unwrap_or_default();
             issues.push(AccessibilityIssue {
@@ -370,6 +423,19 @@ mod tests {
     }
 
     #[test]
+    fn test_img_alt_with_inline_svg_data_url() {
+        // Regression: a `>` inside an SVG data URL in `src` previously
+        // truncated the tag and the parser missed the `alt` attribute,
+        // raising a false `<img> missing alt text: (no src)` issue.
+        let html = r#"<html lang="en"><head></head><body><main><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10'/></svg>" alt="Banner" width="10" height="10"></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "1.1.1"),
+            "SVG-data-url img with valid alt should not raise 1.1.1, got: {issues:?}"
+        );
+    }
+
+    #[test]
     fn test_html_lang_missing() {
         let html = "<html><head></head><body><main></main></body></html>";
         let issues = check_page(html);
@@ -411,7 +477,7 @@ mod tests {
             <main><h1>Title</h1><h2>Sub</h2>
             <img src="x.jpg" alt="Photo"></main></body></html>"#;
         let issues = check_page(html);
-        assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
+        assert!(issues.is_empty(), "Expected no issues, got: {issues:?}");
     }
 
     // -------------------------------------------------------------------
@@ -547,7 +613,7 @@ mod tests {
     #[test]
     fn extract_attr_value_single_quoted() {
         // Lines 311-313: the single-quote branch.
-        let result = extract_attr_value(r#"<a href='/bar'>"#, "href");
+        let result = extract_attr_value(r"<a href='/bar'>", "href");
         assert_eq!(result, Some("/bar".to_string()));
     }
 
@@ -555,13 +621,13 @@ mod tests {
     fn extract_attr_value_unquoted() {
         // Lines 315-318: the no-quote fallback branch, terminated by
         // whitespace or `>`.
-        let result = extract_attr_value(r#"<a href=/baz>"#, "href");
+        let result = extract_attr_value(r"<a href=/baz>", "href");
         assert_eq!(result, Some("/baz".to_string()));
     }
 
     #[test]
     fn extract_attr_value_missing_attribute_returns_none() {
-        let result = extract_attr_value(r#"<a>"#, "href");
+        let result = extract_attr_value(r"<a>", "href");
         assert!(result.is_none());
     }
 
