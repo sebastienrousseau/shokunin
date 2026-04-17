@@ -136,7 +136,7 @@ fn main() -> Result<()> {
     let mut plugins = PluginManager::new();
     plugins.register(ssg::shortcodes::ShortcodePlugin);
     #[cfg(feature = "tera-templates")]
-    plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
+    plugins.register(ssg::template_plugin::TemplatePlugin::from_template_dir(
         &config.template_dir,
     ));
     plugins.register(ssg::postprocess::SitemapFixPlugin);

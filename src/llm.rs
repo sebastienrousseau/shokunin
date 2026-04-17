@@ -97,6 +97,11 @@ impl LlmPlugin {
     ///
     /// Returns a structured report with per-file Flesch-Kincaid scores.
     /// Does not require an LLM — uses the local `ReadabilityAudit` engine.
+    ///
+    /// **Note:** The syllable heuristic is English-only. Non-English
+    /// content (Bengali, Hindi, Turkish, etc.) produces inflated scores.
+    /// Use the `en/` subdirectory for accurate results on multilingual
+    /// repos, or filter results by locale.
     pub fn audit_all(
         content_dir: &Path,
         target_grade: f64,
@@ -836,8 +841,8 @@ mod tests {
     #[test]
     fn flesch_kincaid_empty_text() {
         let audit = ReadabilityAudit::analyze("");
-        assert_eq!(audit.grade_level, 0.0);
-        assert_eq!(audit.reading_ease, 100.0);
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -988,7 +993,7 @@ mod tests {
             ("examples/plugins/content", 10.0),
             ("examples/portfolio/content", 10.0),
             ("examples/quickstart/content", 10.0),
-            ("examples/content", 10.0),
+            ("examples/content/en", 10.0),
         ];
 
         let mut total_files = 0usize;
