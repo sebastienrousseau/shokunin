@@ -43,6 +43,7 @@ use std::{
     collections::HashMap,
     fmt, fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 // =====================================================================
@@ -159,9 +160,34 @@ pub struct PluginContext {
     pub cache: Option<PluginCache>,
     /// Memory budget for streaming compilation.
     pub memory_budget: Option<crate::streaming::MemoryBudget>,
+    /// Cached list of HTML files in `site_dir`, walked once and shared
+    /// across all plugins to avoid redundant filesystem traversals.
+    pub html_files: Option<Arc<Vec<PathBuf>>>,
 }
 
 impl PluginContext {
+    /// Populates the cached HTML file list by walking `site_dir` once.
+    /// Call this before running `after_compile` plugins to eliminate
+    /// redundant directory scans (8+ plugins read the same file list).
+    pub fn cache_html_files(&mut self) {
+        if self.site_dir.exists() {
+            let files = crate::walk::walk_files(&self.site_dir, "html")
+                .unwrap_or_default();
+            self.html_files = Some(Arc::new(files));
+        }
+    }
+
+    /// Returns the cached HTML file list, or walks the directory if
+    /// the cache hasn't been populated.
+    #[must_use]
+    pub fn get_html_files(&self) -> Vec<PathBuf> {
+        if let Some(ref cached) = self.html_files {
+            cached.as_ref().clone()
+        } else {
+            crate::walk::walk_files(&self.site_dir, "html").unwrap_or_default()
+        }
+    }
+
     /// Creates a new plugin context from directory paths.
     #[must_use]
     pub fn new(
@@ -178,6 +204,7 @@ impl PluginContext {
             config: None,
             cache: None,
             memory_budget: None,
+            html_files: None,
         }
     }
 
@@ -198,6 +225,7 @@ impl PluginContext {
             config: Some(config),
             cache: None,
             memory_budget: None,
+            html_files: None,
         }
     }
 }

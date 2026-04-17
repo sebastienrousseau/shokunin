@@ -38,7 +38,7 @@ impl Plugin for AiPlugin {
 
         generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = ctx.get_html_files();
         let pages_with_missing_alt =
             process_html_for_ai(&html_files, &ctx.site_dir)?;
 
@@ -173,7 +173,7 @@ fn count_missing_alt(html: &str) -> usize {
     count
 }
 
-/// Recursively collects HTML files (delegates to `crate::walk`).
+#[cfg(test)]
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }

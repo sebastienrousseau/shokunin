@@ -3,7 +3,7 @@
 
 //! Canonical URL injection plugin.
 
-use super::helpers::{collect_html_files, escape_attr};
+use super::helpers::escape_attr;
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
 use rayon::prelude::*;
@@ -51,7 +51,7 @@ impl Plugin for CanonicalPlugin {
             return Ok(());
         }
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = ctx.get_html_files();
         let base = self.base_url.trim_end_matches('/');
         let site_dir = &ctx.site_dir;
 

@@ -8,8 +8,8 @@
 //! `'unsafe-inline'` in the Content-Security-Policy header.
 
 use crate::plugin::{Plugin, PluginContext};
-use crate::walk;
 use anyhow::Result;
+use rayon::prelude::*;
 use std::{fs, path::Path};
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
@@ -39,32 +39,38 @@ impl Plugin for CspPlugin {
         }
 
         let csp_dir = ctx.site_dir.join("_csp");
-        let html_files =
-            walk::walk_files(&ctx.site_dir, "html").unwrap_or_default();
+        let html_files = ctx.get_html_files();
 
         if html_files.is_empty() {
             return Ok(());
         }
 
-        let mut total_extracted = 0usize;
+        // Pre-create _csp/ dir so parallel writers don't race on mkdir
+        fs::create_dir_all(&csp_dir)?;
 
-        for html_path in &html_files {
-            let html = fs::read_to_string(html_path)?;
-            let (rewritten, extracted) =
-                extract_inline_blocks(&html, &csp_dir, &ctx.site_dir)?;
+        let total_extracted = std::sync::atomic::AtomicUsize::new(0);
 
-            if extracted > 0 {
-                // Also strip 'unsafe-inline' from CSP meta tags
-                let final_html = remove_unsafe_inline_from_csp(&rewritten);
-                fs::write(html_path, final_html)?;
-                total_extracted += extracted;
-            }
-        }
+        html_files
+            .par_iter()
+            .try_for_each(|html_path| -> Result<()> {
+                let html = fs::read_to_string(html_path)?;
+                let (rewritten, extracted) =
+                    extract_inline_blocks(&html, &csp_dir, &ctx.site_dir)?;
 
-        if total_extracted > 0 {
-            log::info!(
-                "[csp] Extracted {total_extracted} inline block(s) to _csp/"
-            );
+                if extracted > 0 {
+                    let final_html = remove_unsafe_inline_from_csp(&rewritten);
+                    fs::write(html_path, final_html)?;
+                    let _ = total_extracted.fetch_add(
+                        extracted,
+                        std::sync::atomic::Ordering::Relaxed,
+                    );
+                }
+                Ok(())
+            })?;
+
+        let count = total_extracted.load(std::sync::atomic::Ordering::Relaxed);
+        if count > 0 {
+            log::info!("[csp] Extracted {count} inline block(s) to _csp/");
         }
         Ok(())
     }

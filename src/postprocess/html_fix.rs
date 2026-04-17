@@ -26,7 +26,7 @@ impl Plugin for HtmlFixPlugin {
             return Ok(());
         }
 
-        let all_html = crate::walk::walk_files(&ctx.site_dir, "html")?;
+        let all_html = ctx.get_html_files();
         let cache = ctx.cache.as_ref();
         let html_files: Vec<_> = all_html
             .into_iter()

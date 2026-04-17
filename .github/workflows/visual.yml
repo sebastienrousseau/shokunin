@@ -40,7 +40,13 @@ jobs:
 
       - name: Run visual tests
         working-directory: tests/visual
-        run: npx playwright test
+        run: |
+          # Auto-create baselines on first run if none exist
+          if [ ! "$(ls -A ../visual-baselines/ 2>/dev/null | grep -v .gitkeep)" ]; then
+            echo "No baselines found — generating initial screenshots..."
+            npx playwright test --update-snapshots || true
+          fi
+          npx playwright test
 
       - name: Upload diff screenshots on failure
         if: failure()

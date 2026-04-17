@@ -4,9 +4,9 @@
 //! SEO meta tag injection plugin.
 
 use super::helpers::{
-    collect_html_files, escape_attr, extract_canonical, extract_description,
-    extract_existing_meta, extract_first_content_image, extract_html_lang,
-    extract_title, has_meta_tag,
+    escape_attr, extract_canonical, extract_description, extract_existing_meta,
+    extract_first_content_image, extract_html_lang, extract_title,
+    has_meta_tag,
 };
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
@@ -45,7 +45,7 @@ impl Plugin for SeoPlugin {
             return Ok(());
         }
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = ctx.get_html_files();
         let cache = ctx.cache.as_ref();
         let files: Vec<_> = html_files
             .into_iter()

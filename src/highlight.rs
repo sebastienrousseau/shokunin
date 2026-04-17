@@ -9,10 +9,8 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use rayon::prelude::*;
+use std::fs;
 
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
@@ -57,28 +55,30 @@ impl Plugin for HighlightPlugin {
         fs::write(ctx.site_dir.join("highlight.css"), &css)?;
 
         // Process HTML files
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        let mut highlighted = 0usize;
+        let html_files = ctx.get_html_files();
+        let highlighted = std::sync::atomic::AtomicUsize::new(0);
 
-        for path in &html_files {
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
             let html = fs::read_to_string(path)?;
             let result = add_highlight_markup(&html);
             if result != html {
-                // Inject CSS link if not present
                 let output = if result.contains("highlight.css") {
                     result
                 } else {
                     inject_css_link(&result)
                 };
                 fs::write(path, output)?;
-                highlighted += 1;
+                let _ = highlighted
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             }
-        }
+            Ok(())
+        })?;
 
-        if highlighted > 0 {
+        let count = highlighted.load(std::sync::atomic::Ordering::Relaxed);
+        if count > 0 {
             log::info!(
                 "[highlight] Processed {} file(s), theme: {}",
-                highlighted,
+                count,
                 self.theme
             );
         }
@@ -175,7 +175,10 @@ pre.highlight code {
     .to_string()
 }
 
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+#[cfg(test)]
+fn collect_html_files(
+    dir: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
 

@@ -173,6 +173,42 @@ pub fn strip_html_tags(html: &str) -> String {
     result
 }
 
+/// Build a search index entry from HTML content and metadata.
+#[must_use]
+pub fn build_search_entry(title: &str, url: &str, html: &str) -> SearchEntry {
+    let content = strip_html_tags(html);
+    // Collapse whitespace for compact index
+    let content: String =
+        content.split_whitespace().collect::<Vec<_>>().join(" ");
+    SearchEntry {
+        title: title.to_string(),
+        url: url.to_string(),
+        content,
+    }
+}
+
+/// Estimates reading time in minutes from text content.
+///
+/// Uses 200 words-per-minute average, with a minimum of 1 minute.
+#[must_use]
+pub fn reading_time(text: &str) -> usize {
+    (text.split_whitespace().count() / 200).max(1)
+}
+
+/// Converts a string to a URL-safe slug.
+#[must_use]
+pub fn slugify(input: &str) -> String {
+    input
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,5 +280,30 @@ mod tests {
     #[test]
     fn strip_html_tags_empty() {
         assert_eq!(strip_html_tags(""), "");
+    }
+
+    #[test]
+    fn build_search_entry_strips_tags() {
+        let entry =
+            build_search_entry("Title", "/page", "<p>Hello <b>world</b></p>");
+        assert_eq!(entry.title, "Title");
+        assert_eq!(entry.content, "Hello world");
+    }
+
+    #[test]
+    fn reading_time_short() {
+        assert_eq!(reading_time("one two three"), 1);
+    }
+
+    #[test]
+    fn reading_time_long() {
+        let text = "word ".repeat(600);
+        assert_eq!(reading_time(&text), 3);
+    }
+
+    #[test]
+    fn slugify_basic() {
+        assert_eq!(slugify("Hello World!"), "hello-world");
+        assert_eq!(slugify("Rust & Web"), "rust-web");
     }
 }

@@ -129,11 +129,6 @@ pub(super) fn strip_tags(html: &str) -> String {
     collapsed.trim().to_string()
 }
 
-/// Collect all `.html` files under `dir` (delegates to `crate::walk`).
-pub(super) fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "html")
-}
-
 /// Escape a string for safe inclusion in an HTML attribute value.
 pub(super) fn escape_attr(s: &str) -> String {
     s.replace('&', "&amp;")

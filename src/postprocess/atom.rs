@@ -281,21 +281,47 @@ fn extract_entries_from_rss(
 }
 
 /// Extracts text content from a simple XML tag.
+///
+/// Handles both `<tag>content</tag>` and `<tag attr="...">content</tag>`.
+/// Strips CDATA wrappers and decodes common XML entities.
 fn extract_xml_tag(xml: &str, tag: &str) -> Option<String> {
-    let open = format!("<{tag}>");
+    // Match both <tag> and <tag attr="...">
+    let open_plain = format!("<{tag}>");
+    let open_attr = format!("<{tag} ");
     let close = format!("</{tag}>");
-    let start = xml.find(&open)? + open.len();
-    let end = xml[start..].find(&close)? + start;
-    let content = xml[start..end].trim();
-    // Strip CDATA if present
+
+    let (start, content_start) = if let Some(pos) = xml.find(&open_plain) {
+        (pos, pos + open_plain.len())
+    } else if let Some(pos) = xml.find(&open_attr) {
+        let gt = xml[pos..].find('>')?;
+        (pos, pos + gt + 1)
+    } else {
+        return None;
+    };
+
+    let _ = start; // used for finding the tag
+    let end = xml[content_start..].find(&close)? + content_start;
+    let content = xml[content_start..end].trim();
+
+    // Strip CDATA wrapper
     let content = content
         .strip_prefix("<![CDATA[")
         .and_then(|s| s.strip_suffix("]]>"))
         .unwrap_or(content);
-    if content.is_empty() {
+
+    // Decode common XML entities
+    let decoded = content
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'");
+
+    let decoded = decoded.trim();
+    if decoded.is_empty() {
         None
     } else {
-        Some(xml_escape(content))
+        Some(xml_escape(decoded))
     }
 }
 

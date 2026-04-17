@@ -156,6 +156,10 @@ pub fn execute_build_pipeline(
         compile_site(build_dir, content_dir, site_dir, template_dir)?;
     }
 
+    // Cache HTML file list once — shared by all after_compile plugins,
+    // eliminating 8+ redundant directory walks.
+    ctx.cache_html_files();
+
     plugins.run_after_compile(&ctx)?;
 
     // Rebuild and save cache: snapshot all HTML files in site_dir

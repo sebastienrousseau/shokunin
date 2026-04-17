@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 #![doc = include_str!("../README.md")]
 #![doc(
-    html_favicon_url = "https://cloudcdn.pro/static-site-generator/images/favicon.ico",
-    html_logo_url = "https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg",
+    html_favicon_url = "https://cloudcdn.pro/static-site-generator/v1/favicon.ico",
+    html_logo_url = "https://cloudcdn.pro/static-site-generator/v1/logos/static-site-generator.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]

@@ -313,7 +313,7 @@ fn run_search(ctx: &PluginContext, labels: &SearchLabels) -> Result<()> {
 
     index.write(&ctx.site_dir)?;
 
-    let html_files = collect_html_files(&ctx.site_dir)?;
+    let html_files = ctx.get_html_files();
     let script = build_widget_script(labels);
     html_files
         .par_iter()

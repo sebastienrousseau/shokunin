@@ -18,7 +18,6 @@
 //!    - Injects the `ssg-island.js` custom element loader into pages
 
 use crate::plugin::{Plugin, PluginContext};
-use crate::walk;
 use anyhow::Result;
 use std::{collections::BTreeSet, fs, path::Path};
 
@@ -36,8 +35,7 @@ impl Plugin for IslandPlugin {
             return Ok(());
         }
 
-        let html_files =
-            walk::walk_files(&ctx.site_dir, "html").unwrap_or_default();
+        let html_files = ctx.get_html_files();
 
         // Scan all HTML files for <ssg-island component="..."> references
         let mut components = BTreeSet::new();
