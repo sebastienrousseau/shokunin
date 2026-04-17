@@ -62,6 +62,97 @@ impl LlmPlugin {
     }
 }
 
+/// Result of auditing a single file's readability.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct FileAuditResult {
+    /// Relative file path.
+    pub path: String,
+    /// Flesch-Kincaid Grade Level.
+    pub grade_level: f64,
+    /// Flesch Reading Ease score.
+    pub reading_ease: f64,
+    /// Average words per sentence.
+    pub avg_sentence_len: f64,
+    /// Whether it passes the target grade threshold.
+    pub passes: bool,
+}
+
+/// Aggregated readability audit report.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AuditReport {
+    /// Target grade level used for pass/fail.
+    pub target_grade: f64,
+    /// Total files scanned.
+    pub total_files: usize,
+    /// Files that pass the readability threshold.
+    pub passing: usize,
+    /// Files that exceed the readability threshold.
+    pub failing: usize,
+    /// Per-file results.
+    pub results: Vec<FileAuditResult>,
+}
+
+impl LlmPlugin {
+    /// Audits all Markdown files in a directory for readability.
+    ///
+    /// Returns a structured report with per-file Flesch-Kincaid scores.
+    /// Does not require an LLM — uses the local `ReadabilityAudit` engine.
+    pub fn audit_all(
+        content_dir: &Path,
+        target_grade: f64,
+    ) -> Result<AuditReport> {
+        let md_files =
+            crate::walk::walk_files(content_dir, "md").unwrap_or_default();
+
+        let mut results = Vec::with_capacity(md_files.len());
+
+        for path in &md_files {
+            let content = fs::read_to_string(path)?;
+            // Strip frontmatter before auditing prose
+            let body = strip_frontmatter(&content);
+            let audit = ReadabilityAudit::analyze(&body);
+            let rel = path
+                .strip_prefix(content_dir)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .to_string();
+
+            results.push(FileAuditResult {
+                path: rel,
+                grade_level: (audit.grade_level * 10.0).round() / 10.0,
+                reading_ease: (audit.reading_ease * 10.0).round() / 10.0,
+                avg_sentence_len: (audit.avg_sentence_len * 10.0).round()
+                    / 10.0,
+                passes: audit.grade_level <= target_grade,
+            });
+        }
+
+        let passing = results.iter().filter(|r| r.passes).count();
+        let failing = results.len() - passing;
+
+        Ok(AuditReport {
+            target_grade,
+            total_files: results.len(),
+            passing,
+            failing,
+            results,
+        })
+    }
+}
+
+/// Strips YAML/TOML frontmatter from Markdown content.
+fn strip_frontmatter(content: &str) -> String {
+    let trimmed = content.trim_start();
+    for delim in ["---", "+++"] {
+        if let Some(rest) = trimmed.strip_prefix(delim) {
+            if let Some(end) = rest.find(delim) {
+                return rest[end + delim.len()..].to_string();
+            }
+        }
+    }
+    content.to_string()
+}
+
 impl Plugin for LlmPlugin {
     fn name(&self) -> &'static str {
         "llm"
@@ -643,6 +734,95 @@ mod tests {
         let result = inject_jsonld_description(html, "New desc");
         assert!(!result.contains("New desc"));
         assert!(result.contains("Existing"));
+    }
+
+    // ── Content audit tests ───────────────────────────────────────
+
+    #[test]
+    fn audit_all_scans_markdown_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+
+        fs::write(
+            content.join("simple.md"),
+            "---\ntitle: Simple\n---\nThe cat sat on the mat. It was a good day.",
+        )
+        .unwrap();
+        fs::write(
+            content.join("complex.md"),
+            "---\ntitle: Complex\n---\n\
+             The implementation of sophisticated cryptographic algorithms \
+             necessitates comprehensive understanding of mathematical \
+             foundations and computational complexity theory.",
+        )
+        .unwrap();
+
+        let report = LlmPlugin::audit_all(&content, 8.0).unwrap();
+        assert_eq!(report.total_files, 2);
+        assert!(report.failing > 0, "complex.md should fail grade 8");
+    }
+
+    #[test]
+    fn audit_all_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("empty");
+        fs::create_dir_all(&content).unwrap();
+
+        let report = LlmPlugin::audit_all(&content, 8.0).unwrap();
+        assert_eq!(report.total_files, 0);
+        assert_eq!(report.failing, 0);
+    }
+
+    #[test]
+    fn strip_frontmatter_yaml() {
+        let input = "---\ntitle: Hello\n---\nBody text here.";
+        let body = strip_frontmatter(input);
+        assert!(body.contains("Body text here"));
+        assert!(!body.contains("title:"));
+    }
+
+    #[test]
+    fn strip_frontmatter_toml() {
+        let input = "+++\ntitle = \"Hello\"\n+++\nBody text here.";
+        let body = strip_frontmatter(input);
+        assert!(body.contains("Body text here"));
+        assert!(!body.contains("title"));
+    }
+
+    #[test]
+    fn strip_frontmatter_none() {
+        let input = "Just plain content.";
+        assert_eq!(strip_frontmatter(input), input);
+    }
+
+    #[test]
+    fn audit_docs_guide() {
+        // This test is called by the readability-gate CI workflow.
+        // It audits all .md files in docs/guide/ against grade 12
+        // (documentation is technical, so we use a higher threshold).
+        let guide_dir = Path::new("docs/guide");
+        if !guide_dir.exists() {
+            return; // Skip in environments without the guide
+        }
+
+        let report = LlmPlugin::audit_all(guide_dir, 12.0).unwrap();
+        for result in &report.results {
+            let status = if result.passes { "PASS" } else { "FAIL" };
+            println!(
+                "[readability] {}: grade={:.1}, ease={:.1}, avg_sentence={:.1} — {}",
+                result.path,
+                result.grade_level,
+                result.reading_ease,
+                result.avg_sentence_len,
+                status
+            );
+        }
+
+        println!(
+            "\n[readability] {}/{} files pass (target: grade {:.0})",
+            report.passing, report.total_files, report.target_grade
+        );
     }
 
     #[test]
