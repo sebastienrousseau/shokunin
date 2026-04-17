@@ -85,9 +85,11 @@ jobs:
           shared-key: test-${{ matrix.os }}
 
       - name: Lib unit tests
+        shell: bash
         run: cargo test --lib --features test-fault-injection
 
       - name: Integration tests (excluding heavy examples)
+        shell: bash
         run: |
           cargo test --test regression \
                      --test fault_injection \
