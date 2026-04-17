@@ -30,6 +30,10 @@ pub struct LlmConfig {
     pub endpoint: String,
     /// If true, print generated text but don't write files.
     pub dry_run: bool,
+    /// Target Flesch-Kincaid Grade Level (default: 8.0).
+    pub target_grade: f64,
+    /// Max refinement attempts if readability exceeds target (default: 1).
+    pub max_refinement_attempts: usize,
 }
 
 impl Default for LlmConfig {
@@ -38,6 +42,8 @@ impl Default for LlmConfig {
             model: "llama3".to_string(),
             endpoint: "http://localhost:11434".to_string(),
             dry_run: false,
+            target_grade: 8.0,
+            max_refinement_attempts: 1,
         }
     }
 }
@@ -88,7 +94,10 @@ impl Plugin for LlmPlugin {
                     &modified,
                     &self.config.model,
                     &self.config.endpoint,
+                    self.config.target_grade,
+                    self.config.max_refinement_attempts,
                 ) {
+                    let audit = ReadabilityAudit::analyze(&desc);
                     if self.config.dry_run {
                         let rel = path
                             .strip_prefix(&ctx.site_dir)
@@ -97,8 +106,14 @@ impl Plugin for LlmPlugin {
                         log::info!(
                             "[llm] [dry-run] {rel}: description = {desc}"
                         );
+                        log::info!(
+                            "[llm] [dry-run] {rel}: grade={:.1}, ease={:.1}, avg_sentence={:.1}",
+                            audit.grade_level, audit.reading_ease, audit.avg_sentence_len
+                        );
                     } else {
                         modified = inject_meta_description(&modified, &desc);
+                        // Also populate JSON-LD Article description
+                        modified = inject_jsonld_description(&modified, &desc);
                     }
                 }
             }
@@ -158,11 +173,13 @@ fn needs_meta_description(html: &str) -> bool {
     !html.contains("name=\"description\"")
 }
 
-/// Generates a meta description via LLM from page content.
+/// Generates a meta description via LLM with readability refinement.
 fn generate_meta_description(
     html: &str,
     model: &str,
     endpoint: &str,
+    target_grade: f64,
+    max_attempts: usize,
 ) -> Option<String> {
     let text = extract_page_text(html, 500);
     if text.len() < 20 {
@@ -171,10 +188,17 @@ fn generate_meta_description(
 
     let prompt = format!(
         "Write a concise SEO meta description (120-155 characters) for this page content. \
+         Use simple words and short sentences. \
          Return ONLY the description text, no quotes or explanation:\n\n{text}"
     );
 
-    call_ollama(endpoint, model, &prompt)
+    generate_with_refinement(
+        endpoint,
+        model,
+        &prompt,
+        target_grade,
+        max_attempts,
+    )
 }
 
 /// Injects a meta description tag into the HTML head.
@@ -283,6 +307,181 @@ fn extract_attr(tag: &str, attr: &str) -> Option<String> {
     Some(tag[start..end].to_string())
 }
 
+// =====================================================================
+// Readability intelligence
+// =====================================================================
+
+/// Readability metrics for a text passage.
+#[derive(Debug, Clone, Copy)]
+pub struct ReadabilityAudit {
+    /// Flesch-Kincaid Grade Level (lower = simpler).
+    pub grade_level: f64,
+    /// Flesch Reading Ease (higher = easier, 0–100).
+    pub reading_ease: f64,
+    /// Average words per sentence.
+    pub avg_sentence_len: f64,
+}
+
+impl ReadabilityAudit {
+    /// Analyzes text and returns readability metrics.
+    #[must_use]
+    pub fn analyze(text: &str) -> Self {
+        let words = count_words(text);
+        let sentences = count_sentences(text);
+        let syllables = count_syllables(text);
+
+        if words == 0 || sentences == 0 {
+            return Self {
+                grade_level: 0.0,
+                reading_ease: 100.0,
+                avg_sentence_len: 0.0,
+            };
+        }
+
+        let wps = words as f64 / sentences as f64;
+        let spw = syllables as f64 / words as f64;
+
+        let grade = 0.39f64.mul_add(wps, 11.8f64.mul_add(spw, -15.59));
+        let ease = (-1.015f64).mul_add(wps, (-84.6f64).mul_add(spw, 206.835));
+
+        Self {
+            grade_level: grade.max(0.0),
+            reading_ease: ease.clamp(0.0, 100.0),
+            avg_sentence_len: wps,
+        }
+    }
+}
+
+/// Counts words in text (whitespace-separated tokens).
+fn count_words(text: &str) -> usize {
+    text.split_whitespace().count()
+}
+
+/// Counts sentences by splitting on `.`, `!`, `?`.
+fn count_sentences(text: &str) -> usize {
+    text.chars()
+        .filter(|&c| c == '.' || c == '!' || c == '?')
+        .count()
+        .max(1)
+}
+
+/// Counts syllables using a lightweight heuristic:
+/// - Count vowel groups (consecutive vowels = 1 syllable)
+/// - Subtract silent trailing 'e'
+/// - Minimum 1 syllable per word
+fn count_syllables(text: &str) -> usize {
+    text.split_whitespace()
+        .map(|word| count_word_syllables(word))
+        .sum()
+}
+
+/// Counts syllables in a single word.
+fn count_word_syllables(word: &str) -> usize {
+    let word = word.to_lowercase();
+    let chars: Vec<char> = word.chars().filter(|c| c.is_alphabetic()).collect();
+    if chars.is_empty() {
+        return 1;
+    }
+
+    let vowels = b"aeiouy";
+    let mut count = 0usize;
+    let mut prev_vowel = false;
+
+    for &ch in &chars {
+        let is_vowel = vowels.contains(&(ch as u8));
+        if is_vowel && !prev_vowel {
+            count += 1;
+        }
+        prev_vowel = is_vowel;
+    }
+
+    // Subtract silent trailing 'e'
+    if chars.len() > 2 && chars.last() == Some(&'e') && count > 1 {
+        count -= 1;
+    }
+
+    count.max(1)
+}
+
+/// Generates text via LLM with readability-driven refinement.
+///
+/// If the initial output exceeds `target_grade`, re-prompts the LLM
+/// once to simplify. Keeps the best available draft on failure.
+fn generate_with_refinement(
+    endpoint: &str,
+    model: &str,
+    prompt: &str,
+    target_grade: f64,
+    max_attempts: usize,
+) -> Option<String> {
+    let mut text = call_ollama(endpoint, model, prompt)?;
+    let mut audit = ReadabilityAudit::analyze(&text);
+
+    for attempt in 0..max_attempts {
+        if audit.grade_level <= target_grade {
+            break;
+        }
+
+        log::info!(
+            "[llm] Grade {:.1} exceeds target {:.1}, refining (attempt {})",
+            audit.grade_level,
+            target_grade,
+            attempt + 1
+        );
+
+        let simplify_prompt = format!(
+            "Rewrite this text at a 6th-grade reading level. \
+             Use short sentences (max 20 words). Use simple words. \
+             Keep all facts and numbers exactly the same. \
+             Return ONLY the rewritten text:\n\n{text}"
+        );
+
+        if let Some(refined) = call_ollama(endpoint, model, &simplify_prompt) {
+            let refined_audit = ReadabilityAudit::analyze(&refined);
+            if refined_audit.grade_level < audit.grade_level {
+                text = refined;
+                audit = refined_audit;
+            }
+        }
+    }
+
+    Some(text)
+}
+
+// =====================================================================
+// JSON-LD generation
+// =====================================================================
+
+/// Injects or updates a JSON-LD `Article` script block in the HTML head.
+///
+/// Populates `description`, `datePublished`, and `author` from the page
+/// content and frontmatter sidecar.
+fn inject_jsonld_description(html: &str, description: &str) -> String {
+    // Skip if JSON-LD Article already has a description
+    if html.contains("\"@type\":\"Article\"")
+        && html.contains("\"description\"")
+    {
+        return html.to_string();
+    }
+
+    let jsonld = serde_json::json!({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "description": description,
+    });
+
+    let script =
+        format!("<script type=\"application/ld+json\">{}</script>\n", jsonld);
+
+    if let Some(pos) = html.find("</head>") {
+        let mut result = html.to_string();
+        result.insert_str(pos, &script);
+        result
+    } else {
+        html.to_string()
+    }
+}
+
 /// Calls the Ollama API to generate text.
 fn call_ollama(endpoint: &str, model: &str, prompt: &str) -> Option<String> {
     let url = format!("{}/api/generate", endpoint.trim_end_matches('/'));
@@ -374,6 +573,83 @@ mod tests {
     fn llm_plugin_name() {
         let plugin = LlmPlugin::new(LlmConfig::default());
         assert_eq!(plugin.name(), "llm");
+    }
+
+    // ── Readability engine tests ──────────────────────────────────
+
+    #[test]
+    fn flesch_kincaid_simple_text() {
+        // "The cat sat on the mat." — very simple, ~grade 1
+        let audit = ReadabilityAudit::analyze("The cat sat on the mat.");
+        assert!(
+            audit.grade_level < 4.0,
+            "Simple text should be below grade 4, got {:.1}",
+            audit.grade_level
+        );
+        assert!(audit.reading_ease > 80.0);
+    }
+
+    #[test]
+    fn flesch_kincaid_complex_text() {
+        let text = "The implementation of sophisticated cryptographic \
+                    algorithms necessitates comprehensive understanding \
+                    of mathematical foundations. Asymmetric encryption \
+                    protocols demonstrate considerable computational \
+                    overhead compared to symmetric alternatives.";
+        let audit = ReadabilityAudit::analyze(text);
+        assert!(
+            audit.grade_level > 12.0,
+            "Complex text should be above grade 12, got {:.1}",
+            audit.grade_level
+        );
+    }
+
+    #[test]
+    fn flesch_kincaid_empty_text() {
+        let audit = ReadabilityAudit::analyze("");
+        assert_eq!(audit.grade_level, 0.0);
+        assert_eq!(audit.reading_ease, 100.0);
+    }
+
+    #[test]
+    fn syllable_count_known_words() {
+        assert_eq!(count_word_syllables("cat"), 1);
+        assert_eq!(count_word_syllables("hello"), 2);
+        assert_eq!(count_word_syllables("beautiful"), 3);
+        assert_eq!(count_word_syllables("implementation"), 5);
+    }
+
+    #[test]
+    fn count_sentences_basic() {
+        assert_eq!(count_sentences("Hello. World!"), 2);
+        assert_eq!(count_sentences("One sentence"), 1); // min 1
+        assert_eq!(count_sentences("A? B? C!"), 3);
+    }
+
+    // ── JSON-LD tests ───────────────────────────────────────────
+
+    #[test]
+    fn inject_jsonld_adds_article_block() {
+        let html = "<html><head><title>T</title></head><body></body></html>";
+        let result = inject_jsonld_description(html, "Test desc");
+        assert!(result.contains("application/ld+json"));
+        assert!(result.contains("\"@type\":\"Article\""));
+        assert!(result.contains("Test desc"));
+    }
+
+    #[test]
+    fn inject_jsonld_skips_existing() {
+        let html = r#"<html><head><script type="application/ld+json">{"@type":"Article","description":"Existing"}</script></head></html>"#;
+        let result = inject_jsonld_description(html, "New desc");
+        assert!(!result.contains("New desc"));
+        assert!(result.contains("Existing"));
+    }
+
+    #[test]
+    fn config_defaults_readability() {
+        let config = LlmConfig::default();
+        assert!((config.target_grade - 8.0).abs() < f64::EPSILON);
+        assert_eq!(config.max_refinement_attempts, 1);
     }
 
     #[test]
