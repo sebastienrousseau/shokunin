@@ -1066,6 +1066,105 @@ mod tests {
         );
     }
 
+    // ── Coverage gap tests ────────────────────────────────────────
+
+    #[test]
+    fn is_ollama_available_unreachable() {
+        assert!(!is_ollama_available("http://localhost:99999"));
+    }
+
+    #[test]
+    fn call_ollama_unreachable_returns_none() {
+        assert!(call_ollama("http://localhost:99999", "llama3", "hi").is_none());
+    }
+
+    #[test]
+    fn needs_meta_description_with_content_attr_first() {
+        // content= before name= (different ordering)
+        let html = r#"<meta content="Decent length description that is more than fifty characters long enough" name="description">"#;
+        // name="description" is present so returns false-ish check
+        assert!(!needs_meta_description(html));
+    }
+
+    #[test]
+    fn inject_meta_description_no_head() {
+        let html = "<html><body>No head tag</body></html>";
+        let result = inject_meta_description(html, "desc");
+        assert_eq!(result, html); // unchanged
+    }
+
+    #[test]
+    fn inject_jsonld_no_head() {
+        let html = "<html><body>No head</body></html>";
+        let result = inject_jsonld_description(html, "desc");
+        assert_eq!(result, html);
+    }
+
+    #[test]
+    fn extract_page_text_no_body() {
+        let html = "just plain text no tags";
+        let text = extract_page_text(html, 100);
+        assert_eq!(text, "just plain text no tags");
+    }
+
+    #[test]
+    fn extract_page_text_truncates() {
+        let html = "<body><p>word </p></body>";
+        let text = extract_page_text(html, 3);
+        assert!(text.len() <= 5);
+    }
+
+    #[test]
+    fn generate_missing_alt_text_no_images() {
+        let mut html = "<html><body><p>No images</p></body></html>".to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://localhost:99999",
+            true,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn readability_audit_single_word() {
+        let audit = ReadabilityAudit::analyze("Hello");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.avg_sentence_len >= 0.0);
+    }
+
+    #[test]
+    fn count_word_syllables_empty() {
+        assert_eq!(count_word_syllables(""), 1);
+    }
+
+    #[test]
+    fn count_word_syllables_numbers() {
+        assert_eq!(count_word_syllables("123"), 1);
+    }
+
+    #[test]
+    fn split_frontmatter_unclosed() {
+        let input = "---\ntitle: Hello\nNo closing delimiter";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.is_empty());
+        assert_eq!(body, input);
+    }
+
+    #[test]
+    fn llm_plugin_skips_missing_site_dir() {
+        let plugin = LlmPlugin::new(LlmConfig::default());
+        let ctx = PluginContext::new(
+            Path::new("/tmp/c"),
+            Path::new("/tmp/b"),
+            Path::new("/nonexistent/site"),
+            Path::new("/tmp/t"),
+        );
+        assert!(plugin.after_compile(&ctx).is_ok());
+    }
+
     #[test]
     fn config_defaults_readability() {
         let config = LlmConfig::default();

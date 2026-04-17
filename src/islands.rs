@@ -317,6 +317,24 @@ mod tests {
     }
 
     #[test]
+    fn island_plugin_no_islands_in_html() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(
+            site.join("index.html"),
+            "<html><body><p>No islands here</p></body></html>",
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        IslandPlugin.after_compile(&ctx).unwrap();
+
+        // No _islands dir should be created
+        assert!(!site.join("_islands").exists());
+    }
+
+    #[test]
     fn island_shortcode_expansion() {
         let input = r#"{{< island component="counter" hydrate="visible" >}}"#;
         let result = crate::shortcodes::expand_shortcodes(input);

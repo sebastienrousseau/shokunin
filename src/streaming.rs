@@ -289,6 +289,62 @@ mod tests {
     }
 
     #[test]
+    fn compile_batch_empty_is_noop() {
+        let dir = tempdir().unwrap();
+        let result = compile_batch(
+            &[],
+            dir.path(),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+            0,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn merge_dir_nonexistent_src_is_noop() {
+        let dir = tempdir().unwrap();
+        let result =
+            merge_dir(&dir.path().join("nonexistent"), &dir.path().join("dst"));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn merge_dir_nested() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        let nested = src.join("sub");
+        fs::create_dir_all(&nested).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(nested.join("file.txt"), "nested").unwrap();
+
+        merge_dir(&src, &dst).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("sub/file.txt")).unwrap(),
+            "nested"
+        );
+    }
+
+    #[test]
+    fn should_stream_large_site() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        // Create more files than default batch size (8192)
+        // Use a tiny budget instead
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 2,
+        };
+        for i in 0..5 {
+            fs::write(content.join(format!("p{i}.md")), "# Hi").unwrap();
+        }
+        assert!(should_stream(&content, &budget, false));
+    }
+
+    #[test]
     fn should_not_stream_small_site() {
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
