@@ -393,5 +393,9 @@ eula         = false
 # Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
 # safe-only implementation.
 # -----------------------------------------------------------------------------
+[workspace]
+members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+default-members = ["."]
+
 [patch.crates-io]
 serde_yml = { path = "crates/serde_yml" }
