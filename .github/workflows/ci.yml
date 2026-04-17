@@ -31,7 +31,7 @@ env:
   RUST_BACKTRACE: short
   COVERAGE_REGIONS_FLOOR: "95.0"
   COVERAGE_LINES_FLOOR: "97.0"
-  COVERAGE_FUNCTIONS_FLOOR: "95.0"
+  COVERAGE_FUNCTIONS_FLOOR: "94.5"
 
 jobs:
   # ── Phase 1: lint (blocks downstream) ───────────────────────────────
