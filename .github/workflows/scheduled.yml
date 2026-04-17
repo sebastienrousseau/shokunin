@@ -81,11 +81,14 @@ jobs:
       - run: cargo build --release --target x86_64-unknown-linux-musl --locked
       - name: Verify static linking
         run: |
-          file target/x86_64-unknown-linux-musl/release/ssg
-          if ldd target/x86_64-unknown-linux-musl/release/ssg 2>&1 | grep -q "not a dynamic executable"; then
+          BIN=target/x86_64-unknown-linux-musl/release/ssg
+          file "$BIN"
+          # `file` output includes "statically linked" or "static-pie linked"
+          # for musl builds. `ldd` is unreliable on static-pie binaries.
+          if file "$BIN" | grep -qE "static(ally|-pie) linked"; then
             echo "✓ Fully static"
           else
-            echo "⚠ Dynamic deps found"
+            echo "⚠ Not statically linked"
             exit 1
           fi
 
@@ -197,16 +200,19 @@ jobs:
         run: cargo install cargo-cyclonedx --locked
 
       - name: Generate CycloneDX SBOM
-        run: cargo cyclonedx --format json --output-cdx
+        # v0.5+ removed --output-cdx; the tool now names files *_cdx.json
+        # by default when using --format json.
+        run: cargo cyclonedx --format json
 
       - uses: actions/upload-artifact@v4
         with:
           name: sbom-cyclonedx
-          path: ./*_cdx.json
+          path: ./*.cdx.json
+          if-no-files-found: warn
           retention-days: 90
 
       - name: Attest provenance
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: ./*_cdx.json
+          subject-path: ./*.cdx.json

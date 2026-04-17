@@ -160,7 +160,7 @@ jobs:
         if: matrix.pkg == 'deb_rpm'
         run: |
           cargo generate-rpm --target ${{ matrix.target }}
-          mv target/generate-rpm/*.rpm . || true
+          mv "target/${{ matrix.target }}/generate-rpm/"*.rpm . || true
           for rpm in *.rpm; do
             [ -f "$rpm" ] && shasum -a 256 "$rpm" > "$rpm.sha256"
           done
