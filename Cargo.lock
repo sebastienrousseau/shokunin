@@ -4530,7 +4530,6 @@ dependencies = [
  "frontmatter-gen 0.0.5",
  "http-handle 0.0.4",
  "image",
- "lazy_static",
  "log",
  "minijinja",
  "openssl",

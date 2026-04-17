@@ -117,7 +117,6 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
-lazy_static = "1.5.0"                      # Static variables for lazy evaluation
 serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
 uuid = { version = "1.22.0", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
