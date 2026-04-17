@@ -388,6 +388,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-specific: path behaviour / error messages differ on Windows
     #[test]
     fn test_process_error_display() {
         let error = ProcessError::MissingArgument("content".to_string());

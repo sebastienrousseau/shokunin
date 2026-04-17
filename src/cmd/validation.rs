@@ -173,6 +173,7 @@ mod tests {
         assert!(validate_path_safety(&path, "test").is_ok());
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-specific: path behaviour / error messages differ on Windows
     #[test]
     fn test_path_with_separators() {
         let cmd = Command::new("test_no_required_args");

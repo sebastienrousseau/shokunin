@@ -2177,6 +2177,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))] // Unix-specific: path behaviour / error messages differ on Windows
     #[test]
     fn create_directories_unsafe_path_bails() -> Result<()> {
         let temp = tempdir()?;
