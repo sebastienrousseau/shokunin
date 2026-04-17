@@ -5,8 +5,14 @@ on:
     branches: [main]
     paths:
       - "docs/**/*.md"
-      - "examples/**/content/**/*.md"
-      - "content/**/*.md"
+      - "examples/content/en/**/*.md"
+      - "examples/basic/content/**/*.md"
+      - "examples/blog/content/**/*.md"
+      - "examples/docs/content/**/*.md"
+      - "examples/landing/content/**/*.md"
+      - "examples/plugins/content/**/*.md"
+      - "examples/portfolio/content/**/*.md"
+      - "examples/quickstart/content/**/*.md"
   workflow_dispatch:
     inputs:
       target_grade:

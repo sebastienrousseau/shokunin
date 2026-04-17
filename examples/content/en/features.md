@@ -118,22 +118,19 @@ site_software: "SSG, Rust" ## The software of the site.
 
 ## Starter Templates
 
-All the starter templates, whether pages or websites are built from scratch
-using the same principles and features. This means that you can easily mix and
-match them together to create your own custom layouts and content.
+All starter templates use the same core features. You can mix and match them to create custom layouts. Pages and full websites both work the same way.
 
-Get started with SSG using any of our Starter Templates for building
-your website or web application.
+Use any of our Starter Templates to build your website or web app.
 
-**Kaishi Starter Templates** has the following features enabled:
+**Kaishi Starter Templates** has these features:
 
-- **Accessibility Meta-Tags:** These meta tags are designed to make the website more accessible to users with disabilities. By setting Accessible Rich Internet Applications (ARIA) roles and attributes, full keyboard control, and no flashing hazard, you can make sure your website is accessible to everyone.
-- **Apple Meta-Tags:** These meta tags improve websites for Apple devices, like iPhones, iPads, and Apple devices. You can change web app capabilities, status bar style, title, application name, and author to improve Apple devices' appearance.
-- **Bootstrap CSS:** Bootstrap is a popular CSS framework that provides you with a set of pre-designed styles and components. By using Bootstrap, you can quickly and easily create a professional-looking website without having to write CSS from scratch.
-- **Bootstrap JavaScript:** Bootstrap JavaScript is a set of pre-built scripts that provide you with responsive navigation menus and modal dialogues.
-- **Content Security Policy:** This meta tag is used to specify the sources of content allowed to load on the page. It is designed to prevent cross-site scripting (XSS) attacks and other security vulnerabilities.
-- **Microsoft Meta Tags:** These meta tags are designed to optimise the website for Microsoft devices. You can set site verification, application configuration, tap highlight colour, tile colour, and tile image to look good on Windows devices.
-- **Open Graph/Facebook Meta-Tags:** These meta tags allow you to control how your website appears when shared on Facebook and other social media platforms. By setting the title, description, and image, you can make sure that your website looks its best when shared online.
-- **Responsive Navigation Bar:** The responsive navigation bar provides users with an intuitive and easy-to-use interface for navigating the website. It aims to adapt to the size of the screen, making it accessible to users on both desktop and mobile devices.
-- **Schema.org Meta Tags:** These meta tags are used to provide structured data about the website's content. Setting the name, description, and image on a website helps search engines and others understand the content better.
-- **Twitter Meta Tags:** These meta tags are designed to optimise the website for Twitter sharing. You can set the card type, creator, description, image, site, title, and URL to make their website look good on Twitter.
+- **Accessibility Meta-Tags:** These tags help users with disabilities access your site. They set ARIA roles, full keyboard control, and no flashing hazards. This makes your site open to everyone.
+- **Apple Meta-Tags:** These tags improve your site on iPhones, iPads, and Macs. You can set web app mode, status bar style, and title. This helps your site look great on Apple devices.
+- **Bootstrap CSS:** Bootstrap is a popular CSS framework with ready-made styles. It lets you build a polished website fast. You do not need to write CSS from scratch.
+- **Bootstrap JavaScript:** These pre-built scripts add responsive menus and modal dialogs to your site.
+- **Content Security Policy:** This tag controls which content can load on the page. It helps stop cross-site scripting (XSS) attacks. It also blocks other security threats.
+- **Microsoft Meta Tags:** These tags make your site look good on Windows devices. You can set the tile colour, tile image, and tap highlight colour.
+- **Open Graph/Facebook Meta-Tags:** These tags control how your site looks when shared on social media. Set the title, description, and image. This helps your site look its best online.
+- **Responsive Navigation Bar:** This nav bar adapts to any screen size. It gives users a simple way to move through your site. It works on both desktop and mobile.
+- **Schema.org Meta Tags:** These tags add structured data about your content. They help search engines understand your pages better. You can set the name, description, and image.
+- **Twitter Meta Tags:** These tags make your site look good when shared on Twitter. You can set the card type, image, title, and URL.

@@ -108,4 +108,4 @@ site_software: "SSG, Rust"
 
 # Contact
 
-Contact us at hello@threshold.press
+Reach us at hello@threshold.press. We'd love to hear from you.

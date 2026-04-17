@@ -109,7 +109,7 @@ site_software: "SSG, Rust"
 
 ## Configuration file
 
-Polaris reads `~/.config/polaris/config.toml` on start. CLI flags override file values; environment variables override both.
+Polaris reads `~/.config/polaris/config.toml` on start. CLI flags override file values. Env vars override both.
 
 ```toml
 [auth]
@@ -130,7 +130,7 @@ colour = "auto"           # "auto" | "always" | "never"
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `POLARIS_TOKEN` | — | Override the cached OAuth token |
-| `POLARIS_ENDPOINT` | `https://api.polaris.example.com` | Override the API endpoint (useful for staging) |
+| `POLARIS_ENDPOINT` | `https://api.polaris.example.com` | Override the API endpoint |
 | `POLARIS_TIMEOUT` | `30` | Per-request timeout in seconds |
 | `POLARIS_FORMAT` | `table` | Default output format |
 | `POLARIS_NO_COLOUR` | unset | Disable ANSI colour in output |

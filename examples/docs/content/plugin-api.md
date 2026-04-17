@@ -113,16 +113,16 @@ site_software: "SSG, Rust"
 https://api.polaris.example.com/v1
 ```
 
-All endpoints accept and return JSON unless otherwise noted. Authentication is via the `Authorization: Bearer <token>` header.
+All routes use JSON. Pass a bearer token to log in.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/datasets` | List datasets you have read access to |
-| GET | `/datasets/{id}` | Retrieve a single dataset's metadata |
-| POST | `/datasets/{id}/queries` | Submit a query against a dataset |
-| GET | `/queries/{id}` | Poll a submitted query for results |
+| GET | `/datasets` | List datasets you can read |
+| GET | `/datasets/{id}` | Get one dataset's metadata |
+| POST | `/datasets/{id}/queries` | Run a query on a dataset |
+| GET | `/queries/{id}` | Poll a query for results |
 | DELETE | `/queries/{id}` | Cancel a running query |
 
 ## Example: submit a query
@@ -149,9 +149,9 @@ Response:
 
 | Code | Meaning |
 |------|---------|
-| 400 | Malformed JSON, invalid SQL, or missing required field |
+| 400 | Bad JSON, bad SQL, or missing field |
 | 401 | Missing or expired token |
-| 403 | Token valid but lacks permission for this dataset |
-| 404 | Dataset or query ID does not exist |
-| 429 | Rate limit exceeded — see `Retry-After` header |
+| 403 | Token valid but no access to this dataset |
+| 404 | Dataset or query ID not found |
+| 429 | Rate limit hit — see `Retry-After` header |
 | 500 | Server error — please [report it](/contact/) |

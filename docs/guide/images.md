@@ -2,18 +2,18 @@
 
 # Images
 
-SSG optimizes images with responsive `<picture>` elements, modern formats, and lazy loading via the `ImageOptimizationPlugin`.
+SSG makes images responsive and fast. It uses `<picture>` elements, modern formats, and lazy loading.
 
 > **Note:** This feature requires the `image-optimization` cargo feature flag.
 
 ## How It Works
 
-The plugin runs in `after_compile` and processes all `<img>` tags in generated HTML:
+The plugin runs in `after_compile`. It finds all `<img>` tags in your HTML.
 
 1. Scans `site_dir` for JPEG and PNG images
-2. Generates WebP variants at responsive widths
-3. Optionally generates AVIF variants (with the `avif` feature)
-4. Rewrites `<img>` tags to `<picture>` elements with `srcset`
+2. Creates WebP versions at each breakpoint width
+3. Can also create AVIF versions (with the `avif` feature)
+4. Rewrites `<img>` tags as `<picture>` elements with `srcset`
 5. Adds `loading="lazy"`, `decoding="async"`, `width`, and `height`
 
 ## Generated Output
@@ -49,7 +49,7 @@ Default breakpoints (in pixels):
 | 1024 | Tablet / Desktop |
 | 1440 | Desktop (large) |
 
-Breakpoints are configurable via the `ImageOptimizationPlugin` struct:
+You can change breakpoints via the `ImageOptimizationPlugin` struct:
 
 ```rust
 use ssg::image_plugin::ImageOptimizationPlugin;
@@ -62,17 +62,17 @@ let plugin = ImageOptimizationPlugin {
 
 ## Lazy Loading
 
-All images receive `loading="lazy"` and `decoding="async"` by default.
+All images get `loading="lazy"` and `decoding="async"` by default.
 
-Images with `fetchpriority="high"` receive `loading="eager"` instead, so the browser fetches them immediately. Use this for above-the-fold hero images.
+Images with `fetchpriority="high"` get `loading="eager"` instead. The browser then fetches them right away. Use this for hero images above the fold.
 
 ## CLS Prevention
 
-SSG reads `width` and `height` from source image metadata and injects them into the `<img>` element. This allows the browser to reserve the correct space before the image loads, preventing Cumulative Layout Shift (CLS).
+SSG reads `width` and `height` from the source image. It adds them to the `<img>` tag. This lets the browser reserve space before the image loads. It stops Cumulative Layout Shift (CLS).
 
 ## WebP Quality
 
-Default WebP encoding quality is 80 (range: 1-100). Configure via the plugin struct:
+The default WebP quality is 80 (range: 1-100). Set it via the plugin struct:
 
 ```rust
 let plugin = ImageOptimizationPlugin {
@@ -83,14 +83,14 @@ let plugin = ImageOptimizationPlugin {
 
 ## Decorative Images
 
-SSG's `AccessibilityPlugin` detects decorative images and applies `role="presentation"` with empty `alt=""`. See [Accessibility](accessibility.md) for details.
+The `AccessibilityPlugin` finds decorative images. It adds `role="presentation"` and empty `alt=""`. See [Accessibility](accessibility.md) for details.
 
 ## Best Practices
 
-- Provide meaningful `alt` text for all informative images
+- Provide clear `alt` text for all informative images
 - Use `fetchpriority="high"` on above-the-fold hero images
-- Keep source images at the largest breakpoint size or larger
-- Use AVIF where browser support allows for better compression
+- Keep source images at the largest breakpoint size or bigger
+- Use AVIF where browsers support it for better compression
 
 ## Next Steps
 

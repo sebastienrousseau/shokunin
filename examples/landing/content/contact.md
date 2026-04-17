@@ -107,4 +107,4 @@ site_software: "SSG, Rust"
 
 # Contact
 
-Contact hello@meridian-systems.com
+Reach us at hello@meridian-systems.com. We'd love to hear from you. We aim to reply within two business days.

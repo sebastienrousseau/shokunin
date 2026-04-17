@@ -2,11 +2,11 @@
 
 # SEO
 
-SSG generates comprehensive SEO metadata automatically from frontmatter and site configuration.
+SSG creates SEO metadata from your frontmatter and site config. This happens on every build.
 
 ## Open Graph
 
-The `SeoPlugin` injects Open Graph meta tags into every page:
+The `SeoPlugin` adds Open Graph meta tags to every page:
 
 ```html
 <meta property="og:title" content="Page Title" />
@@ -21,7 +21,7 @@ The `SeoPlugin` injects Open Graph meta tags into every page:
 
 ## Twitter Cards
 
-For article pages, SSG generates `summary_large_image` Twitter Cards:
+For article pages, SSG creates `summary_large_image` Twitter Cards:
 
 ```html
 <meta name="twitter:card" content="summary_large_image" />
@@ -32,7 +32,7 @@ For article pages, SSG generates `summary_large_image` Twitter Cards:
 
 ## JSON-LD Structured Data
 
-The `JsonLdPlugin` generates JSON-LD for Article and WebPage schema types:
+The `JsonLdPlugin` creates JSON-LD for Article and WebPage types:
 
 ```html
 <script type="application/ld+json">
@@ -55,21 +55,21 @@ The `JsonLdPlugin` generates JSON-LD for Article and WebPage schema types:
 </script>
 ```
 
-SSG also generates `BreadcrumbList` JSON-LD for navigation hierarchy.
+SSG also creates `BreadcrumbList` JSON-LD for page hierarchy.
 
 ## Canonical URLs
 
-The `CanonicalPlugin` injects canonical link tags to prevent duplicate content issues:
+The `CanonicalPlugin` adds canonical link tags. These stop duplicate content issues.
 
 ```html
 <link rel="canonical" href="https://example.com/page" />
 ```
 
-The canonical URL is constructed from `base_url` in configuration and the page's relative path.
+The URL comes from `base_url` in your config plus the page path.
 
 ## robots.txt
 
-The `RobotsPlugin` generates a `robots.txt` file in the site root:
+The `RobotsPlugin` creates a `robots.txt` file in the site root:
 
 ```
 User-agent: *
@@ -77,21 +77,21 @@ Allow: /
 Sitemap: https://example.com/sitemap.xml
 ```
 
-The sitemap URL is derived from the `base_url` configuration.
+The sitemap URL comes from the `base_url` config value.
 
 ## Sitemaps
 
-The `SitemapFixPlugin` generates and validates `sitemap.xml` with per-page `<lastmod>` timestamps.
+The `SitemapFixPlugin` creates and checks `sitemap.xml`. Each page gets a `<lastmod>` timestamp.
 
-For multi-locale sites, per-locale sitemaps are generated with `xhtml:link` alternates (see [i18n](i18n.md)).
+For multi-locale sites, SSG creates per-locale sitemaps. These include `xhtml:link` alternates (see [i18n](i18n.md)).
 
 ## Google News Sitemaps
 
-The `NewsSitemapFixPlugin` generates a Google News sitemap with keywords for news-oriented content.
+The `NewsSitemapFixPlugin` creates a Google News sitemap. It adds keywords for news content.
 
 ## RSS 2.0
 
-The `RssAggregatePlugin` generates an RSS 2.0 feed with:
+The `RssAggregatePlugin` creates an RSS 2.0 feed with:
 
 - Enclosures for media
 - Categories from frontmatter tags
@@ -100,11 +100,11 @@ The `RssAggregatePlugin` generates an RSS 2.0 feed with:
 
 ## Atom Feeds
 
-The `AtomFeedPlugin` generates Atom feeds as an alternative to RSS.
+The `AtomFeedPlugin` creates Atom feeds as an option besides RSS.
 
 ## Meta Description
 
-SSG uses the `description` field from frontmatter for the HTML meta description:
+SSG uses the `description` frontmatter field for the HTML meta tag:
 
 ```html
 <meta name="description" content="Page description from frontmatter" />
@@ -112,13 +112,13 @@ SSG uses the `description` field from frontmatter for the HTML meta description:
 
 ## Checklist
 
-To maximize SEO with SSG, ensure each page has:
+For the best SEO results, give each page:
 
 - A unique `title` in frontmatter
 - A `description` under 160 characters
 - A `date` for date-based content
 - An image for social sharing (OG and Twitter Cards)
-- A valid `base_url` in configuration
+- A valid `base_url` in your config
 
 ## Next Steps
 

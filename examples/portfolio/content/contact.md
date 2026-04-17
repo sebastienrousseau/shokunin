@@ -107,4 +107,4 @@ site_software: "SSG, Rust"
 
 # Contact
 
-Email: jane@example.com
+Email jane@example.com to get in touch. We'd love to hear from you. We aim to reply within two days.
