@@ -1,11 +1,11 @@
 {
-    "version": "0.0.36",
+    "version": "0.0.39",
     "description": "Fast, SEO-optimised static site generator built in Rust",
     "homepage": "https://github.com/sebastienrousseau/static-site-generator",
     "license": "MIT|Apache-2.0",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.36/ssg-v0.0.36-x86_64-pc-windows-msvc.zip",
+            "url": "https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.39/ssg-v0.0.39-x86_64-pc-windows-msvc.zip",
             "hash": ""
         }
     },

@@ -8,7 +8,7 @@
 //!
 //! ## Lifecycle hooks
 //!
-//! Plugins can hook into three stages of site generation:
+//! Plugins can hook into four stages of site generation:
 //!
 //! 1. **`before_compile`** — Runs before compilation. Use for content
 //!    preprocessing, metadata injection, or source transformation.
@@ -223,6 +223,27 @@ pub trait Plugin: fmt::Debug + Send + Sync {
         Ok(())
     }
 
+    /// Returns `true` if this plugin implements `transform_html`.
+    ///
+    /// Used by the pipeline to skip per-file dispatch for plugins that
+    /// only use lifecycle hooks.
+    fn has_transform(&self) -> bool {
+        false
+    }
+
+    /// Transforms a single HTML file in-place after compilation.
+    ///
+    /// Called once per HTML file in the site directory. The default
+    /// implementation returns the input unchanged.
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        Ok(html.to_string())
+    }
+
     /// Called before the development server starts serving files.
     ///
     /// Use this hook to inject dev-mode scripts, set up live-reload,
@@ -356,6 +377,7 @@ impl PluginManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};

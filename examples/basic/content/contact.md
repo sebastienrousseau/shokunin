@@ -59,7 +59,7 @@ news_title: "Contact"
 atom_link: https://ariastudio.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.39)"
 item_description: RSS feed for Aria Studio
 item_guid: "https://ariastudio.example.com/contact/index.html"
 item_link: "https://ariastudio.example.com/contact/index.html"

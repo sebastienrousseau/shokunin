@@ -75,7 +75,7 @@ const SECURITY_HEADERS: &[(&str, &str)] = &[
     ),
     (
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'",
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'",
     ),
     ("Strict-Transport-Security", "max-age=31536000; includeSubDomains"),
 ];
@@ -151,6 +151,7 @@ fn generate_github_pages(site_dir: &std::path::Path) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::test_support::init_logger;

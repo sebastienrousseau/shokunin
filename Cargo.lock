@@ -4608,7 +4608,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.36"
+version = "0.0.39"
 dependencies = [
  "anyhow",
  "clap",

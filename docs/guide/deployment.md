@@ -2,7 +2,7 @@
 
 # Deployment
 
-SSG generates platform-specific deployment configuration with the `--deploy` flag.
+SSG creates deploy configs for each platform. Use the `--deploy` flag to pick one.
 
 ## Supported Platforms
 
@@ -15,7 +15,7 @@ ssg --deploy github
 
 ## Netlify
 
-Generates `netlify.toml` in the site directory:
+Creates a `netlify.toml` file in the site folder:
 
 ```toml
 [build]
@@ -33,7 +33,7 @@ Generates `netlify.toml` in the site directory:
 
 ## Vercel
 
-Generates `vercel.json`:
+Creates a `vercel.json` file:
 
 ```json
 {
@@ -53,7 +53,7 @@ Generates `vercel.json`:
 
 ## Cloudflare Pages
 
-Generates `_headers` and `_redirects` files in the site directory:
+Creates `_headers` and `_redirects` files in the site folder:
 
 ```
 /*
@@ -68,16 +68,16 @@ Generates `_headers` and `_redirects` files in the site directory:
 
 ## GitHub Pages
 
-Generates:
+Creates these files:
 
-- `.nojekyll` — prevents GitHub Pages from processing with Jekyll
-- `CNAME` — custom domain file (if `base_url` has a custom domain)
+- `.nojekyll` — stops GitHub Pages from using Jekyll
+- `CNAME` — custom domain file (if `base_url` has one)
 
-Deploy with GitHub Actions by pushing the output directory to the `gh-pages` branch.
+Push the output folder to the `gh-pages` branch. GitHub Actions can do this in CI.
 
 ## Security Headers
 
-All deployment targets include these security headers:
+All targets add these headers:
 
 | Header | Value |
 | :--- | :--- |
@@ -91,7 +91,7 @@ All deployment targets include these security headers:
 
 ## Manual Deployment
 
-If you are not using `--deploy`, copy the output directory to any static file host. SSG output is plain HTML, CSS, and JavaScript with no server-side requirements.
+Skip `--deploy` and copy the output by hand. SSG makes plain HTML, CSS, and JS. No server code is needed.
 
 ## CI/CD Example
 
@@ -112,5 +112,5 @@ If you are not using `--deploy`, copy the output directory to any static file ho
 ## Next Steps
 
 - [Configuration](configuration.md) — `base_url` and other settings
-- [SEO](seo.md) — sitemaps and robots.txt for production
+- [SEO](seo.md) — Sitemaps and robots.txt
 - [CLI Reference](cli.md) — `--deploy` flag details
