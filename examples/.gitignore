@@ -9,7 +9,7 @@
 /.vscode/
 Icon?
 
-# Legacy entries (kept for backwards compat with checkouts before v0.0.36)
+# Legacy entries (kept for backwards compat with checkouts before v0.0.41)
 /mysite/
 /output/
 /pdfs/

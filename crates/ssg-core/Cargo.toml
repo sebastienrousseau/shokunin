@@ -1,0 +1,19 @@
+[package]
+name = "ssg-core"
+version = "0.0.41"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = "Core compilation pipeline for SSG — no system dependencies, WASM-compatible."
+repository = "https://github.com/sebastienrousseau/static-site-generator"
+keywords = ["ssg", "static", "markdown", "wasm", "core"]
+categories = ["web-programming", "template-engine", "wasm"]
+readme = "../../README.md"
+
+[dependencies]
+anyhow = "1"
+log = "0.4"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"

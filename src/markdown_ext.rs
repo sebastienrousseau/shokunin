@@ -372,6 +372,7 @@ fn find_strike_close(line: &str, from: usize) -> Option<usize> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::Plugin;

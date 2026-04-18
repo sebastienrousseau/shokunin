@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.36-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.41-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -26,7 +26,7 @@
 - [Quick Start](#quick-start) — scaffold a site in 30 seconds
 - [Overview](#overview) — what SSG does
 - [Architecture](#architecture) — build pipeline diagram
-- [Features](#features) — v0.0.36 capability matrix
+- [Features](#features) — v0.0.41 capability matrix
 - [The CLI](#the-cli) — flags and usage
 - [Library Usage](#library-usage) — `ssg::run()`, plugins, schemas
 - [Benchmarks](#benchmarks) — binary size, test suite, coverage
@@ -64,7 +64,7 @@ cargo install ssg
 
 ```sh
 # Download the .deb from the latest release, then:
-sudo dpkg -i ssg_0.0.36_amd64.deb
+sudo dpkg -i ssg_0.0.41_amd64.deb
 ```
 
 Or build it yourself with `packaging/deb/build.sh`.
@@ -97,7 +97,7 @@ winget install sebastienrousseau.ssg
 
 ```toml
 [dependencies]
-ssg = "0.0.36"
+ssg = "0.0.41"
 ```
 
 ### Build from source

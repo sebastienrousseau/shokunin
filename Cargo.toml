@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.36"                      # The version of the library
+version = "0.0.41"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -387,6 +387,10 @@ upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
 path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
 license      = false
 eula         = false
+
+[workspace]
+members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+default-members = ["."]
 
 # -----------------------------------------------------------------------------
 # Patch: replace upstream serde_yml (which uses unsafe libyml) with a local

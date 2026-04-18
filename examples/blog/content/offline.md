@@ -59,7 +59,7 @@ news_title: "Offline"
 atom_link: https://threshold.press/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.41)"
 item_description: RSS feed for Threshold
 item_guid: "https://threshold.press/offline/index.html"
 item_link: "https://threshold.press/offline/index.html"
