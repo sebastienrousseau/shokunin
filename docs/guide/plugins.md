@@ -30,7 +30,7 @@ SSG ships these plugins. They all run on their own.
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `HighlightPlugin` | `after_compile` | Syntax colours for code blocks |
-| `TeraPlugin` | `after_compile` | Tera template rendering |
+| `TemplatePlugin` | `after_compile` | MiniJinja template rendering |
 | `PaginationPlugin` | `after_compile` | Page splits for list pages |
 | `TaxonomyPlugin` | `after_compile` | Tag and category indexes |
 
@@ -62,6 +62,9 @@ SSG ships these plugins. They all run on their own.
 | `ImageOptimizationPlugin` | `after_compile` | `<picture>` with AVIF/WebP |
 | `FingerprintPlugin` | `after_compile` | Asset hashes and SRI |
 | `AiPlugin` | `after_compile` | AI hooks, `llms.txt` |
+| `CspPlugin` | `after_compile` | CSP hardening, inline extraction + SRI |
+| `IslandPlugin` | `after_compile` | Web Component islands, lazy hydration |
+| `LlmPlugin` | `after_compile` | Local LLM content augmentation |
 | `DeployPlugin` | `after_compile` | Deploy config files |
 
 ### Dev Server

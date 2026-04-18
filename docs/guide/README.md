@@ -19,13 +19,14 @@ Guides for SSG.
 
 ## Features
 
-- [Plugins](plugins.md) — 22 built-in plugins
+- [Plugins](plugins.md) — 25+ built-in plugins
 - [Plugin API](plugin-api.md) — Plugin trait
 - [SEO](seo.md) — Open Graph, JSON-LD, sitemaps
 - [A11y](accessibility.md) — WCAG 2.1 AA
 - [Images](images.md) — WebP, srcset, lazy load
 - [Search](search.md) — Client-side, 28 locales
 - [I18n](i18n.md) — Hreflang, locale sitemaps
+- [LLM Pipelines](llm-content-pipelines.md) — Local LLM, readability audit
 
 ## Deploy
 

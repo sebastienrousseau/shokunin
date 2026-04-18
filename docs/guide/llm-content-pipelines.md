@@ -60,6 +60,18 @@ endpoint = "http://localhost:11434"
 | Flag | Description |
 |------|-------------|
 | `--ai-dry-run` | Print generated text without writing files |
+| `--max-memory` | Peak memory budget in MB for streaming (default: 512) |
+
+## Readability Engine
+
+The `LlmPlugin` includes a Flesch-Kincaid readability engine:
+
+- **`ReadabilityAudit::analyze(text)`** — scores any text for grade level and reading ease
+- **`LlmPlugin::audit_all(dir, grade)`** — scans all `.md` files against a target grade
+- **`LlmPlugin::audit_and_fix(dir, config)`** — rewrites files that fail, preserving frontmatter
+- **Refinement loop** — if LLM output exceeds the target grade, re-prompts once for simpler text
+
+Default target: grade 8.0 (configurable via `LlmConfig::target_grade`).
 
 ## Output Files
 

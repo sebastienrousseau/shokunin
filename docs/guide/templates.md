@@ -2,7 +2,7 @@
 
 # Templates
 
-SSG uses the [Tera](https://keats.github.io/tera/) template engine for rendering HTML from content.
+SSG uses the [MiniJinja](https://docs.rs/minijinja) template engine for rendering HTML from content.
 
 ## Template Directory
 
@@ -16,9 +16,9 @@ templates/
   index.html      # Home / listing page
 ```
 
-## Tera Basics
+## MiniJinja Basics
 
-Tera uses `{{ }}` for expressions and `{% %}` for logic:
+MiniJinja uses `{{ }}` for expressions and `{% %}` for logic:
 
 ```html
 <h1>{{ page.title }}</h1>
@@ -121,7 +121,7 @@ Define a base layout with blocks that child templates override:
 
 ## Filters
 
-Tera provides built-in filters. Common ones:
+MiniJinja has built-in filters. Common ones:
 
 ```html
 {{ page.title | upper }}
@@ -152,7 +152,7 @@ SSG includes 7 bundled templates and 3 themes:
 
 ## Feature Flag
 
-Tera templating requires the `tera-templates` feature (enabled by default). The `TeraPlugin` handles rendering during the `after_compile` phase.
+MiniJinja templating requires the `templates` feature (enabled by default). The `TemplatePlugin` handles rendering during the `after_compile` phase.
 
 ## Next Steps
 

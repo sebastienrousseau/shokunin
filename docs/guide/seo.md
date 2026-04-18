@@ -102,6 +102,18 @@ The `RssAggregatePlugin` creates an RSS 2.0 feed with:
 
 The `AtomFeedPlugin` creates Atom feeds as an option besides RSS.
 
+## Content Security Policy
+
+The `CspPlugin` hardens your site's CSP headers. It extracts inline `<style>` and `<script>` blocks to external files. Each file gets an SRI hash.
+
+This removes the need for `'unsafe-inline'` in your CSP. The deploy headers use strict directives:
+
+```
+script-src 'self'; style-src 'self'
+```
+
+JSON-LD blocks and dev scripts are kept inline (they are safe).
+
 ## Meta Description
 
 SSG uses the `description` frontmatter field for the HTML meta tag:
