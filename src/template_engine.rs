@@ -244,6 +244,7 @@ fn slugify_filter(value: String) -> String {
 }
 
 #[cfg(all(test, feature = "templates"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;

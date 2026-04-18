@@ -235,6 +235,7 @@ fn inject_seo_tags_html(html: &str) -> Result<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::Path;

@@ -755,6 +755,7 @@ fn call_ollama(endpoint: &str, model: &str, prompt: &str) -> Option<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

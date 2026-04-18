@@ -142,7 +142,7 @@ impl PortfolioSiteGenerator {
 
         let mut plugins = PluginManager::new();
         plugins.register(ssg::shortcodes::ShortcodePlugin);
-        #[cfg(feature = "tera-templates")]
+        #[cfg(feature = "templates")]
         plugins.register(
             ssg::template_plugin::TemplatePlugin::from_template_dir(
                 &self.config.template_dir,

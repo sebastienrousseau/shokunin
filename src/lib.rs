@@ -31,7 +31,7 @@ pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
-#[allow(unreachable_pub)]
+#[allow(unreachable_pub, clippy::unwrap_used, clippy::expect_used)]
 pub(crate) mod test_support {
     use std::sync::Once;
 
@@ -472,6 +472,7 @@ pub fn run() -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::Cli;

@@ -151,6 +151,7 @@ fn generate_github_pages(site_dir: &std::path::Path) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::test_support::init_logger;

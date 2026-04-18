@@ -100,7 +100,6 @@ default = ["templates", "image-optimization"]
 cli = []                                # Enable command-line interface support
 benchmark = ["tempfile"]                 # Enable benchmark-specific functionality
 templates = ["minijinja"]               # MiniJinja templating engine with inheritance, loops, conditionals
-tera-templates = ["templates"]          # Backward-compatible alias
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 
