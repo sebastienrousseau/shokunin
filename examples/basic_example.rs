@@ -85,6 +85,7 @@ fn main() -> Result<()> {
     let ctx =
         PluginContext::new(content_dir, build_dir, site_dir, template_dir);
     plugins.run_after_compile(&ctx)?;
+    plugins.run_fused_transforms(&ctx)?;
     println!("    🔍 Search index generated");
     println!("    🧹 Browser-compat cleanups applied");
 
