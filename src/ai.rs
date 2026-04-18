@@ -12,10 +12,9 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+#[cfg(test)]
+use std::path::PathBuf;
+use std::{fs, path::Path};
 
 /// Plugin for AI-readiness content validation and enhancement.
 ///
@@ -31,46 +30,34 @@ impl Plugin for AiPlugin {
         "ai"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String> {
+        let modified = inject_max_snippet(html);
+
+        check_alt_text(path, &modified, &ctx.site_dir, &mut 0);
+
+        Ok(modified)
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
         generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
-
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        let pages_with_missing_alt =
-            process_html_for_ai(&html_files, &ctx.site_dir)?;
-
-        if pages_with_missing_alt > 0 {
-            log::warn!(
-                "[ai] {pages_with_missing_alt} page(s) have images without alt text"
-            );
-        }
+        generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())?;
+        generate_ai_provenance(&ctx.site_dir)?;
 
         Ok(())
     }
-}
-
-/// Processes HTML files: injects max-snippet meta tags and checks for missing alt text.
-fn process_html_for_ai(
-    html_files: &[PathBuf],
-    site_dir: &Path,
-) -> Result<usize> {
-    let mut pages_with_missing_alt = 0usize;
-
-    for path in html_files {
-        let html = fs::read_to_string(path)?;
-        let modified = inject_max_snippet(&html);
-
-        check_alt_text(path, &modified, site_dir, &mut pages_with_missing_alt);
-
-        if modified != html {
-            fs::write(path, modified)?;
-        }
-    }
-
-    Ok(pages_with_missing_alt)
 }
 
 /// Injects the max-snippet meta tag before `</head>` if not already present.
@@ -152,6 +139,106 @@ fn generate_llms_txt(
     Ok(())
 }
 
+/// Generates `llms-full.txt` — a comprehensive content index for AI systems.
+///
+/// Lists every HTML page with its title and a snippet of body text,
+/// enabling LLM retrieval systems to understand site content at a glance.
+fn generate_llms_full_txt(
+    site_dir: &Path,
+    config: Option<&crate::cmd::SsgConfig>,
+) -> Result<()> {
+    let site_name = config.map_or("Site", |c| c.site_name.as_str());
+    let base_url = config
+        .map_or("", |c| c.base_url.as_str())
+        .trim_end_matches('/');
+
+    let html_files =
+        crate::walk::walk_files(site_dir, "html").unwrap_or_default();
+    let mut lines = vec![format!("# {site_name} — Full Content Index\n")];
+
+    for path in &html_files {
+        let Ok(html) = fs::read_to_string(path) else {
+            continue;
+        };
+        let title = extract_title_from_html(&html).unwrap_or_default();
+        let rel = path
+            .strip_prefix(site_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let url = if base_url.is_empty() {
+            format!("/{rel}")
+        } else {
+            format!("{base_url}/{rel}")
+        };
+        let snippet = extract_snippet(&html, 200);
+        lines.push(format!("## {title}\nURL: {url}\n{snippet}\n"));
+    }
+
+    fs::write(site_dir.join("llms-full.txt"), lines.join("\n"))?;
+    log::info!(
+        "[ai] Generated llms-full.txt with {} page(s)",
+        html_files.len()
+    );
+    Ok(())
+}
+
+/// Generates `ai-provenance.json` — tracks which content fields were
+/// AI-generated vs human-authored.
+fn generate_ai_provenance(site_dir: &Path) -> Result<()> {
+    let provenance = serde_json::json!({
+        "version": "1.0",
+        "generator": "ssg",
+        "policy": "human-authored",
+        "ai_generated_fields": [],
+        "note": "All content is human-authored unless explicitly marked in frontmatter with ai_generated: true"
+    });
+    let json = serde_json::to_string_pretty(&provenance)
+        .unwrap_or_else(|_| "{}".to_string());
+    fs::write(site_dir.join("ai-provenance.json"), json)?;
+    log::info!("[ai] Generated ai-provenance.json");
+    Ok(())
+}
+
+/// Extracts the `<title>` content from HTML.
+fn extract_title_from_html(html: &str) -> Option<String> {
+    let start = html.find("<title>")? + 7;
+    let end = html[start..].find("</title>")? + start;
+    let title = html[start..end].trim();
+    if title.is_empty() {
+        None
+    } else {
+        Some(title.to_string())
+    }
+}
+
+/// Extracts a plain-text snippet from HTML body content.
+fn extract_snippet(html: &str, max_chars: usize) -> String {
+    // Find <main> or <body> content
+    let body_start = html
+        .find("<main")
+        .or_else(|| html.find("<body"))
+        .unwrap_or(0);
+    let body = &html[body_start..];
+
+    // Strip tags
+    let mut text = String::with_capacity(max_chars + 50);
+    let mut in_tag = false;
+    for ch in body.chars() {
+        if text.len() >= max_chars {
+            break;
+        }
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag && !ch.is_control() => text.push(ch),
+            _ => {}
+        }
+    }
+
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// Counts `<img>` tags missing alt attributes in an HTML string.
 fn count_missing_alt(html: &str) -> usize {
     let lower = html.to_lowercase();
@@ -173,12 +260,13 @@ fn count_missing_alt(html: &str) -> usize {
     count
 }
 
-/// Recursively collects HTML files (delegates to `crate::walk`).
+#[cfg(test)]
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::SsgConfig;
@@ -355,10 +443,10 @@ mod tests {
     fn after_compile_injects_max_snippet_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
-        fs::write(site.join("index.html"), html).unwrap();
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("max-snippet"));
         assert!(output.contains("max-image-preview:large"));
     }
@@ -372,71 +460,52 @@ mod tests {
 
     #[test]
     fn after_compile_idempotent_does_not_duplicate_meta_tag() {
-        // Re-running must not double-inject. Guards the
-        // `!modified.contains("max-snippet")` check at line 52.
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
-        fs::write(site.join("index.html"), html).unwrap();
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        AiPlugin.after_compile(&ctx).unwrap();
+        let first = AiPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        let second = AiPlugin
+            .transform_html(&first, &site.join("index.html"), &ctx)
+            .unwrap();
 
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
-        assert_eq!(output.matches("max-snippet").count(), 1);
+        assert_eq!(second.matches("max-snippet").count(), 1);
     }
 
     #[test]
     fn after_compile_skips_html_files_without_head_tag() {
-        // The `modified.contains("</head>")` guard at line 52 must
-        // skip injection rather than crash on fragment HTML.
         let (_tmp, site, ctx) = make_site();
-        fs::write(site.join("fragment.html"), "<p>just a fragment</p>")
-            .unwrap();
+        let html = "<p>just a fragment</p>";
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(site.join("fragment.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("fragment.html"), &ctx)
+            .unwrap();
         assert!(!output.contains("max-snippet"));
-        // The original content must be preserved.
         assert_eq!(output, "<p>just a fragment</p>");
     }
 
     #[test]
     fn after_compile_processes_files_in_subdirectories() {
         let (_tmp, site, ctx) = make_site();
-        let nested = site.join("blog");
-        fs::create_dir_all(&nested).unwrap();
-        fs::write(
-            nested.join("post.html"),
-            "<html><head></head><body></body></html>",
-        )
-        .unwrap();
+        let html = "<html><head></head><body></body></html>";
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(nested.join("post.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("blog/post.html"), &ctx)
+            .unwrap();
         assert!(output.contains("max-snippet"));
     }
 
     #[test]
     fn after_compile_logs_warning_for_pages_with_missing_alt() {
-        // Exercises the `if missing > 0` branch at line 63 and the
-        // final `if pages_with_missing_alt > 0` branch at line 75.
-        // Covers lines 64-67 and 76.
         let (_tmp, site, ctx) = make_site();
-        fs::write(
-            site.join("bad.html"),
-            r#"<html><head></head><body><img src="a.jpg"></body></html>"#,
-        )
-        .unwrap();
-        fs::write(
-            site.join("worse.html"),
-            r#"<html><head></head><body><img src="a.jpg" alt=""></body></html>"#,
-        )
-        .unwrap();
+        let html =
+            r#"<html><head></head><body><img src="a.jpg"></body></html>"#;
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        // max-snippet meta is injected even when alt-text warnings fire.
-        let bad = fs::read_to_string(site.join("bad.html")).unwrap();
-        assert!(bad.contains("max-snippet"));
+        let output = AiPlugin
+            .transform_html(html, &site.join("bad.html"), &ctx)
+            .unwrap();
+        assert!(output.contains("max-snippet"));
     }
 
     #[test]

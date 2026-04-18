@@ -11,8 +11,8 @@ use staticdatagen::compile;
 use crate::cmd::SsgConfig;
 use crate::{
     accessibility, ai, assets, content, deploy, drafts, highlight, i18n,
-    livereload, pagination, plugin, plugins as plugins_mod, postprocess,
-    search, seo, shortcodes, taxonomy, walk,
+    islands, livereload, pagination, plugin, plugins as plugins_mod,
+    postprocess, search, seo, shortcodes, streaming, taxonomy, walk,
 };
 
 /// CLI-driven options that don't live in `SsgConfig` itself.
@@ -32,6 +32,9 @@ pub struct RunOptions {
     /// Number of parallel threads for Rayon (`--jobs`).
     /// `None` means use all available CPUs.
     pub jobs: Option<usize>,
+    /// Peak memory budget in MB for streaming compilation.
+    /// `None` means use the default (512 MB).
+    pub max_memory_mb: Option<usize>,
 }
 
 impl RunOptions {
@@ -43,6 +46,7 @@ impl RunOptions {
             deploy_target: matches.get_one::<String>("deploy").cloned(),
             validate_only: matches.get_flag("validate"),
             jobs: matches.get_one::<usize>("jobs").copied(),
+            max_memory_mb: matches.get_one::<usize>("max-memory").copied(),
         }
     }
 }
@@ -82,13 +86,18 @@ pub fn build_pipeline(
 ) {
     let (build_dir, site_dir) = resolve_build_and_site_dirs(config);
 
-    let ctx = plugin::PluginContext::with_config(
+    let mut ctx = plugin::PluginContext::with_config(
         &config.content_dir,
         &build_dir,
         &site_dir,
         &config.template_dir,
         config.clone(),
     );
+
+    // Set memory budget if --max-memory was specified
+    if let Some(mb) = opts.max_memory_mb {
+        ctx.memory_budget = Some(streaming::MemoryBudget::from_mb(mb));
+    }
 
     let mut plugins = plugin::PluginManager::new();
     register_default_plugins(
@@ -123,8 +132,39 @@ pub fn execute_build_pipeline(
     ctx.cache = Some(cache);
 
     plugins.run_before_compile(&ctx)?;
-    compile_site(build_dir, content_dir, site_dir, template_dir)?;
+
+    // Use streaming compilation for large sites when --max-memory is set
+    // or the site exceeds the default batch size.
+    let budget = ctx
+        .memory_budget
+        .unwrap_or_else(streaming::MemoryBudget::default_budget);
+    let explicitly_set = ctx.memory_budget.is_some();
+
+    if streaming::should_stream(content_dir, &budget, explicitly_set) {
+        let batches = streaming::batched_content_files(content_dir, &budget)?;
+        for (i, batch) in batches.iter().enumerate() {
+            streaming::compile_batch(
+                batch,
+                content_dir,
+                build_dir,
+                site_dir,
+                template_dir,
+                i,
+            )?;
+        }
+    } else {
+        compile_site(build_dir, content_dir, site_dir, template_dir)?;
+    }
+
+    // Cache HTML file list once — shared by all after_compile plugins,
+    // eliminating 8+ redundant directory walks.
+    ctx.cache_html_files();
+
     plugins.run_after_compile(&ctx)?;
+
+    // Fused transform pass: read each HTML once → pipe through all
+    // transform plugins → write once. Eliminates redundant I/O.
+    plugins.run_fused_transforms(&ctx)?;
 
     // Rebuild and save cache: snapshot all HTML files in site_dir
     if let Some(ref mut cache) = ctx.cache {
@@ -182,7 +222,7 @@ pub fn register_default_plugins(
     plugins.register(drafts::DraftPlugin::new(include_drafts));
     plugins.register(shortcodes::ShortcodePlugin);
 
-    // Tera templating (must run first in after_compile)
+    // Template engine (must run first in after_compile)
     #[cfg(feature = "tera-templates")]
     plugins.register(crate::tera_plugin::TeraPlugin::from_template_dir(
         &config.template_dir,
@@ -230,6 +270,9 @@ pub fn register_default_plugins(
             plugins.register(i18n::I18nPlugin::new(i18n_cfg.clone()));
         }
     }
+
+    // Interactive islands (Web Components)
+    plugins.register(islands::IslandPlugin);
 
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);

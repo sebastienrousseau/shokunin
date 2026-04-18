@@ -134,22 +134,20 @@ fn empty_plugin_manager_is_a_no_op() {
 fn html_fix_plugin_is_idempotent_on_second_run() {
     let tmp = tempfile::tempdir().unwrap();
     let site = tmp.path();
-    fs::write(
-        site.join("index.html"),
-        r#"<!doctype html><html lang="en"><head>
+    let html = r#"<!doctype html><html lang="en"><head>
         <meta name="apple-mobile-web-app-capable" content="yes">
         <link as=image fetchpriority=high href rel=preload type=image/webp>
         <title>x</title>
-        </head><body><h1>h</h1></body></html>"#,
-    )
-    .unwrap();
+        </head><body><h1>h</h1></body></html>"#;
 
     let c = ctx(site);
-    HtmlFixPlugin.after_compile(&c).unwrap();
-    let after_first = fs::read_to_string(site.join("index.html")).unwrap();
+    let after_first = HtmlFixPlugin
+        .transform_html(html, Path::new("index.html"), &c)
+        .unwrap();
 
-    HtmlFixPlugin.after_compile(&c).unwrap();
-    let after_second = fs::read_to_string(site.join("index.html")).unwrap();
+    let after_second = HtmlFixPlugin
+        .transform_html(&after_first, Path::new("index.html"), &c)
+        .unwrap();
 
     assert_eq!(
         after_first, after_second,

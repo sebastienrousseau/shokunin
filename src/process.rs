@@ -308,6 +308,7 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use clap::{arg, Command};

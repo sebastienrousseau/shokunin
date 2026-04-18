@@ -2,67 +2,70 @@
 
 # Plugins
 
-SSG uses a plugin pipeline to process content and output. Plugins hook into the build lifecycle and run in registration order.
+SSG uses plugins. They hook into the build. They run in order.
 
 ## Lifecycle Hooks
 
-Every plugin can implement three hooks:
+Every plugin can use three hooks:
 
 | Hook | When | Use Cases |
 | :--- | :--- | :--- |
-| `before_compile` | Before compilation starts | Content preprocessing, shortcode expansion, schema validation |
-| `after_compile` | After compilation completes | HTML post-processing, SEO injection, sitemap generation, minification |
-| `on_serve` | Before dev server starts | Live-reload injection, dev-mode scripts |
+| `before_compile` | Before build starts | Content prep, shortcodes, schema checks |
+| `after_compile` | After build finishes | HTML fixes, SEO tags, sitemaps, minify |
+| `on_serve` | Before dev server starts | Live-reload scripts, dev-mode setup |
 
 ## Built-in Plugins
 
-SSG ships with these plugins, all running automatically:
+SSG ships these plugins. They all run on their own.
 
 ### Content & Preprocessing
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `ShortcodePlugin` | `before_compile` | Expands `{{< shortcode >}}` syntax |
-| `ContentValidationPlugin` | `before_compile` | Validates frontmatter against `content.schema.toml` |
+| `ContentValidationPlugin` | `before_compile` | Checks frontmatter against schema |
 | `DraftPlugin` | `before_compile` | Filters draft content unless `--drafts` is set |
 | `MarkdownExtPlugin` | `before_compile` | GFM tables, strikethrough, task lists |
 
 ### Compilation & Rendering
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
-| `HighlightPlugin` | `after_compile` | Syntax highlighting for code blocks |
-| `TeraPlugin` | `after_compile` | Tera template rendering |
-| `PaginationPlugin` | `after_compile` | Pagination for listing pages |
-| `TaxonomyPlugin` | `after_compile` | Tag and category index generation |
+| `HighlightPlugin` | `after_compile` | Syntax colours for code blocks |
+| `TemplatePlugin` | `after_compile` | MiniJinja template rendering |
+| `PaginationPlugin` | `after_compile` | Page splits for list pages |
+| `TaxonomyPlugin` | `after_compile` | Tag and category indexes |
 
 ### SEO & Metadata
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `SeoPlugin` | `after_compile` | Open Graph and Twitter Card meta tags |
-| `JsonLdPlugin` | `after_compile` | JSON-LD structured data (Article, WebPage) |
-| `CanonicalPlugin` | `after_compile` | Canonical URL injection |
-| `RobotsPlugin` | `after_compile` | `robots.txt` generation |
+| `JsonLdPlugin` | `after_compile` | JSON-LD data (Article, WebPage) |
+| `CanonicalPlugin` | `after_compile` | Adds canonical URL links |
+| `RobotsPlugin` | `after_compile` | `robots.txt` creation |
 
 ### Post-processing
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
-| `SitemapFixPlugin` | `after_compile` | Sitemap XML fixes and validation |
-| `NewsSitemapFixPlugin` | `after_compile` | Google News sitemap generation |
-| `RssAggregatePlugin` | `after_compile` | RSS 2.0 feed aggregation |
-| `AtomFeedPlugin` | `after_compile` | Atom feed generation |
-| `HtmlFixPlugin` | `after_compile` | HTML output corrections |
+| `SitemapFixPlugin` | `after_compile` | Sitemap XML fixes and checks |
+| `NewsSitemapFixPlugin` | `after_compile` | Google News sitemap creation |
+| `RssAggregatePlugin` | `after_compile` | RSS 2.0 feed building |
+| `AtomFeedPlugin` | `after_compile` | Atom feed creation |
+| `HtmlFixPlugin` | `after_compile` | HTML output fixes |
 | `ManifestFixPlugin` | `after_compile` | Web manifest fixes |
-| `MinifyPlugin` | `after_compile` | HTML minification |
+| `MinifyPlugin` | `after_compile` | HTML minify |
 
 ### Features
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
-| `AccessibilityPlugin` | `after_compile` | WCAG 2.1 AA validation |
-| `I18nPlugin` | `after_compile` | Hreflang injection, per-locale sitemaps |
-| `SearchPlugin` | `after_compile` | Search index and UI generation |
-| `ImageOptimizationPlugin` | `after_compile` | Responsive `<picture>` with AVIF/WebP |
-| `FingerprintPlugin` | `after_compile` | Asset fingerprinting and SRI hashes |
-| `AiPlugin` | `after_compile` | AI-readiness hooks, `llms.txt` |
-| `DeployPlugin` | `after_compile` | Deployment config generation |
+| `AccessibilityPlugin` | `after_compile` | WCAG 2.1 AA checks |
+| `I18nPlugin` | `after_compile` | Hreflang tags, locale sitemaps |
+| `SearchPlugin` | `after_compile` | Search index and UI |
+| `ImageOptimizationPlugin` | `after_compile` | `<picture>` with AVIF/WebP |
+| `FingerprintPlugin` | `after_compile` | Asset hashes and SRI |
+| `AiPlugin` | `after_compile` | AI hooks, `llms.txt` |
+| `CspPlugin` | `after_compile` | CSP hardening, inline extraction + SRI |
+| `IslandPlugin` | `after_compile` | Web Component islands, lazy hydration |
+| `LlmPlugin` | `after_compile` | Local LLM content augmentation |
+| `DeployPlugin` | `after_compile` | Deploy config files |
 
 ### Dev Server
 | Plugin | Hook | Description |
@@ -106,10 +109,10 @@ fn main() -> Result<()> {
 
 ## Plugin Execution
 
-Plugins run in registration order. Some plugins (like `MinifyPlugin`) use Rayon `par_iter` internally for parallel file processing while respecting `--jobs N` thread limits.
+Plugins run in register order. Some (like `MinifyPlugin`) use Rayon `par_iter` inside. This runs files in parallel. It still respects `--jobs N`.
 
 ## Next Steps
 
-- [Plugin API](plugin-api.md) — trait details, PluginContext, PluginCache, testing
-- [SEO](seo.md) — what the SEO plugins generate
-- [Accessibility](accessibility.md) — WCAG checking details
+- [Plugin API](plugin-api.md) — Trait details and testing
+- [SEO](seo.md) — What the SEO plugins create
+- [Accessibility](accessibility.md) — WCAG check details

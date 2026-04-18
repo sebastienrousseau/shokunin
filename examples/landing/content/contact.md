@@ -58,7 +58,7 @@ news_title: "Privacy Policy"
 atom_link: https://meridian-systems.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Meridian Systems
 item_guid: "https://meridian-systems.com/privacy/index.html"
 item_link: "https://meridian-systems.com/privacy/index.html"
@@ -107,4 +107,4 @@ site_software: "SSG, Rust"
 
 # Contact
 
-Contact hello@meridian-systems.com
+Reach us at hello@meridian-systems.com. We'd love to hear from you. We aim to reply within two business days.

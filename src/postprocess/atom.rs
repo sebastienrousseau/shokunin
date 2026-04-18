@@ -22,8 +22,25 @@ impl Plugin for AtomFeedPlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        let meta_entries =
+        let mut meta_entries =
             read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
+
+        // Fall back to build_dir/.meta for sidecars emitted by
+        // TemplatePlugin::before_compile (not present in site_dir
+        // when staticdatagen doesn't copy them).
+        if meta_entries.is_empty() {
+            let meta_dir = ctx.build_dir.join(".meta");
+            if meta_dir.exists() {
+                meta_entries =
+                    read_meta_sidecars(&meta_dir).unwrap_or_default();
+            }
+        }
+
+        // Last resort: extract entries from an existing rss.xml
+        // (staticdatagen generates rss.xml natively even without sidecars).
+        if meta_entries.is_empty() {
+            meta_entries = extract_entries_from_rss(&ctx.site_dir);
+        }
 
         let base_url = ctx
             .config
@@ -207,6 +224,107 @@ impl AtomEntry {
     }
 }
 
+/// Extracts entry metadata from an existing `rss.xml` when no sidecars
+/// are available. Returns entries in the same format as `read_meta_sidecars`.
+fn extract_entries_from_rss(
+    site_dir: &Path,
+) -> Vec<(String, std::collections::HashMap<String, String>)> {
+    let rss_path = site_dir.join("rss.xml");
+    let Ok(rss_content) = fs::read_to_string(&rss_path) else {
+        return Vec::new();
+    };
+
+    let mut entries = Vec::new();
+
+    // Simple XML parsing: extract <item>…</item> blocks
+    let mut search_from = 0;
+    while let Some(item_start) = rss_content[search_from..].find("<item>") {
+        let abs_start = search_from + item_start;
+        let Some(item_end) = rss_content[abs_start..].find("</item>") else {
+            break;
+        };
+        let item = &rss_content[abs_start..abs_start + item_end + 7];
+
+        let mut meta = std::collections::HashMap::new();
+        if let Some(title) = extract_xml_tag(item, "title") {
+            let _ = meta.insert("title".to_string(), title);
+        }
+        if let Some(desc) = extract_xml_tag(item, "description") {
+            let _ = meta.insert("description".to_string(), desc);
+        }
+        if let Some(date) = extract_xml_tag(item, "pubDate") {
+            let _ = meta.insert("item_pub_date".to_string(), date);
+        }
+        if let Some(author) = extract_xml_tag(item, "author") {
+            let _ = meta.insert("author".to_string(), author);
+        }
+
+        // Derive relative path from <link>
+        let rel_path = extract_xml_tag(item, "link")
+            .map(|link| {
+                link.trim_end_matches('/')
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or("")
+                    .to_string()
+            })
+            .unwrap_or_default();
+
+        if !rel_path.is_empty() && meta.contains_key("title") {
+            entries.push((rel_path, meta));
+        }
+
+        search_from = abs_start + item_end + 7;
+    }
+
+    entries
+}
+
+/// Extracts text content from a simple XML tag.
+///
+/// Handles both `<tag>content</tag>` and `<tag attr="...">content</tag>`.
+/// Strips CDATA wrappers and decodes common XML entities.
+fn extract_xml_tag(xml: &str, tag: &str) -> Option<String> {
+    // Match both <tag> and <tag attr="...">
+    let open_plain = format!("<{tag}>");
+    let open_attr = format!("<{tag} ");
+    let close = format!("</{tag}>");
+
+    let (start, content_start) = if let Some(pos) = xml.find(&open_plain) {
+        (pos, pos + open_plain.len())
+    } else if let Some(pos) = xml.find(&open_attr) {
+        let gt = xml[pos..].find('>')?;
+        (pos, pos + gt + 1)
+    } else {
+        return None;
+    };
+
+    let _ = start; // used for finding the tag
+    let end = xml[content_start..].find(&close)? + content_start;
+    let content = xml[content_start..end].trim();
+
+    // Strip CDATA wrapper
+    let content = content
+        .strip_prefix("<![CDATA[")
+        .and_then(|s| s.strip_suffix("]]>"))
+        .unwrap_or(content);
+
+    // Decode common XML entities
+    let decoded = content
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'");
+
+    let decoded = decoded.trim();
+    if decoded.is_empty() {
+        None
+    } else {
+        Some(xml_escape(decoded))
+    }
+}
+
 /// Inject `<link rel="alternate" type="application/atom+xml">` into
 /// HTML files that don't already have one.
 pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<()> {
@@ -234,6 +352,7 @@ pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;

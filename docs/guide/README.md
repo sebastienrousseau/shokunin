@@ -2,34 +2,35 @@
 
 # SSG Documentation Guide
 
-Comprehensive guides for the Static Site Generator (SSG).
+Guides for SSG.
 
-## Getting Started
+## Get Started
 
-- [Installation](installation.md) — All install methods (curl, Homebrew, Cargo, deb, AUR, Scoop, winget, source)
-- [Quick Start](quick-start.md) — Install, scaffold, customize, build, serve, deploy
-- [CLI Reference](cli.md) — Full flag reference, examples, env vars, exit codes
+- [Install](installation.md) — All methods
+- [Quick Start](quick-start.md) — Build your first site
+- [CLI](cli.md) — Flags, env vars, exit codes
 
-## Authoring
+## Write
 
-- [Configuration](configuration.md) — `ssg.toml` fields, env vars, JSON schema
-- [Content](content.md) — Frontmatter, content schemas, GFM, shortcodes
-- [Content Schemas](content-schema.md) — TOML schema format, field types, `--validate`
-- [Templates](templates.md) — Tera engine, inheritance, blocks, variables
+- [Config](configuration.md) — `ssg.toml` fields
+- [Content](content.md) — Frontmatter, GFM, shortcodes
+- [Schemas](content-schema.md) — TOML schema format
+- [Templates](templates.md) — Engine, blocks, variables
 
 ## Features
 
-- [Plugins](plugins.md) — Lifecycle hooks, 22 built-in plugins, custom examples
-- [Plugin API](plugin-api.md) — Plugin trait, PluginContext, PluginCache, testing
-- [SEO](seo.md) — Open Graph, Twitter Cards, JSON-LD, canonical URLs, sitemaps, feeds
-- [Accessibility](accessibility.md) — WCAG 2.1 AA, ARIA, pa11y CI
-- [Images](images.md) — Responsive `<picture>`, AVIF/WebP, srcset, lazy loading
-- [Search](search.md) — Client-side search index, 28 locales, keyboard shortcut
-- [Internationalisation](i18n.md) — Hreflang, x-default, locale sitemaps, lang switcher
+- [Plugins](plugins.md) — 25+ built-in plugins
+- [Plugin API](plugin-api.md) — Plugin trait
+- [SEO](seo.md) — Open Graph, JSON-LD, sitemaps
+- [A11y](accessibility.md) — WCAG 2.1 AA
+- [Images](images.md) — WebP, srcset, lazy load
+- [Search](search.md) — Client-side, 28 locales
+- [I18n](i18n.md) — Hreflang, locale sitemaps
+- [LLM Pipelines](llm-content-pipelines.md) — Local LLM, readability audit
 
-## Operations
+## Deploy
 
-- [Deployment](deployment.md) — Netlify, Vercel, Cloudflare Pages, GitHub Pages, security headers
+- [Deploy](deployment.md) — Netlify, Vercel, GitHub Pages
 
 ## Links
 

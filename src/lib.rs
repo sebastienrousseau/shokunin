@@ -32,7 +32,7 @@ pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
-#[allow(unreachable_pub)]
+#[allow(unreachable_pub, clippy::unwrap_used, clippy::expect_used)]
 pub(crate) mod test_support {
     use std::sync::Once;
 
@@ -119,8 +119,12 @@ pub mod i18n;
 /// Image optimization with WebP and responsive srcset.
 #[cfg(feature = "image-optimization")]
 pub mod image_plugin;
+/// Interactive islands via Web Components with lazy hydration.
+pub mod islands;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// Local LLM content pipeline for alt text, meta descriptions, readability.
+pub mod llm;
 /// Logging infrastructure.
 pub mod logging;
 /// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
@@ -152,6 +156,8 @@ pub mod server;
 pub mod shortcodes;
 /// High-performance streaming file processor.
 pub mod stream;
+/// Streaming compiler for large sites with configurable memory budgets.
+pub mod streaming;
 /// Taxonomy generation (tags, categories).
 pub mod taxonomy;
 /// Tera templating engine integration.
@@ -465,6 +471,7 @@ pub fn run() -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::Cli;
@@ -2036,6 +2043,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2060,6 +2068,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2069,6 +2078,7 @@ mod tests {
             deploy_target: Some("netlify".to_string()),
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2088,6 +2098,7 @@ mod tests {
             deploy_target: Some("nonsense-platform".to_string()),
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2108,6 +2119,7 @@ mod tests {
                 deploy_target: Some(target.to_string()),
                 validate_only: false,
                 jobs: None,
+                max_memory_mb: None,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2296,6 +2308,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2342,6 +2355,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2387,6 +2401,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2419,6 +2434,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2449,6 +2465,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));

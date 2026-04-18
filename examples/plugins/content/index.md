@@ -59,7 +59,7 @@ news_title: "Plugin Pipeline Demo"
 atom_link: https://plugins.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Plugin Pipeline Demo
 item_guid: "https://plugins.example.com/index.html"
 item_link: "https://plugins.example.com/index.html"
@@ -108,7 +108,7 @@ site_software: "SSG, Rust"
 
 ## What this example is
 
-A **developer reference** that walks through every stage of the SSG plugin pipeline so you can see exactly when each lifecycle hook fires.
+A **dev guide** for the SSG plugin pipeline. It shows when each hook fires.
 
 Run it from the repo root:
 
@@ -116,29 +116,29 @@ Run it from the repo root:
 cargo run --example plugins
 ```
 
-The console output annotates each stage:
+The console labels each stage:
 
-1. **Incremental cache check** — `BuildCache::changed_files()` skips work when nothing has changed
-2. **Compile** — `staticdatagen::compile()` produces HTML from markdown + templates
-3. **Plugin pipeline** — `before_compile` → `after_compile` → `on_serve`, in that order
-4. **Output report** — what each plugin produced
+1. **Cache check** — `BuildCache::changed_files()` skips work when nothing changed
+2. **Compile** — `staticdatagen::compile()` turns markdown into HTML
+3. **Plugin pipeline** — `before_compile`, then `after_compile`, then `on_serve`
+4. **Output report** — what each plugin made
 
-## Plugins demonstrated here
+## Plugins shown here
 
-- `SeoPlugin` — Open Graph + Twitter Card meta tags
+- `SeoPlugin` — Open Graph + Twitter Card tags
 - `CanonicalPlugin` — `<link rel="canonical">`
-- `RobotsPlugin` — `robots.txt` generation
-- `SearchPlugin` — client-side full-text index + UI
-- `MinifyPlugin` — HTML/CSS/JS minification
+- `RobotsPlugin` — `robots.txt` file
+- `SearchPlugin` — client-side search index + UI
+- `MinifyPlugin` — HTML/CSS/JS minify
 - `LiveReloadPlugin` — WebSocket script for dev mode
 
-Order matters: `MinifyPlugin` runs after the SEO/search injections so it minifies the *final* HTML, not the intermediate output.
+Order matters. `MinifyPlugin` runs after SEO and search. It shrinks the *final* HTML, not a draft.
 
 ## How this differs from `quickstart`
 
-`quickstart` is a starter site — clone it and ship. This example is the **annotated map** of how plugins compose, with no UI polish or example-site framing. Read the source of `examples/plugins_example.rs` alongside the console output.
+`quickstart` is a starter site you clone and ship. This example is a **map** of how plugins work. It has no UI polish. Read `examples/plugins_example.rs` next to the console output.
 
 ## Where to go next
 
 - [Browse the source](https://github.com/sebastienrousseau/static-site-generator/blob/main/examples/plugins_example.rs)
-- Read the [Plugin trait docs](https://docs.rs/ssg) for `Plugin::before_compile`, `Plugin::after_compile`, and `Plugin::on_serve`
+- Read the [Plugin trait docs](https://docs.rs/ssg) for each hook

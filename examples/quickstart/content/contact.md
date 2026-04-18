@@ -59,7 +59,7 @@ news_title: "Visit & contact"
 atom_link: https://heron.coffee/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Heron Coffee
 item_guid: "https://heron.coffee/contact/index.html"
 item_link: "https://heron.coffee/contact/index.html"

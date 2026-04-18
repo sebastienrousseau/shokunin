@@ -24,7 +24,7 @@ The PKGBUILD is at `packaging/arch/PKGBUILD`.
 5. Commit and push:
    ```sh
    git add PKGBUILD .SRCINFO
-   git commit -m "Initial upload: ssg 0.0.36"
+   git commit -m "Initial upload: ssg 0.0.40"
    git push
    ```
 
@@ -75,19 +75,19 @@ The manifest is at `packaging/winget/ssg.yaml`.
 1. Fork https://github.com/microsoft/winget-pkgs
 2. Create the manifest directory:
    ```
-   manifests/s/sebastienrousseau/ssg/0.0.36/
+   manifests/s/sebastienrousseau/ssg/0.0.40/
    ```
 3. Copy `packaging/winget/ssg.yaml` as the installer manifest
 4. Validate:
    ```powershell
-   winget validate manifests/s/sebastienrousseau/ssg/0.0.36/
+   winget validate manifests/s/sebastienrousseau/ssg/0.0.40/
    ```
 5. Submit a PR to `microsoft/winget-pkgs`
 
 ### Using wingetcreate
 
 ```powershell
-wingetcreate submit --id sebastienrousseau.ssg --version 0.0.36 --urls https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.36/ssg-windows-amd64.zip
+wingetcreate submit --id sebastienrousseau.ssg --version 0.0.40 --urls https://github.com/sebastienrousseau/static-site-generator/releases/download/v0.0.40/ssg-windows-amd64.zip
 ```
 
 ### Updating
@@ -143,7 +143,7 @@ This produces `ssg_<version>_amd64.deb`.
 Attach the `.deb` file to the GitHub Release. Users install with:
 
 ```sh
-sudo dpkg -i ssg_0.0.36_amd64.deb
+sudo dpkg -i ssg_0.0.40_amd64.deb
 ```
 
 ## Release Checklist
