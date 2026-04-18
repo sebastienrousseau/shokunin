@@ -12,10 +12,9 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+#[cfg(test)]
+use std::path::PathBuf;
+use std::{fs, path::Path};
 
 /// Plugin for AI-readiness content validation and enhancement.
 ///
@@ -31,6 +30,23 @@ impl Plugin for AiPlugin {
         "ai"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String> {
+        let modified = inject_max_snippet(html);
+
+        check_alt_text(path, &modified, &ctx.site_dir, &mut 0);
+
+        Ok(modified)
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
@@ -40,39 +56,8 @@ impl Plugin for AiPlugin {
         generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())?;
         generate_ai_provenance(&ctx.site_dir)?;
 
-        let html_files = ctx.get_html_files();
-        let pages_with_missing_alt =
-            process_html_for_ai(&html_files, &ctx.site_dir)?;
-
-        if pages_with_missing_alt > 0 {
-            log::warn!(
-                "[ai] {pages_with_missing_alt} page(s) have images without alt text"
-            );
-        }
-
         Ok(())
     }
-}
-
-/// Processes HTML files: injects max-snippet meta tags and checks for missing alt text.
-fn process_html_for_ai(
-    html_files: &[PathBuf],
-    site_dir: &Path,
-) -> Result<usize> {
-    let mut pages_with_missing_alt = 0usize;
-
-    for path in html_files {
-        let html = fs::read_to_string(path)?;
-        let modified = inject_max_snippet(&html);
-
-        check_alt_text(path, &modified, site_dir, &mut pages_with_missing_alt);
-
-        if modified != html {
-            fs::write(path, modified)?;
-        }
-    }
-
-    Ok(pages_with_missing_alt)
 }
 
 /// Injects the max-snippet meta tag before `</head>` if not already present.
@@ -457,10 +442,10 @@ mod tests {
     fn after_compile_injects_max_snippet_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
-        fs::write(site.join("index.html"), html).unwrap();
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("max-snippet"));
         assert!(output.contains("max-image-preview:large"));
     }
@@ -474,71 +459,52 @@ mod tests {
 
     #[test]
     fn after_compile_idempotent_does_not_duplicate_meta_tag() {
-        // Re-running must not double-inject. Guards the
-        // `!modified.contains("max-snippet")` check at line 52.
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
-        fs::write(site.join("index.html"), html).unwrap();
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        AiPlugin.after_compile(&ctx).unwrap();
+        let first = AiPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        let second = AiPlugin
+            .transform_html(&first, &site.join("index.html"), &ctx)
+            .unwrap();
 
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
-        assert_eq!(output.matches("max-snippet").count(), 1);
+        assert_eq!(second.matches("max-snippet").count(), 1);
     }
 
     #[test]
     fn after_compile_skips_html_files_without_head_tag() {
-        // The `modified.contains("</head>")` guard at line 52 must
-        // skip injection rather than crash on fragment HTML.
         let (_tmp, site, ctx) = make_site();
-        fs::write(site.join("fragment.html"), "<p>just a fragment</p>")
-            .unwrap();
+        let html = "<p>just a fragment</p>";
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(site.join("fragment.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("fragment.html"), &ctx)
+            .unwrap();
         assert!(!output.contains("max-snippet"));
-        // The original content must be preserved.
         assert_eq!(output, "<p>just a fragment</p>");
     }
 
     #[test]
     fn after_compile_processes_files_in_subdirectories() {
         let (_tmp, site, ctx) = make_site();
-        let nested = site.join("blog");
-        fs::create_dir_all(&nested).unwrap();
-        fs::write(
-            nested.join("post.html"),
-            "<html><head></head><body></body></html>",
-        )
-        .unwrap();
+        let html = "<html><head></head><body></body></html>";
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        let output = fs::read_to_string(nested.join("post.html")).unwrap();
+        let output = AiPlugin
+            .transform_html(html, &site.join("blog/post.html"), &ctx)
+            .unwrap();
         assert!(output.contains("max-snippet"));
     }
 
     #[test]
     fn after_compile_logs_warning_for_pages_with_missing_alt() {
-        // Exercises the `if missing > 0` branch at line 63 and the
-        // final `if pages_with_missing_alt > 0` branch at line 75.
-        // Covers lines 64-67 and 76.
         let (_tmp, site, ctx) = make_site();
-        fs::write(
-            site.join("bad.html"),
-            r#"<html><head></head><body><img src="a.jpg"></body></html>"#,
-        )
-        .unwrap();
-        fs::write(
-            site.join("worse.html"),
-            r#"<html><head></head><body><img src="a.jpg" alt=""></body></html>"#,
-        )
-        .unwrap();
+        let html =
+            r#"<html><head></head><body><img src="a.jpg"></body></html>"#;
 
-        AiPlugin.after_compile(&ctx).unwrap();
-        // max-snippet meta is injected even when alt-text warnings fire.
-        let bad = fs::read_to_string(site.join("bad.html")).unwrap();
-        assert!(bad.contains("max-snippet"));
+        let output = AiPlugin
+            .transform_html(html, &site.join("bad.html"), &ctx)
+            .unwrap();
+        assert!(output.contains("max-snippet"));
     }
 
     #[test]

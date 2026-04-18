@@ -4,14 +4,12 @@
 //! JSON-LD structured data injection plugin.
 
 use super::helpers::{
-    collect_html_files_recursive, extract_date_from_html, extract_description,
-    extract_first_content_image, extract_html_lang, extract_meta_author,
-    extract_meta_date, extract_title,
+    extract_date_from_html, extract_description, extract_first_content_image,
+    extract_html_lang, extract_meta_author, extract_meta_date, extract_title,
 };
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use rayon::prelude::*;
-use std::fs;
+use std::path::Path;
 
 /// Configuration for the JSON-LD structured data plugin.
 #[derive(Debug, Clone)]
@@ -251,66 +249,55 @@ impl Plugin for JsonLdPlugin {
         "json-ld"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String> {
+        if html.contains("application/ld+json") {
+            return Ok(html.to_string());
         }
 
-        let html_files = collect_html_files_recursive(&ctx.site_dir)?;
-        let injected = std::sync::atomic::AtomicUsize::new(0);
+        let Some(head_pos) = html.find("</head>") else {
+            return Ok(html.to_string());
+        };
+
         let base = self.config.base_url.trim_end_matches('/');
         let site_dir = &ctx.site_dir;
 
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
-            let html = fs::read_to_string(path)?;
+        let rel_path = path
+            .strip_prefix(site_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
 
-            if html.contains("application/ld+json") {
-                return Ok(());
-            }
+        let scripts = build_jsonld_scripts(
+            html,
+            base,
+            &rel_path,
+            &self.config.org_name,
+            self.config.breadcrumbs,
+        );
 
-            let Some(head_pos) = html.find("</head>") else {
-                return Ok(());
-            };
-
-            let rel_path = path
-                .strip_prefix(site_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .replace('\\', "/");
-
-            let scripts = build_jsonld_scripts(
-                &html,
-                base,
-                &rel_path,
-                &self.config.org_name,
-                self.config.breadcrumbs,
-            );
-
-            let mut injection = String::new();
-            for script in &scripts {
-                let json = serde_json::to_string(script)?;
-                injection.push_str(&format!(
-                    "<script type=\"application/ld+json\">{json}</script>\n"
-                ));
-            }
-
-            let result = format!(
-                "{}{}{}",
-                &html[..head_pos],
-                injection,
-                &html[head_pos..]
-            );
-            fs::write(path, result)?;
-            let _ = injected.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            Ok(())
-        })?;
-
-        let count = injected.load(std::sync::atomic::Ordering::Relaxed);
-        if count > 0 {
-            log::info!(
-                "[json-ld] Injected structured data into {count} page(s)"
-            );
+        let mut injection = String::new();
+        for script in &scripts {
+            let json = serde_json::to_string(script)?;
+            injection.push_str(&format!(
+                "<script type=\"application/ld+json\">{json}</script>\n"
+            ));
         }
+
+        let result =
+            format!("{}{}{}", &html[..head_pos], injection, &html[head_pos..]);
+        Ok(result)
+    }
+
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 }
@@ -567,44 +554,41 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_injects_jsonld_into_html() {
+    fn transform_html_injects_jsonld() {
         let dir = tempdir().unwrap();
-        fs::write(
-            dir.path().join("index.html"),
-            "<html><head><title>X</title></head><body>x</body></html>",
-        )
-        .unwrap();
-        JsonLdPlugin::new(cfg())
-            .after_compile(&ctx(dir.path()))
+        let c = ctx(dir.path());
+        let html = "<html><head><title>X</title></head><body>x</body></html>";
+        let page_path = dir.path().join("index.html");
+        let after = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("index.html")).unwrap();
         assert!(after.contains("application/ld+json"));
         assert!(after.contains("\"@type\":\"WebPage\""));
     }
 
     #[test]
-    fn after_compile_skips_files_with_existing_jsonld() {
+    fn transform_html_skips_existing_jsonld() {
         let dir = tempdir().unwrap();
+        let c = ctx(dir.path());
         let html = r#"<html><head><script type="application/ld+json">{"@type":"X"}</script><title>X</title></head></html>"#;
-        fs::write(dir.path().join("p.html"), html).unwrap();
-        JsonLdPlugin::new(cfg())
-            .after_compile(&ctx(dir.path()))
+        let page_path = dir.path().join("p.html");
+        let after = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("p.html")).unwrap();
         // Only one JSON-LD block — no duplicate injected.
         assert_eq!(after.matches("application/ld+json").count(), 1);
         assert!(after.contains(r#"{"@type":"X"}"#));
     }
 
     #[test]
-    fn after_compile_skips_files_without_head_tag() {
+    fn transform_html_skips_without_head_tag() {
         let dir = tempdir().unwrap();
+        let c = ctx(dir.path());
         let raw = "<!doctype html><html><body>only</body></html>";
-        fs::write(dir.path().join("frag.html"), raw).unwrap();
-        JsonLdPlugin::new(cfg())
-            .after_compile(&ctx(dir.path()))
+        let page_path = dir.path().join("frag.html");
+        let after = JsonLdPlugin::new(cfg())
+            .transform_html(raw, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("frag.html")).unwrap();
         assert_eq!(after, raw);
     }
 }

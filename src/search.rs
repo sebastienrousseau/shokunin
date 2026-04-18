@@ -260,8 +260,21 @@ impl Plugin for SearchPlugin {
         "search"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        transform_search_html(html, &SearchLabels::english())
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        run_search(ctx, &SearchLabels::english())
+        run_search_index(ctx)
     }
 }
 
@@ -295,13 +308,26 @@ impl Plugin for LocalizedSearchPlugin {
         "search"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        transform_search_html(html, &self.labels)
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        run_search(ctx, &self.labels)
+        run_search_index(ctx)
     }
 }
 
-/// Shared body for [`SearchPlugin`] and [`LocalizedSearchPlugin`].
-fn run_search(ctx: &PluginContext, labels: &SearchLabels) -> Result<()> {
+/// Builds the search index and writes it to disk (`after_compile` phase).
+fn run_search_index(ctx: &PluginContext) -> Result<()> {
     if !ctx.site_dir.exists() {
         return Ok(());
     }
@@ -313,17 +339,28 @@ fn run_search(ctx: &PluginContext, labels: &SearchLabels) -> Result<()> {
 
     index.write(&ctx.site_dir)?;
 
-    let html_files = ctx.get_html_files();
-    let script = build_widget_script(labels);
-    html_files
-        .par_iter()
-        .try_for_each(|path| inject_search_ui(path, &script))?;
-
     println!(
         "[search] Indexed {} pages, search-index.json written",
         index.len()
     );
     Ok(())
+}
+
+/// Injects the search widget into an HTML string (`transform_html` phase).
+fn transform_search_html(html: &str, labels: &SearchLabels) -> Result<String> {
+    if html.contains("ssg-search-widget") {
+        return Ok(html.to_string()); // Already injected
+    }
+
+    let script = build_widget_script(labels);
+
+    let injected = if let Some(pos) = html.rfind("</body>") {
+        format!("{}{}{}", &html[..pos], script, &html[pos..])
+    } else {
+        format!("{html}{script}")
+    };
+
+    Ok(injected)
 }
 
 // =====================================================================
@@ -467,6 +504,7 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 /// 3. Performs case-insensitive substring matching on title + content
 /// 4. Displays results with highlighted snippets
 /// 5. Activates on `Ctrl+K` / `Cmd+K`
+#[cfg(test)]
 fn inject_search_ui(path: &Path, script: &str) -> Result<()> {
     let html = fs::read_to_string(path)
         .with_context(|| format!("cannot read {}", path.display()))?;
@@ -878,10 +916,8 @@ mod tests {
     #[test]
     fn search_plugin_full_pipeline() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("index.html"),
-            make_html("Home", "<p>Welcome</p>"),
-        )?;
+        let html_content = make_html("Home", "<p>Welcome</p>");
+        fs::write(tmp.path().join("index.html"), &html_content)?;
         fs::write(
             tmp.path().join("about.html"),
             make_html("About", "<p>About us</p>"),
@@ -898,9 +934,13 @@ mod tests {
         // Index was written
         assert!(tmp.path().join("search-index.json").exists());
 
-        // Widget was injected
-        let html = fs::read_to_string(tmp.path().join("index.html"))?;
-        assert!(html.contains("ssg-search-widget"));
+        // Widget was injected via transform_html
+        let output = SearchPlugin.transform_html(
+            &html_content,
+            &tmp.path().join("index.html"),
+            &ctx,
+        )?;
+        assert!(output.contains("ssg-search-widget"));
         Ok(())
     }
 
@@ -1413,22 +1453,25 @@ mod tests {
     fn localized_search_plugin_writes_index_with_localized_labels() -> Result<()>
     {
         let dir = tempdir().unwrap();
-        fs::write(
-            dir.path().join("page.html"),
-            "<html><head><title>P</title></head><body>x</body></html>",
-        )?;
+        let html_content =
+            "<html><head><title>P</title></head><body>x</body></html>";
+        fs::write(dir.path().join("page.html"), html_content)?;
         let ctx = PluginContext::new(
             Path::new("c"),
             Path::new("b"),
             dir.path(),
             Path::new("t"),
         );
-        LocalizedSearchPlugin::new(SearchLabels::french())
-            .after_compile(&ctx)?;
-        let html = fs::read_to_string(dir.path().join("page.html"))?;
+        let plugin = LocalizedSearchPlugin::new(SearchLabels::french());
+        plugin.after_compile(&ctx)?;
+        let output = plugin.transform_html(
+            html_content,
+            &dir.path().join("page.html"),
+            &ctx,
+        )?;
         // Localized button text should appear in the injected widget.
         assert!(
-            html.contains("Rechercher"),
+            output.contains("Rechercher"),
             "French label 'Rechercher' should appear in injected UI"
         );
         Ok(())

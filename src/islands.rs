@@ -30,6 +30,36 @@ impl Plugin for IslandPlugin {
         "islands"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        if !html.contains("<ssg-island") {
+            return Ok(html.to_string());
+        }
+
+        if html.contains("ssg-island.js") {
+            return Ok(html.to_string()); // Already injected
+        }
+
+        let script =
+            "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
+
+        let output = if let Some(pos) = html.rfind("</body>") {
+            format!("{}{script}{}", &html[..pos], &html[pos..])
+        } else {
+            format!("{html}{script}")
+        };
+
+        Ok(output)
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
@@ -39,15 +69,11 @@ impl Plugin for IslandPlugin {
 
         // Scan all HTML files for <ssg-island component="..."> references
         let mut components = BTreeSet::new();
-        let mut pages_with_islands = Vec::new();
 
         for path in &html_files {
             let html = fs::read_to_string(path)?;
             let page_components = extract_island_components(&html);
-            if !page_components.is_empty() {
-                components.extend(page_components);
-                pages_with_islands.push(path.clone());
-            }
+            components.extend(page_components);
         }
 
         if components.is_empty() {
@@ -83,16 +109,7 @@ impl Plugin for IslandPlugin {
         // Write the ssg-island.js custom element loader
         fs::write(islands_dir.join("ssg-island.js"), ISLAND_LOADER_JS)?;
 
-        // Inject the loader script into pages that contain islands
-        for path in &pages_with_islands {
-            inject_island_loader(path)?;
-        }
-
-        log::info!(
-            "[islands] {} component(s), {} page(s) with islands",
-            components.len(),
-            pages_with_islands.len()
-        );
+        log::info!("[islands] {} component(s) bundled", components.len());
         Ok(())
     }
 }
@@ -128,6 +145,7 @@ fn extract_island_components(html: &str) -> BTreeSet<String> {
 }
 
 /// Injects the island loader `<script>` before `</body>`.
+#[cfg(test)]
 fn inject_island_loader(path: &Path) -> Result<()> {
     let html = fs::read_to_string(path)?;
 
@@ -297,10 +315,8 @@ mod tests {
         .unwrap();
 
         // Write HTML with an island
-        fs::write(
-            site.join("index.html"),
-            "<html><body><ssg-island component=\"counter\" hydrate=\"visible\"></ssg-island></body></html>",
-        ).unwrap();
+        let html_content = "<html><body><ssg-island component=\"counter\" hydrate=\"visible\"></ssg-island></body></html>";
+        fs::write(site.join("index.html"), html_content).unwrap();
 
         let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
         IslandPlugin.after_compile(&ctx).unwrap();
@@ -311,8 +327,10 @@ mod tests {
         assert!(site.join("_islands/ssg-island.js").exists());
         // Check user bundle was copied
         assert!(site.join("_islands/counter.js").exists());
-        // Check loader was injected into HTML
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        // Check loader was injected into HTML via transform_html
+        let output = IslandPlugin
+            .transform_html(html_content, &site.join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("ssg-island.js"));
     }
 

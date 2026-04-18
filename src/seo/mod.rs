@@ -86,15 +86,11 @@ mod tests {
     #[test]
     fn test_seo_plugin_injects_meta_tags() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("index.html"),
-            make_html("Hello World", "<p>Some content here</p>"),
-        )?;
-
         let ctx = test_ctx(tmp.path());
-        SeoPlugin.after_compile(&ctx)?;
+        let html = make_html("Hello World", "<p>Some content here</p>");
 
-        let result = fs::read_to_string(tmp.path().join("index.html"))?;
+        let result =
+            SeoPlugin.transform_html(&html, Path::new("index.html"), &ctx)?;
         assert!(result.contains("<meta name=\"description\""));
         assert!(result.contains("<meta property=\"og:title\""));
         assert!(result.contains("Hello World"));
@@ -111,17 +107,13 @@ mod tests {
     #[test]
     fn test_seo_plugin_idempotent() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("page.html"),
-            make_html("Test", "<p>Content</p>"),
-        )?;
-
         let ctx = test_ctx(tmp.path());
-        SeoPlugin.after_compile(&ctx)?;
-        let first = fs::read_to_string(tmp.path().join("page.html"))?;
+        let html = make_html("Test", "<p>Content</p>");
 
-        SeoPlugin.after_compile(&ctx)?;
-        let second = fs::read_to_string(tmp.path().join("page.html"))?;
+        let first =
+            SeoPlugin.transform_html(&html, Path::new("page.html"), &ctx)?;
+        let second =
+            SeoPlugin.transform_html(&first, Path::new("page.html"), &ctx)?;
 
         assert_eq!(first, second);
         Ok(())
@@ -158,15 +150,12 @@ mod tests {
     #[test]
     fn test_seo_plugin_handles_missing_title() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("no-title.html"),
-            "<html><head></head><body><p>No title here</p></body></html>",
-        )?;
-
         let ctx = test_ctx(tmp.path());
-        SeoPlugin.after_compile(&ctx)?;
+        let html =
+            "<html><head></head><body><p>No title here</p></body></html>";
 
-        let result = fs::read_to_string(tmp.path().join("no-title.html"))?;
+        let result =
+            SeoPlugin.transform_html(html, Path::new("no-title.html"), &ctx)?;
         // Should still inject og:type and twitter:card
         assert!(result.contains("<meta property=\"og:type\""));
         assert!(result.contains("<meta name=\"twitter:card\""));
@@ -267,16 +256,12 @@ mod tests {
     #[test]
     fn test_canonical_plugin_injects_tag() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("index.html"),
-            make_html("Home", "<p>Welcome</p>"),
-        )?;
-
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
+        let html = make_html("Home", "<p>Welcome</p>");
+        let page_path = tmp.path().join("index.html");
 
-        let result = fs::read_to_string(tmp.path().join("index.html"))?;
+        let result = plugin.transform_html(&html, &page_path, &ctx)?;
         assert!(result.contains("<link rel=\"canonical\""));
         assert!(result.contains("https://example.com/index.html"));
         Ok(())
@@ -285,18 +270,13 @@ mod tests {
     #[test]
     fn test_canonical_plugin_idempotent() -> Result<()> {
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("page.html"),
-            make_html("Page", "<p>Content</p>"),
-        )?;
-
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
-        let first = fs::read_to_string(tmp.path().join("page.html"))?;
+        let html = make_html("Page", "<p>Content</p>");
+        let page_path = tmp.path().join("page.html");
 
-        plugin.after_compile(&ctx)?;
-        let second = fs::read_to_string(tmp.path().join("page.html"))?;
+        let first = plugin.transform_html(&html, &page_path, &ctx)?;
+        let second = plugin.transform_html(&first, &page_path, &ctx)?;
 
         assert_eq!(first, second);
         Ok(())
@@ -306,16 +286,12 @@ mod tests {
     fn test_canonical_plugin_nested_files() -> Result<()> {
         let tmp = tempdir()?;
         fs::create_dir_all(tmp.path().join("blog"))?;
-        fs::write(
-            tmp.path().join("blog/post.html"),
-            make_html("Post", "<p>Blog post</p>"),
-        )?;
-
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
+        let html = make_html("Post", "<p>Blog post</p>");
+        let page_path = tmp.path().join("blog/post.html");
 
-        let result = fs::read_to_string(tmp.path().join("blog/post.html"))?;
+        let result = plugin.transform_html(&html, &page_path, &ctx)?;
         assert!(result.contains("https://example.com/blog/post.html"));
         Ok(())
     }
@@ -432,15 +408,14 @@ mod tests {
                      <title>Test</title></head>\
                      <body><p>Content</p></body></html>";
         let tmp = tempdir()?;
-        let path = tmp.path().join("single-quote.html");
-        fs::write(&path, html)?;
+        let ctx = test_ctx(tmp.path());
 
         // Act
-        let ctx = test_ctx(tmp.path());
-        SeoPlugin.after_compile(&ctx)?;
-
-        // Assert: no duplicate meta tags injected
-        let result = fs::read_to_string(&path)?;
+        let result = SeoPlugin.transform_html(
+            html,
+            Path::new("single-quote.html"),
+            &ctx,
+        )?;
         assert_eq!(
             result.matches("meta name=\"description\"").count()
                 + result.matches("meta name='description'").count(),
@@ -457,20 +432,13 @@ mod tests {
 
     #[test]
     fn canonical_plugin_trailing_slash_base_url() -> Result<()> {
-        // Arrange: base_url has a trailing slash
         let tmp = tempdir()?;
-        fs::write(
-            tmp.path().join("index.html"),
-            make_html("Home", "<p>Welcome</p>"),
-        )?;
-
-        // Act
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com/");
-        plugin.after_compile(&ctx)?;
+        let html = make_html("Home", "<p>Welcome</p>");
+        let page_path = tmp.path().join("index.html");
 
-        // Assert: canonical URL has no double slash
-        let result = fs::read_to_string(tmp.path().join("index.html"))?;
+        let result = plugin.transform_html(&html, &page_path, &ctx)?;
         assert!(
             result.contains("https://example.com/index.html"),
             "should produce clean URL without double slash"
@@ -539,13 +507,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
 
         let html = make_html("About", "<p>About us</p>");
-        fs::write(site.join("about.html"), &html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Test Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = site.join("about.html");
 
-        let output = fs::read_to_string(site.join("about.html")).unwrap();
+        let output = plugin.transform_html(&html, &page_path, &ctx).unwrap();
         assert!(output.contains("application/ld+json"));
         assert!(output.contains("\"@type\":\"WebPage\""));
         assert!(output.contains("\"name\":\"About\""));
@@ -559,13 +525,11 @@ mod tests {
 
         let html = "<html><head><title>Post</title></head>\
                      <body><article><h1>Post</h1></article></body></html>";
-        fs::write(site.join("post.html"), html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "My Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = site.join("post.html");
 
-        let output = fs::read_to_string(site.join("post.html")).unwrap();
+        let output = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert!(output.contains("\"@type\":\"Article\""));
         assert!(output.contains("\"headline\":\"Post\""));
         assert!(output.contains("My Org"));
@@ -579,13 +543,11 @@ mod tests {
         fs::create_dir_all(&blog).unwrap();
 
         let html = make_html("My Post", "<p>Content</p>");
-        fs::write(blog.join("my-post.html"), &html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = blog.join("my-post.html");
 
-        let output = fs::read_to_string(blog.join("my-post.html")).unwrap();
+        let output = plugin.transform_html(&html, &page_path, &ctx).unwrap();
         assert!(output.contains("BreadcrumbList"));
         assert!(output.contains("\"name\":\"Home\""));
         assert!(output.contains("\"name\":\"blog\""));
@@ -600,13 +562,11 @@ mod tests {
         let html = "<html><head><title>X</title>\
                      <script type=\"application/ld+json\">{}</script>\
                      </head><body></body></html>";
-        fs::write(site.join("x.html"), html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = site.join("x.html");
 
-        let output = fs::read_to_string(site.join("x.html")).unwrap();
+        let output = plugin.transform_html(html, &page_path, &ctx).unwrap();
         // Should have exactly one ld+json (the original), not two
         let count = output.matches("application/ld+json").count();
         assert_eq!(count, 1);
@@ -840,13 +800,11 @@ mod tests {
     fn canonical_plugin_replaces_existing_canonical_with_correct_url() {
         let dir = tempdir().unwrap();
         let html = r#"<html><head><link rel="canonical" href="/original"></head><body></body></html>"#;
-        fs::write(dir.path().join("p.html"), html).unwrap();
-
         let plugin = CanonicalPlugin::new("https://example.com");
         let ctx = test_ctx(dir.path());
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = dir.path().join("p.html");
 
-        let out = fs::read_to_string(dir.path().join("p.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert_eq!(out.matches(r#"rel="canonical""#).count(), 1);
         assert!(out.contains("https://example.com/p.html"));
     }
@@ -856,13 +814,11 @@ mod tests {
         let dir = tempdir().unwrap();
         let html =
             r"<html><head><link rel='canonical' href='/x'></head></html>";
-        fs::write(dir.path().join("p.html"), html).unwrap();
-
         let plugin = CanonicalPlugin::new("https://example.com");
         let ctx = test_ctx(dir.path());
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = dir.path().join("p.html");
 
-        let out = fs::read_to_string(dir.path().join("p.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert_eq!(out.matches("canonical").count(), 1);
     }
 
@@ -870,13 +826,11 @@ mod tests {
     fn canonical_plugin_page_without_head_is_left_unchanged() {
         let dir = tempdir().unwrap();
         let html = "<p>no structure</p>";
-        fs::write(dir.path().join("frag.html"), html).unwrap();
-
         let plugin = CanonicalPlugin::new("https://example.com");
         let ctx = test_ctx(dir.path());
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = dir.path().join("frag.html");
 
-        let out = fs::read_to_string(dir.path().join("frag.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert_eq!(out, html);
     }
 
@@ -884,13 +838,11 @@ mod tests {
     fn canonical_plugin_injects_canonical_link_before_head_close() {
         let dir = tempdir().unwrap();
         let html = "<html><head><title>T</title></head><body></body></html>";
-        fs::write(dir.path().join("a.html"), html).unwrap();
-
         let plugin = CanonicalPlugin::new("https://example.com/");
         let ctx = test_ctx(dir.path());
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = dir.path().join("a.html");
 
-        let out = fs::read_to_string(dir.path().join("a.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert!(out.contains(r#"rel="canonical""#));
         assert!(out.contains("https://example.com/a.html"));
     }
@@ -918,12 +870,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
-        fs::write(site.join("frag.html"), "<p>no head</p>").unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
-        plugin.after_compile(&ctx).unwrap();
-        let out = fs::read_to_string(site.join("frag.html")).unwrap();
+        let page_path = site.join("frag.html");
+
+        let out = plugin
+            .transform_html("<p>no head</p>", &page_path, &ctx)
+            .unwrap();
         assert_eq!(out, "<p>no head</p>");
     }
 
@@ -933,13 +886,11 @@ mod tests {
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
         let html = "<html><head><title>Hello</title></head><body><p>content</p></body></html>";
-        fs::write(site.join("index.html"), html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = site.join("index.html");
 
-        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert!(out.contains("application/ld+json"));
         assert!(out.contains("WebPage"));
     }
@@ -950,13 +901,11 @@ mod tests {
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
         let html = "<html><head><title>Post</title></head><body><article><h1>Post</h1></article></body></html>";
-        fs::write(site.join("post.html"), html).unwrap();
-
         let ctx = test_ctx(&site);
         let plugin = JsonLdPlugin::from_site("https://example.com", "Org");
-        plugin.after_compile(&ctx).unwrap();
+        let page_path = site.join("post.html");
 
-        let out = fs::read_to_string(site.join("post.html")).unwrap();
+        let out = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert!(out.contains("application/ld+json"));
         assert!(out.contains(r#""Article""#));
     }
@@ -1224,12 +1173,10 @@ mod tests {
         let tmp = tempdir()?;
         let html = "<html><head><title>Blog Post</title></head>\
                      <body><article><p>Article content</p></article></body></html>";
-        fs::write(tmp.path().join("post.html"), html)?;
-
         let ctx = test_ctx(tmp.path());
-        SeoPlugin.after_compile(&ctx)?;
 
-        let result = fs::read_to_string(tmp.path().join("post.html"))?;
+        let result =
+            SeoPlugin.transform_html(html, Path::new("post.html"), &ctx)?;
         assert!(
             result.contains("content=\"summary_large_image\""),
             "article pages should use summary_large_image twitter card"
@@ -1249,13 +1196,11 @@ mod tests {
     fn canonical_plugin_replaces_not_skips_existing() -> Result<()> {
         let tmp = tempdir()?;
         let html = r#"<html><head><link rel="canonical" href="https://old.com/wrong"></head><body></body></html>"#;
-        fs::write(tmp.path().join("page.html"), html)?;
-
         let plugin = CanonicalPlugin::new("https://correct.com");
         let ctx = test_ctx(tmp.path());
-        plugin.after_compile(&ctx)?;
+        let page_path = tmp.path().join("page.html");
 
-        let result = fs::read_to_string(tmp.path().join("page.html"))?;
+        let result = plugin.transform_html(html, &page_path, &ctx)?;
         assert!(
             result.contains("https://correct.com/page.html"),
             "canonical should be replaced with correct URL"

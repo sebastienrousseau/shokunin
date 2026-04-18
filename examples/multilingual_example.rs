@@ -114,6 +114,7 @@ fn main() -> Result<()> {
             &template_dir,
         );
         plugins.run_after_compile(&ctx)?;
+        plugins.run_fused_transforms(&ctx)?;
         println!("    🔌 Plugins complete for {lang}");
     }
 

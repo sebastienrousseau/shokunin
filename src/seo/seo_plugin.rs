@@ -9,9 +9,7 @@ use super::helpers::{
     has_meta_tag,
 };
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
-use rayon::prelude::*;
-use std::fs;
+use anyhow::Result;
 use std::path::Path;
 
 /// Injects missing SEO meta tags into HTML files.
@@ -40,22 +38,20 @@ impl Plugin for SeoPlugin {
         "seo"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
+    fn has_transform(&self) -> bool {
+        true
+    }
 
-        let html_files = ctx.get_html_files();
-        let cache = ctx.cache.as_ref();
-        let files: Vec<_> = html_files
-            .into_iter()
-            .filter(|p| cache.is_none_or(|c| c.has_changed(p)))
-            .collect();
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        inject_seo_tags_html(html)
+    }
 
-        files
-            .par_iter()
-            .try_for_each(|path| inject_seo_tags(path))?;
-
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 }
@@ -196,17 +192,11 @@ fn build_meta_description(html: &str, description: &str) -> Option<String> {
     }
 }
 
-/// Inject missing SEO meta tags into a single HTML file.
-///
-/// Fix 5: checks for actual `<meta>` tags rather than comment markers,
-/// and injects a comprehensive set of OG/Twitter tags for all page types.
-fn inject_seo_tags(path: &Path) -> Result<()> {
-    let html = fs::read_to_string(path)
-        .with_context(|| format!("cannot read {}", path.display()))?;
-
-    let title = extract_title(&html);
-    let description = extract_description(&html, 160);
-    let canonical = extract_canonical(&html);
+/// Inject missing SEO meta tags into an HTML string, returning the modified HTML.
+fn inject_seo_tags_html(html: &str) -> Result<String> {
+    let title = extract_title(html);
+    let description = extract_description(html, 160);
+    let canonical = extract_canonical(html);
 
     let is_article = html.contains("<article");
     let og_type = if is_article { "article" } else { "website" };
@@ -218,37 +208,30 @@ fn inject_seo_tags(path: &Path) -> Result<()> {
 
     let mut tags = Vec::new();
 
-    if let Some(meta_desc) = build_meta_description(&html, &description) {
+    if let Some(meta_desc) = build_meta_description(html, &description) {
         tags.push(meta_desc);
     }
     tags.extend(build_og_tags(
-        &html,
+        html,
         &title,
         &description,
         &canonical,
         og_type,
     ));
-    tags.extend(build_twitter_tags(
-        &html,
-        &title,
-        &description,
-        twitter_card,
-    ));
+    tags.extend(build_twitter_tags(html, &title, &description, twitter_card));
 
     if tags.is_empty() {
-        return Ok(());
+        return Ok(html.to_string());
     }
 
     let injection = tags.join("\n");
     let result = if let Some(pos) = html.find("</head>") {
         format!("{}{}\n{}", &html[..pos], injection, &html[pos..])
     } else {
-        html
+        html.to_string()
     };
 
-    fs::write(path, result)
-        .with_context(|| format!("cannot write {}", path.display()))?;
-    Ok(())
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -264,10 +247,6 @@ mod tests {
             site,
             Path::new("templates"),
         )
-    }
-
-    fn write_html(site: &Path, name: &str, body: &str) {
-        fs::write(site.join(name), body).unwrap();
     }
 
     #[test]
@@ -428,36 +407,32 @@ mod tests {
     // ── inject_seo_tags integration via after_compile ───────────
 
     #[test]
-    fn after_compile_injects_tags_into_html_files() {
+    fn transform_html_injects_tags() {
         let dir = tempdir().unwrap();
-        write_html(
-            dir.path(),
-            "page.html",
-            r#"<!doctype html><html lang="en"><head><title>Hello</title></head>
-            <body><p>World is wide.</p></body></html>"#,
-        );
+        let c = ctx(dir.path());
 
-        SeoPlugin.after_compile(&ctx(dir.path())).unwrap();
+        let html = r#"<!doctype html><html lang="en"><head><title>Hello</title></head>
+            <body><p>World is wide.</p></body></html>"#;
 
-        let after = fs::read_to_string(dir.path().join("page.html")).unwrap();
+        let after = SeoPlugin
+            .transform_html(html, Path::new("page.html"), &c)
+            .unwrap();
         assert!(after.contains("og:title"));
         assert!(after.contains("twitter:card"));
         assert!(after.contains("name=\"description\""));
     }
 
     #[test]
-    fn after_compile_uses_article_type_when_article_tag_present() {
+    fn transform_html_uses_article_type_when_article_tag_present() {
         let dir = tempdir().unwrap();
-        write_html(
-            dir.path(),
-            "post.html",
-            r#"<!doctype html><html lang="en"><head><title>P</title></head>
-            <body><article><p>Content.</p></article></body></html>"#,
-        );
+        let c = ctx(dir.path());
 
-        SeoPlugin.after_compile(&ctx(dir.path())).unwrap();
+        let html = r#"<!doctype html><html lang="en"><head><title>P</title></head>
+            <body><article><p>Content.</p></article></body></html>"#;
 
-        let after = fs::read_to_string(dir.path().join("post.html")).unwrap();
+        let after = SeoPlugin
+            .transform_html(html, Path::new("post.html"), &c)
+            .unwrap();
         assert!(
             after.contains(r#"og:type" content="article""#),
             "presence of <article> should set og:type=article: {after}"
@@ -469,18 +444,18 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_is_idempotent() {
+    fn transform_html_is_idempotent() {
         let dir = tempdir().unwrap();
-        write_html(
-            dir.path(),
-            "x.html",
-            r#"<html lang="en"><head><title>Y</title></head><body>Z</body></html>"#,
-        );
+        let c = ctx(dir.path());
 
-        SeoPlugin.after_compile(&ctx(dir.path())).unwrap();
-        let first = fs::read_to_string(dir.path().join("x.html")).unwrap();
-        SeoPlugin.after_compile(&ctx(dir.path())).unwrap();
-        let second = fs::read_to_string(dir.path().join("x.html")).unwrap();
+        let html = r#"<html lang="en"><head><title>Y</title></head><body>Z</body></html>"#;
+
+        let first = SeoPlugin
+            .transform_html(html, Path::new("x.html"), &c)
+            .unwrap();
+        let second = SeoPlugin
+            .transform_html(&first, Path::new("x.html"), &c)
+            .unwrap();
         assert_eq!(first, second, "second run must not duplicate meta tags");
     }
 
@@ -492,14 +467,13 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_handles_html_without_head_tag() {
-        // Edge case: HTML fragment with no </head> — should not crash,
-        // should leave file unchanged.
+    fn transform_html_handles_html_without_head_tag() {
         let dir = tempdir().unwrap();
+        let c = ctx(dir.path());
         let raw = "<!doctype html><html><body>only</body></html>";
-        write_html(dir.path(), "frag.html", raw);
-        SeoPlugin.after_compile(&ctx(dir.path())).unwrap();
-        let after = fs::read_to_string(dir.path().join("frag.html")).unwrap();
+        let after = SeoPlugin
+            .transform_html(raw, Path::new("frag.html"), &c)
+            .unwrap();
         assert_eq!(after, raw);
     }
 }

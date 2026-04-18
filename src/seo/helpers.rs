@@ -3,7 +3,9 @@
 
 //! Internal helper functions for SEO plugins.
 
+#[cfg(test)]
 use anyhow::Result;
+#[cfg(test)]
 use std::path::{Path, PathBuf};
 
 /// Extract the page title from the `<title>` tag.
@@ -299,6 +301,7 @@ pub(super) fn extract_meta_date(html: &str) -> Option<String> {
 }
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
+#[cfg(test)]
 pub(super) fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }

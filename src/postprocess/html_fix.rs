@@ -5,8 +5,8 @@
 
 use super::helpers::rfc2822_to_iso8601;
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
-use std::fs;
+use anyhow::Result;
+use std::path::Path;
 
 /// Repairs HTML output:
 /// - Fix 7: Upgrades JSON-LD `@context` from `http://schema.org/` to
@@ -21,39 +21,20 @@ impl Plugin for HtmlFixPlugin {
         "html-fix"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
+    fn has_transform(&self) -> bool {
+        true
+    }
 
-        let all_html = ctx.get_html_files();
-        let cache = ctx.cache.as_ref();
-        let html_files: Vec<_> = all_html
-            .into_iter()
-            .filter(|p| cache.is_none_or(|c| c.has_changed(p)))
-            .collect();
-        let fixed = std::sync::atomic::AtomicUsize::new(0);
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        Ok(apply_html_fixes(html))
+    }
 
-        html_files.iter().try_for_each(|path| -> Result<()> {
-            let html = fs::read_to_string(path)
-                .with_context(|| format!("cannot read {}", path.display()))?;
-
-            let modified = apply_html_fixes(&html);
-
-            if modified != html {
-                fs::write(path, &modified).with_context(|| {
-                    format!("cannot write {}", path.display())
-                })?;
-                let _ =
-                    fixed.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            }
-            Ok(())
-        })?;
-
-        let count = fixed.load(std::sync::atomic::Ordering::Relaxed);
-        if count > 0 {
-            log::info!("[html-fix] Repaired {count} HTML file(s)");
-        }
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 }
@@ -412,20 +393,19 @@ mod tests {
     #[test]
     fn test_html_fix_upgrades_jsonld_context() -> Result<()> {
         let tmp = tempdir()?;
-        let html_path = tmp.path().join("index.html");
-        fs::write(
-            &html_path,
-            r#"<html><head>
+        let ctx = test_ctx(tmp.path());
+
+        let html = r#"<html><head>
 <script type="application/ld+json">
 {"@context":"http://schema.org/","@type":"WebPage"}
 </script>
-</head><body></body></html>"#,
+</head><body></body></html>"#;
+
+        let result = HtmlFixPlugin.transform_html(
+            html,
+            Path::new("index.html"),
+            &ctx,
         )?;
-
-        let ctx = test_ctx(tmp.path());
-        HtmlFixPlugin.after_compile(&ctx)?;
-
-        let result = fs::read_to_string(&html_path)?;
         assert!(result.contains("\"https://schema.org\""));
         assert!(!result.contains("\"http://schema.org/\""));
         Ok(())
@@ -434,20 +414,19 @@ mod tests {
     #[test]
     fn test_html_fix_converts_jsonld_dates() -> Result<()> {
         let tmp = tempdir()?;
-        let html_path = tmp.path().join("article.html");
-        fs::write(
-            &html_path,
-            r#"<html><head>
+        let ctx = test_ctx(tmp.path());
+
+        let html = r#"<html><head>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Article","datePublished":"Thu, 11 Apr 2026 06:06:06 +0000","dateModified":"Mon, 01 Sep 2025 06:06:06 +0000"}
 </script>
-</head><body></body></html>"#,
+</head><body></body></html>"#;
+
+        let result = HtmlFixPlugin.transform_html(
+            html,
+            Path::new("article.html"),
+            &ctx,
         )?;
-
-        let ctx = test_ctx(tmp.path());
-        HtmlFixPlugin.after_compile(&ctx)?;
-
-        let result = fs::read_to_string(&html_path)?;
         assert!(
             result.contains("\"datePublished\":\"2026-04-11"),
             "Expected ISO date, got: {result}"

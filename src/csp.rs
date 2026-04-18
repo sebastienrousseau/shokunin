@@ -9,7 +9,6 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use rayon::prelude::*;
 use std::{fs, path::Path};
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
@@ -33,45 +32,37 @@ impl Plugin for CspPlugin {
         "csp"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String> {
+        let csp_dir = ctx.site_dir.join("_csp");
+        let (rewritten, extracted) =
+            extract_inline_blocks(html, &csp_dir, &ctx.site_dir)?;
+
+        if extracted > 0 {
+            let final_html = remove_unsafe_inline_from_csp(&rewritten);
+            Ok(final_html)
+        } else {
+            Ok(html.to_string())
+        }
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
+        // Pre-create _csp/ dir so transform_html writers have the directory
         let csp_dir = ctx.site_dir.join("_csp");
-        let html_files = ctx.get_html_files();
-
-        if html_files.is_empty() {
-            return Ok(());
-        }
-
-        // Pre-create _csp/ dir so parallel writers don't race on mkdir
         fs::create_dir_all(&csp_dir)?;
 
-        let total_extracted = std::sync::atomic::AtomicUsize::new(0);
-
-        html_files
-            .par_iter()
-            .try_for_each(|html_path| -> Result<()> {
-                let html = fs::read_to_string(html_path)?;
-                let (rewritten, extracted) =
-                    extract_inline_blocks(&html, &csp_dir, &ctx.site_dir)?;
-
-                if extracted > 0 {
-                    let final_html = remove_unsafe_inline_from_csp(&rewritten);
-                    fs::write(html_path, final_html)?;
-                    let _ = total_extracted.fetch_add(
-                        extracted,
-                        std::sync::atomic::Ordering::Relaxed,
-                    );
-                }
-                Ok(())
-            })?;
-
-        let count = total_extracted.load(std::sync::atomic::Ordering::Relaxed);
-        if count > 0 {
-            log::info!("[csp] Extracted {count} inline block(s) to _csp/");
-        }
         Ok(())
     }
 }
@@ -345,16 +336,14 @@ mod tests {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
-        fs::write(
-            site.join("index.html"),
-            "<html><head><style>body{color:red}</style></head><body><script>alert(1)</script></body></html>",
-        )
-        .unwrap();
+        let html = "<html><head><style>body{color:red}</style></head><body><script>alert(1)</script></body></html>";
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         CspPlugin.after_compile(&ctx).unwrap();
 
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        let output = CspPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("<link rel=\"stylesheet\""));
         assert!(output.contains("<script src="));
         assert!(!output.contains("body{color:red}"));
