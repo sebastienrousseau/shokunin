@@ -59,7 +59,7 @@ news_title: "WCAG 2.2: what actually changed for builders"
 atom_link: https://threshold.press/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.39)"
 item_description: RSS feed for Threshold
 item_guid: "https://threshold.press/wcag-2-1-vs-2-2/index.html"
 item_link: "https://threshold.press/wcag-2-1-vs-2-2/index.html"

@@ -58,7 +58,7 @@ news_title: "Explore by Tag"
 atom_link: https://janedoe.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.39)"
 item_description: RSS feed for Maya Okafor's portfolio
 item_guid: "https://janedoe.example.com/tags/index.html"
 item_link: "https://janedoe.example.com/tags/index.html"

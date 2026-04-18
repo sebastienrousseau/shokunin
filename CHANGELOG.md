@@ -7,6 +7,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.39] - 2026-04-18
+
+### Added
+
+- **CSP/SRI hardening** — extract inline styles and scripts to external
+  files with Subresource Integrity (SRI) hashes, pin GitHub Actions to
+  commit SHAs, add Dependabot configuration.
+
 ## [0.0.36] - 2026-04-13
 
 ### Added
@@ -302,6 +310,7 @@ See [release notes](https://github.com/sebastienrousseau/static-site-generator/r
 
 See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
+[0.0.39]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.36...v0.0.39
 [0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
 [0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
 [0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34

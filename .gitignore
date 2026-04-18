@@ -27,6 +27,19 @@ tarpaulin-report.html
 # Logs
 *.log
 
+# Secrets & credentials
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+.aws/
+.ssh/
+credentials
+secrets
+
 # IDE / OS
 *.DS_Store
 /.vscode/
