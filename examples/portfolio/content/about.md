@@ -59,7 +59,7 @@ news_title: "About"
 atom_link: https://mayaokafor.studio/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.38)"
 item_description: RSS feed for Maya Okafor
 item_guid: "https://mayaokafor.studio/about/index.html"
 item_link: "https://mayaokafor.studio/about/index.html"

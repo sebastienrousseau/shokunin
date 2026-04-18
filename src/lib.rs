@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_favicon_url = "https://cloudcdn.pro/static-site-generator/images/favicon.ico",
@@ -32,7 +31,7 @@ pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
-#[allow(unreachable_pub)]
+#[allow(unreachable_pub, clippy::unwrap_used, clippy::expect_used)]
 pub(crate) mod test_support {
     use std::sync::Once;
 
@@ -154,12 +153,12 @@ pub mod shortcodes;
 pub mod stream;
 /// Taxonomy generation (tags, categories).
 pub mod taxonomy;
-/// Tera templating engine integration.
-#[cfg(feature = "tera-templates")]
-pub mod tera_engine;
-/// Tera template rendering plugin.
-#[cfg(feature = "tera-templates")]
-pub mod tera_plugin;
+/// MiniJinja templating engine integration.
+#[cfg(feature = "templates")]
+pub mod template_engine;
+/// MiniJinja template rendering plugin.
+#[cfg(feature = "templates")]
+pub mod template_plugin;
 /// File-watching for live rebuild.
 pub mod watch;
 /// Re-exports
@@ -465,6 +464,7 @@ pub fn run() -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::Cli;

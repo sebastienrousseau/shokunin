@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.36"                      # The version of the library
+version = "0.0.38"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -96,10 +96,10 @@ path = "src/main.rs"                    # Path to the binary entry point
 # -----------------------------------------------------------------------------
 [features]
 # Optional features that can be enabled or disabled.
-default = ["tera-templates", "image-optimization"]
+default = ["templates", "image-optimization"]
 cli = []                                # Enable command-line interface support
 benchmark = ["tempfile"]                 # Enable benchmark-specific functionality
-tera-templates = ["tera"]               # Tera templating engine with inheritance, loops, conditionals
+templates = ["minijinja"]               # MiniJinja templating engine with inheritance, loops, conditionals
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 
@@ -116,7 +116,6 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
-lazy_static = "1.5.0"                      # Static variables for lazy evaluation
 serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
 uuid = { version = "1.22.0", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
@@ -142,7 +141,7 @@ toml = "1.1.2"
 # Optional dependencies (feature-gated)
 fail = { version = "0.5", optional = true }
 tempfile = { version = "3.27.0", optional = true }
-tera = { version = "1", optional = true }
+minijinja = { version = "2", optional = true, features = ["loader"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
 
 # Owned crate for frontmatter parsing
@@ -277,7 +276,7 @@ missing_panics_doc = "allow"                 # Skip requiring # Panics doc secti
 module_inception = "allow"                   # Allow modules with the same name as their parents
 too_many_arguments = "allow"                 # Allow functions with more than 7 arguments if justified
 missing_docs_in_private_items = "allow"      # Skip requiring documentation for private items
-multiple_crate_versions = "allow"            # Transitive duplicates from staticdatagen/tera/scraper — not actionable from this repo
+multiple_crate_versions = "allow"            # Transitive duplicates from staticdatagen/scraper — not actionable from this repo
 must_use_candidate = "allow"                 # Too noisy for builder-pattern methods
 implicit_hasher = "allow"                    # HashMap parameters don't need generic hashers in this codebase
 too_many_lines = "allow"                     # Some functions are long by necessity
@@ -392,5 +391,7 @@ eula         = false
 # Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
 # safe-only implementation.
 # -----------------------------------------------------------------------------
+[workspace]
+
 [patch.crates-io]
 serde_yml = { path = "crates/serde_yml" }

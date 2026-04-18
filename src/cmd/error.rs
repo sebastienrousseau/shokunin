@@ -120,6 +120,7 @@ impl From<toml::de::Error> for CliError {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

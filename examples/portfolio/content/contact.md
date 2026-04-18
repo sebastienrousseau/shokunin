@@ -58,7 +58,7 @@ news_title: "Privacy Policy"
 atom_link: https://janedoe.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.38)"
 item_description: RSS feed for Acme Corp
 item_guid: "https://janedoe.example.com/privacy/index.html"
 item_link: "https://janedoe.example.com/privacy/index.html"
