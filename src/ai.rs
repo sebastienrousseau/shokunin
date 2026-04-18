@@ -8,19 +8,21 @@
 //!
 //! - Auto-generate meta descriptions from page content when missing
 //! - Validate all `<img>` elements have alt text (log warnings)
-//! - Generate `llms.txt` for AI crawler guidance
+//! - Generate `llms.txt` and `llms-full.txt` for AI crawler guidance
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-#[cfg(test)]
-use std::path::PathBuf;
-use std::{fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 /// Plugin for AI-readiness content validation and enhancement.
 ///
 /// Runs in `after_compile`:
 /// - Checks all images have alt text (logs warnings for missing)
-/// - Generates `llms.txt` in the site root
+/// - Generates `llms.txt` and `llms-full.txt` in the site root
 /// - Adds max-snippet meta for AI citation eligibility
 #[derive(Debug, Clone, Copy)]
 pub struct AiPlugin;
@@ -30,23 +32,6 @@ impl Plugin for AiPlugin {
         "ai"
     }
 
-    fn has_transform(&self) -> bool {
-        true
-    }
-
-    fn transform_html(
-        &self,
-        html: &str,
-        path: &Path,
-        ctx: &PluginContext,
-    ) -> Result<String> {
-        let modified = inject_max_snippet(html);
-
-        check_alt_text(path, &modified, &ctx.site_dir, &mut 0);
-
-        Ok(modified)
-    }
-
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
@@ -54,10 +39,40 @@ impl Plugin for AiPlugin {
 
         generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
         generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())?;
-        generate_ai_provenance(&ctx.site_dir)?;
+
+        let html_files = collect_html_files(&ctx.site_dir)?;
+        let pages_with_missing_alt =
+            process_html_for_ai(&html_files, &ctx.site_dir)?;
+
+        if pages_with_missing_alt > 0 {
+            log::warn!(
+                "[ai] {pages_with_missing_alt} page(s) have images without alt text"
+            );
+        }
 
         Ok(())
     }
+}
+
+/// Processes HTML files: injects max-snippet meta tags and checks for missing alt text.
+fn process_html_for_ai(
+    html_files: &[PathBuf],
+    site_dir: &Path,
+) -> Result<usize> {
+    let mut pages_with_missing_alt = 0usize;
+
+    for path in html_files {
+        let html = fs::read_to_string(path)?;
+        let modified = inject_max_snippet(&html);
+
+        check_alt_text(path, &modified, site_dir, &mut pages_with_missing_alt);
+
+        if modified != html {
+            fs::write(path, modified)?;
+        }
+    }
+
+    Ok(pages_with_missing_alt)
 }
 
 /// Injects the max-snippet meta tag before `</head>` if not already present.
@@ -90,10 +105,179 @@ fn check_alt_text(
     }
 }
 
-/// Generates `llms.txt` — a guidance file for AI crawlers.
+// -------------------------------------------------------------------
+// llms.txt generation — llmstxt.org v1 spec
+// -------------------------------------------------------------------
+
+/// Collects page metadata from `.meta.json` sidecars in the site dir.
 ///
-/// Similar to `robots.txt` but aimed at LLM training and retrieval
-/// systems. Documents site structure and content policies.
+/// Returns a list of `(title, relative_url, description)` tuples for
+/// pages that should appear in `llms.txt`.
+fn collect_page_entries(
+    site_dir: &Path,
+) -> Result<Vec<(String, String, String)>> {
+    let html_files = collect_html_files(site_dir)?;
+    let mut entries = Vec::new();
+
+    for html_path in &html_files {
+        let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
+
+        // Read the companion sidecar
+        let sidecar_path = html_path.with_extension("meta.json");
+        let meta: serde_json::Map<String, serde_json::Value> =
+            if sidecar_path.exists() {
+                if let Ok(content) = fs::read_to_string(&sidecar_path) {
+                    serde_json::from_str(&content).unwrap_or_default()
+                } else {
+                    serde_json::Map::new()
+                }
+            } else {
+                serde_json::Map::new()
+            };
+
+        if is_excluded_page(rel, &meta) {
+            continue;
+        }
+
+        let title = meta
+            .get("title")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        let description = meta
+            .get("description")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+
+        // Build a URL path from the relative file path
+        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+
+        if !title.is_empty() {
+            entries.push((title, url, description));
+        }
+    }
+
+    Ok(entries)
+}
+
+/// Returns true if a page should be excluded from `llms.txt`.
+///
+/// Excludes pages that are drafts, private, or error pages (404).
+fn is_excluded_page(
+    path: &Path,
+    frontmatter: &serde_json::Map<String, serde_json::Value>,
+) -> bool {
+    // Exclude 404 and error pages
+    let file_name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    if file_name == "404.html" || file_name.starts_with("error") {
+        return true;
+    }
+
+    // Exclude drafts
+    if let Some(draft) = frontmatter.get("draft") {
+        if draft.as_bool().unwrap_or(false)
+            || draft.as_str().is_some_and(|s| s == "true")
+        {
+            return true;
+        }
+    }
+
+    // Exclude private pages
+    if let Some(private) = frontmatter.get("private") {
+        if private.as_bool().unwrap_or(false)
+            || private.as_str().is_some_and(|s| s == "true")
+        {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Groups page entries by their top-level directory.
+///
+/// Files at the root level are grouped under `"Pages"`.
+/// Subdirectory names are title-cased (e.g., `blog/` becomes `"Blog"`).
+fn group_pages_by_section(
+    entries: &[(String, String, String)],
+) -> BTreeMap<String, Vec<(String, String, String)>> {
+    let mut sections: BTreeMap<String, Vec<(String, String, String)>> =
+        BTreeMap::new();
+
+    for (title, url, description) in entries {
+        // url looks like "/blog/post.html" or "/index.html"
+        let trimmed = url.trim_start_matches('/');
+        let section = if let Some(slash) = trimmed.find('/') {
+            let dir = &trimmed[..slash];
+            titlecase_word(dir)
+        } else {
+            "Pages".to_string()
+        };
+
+        sections.entry(section).or_default().push((
+            title.clone(),
+            url.clone(),
+            description.clone(),
+        ));
+    }
+
+    sections
+}
+
+/// Title-cases a single word (first char uppercase, rest lowercase).
+fn titlecase_word(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => {
+            let upper: String = first.to_uppercase().collect();
+            format!("{upper}{}", chars.as_str().to_lowercase())
+        }
+    }
+}
+
+/// Parses `Disallow:` patterns from an existing `robots.txt` file.
+fn parse_robots_disallow(site_dir: &Path) -> Vec<String> {
+    let robots_path = site_dir.join("robots.txt");
+    let Ok(content) = fs::read_to_string(&robots_path) else {
+        return Vec::new();
+    };
+
+    content
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("Disallow:") {
+                let pattern = rest.trim();
+                if !pattern.is_empty() {
+                    return Some(pattern.to_string());
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+/// Generates `llms.txt` following the llmstxt.org v1 specification.
+///
+/// Format:
+/// ```text
+/// # {site_name}
+///
+/// > {site_description}
+///
+/// Language: {language}
+///
+/// ## {Section Name}
+/// - [{Page Title}]({URL}): {Description}
+///
+/// ## Disallow
+/// - {pattern from robots.txt}
+/// ```
 fn generate_llms_txt(
     site_dir: &Path,
     config: Option<&crate::cmd::SsgConfig>,
@@ -101,142 +285,170 @@ fn generate_llms_txt(
     let site_name = config.map_or("Site", |c| c.site_name.as_str());
     let base_url = config.map_or("", |c| c.base_url.as_str());
     let description = config.map_or("", |c| c.site_description.as_str());
+    let language = config
+        .map(|c| c.language.as_str())
+        .filter(|l| !l.is_empty())
+        .unwrap_or("en");
     let canonical_root = base_url.trim_end_matches('/');
-    let source_example = if canonical_root.is_empty() {
-        "<canonical-page-url>".to_string()
-    } else {
-        format!("{canonical_root}/<page-path>")
-    };
 
-    let content = format!(
-        "# {}\n\
-         > {}\n\
-         \n\
-         ## About\n\
-         URL: {}\n\
-         \n\
-         ## Content Policy\n\
-         This site's content may be used for AI training and retrieval.\n\
-         \n\
-         ## Attribution\n\
-         When citing or reusing content from this site, include exact attribution:\n\
-         - Source: {}\n\
-         - Publisher: {}\n\
-         - Preserve author byline and publish date when available.\n\
-         \n\
-         ## Sitemap\n\
-         {}/sitemap.xml\n",
-        site_name,
-        description,
-        base_url,
-        source_example,
-        site_name,
-        base_url.trim_end_matches('/'),
-    );
+    let mut content =
+        format!("# {site_name}\n\n> {description}\n\nLanguage: {language}\n");
+
+    // Collect and group pages
+    let entries = collect_page_entries(site_dir).unwrap_or_default();
+    let sections = group_pages_by_section(&entries);
+
+    for (section, pages) in &sections {
+        content.push_str(&format!("\n## {section}\n"));
+        for (title, url, desc) in pages {
+            let full_url = if canonical_root.is_empty() {
+                url.clone()
+            } else {
+                format!("{canonical_root}{url}")
+            };
+            if desc.is_empty() {
+                content.push_str(&format!("- [{title}]({full_url})\n"));
+            } else {
+                content.push_str(&format!("- [{title}]({full_url}): {desc}\n"));
+            }
+        }
+    }
+
+    // Disallow section from robots.txt
+    let disallow = parse_robots_disallow(site_dir);
+    if !disallow.is_empty() {
+        content.push_str("\n## Disallow\n");
+        for pattern in &disallow {
+            content.push_str(&format!("- {pattern}\n"));
+        }
+    }
 
     fs::write(site_dir.join("llms.txt"), content)?;
     log::info!("[ai] Generated llms.txt");
     Ok(())
 }
 
-/// Generates `llms-full.txt` — a comprehensive content index for AI systems.
+/// Generates `llms-full.txt` with full text content for each page.
 ///
-/// Lists every HTML page with its title and a snippet of body text,
-/// enabling LLM retrieval systems to understand site content at a glance.
+/// Follows the same structure as `llms.txt` but includes the stripped
+/// HTML body content for each page rather than just a link index.
 fn generate_llms_full_txt(
     site_dir: &Path,
     config: Option<&crate::cmd::SsgConfig>,
 ) -> Result<()> {
     let site_name = config.map_or("Site", |c| c.site_name.as_str());
-    let base_url = config
-        .map_or("", |c| c.base_url.as_str())
-        .trim_end_matches('/');
+    let base_url = config.map_or("", |c| c.base_url.as_str());
+    let description = config.map_or("", |c| c.site_description.as_str());
+    let language = config
+        .map(|c| c.language.as_str())
+        .filter(|l| !l.is_empty())
+        .unwrap_or("en");
+    let canonical_root = base_url.trim_end_matches('/');
 
-    let html_files =
-        crate::walk::walk_files(site_dir, "html").unwrap_or_default();
-    let mut lines = vec![format!("# {site_name} — Full Content Index\n")];
+    let mut content =
+        format!("# {site_name}\n\n> {description}\n\nLanguage: {language}\n");
 
-    for path in &html_files {
-        let Ok(html) = fs::read_to_string(path) else {
+    let html_files = collect_html_files(site_dir)?;
+
+    for html_path in &html_files {
+        let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
+
+        // Read sidecar
+        let sidecar_path = html_path.with_extension("meta.json");
+        let meta: serde_json::Map<String, serde_json::Value> =
+            if sidecar_path.exists() {
+                if let Ok(c) = fs::read_to_string(&sidecar_path) {
+                    serde_json::from_str(&c).unwrap_or_default()
+                } else {
+                    serde_json::Map::new()
+                }
+            } else {
+                serde_json::Map::new()
+            };
+
+        if is_excluded_page(rel, &meta) {
             continue;
-        };
-        let title = extract_title_from_html(&html).unwrap_or_default();
-        let rel = path
-            .strip_prefix(site_dir)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .replace('\\', "/");
-        let url = if base_url.is_empty() {
-            format!("/{rel}")
-        } else {
-            format!("{base_url}/{rel}")
-        };
-        let snippet = extract_snippet(&html, 200);
-        lines.push(format!("## {title}\nURL: {url}\n{snippet}\n"));
-    }
-
-    fs::write(site_dir.join("llms-full.txt"), lines.join("\n"))?;
-    log::info!(
-        "[ai] Generated llms-full.txt with {} page(s)",
-        html_files.len()
-    );
-    Ok(())
-}
-
-/// Generates `ai-provenance.json` — tracks which content fields were
-/// AI-generated vs human-authored.
-fn generate_ai_provenance(site_dir: &Path) -> Result<()> {
-    let provenance = serde_json::json!({
-        "version": "1.0",
-        "generator": "ssg",
-        "policy": "human-authored",
-        "ai_generated_fields": [],
-        "note": "All content is human-authored unless explicitly marked in frontmatter with ai_generated: true"
-    });
-    let json = serde_json::to_string_pretty(&provenance)
-        .unwrap_or_else(|_| "{}".to_string());
-    fs::write(site_dir.join("ai-provenance.json"), json)?;
-    log::info!("[ai] Generated ai-provenance.json");
-    Ok(())
-}
-
-/// Extracts the `<title>` content from HTML.
-fn extract_title_from_html(html: &str) -> Option<String> {
-    let start = html.find("<title>")? + 7;
-    let end = html[start..].find("</title>")? + start;
-    let title = html[start..end].trim();
-    if title.is_empty() {
-        None
-    } else {
-        Some(title.to_string())
-    }
-}
-
-/// Extracts a plain-text snippet from HTML body content.
-fn extract_snippet(html: &str, max_chars: usize) -> String {
-    // Find <main> or <body> content
-    let body_start = html
-        .find("<main")
-        .or_else(|| html.find("<body"))
-        .unwrap_or(0);
-    let body = &html[body_start..];
-
-    // Strip tags
-    let mut text = String::with_capacity(max_chars + 50);
-    let mut in_tag = false;
-    for ch in body.chars() {
-        if text.len() >= max_chars {
-            break;
         }
+
+        let title = meta
+            .get("title")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+
+        if title.is_empty() {
+            continue;
+        }
+
+        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+        let full_url = if canonical_root.is_empty() {
+            url.clone()
+        } else {
+            format!("{canonical_root}{url}")
+        };
+
+        // Read and strip HTML content
+        let html = fs::read_to_string(html_path).unwrap_or_default();
+        let body_text = strip_html_tags(&extract_body(&html));
+        let trimmed = collapse_whitespace(&body_text);
+
+        content.push_str(&format!("\n---\n\n## [{title}]({full_url})\n\n"));
+        if !trimmed.is_empty() {
+            content.push_str(&trimmed);
+            content.push('\n');
+        }
+    }
+
+    fs::write(site_dir.join("llms-full.txt"), content)?;
+    log::info!("[ai] Generated llms-full.txt");
+    Ok(())
+}
+
+/// Extracts the content between `<body>` and `</body>` tags.
+fn extract_body(html: &str) -> String {
+    let lower = html.to_lowercase();
+    let start = lower
+        .find("<body")
+        .and_then(|i| lower[i..].find('>').map(|j| i + j + 1))
+        .unwrap_or(0);
+    let end = lower.find("</body>").unwrap_or(html.len());
+    html[start..end].to_string()
+}
+
+/// Strips HTML tags from a string, preserving text content.
+fn strip_html_tags(html: &str) -> String {
+    let mut result = String::with_capacity(html.len());
+    let mut in_tag = false;
+    for ch in html.chars() {
         match ch {
             '<' => in_tag = true,
             '>' => in_tag = false,
-            _ if !in_tag && !ch.is_control() => text.push(ch),
+            _ if !in_tag => result.push(ch),
             _ => {}
         }
     }
+    result
+}
 
-    text.split_whitespace().collect::<Vec<_>>().join(" ")
+/// Collapses runs of whitespace into single spaces and trims.
+fn collapse_whitespace(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut prev_ws = true; // start true to trim leading
+    for ch in s.chars() {
+        if ch.is_whitespace() {
+            if !prev_ws {
+                result.push(' ');
+                prev_ws = true;
+            }
+        } else {
+            result.push(ch);
+            prev_ws = false;
+        }
+    }
+    // Trim trailing space
+    if result.ends_with(' ') {
+        let _ = result.pop();
+    }
+    result
 }
 
 /// Counts `<img>` tags missing alt attributes in an HTML string.
@@ -260,14 +472,15 @@ fn count_missing_alt(html: &str) -> usize {
     count
 }
 
-#[cfg(test)]
+/// Recursively collects HTML files (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::cmd::SsgConfig;
     use crate::test_support::init_logger;
@@ -285,6 +498,34 @@ mod tests {
         fs::create_dir_all(&site).expect("mkdir site");
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         (dir, site, ctx)
+    }
+
+    /// Writes an HTML file and a companion `.meta.json` sidecar.
+    fn write_page(
+        site: &Path,
+        rel_path: &str,
+        title: &str,
+        description: &str,
+        extra_fields: &str,
+    ) {
+        let html_path = site.join(rel_path);
+        if let Some(parent) = html_path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        let html = format!(
+            "<html><head><title>{title}</title></head>\
+             <body><h1>{title}</h1><p>{description}</p></body></html>"
+        );
+        fs::write(&html_path, html).unwrap();
+
+        let mut sidecar_json =
+            format!(r#"{{"title": "{title}", "description": "{description}""#);
+        if !extra_fields.is_empty() {
+            sidecar_json.push_str(", ");
+            sidecar_json.push_str(extra_fields);
+        }
+        sidecar_json.push('}');
+        fs::write(html_path.with_extension("meta.json"), sidecar_json).unwrap();
     }
 
     // -------------------------------------------------------------------
@@ -346,17 +587,204 @@ mod tests {
 
     #[test]
     fn count_missing_alt_unterminated_tag_does_not_panic() {
-        // The `tag_end` fallback at line 142 (`map_or(lower.len(), …)`)
-        // handles a `<img` with no closing `>` by treating the rest of
-        // the string as the tag. Function must terminate.
         let result = count_missing_alt("<img src=foo");
-        // Whether it counts as missing or not is implementation
-        // detail; the assertion is that it returns at all.
         assert!(result <= 1);
     }
 
     // -------------------------------------------------------------------
-    // generate_llms_txt — config matrix
+    // parse_robots_disallow
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_robots_disallow() {
+        let dir = tempdir().expect("tempdir");
+
+        // Standard robots.txt with multiple directives
+        fs::write(
+            dir.path().join("robots.txt"),
+            "User-agent: *\nDisallow: /admin/\nDisallow: /private/\nAllow: /\n",
+        )
+        .unwrap();
+        let result = parse_robots_disallow(dir.path());
+        assert_eq!(result, vec!["/admin/", "/private/"]);
+    }
+
+    #[test]
+    fn test_parse_robots_disallow_empty_file() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(dir.path().join("robots.txt"), "").unwrap();
+        let result = parse_robots_disallow(dir.path());
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_robots_disallow_no_disallow_lines() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("robots.txt"),
+            "User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml\n",
+        )
+        .unwrap();
+        let result = parse_robots_disallow(dir.path());
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_robots_disallow_multiple_user_agents() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("robots.txt"),
+            "User-agent: Googlebot\nDisallow: /nogoogle/\n\n\
+             User-agent: *\nDisallow: /secret/\n",
+        )
+        .unwrap();
+        let result = parse_robots_disallow(dir.path());
+        assert_eq!(result, vec!["/nogoogle/", "/secret/"]);
+    }
+
+    #[test]
+    fn test_parse_robots_disallow_missing_file() {
+        let dir = tempdir().expect("tempdir");
+        let result = parse_robots_disallow(dir.path());
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_parse_robots_disallow_empty_pattern_skipped() {
+        // `Disallow:` with no path means allow all — should be skipped
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("robots.txt"),
+            "User-agent: *\nDisallow:\nDisallow: /blocked/\n",
+        )
+        .unwrap();
+        let result = parse_robots_disallow(dir.path());
+        assert_eq!(result, vec!["/blocked/"]);
+    }
+
+    // -------------------------------------------------------------------
+    // is_excluded_page
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_is_excluded_page_draft() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert("draft".to_string(), serde_json::Value::Bool(true));
+        assert!(is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_draft_string() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "draft".to_string(),
+            serde_json::Value::String("true".to_string()),
+        );
+        assert!(is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private() {
+        let mut meta = serde_json::Map::new();
+        let _ =
+            meta.insert("private".to_string(), serde_json::Value::Bool(true));
+        assert!(is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_404() {
+        let meta = serde_json::Map::new();
+        assert!(is_excluded_page(Path::new("404.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_normal() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "title".to_string(),
+            serde_json::Value::String("Hello".to_string()),
+        );
+        assert!(!is_excluded_page(Path::new("index.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_error_page() {
+        let meta = serde_json::Map::new();
+        assert!(is_excluded_page(Path::new("error500.html"), &meta));
+    }
+
+    // -------------------------------------------------------------------
+    // group_pages_by_section
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_group_pages_by_section() {
+        let entries = vec![
+            (
+                "Home".to_string(),
+                "/index.html".to_string(),
+                "Welcome".to_string(),
+            ),
+            (
+                "Post 1".to_string(),
+                "/blog/post1.html".to_string(),
+                "First".to_string(),
+            ),
+            (
+                "Post 2".to_string(),
+                "/blog/post2.html".to_string(),
+                "Second".to_string(),
+            ),
+            (
+                "API Ref".to_string(),
+                "/docs/api.html".to_string(),
+                "API docs".to_string(),
+            ),
+        ];
+        let grouped = group_pages_by_section(&entries);
+
+        assert_eq!(grouped.len(), 3);
+        assert!(grouped.contains_key("Pages"));
+        assert!(grouped.contains_key("Blog"));
+        assert!(grouped.contains_key("Docs"));
+        assert_eq!(grouped["Pages"].len(), 1);
+        assert_eq!(grouped["Blog"].len(), 2);
+        assert_eq!(grouped["Docs"].len(), 1);
+    }
+
+    #[test]
+    fn test_group_pages_by_section_root_only() {
+        let entries = vec![
+            (
+                "About".to_string(),
+                "/about.html".to_string(),
+                String::new(),
+            ),
+            (
+                "Contact".to_string(),
+                "/contact.html".to_string(),
+                String::new(),
+            ),
+        ];
+        let grouped = group_pages_by_section(&entries);
+        assert_eq!(grouped.len(), 1);
+        assert_eq!(grouped["Pages"].len(), 2);
+    }
+
+    #[test]
+    fn test_group_pages_by_section_deterministic_order() {
+        let entries = vec![
+            ("Z".to_string(), "/zebra/z.html".to_string(), String::new()),
+            ("A".to_string(), "/alpha/a.html".to_string(), String::new()),
+            ("M".to_string(), "/middle/m.html".to_string(), String::new()),
+        ];
+        let grouped = group_pages_by_section(&entries);
+        let keys: Vec<&String> = grouped.keys().collect();
+        assert_eq!(keys, vec!["Alpha", "Middle", "Zebra"]);
+    }
+
+    // -------------------------------------------------------------------
+    // generate_llms_txt — spec compliance
     // -------------------------------------------------------------------
 
     #[test]
@@ -366,6 +794,7 @@ mod tests {
             site_name: "My Site".to_string(),
             site_description: "A great site".to_string(),
             base_url: "https://example.com".to_string(),
+            language: "en".to_string(),
             ..Default::default()
         };
 
@@ -373,32 +802,21 @@ mod tests {
         let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
         assert!(body.contains("# My Site"));
         assert!(body.contains("> A great site"));
-        assert!(body.contains("https://example.com"));
-        assert!(body.contains("sitemap.xml"));
-        assert!(body.contains("include exact attribution"));
-        assert!(body.contains("Source: https://example.com/<page-path>"));
-        assert!(body.contains("Publisher: My Site"));
+        assert!(body.contains("Language: en"));
     }
 
     #[test]
     fn generate_llms_txt_without_config_uses_defaults() {
-        // The `config.map_or(...)` fallbacks at lines 93-95 must apply
-        // when no config is provided.
         let dir = tempdir().expect("tempdir");
         generate_llms_txt(dir.path(), None).unwrap();
 
         let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
         assert!(body.contains("# Site"));
-        assert!(
-            body.contains("<canonical-page-url>"),
-            "empty base_url should fall back to placeholder:\n{body}"
-        );
+        assert!(body.contains("Language: en"));
     }
 
     #[test]
     fn generate_llms_txt_strips_trailing_slash_from_base_url() {
-        // Guards `trim_end_matches('/')` at line 96 — preventing
-        // double-slashes in `Source:` and `Sitemap:` rendering.
         let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
             site_name: "S".to_string(),
@@ -406,21 +824,275 @@ mod tests {
             base_url: "https://example.com/".to_string(),
             ..Default::default()
         };
-        generate_llms_txt(dir.path(), Some(&config)).unwrap();
 
+        // Write a page so we can verify URL formatting
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+
+        generate_llms_txt(dir.path(), Some(&config)).unwrap();
         let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        // URLs should not have double slashes
         assert!(
-            body.contains("Source: https://example.com/<page-path>"),
+            !body.contains("//index.html"),
             "trailing slash should be normalised:\n{body}"
         );
-        assert!(!body.contains("//<page-path>"));
-        assert!(!body.contains("//sitemap.xml"));
     }
 
     #[test]
     fn generate_llms_txt_into_missing_parent_returns_err() {
         let bogus = Path::new("/this/path/should/not/exist");
         assert!(generate_llms_txt(bogus, None).is_err());
+    }
+
+    #[test]
+    fn test_llms_txt_contains_language() {
+        let dir = tempdir().expect("tempdir");
+        let config = SsgConfig {
+            language: "fr".to_string(),
+            ..Default::default()
+        };
+        generate_llms_txt(dir.path(), Some(&config)).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("Language: fr"),
+            "llms.txt must include Language field:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_contains_language_defaults_to_en() {
+        let dir = tempdir().expect("tempdir");
+        let config = SsgConfig {
+            language: String::new(),
+            ..Default::default()
+        };
+        generate_llms_txt(dir.path(), Some(&config)).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("Language: en"),
+            "empty language should default to en:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_excludes_drafts() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "published.html", "Published", "Visible", "");
+        write_page(
+            dir.path(),
+            "draft.html",
+            "Draft Post",
+            "Hidden",
+            r#""draft": true"#,
+        );
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("Published"),
+            "published page must appear:\n{body}"
+        );
+        assert!(
+            !body.contains("Draft Post"),
+            "draft page must be excluded:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_excludes_private() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "public.html", "Public", "Visible", "");
+        write_page(
+            dir.path(),
+            "secret.html",
+            "Secret",
+            "Hidden",
+            r#""private": true"#,
+        );
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            !body.contains("Secret"),
+            "private page must be excluded:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_excludes_404() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+        write_page(dir.path(), "404.html", "Not Found", "Error page", "");
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            !body.contains("Not Found"),
+            "404 page must be excluded:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_contains_sections() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+        write_page(dir.path(), "blog/post.html", "My Post", "A blog post", "");
+        write_page(
+            dir.path(),
+            "docs/api.html",
+            "API Docs",
+            "API reference",
+            "",
+        );
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("## Pages"),
+            "should have Pages section:\n{body}"
+        );
+        assert!(
+            body.contains("## Blog"),
+            "should have Blog section:\n{body}"
+        );
+        assert!(
+            body.contains("## Docs"),
+            "should have Docs section:\n{body}"
+        );
+        assert!(
+            body.contains("- [My Post]"),
+            "should contain page link:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_contains_disallow_section() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("robots.txt"),
+            "User-agent: *\nDisallow: /admin/\n",
+        )
+        .unwrap();
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("## Disallow"),
+            "should have Disallow section:\n{body}"
+        );
+        assert!(
+            body.contains("- /admin/"),
+            "should contain disallow pattern:\n{body}"
+        );
+    }
+
+    #[test]
+    fn test_llms_txt_no_disallow_without_robots() {
+        let dir = tempdir().expect("tempdir");
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            !body.contains("## Disallow"),
+            "no robots.txt means no Disallow section:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // generate_llms_full_txt
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_llms_full_txt_contains_body_content() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome home", "");
+
+        generate_llms_full_txt(dir.path(), None).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(body.contains("# Site"), "header present:\n{body}");
+        assert!(body.contains("Language: en"), "language present:\n{body}");
+        assert!(body.contains("## [Home]"), "page title present:\n{body}");
+        assert!(body.contains("Welcome home"), "body text present:\n{body}");
+    }
+
+    #[test]
+    fn test_llms_full_txt_excludes_drafts() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "ok.html", "Visible", "Content", "");
+        write_page(
+            dir.path(),
+            "hidden.html",
+            "Hidden",
+            "Secret",
+            r#""draft": true"#,
+        );
+
+        generate_llms_full_txt(dir.path(), None).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(body.contains("Visible"), "published page present:\n{body}");
+        assert!(!body.contains("Hidden"), "draft excluded:\n{body}");
+    }
+
+    #[test]
+    fn test_llms_full_txt_excludes_404() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+        write_page(dir.path(), "404.html", "Not Found", "Error", "");
+
+        generate_llms_full_txt(dir.path(), None).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(!body.contains("Not Found"), "404 excluded:\n{body}");
+    }
+
+    // -------------------------------------------------------------------
+    // strip_html_tags / extract_body / collapse_whitespace
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_strip_html_tags() {
+        assert_eq!(strip_html_tags("<p>hello</p>"), "hello");
+        assert_eq!(strip_html_tags("<div><b>bold</b> text</div>"), "bold text");
+        assert_eq!(strip_html_tags("no tags"), "no tags");
+        assert_eq!(strip_html_tags(""), "");
+    }
+
+    #[test]
+    fn test_extract_body() {
+        let html =
+            "<html><head><title>T</title></head><body>Content</body></html>";
+        assert_eq!(extract_body(html), "Content");
+    }
+
+    #[test]
+    fn test_extract_body_with_attributes() {
+        let html = "<html><body class=\"main\">Content</body></html>";
+        assert_eq!(extract_body(html), "Content");
+    }
+
+    #[test]
+    fn test_extract_body_no_body_tag() {
+        let html = "<p>Just a fragment</p>";
+        assert_eq!(extract_body(html), html);
+    }
+
+    #[test]
+    fn test_collapse_whitespace() {
+        assert_eq!(collapse_whitespace("  hello   world  "), "hello world");
+        assert_eq!(collapse_whitespace("no  extra"), "no extra");
+        assert_eq!(collapse_whitespace(""), "");
+    }
+
+    // -------------------------------------------------------------------
+    // titlecase_word
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_titlecase_word() {
+        assert_eq!(titlecase_word("blog"), "Blog");
+        assert_eq!(titlecase_word("DOCS"), "Docs");
+        assert_eq!(titlecase_word(""), "");
+        assert_eq!(titlecase_word("a"), "A");
     }
 
     // -------------------------------------------------------------------
@@ -443,10 +1115,10 @@ mod tests {
     fn after_compile_injects_max_snippet_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
 
-        let output = AiPlugin
-            .transform_html(html, &site.join("index.html"), &ctx)
-            .unwrap();
+        AiPlugin.after_compile(&ctx).unwrap();
+        let output = fs::read_to_string(site.join("index.html")).unwrap();
         assert!(output.contains("max-snippet"));
         assert!(output.contains("max-image-preview:large"));
     }
@@ -459,28 +1131,33 @@ mod tests {
     }
 
     #[test]
+    fn after_compile_creates_llms_full_txt_in_site_root() {
+        let (_tmp, site, ctx) = make_site();
+        AiPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("llms-full.txt").exists());
+    }
+
+    #[test]
     fn after_compile_idempotent_does_not_duplicate_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
 
-        let first = AiPlugin
-            .transform_html(html, &site.join("index.html"), &ctx)
-            .unwrap();
-        let second = AiPlugin
-            .transform_html(&first, &site.join("index.html"), &ctx)
-            .unwrap();
+        AiPlugin.after_compile(&ctx).unwrap();
+        AiPlugin.after_compile(&ctx).unwrap();
 
-        assert_eq!(second.matches("max-snippet").count(), 1);
+        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(output.matches("max-snippet").count(), 1);
     }
 
     #[test]
     fn after_compile_skips_html_files_without_head_tag() {
         let (_tmp, site, ctx) = make_site();
-        let html = "<p>just a fragment</p>";
-
-        let output = AiPlugin
-            .transform_html(html, &site.join("fragment.html"), &ctx)
+        fs::write(site.join("fragment.html"), "<p>just a fragment</p>")
             .unwrap();
+
+        AiPlugin.after_compile(&ctx).unwrap();
+        let output = fs::read_to_string(site.join("fragment.html")).unwrap();
         assert!(!output.contains("max-snippet"));
         assert_eq!(output, "<p>just a fragment</p>");
     }
@@ -488,30 +1165,40 @@ mod tests {
     #[test]
     fn after_compile_processes_files_in_subdirectories() {
         let (_tmp, site, ctx) = make_site();
-        let html = "<html><head></head><body></body></html>";
+        let nested = site.join("blog");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(
+            nested.join("post.html"),
+            "<html><head></head><body></body></html>",
+        )
+        .unwrap();
 
-        let output = AiPlugin
-            .transform_html(html, &site.join("blog/post.html"), &ctx)
-            .unwrap();
+        AiPlugin.after_compile(&ctx).unwrap();
+        let output = fs::read_to_string(nested.join("post.html")).unwrap();
         assert!(output.contains("max-snippet"));
     }
 
     #[test]
     fn after_compile_logs_warning_for_pages_with_missing_alt() {
         let (_tmp, site, ctx) = make_site();
-        let html =
-            r#"<html><head></head><body><img src="a.jpg"></body></html>"#;
+        fs::write(
+            site.join("bad.html"),
+            r#"<html><head></head><body><img src="a.jpg"></body></html>"#,
+        )
+        .unwrap();
+        fs::write(
+            site.join("worse.html"),
+            r#"<html><head></head><body><img src="a.jpg" alt=""></body></html>"#,
+        )
+        .unwrap();
 
-        let output = AiPlugin
-            .transform_html(html, &site.join("bad.html"), &ctx)
-            .unwrap();
-        assert!(output.contains("max-snippet"));
+        AiPlugin.after_compile(&ctx).unwrap();
+        let bad = fs::read_to_string(site.join("bad.html")).unwrap();
+        assert!(bad.contains("max-snippet"));
     }
 
     #[test]
     fn after_compile_does_not_rewrite_unchanged_files() {
-        // The `if changed` guard at line 70 must skip the fs::write
-        // call when nothing changed (no max-snippet to inject).
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><meta name=\"robots\" content=\"max-snippet:-1\"></head><body></body></html>";
         fs::write(site.join("index.html"), html).unwrap();
@@ -520,12 +1207,9 @@ mod tests {
             .modified()
             .unwrap();
 
-        // Run the plugin — file already has max-snippet, should be a no-op.
         AiPlugin.after_compile(&ctx).unwrap();
         let after = fs::read_to_string(site.join("index.html")).unwrap();
         assert_eq!(after, html, "unchanged file body must be preserved");
-        // mtime equality is best-effort across filesystems; main
-        // assertion is the body byte equality above.
         let _ = original_mtime;
     }
 
