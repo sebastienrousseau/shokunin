@@ -30,6 +30,14 @@ jobs:
       - name: Build ssg-wasm with wasm-pack
         run: wasm-pack build crates/ssg-wasm --target web --out-dir ../../pkg
 
+      - name: Install Chrome for headless tests
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Test ssg-wasm (headless Chrome)
+        run: wasm-pack test --headless --chrome crates/ssg-wasm
+
       - name: Upload WASM artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

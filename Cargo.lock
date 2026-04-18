@@ -4561,6 +4561,7 @@ dependencies = [
 name = "ssg-wasm"
 version = "0.0.37"
 dependencies = [
+ "js-sys",
  "serde-wasm-bindgen",
  "serde_json",
  "ssg-core",
