@@ -59,7 +59,7 @@ news_title: "The Sidamo Guji story"
 atom_link: https://heron.coffee/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Heron Coffee
 item_guid: "https://heron.coffee/sidamo-guji-story/index.html"
 item_link: "https://heron.coffee/sidamo-guji-story/index.html"
@@ -108,13 +108,13 @@ site_software: "SSG, Rust"
 
 ## Where it comes from
 
-**Sidamo Guji** is grown by 240 smallholder farmers in the Hambela Wamena district of southern Ethiopia, at elevations between 1,950 and 2,200 metres. The cherries are dried on raised African beds for 18–22 days, then hand-sorted three times before export.
+**Sidamo Guji** is grown by 240 smallholder farmers in Hambela Wamena, southern Ethiopia. They farm at 1,950 to 2,200 metres. Cherries dry on raised beds for 18-22 days, then get hand-sorted three times before export.
 
-Our 60kg sack arrived in London on 28 March, three months after harvest, via Mombasa and Antwerp. The supplier is **Sucafina Specialty**, who pay the cooperative a 30% premium over the local C-market price.
+Our 60kg sack reached London on 28 March, three months after harvest. It came via Mombasa and Antwerp. The supplier is **Sucafina Specialty**, who pay the co-op 30% above the local C-market price.
 
 ## What it tastes like
 
-**Cup notes**: blueberry, jasmine, dark molasses. Best brewed as a V60 or Chemex; we've been pulling it as espresso this week as a special and it's surprisingly clean — high-toned but not thin.
+**Cup notes**: blueberry, jasmine, dark molasses. Best brewed as a V60 or Chemex. We pulled it as espresso this week and it was clean — bright but not thin.
 
 **Brew recipe** *(V60, single cup)*:
 
@@ -126,6 +126,6 @@ Our 60kg sack arrived in London on 28 March, three months after harvest, via Mom
 
 ## Why it costs what it costs
 
-This roast is **£14 for 250g**, which puts it in the upper third of our menu. The price reflects the lot size (we bought 60kg of a 240-farmer microlot), the elevation premium, and the fact that we're shipping a coffee that was on the tree at 2,000m a hundred days ago.
+This roast is **£14 for 250g**. That is in the upper third of our menu. The price covers the small lot size, the high-altitude premium, and fast shipping from origin. This coffee was on the tree at 2,000m just a hundred days ago.
 
-We sell about half our Sidamo to other independent roasters in London. If you're a cafe and want to put it on bar, email **wholesale@heron.coffee**.
+We sell about half our Sidamo to other London roasters. If you run a cafe and want it on bar, email **wholesale@heron.coffee**.

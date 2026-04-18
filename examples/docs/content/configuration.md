@@ -60,7 +60,7 @@ atom_link: https://docs.polaris.example.com/rss.xml
 category: "guides"
 schema: "doc"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Polaris
 item_guid: "https://docs.polaris.example.com/configuration/index.html"
 item_link: "https://docs.polaris.example.com/configuration/index.html"
@@ -109,7 +109,7 @@ site_software: "SSG, Rust"
 
 ## Configuration file
 
-Polaris reads `~/.config/polaris/config.toml` on start. CLI flags override file values; environment variables override both.
+Polaris reads `~/.config/polaris/config.toml` on start. CLI flags override file values. Env vars override both.
 
 ```toml
 [auth]
@@ -130,7 +130,7 @@ colour = "auto"           # "auto" | "always" | "never"
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `POLARIS_TOKEN` | — | Override the cached OAuth token |
-| `POLARIS_ENDPOINT` | `https://api.polaris.example.com` | Override the API endpoint (useful for staging) |
+| `POLARIS_ENDPOINT` | `https://api.polaris.example.com` | Override the API endpoint |
 | `POLARIS_TIMEOUT` | `30` | Per-request timeout in seconds |
 | `POLARIS_FORMAT` | `table` | Default output format |
 | `POLARIS_NO_COLOUR` | unset | Disable ANSI colour in output |

@@ -59,7 +59,7 @@ news_title: "Polaris Maps"
 atom_link: https://mayaokafor.studio/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.40)"
 item_description: RSS feed for Maya Okafor
 item_guid: "https://mayaokafor.studio/polaris-maps/index.html"
 item_link: "https://mayaokafor.studio/polaris-maps/index.html"
@@ -116,20 +116,20 @@ site_software: "SSG, Rust"
 
 ## The problem
 
-Polaris publishes city walking maps for tourism boards. Each map has its own visual language — they're commissioned by the destination, not by Polaris. But Polaris's customers (tourism boards, hotel chains) wanted a consistent *wayfinding* layer: the same symbology for "viewpoint," "step-free entrance," "drinking water" across the whole catalogue, regardless of the map's bespoke art direction.
+Polaris publishes city walking maps for tourism boards. Each map has its own visual style set by the destination. But customers (tourism boards, hotel chains) wanted the same *wayfinding* symbols across every map. They needed one shared set for "viewpoint," "step-free entrance," "drinking water," and more.
 
 ## What I did
 
-**Field research.** Spent 4 days walking with map users in Edinburgh, Bath, and Galway. Recorded where they hesitated, where they checked the legend, where they stopped to ask another person. Observation tally: 312 wayfinding decisions across 23 walks.
+**Field research.** Spent 4 days walking with map users in Edinburgh, Bath, and Galway. Noted where they paused, checked the legend, or asked someone for help. In total: 312 wayfinding choices across 23 walks.
 
-**Symbol audit.** Catalogued every wayfinding symbol Polaris had ever used (218 of them). Reduced to 47 essentials, of which 34 were already used consistently across 70%+ of the catalogue. The remaining 13 were the design problem.
+**Symbol audit.** Listed every wayfinding symbol Polaris had ever used (218 total). Cut them to 47 key symbols. Of those, 34 were already used the same way in over 70% of maps. The other 13 were the design problem.
 
-**Symbol design.** Worked with the cartography team for 8 weeks, iterating on each symbol with print proofs and user testing. Final symbol set was tested with 24 first-time users — recognition rate rose from 64% (legacy symbols) to 93% (new set).
+**Symbol design.** Worked with the cartography team for 8 weeks. We tested each symbol with print proofs and user tests. The final set scored 93% recognition with 24 new users, up from 64%.
 
-**Documentation.** Wrote a 28-page wayfinding standard that Polaris now ships to every new commission's design team. The standard is short on theory and long on examples — it includes the rejected versions of every symbol, with a sentence explaining what was wrong with each.
+**Documentation.** Wrote a 28-page wayfinding standard that Polaris now ships to every new design team. It is light on theory and full of examples. It shows the rejected versions of every symbol with a note on what failed.
 
 ## Outcome
 
-- Wayfinding standard adopted on all new Polaris commissions since launch (14 maps in 8 months)
-- Tourist information centres in Edinburgh and Bath report a measurable drop in "where is X" questions, attributed to clearer map symbology
+- Standard adopted on all new Polaris maps since launch (14 maps in 8 months)
+- Tourist info centres in Edinburgh and Bath report fewer "where is X" questions thanks to clearer symbols
 - Polaris won a 2025 European Cartographic Award for the wayfinding standard

@@ -1,5 +1,6 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
+#![allow(missing_docs)]
 #![cfg(feature = "test-fault-injection")]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 

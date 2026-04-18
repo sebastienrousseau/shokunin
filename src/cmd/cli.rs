@@ -113,6 +113,13 @@ impl Cli {
                     .value_name("N")
                     .value_parser(clap::value_parser!(usize)),
             )
+            .arg(
+                Arg::new("max-memory")
+                    .help("Peak memory budget in MB for streaming compilation (default: 512)")
+                    .long("max-memory")
+                    .value_name("MB")
+                    .value_parser(clap::value_parser!(usize)),
+            )
     }
 
     /// Displays the application banner
@@ -144,6 +151,7 @@ impl Cli {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

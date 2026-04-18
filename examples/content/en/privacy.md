@@ -117,32 +117,30 @@ site_software: "SSG, Rust" ## The software of the site.
 
 ---
 
-## Information Collection and Use
+## Information We Collect
 
-We do not directly collect any personal data from you while you navigate our website. We do not use cookies for logic or save any personal information from a user.
+We do not collect personal data as you browse our website. We do not use cookies for logic. We do not save any personal details from users.
 
 ## Use of Tracking Tools
 
-We use two third-party services to monitor and analyze web traffic: Google Analytics and Microsoft Clarity.
+We use two third-party services to watch and study web traffic. These are Google Analytics and Microsoft Clarity.
 
 ### Google Analytics
 
-Google Analytics is a web analytics service offered by Google that tracks and reports website traffic. Google uses the data collected to track and monitor the use of our Website. This data is shared with other Google services. For more information on the privacy practices of Google, please visit the Google Privacy & Terms web page: [Google Privacy & Terms ⧉](https://policies.google.com/privacy)
+Google Analytics tracks and reports website traffic. Google uses the data it collects to watch how people use our site. This data may be shared with other Google services. Learn more at the [Google Privacy & Terms ⧉](https://policies.google.com/privacy) page.
 
 ### Microsoft Clarity
 
-Microsoft Clarity is a user behaviour analytics tool that helps us understand how users interact with our website. The data collected includes information such as mouse movements, clicks, and scrolls. For more information on the privacy practices of Microsoft, please visit the Microsoft Privacy Statement web page: [Microsoft Privacy Statement ⧉](https://privacy.microsoft.com/en-us/privacystatement)
+Microsoft Clarity helps us see how users interact with our site. It collects data like mouse movements, clicks, and scrolls. Learn more at the [Microsoft Privacy Statement ⧉](https://privacy.microsoft.com/en-us/privacystatement) page.
 
 ## Your Rights
 
-Depending on where you reside, you may have certain rights with respect to your personal data, such as the right to request access, correction, or deletion of your data, or to object to our use of your data.
+Based on where you live, you may have rights over your personal data. You can ask to access, correct, or delete your data. You can also object to how we use your data.
 
 ## Changes to This Privacy Policy
 
-We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.
-
-We advise you to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.
+We may update this Privacy Policy from time to time. We will post any changes on this page. Please review this page now and then for updates. Changes take effect when they are posted here.
 
 ## Contact Us
 
-If you have any questions about this Privacy Policy, please contact us.
+If you have questions about this Privacy Policy, please contact us.

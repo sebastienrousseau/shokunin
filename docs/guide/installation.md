@@ -42,7 +42,7 @@ This builds from source and installs to `~/.cargo/bin`.
 Download the `.deb` package from the [latest release](https://github.com/sebastienrousseau/static-site-generator/releases/latest):
 
 ```sh
-sudo dpkg -i ssg_0.0.36_amd64.deb
+sudo dpkg -i ssg_0.0.40_amd64.deb
 ```
 
 Or build the `.deb` yourself:
@@ -104,7 +104,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ssg = "0.0.36"
+ssg = "0.0.40"
 ```
 
 ## WSL2 / GitHub Codespaces

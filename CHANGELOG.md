@@ -7,6 +7,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.40] - 2026-04-18
+
+### Added
+
+- **Plugin fusion with single-pass I/O** — migrated plugins to fused
+  `transform_html` for dramatically reduced file system overhead.
+- **Interactive islands via Web Components** — client-side interactivity
+  without a framework, using standard custom elements.
+- **Streaming compilation for 100K+ page sites** — constant-memory build
+  pipeline that scales to very large corpora.
+- **Local LLM content pipeline** — on-device language model integration for
+  content generation and transformation.
+- **Visual regression CI** — automated screenshot diffing in the test suite
+  to catch unintended rendering changes.
+- **Readability gate** — enforced prose-quality thresholds so published
+  content meets plain-language standards.
+
 ## [0.0.36] - 2026-04-13
 
 ### Added
@@ -302,6 +319,7 @@ See [release notes](https://github.com/sebastienrousseau/static-site-generator/r
 
 See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
+[0.0.40]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.36...v0.0.40
 [0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
 [0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
 [0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34

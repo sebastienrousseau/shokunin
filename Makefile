@@ -135,6 +135,19 @@ ensure-cargo-deny:
 ensure-cargo-outdated:
 	@command -v cargo-outdated || cargo install cargo-outdated
 
+# Visual regression tests (Playwright)
+.PHONY: visual
+visual: build ## Run visual regression tests against example site.
+	@cd tests/visual && npm ci && npx playwright install --with-deps chromium
+	@cargo run -- -c examples/content/en -o examples/public -t examples/templates/en
+	@cd tests/visual && npx playwright test
+
+.PHONY: visual-update
+visual-update: build ## Update visual regression baselines.
+	@cd tests/visual && npm ci && npx playwright install --with-deps chromium
+	@cargo run -- -c examples/content/en -o examples/public -t examples/templates/en
+	@cd tests/visual && npx playwright test --update-snapshots
+
 # Help target to display callable targets and their descriptions.
 .PHONY: help
 help: ## Display this help.

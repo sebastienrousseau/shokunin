@@ -9,10 +9,8 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fs;
+use std::path::Path;
 
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
@@ -47,6 +45,27 @@ impl Plugin for HighlightPlugin {
         "highlight"
     }
 
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        let result = add_highlight_markup(html);
+        if result == html {
+            return Ok(html.to_string());
+        }
+        if result.contains("highlight.css") {
+            Ok(result)
+        } else {
+            Ok(inject_css_link(&result))
+        }
+    }
+
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
@@ -55,33 +74,6 @@ impl Plugin for HighlightPlugin {
         // Generate highlight.css
         let css = generate_highlight_css(&self.theme);
         fs::write(ctx.site_dir.join("highlight.css"), &css)?;
-
-        // Process HTML files
-        let html_files = collect_html_files(&ctx.site_dir)?;
-        let mut highlighted = 0usize;
-
-        for path in &html_files {
-            let html = fs::read_to_string(path)?;
-            let result = add_highlight_markup(&html);
-            if result != html {
-                // Inject CSS link if not present
-                let output = if result.contains("highlight.css") {
-                    result
-                } else {
-                    inject_css_link(&result)
-                };
-                fs::write(path, output)?;
-                highlighted += 1;
-            }
-        }
-
-        if highlighted > 0 {
-            log::info!(
-                "[highlight] Processed {} file(s), theme: {}",
-                highlighted,
-                self.theme
-            );
-        }
 
         Ok(())
     }
@@ -175,11 +167,13 @@ pre.highlight code {
     .to_string()
 }
 
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+#[cfg(test)]
+fn collect_html_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -320,13 +314,14 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
 
         let html = r#"<html><head><title>X</title></head><body><pre><code class="language-js">let x = 1;</code></pre></body></html>"#;
-        fs::write(site.join("index.html"), html).unwrap();
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         HighlightPlugin::default().after_compile(&ctx).unwrap();
 
         assert!(site.join("highlight.css").exists());
-        let output = fs::read_to_string(site.join("index.html")).unwrap();
+        let output = HighlightPlugin::default()
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("highlight.css"));
         assert!(output.contains("highlight language-js"));
     }
