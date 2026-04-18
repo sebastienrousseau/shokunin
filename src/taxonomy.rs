@@ -691,3 +691,43 @@ mod tests {
         assert_eq!(copy.pages.len(), 1);
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// `slugify` output must contain only (Unicode) alphanumerics and
+        /// hyphens, with no leading/trailing/consecutive hyphens.
+        ///
+        /// NOTE: proptest discovered that `slugify` preserves Unicode
+        /// alphanumeric characters (e.g. `𐞀`). This is intentional —
+        /// the existing test suite asserts `"café"` -> `"café"`.
+        #[test]
+        fn slugify_valid_chars(input in "\\PC*") {
+            let slug = slugify(&input);
+            for ch in slug.chars() {
+                prop_assert!(
+                    ch.is_alphanumeric() || ch == '-',
+                    "unexpected char {:?} in slug {:?}", ch, slug,
+                );
+            }
+            prop_assert!(
+                !slug.starts_with('-'),
+                "slug must not start with hyphen: {:?}", slug,
+            );
+            prop_assert!(
+                !slug.ends_with('-'),
+                "slug must not end with hyphen: {:?}", slug,
+            );
+            prop_assert!(
+                !slug.contains("--"),
+                "slug must not contain consecutive hyphens: {:?}", slug,
+            );
+        }
+    }
+}

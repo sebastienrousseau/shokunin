@@ -120,6 +120,7 @@ serial_test = "3.2"                        # Serialise fail-rs failpoint tests s
 uuid = { version = "1.22.0", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
+proptest = "1"
 
 # -----------------------------------------------------------------------------
 # Dependencies

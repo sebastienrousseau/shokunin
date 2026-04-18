@@ -568,3 +568,27 @@ title: Test
         assert!(result.contains("youtube-nocookie.com"));
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// `expand_shortcodes` must never panic on arbitrary input.
+        #[test]
+        fn expand_never_panics(input in "\\PC*") {
+            let _ = expand_shortcodes(&input);
+        }
+
+        /// Strings without `{{<` must pass through unchanged.
+        #[test]
+        fn no_shortcode_identity(input in "[^{]*") {
+            let output = expand_shortcodes(&input);
+            prop_assert_eq!(&output, &input);
+        }
+    }
+}

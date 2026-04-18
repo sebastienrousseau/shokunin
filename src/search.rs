@@ -1478,3 +1478,24 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// After stripping tags the output must contain no angle brackets.
+        #[test]
+        fn strip_tags_no_angle_brackets(input in "\\PC*") {
+            let stripped = strip_tags(&input);
+            prop_assert!(
+                !stripped.contains('<') && !stripped.contains('>'),
+                "angle brackets survived strip_tags: {:?}", stripped,
+            );
+        }
+    }
+}

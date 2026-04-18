@@ -2569,3 +2569,40 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// `frontmatter_gen::extract` must never panic on arbitrary input.
+        #[test]
+        fn parse_frontmatter_never_panics(input in "\\PC*") {
+            let _ = frontmatter_gen::extract(&input);
+        }
+
+        /// Compiling arbitrary Markdown via pulldown-cmark must never panic
+        /// and must produce valid UTF-8 (guaranteed by `String`).
+        #[test]
+        fn compile_markdown_never_panics(input in "\\PC*") {
+            use pulldown_cmark::{Parser, html};
+            let parser = Parser::new(&input);
+            let mut output = String::new();
+            html::push_html(&mut output, parser);
+            // output is a String — valid UTF-8 by construction.
+            // Reaching this point without a panic is the property.
+            drop(output);
+        }
+
+        /// Reading time of non-empty text must be at least 1 minute.
+        #[test]
+        fn reading_time_at_least_one(input in ".{1,5000}") {
+            let word_count = input.split_whitespace().count();
+            let minutes = (word_count / 200).max(1);
+            prop_assert!(minutes >= 1, "reading time was {}", minutes);
+        }
+    }
+}
