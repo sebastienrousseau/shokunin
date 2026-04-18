@@ -173,6 +173,7 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 #[cfg(all(test, feature = "tera-templates"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::SsgConfig;

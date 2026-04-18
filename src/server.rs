@@ -259,6 +259,7 @@ pub fn prepare_serve_dir(paths: &Paths, serve_dir: &PathBuf) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};

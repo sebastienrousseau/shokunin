@@ -60,7 +60,7 @@ atom_link: https://docs.polaris.example.com/rss.xml
 category: "system"
 schema: "doc"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.41)"
 item_description: RSS feed for Polaris
 item_guid: "https://docs.polaris.example.com/offline/index.html"
 item_link: "https://docs.polaris.example.com/offline/index.html"

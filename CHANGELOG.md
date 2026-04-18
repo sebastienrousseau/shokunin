@@ -7,6 +7,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.41] - 2026-04-18
+
+### Added
+
+- **WebAssembly target** — new `ssg-core` and `ssg-wasm` crates that compile
+  SSG to WebAssembly for browser and edge environments.
+- **Rustdoc CI** — GitHub Actions workflow for rustdoc generation with GitHub
+  Pages deployment.
+
 ## [0.0.36] - 2026-04-13
 
 ### Added
@@ -302,6 +311,7 @@ See [release notes](https://github.com/sebastienrousseau/static-site-generator/r
 
 See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
+[0.0.41]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.36...v0.0.41
 [0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
 [0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
 [0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34

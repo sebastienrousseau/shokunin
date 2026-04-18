@@ -256,7 +256,7 @@ impl BuildCache {
 // Tests
 // =====================================================================
 #[cfg(test)]
-#[allow(unused_results)]
+#[allow(unused_results, clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;

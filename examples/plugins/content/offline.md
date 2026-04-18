@@ -59,7 +59,7 @@ news_title: "Offline"
 atom_link: https://plugins.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.41)"
 item_description: RSS feed for Plugin Pipeline Demo
 item_guid: "https://plugins.example.com/offline/index.html"
 item_link: "https://plugins.example.com/offline/index.html"
