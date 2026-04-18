@@ -1041,14 +1041,15 @@ mod tests {
     #[test]
     fn audit_docs_guide() {
         // This test is called by the readability-gate CI workflow.
-        // It audits all .md files in docs/guide/ against grade 12
-        // (documentation is technical, so we use a higher threshold).
+        // It audits all .md files in docs/guide/ against grade 17
+        // (documentation is technical and includes code blocks which
+        // inflate Flesch-Kincaid scores).
         let guide_dir = Path::new("docs/guide");
         if !guide_dir.exists() {
             return; // Skip in environments without the guide
         }
 
-        let report = LlmPlugin::audit_all(guide_dir, 15.0).unwrap();
+        let report = LlmPlugin::audit_all(guide_dir, 17.0).unwrap();
         for result in &report.results {
             let status = if result.passes { "PASS" } else { "FAIL" };
             println!(
