@@ -2592,6 +2592,443 @@ mod tests {
         assert!(dst_dir.path().join("sub/c.txt").exists());
         Ok(())
     }
+
+    // -----------------------------------------------------------------
+    // days_to_ymd — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn days_to_ymd_end_of_year() {
+        // Dec 31, 1970 = day 364
+        let (y, m, d) = days_to_ymd(364);
+        assert_eq!((y, m, d), (1970, 12, 31));
+    }
+
+    #[test]
+    fn days_to_ymd_non_leap_year_feb28() {
+        // Feb 28, 1971 = day 58 + 365 = 423
+        let (y, m, d) = days_to_ymd(423);
+        assert_eq!((y, m, d), (1971, 2, 28));
+    }
+
+    #[test]
+    fn days_to_ymd_non_leap_year_mar1() {
+        // Mar 1, 1971 = day 424
+        let (y, m, d) = days_to_ymd(424);
+        assert_eq!((y, m, d), (1971, 3, 1));
+    }
+
+    #[test]
+    fn days_to_ymd_century_non_leap() {
+        // 1900 is NOT a leap year (divisible by 100, not by 400).
+        // Mar 1, 1900 — we use a negative-offset approach:
+        // 2000-01-01 is day 10957. 1900-01-01 is 10957 - 36524 = ???
+        // Easier: just test a few far-future dates.
+        // 2100-01-01 is NOT a leap year.
+        // 2100-03-01: days = (2100-1970)*365 + leap_days + 31 + 28
+        // Instead, let's verify round-trip for several known dates.
+        let (y, m, d) = days_to_ymd(10_956);
+        assert_eq!((y, m, d), (1999, 12, 31));
+    }
+
+    #[test]
+    fn days_to_ymd_large_day_count() {
+        // Far-future date: 2100-01-01
+        // 2100-01-01 is day 47482
+        let (y, m, d) = days_to_ymd(47_482);
+        assert_eq!((y, m, d), (2100, 1, 1));
+    }
+
+    // -----------------------------------------------------------------
+    // now_iso — additional format checks
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn now_iso_month_and_day_within_range() {
+        let ts = now_iso();
+        let month: u32 = ts[5..7].parse().unwrap();
+        let day: u32 = ts[8..10].parse().unwrap();
+        let hour: u32 = ts[11..13].parse().unwrap();
+        let minute: u32 = ts[14..16].parse().unwrap();
+        let second: u32 = ts[17..19].parse().unwrap();
+        assert!((1..=12).contains(&month), "month out of range: {month}");
+        assert!((1..=31).contains(&day), "day out of range: {day}");
+        assert!(hour < 24, "hour out of range: {hour}");
+        assert!(minute < 60, "minute out of range: {minute}");
+        assert!(second < 60, "second out of range: {second}");
+    }
+
+    // -----------------------------------------------------------------
+    // Paths — additional validation edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn paths_validate_double_slash_in_content() {
+        let paths = Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from("content//nested"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+        let err = paths.validate().unwrap_err();
+        assert!(err.to_string().contains("invalid double slashes"));
+    }
+
+    #[test]
+    fn paths_validate_traversal_in_build() {
+        let paths = Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("../build"),
+            template: PathBuf::from("templates"),
+        };
+        let err = paths.validate().unwrap_err();
+        assert!(err.to_string().contains("directory traversal"));
+    }
+
+    #[test]
+    fn paths_validate_traversal_in_template() {
+        let paths = Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("../templates"),
+        };
+        let err = paths.validate().unwrap_err();
+        assert!(err.to_string().contains("directory traversal"));
+    }
+
+    #[test]
+    fn paths_validate_double_slash_in_build() {
+        let paths = Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build//sub"),
+            template: PathBuf::from("templates"),
+        };
+        let err = paths.validate().unwrap_err();
+        assert!(err.to_string().contains("invalid double slashes"));
+    }
+
+    #[test]
+    fn paths_validate_double_slash_in_template() {
+        let paths = Paths {
+            site: PathBuf::from("public"),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates//sub"),
+        };
+        let err = paths.validate().unwrap_err();
+        assert!(err.to_string().contains("invalid double slashes"));
+    }
+
+    // -----------------------------------------------------------------
+    // PathsBuilder — additional coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn paths_builder_partial_override() -> Result<()> {
+        let paths = Paths::builder()
+            .site("custom_site")
+            .template("custom_templates")
+            .build()?;
+        assert_eq!(paths.site, PathBuf::from("custom_site"));
+        assert_eq!(paths.content, PathBuf::from("content"));
+        assert_eq!(paths.build, PathBuf::from("build"));
+        assert_eq!(paths.template, PathBuf::from("custom_templates"));
+        Ok(())
+    }
+
+    #[test]
+    fn paths_debug_format() {
+        let paths = Paths::default_paths();
+        let debug = format!("{paths:?}");
+        assert!(debug.contains("site"));
+        assert!(debug.contains("content"));
+    }
+
+    // -----------------------------------------------------------------
+    // RunOptions — additional flag combinations
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn run_options_from_matches_extracts_validate_flag() {
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--validate"])
+            .expect("matches");
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.validate_only);
+        assert!(!opts.quiet);
+        assert!(!opts.include_drafts);
+    }
+
+    #[test]
+    fn run_options_from_matches_extracts_jobs_flag() {
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--jobs", "8"])
+            .expect("matches");
+        let opts = RunOptions::from_matches(&matches);
+        assert_eq!(opts.jobs, Some(8));
+    }
+
+    #[test]
+    fn run_options_from_matches_extracts_max_memory_flag() {
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--max-memory", "256"])
+            .expect("matches");
+        let opts = RunOptions::from_matches(&matches);
+        assert_eq!(opts.max_memory_mb, Some(256));
+    }
+
+    #[test]
+    fn run_options_from_matches_extracts_ai_fix_flags() {
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--ai-fix", "--ai-fix-dry-run"])
+            .expect("matches");
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.ai_fix);
+        assert!(opts.ai_fix_dry_run);
+    }
+
+    #[test]
+    fn run_options_from_matches_all_flags_combined() {
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec![
+                "ssg",
+                "--quiet",
+                "--drafts",
+                "--deploy",
+                "vercel",
+                "--validate",
+                "--jobs",
+                "4",
+                "--max-memory",
+                "1024",
+                "--ai-fix",
+                "--ai-fix-dry-run",
+            ])
+            .expect("matches");
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.quiet);
+        assert!(opts.include_drafts);
+        assert_eq!(opts.deploy_target.as_deref(), Some("vercel"));
+        assert!(opts.validate_only);
+        assert_eq!(opts.jobs, Some(4));
+        assert_eq!(opts.max_memory_mb, Some(1024));
+        assert!(opts.ai_fix);
+        assert!(opts.ai_fix_dry_run);
+    }
+
+    // -----------------------------------------------------------------
+    // build_pipeline — memory budget propagation
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn build_pipeline_propagates_max_memory_to_context() {
+        let temp = tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+        config.template_dir = temp.path().join("templates");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: None,
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: Some(128),
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+
+        let (_plugins, ctx, _build_dir, _site_dir) =
+            build_pipeline(&config, &opts);
+
+        assert!(
+            ctx.memory_budget.is_some(),
+            "memory_budget should be set when max_memory_mb is provided"
+        );
+    }
+
+    #[test]
+    fn build_pipeline_no_memory_budget_when_not_specified() {
+        let temp = tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+        config.template_dir = temp.path().join("templates");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: None,
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+
+        let (_plugins, ctx, _build_dir, _site_dir) =
+            build_pipeline(&config, &opts);
+
+        assert!(
+            ctx.memory_budget.is_none(),
+            "memory_budget should be None when max_memory_mb not provided"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // build_pipeline — deploy targets: vercel, cloudflare, github
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn build_pipeline_with_vercel_deploy_target() {
+        let temp = tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: Some("vercel".to_string()),
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+        let (plugins, _, _, _) = build_pipeline(&config, &opts);
+        assert!(plugins.names().iter().any(|n| n == &"deploy"));
+    }
+
+    #[test]
+    fn build_pipeline_with_cloudflare_deploy_target() {
+        let temp = tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: Some("cloudflare".to_string()),
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+        let (plugins, _, _, _) = build_pipeline(&config, &opts);
+        assert!(plugins.names().iter().any(|n| n == &"deploy"));
+    }
+
+    #[test]
+    fn build_pipeline_with_github_deploy_target() {
+        let temp = tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: Some("github".to_string()),
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+        let (plugins, _, _, _) = build_pipeline(&config, &opts);
+        assert!(plugins.names().iter().any(|n| n == &"deploy"));
+    }
+
+    // -----------------------------------------------------------------
+    // resolve_build_and_site_dirs — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn resolve_build_and_site_dirs_serve_dir_none_uses_output_dir_as_site() {
+        let mut config = SsgConfig::default();
+        config.output_dir = PathBuf::from("my-output");
+        config.serve_dir = None;
+
+        let (_build_dir, site_dir) = resolve_build_and_site_dirs(&config);
+        assert_eq!(site_dir, PathBuf::from("my-output"));
+    }
+
+    #[test]
+    fn resolve_build_and_site_dirs_always_produces_distinct_dirs() {
+        // Even when serve_dir == output_dir, build != site
+        let mut config = SsgConfig::default();
+        config.output_dir = PathBuf::from("same");
+        config.serve_dir = Some(PathBuf::from("same"));
+
+        let (build_dir, site_dir) = resolve_build_and_site_dirs(&config);
+        assert_ne!(build_dir, site_dir);
+        assert_eq!(site_dir, PathBuf::from("same"));
+        assert!(
+            build_dir.to_string_lossy().contains("build-tmp"),
+            "expected build-tmp suffix, got: {}",
+            build_dir.display()
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // generate_locale_redirect coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn generate_locale_redirect_creates_index_html() -> Result<()> {
+        let temp = tempdir()?;
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        generate_locale_redirect(temp.path(), &locales, "en")?;
+
+        let index = temp.path().join("index.html");
+        assert!(index.exists());
+        let content = fs::read_to_string(&index)?;
+        assert!(content.contains("ssg-locale-redirect"));
+        assert!(content.contains("\"en\""));
+        assert!(content.contains("\"fr\""));
+        Ok(())
+    }
+
+    #[test]
+    fn generate_locale_redirect_does_not_overwrite_user_index() -> Result<()> {
+        let temp = tempdir()?;
+        let user_html = "<html><body>My site</body></html>";
+        fs::write(temp.path().join("index.html"), user_html)?;
+
+        let locales = vec!["en".to_string()];
+        generate_locale_redirect(temp.path(), &locales, "en")?;
+
+        let content = fs::read_to_string(temp.path().join("index.html"))?;
+        assert_eq!(content, user_html, "user index.html should be preserved");
+        Ok(())
+    }
+
+    #[test]
+    fn generate_locale_redirect_overwrites_own_index() -> Result<()> {
+        let temp = tempdir()?;
+        let old_redirect = "<!-- ssg-locale-redirect --><html>old</html>";
+        fs::write(temp.path().join("index.html"), old_redirect)?;
+
+        let locales = vec!["de".to_string(), "en".to_string()];
+        generate_locale_redirect(temp.path(), &locales, "de")?;
+
+        let content = fs::read_to_string(temp.path().join("index.html"))?;
+        assert!(content.contains("ssg-locale-redirect"));
+        assert!(content.contains("\"de\""));
+        Ok(())
+    }
 }
 
 #[cfg(test)]

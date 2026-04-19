@@ -628,6 +628,325 @@ mod tests {
         assert_eq!(result.bytes_written, 0);
         Ok(())
     }
+
+    // -----------------------------------------------------------------
+    // stream_copy — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn stream_copy_file_just_over_buffer_boundary() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("over.bin");
+        let dst = tmp.path().join("over_copy.bin");
+        // One byte beyond buffer size forces two reads.
+        let data = vec![0xEFu8; STREAM_BUFFER_SIZE + 1];
+        fs::write(&src, &data)?;
+
+        let bytes = stream_copy(&src, &dst)?;
+        assert_eq!(bytes, (STREAM_BUFFER_SIZE + 1) as u64);
+        assert_eq!(fs::read(&dst)?, data);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_copy_file_just_under_buffer_boundary() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("under.bin");
+        let dst = tmp.path().join("under_copy.bin");
+        let data = vec![0xAAu8; STREAM_BUFFER_SIZE - 1];
+        fs::write(&src, &data)?;
+
+        let bytes = stream_copy(&src, &dst)?;
+        assert_eq!(bytes, (STREAM_BUFFER_SIZE - 1) as u64);
+        assert_eq!(fs::read(&dst)?, data);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_copy_multiple_of_buffer_size() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("multi.bin");
+        let dst = tmp.path().join("multi_copy.bin");
+        let data = vec![0xBBu8; STREAM_BUFFER_SIZE * 3];
+        fs::write(&src, &data)?;
+
+        let bytes = stream_copy(&src, &dst)?;
+        assert_eq!(bytes, (STREAM_BUFFER_SIZE * 3) as u64);
+        assert_eq!(fs::read(&dst)?, data);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_copy_single_byte() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("one.bin");
+        let dst = tmp.path().join("one_copy.bin");
+        fs::write(&src, [0x42])?;
+
+        let bytes = stream_copy(&src, &dst)?;
+        assert_eq!(bytes, 1);
+        assert_eq!(fs::read(&dst)?, vec![0x42]);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_copy_dst_parent_does_not_exist() {
+        let tmp = tempdir().unwrap();
+        let src = tmp.path().join("src.txt");
+        fs::write(&src, "data").unwrap();
+        let dst = tmp.path().join("no/such/parent/out.txt");
+
+        let err = stream_copy(&src, &dst);
+        assert!(err.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // stream_hash — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn stream_hash_multi_chunk_file() -> Result<()> {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("multi_chunk.bin");
+        // Force multiple read iterations
+        let data = vec![0xCCu8; STREAM_BUFFER_SIZE * 2 + 100];
+        fs::write(&path, &data)?;
+
+        let h1 = stream_hash(&path)?;
+        let h2 = stream_hash(&path)?;
+        assert_eq!(h1, h2);
+        assert_eq!(h1.len(), 16);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_hash_exact_buffer_boundary() -> Result<()> {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("exact_buf.bin");
+        let data = vec![0xDDu8; STREAM_BUFFER_SIZE];
+        fs::write(&path, &data)?;
+
+        let hash = stream_hash(&path)?;
+        assert_eq!(hash.len(), 16);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // stream_lines — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn stream_lines_callback_error_propagates() -> Result<()> {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("err.txt");
+        fs::write(&path, "line1\nline2\nline3\n")?;
+
+        let result = stream_lines(&path, |i, _line| {
+            if i == 1 {
+                anyhow::bail!("stop at line 1");
+            }
+            Ok(())
+        });
+
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(msg.contains("stop at line 1"));
+        Ok(())
+    }
+
+    #[test]
+    fn stream_lines_nonexistent_file() {
+        let result = stream_lines(Path::new("/nonexistent_ssg"), |_, _| Ok(()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn stream_lines_line_index_is_zero_based() -> Result<()> {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("indexed.txt");
+        fs::write(&path, "a\nb\nc")?;
+
+        let mut indices = Vec::new();
+        let _ = stream_lines(&path, |i, _| {
+            indices.push(i);
+            Ok(())
+        })?;
+        assert_eq!(indices, vec![0, 1, 2]);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_lines_trailing_newline_does_not_create_extra_line() -> Result<()>
+    {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("trailing.txt");
+        fs::write(&path, "a\nb\n")?;
+
+        let count = stream_lines(&path, |_, _| Ok(()))?;
+        assert_eq!(count, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn stream_lines_many_lines() -> Result<()> {
+        let tmp = tempdir()?;
+        let path = tmp.path().join("many.txt");
+        let mut content = String::new();
+        for i in 0..1000 {
+            content.push_str(&format!("line {i}\n"));
+        }
+        fs::write(&path, &content)?;
+
+        let count = stream_lines(&path, |_, _| Ok(()))?;
+        assert_eq!(count, 1000);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // process_batch — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn process_batch_nonexistent_src_dir() {
+        let tmp = tempdir().unwrap();
+        let result = process_batch(
+            &tmp.path().join("no-such-dir"),
+            &tmp.path().join("dst"),
+            stream_copy,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn process_batch_processor_error_stops_batch() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src)?;
+        fs::write(src.join("a.txt"), "hello")?;
+
+        let result = process_batch(&src, &dst, |_s, _d| {
+            anyhow::bail!("processor error")
+        });
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn process_batch_throughput_finite_for_fast_run() -> Result<()> {
+        let tmp = tempdir()?;
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src)?;
+        for i in 0..5 {
+            fs::write(src.join(format!("f{i}.txt")), "x")?;
+        }
+
+        let result = process_batch(&src, &dst, stream_copy)?;
+        assert_eq!(result.files_processed, 5);
+        assert!(result.duration_ms >= 0.0);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // collect_files_bounded_with_limit — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn collect_files_bounded_with_limit_zero() -> Result<()> {
+        let tmp = tempdir()?;
+        fs::write(tmp.path().join("a.txt"), "x")?;
+
+        let files = collect_files_bounded_with_limit(tmp.path(), 0)?;
+        assert!(files.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_with_limit_exact() -> Result<()> {
+        let tmp = tempdir()?;
+        for i in 0..5 {
+            fs::write(tmp.path().join(format!("f{i}.txt")), "x")?;
+        }
+
+        let files = collect_files_bounded_with_limit(tmp.path(), 5)?;
+        assert_eq!(files.len(), 5);
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_with_limit_deeply_nested() -> Result<()> {
+        let tmp = tempdir()?;
+        let deep = tmp.path().join("a/b/c/d/e");
+        fs::create_dir_all(&deep)?;
+        fs::write(deep.join("leaf.txt"), "deep")?;
+        fs::write(tmp.path().join("root.txt"), "root")?;
+
+        let files = collect_files_bounded(tmp.path())?;
+        assert_eq!(files.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_empty_dir() -> Result<()> {
+        let tmp = tempdir()?;
+        let files = collect_files_bounded(tmp.path())?;
+        assert!(files.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn collect_files_bounded_nonexistent_dir() {
+        let result =
+            collect_files_bounded(Path::new("/nonexistent_ssg_walker"));
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // BatchResult — Clone / Copy / Debug
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn batch_result_clone_and_debug() {
+        let r = BatchResult {
+            files_processed: 5,
+            bytes_read: 500,
+            bytes_written: 400,
+            duration_ms: 2.0,
+            throughput: 2500.0,
+        };
+        let r2 = r;
+        assert_eq!(r.files_processed, r2.files_processed);
+        assert_eq!(format!("{r:?}"), format!("{r2:?}"));
+    }
+
+    // -----------------------------------------------------------------
+    // benchmark_throughput — edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn benchmark_throughput_zero_files() -> Result<()> {
+        let result = benchmark_throughput(0)?;
+        assert_eq!(result.files_processed, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_throughput_single_file() -> Result<()> {
+        let result = benchmark_throughput(1)?;
+        assert_eq!(result.files_processed, 1);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // Constants — sanity checks
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn constants_are_sensible() {
+        assert_eq!(STREAM_BUFFER_SIZE, 8192);
+        assert_eq!(MAX_BATCH_SIZE, 100_000);
+    }
 }
 
 #[cfg(test)]

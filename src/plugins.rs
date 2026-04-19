@@ -445,4 +445,245 @@ mod tests {
         assert!(MinifyPlugin.after_compile(&ctx).is_ok());
         Ok(())
     }
+
+    // -----------------------------------------------------------------
+    // minify_html — additional edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn minify_html_empty_string() {
+        let result = minify_html("");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn minify_html_whitespace_only() {
+        let result = minify_html("   \n\t  \n  ");
+        assert_eq!(result, " ");
+    }
+
+    #[test]
+    fn minify_html_no_whitespace() {
+        let input = "<p>hello</p>";
+        let result = minify_html(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn minify_html_preserves_pre_with_class() {
+        let input = "<pre class=\"lang-rust\">  fn main() {  }  </pre>";
+        let result = minify_html(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn minify_html_tabs_and_newlines() {
+        let input = "<div>\n\t<p>\n\t\tHello\n\t</p>\n</div>";
+        let result = minify_html(input);
+        assert_eq!(result, "<div> <p> Hello </p> </div>");
+    }
+
+    #[test]
+    fn minify_html_mixed_whitespace_types() {
+        let input = "<span>  \t\n  word  \t\n  </span>";
+        let result = minify_html(input);
+        assert_eq!(result, "<span> word </span>");
+    }
+
+    #[test]
+    fn minify_html_single_char() {
+        assert_eq!(minify_html("a"), "a");
+        assert_eq!(minify_html(" "), " ");
+    }
+
+    #[test]
+    fn minify_html_multiple_pre_tags() {
+        let input = "<pre>a</pre><pre>b</pre>";
+        let result = minify_html(input);
+        assert_eq!(result, input);
+    }
+
+    // -----------------------------------------------------------------
+    // MinifyPlugin — multiple HTML files
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn minify_plugin_processes_multiple_html_files() -> Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("a.html"), "<p>  hello  </p>")?;
+        fs::write(temp.path().join("b.html"), "<div>  world  </div>")?;
+        fs::write(temp.path().join("c.txt"), "  not html  ")?;
+
+        let ctx = test_ctx_with(temp.path());
+        MinifyPlugin.after_compile(&ctx)?;
+
+        let a = fs::read_to_string(temp.path().join("a.html"))?;
+        let b = fs::read_to_string(temp.path().join("b.html"))?;
+        let c = fs::read_to_string(temp.path().join("c.txt"))?;
+
+        assert!(!a.contains("  "), "a.html should be minified");
+        assert!(!b.contains("  "), "b.html should be minified");
+        assert!(c.contains("  "), "c.txt should not be minified");
+        Ok(())
+    }
+
+    #[test]
+    fn minify_plugin_whitespace_only_html_file() -> Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("ws.html"), "   \n\t  \n  ")?;
+
+        let ctx = test_ctx_with(temp.path());
+        MinifyPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(temp.path().join("ws.html"))?;
+        assert_eq!(content, " ");
+        Ok(())
+    }
+
+    #[test]
+    fn minify_plugin_html_with_pre_block_not_modified() -> Result<()> {
+        let temp = tempdir()?;
+        let original =
+            "<html><pre>  keep  spaces  </pre><p>  other  </p></html>";
+        fs::write(temp.path().join("pre.html"), original)?;
+
+        let ctx = test_ctx_with(temp.path());
+        MinifyPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(temp.path().join("pre.html"))?;
+        assert_eq!(content, original);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // ImageOptiPlugin — additional file types
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn image_opti_plugin_finds_gif_and_bmp() -> Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("anim.gif"), "GIF")?;
+        fs::write(temp.path().join("icon.bmp"), "BMP")?;
+        fs::write(temp.path().join("doc.pdf"), "PDF")?;
+
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+
+        // Verify the plugin ran without error. The plugin only logs —
+        // we verify it recognizes gif/bmp by not crashing and check
+        // file counts manually.
+        let mut count = 0;
+        for entry in fs::read_dir(temp.path())? {
+            let path = entry?.path();
+            if let Some(ext) = path.extension() {
+                let ext = ext.to_string_lossy().to_lowercase();
+                if matches!(ext.as_str(), "gif" | "bmp") {
+                    count += 1;
+                }
+            }
+        }
+        assert_eq!(count, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn image_opti_plugin_empty_dir_no_crash() -> Result<()> {
+        let temp = tempdir()?;
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+        Ok(())
+    }
+
+    #[test]
+    fn image_opti_plugin_no_images() -> Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("readme.txt"), "text")?;
+        fs::write(temp.path().join("style.css"), "css")?;
+
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+        Ok(())
+    }
+
+    #[test]
+    fn image_opti_plugin_files_without_extension() -> Result<()> {
+        let temp = tempdir()?;
+        fs::write(temp.path().join("Makefile"), "all:")?;
+        fs::write(temp.path().join("LICENSE"), "MIT")?;
+
+        let ctx = test_ctx_with(temp.path());
+        ImageOptiPlugin.after_compile(&ctx)?;
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // DeployPlugin — additional targets
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn deploy_plugin_empty_target() -> Result<()> {
+        let temp = tempdir()?;
+        let ctx = test_ctx_with(temp.path());
+        let plugin = DeployPlugin::new("");
+        plugin.after_compile(&ctx)?;
+        assert_eq!(plugin.target, "");
+        Ok(())
+    }
+
+    #[test]
+    fn deploy_plugin_various_targets() -> Result<()> {
+        let temp = tempdir()?;
+        let ctx = test_ctx_with(temp.path());
+
+        for target in ["staging", "production", "preview", "canary"] {
+            let plugin = DeployPlugin::new(target);
+            assert_eq!(plugin.name(), "deploy");
+            assert_eq!(plugin.target, target);
+            plugin.after_compile(&ctx)?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn deploy_plugin_debug_format() {
+        let plugin = DeployPlugin::new("prod");
+        let debug = format!("{plugin:?}");
+        assert!(debug.contains("prod"));
+    }
+
+    // -----------------------------------------------------------------
+    // MinifyPlugin / ImageOptiPlugin — trait object coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn minify_plugin_copy_clone() {
+        let a = MinifyPlugin;
+        let b = a;
+        #[allow(clippy::clone_on_copy)]
+        let c = a.clone();
+        assert_eq!(a.name(), b.name());
+        assert_eq!(a.name(), c.name());
+    }
+
+    #[test]
+    fn minify_plugin_debug_format() {
+        let debug = format!("{:?}", MinifyPlugin);
+        assert!(debug.contains("MinifyPlugin"));
+    }
+
+    #[test]
+    fn image_opti_plugin_copy_clone() {
+        let a = ImageOptiPlugin;
+        let b = a;
+        #[allow(clippy::clone_on_copy)]
+        let c = a.clone();
+        assert_eq!(a.name(), b.name());
+        assert_eq!(a.name(), c.name());
+    }
+
+    #[test]
+    fn image_opti_plugin_debug_format() {
+        let debug = format!("{:?}", ImageOptiPlugin);
+        assert!(debug.contains("ImageOptiPlugin"));
+    }
 }

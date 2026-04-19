@@ -467,4 +467,329 @@ mod tests {
         assert!(be.line.is_none());
         assert!(be.message.contains("disk full"));
     }
+
+    // -----------------------------------------------------------------
+    // BuildError — additional coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_error_no_file_no_line() {
+        let err = BuildError {
+            file: None,
+            line: None,
+            message: "something broke".to_string(),
+        };
+        let json = err.to_ws_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&json).expect("valid JSON");
+        assert_eq!(parsed["type"], "error");
+        assert!(parsed["file"].is_null());
+        assert!(parsed["line"].is_null());
+        assert_eq!(parsed["message"], "something broke");
+    }
+
+    #[test]
+    fn test_build_error_clone() {
+        let err = BuildError {
+            file: Some("a/b.md".to_string()),
+            line: Some(10),
+            message: "oops".to_string(),
+        };
+        let cloned = err.clone();
+        assert_eq!(cloned.file, err.file);
+        assert_eq!(cloned.line, err.line);
+        assert_eq!(cloned.message, err.message);
+    }
+
+    #[test]
+    fn test_build_error_debug() {
+        let err = BuildError {
+            file: None,
+            line: None,
+            message: "debug test".to_string(),
+        };
+        let debug = format!("{err:?}");
+        assert!(debug.contains("BuildError"));
+        assert!(debug.contains("debug test"));
+    }
+
+    #[test]
+    fn test_build_error_from_anyhow_no_file() {
+        let err = anyhow::anyhow!("generic error without any file path");
+        let be = BuildError::from_anyhow(&err);
+        assert!(be.file.is_none());
+        assert!(be.message.contains("generic error"));
+    }
+
+    #[test]
+    fn test_build_error_from_anyhow_yml_extension() {
+        let err = anyhow::anyhow!("parse error in config/site.yml");
+        let be = BuildError::from_anyhow(&err);
+        assert_eq!(be.file, Some("config/site.yml".to_string()));
+    }
+
+    #[test]
+    fn test_build_error_from_anyhow_yaml_extension() {
+        let err = anyhow::anyhow!("error in data/settings.yaml at line 3");
+        let be = BuildError::from_anyhow(&err);
+        assert_eq!(be.file, Some("data/settings.yaml".to_string()));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_file_from_error — additional coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_file_with_punctuation_around_path() {
+        let msg = "error: 'templates/base.html' not found";
+        let result = extract_file_from_error(msg);
+        assert_eq!(result, Some("templates/base.html".to_string()));
+    }
+
+    #[test]
+    fn test_extract_file_no_slash_in_word() {
+        let msg = "file not found: base.html";
+        let result = extract_file_from_error(msg);
+        assert!(result.is_none(), "no slash means no file path extraction");
+    }
+
+    #[test]
+    fn test_extract_file_multiple_paths_returns_first() {
+        let msg = "failed to read src/a.md and src/b.html";
+        let result = extract_file_from_error(msg);
+        assert_eq!(result, Some("src/a.md".to_string()));
+    }
+
+    #[test]
+    fn test_extract_file_toml_with_trailing_colon() {
+        let msg = "invalid key in config/site.toml: 'foo'";
+        let result = extract_file_from_error(msg);
+        assert_eq!(result, Some("config/site.toml".to_string()));
+    }
+
+    // -----------------------------------------------------------------
+    // clear_error_message — sanity
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_clear_error_message_is_valid_json() {
+        let msg = clear_error_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&msg).expect("valid JSON");
+        assert_eq!(parsed["type"], "clear-error");
+        // Ensure no extra keys leak
+        assert_eq!(parsed.as_object().unwrap().len(), 1);
+    }
+
+    // -----------------------------------------------------------------
+    // resolve_build_and_site_dirs — coverage from pipeline module
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_resolve_dirs_no_serve_dir() {
+        use crate::cmd::SsgConfig;
+        use std::path::PathBuf;
+        let mut config = SsgConfig::default();
+        config.output_dir = PathBuf::from("out");
+        config.serve_dir = None;
+
+        let (build, site) = resolve_build_and_site_dirs(&config);
+        assert_eq!(site, PathBuf::from("out"));
+        // build should differ from site
+        assert_ne!(build, site);
+    }
+
+    #[test]
+    fn test_resolve_dirs_serve_differs_from_output() {
+        use crate::cmd::SsgConfig;
+        use std::path::PathBuf;
+        let mut config = SsgConfig::default();
+        config.output_dir = PathBuf::from("build");
+        config.serve_dir = Some(PathBuf::from("public"));
+
+        let (build, site) = resolve_build_and_site_dirs(&config);
+        assert_eq!(build, PathBuf::from("build"));
+        assert_eq!(site, PathBuf::from("public"));
+    }
+
+    #[test]
+    fn test_resolve_dirs_serve_equals_output() {
+        use crate::cmd::SsgConfig;
+        use std::path::PathBuf;
+        let mut config = SsgConfig::default();
+        config.output_dir = PathBuf::from("dist");
+        config.serve_dir = Some(PathBuf::from("dist"));
+
+        let (build, site) = resolve_build_and_site_dirs(&config);
+        assert_eq!(site, PathBuf::from("dist"));
+        assert_ne!(build, site);
+        assert!(build.to_string_lossy().contains("build-tmp"));
+    }
+
+    // -----------------------------------------------------------------
+    // RunOptions — construction from matches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_run_options_defaults() {
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli.try_get_matches_from(vec!["ssg"]).unwrap();
+        let opts = RunOptions::from_matches(&matches);
+
+        assert!(!opts.quiet);
+        assert!(!opts.include_drafts);
+        assert!(opts.deploy_target.is_none());
+        assert!(!opts.validate_only);
+        assert!(opts.jobs.is_none());
+        assert!(opts.max_memory_mb.is_none());
+        assert!(!opts.ai_fix);
+        assert!(!opts.ai_fix_dry_run);
+    }
+
+    #[test]
+    fn test_run_options_ai_fix_flags() {
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--ai-fix", "--ai-fix-dry-run"])
+            .unwrap();
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.ai_fix);
+        assert!(opts.ai_fix_dry_run);
+    }
+
+    #[test]
+    fn test_run_options_debug() {
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli.try_get_matches_from(vec!["ssg"]).unwrap();
+        let opts = RunOptions::from_matches(&matches);
+        let debug = format!("{opts:?}");
+        assert!(debug.contains("RunOptions"));
+        assert!(debug.contains("quiet"));
+    }
+
+    #[test]
+    fn test_run_options_clone() {
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec!["ssg", "--quiet", "--jobs", "2"])
+            .unwrap();
+        let opts = RunOptions::from_matches(&matches);
+        let cloned = opts.clone();
+        assert_eq!(cloned.quiet, opts.quiet);
+        assert_eq!(cloned.jobs, opts.jobs);
+    }
+
+    // -----------------------------------------------------------------
+    // register_default_plugins — plugin count and ordering
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_register_default_plugins_minimum_count() {
+        use crate::cmd::SsgConfig;
+        use crate::plugin::PluginManager;
+
+        let config = SsgConfig::default();
+        let mut pm = PluginManager::new();
+        register_default_plugins(&mut pm, &config, false, None);
+
+        // We expect a substantial number of default plugins
+        assert!(
+            pm.len() >= 15,
+            "expected at least 15 default plugins, got {}",
+            pm.len()
+        );
+    }
+
+    #[test]
+    fn test_register_default_plugins_includes_key_plugins() {
+        use crate::cmd::SsgConfig;
+        use crate::plugin::PluginManager;
+
+        let config = SsgConfig::default();
+        let mut pm = PluginManager::new();
+        register_default_plugins(&mut pm, &config, false, None);
+
+        let names = pm.names();
+        assert!(names.contains(&"content-validation"));
+        assert!(names.contains(&"drafts"));
+        assert!(names.contains(&"shortcodes"));
+        assert!(names.contains(&"seo"));
+        assert!(names.contains(&"search"));
+        assert!(names.contains(&"minify"));
+        assert!(names.contains(&"livereload"));
+    }
+
+    #[test]
+    fn test_register_default_plugins_with_deploy_adds_deploy_plugin() {
+        use crate::cmd::SsgConfig;
+        use crate::plugin::PluginManager;
+
+        let config = SsgConfig::default();
+        let mut pm_without = PluginManager::new();
+        register_default_plugins(&mut pm_without, &config, false, None);
+        let count_without = pm_without.len();
+
+        let mut pm_with = PluginManager::new();
+        register_default_plugins(&mut pm_with, &config, false, Some("netlify"));
+
+        assert_eq!(pm_with.len(), count_without + 1);
+        assert!(pm_with.names().contains(&"deploy"));
+    }
+
+    #[test]
+    fn test_register_default_plugins_unknown_deploy_skipped() {
+        use crate::cmd::SsgConfig;
+        use crate::plugin::PluginManager;
+
+        let config = SsgConfig::default();
+        let mut pm = PluginManager::new();
+        register_default_plugins(
+            &mut pm,
+            &config,
+            false,
+            Some("nonexistent-platform"),
+        );
+
+        assert!(
+            !pm.names().contains(&"deploy"),
+            "unknown deploy target should not register a deploy plugin"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // build_pipeline — basic wiring
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_pipeline_returns_valid_dirs() {
+        use crate::cmd::SsgConfig;
+
+        let temp = tempfile::tempdir().unwrap();
+        let mut config = SsgConfig::default();
+        config.content_dir = temp.path().join("content");
+        config.output_dir = temp.path().join("public");
+        config.template_dir = temp.path().join("templates");
+
+        let opts = RunOptions {
+            quiet: true,
+            include_drafts: false,
+            deploy_target: None,
+            validate_only: false,
+            jobs: None,
+            max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        };
+
+        let (plugins, ctx, build_dir, site_dir) =
+            build_pipeline(&config, &opts);
+
+        assert!(!plugins.is_empty());
+        assert_ne!(build_dir, site_dir);
+        assert_eq!(ctx.content_dir, temp.path().join("content"));
+    }
 }

@@ -1808,4 +1808,595 @@ mod tests {
         assert_eq!(report.total_files, 1);
         // Should use Kandel-Moles, not Flesch-Kincaid
     }
+
+    // ── Multilingual formulas: empty text ────────────────────────
+
+    #[test]
+    fn kandel_moles_empty_text() {
+        let audit = ReadabilityAudit::analyze_with_lang("", "fr");
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
+        assert!(audit.avg_sentence_len.abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn wiener_empty_text() {
+        let audit = ReadabilityAudit::analyze_with_lang("", "de");
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn gulpease_empty_text() {
+        let audit = ReadabilityAudit::analyze_with_lang("", "it");
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn lix_empty_text() {
+        let audit = ReadabilityAudit::analyze_with_lang("", "sv");
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn fernandez_huerta_empty_text() {
+        let audit = ReadabilityAudit::analyze_with_lang("", "es");
+        assert!(audit.grade_level.abs() < f64::EPSILON);
+        assert!((audit.reading_ease - 100.0).abs() < f64::EPSILON);
+    }
+
+    // ── Multilingual formulas: single-word text ──────────────────
+
+    #[test]
+    fn kandel_moles_single_word() {
+        let audit = ReadabilityAudit::analyze_with_lang("Bonjour", "fr");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.reading_ease >= 0.0);
+        assert!(audit.avg_sentence_len >= 1.0);
+    }
+
+    #[test]
+    fn wiener_single_word() {
+        let audit = ReadabilityAudit::analyze_with_lang("Hallo", "de");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.avg_sentence_len >= 1.0);
+    }
+
+    #[test]
+    fn gulpease_single_word() {
+        let audit = ReadabilityAudit::analyze_with_lang("Ciao", "it");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.avg_sentence_len >= 1.0);
+    }
+
+    #[test]
+    fn lix_single_word() {
+        let audit = ReadabilityAudit::analyze_with_lang("Hej", "sv");
+        assert!(audit.grade_level >= 0.0);
+    }
+
+    #[test]
+    fn fernandez_huerta_single_word() {
+        let audit = ReadabilityAudit::analyze_with_lang("Hola", "es");
+        assert!(audit.grade_level >= 0.0);
+    }
+
+    // ── Multilingual formulas: long text ─────────────────────────
+
+    #[test]
+    fn kandel_moles_long_text() {
+        let text = "Le développement de nouvelles infrastructures \
+                    technologiques nécessite une compréhension \
+                    approfondie des systèmes complexes. \
+                    Les algorithmes sophistiqués démontrent \
+                    une efficacité considérable. \
+                    La modernisation progressive des architectures \
+                    informatiques représente un défi majeur.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "fr");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.reading_ease >= 0.0);
+        assert!(audit.avg_sentence_len > 1.0);
+    }
+
+    #[test]
+    fn wiener_long_text() {
+        let text = "Die Implementierung fortschrittlicher kryptografischer \
+                    Algorithmen erfordert umfassendes Verständnis \
+                    mathematischer Grundlagen. Asymmetrische \
+                    Verschlüsselungsprotokolle weisen erheblichen \
+                    Rechenaufwand auf. Die systematische Optimierung \
+                    komplexer Datenstrukturen bleibt herausfordernd.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "de");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.avg_sentence_len > 1.0);
+    }
+
+    #[test]
+    fn gulpease_long_text() {
+        let text = "L'implementazione di algoritmi crittografici sofisticati \
+                    richiede una comprensione approfondita dei fondamenti \
+                    matematici. I protocolli di crittografia asimmetrica \
+                    dimostrano un considerevole sovraccarico computazionale. \
+                    L'ottimizzazione sistematica delle strutture dati \
+                    complesse rimane impegnativa.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "it");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.avg_sentence_len > 1.0);
+    }
+
+    #[test]
+    fn lix_long_text() {
+        let text = "Implementeringen av avancerade kryptografiska algoritmer \
+                    kräver omfattande förståelse av matematiska grunder. \
+                    Asymmetriska krypteringsprotokoll uppvisar betydande \
+                    beräkningsbelastning. Systematisk optimering av komplexa \
+                    datastrukturer förblir utmanande.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "sv");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.avg_sentence_len > 1.0);
+    }
+
+    #[test]
+    fn fernandez_huerta_long_text() {
+        let text =
+            "La implementación de algoritmos criptográficos sofisticados \
+                    requiere una comprensión profunda de los fundamentos \
+                    matemáticos. Los protocolos de cifrado asimétrico \
+                    demuestran una considerable sobrecarga computacional. \
+                    La optimización sistemática de estructuras de datos \
+                    complejas sigue siendo un desafío.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "es");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.avg_sentence_len > 1.0);
+    }
+
+    // ── WienerSachtextformel: varying syllable counts ────────────
+
+    #[test]
+    fn wiener_mixed_syllable_words() {
+        // Mix of 1-syllable, 2-syllable, 3+ syllable words
+        let text = "Ich bin gut. Das Haus ist sehr interessant. \
+                    Die Universität hat viele Studenten.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "de");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.reading_ease >= 0.0);
+        assert!(audit.reading_ease <= 100.0);
+    }
+
+    // ── LIX: varying character lengths ───────────────────────────
+
+    #[test]
+    fn lix_mixed_word_lengths() {
+        // Short words and long words (>6 chars) to exercise long-word filter
+        let text = "En bok om programmering. \
+                    Datavetenskapliga beräkningar kräver noggrannhet.";
+        let audit = ReadabilityAudit::analyze_with_lang(text, "sv");
+        assert!(audit.grade_level > 0.0);
+        assert!(audit.reading_ease >= 0.0);
+        assert!(audit.reading_ease <= 100.0);
+    }
+
+    // ── extract_frontmatter_lang() edge cases ────────────────────
+
+    #[test]
+    fn extract_frontmatter_lang_toml_with_quotes() {
+        let content =
+            "+++\ntitle = \"Hello\"\nlanguage = \"en-US\"\n+++\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "en-US");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_first_wins() {
+        // language appears before lang — first one should win
+        let content = "---\nlanguage: fr\nlang: de\n---\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "fr");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_whitespace_around_value() {
+        let content = "---\nlanguage:   es  \n---\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "es");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_yaml_quoted_value() {
+        let content = "---\nlanguage: \"de\"\n---\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "de");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_single_quoted() {
+        let content = "---\nlanguage: 'it'\n---\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "it");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_empty_value() {
+        let content = "---\nlanguage: \n---\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_toml_lang_key() {
+        let content = "+++\nlang = \"sv\"\n+++\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "sv");
+    }
+
+    // ── audit_and_fix_with_report edge cases ─────────────────────
+
+    #[test]
+    fn audit_and_fix_with_report_all_passing() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+
+        // Very simple text that passes any reasonable threshold
+        fs::write(
+            content.join("simple.md"),
+            "---\ntitle: Simple\n---\nThe cat sat. It was good.",
+        )
+        .unwrap();
+
+        // Use a high target so everything passes
+        let config = LlmConfig {
+            endpoint: "http://localhost:99999".to_string(),
+            target_grade: 20.0,
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &config).unwrap();
+        // Ollama unreachable => empty report, but test the path
+        assert_eq!(report.total_fixed, 0);
+    }
+
+    #[test]
+    fn audit_and_fix_with_report_empty_dir() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("empty_content");
+        fs::create_dir_all(&content).unwrap();
+
+        let config = LlmConfig {
+            endpoint: "http://localhost:99999".to_string(),
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &config).unwrap();
+        assert_eq!(report.total_audited, 0);
+        assert_eq!(report.total_failing, 0);
+        assert!(report.results.is_empty());
+    }
+
+    #[test]
+    fn audit_all_file_with_empty_body() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+
+        fs::write(content.join("empty_body.md"), "---\ntitle: T\n---\n")
+            .unwrap();
+
+        let report = LlmPlugin::audit_all(&content, 8.0).unwrap();
+        assert_eq!(report.total_files, 1);
+        // Empty body => grade 0, passes any threshold
+        assert_eq!(report.passing, 1);
+    }
+
+    // ── needs_meta_description edge cases ────────────────────────
+
+    #[test]
+    fn needs_meta_description_no_content_attr() {
+        // Has name="description" but no content attribute
+        let html = r#"<meta name="description">"#;
+        // name="description" is found, but content= search fails,
+        // so falls through to the !html.contains check which is false
+        assert!(!needs_meta_description(html));
+    }
+
+    #[test]
+    fn needs_meta_description_multiple_meta_tags() {
+        let html = r#"<meta name="author" content="Alice"><meta name="description" content="This is a sufficiently long description that is more than fifty characters long">"#;
+        assert!(!needs_meta_description(html));
+    }
+
+    #[test]
+    fn needs_meta_description_empty_content() {
+        let html = r#"<meta name="description" content="">"#;
+        assert!(needs_meta_description(html));
+    }
+
+    // ── inject_meta_description with special chars ───────────────
+
+    #[test]
+    fn inject_meta_description_escapes_ampersand() {
+        let html = "<html><head></head><body></body></html>";
+        let result = inject_meta_description(html, "Tom & Jerry");
+        assert!(result.contains("Tom &amp; Jerry"));
+    }
+
+    #[test]
+    fn inject_meta_description_escapes_quotes() {
+        let html = "<html><head></head><body></body></html>";
+        let result = inject_meta_description(html, r#"A "great" page"#);
+        assert!(result.contains("A &quot;great&quot; page"));
+    }
+
+    #[test]
+    fn inject_meta_description_escapes_angle_brackets() {
+        let html = "<html><head></head><body></body></html>";
+        let result = inject_meta_description(html, "x < y");
+        assert!(result.contains("x &lt; y"));
+    }
+
+    #[test]
+    fn inject_meta_description_all_special_chars() {
+        let html = "<html><head></head><body></body></html>";
+        let result = inject_meta_description(html, r#"A & B "C" <D>"#);
+        // The function escapes &, ", < but not > (only the dangerous chars in attribute context)
+        assert!(result.contains("A &amp; B &quot;C&quot; &lt;D>"));
+    }
+
+    // ── extract_page_text edge cases ─────────────────────────────
+
+    #[test]
+    fn extract_page_text_with_main_tag() {
+        let html = "<html><body><div>ignored</div><main><p>Main content here.</p></main></body></html>";
+        let text = extract_page_text(html, 500);
+        assert!(text.contains("Main content here"));
+        // "ignored" is before <main>, so it should not appear
+        assert!(!text.contains("ignored"));
+    }
+
+    #[test]
+    fn extract_page_text_large_truncated() {
+        let long_body = "word ".repeat(200);
+        let html = format!("<body><p>{long_body}</p></body>");
+        let text = extract_page_text(&html, 50);
+        // Should be truncated well under the full 1000-char body
+        assert!(text.len() <= 60);
+    }
+
+    #[test]
+    fn extract_page_text_strips_control_chars() {
+        let html = "<body>Hello\x00\x01World</body>";
+        let text = extract_page_text(html, 100);
+        assert_eq!(text, "HelloWorld");
+    }
+
+    #[test]
+    fn extract_page_text_nested_tags() {
+        let html = "<body><div><span>A</span> <em>B</em></div></body>";
+        let text = extract_page_text(html, 100);
+        assert!(text.contains('A'));
+        assert!(text.contains('B'));
+    }
+
+    // ── generate_missing_alt_text edge cases ─────────────────────
+
+    #[test]
+    fn generate_missing_alt_text_empty_alt() {
+        let mut html =
+            r#"<html><body><img src="photo.jpg" alt=""></body></html>"#
+                .to_string();
+        // Ollama unreachable, so count stays 0, but exercises the tag detection
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://localhost:99999",
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        // Can't generate without Ollama, but exercises alt="" detection path
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn generate_missing_alt_text_missing_closing_bracket() {
+        let mut html =
+            "<html><body><img src=\"photo.jpg\"</body></html>".to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://localhost:99999",
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn generate_missing_alt_text_mixed_images() {
+        let mut html = r#"<html><body>
+            <img src="a.jpg" alt="Good alt">
+            <img src="b.jpg">
+            <img src="c.jpg" alt="">
+        </body></html>"#
+            .to_string();
+        // Exercises the loop: first image has alt (skipped),
+        // second has no alt, third has empty alt.
+        // Ollama unreachable so no actual generation.
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://localhost:99999",
+            true,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn generate_missing_alt_text_with_alt_present() {
+        let mut html =
+            r#"<html><body><img src="x.jpg" alt="Has alt text"></body></html>"#
+                .to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://localhost:99999",
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0);
+    }
+
+    // ── ReadabilityFormula edge cases ─────────────────────────────
+
+    #[test]
+    fn formula_from_lang_underscore_separator() {
+        assert_eq!(
+            ReadabilityFormula::from_lang("en_US"),
+            Some(ReadabilityFormula::FleschKincaid)
+        );
+        assert_eq!(
+            ReadabilityFormula::from_lang("de_DE"),
+            Some(ReadabilityFormula::WienerSachtextformel)
+        );
+    }
+
+    #[test]
+    fn formula_from_lang_norwegian_variants() {
+        assert_eq!(
+            ReadabilityFormula::from_lang("nn"),
+            Some(ReadabilityFormula::Lix)
+        );
+        assert_eq!(
+            ReadabilityFormula::from_lang("no"),
+            Some(ReadabilityFormula::Lix)
+        );
+    }
+
+    // ── LlmConfig / LlmPlugin additional coverage ───────────────
+
+    #[test]
+    fn llm_config_default_values() {
+        let config = LlmConfig::default();
+        assert_eq!(config.model, "llama3");
+        assert_eq!(config.endpoint, "http://localhost:11434");
+        assert!(!config.dry_run);
+    }
+
+    #[test]
+    fn llm_plugin_debug_impl() {
+        let plugin = LlmPlugin::new(LlmConfig::default());
+        let debug = format!("{plugin:?}");
+        assert!(debug.contains("LlmPlugin"));
+        assert!(debug.contains("llama3"));
+    }
+
+    // ── split_frontmatter edge cases ─────────────────────────────
+
+    #[test]
+    fn split_frontmatter_leading_whitespace() {
+        let input = "  ---\ntitle: Hello\n---\nBody.";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.contains("title: Hello"));
+        assert!(body.contains("Body."));
+    }
+
+    #[test]
+    fn split_frontmatter_toml_unclosed() {
+        let input = "+++\ntitle = \"Hello\"\nNo closing delimiter";
+        let (fm, body) = split_frontmatter(input);
+        assert!(fm.is_empty());
+        assert_eq!(body, input);
+    }
+
+    // ── FileAuditResult / AuditReport serialization ──────────────
+
+    #[test]
+    fn file_audit_result_serializes() {
+        let result = FileAuditResult {
+            path: "test.md".to_string(),
+            grade_level: 7.5,
+            reading_ease: 65.0,
+            avg_sentence_len: 12.0,
+            passes: true,
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("\"path\":\"test.md\""));
+        assert!(json.contains("\"passes\":true"));
+    }
+
+    #[test]
+    fn audit_report_serializes() {
+        let report = AuditReport {
+            target_grade: 8.0,
+            total_files: 2,
+            passing: 1,
+            failing: 1,
+            results: vec![],
+        };
+        let json = serde_json::to_string(&report).unwrap();
+        assert!(json.contains("\"target_grade\":8.0"));
+        assert!(json.contains("\"total_files\":2"));
+    }
+
+    // ── inject_jsonld_description edge cases ─────────────────────
+
+    #[test]
+    fn inject_jsonld_with_special_chars() {
+        let html = "<html><head></head><body></body></html>";
+        let result = inject_jsonld_description(html, "Tom & Jerry's \"show\"");
+        assert!(result.contains("application/ld+json"));
+        assert!(result.contains("Tom & Jerry"));
+    }
+
+    // ── count_syllables edge cases ───────────────────────────────
+
+    #[test]
+    fn count_syllables_multiple_vowel_groups() {
+        // "beautiful" has vowel groups: eau-i-u => 3 groups, minus silent e = stays
+        assert!(count_word_syllables("beautiful") >= 2);
+    }
+
+    #[test]
+    fn count_syllables_consecutive_vowels() {
+        // "queue" => qu-eu-e: vowel groups = 2, minus trailing e = 1
+        assert_eq!(count_word_syllables("queue"), 1);
+    }
+
+    #[test]
+    fn count_syllables_all_consonants() {
+        // "rhythm" => y is a vowel => 1 vowel group
+        assert_eq!(count_word_syllables("rhythm"), 1);
+    }
+
+    #[test]
+    fn count_syllables_text_total() {
+        let total = count_syllables("The cat sat on the mat.");
+        assert!(total >= 6); // 6 monosyllabic words
+    }
+
+    #[test]
+    fn count_words_basic() {
+        assert_eq!(count_words("one two three"), 3);
+        assert_eq!(count_words(""), 0);
+        assert_eq!(count_words("   "), 0);
+        assert_eq!(count_words("single"), 1);
+    }
+
+    // ── Readability: numeric edge cases ──────────────────────────
+
+    #[test]
+    fn readability_grade_never_negative() {
+        // Single short word => formula could produce negative, clamped to 0
+        let audit = ReadabilityAudit::analyze("Hi.");
+        assert!(audit.grade_level >= 0.0);
+        assert!(audit.reading_ease >= 0.0);
+        assert!(audit.reading_ease <= 100.0);
+    }
+
+    #[test]
+    fn readability_ease_clamped_to_100() {
+        // Very simple text should not exceed 100
+        let audit = ReadabilityAudit::analyze("Go. Do. Be.");
+        assert!(audit.reading_ease <= 100.0);
+        assert!(audit.reading_ease >= 0.0);
+    }
 }
