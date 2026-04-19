@@ -173,3 +173,80 @@ pub fn log_arguments(log_file: &mut File, date: &str) -> Result<()> {
     writeln!(log_file, "[{date}] INFO process: Arguments processed")
         .context("Failed to write arguments log")
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_log_level_info() {
+        assert_eq!(parse_log_level("info"), LevelFilter::Info);
+    }
+
+    #[test]
+    fn parse_log_level_debug() {
+        assert_eq!(parse_log_level("debug"), LevelFilter::Debug);
+    }
+
+    #[test]
+    fn parse_log_level_warn() {
+        assert_eq!(parse_log_level("warn"), LevelFilter::Warn);
+    }
+
+    #[test]
+    fn parse_log_level_error() {
+        assert_eq!(parse_log_level("error"), LevelFilter::Error);
+    }
+
+    #[test]
+    fn parse_log_level_trace() {
+        assert_eq!(parse_log_level("trace"), LevelFilter::Trace);
+    }
+
+    #[test]
+    fn parse_log_level_case_insensitive() {
+        assert_eq!(parse_log_level("DEBUG"), LevelFilter::Debug);
+        assert_eq!(parse_log_level("Warn"), LevelFilter::Warn);
+    }
+
+    #[test]
+    fn parse_log_level_invalid_defaults_to_info() {
+        assert_eq!(parse_log_level("garbage"), LevelFilter::Info);
+        assert_eq!(parse_log_level(""), LevelFilter::Info);
+    }
+
+    #[test]
+    fn create_log_file_in_tempdir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("test.log");
+        let file = create_log_file(path.to_str().unwrap());
+        assert!(file.is_ok());
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn log_initialization_writes_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("init.log");
+        let mut file = create_log_file(path.to_str().unwrap()).unwrap();
+
+        log_initialization(&mut file, "2025-01-01T00:00:00Z").unwrap();
+
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert!(contents.contains("System initialization complete"));
+        assert!(contents.contains("2025-01-01"));
+    }
+
+    #[test]
+    fn log_arguments_writes_entry() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("args.log");
+        let mut file = create_log_file(path.to_str().unwrap()).unwrap();
+
+        log_arguments(&mut file, "2025-06-15T12:00:00Z").unwrap();
+
+        let contents = std::fs::read_to_string(&path).unwrap();
+        assert!(contents.contains("Arguments processed"));
+    }
+}

@@ -130,6 +130,7 @@ pub(super) fn strip_tags(html: &str) -> String {
 }
 
 /// Collect all `.html` files under `dir` (delegates to `crate::walk`).
+#[allow(dead_code)] // used only by tests in seo::mod
 pub(super) fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
@@ -304,6 +305,197 @@ pub(super) fn extract_meta_date(html: &str) -> Option<String> {
 }
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
+#[allow(dead_code)] // used only by tests in seo::mod
 pub(super) fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files(dir, "html")
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn extract_title_from_html() {
+        let html = "<html><head><title>Test Page</title></head></html>";
+        assert_eq!(extract_title(html), "Test Page");
+    }
+
+    #[test]
+    fn extract_title_empty_no_tag() {
+        let html = "<html><head></head><body>Hello</body></html>";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
+    fn extract_title_empty_tag() {
+        let html = "<html><head><title></title></head></html>";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
+    fn extract_title_nested_tags() {
+        let html = "<title><span>Inner</span></title>";
+        // strip_tags removes the inner span, leaving "Inner"
+        assert_eq!(extract_title(html), "Inner");
+    }
+
+    #[test]
+    fn extract_description_from_body() {
+        let html = "<html><body><main><p>Short description here.</p></main></body></html>";
+        let desc = extract_description(html, 200);
+        assert!(desc.contains("Short description here"));
+    }
+
+    #[test]
+    fn extract_description_truncation() {
+        let long_text = "word ".repeat(100);
+        let html = format!("<main><p>{long_text}</p></main>");
+        let desc = extract_description(&html, 50);
+        assert!(desc.len() <= 50);
+    }
+
+    #[test]
+    fn strip_tags_basic() {
+        assert_eq!(strip_tags("<p>Hello <b>world</b></p>"), "Hello world");
+    }
+
+    #[test]
+    fn strip_tags_empty() {
+        assert_eq!(strip_tags(""), "");
+    }
+
+    #[test]
+    fn strip_tags_no_tags() {
+        assert_eq!(strip_tags("plain text"), "plain text");
+    }
+
+    #[test]
+    fn strip_tags_self_closing() {
+        let result = strip_tags("<img src=\"x\"/>text");
+        assert!(result.contains("text"));
+        assert!(!result.contains("img"));
+    }
+
+    #[test]
+    fn truncate_short_text_unchanged() {
+        assert_eq!(truncate_at_word_boundary("short", 100), "short");
+    }
+
+    #[test]
+    fn truncate_long_text_at_word() {
+        let text = "one two three four five six";
+        let result = truncate_at_word_boundary(text, 15);
+        assert!(result.len() <= 15);
+        // Should cut at a space
+        assert!(!result.ends_with(' '));
+        assert_eq!(result, "one two three");
+    }
+
+    #[test]
+    fn truncate_unicode() {
+        let text = "日本語 テスト データ";
+        let result = truncate_at_word_boundary(text, 15);
+        // Must not panic on multi-byte boundaries
+        assert!(result.len() <= 15);
+    }
+
+    #[test]
+    fn collect_html_files_finds_files() {
+        let tmp = tempdir().unwrap();
+        let sub = tmp.path().join("sub");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(tmp.path().join("index.html"), "<html></html>").unwrap();
+        fs::write(sub.join("page.html"), "<html></html>").unwrap();
+
+        let files = collect_html_files(tmp.path()).unwrap();
+        assert_eq!(files.len(), 2);
+    }
+
+    #[test]
+    fn collect_html_files_recursive_finds_files() {
+        let tmp = tempdir().unwrap();
+        let sub = tmp.path().join("sub");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(tmp.path().join("index.html"), "<html></html>").unwrap();
+        fs::write(sub.join("page.html"), "<html></html>").unwrap();
+        fs::write(sub.join("style.css"), "body{}").unwrap();
+
+        let files = collect_html_files_recursive(tmp.path()).unwrap();
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().all(|p| p.extension().unwrap() == "html"));
+    }
+
+    #[test]
+    fn collect_html_files_recursive_empty_dir() {
+        let tmp = tempdir().unwrap();
+        let files = collect_html_files_recursive(tmp.path()).unwrap();
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn escape_attr_special_chars() {
+        assert_eq!(escape_attr("a&b<c>d\"e"), "a&amp;b&lt;c&gt;d&quot;e");
+    }
+
+    #[test]
+    fn has_meta_tag_present() {
+        let html = r#"<meta property="og:title" content="Hi">"#;
+        assert!(has_meta_tag(html, "og:title"));
+    }
+
+    #[test]
+    fn has_meta_tag_absent() {
+        let html = "<html><head></head></html>";
+        assert!(!has_meta_tag(html, "og:title"));
+    }
+
+    #[test]
+    fn extract_canonical_found() {
+        let html = r#"<link rel="canonical" href="https://example.com/page">"#;
+        assert_eq!(extract_canonical(html), "https://example.com/page");
+    }
+
+    #[test]
+    fn extract_canonical_missing() {
+        let html = "<html><head></head></html>";
+        assert_eq!(extract_canonical(html), "");
+    }
+
+    #[test]
+    fn extract_existing_meta_by_name() {
+        let html = r#"<meta name="author" content="Alice">"#;
+        assert_eq!(extract_existing_meta(html, "author"), "Alice");
+    }
+
+    #[test]
+    fn extract_html_lang_found() {
+        let html = r#"<html lang="fr"><head></head></html>"#;
+        assert_eq!(extract_html_lang(html), "fr");
+    }
+
+    #[test]
+    fn extract_html_lang_missing() {
+        let html = "<html><head></head></html>";
+        assert_eq!(extract_html_lang(html), "");
+    }
+
+    #[test]
+    fn extract_date_from_html_found() {
+        let html = r#"{"datePublished":"2025-01-15"}"#;
+        assert_eq!(
+            extract_date_from_html(html, "datePublished"),
+            Some("2025-01-15".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_date_from_html_missing() {
+        assert_eq!(
+            extract_date_from_html("<html></html>", "datePublished"),
+            None
+        );
+    }
 }

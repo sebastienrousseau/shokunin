@@ -150,6 +150,7 @@ fn livereload_script(port: u16) -> String {
 <script data-ssg-livereload>
 (function(){{
   var url='ws://localhost:{port}',delay=1000,maxDelay=10000,indicator=null;
+  try{{var sp=sessionStorage.getItem('ssg-scroll');if(sp){{sessionStorage.removeItem('ssg-scroll');var p=JSON.parse(sp);setTimeout(function(){{scrollTo(p.x,p.y);}},50);}}}}catch(se){{}}
   function showIndicator(){{
     if(indicator)return;
     indicator=document.createElement('div');
@@ -163,11 +164,57 @@ fn livereload_script(port: u16) -> String {
   function hideIndicator(){{
     if(indicator){{indicator.remove();indicator=null;}}
   }}
+  function showOverlay(msg){{
+    hideOverlay();
+    var d=document.createElement('div');
+    d.id='ssg-error-overlay';
+    d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);color:#fff;font-family:monospace;font-size:14px;z-index:999999;padding:32px;overflow:auto;';
+    var c=document.createElement('div');
+    c.style.cssText='max-width:800px;margin:0 auto;';
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
+    var title=document.createElement('span');
+    title.style.cssText='color:#ff6b6b;font-size:18px;font-weight:bold;';
+    title.textContent='Build Error';
+    var btn=document.createElement('button');
+    btn.textContent='\u2715';
+    btn.style.cssText='background:none;border:1px solid #666;color:#fff;padding:4px 12px;cursor:pointer;border-radius:4px;';
+    btn.addEventListener('click',hideOverlay);
+    hdr.appendChild(title);
+    hdr.appendChild(btn);
+    c.appendChild(hdr);
+    if(msg.file){{
+      var fp=document.createElement('div');
+      fp.style.cssText='color:#ffd93d;margin-bottom:8px;';
+      fp.textContent=msg.file+(msg.line?':'+msg.line:'');
+      c.appendChild(fp);
+    }}
+    var pre=document.createElement('pre');
+    pre.style.cssText='background:#1a1a2e;padding:16px;border-radius:8px;border-left:4px solid #ff6b6b;overflow-x:auto;white-space:pre-wrap;word-break:break-word;';
+    pre.textContent=msg.message;
+    c.appendChild(pre);
+    d.appendChild(c);
+    document.body.appendChild(d);
+  }}
+  function hideOverlay(){{var e=document.getElementById('ssg-error-overlay');if(e)e.remove();}}
   function connect(){{
     try{{
       var ws=new WebSocket(url);
       ws.onopen=function(){{delay=1000;hideIndicator();}};
-      ws.onmessage=function(e){{if(e.data==='reload')location.reload();}};
+      ws.onmessage=function(e){{
+        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}location.reload();}}
+        try{{var msg=JSON.parse(e.data);
+        if(msg.type==='error'){{showOverlay(msg);}}
+        else if(msg.type==='clear-error'){{hideOverlay();}}
+        else if(msg.type==='css-reload'){{
+          var links=document.querySelectorAll('link[rel=stylesheet]');
+          links.forEach(function(link){{
+            var href=link.getAttribute('href');
+            if(href){{link.setAttribute('href',href.split('?')[0]+'?v='+Date.now());}}
+          }});
+        }}
+        }}catch(x){{}}
+      }};
       ws.onclose=function(){{
         var d=delay;
         delay=Math.min(delay*2,maxDelay);
@@ -191,7 +238,19 @@ fn livereload_script(port: u16) -> String {
     )
 }
 
+/// Returns a WebSocket message for CSS-only reload.
+#[must_use]
+#[allow(dead_code)]
+pub fn css_reload_message(css_path: &str) -> String {
+    serde_json::json!({
+        "type": "css-reload",
+        "file": css_path,
+    })
+    .to_string()
+}
+
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -476,5 +535,62 @@ mod tests {
         // Assert — returns Ok, does not error on missing directory
         assert!(result.is_ok());
         Ok(())
+    }
+
+    #[test]
+    fn test_script_contains_error_overlay() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("showOverlay"),
+            "script must contain showOverlay function"
+        );
+        assert!(
+            script.contains("hideOverlay"),
+            "script must contain hideOverlay function"
+        );
+        assert!(
+            script.contains("ssg-error-overlay"),
+            "script must contain overlay element id"
+        );
+    }
+
+    #[test]
+    fn test_script_backward_compat() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("'reload'"),
+            "script must still handle plain 'reload' messages"
+        );
+    }
+
+    #[test]
+    fn test_script_contains_css_reload() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("css-reload"),
+            "script must contain css-reload handler"
+        );
+    }
+
+    #[test]
+    fn test_script_contains_scroll_preservation() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("ssg-scroll"),
+            "script must contain scroll preservation key"
+        );
+        assert!(
+            script.contains("sessionStorage"),
+            "script must use sessionStorage for scroll"
+        );
+    }
+
+    #[test]
+    fn test_css_reload_message() {
+        let msg = css_reload_message("styles/main.css");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&msg).expect("valid JSON");
+        assert_eq!(parsed["type"], "css-reload");
+        assert_eq!(parsed["file"], "styles/main.css");
     }
 }

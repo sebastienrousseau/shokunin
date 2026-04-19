@@ -276,6 +276,7 @@ pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -626,5 +627,28 @@ mod tests {
         assert_eq!(result.bytes_read, 0);
         assert_eq!(result.bytes_written, 0);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// Hashing the same content twice must yield the same fingerprint.
+        #[test]
+        fn stream_hash_deterministic(data in proptest::collection::vec(any::<u8>(), 0..4096)) {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("input.bin");
+            fs::write(&path, &data).unwrap();
+
+            let h1 = stream_hash(&path).unwrap();
+            let h2 = stream_hash(&path).unwrap();
+            prop_assert_eq!(h1, h2);
+        }
     }
 }

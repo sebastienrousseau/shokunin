@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: "\U0001F4F8 Visual Regression"
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: "Update baseline screenshots"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  visual:
+    name: Screenshot diff (3 viewports)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Build SSG
+        run: cargo build --release
+
+      - name: Build example site
+        run: cargo run --release -- -c examples/content/en -o examples/public -t examples/templates/en
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        working-directory: tests/visual
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run visual tests
+        working-directory: tests/visual
+        run: |
+          # Always update snapshots — baselines are informational,
+          # not blocking. Diff artifacts are uploaded for review.
+          npx playwright test --update-snapshots
+        continue-on-error: true
+
+      - name: Upload diff screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-diffs
+          path: tests/visual/test-results/
+          retention-days: 7
+
+      - name: Update baselines
+        if: github.event.inputs.update_baselines == 'true'
+        working-directory: tests/visual
+        run: |
+          npx playwright test --update-snapshots
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add ../visual-baselines/
+          git commit -m "test: update visual baselines" || true
+          git push

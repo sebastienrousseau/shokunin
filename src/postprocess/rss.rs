@@ -263,7 +263,9 @@ fn extract_last_build_date(articles: &[(String, String)]) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
     use super::*;
     use crate::plugin::PluginContext;
     use std::collections::HashMap;
@@ -515,6 +517,167 @@ mod tests {
 
         let result = fs::read_to_string(&rss_path)?;
         assert_eq!(result, original, "Should not modify feed with >1 items");
+        Ok(())
+    }
+
+    #[test]
+    fn test_collect_articles_empty_entries() {
+        let articles = collect_articles(&[], "https://example.com");
+        assert!(
+            articles.is_empty(),
+            "no meta entries should produce no articles"
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_skips_empty_title() {
+        let mut meta = HashMap::new();
+        let _ =
+            meta.insert("description".to_string(), "no title here".to_string());
+        let entries = vec![("page".to_string(), meta)];
+        let articles = collect_articles(&entries, "https://example.com");
+        assert!(
+            articles.is_empty(),
+            "entries without title should be skipped"
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_skips_empty_path() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Has Title".to_string());
+        let entries = vec![(String::new(), meta)];
+        let articles = collect_articles(&entries, "https://example.com");
+        assert!(
+            articles.is_empty(),
+            "entries with empty path should be skipped"
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_multiple_entries_sorted() {
+        let mut meta1 = HashMap::new();
+        let _ = meta1.insert("title".to_string(), "Older".to_string());
+        let _ = meta1.insert("description".to_string(), "old".to_string());
+        let _ = meta1.insert(
+            "item_pub_date".to_string(),
+            "Mon, 01 Jan 2024 00:00:00 +0000".to_string(),
+        );
+        let _ = meta1.insert("author".to_string(), "A".to_string());
+
+        let mut meta2 = HashMap::new();
+        let _ = meta2.insert("title".to_string(), "Newer".to_string());
+        let _ = meta2.insert("description".to_string(), "new".to_string());
+        let _ = meta2.insert(
+            "item_pub_date".to_string(),
+            "Wed, 01 Jan 2025 00:00:00 +0000".to_string(),
+        );
+        let _ = meta2.insert("author".to_string(), "B".to_string());
+
+        let entries = vec![
+            ("old-post".to_string(), meta1),
+            ("new-post".to_string(), meta2),
+        ];
+        let mut articles = collect_articles(&entries, "https://example.com");
+        assert_eq!(articles.len(), 2);
+
+        // Sort descending like the plugin does
+        articles.sort_by(|a, b| b.0.cmp(&a.0));
+        assert!(
+            articles[0].1.contains("<title>Newer</title>"),
+            "newest article should sort first"
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_xml_escapes_description() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Escape Test".to_string());
+        let _ = meta.insert(
+            "description".to_string(),
+            "Use <b>bold</b> & \"quotes\"".to_string(),
+        );
+        let _ = meta.insert("author".to_string(), "X".to_string());
+        let entries = vec![("esc".to_string(), meta)];
+        let articles = collect_articles(&entries, "");
+        assert_eq!(articles.len(), 1);
+        let xml = &articles[0].1;
+        assert!(
+            xml.contains("&lt;b&gt;bold&lt;/b&gt;"),
+            "angle brackets should be escaped: {xml}"
+        );
+        assert!(xml.contains("&amp;"), "ampersands should be escaped: {xml}");
+    }
+
+    #[test]
+    fn test_build_rss_channel_minimal() {
+        let result = build_rss_channel(
+            "Title",
+            "https://x.example",
+            "Desc",
+            "https://x.example",
+            "",
+            "",
+            "",
+            "",
+        );
+        assert!(result.contains("<title>Title</title>"));
+        assert!(result.contains("<link>https://x.example</link>"));
+        assert!(result.contains("<description>Desc</description>"));
+        assert!(
+            !result.contains("<language>"),
+            "no language when empty string supplied"
+        );
+        assert!(
+            !result.contains("<lastBuildDate>"),
+            "no lastBuildDate when empty string supplied"
+        );
+    }
+
+    #[test]
+    fn test_build_rss_channel_with_all_extras() {
+        let result = build_rss_channel(
+            "T",
+            "L",
+            "D",
+            "https://x.example",
+            "en",
+            "Mon, 01 Jan 2024 00:00:00 +0000",
+            "Copyright 2024 X",
+            "<item><title>A</title></item>",
+        );
+        assert!(result.contains("<language>en</language>"));
+        assert!(result.contains(
+            "<lastBuildDate>Mon, 01 Jan 2024 00:00:00 +0000</lastBuildDate>"
+        ));
+        assert!(result.contains("<copyright>Copyright 2024 X</copyright>"));
+        assert!(result.contains("<item><title>A</title></item>"));
+    }
+
+    #[test]
+    fn test_extract_last_build_date_from_articles() {
+        let articles = vec![
+            ("2025".to_string(), "<item><pubDate>Mon, 01 Sep 2025 12:00:00 +0000</pubDate></item>".to_string()),
+            ("2024".to_string(), "<item><pubDate>Mon, 01 Jan 2024 00:00:00 +0000</pubDate></item>".to_string()),
+        ];
+        let date = extract_last_build_date(&articles);
+        assert_eq!(date, "Mon, 01 Sep 2025 12:00:00 +0000");
+    }
+
+    #[test]
+    fn test_extract_last_build_date_empty() {
+        let articles: Vec<(String, String)> = vec![];
+        let date = extract_last_build_date(&articles);
+        assert!(date.is_empty());
+    }
+
+    #[test]
+    fn test_rss_no_file_is_noop() -> Result<()> {
+        let tmp = tempdir()?;
+        // No rss.xml exists
+        let ctx = test_ctx(tmp.path());
+        RssAggregatePlugin.after_compile(&ctx)?;
+        assert!(!tmp.path().join("rss.xml").exists());
         Ok(())
     }
 }

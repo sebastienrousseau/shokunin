@@ -59,7 +59,7 @@ news_title: "Field Notes Collective"
 atom_link: https://mayaokafor.studio/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Maya Okafor
 item_guid: "https://mayaokafor.studio/field-notes-collective/index.html"
 item_link: "https://mayaokafor.studio/field-notes-collective/index.html"
@@ -116,22 +116,22 @@ site_software: "SSG, Rust"
 
 ## The problem
 
-FNC had 14 years of field research — interviews with smallholders, soil sample reports, climate observation logs — locked inside a folder hierarchy on Dropbox. New researchers couldn't find prior work; old researchers couldn't trust that their work would still be findable in five years.
+FNC had 14 years of field research locked in Dropbox folders. This included interviews, soil sample reports, and climate logs. New researchers could not find prior work. Old researchers had no confidence their work would stay findable.
 
-They had a budget for "a website" but no clarity on whether the answer was a CMS, a static archive, or something else entirely.
+They had a budget for "a website." But they did not know if they needed a CMS, a static archive, or something else.
 
 ## What I did
 
-**Week 1 — Discovery.** Twelve 45-minute interviews with current and former field researchers across Nigeria, Kenya, and Ghana. The pattern was clear: researchers needed to find prior work *by location and topic*, not by author or date. Existing folder structure made both impossible.
+**Week 1 — Discovery.** Twelve 45-minute interviews with current and former field researchers in Nigeria, Kenya, and Ghana. The pattern was clear: people needed to find work *by location and topic*, not by author or date. The old folder layout made both impossible.
 
-**Week 2 — IA design.** Card-sorted 200 sample documents with five participants. Settled on a two-axis taxonomy: ecological zone (12 categories) crossed with topic (8 categories). Validated with a tree test — task success rose from 32% on the old structure to 89% on the proposed one.
+**Week 2 — IA design.** Card-sorted 200 sample documents with five people. Chose a two-axis system: ecological zone (12 types) crossed with topic (8 types). A tree test showed task success rose from 32% to 89%.
 
-**Weeks 3-5 — Build.** Worked with FNC's part-time developer to migrate documents into a static-site archive with full-text search and per-axis filtering.
+**Weeks 3-5 — Build.** Worked with FNC's part-time developer to move documents into a static-site archive. Added full-text search and per-axis filtering.
 
-**Week 6 — Handover.** Wrote a maintenance guide for adding new documents. Trained two staff members in 90 minutes each.
+**Week 6 — Handover.** Wrote a guide for adding new documents. Trained two staff members in 90 minutes each.
 
 ## Outcome
 
-- Search-to-find time dropped from a median of 11 minutes to 47 seconds (measured before and after with the same 8 tasks)
-- The two staff trained in week 6 have added 36 new documents in the four months since launch with no support questions
+- Search-to-find time dropped from 11 minutes to 47 seconds (same 8 tasks, before and after)
+- The two trained staff have added 36 new documents in four months with no support questions
 - FNC's funder cited the archive as a key factor in renewing their three-year grant

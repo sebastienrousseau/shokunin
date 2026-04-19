@@ -1,11 +1,10 @@
 #![forbid(unsafe_code)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
-    html_favicon_url = "https://cloudcdn.pro/static-site-generator/images/favicon.ico",
-    html_logo_url = "https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg",
+    html_favicon_url = "https://cloudcdn.pro/static-site-generator/v1/favicon.ico",
+    html_logo_url = "https://cloudcdn.pro/static-site-generator/v1/logos/static-site-generator.svg",
     html_root_url = "https://docs.rs/ssg"
 )]
 #![crate_name = "ssg"]
@@ -32,7 +31,7 @@ pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
-#[allow(unreachable_pub)]
+#[allow(unreachable_pub, clippy::unwrap_used, clippy::expect_used)]
 pub(crate) mod test_support {
     use std::sync::Once;
 
@@ -104,6 +103,10 @@ pub mod cache;
 pub mod cmd;
 /// Typed content collections with frontmatter schema validation.
 pub mod content;
+/// Content Security Policy hardening: inline extraction + SRI.
+pub mod csp;
+/// Page dependency graph for incremental rebuilds.
+pub mod depgraph;
 /// Deployment adapter generation.
 pub mod deploy;
 /// Draft content filtering.
@@ -119,8 +122,12 @@ pub mod i18n;
 /// Image optimization with WebP and responsive srcset.
 #[cfg(feature = "image-optimization")]
 pub mod image_plugin;
+/// Interactive islands — lazy-hydrating Web Components.
+pub mod islands;
 /// WebSocket-based live-reload script injection.
 pub mod livereload;
+/// Local LLM content augmentation plugin.
+pub mod llm;
 /// Logging infrastructure.
 pub mod logging;
 /// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
@@ -152,14 +159,16 @@ pub mod server;
 pub mod shortcodes;
 /// High-performance streaming file processor.
 pub mod stream;
+/// Streaming compilation for large (100K+ page) sites.
+pub mod streaming;
 /// Taxonomy generation (tags, categories).
 pub mod taxonomy;
-/// Tera templating engine integration.
-#[cfg(feature = "tera-templates")]
-pub mod tera_engine;
-/// Tera template rendering plugin.
-#[cfg(feature = "tera-templates")]
-pub mod tera_plugin;
+/// Template engine integration (MiniJinja).
+#[cfg(feature = "templates")]
+pub mod template_engine;
+/// Template rendering plugin.
+#[cfg(feature = "templates")]
+pub mod template_plugin;
 /// File-watching for live rebuild.
 pub mod watch;
 /// Re-exports
@@ -465,6 +474,7 @@ pub fn run() -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::Cli;
@@ -2036,6 +2046,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2060,6 +2071,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2069,6 +2081,7 @@ mod tests {
             deploy_target: Some("netlify".to_string()),
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2088,6 +2101,7 @@ mod tests {
             deploy_target: Some("nonsense-platform".to_string()),
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2108,6 +2122,7 @@ mod tests {
                 deploy_target: Some(target.to_string()),
                 validate_only: false,
                 jobs: None,
+                max_memory_mb: None,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2296,6 +2311,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2342,6 +2358,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2387,6 +2404,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2419,6 +2437,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2449,6 +2468,7 @@ mod tests {
             deploy_target: None,
             validate_only: false,
             jobs: None,
+            max_memory_mb: None,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));
@@ -2549,5 +2569,42 @@ mod tests {
         assert!(dst_dir.path().join("b.txt").exists());
         assert!(dst_dir.path().join("sub/c.txt").exists());
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// `frontmatter_gen::extract` must never panic on arbitrary input.
+        #[test]
+        fn parse_frontmatter_never_panics(input in "\\PC*") {
+            let _ = frontmatter_gen::extract(&input);
+        }
+
+        /// Compiling arbitrary Markdown via pulldown-cmark must never panic
+        /// and must produce valid UTF-8 (guaranteed by `String`).
+        #[test]
+        fn compile_markdown_never_panics(input in "\\PC*") {
+            use pulldown_cmark::{Parser, html};
+            let parser = Parser::new(&input);
+            let mut output = String::new();
+            html::push_html(&mut output, parser);
+            // output is a String — valid UTF-8 by construction.
+            // Reaching this point without a panic is the property.
+            drop(output);
+        }
+
+        /// Reading time of non-empty text must be at least 1 minute.
+        #[test]
+        fn reading_time_at_least_one(input in ".{1,5000}") {
+            let word_count = input.split_whitespace().count();
+            let minutes = (word_count / 200).max(1);
+            prop_assert!(minutes >= 1, "reading time was {}", minutes);
+        }
     }
 }

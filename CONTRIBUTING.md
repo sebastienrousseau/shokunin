@@ -201,6 +201,63 @@ impl Plugin for MyPlugin {
 - Ensure CI passes before requesting review.
 - Reference related issues (e.g., `Closes #123`).
 
+## Testing standards
+
+SSG enforces enterprise-grade quality gates. All PRs must pass:
+
+### Coverage floors (CI-enforced)
+
+| Metric | Floor |
+|--------|-------|
+| Regions | 95% |
+| Lines | 95% |
+| Functions | 95% |
+
+Coverage is measured with `cargo llvm-cov` and enforced in CI. If a PR
+drops coverage below the floor, the build fails.
+
+### Property-based testing
+
+The project uses [proptest](https://crates.io/crates/proptest) for
+generative testing. Property tests generate 1,000+ random inputs per
+property and verify invariants like "never panics" and "output is valid."
+
+Add property tests when modifying:
+- Frontmatter parsing (`src/frontmatter.rs`)
+- Shortcode expansion (`src/shortcodes.rs`)
+- Markdown rendering (`src/markdown_ext.rs`)
+- Slug generation (`src/taxonomy.rs`)
+- Cache hashing (`src/stream.rs`)
+
+### Performance regression gates
+
+`tests/perf_regression.rs` contains timed assertions:
+
+| Operation | Budget |
+|-----------|--------|
+| 100-page compilation | < 5s |
+| 50-page search index | < 500ms |
+| 1000-file cache fingerprint | < 500ms |
+| 10K depgraph invalidation | < 200ms |
+
+If a change makes an operation slower than its budget, CI fails.
+
+### Enterprise regression suite
+
+`tests/perf_regression.rs` also validates:
+- **Cache resilience**: corruption recovery, determinism, deleted files
+- **Licence compliance**: SPDX headers on all `.rs` files, correct identifier
+- **Localisation**: Unicode/RTL/CJK slug generation, BCP 47 codes
+- **Pipeline integrity**: fused transform idempotency, plugin order
+
+### Running tests locally
+
+```bash
+cargo test --workspace              # All tests
+cargo test --test perf_regression   # Performance + enterprise gates
+cargo test --test example_outputs   # Example validation (serial, slow)
+```
+
 ## Code of Conduct
 
 Please read our [Code of Conduct](.github/CODE-OF-CONDUCT.md) before participating.

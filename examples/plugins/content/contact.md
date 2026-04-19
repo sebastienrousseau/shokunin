@@ -59,7 +59,7 @@ news_title: "Contact"
 atom_link: https://plugins.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Plugin Pipeline Demo
 item_guid: "https://plugins.example.com/contact/index.html"
 item_link: "https://plugins.example.com/contact/index.html"
@@ -108,4 +108,4 @@ site_software: "SSG, Rust"
 
 ## Contact
 
-This is a developer-reference example, not a starter template — see `examples/quickstart` if you want a clone-and-edit site.
+This is a developer reference, not a starter template. See `examples/quickstart` for a clone-and-edit site.

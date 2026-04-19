@@ -125,3 +125,9 @@ To maximize SEO with SSG, ensure each page has:
 - [Accessibility](accessibility.md) — WCAG compliance for SEO
 - [i18n](i18n.md) — hreflang for international SEO
 - [Deployment](deployment.md) — security headers that affect SEO
+
+## LLM Crawlers
+
+The `AiPlugin` generates `llms.txt` and `llms-full.txt` to guide LLM
+crawlers and AI agents. See [LLM Content Pipelines](llm-content-pipelines.md)
+for details.

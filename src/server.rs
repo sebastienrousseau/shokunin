@@ -259,7 +259,9 @@ pub fn prepare_serve_dir(paths: &Paths, serve_dir: &PathBuf) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
     use super::*;
     use std::sync::{Arc, Mutex};
     use tempfile::tempdir;
@@ -435,5 +437,39 @@ mod tests {
         // serve_dir == site — should not re-copy (no-op).
         prepare_serve_dir(&paths, &site).unwrap();
         assert!(site.join("a.html").exists());
+    }
+
+    #[test]
+    fn build_serve_address_contains_host_and_port() {
+        let dir = tempdir().unwrap();
+        let (addr, root) = build_serve_address(dir.path()).unwrap();
+        assert_eq!(
+            addr,
+            format!("{}:{}", cmd::DEFAULT_HOST, cmd::DEFAULT_PORT)
+        );
+        assert_eq!(root, dir.path().to_str().unwrap());
+    }
+
+    #[test]
+    fn serve_site_with_records_correct_root() {
+        let dir = tempdir().unwrap();
+        let sub = dir.path().join("deep").join("nested");
+        fs::create_dir_all(&sub).unwrap();
+        let transport = RecordingTransport::default();
+        let calls = transport.calls.clone();
+        serve_site_with(&sub, &transport).unwrap();
+        let recorded = calls.lock().unwrap();
+        assert_eq!(recorded[0].1, sub.to_str().unwrap());
+    }
+
+    #[test]
+    fn generate_locale_redirect_single_locale() {
+        let dir = tempdir().unwrap();
+        generate_locale_redirect(dir.path(), &["es".to_string()], "es")
+            .unwrap();
+        let html = fs::read_to_string(dir.path().join("index.html")).unwrap();
+        assert!(html.contains("\"es\""));
+        assert!(html.contains("/es/"));
+        assert!(html.contains("<!-- ssg-locale-redirect -->"));
     }
 }

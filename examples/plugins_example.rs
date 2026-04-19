@@ -137,6 +137,7 @@ fn main() -> Result<()> {
 
     plugins.run_before_compile(&ctx)?;
     plugins.run_after_compile(&ctx)?;
+    plugins.run_fused_transforms(&ctx)?;
     plugins.run_on_serve(&ctx)?;
 
     println!("\n  ✅ Plugin pipeline complete");
@@ -151,6 +152,52 @@ fn main() -> Result<()> {
     if robots_path.exists() {
         println!("  🤖 robots.txt generated");
     }
+
+    // ── Step 5: Demonstrate remaining API modules ────────────────
+
+    // File system operations (fs_ops)
+    let safe = ssg::fs_ops::is_safe_path(site_dir)?;
+    println!(
+        "  \u{1f512} Path safety check: {}",
+        if safe { "PASS" } else { "FAIL" }
+    );
+
+    // Streaming I/O (stream)
+    println!(
+        "  \u{1f4be} Stream buffer: {} KB",
+        ssg::stream::STREAM_BUFFER_SIZE / 1024
+    );
+
+    // File watching (watch) — classify changes for selective reload
+    let css_kind = ssg::watch::classify_change(Path::new("style.css"));
+    let md_kind = ssg::watch::classify_change(Path::new("post.md"));
+    println!(
+        "  \u{1f441} Watch: style.css → {css_kind:?}, post.md → {md_kind:?}"
+    );
+
+    // Markdown extensions (markdown_ext)
+    let md = "| Col A | Col B |\n|-------|-------|\n| 1 | 2 |";
+    let html = ssg::markdown_ext::expand_gfm(md);
+    println!("  \u{1f4dd} GFM table \u{2192} {} bytes HTML", html.len());
+
+    // Schema generation (schema)
+    let schema = ssg::schema::generate_schema();
+    println!(
+        "  \u{1f4cb} Config schema: {} properties",
+        schema
+            .get("properties")
+            .and_then(|p| p.as_object())
+            .map_or(0, |o| o.len())
+    );
+
+    // Scaffold (project generation)
+    println!("  \u{1f3d7} Scaffold: ssg::scaffold::scaffold_project(\"my-site\") creates a starter");
+
+    // Logging
+    println!("  \u{1f4c4} Logging: ssg::logging::create_log_file(\"build.log\") for structured logs");
+
+    // Process (CLI argument handling)
+    println!("  \u{2699} Process: ssg::process::args() handles CLI \u{2192} compilation workflow");
 
     println!("\n  Done. Site ready at {}", site_dir.display());
     Ok(())

@@ -59,7 +59,7 @@ news_title: "Aria Studio"
 atom_link: https://ariastudio.example.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Aria Studio
 item_guid: "https://ariastudio.example.com/index.html"
 item_link: "https://ariastudio.example.com/index.html"
@@ -106,26 +106,26 @@ site_software: "SSG, Rust"
 
 ---
 
-## Calm interfaces for ambitious teams
+## Calm design for bold teams
 
-We are a small independent design studio working with founders, small teams, and museums on long-running products that need to feel quiet, considered, and easy to use.
+We are a small design studio. We work with founders, small teams, and museums. We build products that feel clear and easy to use.
 
-We take on **two engagements per quarter** and stay close to every project from research through release.
+We take on **two projects per quarter**. We stay close from research through release.
 
 ## What we do
 
-- **Product design** — discovery, IA, interaction patterns, accessible prototypes
-- **Design systems** — small, considered token sets and component libraries that fit a team of five
-- **Editorial sites** — typography-first marketing pages and documentation portals
+- **Product design** — discovery, IA, and prototypes
+- **Design systems** — token sets and parts for small teams
+- **Editorial sites** — type-first pages and doc portals
 
 ## Recent work
 
-- **Polaris Maps** — wayfinding system for an independent map publisher
-- **Linden Editions** — quarterly literary journal, print + web
-- **Field Notes Collective** — research archive for an environmental nonprofit
+- **Polaris Maps** — wayfinding for a map publisher
+- **Linden Editions** — literary journal, print + web
+- **Field Notes Collective** — archive for a nonprofit
 
-## Working together
+## Working with us
 
-We work in **two-week cycles** with a single point of contact on your side. Every engagement starts with a paid one-week discovery so both of us can decide whether to continue. No long contracts, no surprises.
+We work in **two-week cycles**. You pick one point of contact. Every project starts with a paid one-week discovery. Both sides then decide whether to go on. No long contracts. No surprises.
 
-If that sounds like the way you want to work, [say hello](/contact/).
+If that sounds right, [say hello](/contact/).

@@ -21,7 +21,7 @@
 //! cargo run --release --example blog_example
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3002> in your browser.
 //!
 //! ## What makes this different from other examples
 //!
@@ -37,7 +37,7 @@ use ssg::{
     plugin::{PluginContext, PluginManager},
     Paths,
 };
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, time::Instant};
 
 fn main() -> Result<()> {
     // ---------------------------------------------------------------
@@ -64,7 +64,7 @@ fn main() -> Result<()> {
     // ---------------------------------------------------------------
     let config = SsgConfig::builder()
         .site_name("threshold".to_string())
-        .base_url("http://127.0.0.1:3000".to_string())
+        .base_url("http://127.0.0.1:3002".to_string())
         .content_dir(content_dir.clone())
         .output_dir(output_dir.clone())
         .template_dir(template_dir.clone())
@@ -97,9 +97,13 @@ fn main() -> Result<()> {
     );
 
     let mut plugins = PluginManager::new();
+
+    // Draft content filtering (exclude drafts for published blog)
+    plugins.register(ssg::drafts::DraftPlugin::new(false));
+
     plugins.register(ssg::shortcodes::ShortcodePlugin);
-    #[cfg(feature = "tera-templates")]
-    plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
+    #[cfg(feature = "templates")]
+    plugins.register(ssg::template_plugin::TemplatePlugin::from_template_dir(
         &config.template_dir,
     ));
     plugins.register(ssg::postprocess::SitemapFixPlugin);
@@ -120,10 +124,17 @@ fn main() -> Result<()> {
     plugins.register(ssg::accessibility::AccessibilityPlugin);
     plugins.register(ssg::plugins::MinifyPlugin);
 
+    // AI readiness (llms.txt generation)
+    plugins.register(ssg::ai::AiPlugin);
+
+    // Taxonomy generation (tags, categories)
+    plugins.register(ssg::taxonomy::TaxonomyPlugin);
+
     // ---------------------------------------------------------------
     // 4. Build the site
     // ---------------------------------------------------------------
     println!("Building accessibility-first blog...");
+    let start = Instant::now();
     execute_build_pipeline(
         &plugins,
         &ctx,
@@ -133,7 +144,8 @@ fn main() -> Result<()> {
         &config.template_dir,
         false,
     )?;
-    println!("Build complete.");
+    let elapsed = start.elapsed();
+    println!("    ⚡ Built in {elapsed:.0?}");
 
     // Single-locale build: hide the language dropdown the templates
     // hardcode for the multilingual example.
@@ -216,15 +228,11 @@ fn main() -> Result<()> {
     // page out of the Topics API. Suppresses the "Browsing Topics API
     // removed" Chrome console message in dev mode.
     let server = Server::builder()
-        .address("127.0.0.1:3000")
+        .address("127.0.0.1:3002")
         .document_root(doc_root.as_str())
         .custom_header("Permissions-Policy", "browsing-topics=()")
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
-
-    println!("Server running at http://127.0.0.1:3000");
-    println!("Document root: {doc_root}");
-    println!("Press Ctrl+C to stop.");
 
     server.start().context("Failed to start dev server")?;
 

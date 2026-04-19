@@ -21,7 +21,7 @@
 //! cargo run --release --example portfolio_example
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3006> in your browser.
 //!
 //! ## What makes this different from other examples
 //!
@@ -40,6 +40,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
+    time::Instant,
 };
 
 /// Site generator configured for a developer portfolio.
@@ -75,7 +76,7 @@ impl PortfolioSiteGenerator {
 
         let config = SsgConfig::builder()
             .site_name("maya-okafor".to_string())
-            .base_url("http://127.0.0.1:3000".to_string())
+            .base_url("http://127.0.0.1:3006".to_string())
             .content_dir(content_dir.clone())
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
@@ -142,10 +143,12 @@ impl PortfolioSiteGenerator {
 
         let mut plugins = PluginManager::new();
         plugins.register(ssg::shortcodes::ShortcodePlugin);
-        #[cfg(feature = "tera-templates")]
-        plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
-            &self.config.template_dir,
-        ));
+        #[cfg(feature = "templates")]
+        plugins.register(
+            ssg::template_plugin::TemplatePlugin::from_template_dir(
+                &self.config.template_dir,
+            ),
+        );
         plugins.register(ssg::postprocess::SitemapFixPlugin);
         plugins.register(ssg::postprocess::NewsSitemapFixPlugin);
         plugins.register(ssg::postprocess::RssAggregatePlugin);
@@ -166,9 +169,20 @@ impl PortfolioSiteGenerator {
         ));
         plugins.register(ssg::search::SearchPlugin);
         plugins.register(ssg::accessibility::AccessibilityPlugin);
+        #[cfg(feature = "image-optimization")]
+        plugins.register(ssg::image_plugin::ImageOptimizationPlugin::default());
+        plugins.register(ssg::ai::AiPlugin);
+        plugins.register(ssg::taxonomy::TaxonomyPlugin);
+        plugins.register(ssg::pagination::PaginationPlugin::default());
+        plugins.register(ssg::drafts::DraftPlugin::new(false));
+        plugins.register(ssg::assets::FingerprintPlugin);
+        // Interactive islands (Web Components with lazy hydration)
+        plugins.register(ssg::islands::IslandPlugin);
+
         plugins.register(ssg::plugins::MinifyPlugin);
 
         self.log_message("Compiling site with full plugin pipeline...")?;
+        let start = Instant::now();
         execute_build_pipeline(
             &plugins,
             &ctx,
@@ -178,6 +192,8 @@ impl PortfolioSiteGenerator {
             &self.config.template_dir,
             false,
         )?;
+        let elapsed = start.elapsed();
+        println!("    \u{26a1} Built in {elapsed:.0?}");
 
         self.log_message(&format!(
             "Site generated at: {}",
@@ -230,10 +246,10 @@ impl PortfolioSiteGenerator {
         Ok(())
     }
 
-    /// Starts a dev server at 127.0.0.1:3000.
+    /// Starts a dev server at 127.0.0.1:3006.
     fn serve(&self) -> Result<()> {
         self.log_message(
-            "Starting development server at http://127.0.0.1:3000",
+            "Starting development server at http://127.0.0.1:3006",
         )?;
 
         let root: String = self
@@ -247,15 +263,11 @@ impl PortfolioSiteGenerator {
         // page out of the Topics API. Suppresses the "Browsing Topics API
         // removed" Chrome console message in dev mode.
         let server = Server::builder()
-            .address("127.0.0.1:3000")
+            .address("127.0.0.1:3006")
             .document_root(root.as_str())
             .custom_header("Permissions-Policy", "browsing-topics=()")
             .build()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
-
-        println!("Server running at http://127.0.0.1:3000");
-        println!("  Document root: {root}");
-        println!("  Press Ctrl+C to stop.");
 
         server.start().context("Failed to start dev server")?;
 

@@ -198,6 +198,20 @@ fn render_inline_shortcode(tag: &str) -> String {
             html.push_str("</figure>");
             html
         }
+        "island" => {
+            let component = parts.get("component").map_or("", String::as_str);
+            let hydrate =
+                parts.get("hydrate").map_or("visible", String::as_str);
+            let props = parts.get("props").map_or("{}", String::as_str);
+            if component.is_empty() {
+                return "<!-- island: missing component -->".to_string();
+            }
+            format!(
+                "<ssg-island component=\"{component}\" hydrate=\"{hydrate}\" props='{props}'>\
+                 <template shadowrootmode=\"open\"><slot></slot></template>\
+                 </ssg-island>"
+            )
+        }
         _ => format!("<!-- unknown shortcode: {name} -->"),
     }
 }
@@ -272,6 +286,7 @@ fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -551,5 +566,29 @@ title: Test
 
         let result = fs::read_to_string(content.join("test.md")).unwrap();
         assert!(result.contains("youtube-nocookie.com"));
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(1000))]
+
+        /// `expand_shortcodes` must never panic on arbitrary input.
+        #[test]
+        fn expand_never_panics(input in "\\PC*") {
+            let _ = expand_shortcodes(&input);
+        }
+
+        /// Strings without `{{<` must pass through unchanged.
+        #[test]
+        fn no_shortcode_identity(input in "[^{]*") {
+            let output = expand_shortcodes(&input);
+            prop_assert_eq!(&output, &input);
+        }
     }
 }

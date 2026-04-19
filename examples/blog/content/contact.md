@@ -59,7 +59,7 @@ news_title: "Contact"
 atom_link: https://threshold.press/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Threshold
 item_guid: "https://threshold.press/contact/index.html"
 item_link: "https://threshold.press/contact/index.html"
@@ -108,4 +108,4 @@ site_software: "SSG, Rust"
 
 # Contact
 
-Contact us at hello@threshold.press
+Reach us at hello@threshold.press. We'd love to hear from you.

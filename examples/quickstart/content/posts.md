@@ -59,7 +59,7 @@ news_title: "Journal"
 atom_link: https://heron.coffee/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Heron Coffee
 item_guid: "https://heron.coffee/posts/index.html"
 item_link: "https://heron.coffee/posts/index.html"
@@ -110,8 +110,8 @@ site_software: "SSG, Rust"
 
 Notes from the roastery: workflow, equipment, origins, occasional opinions.
 
-- **[Why we roast on Tuesdays](/why-we-roast-tuesdays/)** — The workflow that lets a small team ship fresh coffee every week — and the practical reasons we picked Tuesday.
-- **[Choosing a grinder for home espresso](/grinder-buying-guide/)** — The only piece of equipment that materially affects what you taste, and the three we recommend at three price points.
-- **[The Sidamo Guji story](/sidamo-guji-story/)** — How this season's natural-process Ethiopian made it from a 240-farmer collective in Yirgacheffe to a small roastery in Bermondsey.
+- **[Why we roast on Tuesdays](/why-we-roast-tuesdays/)** — How a small team ships fresh coffee every week, and why we chose Tuesday.
+- **[Choosing a grinder for home espresso](/grinder-buying-guide/)** — The one piece of gear that changes what you taste, plus three picks at three price points.
+- **[The Sidamo Guji story](/sidamo-guji-story/)** — How this season's natural-process Ethiopian went from Yirgacheffe to Bermondsey.
 
 Subscribe to the [RSS feed](/rss.xml) or [Atom feed](/atom.xml) to follow new entries.

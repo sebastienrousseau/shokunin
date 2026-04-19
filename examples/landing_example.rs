@@ -21,7 +21,7 @@
 //! cargo run --release --example landing_example
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3004> in your browser.
 //!
 //! ## What makes this different from other examples
 //!
@@ -41,6 +41,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
+    time::Instant,
 };
 
 /// Site generator configured for a zero-JS enterprise landing page.
@@ -76,7 +77,7 @@ impl LandingSiteGenerator {
 
         let config = SsgConfig::builder()
             .site_name("meridian-systems".to_string())
-            .base_url("http://127.0.0.1:3000".to_string())
+            .base_url("http://127.0.0.1:3004".to_string())
             .content_dir(content_dir.clone())
             .output_dir(output_dir.clone())
             .template_dir(template_dir.clone())
@@ -146,10 +147,12 @@ impl LandingSiteGenerator {
 
         let mut plugins = PluginManager::new();
         plugins.register(ssg::shortcodes::ShortcodePlugin);
-        #[cfg(feature = "tera-templates")]
-        plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
-            &self.config.template_dir,
-        ));
+        #[cfg(feature = "templates")]
+        plugins.register(
+            ssg::template_plugin::TemplatePlugin::from_template_dir(
+                &self.config.template_dir,
+            ),
+        );
         plugins.register(ssg::postprocess::SitemapFixPlugin);
         plugins.register(ssg::postprocess::NewsSitemapFixPlugin);
         plugins.register(ssg::postprocess::RssAggregatePlugin);
@@ -170,9 +173,21 @@ impl LandingSiteGenerator {
         ));
         plugins.register(ssg::search::SearchPlugin);
         plugins.register(ssg::accessibility::AccessibilityPlugin);
+        // CSP hardening (extract inline styles/scripts to external files with SRI)
+        plugins.register(ssg::csp::CspPlugin);
+
+        // Interactive islands (Web Components with lazy hydration)
+        plugins.register(ssg::islands::IslandPlugin);
+
         plugins.register(ssg::plugins::MinifyPlugin);
 
+        // Deployment adapter (generate netlify.toml with cache + security headers)
+        plugins.register(ssg::deploy::DeployPlugin::new(
+            ssg::deploy::DeployTarget::Netlify,
+        ));
+
         self.log_message("Compiling site with full plugin pipeline...")?;
+        let start = Instant::now();
         execute_build_pipeline(
             &plugins,
             &ctx,
@@ -182,6 +197,8 @@ impl LandingSiteGenerator {
             &self.config.template_dir,
             false,
         )?;
+        let elapsed = start.elapsed();
+        self.log_message(&format!("⚡ Built in {elapsed:.0?}"))?;
 
         self.log_message(&format!(
             "Site generated at: {}",
@@ -262,10 +279,10 @@ impl LandingSiteGenerator {
         Ok(())
     }
 
-    /// Starts a dev server at 127.0.0.1:3000.
+    /// Starts a dev server at 127.0.0.1:3004.
     fn serve(&self) -> Result<()> {
         self.log_message(
-            "Starting development server at http://127.0.0.1:3000",
+            "Starting development server at http://127.0.0.1:3004",
         )?;
 
         let root: String = self
@@ -279,15 +296,11 @@ impl LandingSiteGenerator {
         // page out of the Topics API. Suppresses the "Browsing Topics API
         // removed" Chrome console message in dev mode.
         let server = Server::builder()
-            .address("127.0.0.1:3000")
+            .address("127.0.0.1:3004")
             .document_root(root.as_str())
             .custom_header("Permissions-Policy", "browsing-topics=()")
             .build()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
-
-        println!("Server running at http://127.0.0.1:3000");
-        println!("  Document root: {root}");
-        println!("  Press Ctrl+C to stop.");
 
         server.start().context("Failed to start dev server")?;
 

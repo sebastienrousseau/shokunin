@@ -21,7 +21,7 @@
 //! cargo run --release --example multilingual_example
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3005> in your browser.
 //!
 //! ## What makes this different from other examples
 //!
@@ -36,6 +36,7 @@ use ssg::seo::SeoPlugin;
 use staticdatagen::compiler::service::compile;
 use std::fs;
 use std::path::Path;
+use std::time::Instant;
 
 /// Supported locales as (code, native name) pairs.
 /// Matches the language set offered on bankstatementparser.com.
@@ -79,6 +80,8 @@ fn main() -> Result<()> {
     let public_root = Path::new("./examples/public");
     fs::create_dir_all(public_root)?;
 
+    let start = Instant::now();
+
     // Generate sites for all languages
     for lang in &languages {
         println!("Processing language: {lang}");
@@ -114,12 +117,15 @@ fn main() -> Result<()> {
             &template_dir,
         );
         plugins.run_after_compile(&ctx)?;
+        plugins.run_fused_transforms(&ctx)?;
         println!("    🔌 Plugins complete for {lang}");
     }
 
-    // Run the I18nPlugin once over the whole site to inject hreflang
-    // links, generate per-locale sitemaps, and replace the
-    // <!-- ssg:lang-switcher --> marker with a full 28-locale switcher.
+    // Run the I18nPlugin once over the whole site. This single pass:
+    //   - injects <link rel="alternate" hreflang="…"> into every page
+    //   - generates per-locale XML sitemaps for search-engine discovery
+    //   - replaces <!-- ssg:lang-switcher --> with a 28-locale dropdown
+    //   - sets the `x-default` hreflang for Accept-Language negotiation
     {
         use ssg::i18n::{I18nConfig, I18nPlugin, UrlPrefixStrategy};
         let i18n_cfg = I18nConfig {
@@ -149,6 +155,9 @@ fn main() -> Result<()> {
         println!("    ✅ Promoted English to site root");
     }
 
+    let elapsed = start.elapsed();
+    println!("    ⚡ Built in {elapsed:.0?}");
+
     // Serve the root public directory.
     //
     // Host/port can be overridden via env vars so WSL2, Codespaces and
@@ -161,7 +170,7 @@ fn main() -> Result<()> {
     let port = std::env::var("SSG_PORT")
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
-        .unwrap_or(3000);
+        .unwrap_or(3005);
     let bind = format!("{host}:{port}");
     // Build the server with a Permissions-Policy header that opts the
     // page out of the Topics API. Suppresses the "Browsing Topics API

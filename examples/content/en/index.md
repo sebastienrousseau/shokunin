@@ -130,15 +130,15 @@ security_encryption: "https://kaishi.one/encryption" ## The encryption of the pa
 
 ## Write once, ship in 28 languages
 
-**Kaishi** is the starter template behind product sites that need to read perfectly in English, Japanese, Arabic, Mandarin, and 24 other languages — without a JavaScript runtime. Markdown-first, framework-free, and server-rendered, it ships HTML that any browser can read on any device.
+**Kaishi** is a starter template for product sites. It works in English, Japanese, Arabic, Mandarin, and 24 more languages. There is no JavaScript runtime needed. It uses Markdown, needs no framework, and renders on the server. Any browser can read the HTML on any device.
 
 ## Built for global products
 
-- **28 locales out of the box** — including 4 right-to-left languages, 7 CJK scripts, and 17 Latin-script variants
-- **hreflang + x-default wired in** — search engines see every locale, every page, every variant
+- **28 locales out of the box** — includes 4 right-to-left languages, 7 CJK scripts, and 17 Latin-script variants
+- **hreflang + x-default wired in** — search engines see every locale and page
 - **Per-locale search, sitemap, and feed** — `/fr/search-index.json`, `/de/sitemap.xml`, etc.
-- **Accept-Language negotiation** — `/` redirects to the visitor's preferred locale, falls back gracefully
+- **Accept-Language negotiation** — `/` sends visitors to their preferred locale with a graceful fallback
 
 ## Try the language switcher
 
-Use the language switcher in the top-right (or the list at the bottom of any page) to see this content in any of the 28 supported languages. The URL changes; the content stays in sync.
+Use the language switcher in the top right. You can also use the list at the bottom of any page. It shows this content in any of the 28 supported languages. The URL changes but the content stays in sync.

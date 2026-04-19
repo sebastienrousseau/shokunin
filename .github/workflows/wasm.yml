@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: "\U0001F310 WASM"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  wasm-build:
+    name: Build & test ssg-core (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build ssg-core for wasm32
+        run: cargo build -p ssg-core --target wasm32-unknown-unknown
+
+      - name: Test ssg-core (native)
+        run: cargo test -p ssg-core
+
+      - name: Build ssg-wasm with wasm-pack
+        run: wasm-pack build crates/ssg-wasm --target web --out-dir ../../pkg
+
+      - name: Install Chrome for headless tests
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: Test ssg-wasm (headless Chrome)
+        run: wasm-pack test --headless --chrome crates/ssg-wasm
+
+      - name: Upload WASM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ssg-wasm
+          path: pkg/
+          retention-days: 7

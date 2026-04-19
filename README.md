@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.36-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.37-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -26,7 +26,7 @@
 - [Quick Start](#quick-start) — scaffold a site in 30 seconds
 - [Overview](#overview) — what SSG does
 - [Architecture](#architecture) — build pipeline diagram
-- [Features](#features) — v0.0.36 capability matrix
+- [Features](#features) — v0.0.37 capability matrix
 - [The CLI](#the-cli) — flags and usage
 - [Library Usage](#library-usage) — `ssg::run()`, plugins, schemas
 - [Benchmarks](#benchmarks) — binary size, test suite, coverage
@@ -64,7 +64,7 @@ cargo install ssg
 
 ```sh
 # Download the .deb from the latest release, then:
-sudo dpkg -i ssg_0.0.36_amd64.deb
+sudo dpkg -i ssg_0.0.37_amd64.deb
 ```
 
 Or build it yourself with `packaging/deb/build.sh`.
@@ -97,7 +97,7 @@ winget install sebastienrousseau.ssg
 
 ```toml
 [dependencies]
-ssg = "0.0.36"
+ssg = "0.0.37"
 ```
 
 ### Build from source
@@ -183,6 +183,25 @@ graph TD
 | **Deployment** | One-command config for Netlify, Vercel, Cloudflare Pages, GitHub Pages. CSP + HSTS security headers |
 | **Security** | `#![forbid(unsafe_code)]`, path traversal prevention, symlink rejection, file size limits, `CycloneDX` SBOM, Sigstore attestation |
 | **CI** | Automated multi-platform releases (Linux glibc/musl, macOS ARM64/Intel, Windows), pa11y accessibility audits, cargo audit/deny |
+| **WebAssembly** | ssg-core + ssg-wasm compile to WASM for browser/edge |
+| **Interactive Islands** | Web Components with lazy hydration (visible, idle, interaction) |
+| **CSS Hot Reload** | Stylesheet changes apply without full page reload |
+| **Browser Error Overlay** | Build errors render in-browser via WebSocket |
+| **Incremental Rebuilds** | Dependency graph tracks page → template relationships |
+| **95% Coverage Floors** | Regions, lines, and functions enforced in CI |
+
+### Why SSG?
+
+| Capability | SSG | Hugo | Zola | Astro |
+|---|---|---|---|---|
+| Built-in WCAG validation | ✓ | ✗ | ✗ | ✗ |
+| CSP/SRI auto-extraction | ✓ | ✗ | ✗ | ✓ |
+| Local LLM integration | ✓ | ✗ | ✗ | ✗ |
+| WebAssembly target | ✓ | ✗ | ✗ | N/A |
+| 95% CI coverage floors | ✓ | ✗ | ✗ | ✗ |
+| Property-based testing | ✓ | ✗ | ✗ | ✗ |
+| Readability CI gate | ✓ | ✗ | ✗ | ✗ |
+| Zero unsafe code | ✓ | ✓ | ✓ | N/A |
 
 ---
 
@@ -331,6 +350,15 @@ if changed.is_empty() {
 | **Plugin pipeline** | 22 plugins, Rayon-parallelised |
 | **Build** | `cargo build`: ~2 min cold, <10 s incremental |
 | **MSRV** | Rust 1.88.0 |
+
+### Build Performance
+
+| Pages | Time | Memory |
+|-------|------|--------|
+| 50 | ~40ms | < 50 MB |
+| 100 | < 5s (CI-gated) | < 100 MB |
+| 10,000 | Streaming batches | 512 MB budget |
+| 100,000+ | Streaming compilation | Configurable |
 
 ---
 

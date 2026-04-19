@@ -135,6 +135,7 @@ pub(super) fn validate_path_safety(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     #[cfg(not(target_os = "windows"))]

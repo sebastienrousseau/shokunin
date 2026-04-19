@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved. All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! Benchmark suite for the Static Site Generator.

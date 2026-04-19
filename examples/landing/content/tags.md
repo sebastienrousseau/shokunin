@@ -58,7 +58,7 @@ news_title: "Explore by Tag"
 atom_link: https://meridian-systems.com/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
-generator: "SSG (version 0.0.36)"
+generator: "SSG (version 0.0.37)"
 item_description: RSS feed for Meridian Systems
 item_guid: "https://meridian-systems.com/tags/index.html"
 item_link: "https://meridian-systems.com/tags/index.html"

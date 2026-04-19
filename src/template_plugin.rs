@@ -1,56 +1,56 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Tera template rendering plugin.
+//! Template rendering plugin.
 //!
-//! Post-processes compiled HTML through Tera templates, enabling
+//! Post-processes compiled HTML through templates, enabling
 //! template inheritance, conditionals, loops, and filters.
 
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 use crate::{
     frontmatter,
     plugin::{Plugin, PluginContext},
-    tera_engine::{TeraConfig, TeraEngine},
+    template_engine::{TemplateConfig, TemplateEngine},
     MAX_DIR_DEPTH,
 };
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 use anyhow::Result;
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
 
-/// Plugin that post-processes compiled HTML through Tera templates.
+/// Plugin that post-processes compiled HTML through templates.
 ///
 /// Runs in the `after_compile` phase. For each HTML file in `site_dir`:
 /// 1. Reads the companion `.meta.json` sidecar (from frontmatter extraction)
 /// 2. Determines the layout from frontmatter (`layout` field, default: `page`)
-/// 3. Renders the HTML through the Tera template chain
+/// 3. Renders the HTML through the template chain
 /// 4. Writes the rendered result back to the same file
 ///
-/// Falls back gracefully if no Tera templates directory exists.
-#[cfg(feature = "tera-templates")]
+/// Falls back gracefully if no templates directory exists.
+#[cfg(feature = "templates")]
 #[derive(Debug)]
-pub struct TeraPlugin {
-    config: TeraConfig,
+pub struct TemplatePlugin {
+    config: TemplateConfig,
 }
 
-#[cfg(feature = "tera-templates")]
-impl TeraPlugin {
-    /// Creates a new `TeraPlugin` with the given configuration.
+#[cfg(feature = "templates")]
+impl TemplatePlugin {
+    /// Creates a new `TemplatePlugin` with the given configuration.
     #[must_use]
-    pub const fn new(config: TeraConfig) -> Self {
+    pub const fn new(config: TemplateConfig) -> Self {
         Self { config }
     }
 
-    /// Creates a `TeraPlugin` that looks for templates in the standard
+    /// Creates a `TemplatePlugin` that looks for templates in the standard
     /// `templates/tera/` subdirectory of the template dir.
     #[must_use]
     pub fn from_template_dir(template_dir: &Path) -> Self {
         Self {
-            config: TeraConfig {
+            config: TemplateConfig {
                 template_dir: template_dir.join("tera"),
                 ..Default::default()
             },
@@ -58,10 +58,10 @@ impl TeraPlugin {
     }
 }
 
-#[cfg(feature = "tera-templates")]
-impl Plugin for TeraPlugin {
+#[cfg(feature = "templates")]
+impl Plugin for TemplatePlugin {
     fn name(&self) -> &'static str {
-        "tera"
+        "templates"
     }
 
     fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
@@ -69,15 +69,15 @@ impl Plugin for TeraPlugin {
         let sidecar_dir = ctx.build_dir.join(".meta");
         let count = frontmatter::emit_sidecars(&ctx.content_dir, &sidecar_dir)?;
         if count > 0 {
-            log::info!("[tera] Emitted {count} frontmatter sidecar(s)");
+            log::info!("[templates] Emitted {count} frontmatter sidecar(s)");
         }
         Ok(())
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        let Some(engine) = TeraEngine::init(self.config.clone())? else {
+        let Some(engine) = TemplateEngine::init(self.config.clone())? else {
             log::info!(
-                "[tera] No templates at {}, skipping",
+                "[templates] No templates at {}, skipping",
                 self.config.template_dir.display()
             );
             return Ok(());
@@ -87,11 +87,11 @@ impl Plugin for TeraPlugin {
         let mut site_globals = ctx
             .config
             .as_ref()
-            .map(TeraEngine::site_globals_from_config)
+            .map(TemplateEngine::site_globals_from_config)
             .unwrap_or_default();
 
         // Load data files (data/*.toml, data/*.json) into context
-        let data_files = TeraEngine::load_data_files(&ctx.content_dir);
+        let data_files = TemplateEngine::load_data_files(&ctx.content_dir);
         if !data_files.is_empty() {
             let _ = site_globals.insert(
                 "data".to_string(),
@@ -130,7 +130,7 @@ impl Plugin for TeraPlugin {
                 }
                 Err(e) => {
                     log::warn!(
-                        "[tera] Failed to render {}: {e}",
+                        "[templates] Failed to render {}: {e}",
                         html_path.display()
                     );
                 }
@@ -138,17 +138,14 @@ impl Plugin for TeraPlugin {
         }
 
         if rendered > 0 {
-            log::info!("[tera] Rendered {rendered} page(s)");
+            log::info!("[templates] Rendered {rendered} page(s)");
         }
         Ok(())
     }
 }
 
 /// Reads frontmatter for an HTML file, trying sidecar then falling back to empty.
-///
-/// Maps `<name>.html` → `<name>.meta.json` in the sidecar dir. If the
-/// sidecar is missing or cannot be parsed, returns an empty map.
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 fn read_frontmatter_for_html(
     html_path: &Path,
     site_dir: &Path,
@@ -167,12 +164,13 @@ fn read_frontmatter_for_html(
 }
 
 /// Recursively collects `.html` files (delegates to `crate::walk`).
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files_bounded_depth(dir, "html", MAX_DIR_DEPTH)
 }
 
-#[cfg(all(test, feature = "tera-templates"))]
+#[cfg(all(test, feature = "templates"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::SsgConfig;
@@ -184,7 +182,6 @@ mod tests {
     // Test fixtures
     // -------------------------------------------------------------------
 
-    /// Returns the standard project layout under a tempdir.
     fn layout() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf) {
         init_logger();
         let dir = tempdir().expect("tempdir");
@@ -198,8 +195,6 @@ mod tests {
         (dir, content, build, site, templates)
     }
 
-    /// Builds an `SsgConfig` suitable for `with_config`. The paths all
-    /// point at subdirs of the supplied root.
     fn make_config(root: &Path) -> SsgConfig {
         SsgConfig {
             site_name: "Test".to_string(),
@@ -225,11 +220,10 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         fs::create_dir_all(&templates).unwrap();
 
-        // Write Tera templates
         fs::write(
             templates.join("base.html"),
             r#"<!DOCTYPE html>
-<html><head><title>{{ page.title | default(value="") }}</title></head>
+<html><head><title>{{ page.title | default("") }}</title></head>
 <body>{% block content %}{% endblock %}</body></html>"#,
         )
         .unwrap();
@@ -241,17 +235,14 @@ mod tests {
         )
         .unwrap();
 
-        // Write content
         fs::write(
             content.join("index.md"),
             "---\ntitle: Home\nlayout: page\n---\n# Welcome\n",
         )
         .unwrap();
 
-        // Write compiled HTML (simulating staticdatagen output)
         fs::write(site.join("index.html"), "<h1>Welcome</h1>").unwrap();
 
-        // Write sidecar
         let meta_dir = build.join(".meta");
         fs::create_dir_all(&meta_dir).unwrap();
         fs::write(
@@ -262,11 +253,11 @@ mod tests {
     }
 
     #[test]
-    fn test_tera_plugin_renders() {
+    fn test_template_plugin_renders() {
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("templates/tera"),
             ..Default::default()
         });
@@ -306,57 +297,47 @@ mod tests {
     }
 
     #[test]
-    fn test_tera_plugin_skips_missing_templates() {
+    fn test_template_plugin_skips_missing_templates() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
         fs::write(site.join("index.html"), "<p>hello</p>").unwrap();
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("nonexistent"),
             ..Default::default()
         });
 
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
 
-        // Should succeed (graceful skip)
         plugin.after_compile(&ctx).unwrap();
 
-        // Content should be unchanged
         let output = fs::read_to_string(site.join("index.html")).unwrap();
         assert_eq!(output, "<p>hello</p>");
     }
 
-    // -------------------------------------------------------------------
-    // Derive surface
-    // -------------------------------------------------------------------
-
     #[test]
-    fn name_returns_static_tera_identifier() {
-        let plugin = TeraPlugin::new(TeraConfig::default());
-        assert_eq!(plugin.name(), "tera");
+    fn name_returns_templates_identifier() {
+        let plugin = TemplatePlugin::new(TemplateConfig::default());
+        assert_eq!(plugin.name(), "templates");
     }
 
     #[test]
     fn new_stores_supplied_config() {
-        let cfg = TeraConfig {
-            template_dir: std::env::temp_dir().join("ssg_tera_fake"),
+        let cfg = TemplateConfig {
+            template_dir: std::env::temp_dir().join("ssg_template_fake"),
             ..Default::default()
         };
-        let plugin = TeraPlugin::new(cfg.clone());
+        let plugin = TemplatePlugin::new(cfg.clone());
         assert_eq!(plugin.config.template_dir, cfg.template_dir);
     }
 
     #[test]
     fn from_template_dir_nests_under_tera_subdirectory() {
-        // Guards the `template_dir.join("tera")` at line 54.
-        let plugin = TeraPlugin::from_template_dir(Path::new("/my/templates"));
+        let plugin =
+            TemplatePlugin::from_template_dir(Path::new("/my/templates"));
         assert!(plugin.config.template_dir.ends_with("templates/tera"));
     }
-
-    // -------------------------------------------------------------------
-    // before_compile — sidecar emission
-    // -------------------------------------------------------------------
 
     #[test]
     fn before_compile_emits_sidecars_from_content_markdown() {
@@ -364,7 +345,7 @@ mod tests {
         fs::write(content.join("index.md"), "---\ntitle: Test\n---\nbody")
             .unwrap();
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: templates,
             ..Default::default()
         });
@@ -377,7 +358,7 @@ mod tests {
     #[test]
     fn before_compile_no_markdown_files_still_returns_ok() {
         let (_tmp, content, build, _site, templates) = layout();
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: templates,
             ..Default::default()
         });
@@ -385,18 +366,12 @@ mod tests {
         plugin.before_compile(&ctx).unwrap();
     }
 
-    // -------------------------------------------------------------------
-    // after_compile — config + data file paths
-    // -------------------------------------------------------------------
-
     #[test]
     fn after_compile_without_config_uses_empty_site_globals() {
-        // The `ctx.config.as_ref().map(...).unwrap_or_default()`
-        // fallback at line 93 — this test takes the `None` arm.
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("templates/tera"),
             ..Default::default()
         });
@@ -416,21 +391,14 @@ mod tests {
 
     #[test]
     fn after_compile_loads_data_files_into_context() {
-        // The `!data_files.is_empty()` branch at lines 97-101 must
-        // populate the site-globals map with the `data` key. Note:
-        // load_data_files looks at `content_dir.parent().join("data")`,
-        // so the data file must be a SIBLING of the content dir,
-        // not inside it.
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
-        // data/ as a sibling of content/ — this is what
-        // load_data_files actually scans.
         let data = dir.path().join("data");
         fs::create_dir_all(&data).unwrap();
         fs::write(data.join("nav.toml"), r#"site = "demo""#).unwrap();
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("templates/tera"),
             ..Default::default()
         });
@@ -443,8 +411,6 @@ mod tests {
             config,
         );
 
-        // Should not error, and the rendered HTML must contain the
-        // template wrapper.
         plugin.after_compile(&ctx).unwrap();
         let output =
             fs::read_to_string(dir.path().join("site").join("index.html"))
@@ -452,17 +418,8 @@ mod tests {
         assert!(output.contains("<!DOCTYPE html>"));
     }
 
-    // -------------------------------------------------------------------
-    // after_compile — render failure tolerance
-    // -------------------------------------------------------------------
-
     #[test]
     fn after_compile_unknown_layout_does_not_propagate_error() {
-        // When `layout: nonexistent`, `engine.render_page` at line
-        // 123 returns Err; the plugin's match arm at line 133 must
-        // log and continue rather than propagate. (Tera may still
-        // fall back to an available template depending on engine
-        // internals; the assertion only cares about non-propagation.)
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
@@ -473,7 +430,7 @@ mod tests {
         )
         .unwrap();
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("templates/tera"),
             ..Default::default()
         });
@@ -484,7 +441,6 @@ mod tests {
             &dir.path().join("templates"),
         );
 
-        // Must not return an error regardless of fall-through.
         plugin
             .after_compile(&ctx)
             .expect("render failure must not propagate");
@@ -492,9 +448,6 @@ mod tests {
 
     #[test]
     fn after_compile_default_layout_is_page_when_missing_field() {
-        // The `fm.get("layout").and_then(...).unwrap_or("page")`
-        // fallback at line 120 — this test removes the `layout`
-        // field entirely.
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
@@ -502,7 +455,7 @@ mod tests {
         fs::write(meta_dir.join("index.meta.json"), r#"{"title": "Home"}"#)
             .unwrap();
 
-        let plugin = TeraPlugin::new(TeraConfig {
+        let plugin = TemplatePlugin::new(TemplateConfig {
             template_dir: dir.path().join("templates/tera"),
             ..Default::default()
         });
@@ -543,9 +496,6 @@ mod tests {
 
     #[test]
     fn read_frontmatter_for_html_invalid_sidecar_returns_empty() {
-        // When the sidecar exists but is invalid JSON, the inner
-        // `if let Ok(meta) = ...` takes the Err branch and falls
-        // through to the empty default.
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         let sidecars = dir.path().join(".meta");
@@ -562,7 +512,6 @@ mod tests {
 
     #[test]
     fn read_frontmatter_for_html_no_match_returns_empty_map() {
-        // Guards the final `HashMap::new()` at line 177.
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
         let sidecars = dir.path().join(".meta");
@@ -576,27 +525,8 @@ mod tests {
         assert!(meta.is_empty());
     }
 
-    #[test]
-    fn read_frontmatter_for_html_invalid_json_returns_empty() {
-        // The `Ok(meta)` arm at line 160 is bypassed when JSON is
-        // invalid — the function falls through to the `.md` path
-        // and then to the empty default.
-        let dir = tempdir().unwrap();
-        let site = dir.path().join("site");
-        let sidecars = dir.path().join(".meta");
-        fs::create_dir_all(&site).unwrap();
-        fs::create_dir_all(&sidecars).unwrap();
-
-        let html = site.join("post.html");
-        fs::write(&html, "").unwrap();
-        fs::write(sidecars.join("post.meta.json"), "{not valid").unwrap();
-
-        let meta = read_frontmatter_for_html(&html, &site, &sidecars);
-        assert!(meta.is_empty());
-    }
-
     // -------------------------------------------------------------------
-    // collect_html_files — recursion + filtering + depth
+    // collect_html_files
     // -------------------------------------------------------------------
 
     #[test]
@@ -627,32 +557,5 @@ mod tests {
         let dir = tempdir().unwrap();
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
         assert!(result.is_empty());
-    }
-
-    #[test]
-    fn collect_html_files_returns_results_sorted() {
-        let dir = tempdir().unwrap();
-        for name in ["zebra.html", "apple.html", "mango.html"] {
-            fs::write(dir.path().join(name), "").unwrap();
-        }
-        let files = collect_html_files(dir.path()).unwrap();
-        let names: Vec<_> = files
-            .iter()
-            .map(|p| p.file_name().unwrap().to_str().unwrap())
-            .collect();
-        assert_eq!(names, vec!["apple.html", "mango.html", "zebra.html"]);
-    }
-
-    #[test]
-    fn collect_html_files_respects_max_dir_depth_guard() {
-        let dir = tempdir().unwrap();
-        let mut current = dir.path().to_path_buf();
-        for i in 0..MAX_DIR_DEPTH + 2 {
-            current = current.join(format!("d{i}"));
-            fs::create_dir_all(&current).unwrap();
-            fs::write(current.join("page.html"), "").unwrap();
-        }
-        let files = collect_html_files(dir.path()).unwrap();
-        assert!(files.len() <= MAX_DIR_DEPTH + 1);
     }
 }

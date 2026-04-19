@@ -10,10 +10,83 @@ use staticdatagen::compile;
 
 use crate::cmd::SsgConfig;
 use crate::{
-    accessibility, ai, assets, content, deploy, drafts, highlight, i18n,
-    livereload, pagination, plugin, plugins as plugins_mod, postprocess,
-    search, seo, shortcodes, taxonomy, walk,
+    accessibility, ai, assets, content, csp, deploy, drafts, highlight, i18n,
+    islands, livereload, pagination, plugin, plugins as plugins_mod,
+    postprocess, search, seo, shortcodes, streaming, taxonomy, walk,
 };
+
+// ---------------------------------------------------------------------------
+// BuildError — serialisable build error for browser overlay delivery
+// ---------------------------------------------------------------------------
+
+/// Serialisable build error for browser overlay delivery.
+#[derive(Debug, Clone, serde::Serialize)]
+#[allow(dead_code)]
+pub struct BuildError {
+    /// Source file path (if extractable from the error chain).
+    pub file: Option<String>,
+    /// Line number (if extractable).
+    pub line: Option<usize>,
+    /// Human-readable error message.
+    pub message: String,
+}
+
+impl BuildError {
+    /// Creates a `BuildError` from an `anyhow` error, attempting to extract
+    /// file path and line number from the error chain.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn from_anyhow(err: &anyhow::Error) -> Self {
+        let message = format!("{err:#}");
+        let file = extract_file_from_error(&message);
+        Self {
+            file,
+            line: None,
+            message,
+        }
+    }
+
+    /// Serializes to a WebSocket JSON message.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn to_ws_message(&self) -> String {
+        serde_json::json!({
+            "type": "error",
+            "file": self.file,
+            "line": self.line,
+            "message": self.message,
+        })
+        .to_string()
+    }
+}
+
+/// Returns the JSON message to clear the error overlay.
+#[must_use]
+#[allow(dead_code)]
+pub fn clear_error_message() -> String {
+    r#"{"type":"clear-error"}"#.to_string()
+}
+
+/// Extracts a file path from an error message by scanning for path-like
+/// tokens ending in known extensions.
+#[allow(dead_code)]
+fn extract_file_from_error(msg: &str) -> Option<String> {
+    for word in msg.split_whitespace() {
+        let trimmed = word.trim_matches(|c: char| {
+            !c.is_alphanumeric() && c != '/' && c != '.' && c != '_' && c != '-'
+        });
+        if trimmed.contains('/')
+            && (trimmed.ends_with(".md")
+                || trimmed.ends_with(".html")
+                || trimmed.ends_with(".toml")
+                || trimmed.ends_with(".yml")
+                || trimmed.ends_with(".yaml"))
+        {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
 
 /// CLI-driven options that don't live in `SsgConfig` itself.
 ///
@@ -32,6 +105,9 @@ pub struct RunOptions {
     /// Number of parallel threads for Rayon (`--jobs`).
     /// `None` means use all available CPUs.
     pub jobs: Option<usize>,
+    /// Peak memory budget in MB for streaming compilation.
+    /// `None` means use the default (512 MB).
+    pub max_memory_mb: Option<usize>,
 }
 
 impl RunOptions {
@@ -43,6 +119,7 @@ impl RunOptions {
             deploy_target: matches.get_one::<String>("deploy").cloned(),
             validate_only: matches.get_flag("validate"),
             jobs: matches.get_one::<usize>("jobs").copied(),
+            max_memory_mb: matches.get_one::<usize>("max-memory").copied(),
         }
     }
 }
@@ -82,13 +159,18 @@ pub fn build_pipeline(
 ) {
     let (build_dir, site_dir) = resolve_build_and_site_dirs(config);
 
-    let ctx = plugin::PluginContext::with_config(
+    let mut ctx = plugin::PluginContext::with_config(
         &config.content_dir,
         &build_dir,
         &site_dir,
         &config.template_dir,
         config.clone(),
     );
+
+    // Set memory budget if --max-memory was specified
+    if let Some(mb) = opts.max_memory_mb {
+        ctx.memory_budget = Some(streaming::MemoryBudget::from_mb(mb));
+    }
 
     let mut plugins = plugin::PluginManager::new();
     register_default_plugins(
@@ -119,12 +201,45 @@ pub fn execute_build_pipeline(
 
     // Load plugin cache for incremental builds
     let cache = plugin::PluginCache::load(site_dir);
+    let dep_graph = crate::depgraph::DepGraph::load(site_dir);
     let mut ctx = ctx.clone();
     ctx.cache = Some(cache);
+    ctx.dep_graph = Some(dep_graph);
 
     plugins.run_before_compile(&ctx)?;
-    compile_site(build_dir, content_dir, site_dir, template_dir)?;
+
+    // Use streaming compilation for large sites when --max-memory is set
+    // or the site exceeds the default batch size.
+    let budget = ctx
+        .memory_budget
+        .unwrap_or_else(streaming::MemoryBudget::default_budget);
+    let explicitly_set = ctx.memory_budget.is_some();
+
+    if streaming::should_stream(content_dir, &budget, explicitly_set) {
+        let batches = streaming::batched_content_files(content_dir, &budget)?;
+        for (i, batch) in batches.iter().enumerate() {
+            streaming::compile_batch(
+                batch,
+                content_dir,
+                build_dir,
+                site_dir,
+                template_dir,
+                i,
+            )?;
+        }
+    } else {
+        compile_site(build_dir, content_dir, site_dir, template_dir)?;
+    }
+
+    // Cache HTML file list once — shared by all after_compile plugins,
+    // eliminating 8+ redundant directory walks.
+    ctx.cache_html_files();
+
     plugins.run_after_compile(&ctx)?;
+
+    // Fused transform pass: read each HTML once → pipe through all
+    // transform plugins → write once. Eliminates redundant I/O.
+    plugins.run_fused_transforms(&ctx)?;
 
     // Rebuild and save cache: snapshot all HTML files in site_dir
     if let Some(ref mut cache) = ctx.cache {
@@ -135,6 +250,13 @@ pub fn execute_build_pipeline(
         }
         if let Err(e) = cache.save(site_dir) {
             log::warn!("Failed to save plugin cache: {e}");
+        }
+    }
+
+    // Persist the dependency graph for next incremental build
+    if let Some(ref dg) = ctx.dep_graph {
+        if let Err(e) = dg.save(site_dir) {
+            log::warn!("Failed to save dependency graph: {e}");
         }
     }
 
@@ -182,11 +304,13 @@ pub fn register_default_plugins(
     plugins.register(drafts::DraftPlugin::new(include_drafts));
     plugins.register(shortcodes::ShortcodePlugin);
 
-    // Tera templating (must run first in after_compile)
-    #[cfg(feature = "tera-templates")]
-    plugins.register(crate::tera_plugin::TeraPlugin::from_template_dir(
-        &config.template_dir,
-    ));
+    // Template engine (must run first in after_compile)
+    #[cfg(feature = "templates")]
+    plugins.register(
+        crate::template_plugin::TemplatePlugin::from_template_dir(
+            &config.template_dir,
+        ),
+    );
 
     // Post-processing fixes for staticdatagen output (run early,
     // before SEO plugins read/modify the HTML)
@@ -231,6 +355,12 @@ pub fn register_default_plugins(
         }
     }
 
+    // Interactive islands (Web Components)
+    plugins.register(islands::IslandPlugin);
+
+    // CSP hardening: extract inline styles/scripts to external files with SRI
+    plugins.register(csp::CspPlugin);
+
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);
 
@@ -256,4 +386,76 @@ pub fn register_default_plugins(
 
     // Dev server
     plugins.register(livereload::LiveReloadPlugin::default());
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_error_serialization() {
+        let err = BuildError {
+            file: Some("content/post.md".to_string()),
+            line: Some(42),
+            message: "unexpected token".to_string(),
+        };
+        let json = err.to_ws_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&json).expect("valid JSON");
+        assert_eq!(parsed["type"], "error");
+        assert_eq!(parsed["file"], "content/post.md");
+        assert_eq!(parsed["line"], 42);
+        assert_eq!(parsed["message"], "unexpected token");
+    }
+
+    #[test]
+    fn test_clear_error_message() {
+        let msg = clear_error_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&msg).expect("valid JSON");
+        assert_eq!(parsed["type"], "clear-error");
+    }
+
+    #[test]
+    fn test_extract_file_from_error_md() {
+        let msg = "cannot read content/posts/hello.md: permission denied";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("content/posts/hello.md".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_html() {
+        let msg = "template error in templates/base.html";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("templates/base.html".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_toml() {
+        let msg = "parse error in config/site.toml at line 5";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("config/site.toml".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_none() {
+        let msg = "something went wrong with no file path";
+        assert_eq!(extract_file_from_error(msg), None);
+    }
+
+    #[test]
+    fn test_build_error_from_anyhow() {
+        let err = anyhow::anyhow!("cannot write output/index.html: disk full");
+        let be = BuildError::from_anyhow(&err);
+        assert_eq!(be.file, Some("output/index.html".to_string()));
+        assert!(be.line.is_none());
+        assert!(be.message.contains("disk full"));
+    }
 }

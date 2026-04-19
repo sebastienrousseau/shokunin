@@ -257,7 +257,7 @@ fn process_frontmatter(content: &str) -> Result<String, ProcessError> {
     }
 }
 
-/// Processes command-line arguments and initiates the static site generation.
+/// Processes CLI arguments and executes the corresponding site compilation workflow.
 ///
 /// This function performs the following steps:
 /// 1. Retrieves required directory paths from command-line arguments.
@@ -308,6 +308,7 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use clap::{arg, Command};

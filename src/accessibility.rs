@@ -10,10 +10,7 @@
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use serde::Serialize;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::fs;
 
 /// An individual accessibility issue found in a page.
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
@@ -62,7 +59,7 @@ impl Plugin for AccessibilityPlugin {
             return Ok(());
         }
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = ctx.get_html_files();
         let mut report = AccessibilityReport {
             pages_scanned: html_files.len(),
             total_issues: 0,
@@ -388,14 +385,18 @@ fn strip_tags_simple(html: &str) -> String {
     result
 }
 
-/// Recursively collects HTML files (delegates to `crate::walk`).
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+#[cfg(test)]
+fn collect_html_files(
+    dir: &std::path::Path,
+) -> Result<Vec<std::path::PathBuf>> {
     crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use std::path::Path;
     use tempfile::tempdir;
 
     fn test_ctx(site_dir: &Path) -> PluginContext {

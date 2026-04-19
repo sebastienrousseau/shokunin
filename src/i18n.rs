@@ -612,6 +612,7 @@ pub fn generate_lang_switcher_html(
 // ── Tests ────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;
