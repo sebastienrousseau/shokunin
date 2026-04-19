@@ -234,10 +234,6 @@ fn main() -> Result<()> {
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-    println!("Server running at http://127.0.0.1:3002");
-    println!("Document root: {doc_root}");
-    println!("Press Ctrl+C to stop.");
-
     server.start().context("Failed to start dev server")?;
 
     Ok(())

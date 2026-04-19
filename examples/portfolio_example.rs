@@ -269,10 +269,6 @@ impl PortfolioSiteGenerator {
             .build()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        println!("Server running at http://127.0.0.1:3006");
-        println!("  Document root: {root}");
-        println!("  Press Ctrl+C to stop.");
-
         server.start().context("Failed to start dev server")?;
 
         Ok(())

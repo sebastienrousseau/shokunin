@@ -87,6 +87,7 @@ fn main() -> Result<()> {
     let ctx =
         PluginContext::new(content_dir, build_dir, site_dir, template_dir);
     plugins.run_after_compile(&ctx)?;
+    plugins.run_fused_transforms(&ctx)?;
     println!("    🔍 Search index generated");
     println!("    🧹 Browser-compat cleanups applied");
     let elapsed = start.elapsed();
@@ -114,10 +115,6 @@ fn main() -> Result<()> {
         .custom_header("Permissions-Policy", "browsing-topics=()")
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
-
-    println!("\n❯ Server is now running at http://127.0.0.1:3001");
-    println!("  Document root: {example_root}");
-    println!("  Press Ctrl+C to stop the server.");
 
     server.start().map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(())

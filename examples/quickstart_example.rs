@@ -297,11 +297,7 @@ impl SiteGenerator {
             .build()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        println!("❯ Server is now running at http://127.0.0.1:3007");
-        println!("  Document root: {example_root}");
-        println!("  Press Ctrl+C to stop the server.");
-
-        // Start the server (blocks until stopped)
+        // Start the server (blocks until stopped — prints its own banner)
         server.start().context("Failed to start dev server")?;
 
         Ok(())
