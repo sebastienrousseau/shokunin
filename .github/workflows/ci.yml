@@ -95,6 +95,7 @@ jobs:
                      --test fault_injection \
                      --test schema_validation \
                      --test plugin_contracts \
+                     --test perf_regression \
                      --test test_navigation \
                      --test test_tags \
                      --test test_manifest \

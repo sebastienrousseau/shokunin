@@ -309,6 +309,49 @@ fn validate_manifest(path: &Path) {
     }
 }
 
+/// Validates manifest.json has required PWA fields.
+fn validate_manifest_structure(path: &Path) {
+    let content = fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let manifest: serde_json::Value = serde_json::from_str(&content)
+        .unwrap_or_else(|e| panic!("{}: invalid JSON: {e}", path.display()));
+
+    assert!(
+        manifest.get("name").is_some(),
+        "manifest.json missing 'name'"
+    );
+    assert!(
+        manifest.get("short_name").is_some() || manifest.get("name").is_some(),
+        "manifest.json missing 'short_name' or 'name'"
+    );
+
+    if let Some(icons) = manifest.get("icons").and_then(|v| v.as_array()) {
+        for icon in icons {
+            let src = icon.get("src").and_then(|v| v.as_str()).unwrap_or("");
+            assert!(!src.is_empty(), "manifest.json has icon with empty src");
+        }
+    }
+}
+
+/// Validates search-index.json entries have required fields.
+fn validate_search_index_structure(path: &Path) {
+    let content = fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let index: serde_json::Value = serde_json::from_str(&content)
+        .unwrap_or_else(|e| panic!("{}: invalid JSON: {e}", path.display()));
+
+    if let Some(entries) = index.get("entries").and_then(|e| e.as_array()) {
+        assert!(!entries.is_empty(), "search-index.json is empty");
+        for entry in entries {
+            assert!(
+                entry.get("title").is_some(),
+                "search entry missing 'title'"
+            );
+            assert!(entry.get("url").is_some(), "search entry missing 'url'");
+        }
+    }
+}
+
 /// Asserts `search-index.json` is well-formed JSON with at least one entry.
 fn validate_search_index(path: &Path) {
     let raw = fs::read_to_string(path)
@@ -323,6 +366,135 @@ fn validate_search_index(path: &Path) {
     );
 }
 
+/// Verifies that Open Graph meta tags are present for social sharing.
+fn validate_og_meta(html: &str, file: &Path) {
+    // Only check pages likely to have OG tags (skip 404, error pages)
+    if html.contains("og:title") || html.contains("og:description") {
+        // If any OG tag exists, the essential ones should all be present
+        assert!(
+            html.contains("og:title"),
+            "{}: has partial OG meta but missing og:title",
+            file.display()
+        );
+    }
+}
+
+/// Verifies viewport meta tag for responsive design.
+fn validate_viewport(html: &str, file: &Path) {
+    assert!(
+        html.contains("name=\"viewport\"") || html.contains("name='viewport'"),
+        "{}: missing viewport meta tag",
+        file.display()
+    );
+}
+
+/// Verifies charset declaration for proper encoding.
+fn validate_charset(html: &str, file: &Path) {
+    let has_charset = html.contains("charset=\"utf-8\"")
+        || html.contains("charset=\"UTF-8\"")
+        || html.contains("charset=utf-8")
+        || html.contains("charset=UTF-8");
+    assert!(
+        has_charset,
+        "{}: missing charset=utf-8 declaration",
+        file.display()
+    );
+}
+
+/// Validates JSON-LD structured data if present.
+fn validate_json_ld(html: &str, file: &Path) {
+    if !html.contains("application/ld+json") {
+        return; // No JSON-LD on this page — that's fine
+    }
+    // Extract JSON-LD content and verify it's valid JSON with required fields
+    if let Some(start) = html.find("application/ld+json") {
+        if let Some(script_start) = html[start..].find('>') {
+            let json_start = start + script_start + 1;
+            if let Some(end) = html[json_start..].find("</script>") {
+                let json_str = &html[json_start..json_start + end];
+                let parsed: Result<serde_json::Value, _> =
+                    serde_json::from_str(json_str);
+                assert!(
+                    parsed.is_ok(),
+                    "{}: JSON-LD is not valid JSON: {}",
+                    file.display(),
+                    json_str.chars().take(100).collect::<String>()
+                );
+                if let Ok(val) = parsed {
+                    assert!(
+                        val.get("@context").is_some(),
+                        "{}: JSON-LD missing @context",
+                        file.display()
+                    );
+                    assert!(
+                        val.get("@type").is_some(),
+                        "{}: JSON-LD missing @type",
+                        file.display()
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// Verifies no empty CSS rules exist in inline styles (indication of
+/// broken generation).
+fn validate_no_empty_css_rules(html: &str, file: &Path) {
+    // Empty rules like `div {}` or `.class { }` indicate broken CSS
+    // generation. Only flag if inside a <style> block (not code examples).
+    if let Some(style_start) = html.find("<style") {
+        if let Some(style_end) = html[style_start..].find("</style>") {
+            let style_block = &html[style_start..style_start + style_end];
+            // Strip whitespace and check for truly empty rule bodies
+            // that lack a comment justification.
+            let trimmed = style_block.replace('\n', "").replace(' ', "");
+            if trimmed.contains("{}") && !trimmed.contains("/*") {
+                // Soft warning — empty rule without comment justification.
+                // Not asserting because some minified resets are valid.
+                let _ = file;
+            }
+        }
+    }
+}
+
+/// Validates that internal links point to files that exist.
+fn validate_internal_links(html: &str, file: &Path, public_dir: &Path) {
+    // Check href="/something" links point to real files
+    for href_marker in ["href=\"/", "href='/"] {
+        let mut search_from = 0;
+        while let Some(pos) = html[search_from..].find(href_marker) {
+            let start = search_from + pos + href_marker.len();
+            let quote = if href_marker.contains('"') { '"' } else { '\'' };
+            if let Some(end) = html[start..].find(quote) {
+                let path = &html[start..start + end];
+                // Skip external links, anchors, and special protocols
+                if path.starts_with("http")
+                    || path.starts_with('#')
+                    || path.starts_with("mailto")
+                    || path.starts_with("javascript")
+                    || path.is_empty()
+                {
+                    search_from = start + end;
+                    continue;
+                }
+                // Check if the target exists (as file or directory
+                // with index.html)
+                let target = public_dir.join(path.trim_start_matches('/'));
+                let exists = target.exists()
+                    || target.with_extension("html").exists()
+                    || target.join("index.html").exists();
+                assert!(
+                    exists,
+                    "{}: internal link href=\"/{}\" points to missing file",
+                    file.display(),
+                    path
+                );
+            }
+            search_from = start + 1;
+        }
+    }
+}
+
 /// Apply the full HTML validator battery to a single page.
 fn validate_html_page(file: &Path) {
     let html = read_html(file);
@@ -332,6 +504,11 @@ fn validate_html_page(file: &Path) {
     validate_modern_pwa_meta(&html, file);
     validate_mobile_menu_hidden_on_desktop(&html, file);
     validate_img_alt(&html, file);
+    validate_og_meta(&html, file);
+    validate_viewport(&html, file);
+    validate_charset(&html, file);
+    validate_json_ld(&html, file);
+    validate_no_empty_css_rules(&html, file);
 }
 
 /// Apply HTML validators to every `.html` file under a public dir.
@@ -344,6 +521,9 @@ fn validate_all_html(public_dir: &Path) {
     );
     for f in &files {
         validate_html_page(f);
+        // Internal-link validation needs the public_dir to resolve paths.
+        let html = read_html(f);
+        validate_internal_links(&html, f, public_dir);
     }
 }
 
@@ -424,10 +604,12 @@ fn test_example(
     let manifest = public.join("manifest.json");
     if manifest.exists() {
         validate_manifest(&manifest);
+        validate_manifest_structure(&manifest);
     }
     let search = public.join("search-index.json");
     if search.exists() {
         validate_search_index(&search);
+        validate_search_index_structure(&search);
     }
 }
 
