@@ -120,6 +120,18 @@ impl Cli {
                     .value_name("MB")
                     .value_parser(clap::value_parser!(usize)),
             )
+            .arg(
+                Arg::new("ai-fix")
+                    .help("Run agentic AI pipeline to audit and fix content readability")
+                    .long("ai-fix")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("ai-fix-dry-run")
+                    .help("Preview AI fixes without writing changes")
+                    .long("ai-fix-dry-run")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Displays the application banner

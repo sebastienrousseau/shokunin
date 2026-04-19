@@ -11,7 +11,7 @@
 //! - `CanonicalPlugin` — Injects `<link rel="canonical">` tags.
 
 mod canonical;
-mod helpers;
+pub mod helpers;
 mod jsonld;
 mod robots;
 mod seo_plugin;

@@ -93,6 +93,7 @@ fn extract_file_from_error(msg: &str) -> Option<String> {
 /// Extracted from clap matches so the run pipeline can be unit-tested
 /// without going through `Cli::build()`.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct RunOptions {
     /// Suppress banner and timing print-outs.
     pub quiet: bool,
@@ -108,6 +109,12 @@ pub struct RunOptions {
     /// Peak memory budget in MB for streaming compilation.
     /// `None` means use the default (512 MB).
     pub max_memory_mb: Option<usize>,
+    /// Run the agentic AI pipeline to audit and fix content.
+    #[allow(dead_code)]
+    pub ai_fix: bool,
+    /// Preview AI fixes without writing files.
+    #[allow(dead_code)]
+    pub ai_fix_dry_run: bool,
 }
 
 impl RunOptions {
@@ -120,6 +127,8 @@ impl RunOptions {
             validate_only: matches.get_flag("validate"),
             jobs: matches.get_one::<usize>("jobs").copied(),
             max_memory_mb: matches.get_one::<usize>("max-memory").copied(),
+            ai_fix: matches.get_flag("ai-fix"),
+            ai_fix_dry_run: matches.get_flag("ai-fix-dry-run"),
         }
     }
 }

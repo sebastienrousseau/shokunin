@@ -132,6 +132,8 @@ pub mod llm;
 pub mod logging;
 /// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
 pub mod markdown_ext;
+/// Auto-generates Open Graph social card images from page metadata.
+pub mod og_image;
 /// Pagination for listing pages.
 pub mod pagination;
 /// Build pipeline orchestration.
@@ -2047,6 +2049,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2072,6 +2076,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2082,6 +2088,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2102,6 +2110,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2123,6 +2133,8 @@ mod tests {
                 validate_only: false,
                 jobs: None,
                 max_memory_mb: None,
+                ai_fix: false,
+                ai_fix_dry_run: false,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2312,6 +2324,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2359,6 +2373,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2405,6 +2421,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2438,6 +2456,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2469,6 +2489,8 @@ mod tests {
             validate_only: false,
             jobs: None,
             max_memory_mb: None,
+            ai_fix: false,
+            ai_fix_dry_run: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));

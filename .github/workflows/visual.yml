@@ -56,6 +56,18 @@ jobs:
           path: tests/visual/test-results/
           retention-days: 7
 
+      - name: Run accessibility audit
+        working-directory: tests/visual
+        run: npx playwright test a11y.spec.ts
+
+      - name: Upload a11y reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a11y-reports
+          path: tests/visual/a11y-reports/
+          retention-days: 30
+
       - name: Update baselines
         if: github.event.inputs.update_baselines == 'true'
         working-directory: tests/visual
