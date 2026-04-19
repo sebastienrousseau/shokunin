@@ -841,16 +841,15 @@ fn validator_accepts_apple_with_modern_meta() {
 }
 
 #[test]
-fn validator_rejects_missing_mobile_menu_base_rule() {
+fn validator_warns_missing_mobile_menu_base_rule() {
+    // Validator now emits a warning instead of panicking — verify it
+    // does not panic even when the base rule is missing.
     let html = r#"<head><style>@media(max-width:768px){.mobile-menu{display:none}}</style></head>"#;
     let file = Path::new("test://synthetic");
     let result = std::panic::catch_unwind(|| {
         validate_mobile_menu_hidden_on_desktop(html, file);
     });
-    assert!(
-        result.is_err(),
-        "should have panicked: rule only inside @media"
-    );
+    assert!(result.is_ok(), "validator should warn, not panic");
 }
 
 #[test]

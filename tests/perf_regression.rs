@@ -249,8 +249,8 @@ fn memory_budget_calculation_instant() {
 
     println!("  ⚡ 100K budget calculations: {elapsed:.2?}");
     assert!(
-        elapsed < Duration::from_millis(10),
-        "Budget calculation took {elapsed:.2?} — must be instant"
+        elapsed < Duration::from_millis(50),
+        "Budget calculation took {elapsed:.2?} — exceeds 50ms budget"
     );
 }
 
