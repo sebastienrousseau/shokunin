@@ -546,7 +546,7 @@ mod tests {
     fn test_collect_articles_skips_empty_path() {
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Has Title".to_string());
-        let entries = vec![("".to_string(), meta)];
+        let entries = vec![(String::new(), meta)];
         let articles = collect_articles(&entries, "https://example.com");
         assert!(
             articles.is_empty(),

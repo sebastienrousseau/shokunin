@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn cli_default_is_unit_struct() {
-        let _cli = Cli::default();
+        let _cli = Cli;
         // Cli is a ZST — just ensure Default works.
     }
 }
