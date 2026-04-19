@@ -39,7 +39,7 @@
 //! cargo run --release --example basic
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3001> in your browser.
 //!
 //! ## How this differs from `quickstart`
 //!
@@ -53,6 +53,7 @@ use http_handle::Server;
 use ssg::plugin::{PluginContext, PluginManager};
 use ssg::search::SearchPlugin;
 use staticdatagen::compiler::service::compile;
+use std::time::Instant;
 use std::{fs, path::Path};
 
 fn main() -> Result<()> {
@@ -66,6 +67,7 @@ fn main() -> Result<()> {
     fs::create_dir_all(site_dir)?;
 
     // 1. Compile content → HTML
+    let start = Instant::now();
     match compile(build_dir, content_dir, site_dir, template_dir) {
         Ok(()) => println!("    ✅ Successfully compiled static site"),
         Err(e) => {
@@ -87,6 +89,8 @@ fn main() -> Result<()> {
     plugins.run_after_compile(&ctx)?;
     println!("    🔍 Search index generated");
     println!("    🧹 Browser-compat cleanups applied");
+    let elapsed = start.elapsed();
+    println!("    ⚡ Built in {elapsed:.0?}");
 
     // Markdown GFM support
     let gfm_sample = ssg::markdown_ext::expand_gfm("**bold** and ~~strike~~");
@@ -105,13 +109,13 @@ fn main() -> Result<()> {
     // page out of the Topics API. Suppresses the "Browsing Topics API
     // removed" Chrome console message in dev mode.
     let server = Server::builder()
-        .address("127.0.0.1:3000")
+        .address("127.0.0.1:3001")
         .document_root(example_root.as_str())
         .custom_header("Permissions-Policy", "browsing-topics=()")
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-    println!("\n❯ Server is now running at http://127.0.0.1:3000");
+    println!("\n❯ Server is now running at http://127.0.0.1:3001");
     println!("  Document root: {example_root}");
     println!("  Press Ctrl+C to stop the server.");
 
