@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved. All rights reserved.
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 #![allow(missing_docs)]
 
@@ -224,7 +224,10 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(not(feature = "benchmark"), ignore)]
+    #[cfg_attr(
+        not(feature = "benchmark"),
+        ignore = "requires benchmark feature"
+    )]
     fn test_setup_test_files() {
         let (src, dst) = setup_test_files(5, 1024);
         assert!(src.exists());
@@ -241,7 +244,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(not(feature = "benchmark"), ignore)]
+    #[cfg_attr(
+        not(feature = "benchmark"),
+        ignore = "requires benchmark feature"
+    )]
     fn test_setup_nested_directories() {
         let (src, _) = setup_nested_directories();
 
@@ -261,7 +267,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(not(feature = "benchmark"), ignore)]
+    #[cfg_attr(
+        not(feature = "benchmark"),
+        ignore = "requires benchmark feature"
+    )]
     fn test_setup_mixed_content() {
         let (src, _) = setup_mixed_content();
 

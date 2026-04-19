@@ -109,6 +109,6 @@ site_software: "SSG, Rust"
 
 ## Browse by topic
 
-Select a tag to discover related documentation pages.
+Pick a tag to find related pages.
 
 [[content]]

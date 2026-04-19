@@ -108,20 +108,20 @@ site_software: "SSG, Rust"
 
 ## About
 
-I trained as a cognitive psychologist at the University of Lagos, then moved into UX research at a London charity in 2018. I've been independent since 2022.
+I trained as a cognitive psychologist at the University of Lagos. In 2018 I moved into UX research at a London charity. I have been independent since 2022.
 
-My background means I write up findings the way researchers expect to read them: clear methodology, honest sample sizes, no hand-wavy "users said" claims. Clients tell me this is the difference between a report that gets read and one that gathers dust.
+I write findings the way researchers expect. That means clear methods, honest sample sizes, and no vague "users said" claims. Clients say this makes the difference between a report people read and one that gathers dust.
 
 ## How I work
 
-- **Discovery first.** Every engagement starts with a paid one-week discovery so we both know what we're getting into.
-- **In writing, not slides.** Every finding lives in a written document with citations, not a deck that disappears after the readout.
+- **Discovery first.** Every project starts with a paid one-week discovery. That way we both know what we are getting into.
+- **In writing, not slides.** Every finding lives in a written document with citations, not a deck that fades after the readout.
 - **Fortnightly check-ins.** A 30-minute call every other Wednesday, even on long projects, so nothing drifts.
-- **No NDAs that bury negative findings.** I'll sign reasonable confidentiality terms; I won't sign clauses that prevent me from telling you when something isn't working.
+- **No NDAs that bury bad findings.** I will sign fair privacy terms. I will not sign clauses that stop me from flagging problems.
 
 ## Speaking and writing
 
-I write occasionally for [A List Apart](https://alistapart.com) and have given talks at UX London, Service Design in Government, and the Interaction conference. Slides and notes are available on request.
+I write now and then for [A List Apart](https://alistapart.com). I have spoken at UX London, Service Design in Government, and the Interaction conference. Slides and notes are on request.
 
 ## Education
 

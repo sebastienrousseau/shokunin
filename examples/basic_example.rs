@@ -39,7 +39,7 @@
 //! cargo run --release --example basic
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3001> in your browser.
 //!
 //! ## How this differs from `quickstart`
 //!
@@ -53,6 +53,7 @@ use http_handle::Server;
 use ssg::plugin::{PluginContext, PluginManager};
 use ssg::search::SearchPlugin;
 use staticdatagen::compiler::service::compile;
+use std::time::Instant;
 use std::{fs, path::Path};
 
 fn main() -> Result<()> {
@@ -64,6 +65,8 @@ fn main() -> Result<()> {
     // Ensure per-example output directories exist before compile.
     fs::create_dir_all(build_dir)?;
     fs::create_dir_all(site_dir)?;
+
+    let start = Instant::now();
 
     // 1. Compile content → HTML
     match compile(build_dir, content_dir, site_dir, template_dir) {
@@ -79,14 +82,27 @@ fn main() -> Result<()> {
     //    console warnings (empty <link rel=preload>, deprecated apple
     //    meta, manifest icon with empty src).
     let mut plugins = PluginManager::new();
+
+    // Draft filtering (include all for this example)
+    plugins.register(ssg::drafts::DraftPlugin::new(true));
+
     plugins.register(ssg::postprocess::HtmlFixPlugin);
     plugins.register(ssg::postprocess::ManifestFixPlugin);
     plugins.register(SearchPlugin);
+
+    // Asset fingerprinting + SRI
+    plugins.register(ssg::assets::FingerprintPlugin);
+
     let ctx =
         PluginContext::new(content_dir, build_dir, site_dir, template_dir);
+    plugins.run_before_compile(&ctx)?;
     plugins.run_after_compile(&ctx)?;
+    plugins.run_fused_transforms(&ctx)?;
     println!("    🔍 Search index generated");
     println!("    🧹 Browser-compat cleanups applied");
+
+    let elapsed = start.elapsed();
+    println!("    ⚡ Built in {elapsed:.0?}");
 
     // 3. Hide template UI that doesn't apply to this template:
     //    - the language dropdown (single-locale site)
@@ -101,13 +117,13 @@ fn main() -> Result<()> {
     // page out of the Topics API. Suppresses the "Browsing Topics API
     // removed" Chrome console message in dev mode.
     let server = Server::builder()
-        .address("127.0.0.1:3000")
+        .address("127.0.0.1:3001")
         .document_root(example_root.as_str())
         .custom_header("Permissions-Policy", "browsing-topics=()")
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-    println!("\n❯ Server is now running at http://127.0.0.1:3000");
+    println!("\n❯ Server is now running at http://127.0.0.1:3001");
     println!("  Document root: {example_root}");
     println!("  Press Ctrl+C to stop the server.");
 

@@ -119,6 +119,6 @@ site_software: "SSG, Rust" ## The software of the site.
 
 ## Explore by Tag
 
-Browse all content organised by topic. Select a tag below to discover related pages, articles, and resources.
+Browse all content sorted by topic. Pick a tag below to find related pages and articles.
 
 [[content]]

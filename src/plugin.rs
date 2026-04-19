@@ -43,6 +43,7 @@ use std::{
     collections::HashMap,
     fmt, fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 // =====================================================================
@@ -157,9 +158,38 @@ pub struct PluginContext {
     pub config: Option<SsgConfig>,
     /// Content-addressed plugin cache for incremental builds.
     pub cache: Option<PluginCache>,
+    /// Memory budget for streaming compilation.
+    pub memory_budget: Option<crate::streaming::MemoryBudget>,
+    /// Cached list of HTML files in `site_dir`, walked once and shared
+    /// across all plugins to avoid redundant filesystem traversals.
+    pub html_files: Option<Arc<Vec<PathBuf>>>,
+    /// Page dependency graph for incremental rebuilds.
+    pub dep_graph: Option<crate::depgraph::DepGraph>,
 }
 
 impl PluginContext {
+    /// Populates the cached HTML file list by walking `site_dir` once.
+    /// Call this before running `after_compile` plugins to eliminate
+    /// redundant directory scans (8+ plugins read the same file list).
+    pub fn cache_html_files(&mut self) {
+        if self.site_dir.exists() {
+            let files = crate::walk::walk_files(&self.site_dir, "html")
+                .unwrap_or_default();
+            self.html_files = Some(Arc::new(files));
+        }
+    }
+
+    /// Returns the cached HTML file list, or walks the directory if
+    /// the cache hasn't been populated.
+    #[must_use]
+    pub fn get_html_files(&self) -> Vec<PathBuf> {
+        if let Some(ref cached) = self.html_files {
+            cached.as_ref().clone()
+        } else {
+            crate::walk::walk_files(&self.site_dir, "html").unwrap_or_default()
+        }
+    }
+
     /// Creates a new plugin context from directory paths.
     #[must_use]
     pub fn new(
@@ -175,6 +205,9 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: None,
             cache: None,
+            memory_budget: None,
+            html_files: None,
+            dep_graph: None,
         }
     }
 
@@ -194,6 +227,9 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: Some(config),
             cache: None,
+            memory_budget: None,
+            html_files: None,
+            dep_graph: None,
         }
     }
 }
@@ -221,6 +257,30 @@ pub trait Plugin: fmt::Debug + Send + Sync {
     /// generate sitemaps, or perform any output transformation.
     fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
+    }
+
+    /// Per-file HTML transform hook — called once per HTML file during
+    /// the fused transform pass.
+    ///
+    /// Receives the current HTML content and returns the (possibly modified)
+    /// HTML. The default implementation returns the input unchanged.
+    ///
+    /// Plugins that implement this hook avoid redundant file I/O — the
+    /// pipeline reads each HTML file once, pipes it through all plugins'
+    /// `transform_html` hooks, then writes the result once.
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String> {
+        Ok(html.to_string())
+    }
+
+    /// Returns `true` if this plugin implements `transform_html`.
+    /// Override to `true` to opt in to the fused transform pass.
+    fn has_transform(&self) -> bool {
+        false
     }
 
     /// Called before the development server starts serving files.
@@ -337,6 +397,50 @@ impl PluginManager {
         Ok(())
     }
 
+    /// Runs the fused HTML transform pass: reads each HTML file once,
+    /// pipes through all plugins with `has_transform() == true`, writes once.
+    ///
+    /// This eliminates N separate read/write cycles (where N = number of
+    /// transform plugins) per HTML file.
+    pub fn run_fused_transforms(&self, ctx: &PluginContext) -> Result<()> {
+        use rayon::prelude::*;
+
+        let transform_plugins: Vec<_> =
+            self.plugins.iter().filter(|p| p.has_transform()).collect();
+
+        if transform_plugins.is_empty() {
+            return Ok(());
+        }
+
+        let html_files = ctx.get_html_files();
+        let transformed = std::sync::atomic::AtomicUsize::new(0);
+
+        html_files.par_iter().try_for_each(|path| -> Result<()> {
+            let original = fs::read_to_string(path)?;
+            let mut html = original.clone();
+
+            for plugin in &transform_plugins {
+                html = plugin.transform_html(&html, path, ctx)?;
+            }
+
+            if html != original {
+                fs::write(path, &html)?;
+                let _ = transformed
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(())
+        })?;
+
+        let count = transformed.load(std::sync::atomic::Ordering::Relaxed);
+        if count > 0 {
+            log::info!(
+                "[pipeline] Fused transform: {count} file(s), {} plugin(s)",
+                transform_plugins.len()
+            );
+        }
+        Ok(())
+    }
+
     /// Runs the `on_serve` hook on all registered plugins.
     ///
     /// Plugins execute in registration order. If any plugin returns
@@ -356,6 +460,7 @@ impl PluginManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};

@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: "\U0001F4DA Document"
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  document:
+    name: Build & deploy docs
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Generate documentation
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+          echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
+
+      - name: Write CNAME file
+        run: echo 'doc.static-site-generator.com' > ./target/doc/CNAME
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: documentation
+          path: target/doc
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          publish_branch: gh-pages
+          cname: true
+          commit_message: "Deploy documentation at ${{ github.sha }}"
+          user_name: github-actions
+          user_email: actions@users.noreply.github.com

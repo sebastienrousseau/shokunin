@@ -38,7 +38,7 @@
 //! cargo run --release --example quickstart
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000>.
+//! Then open <http://127.0.0.1:3007>.
 //!
 //! ## How this differs from `basic`
 //!
@@ -60,6 +60,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
+    time::Instant,
 };
 
 /// Represents the configuration for site generation
@@ -86,7 +87,7 @@ impl SiteGenerator {
         // roastery) so the output looks like a real site, not a generic
         // demo. Replace these strings to repurpose the starter.
         let site_name = "heron-coffee";
-        let base_url = "http://127.0.0.1:3000";
+        let base_url = "http://127.0.0.1:3007";
         // Create log file
         let log_file = File::create("site_generation.log")
             .context("Failed to create log file")?;
@@ -197,10 +198,12 @@ impl SiteGenerator {
         // Register the default plugin pipeline
         let mut plugins = PluginManager::new();
         plugins.register(ssg::shortcodes::ShortcodePlugin);
-        #[cfg(feature = "tera-templates")]
-        plugins.register(ssg::tera_plugin::TeraPlugin::from_template_dir(
-            &self.config.template_dir,
-        ));
+        #[cfg(feature = "templates")]
+        plugins.register(
+            ssg::template_plugin::TemplatePlugin::from_template_dir(
+                &self.config.template_dir,
+            ),
+        );
         plugins.register(ssg::postprocess::SitemapFixPlugin);
         plugins.register(ssg::postprocess::NewsSitemapFixPlugin);
         plugins.register(ssg::postprocess::RssAggregatePlugin);
@@ -221,10 +224,24 @@ impl SiteGenerator {
         ));
         plugins.register(ssg::search::SearchPlugin);
         plugins.register(ssg::accessibility::AccessibilityPlugin);
+        #[cfg(feature = "image-optimization")]
+        plugins.register(ssg::image_plugin::ImageOptimizationPlugin::default());
+        plugins.register(ssg::ai::AiPlugin);
+        plugins.register(ssg::taxonomy::TaxonomyPlugin);
+        plugins.register(ssg::pagination::PaginationPlugin::default());
+        plugins.register(ssg::drafts::DraftPlugin::new(true));
+        plugins.register(ssg::assets::FingerprintPlugin);
+        // CSP hardening (extract inline styles/scripts to external files with SRI)
+        plugins.register(ssg::csp::CspPlugin);
+
+        // Interactive islands (Web Components with lazy hydration)
+        plugins.register(ssg::islands::IslandPlugin);
+
         plugins.register(ssg::plugins::MinifyPlugin);
 
         // Run the full pipeline: before_compile → compile → after_compile
         self.log_message("Compiling site with full plugin pipeline...")?;
+        let start = Instant::now();
         execute_build_pipeline(
             &plugins,
             &ctx,
@@ -234,6 +251,18 @@ impl SiteGenerator {
             &self.config.template_dir,
             false,
         )?;
+        println!(
+            "    📦 Streaming: {} MB memory budget available",
+            ssg::streaming::DEFAULT_MEMORY_BUDGET_MB
+        );
+        let elapsed = start.elapsed();
+        println!("    \u{26a1} Built in {elapsed:.0?}");
+
+        // Show streaming I/O buffer size
+        println!(
+            "    \u{1f4e6} Streaming I/O buffer: {} KB",
+            ssg::stream::STREAM_BUFFER_SIZE / 1024
+        );
 
         self.log_message(&format!(
             "Site generated successfully at: {}",
@@ -246,7 +275,7 @@ impl SiteGenerator {
     /// Starts a development server to preview the generated site
     fn serve(&self) -> Result<()> {
         self.log_message(
-            "Starting development server at http://127.0.0.1:3000",
+            "Starting development server at http://127.0.0.1:3007",
         )?;
 
         // Get the site directory as a string for the server
@@ -262,13 +291,13 @@ impl SiteGenerator {
         // page out of the Topics API. Suppresses the "Browsing Topics API
         // removed" Chrome console message in dev mode.
         let server = Server::builder()
-            .address("127.0.0.1:3000")
+            .address("127.0.0.1:3007")
             .document_root(example_root.as_str())
             .custom_header("Permissions-Policy", "browsing-topics=()")
             .build()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-        println!("❯ Server is now running at http://127.0.0.1:3000");
+        println!("❯ Server is now running at http://127.0.0.1:3007");
         println!("  Document root: {example_root}");
         println!("  Press Ctrl+C to stop the server.");
 
@@ -316,7 +345,7 @@ fn main() -> Result<()> {
     // SiteGenerator::new() for the demo branding. Replace them and the
     // hard-coded values inside `new()` to repurpose this starter.
     let generator =
-        SiteGenerator::new("heron-coffee", "http://127.0.0.1:3000")?;
+        SiteGenerator::new("heron-coffee", "http://127.0.0.1:3007")?;
 
     // Generate the site
     generator.generate()?;
@@ -338,16 +367,16 @@ mod tests {
     #[test]
     fn test_site_generator_creation() -> Result<()> {
         let generator =
-            SiteGenerator::new("test-site", "http://127.0.0.1:3000")?;
+            SiteGenerator::new("test-site", "http://127.0.0.1:3007")?;
         assert_eq!(generator.config.site_name, "test-site");
-        assert_eq!(generator.config.base_url, "http://127.0.0.1:3000");
+        assert_eq!(generator.config.base_url, "http://127.0.0.1:3007");
         Ok(())
     }
 
     #[test]
     fn test_directory_preparation() -> Result<()> {
         let generator =
-            SiteGenerator::new("test-site", "http://127.0.0.1:3000")?;
+            SiteGenerator::new("test-site", "http://127.0.0.1:3007")?;
         generator.prepare_directories()?;
 
         assert!(generator.config.content_dir.exists());

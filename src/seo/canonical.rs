@@ -3,11 +3,10 @@
 
 //! Canonical URL injection plugin.
 
-use super::helpers::{collect_html_files, escape_attr};
+use super::helpers::escape_attr;
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
-use rayon::prelude::*;
-use std::fs;
+use anyhow::Result;
+use std::path::Path;
 
 /// Injects `<link rel="canonical">` tags into HTML files.
 ///
@@ -46,44 +45,39 @@ impl Plugin for CanonicalPlugin {
         "canonical"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        if !ctx.site_dir.exists() {
-            return Ok(());
-        }
+    fn has_transform(&self) -> bool {
+        true
+    }
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+    fn transform_html(
+        &self,
+        html: &str,
+        path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String> {
         let base = self.base_url.trim_end_matches('/');
-        let site_dir = &ctx.site_dir;
 
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
-            let html = fs::read_to_string(path)
-                .with_context(|| format!("cannot read {}", path.display()))?;
+        let rel_path = path
+            .strip_prefix(&ctx.site_dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .replace('\\', "/");
 
-            let rel_path = path
-                .strip_prefix(site_dir)
-                .unwrap_or(path)
-                .to_string_lossy()
-                .replace('\\', "/");
+        let tag = build_canonical_tag(base, &rel_path);
 
-            let tag = build_canonical_tag(base, &rel_path);
+        let mut result = remove_existing_canonicals(html);
 
-            let mut result = remove_existing_canonicals(&html);
+        // Inject the correct canonical before </head>
+        result = if let Some(pos) = result.find("</head>") {
+            format!("{}{}\n{}", &result[..pos], tag, &result[pos..])
+        } else {
+            result
+        };
 
-            // Inject the correct canonical before </head>
-            result = if let Some(pos) = result.find("</head>") {
-                format!("{}{}\n{}", &result[..pos], tag, &result[pos..])
-            } else {
-                result
-            };
+        Ok(result)
+    }
 
-            if result != html {
-                fs::write(path, &result).with_context(|| {
-                    format!("cannot write {}", path.display())
-                })?;
-            }
-            Ok(())
-        })?;
-
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
         Ok(())
     }
 }
@@ -125,6 +119,7 @@ fn remove_existing_canonicals(html: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;
@@ -217,17 +212,14 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_injects_canonical_into_html() {
+    fn transform_html_injects_canonical() {
         let dir = tempdir().unwrap();
-        fs::write(
-            dir.path().join("page.html"),
-            "<html><head></head><body></body></html>",
-        )
-        .unwrap();
-        CanonicalPlugin::new("https://example.com")
-            .after_compile(&ctx(dir.path()))
+        let c = ctx(dir.path());
+        let html = "<html><head></head><body></body></html>";
+        let page_path = dir.path().join("page.html");
+        let after = CanonicalPlugin::new("https://example.com")
+            .transform_html(html, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("page.html")).unwrap();
         assert!(
             after.contains(r#"<link rel="canonical""#),
             "canonical link should be injected: {after}"
@@ -235,17 +227,15 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_replaces_existing_canonical_with_correct_one() {
+    fn transform_html_replaces_existing_canonical_with_correct_one() {
         let dir = tempdir().unwrap();
-        fs::write(
-            dir.path().join("page.html"),
-            r#"<html><head><link rel="canonical" href="/wrong"></head></html>"#,
-        )
-        .unwrap();
-        CanonicalPlugin::new("https://example.com")
-            .after_compile(&ctx(dir.path()))
+        let c = ctx(dir.path());
+        let html =
+            r#"<html><head><link rel="canonical" href="/wrong"></head></html>"#;
+        let page_path = dir.path().join("page.html");
+        let after = CanonicalPlugin::new("https://example.com")
+            .transform_html(html, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("page.html")).unwrap();
         assert!(
             after.contains("https://example.com"),
             "wrong canonical replaced with correct: {after}"
@@ -257,14 +247,14 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_trims_trailing_slash_on_base_url() {
+    fn transform_html_trims_trailing_slash_on_base_url() {
         let dir = tempdir().unwrap();
-        fs::write(dir.path().join("page.html"), "<html><head></head></html>")
+        let c = ctx(dir.path());
+        let html = "<html><head></head></html>";
+        let page_path = dir.path().join("page.html");
+        let after = CanonicalPlugin::new("https://example.com/")
+            .transform_html(html, &page_path, &c)
             .unwrap();
-        CanonicalPlugin::new("https://example.com/")
-            .after_compile(&ctx(dir.path()))
-            .unwrap();
-        let after = fs::read_to_string(dir.path().join("page.html")).unwrap();
         assert!(
             !after.contains("com//page.html"),
             "no double-slash after trim: {after}"
@@ -272,15 +262,14 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_handles_html_without_head_tag() {
-        // Edge: file with no </head> — should not panic, leave as-is.
+    fn transform_html_handles_html_without_head_tag() {
         let dir = tempdir().unwrap();
+        let c = ctx(dir.path());
         let raw = "<!doctype html><html><body>only</body></html>";
-        fs::write(dir.path().join("frag.html"), raw).unwrap();
-        CanonicalPlugin::new("https://example.com")
-            .after_compile(&ctx(dir.path()))
+        let page_path = dir.path().join("frag.html");
+        let after = CanonicalPlugin::new("https://example.com")
+            .transform_html(raw, &page_path, &c)
             .unwrap();
-        let after = fs::read_to_string(dir.path().join("frag.html")).unwrap();
         assert_eq!(after, raw);
     }
 }

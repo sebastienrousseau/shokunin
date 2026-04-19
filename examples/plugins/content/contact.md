@@ -108,4 +108,4 @@ site_software: "SSG, Rust"
 
 ## Contact
 
-This is a developer-reference example, not a starter template — see `examples/quickstart` if you want a clone-and-edit site.
+This is a developer reference, not a starter template. See `examples/quickstart` for a clone-and-edit site.

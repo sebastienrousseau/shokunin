@@ -108,8 +108,8 @@ site_software: "SSG, Rust"
 
 ## All projects
 
-- **[Field Notes Collective](/field-notes-collective/)** — Research archive rebuild for an environmental nonprofit — 12 field interviews, complete IA rework, 6-week ship.
-- **[Linden Editions](/linden-editions/)** — Editorial site for a quarterly literary journal — print-to-web typography system, four issues live.
-- **[Polaris Maps](/polaris-maps/)** — Wayfinding system for an independent map publisher — co-designed with the cartography team across 16 weeks.
+- **[Field Notes Collective](/field-notes-collective/)** — Archive rebuild for a nonprofit. 12 interviews and full IA rework. Shipped in 6 weeks.
+- **[Linden Editions](/linden-editions/)** — Editorial site for a literary journal. Print-to-web type. Four issues live.
+- **[Polaris Maps](/polaris-maps/)** — Wayfinding for a map publisher. Built with the cartography team over 16 weeks.
 
 [Back to home](/) · [About me](/about/) · [Get in touch](/contact/)

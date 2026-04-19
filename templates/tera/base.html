@@ -1,13 +1,26 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 <!DOCTYPE html>
-<html lang="{{ site.language | default(value='en') }}">
+<html lang="{{ site.language | default('en') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
+  <title>{% block title %}{{ page.title | default("Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
   {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
   {% if page.keywords %}<meta name="keywords" content="{{ page.keywords }}">{% endif %}
-  {% if site.base_url %}<link rel="canonical" href="{{ site.base_url }}{{ page.url | default(value='/') }}">{% endif %}
+  {% if site.base_url %}<link rel="canonical" href="{{ site.base_url }}{{ page.url | default('/') }}">{% endif %}
+  <style>
+  /* Forced-colours / Windows High Contrast Mode support (#413) */
+  @media (forced-colors: active) {
+    a, button, [role="button"] { border: 1px solid ButtonText; }
+    a:focus, button:focus, [role="button"]:focus,
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
+    img { border: 1px solid CanvasText; }
+    mark { background: Highlight; color: HighlightText; }
+  }
+  </style>
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -16,7 +29,7 @@
   <header role="banner">
     <nav aria-label="Main navigation">
       {% block nav %}
-      <a href="/">{{ site.name | default(value="Home") }}</a>
+      <a href="/">{{ site.name | default("Home") }}</a>
       {% endblock %}
     </nav>
   </header>
@@ -28,7 +41,7 @@
 
   {% block footer %}
   <footer role="contentinfo">
-    <p>&copy; {{ site.name | default(value="") }}</p>
+    <p>&copy; {{ site.name | default("") }}</p>
   </footer>
   {% endblock %}
 </body>

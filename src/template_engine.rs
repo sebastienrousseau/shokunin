@@ -1,22 +1,22 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Tera templating engine integration.
+//! Template engine integration (MiniJinja).
 //!
-//! Wraps the [Tera](https://keats.github.io/tera/) template engine to
+//! Wraps the [MiniJinja](https://docs.rs/minijinja) template engine to
 //! provide Jinja2-style templating with inheritance, conditionals, loops,
 //! partials, and custom filters for static site generation.
 
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 use anyhow::{Context, Result};
-#[cfg(feature = "tera-templates")]
+#[cfg(feature = "templates")]
 use std::{collections::HashMap, path::PathBuf};
 
-/// Configuration for the Tera templating engine.
-#[cfg(feature = "tera-templates")]
+/// Configuration for the template engine.
+#[cfg(feature = "templates")]
 #[derive(Debug, Clone)]
-pub struct TeraConfig {
-    /// Directory containing Tera templates.
+pub struct TemplateConfig {
+    /// Directory containing templates.
     pub template_dir: PathBuf,
     /// Global variables injected into every template context.
     pub globals: HashMap<String, serde_json::Value>,
@@ -24,8 +24,8 @@ pub struct TeraConfig {
     pub autoescape: bool,
 }
 
-#[cfg(feature = "tera-templates")]
-impl Default for TeraConfig {
+#[cfg(feature = "templates")]
+impl Default for TemplateConfig {
     fn default() -> Self {
         Self {
             template_dir: PathBuf::from("templates/tera"),
@@ -35,50 +35,41 @@ impl Default for TeraConfig {
     }
 }
 
-/// Wraps Tera and provides site-generation-specific rendering.
-#[cfg(feature = "tera-templates")]
+/// Wraps `MiniJinja` and provides site-generation-specific rendering.
+#[cfg(feature = "templates")]
 #[derive(Debug)]
-pub struct TeraEngine {
-    tera: tera::Tera,
-    config: TeraConfig,
+pub struct TemplateEngine {
+    env: minijinja::Environment<'static>,
+    config: TemplateConfig,
 }
 
-#[cfg(feature = "tera-templates")]
-impl TeraEngine {
-    /// Initializes the Tera engine from a template directory.
+#[cfg(feature = "templates")]
+impl TemplateEngine {
+    /// Initializes the template engine from a template directory.
     ///
-    /// Loads all `*.html` files recursively from the template directory.
+    /// Uses a path-based loader for lazy template resolution.
     /// Returns `Ok(None)` if the template directory does not exist
-    /// (graceful fallback for projects without Tera templates).
-    pub fn init(config: TeraConfig) -> Result<Option<Self>> {
+    /// (graceful fallback for projects without templates).
+    pub fn init(config: TemplateConfig) -> Result<Option<Self>> {
         if !config.template_dir.exists() {
             return Ok(None);
         }
 
-        let glob = config
-            .template_dir
-            .join("**/*.html")
-            .to_string_lossy()
-            .to_string();
-
-        let mut tera = tera::Tera::new(&glob).with_context(|| {
-            format!(
-                "Failed to load Tera templates from {}",
-                config.template_dir.display()
-            )
-        })?;
-
-        // Register custom filters
-        tera.register_filter("reading_time", reading_time_filter);
+        let mut env = minijinja::Environment::new();
+        env.set_loader(minijinja::path_loader(&config.template_dir));
 
         if !config.autoescape {
-            tera.autoescape_on(vec![]);
+            env.set_auto_escape_callback(|_| minijinja::AutoEscape::None);
         }
 
-        Ok(Some(Self { tera, config }))
+        // Register custom filters
+        env.add_filter("reading_time", reading_time_filter);
+        env.add_filter("slugify", slugify_filter);
+
+        Ok(Some(Self { env, config }))
     }
 
-    /// Renders a page through the Tera template chain.
+    /// Renders a page through the template chain.
     ///
     /// # Arguments
     /// * `template_name` — template to render (e.g. `"page.html"`)
@@ -92,40 +83,50 @@ impl TeraEngine {
         frontmatter: &HashMap<String, serde_json::Value>,
         site_globals: &HashMap<String, serde_json::Value>,
     ) -> Result<String> {
-        let mut context = tera::Context::new();
-
-        // Inject page-level variables under `page.*`
-        let mut page = HashMap::new();
-        for (k, v) in frontmatter {
-            let _ = page.insert(k.clone(), v.clone());
-        }
+        // Build page context
+        let mut page: serde_json::Map<String, serde_json::Value> = frontmatter
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         let _ = page.insert(
             "content".to_string(),
             serde_json::Value::String(page_content.to_string()),
         );
-        context.insert("page", &page);
 
-        // Inject site-level variables under `site.*`
-        context.insert("site", site_globals);
+        // Build the full render context
+        let mut ctx = serde_json::Map::new();
+        let _ = ctx.insert("page".to_string(), serde_json::Value::Object(page));
+        let _ = ctx.insert(
+            "site".to_string(),
+            serde_json::Value::Object(
+                site_globals
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            ),
+        );
 
-        // Inject global config variables
+        // Inject global config variables at top level
         for (k, v) in &self.config.globals {
-            context.insert(k, v);
+            let _ = ctx.insert(k.clone(), v.clone());
         }
 
         // Determine which template to use, fall back to page.html
-        let tmpl = if self.tera.get_template(template_name).is_ok() {
-            template_name.to_string()
-        } else if self.tera.get_template("page.html").is_ok() {
-            "page.html".to_string()
+        let tmpl_name = if self.env.get_template(template_name).is_ok() {
+            template_name
+        } else if self.env.get_template("page.html").is_ok() {
+            "page.html"
         } else {
             // No matching template — return content as-is
             return Ok(page_content.to_string());
         };
 
-        self.tera
-            .render(&tmpl, &context)
-            .with_context(|| format!("Failed to render template '{tmpl}'"))
+        let tmpl = self.env.get_template(tmpl_name).with_context(|| {
+            format!("Failed to load template '{tmpl_name}'")
+        })?;
+
+        tmpl.render(serde_json::Value::Object(ctx))
+            .with_context(|| format!("Failed to render template '{tmpl_name}'"))
     }
 
     /// Builds site-level globals from an `SsgConfig`.
@@ -202,10 +203,7 @@ impl TeraEngine {
             let value: Option<serde_json::Value> = match ext.as_str() {
                 "toml" => toml::from_str::<serde_json::Value>(&content).ok(),
                 "json" => serde_json::from_str(&content).ok(),
-                "yml" | "yaml" => {
-                    // Parse YAML via serde_json round-trip
-                    serde_json::from_str(&content).ok()
-                }
+                "yml" | "yaml" => serde_json::from_str(&content).ok(),
                 _ => None,
             };
 
@@ -218,22 +216,35 @@ impl TeraEngine {
     }
 }
 
-/// Custom Tera filter: estimates reading time in minutes.
+/// Custom filter: estimates reading time in minutes.
 ///
 /// Usage: `{{ page.content | reading_time }}`
 /// Returns a string like "3 min read".
-#[cfg(feature = "tera-templates")]
-fn reading_time_filter(
-    value: &tera::Value,
-    _args: &HashMap<String, tera::Value>,
-) -> tera::Result<tera::Value> {
-    let text = value.as_str().unwrap_or("");
-    let word_count = text.split_whitespace().count();
+#[cfg(feature = "templates")]
+fn reading_time_filter(value: String) -> String {
+    let word_count = value.split_whitespace().count();
     let minutes = (word_count / 200).max(1);
-    Ok(tera::Value::String(format!("{minutes} min read")))
+    format!("{minutes} min read")
 }
 
-#[cfg(all(test, feature = "tera-templates"))]
+/// Custom filter: converts a string to a URL-safe slug.
+///
+/// Usage: `{{ tag | slugify }}`
+#[cfg(feature = "templates")]
+fn slugify_filter(value: String) -> String {
+    value
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+#[cfg(all(test, feature = "templates"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;
@@ -248,13 +259,13 @@ mod tests {
         fs::write(
             tera_dir.join("base.html"),
             r#"<!DOCTYPE html>
-<html lang="{{ site.language | default(value="en") }}">
-<head><title>{% block title %}{{ page.title | default(value="Untitled") }}{% endblock %}</title>
+<html lang="{{ site.language | default("en") }}">
+<head><title>{% block title %}{{ page.title | default("Untitled") }}{% endblock %}</title>
 {% block head_extra %}{% endblock %}
 </head>
 <body>
 <main>{% block content %}{% endblock %}</main>
-<footer>{% block footer %}<p>&copy; {{ site.name | default(value="") }}</p>{% endblock %}</footer>
+<footer>{% block footer %}<p>&copy; {{ site.name | default("") }}</p>{% endblock %}</footer>
 </body>
 </html>"#,
         )
@@ -272,8 +283,8 @@ mod tests {
             r#"{% extends "base.html" %}
 {% block content %}
 <article>
-<h1>{{ page.title | default(value="") }}</h1>
-<time>{{ page.date | default(value="") }}</time>
+<h1>{{ page.title | default("") }}</h1>
+<time>{{ page.date | default("") }}</time>
 <p>{{ page.content | reading_time }}</p>
 {{ page.content | safe }}
 </article>
@@ -284,11 +295,11 @@ mod tests {
 
     #[test]
     fn test_init_missing_dir() {
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: PathBuf::from("/nonexistent/path"),
             ..Default::default()
         };
-        let result = TeraEngine::init(config).unwrap();
+        let result = TemplateEngine::init(config).unwrap();
         assert!(result.is_none());
     }
 
@@ -297,11 +308,11 @@ mod tests {
         let dir = tempdir().unwrap();
         setup_templates(dir.path());
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: dir.path().join("tera"),
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let mut fm = HashMap::new();
         let _ = fm.insert(
@@ -334,11 +345,11 @@ mod tests {
         let dir = tempdir().unwrap();
         setup_templates(dir.path());
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: dir.path().join("tera"),
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let content = "word ".repeat(600); // ~3 min read
         let mut fm = HashMap::new();
@@ -365,11 +376,11 @@ mod tests {
         let dir = tempdir().unwrap();
         setup_templates(dir.path());
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: dir.path().join("tera"),
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let fm = HashMap::new();
         let site = HashMap::new();
@@ -383,9 +394,14 @@ mod tests {
     #[test]
     fn test_reading_time_filter_direct() {
         let text = "word ".repeat(400);
-        let val = tera::Value::String(text);
-        let result = reading_time_filter(&val, &HashMap::new()).unwrap();
-        assert_eq!(result, tera::Value::String("2 min read".to_string()));
+        let result = reading_time_filter(text);
+        assert_eq!(result, "2 min read");
+    }
+
+    #[test]
+    fn test_slugify_filter() {
+        assert_eq!(slugify_filter("Hello World!".to_string()), "hello-world");
+        assert_eq!(slugify_filter("Rust & Web".to_string()), "rust-web");
     }
 
     // -------------------------------------------------------------------
@@ -394,20 +410,15 @@ mod tests {
 
     #[test]
     fn load_data_files_missing_data_dir_returns_empty_map() {
-        // The `!data_dir.exists()` early return at line 173 is
-        // exercised when there's no `data/` sibling to content_dir.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
-        let result = TeraEngine::load_data_files(&content);
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.is_empty());
     }
 
     #[test]
     fn load_data_files_parses_toml_and_json_and_yaml() {
-        // Covers the main body of load_data_files at lines 182-216:
-        // the file walk, read_to_string success, extension match,
-        // and `if let Some(val) = value` branch.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
@@ -420,13 +431,11 @@ mod tests {
         fs::write(data.join("conf.yml"), r#"{"yaml": "value"}"#).unwrap();
         fs::write(data.join("ignored.txt"), "not parsed").unwrap();
 
-        // Add a subdirectory — the `!path.is_file() continue` at
-        // line 184 should skip it.
         let sub = data.join("sub");
         fs::create_dir_all(&sub).unwrap();
         fs::write(sub.join("inside.json"), "{}").unwrap();
 
-        let result = TeraEngine::load_data_files(&content);
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.contains_key("site"));
         assert!(result.contains_key("nav"));
         assert!(result.contains_key("conf"));
@@ -436,9 +445,6 @@ mod tests {
 
     #[test]
     fn load_data_files_skips_files_with_invalid_content() {
-        // Covers the `Option::ok()` branch that returns None on
-        // unparseable content — the `if let Some(val) = value` at
-        // line 214 skips those entries.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
@@ -449,15 +455,13 @@ mod tests {
         fs::write(data.join("broken.json"), "{not valid").unwrap();
         fs::write(data.join("good.toml"), r#"x = "y""#).unwrap();
 
-        let result = TeraEngine::load_data_files(&content);
-        // Only the good file survives.
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.contains_key("good"));
         assert!(!result.contains_key("broken"));
     }
 
     #[test]
     fn load_data_files_ignores_unsupported_extensions() {
-        // The `_ => None` arm of the extension match at line 211.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
@@ -468,7 +472,7 @@ mod tests {
         fs::write(data.join("b.csv"), "a,b").unwrap();
         fs::write(data.join("c"), "no extension").unwrap();
 
-        let result = TeraEngine::load_data_files(&content);
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.is_empty());
     }
 
@@ -478,32 +482,17 @@ mod tests {
 
     #[test]
     fn render_page_injects_custom_globals_from_config() {
-        // Covers lines 112-114 — the `for (k, v) in &self.config.globals`
-        // loop that injects engine-level globals into every render.
         let dir = tempdir().unwrap();
         setup_templates(dir.path());
 
-        let mut globals = HashMap::new();
-        let _ = globals.insert(
-            "brand".to_string(),
-            serde_json::Value::String("Acme".to_string()),
-        );
-        let config = TeraConfig {
-            template_dir: dir.path().join("tera"),
-            globals,
-            ..Default::default()
-        };
-        let _ = TeraEngine::init(config).unwrap().unwrap();
-
-        // Add a minimal template that references the custom global.
+        // Write a minimal template that references the custom global.
         fs::write(
             dir.path().join("tera").join("branded.html"),
             r"<p>{{ brand }}</p>",
         )
         .unwrap();
 
-        // Re-init to pick up the new template.
-        let config2 = TeraConfig {
+        let config = TemplateConfig {
             template_dir: dir.path().join("tera"),
             globals: {
                 let mut g = HashMap::new();
@@ -515,20 +504,17 @@ mod tests {
             },
             ..Default::default()
         };
-        let engine = TeraEngine::init(config2).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let result = engine
             .render_page("branded.html", "", &HashMap::new(), &HashMap::new())
             .unwrap();
         assert!(result.contains("Acme"));
-        let _ = engine; // keep engine alive for the assertion
     }
 
     #[test]
     fn render_page_no_matching_template_and_no_page_html_returns_content_as_is()
     {
-        // Covers line 123: the final fallback `return Ok(page_content.to_string())`
-        // when neither the requested template nor `page.html` exist.
         let dir = tempdir().unwrap();
         let tera_dir = dir.path().join("tera");
         fs::create_dir_all(&tera_dir).unwrap();
@@ -539,11 +525,11 @@ mod tests {
         )
         .unwrap();
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: tera_dir,
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let content = "<p>raw content</p>";
         let result = engine
@@ -554,23 +540,20 @@ mod tests {
                 &HashMap::new(),
             )
             .unwrap();
-        // Content returned verbatim when no template chain matches.
         assert_eq!(result, content);
     }
 
     #[test]
-    fn init_with_autoescape_false_calls_autoescape_on_with_empty_vec() {
-        // Line 75: the `if !config.autoescape` branch.
+    fn init_with_autoescape_false() {
         let dir = tempdir().unwrap();
         setup_templates(dir.path());
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: dir.path().join("tera"),
             autoescape: false,
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
-        // Engine constructed; render still works.
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
         let result = engine
             .render_page(
                 "page.html",
@@ -583,87 +566,75 @@ mod tests {
     }
 
     #[test]
-    fn init_with_broken_template_propagates_with_context_error() {
-        // Lines 64-69: the `.with_context(|| format!(...))` closure
-        // on Tera::new failure. Plant a template with invalid syntax.
+    fn init_with_broken_template_errors_on_render() {
         let dir = tempdir().unwrap();
         let tera_dir = dir.path().join("tera");
         fs::create_dir_all(&tera_dir).unwrap();
-        // {% block %} is unclosed → Tera::new returns Err.
-        fs::write(tera_dir.join("broken.html"), "{% block %}").unwrap();
+        // Use an extends to a non-existent parent — always errors on render
+        fs::write(tera_dir.join("broken.html"), "{% extends \"nonexistent_parent.html\" %}{% block x %}{% endblock %}").unwrap();
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: tera_dir,
             ..Default::default()
         };
-        let result = TeraEngine::init(config);
+        // MiniJinja uses lazy loading — init succeeds
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
+        // Error surfaces at render time
+        let result = engine.render_page(
+            "broken.html",
+            "",
+            &HashMap::new(),
+            &HashMap::new(),
+        );
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
-        assert!(msg.contains("Failed to load Tera templates"));
     }
 
     #[test]
     #[cfg(unix)]
     fn load_data_files_unreadable_file_continues_silently() {
-        // Line 201: `Err(_) => continue` for the read_to_string Err
-        // branch. We create a broken symlink (link target doesn't
-        // exist) which `is_file()` reports true on dangling symlinks
-        // is platform-dependent — we use a regular file with a
-        // sibling that we then make unreadable via path tricks.
-        // Simplest cross-fs: a directory shaped like a .toml file —
-        // .file_stem() and .extension() succeed, but read_to_string
-        // returns Err because the path is a directory.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
         let data = dir.path().join("data");
         fs::create_dir_all(&data).unwrap();
 
-        // A .toml "file" that's actually a directory.
         fs::create_dir_all(data.join("not-really.toml")).unwrap();
-        // Plus a real one to prove the rest of the loop continues.
         fs::write(data.join("real.toml"), r#"k = "v""#).unwrap();
 
-        let result = TeraEngine::load_data_files(&content);
-        // Only the real file makes it through.
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.contains_key("real"));
         assert!(!result.contains_key("not-really"));
     }
 
     #[test]
     fn load_data_files_data_dir_is_a_file_returns_empty() {
-        // Line 179: `Err(_) => return data` from read_dir when the
-        // path resolves to a file rather than a directory.
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
-        // Plant `data` as a file alongside content/.
         let data = dir.path().join("data");
         fs::write(&data, "I am a file, not a directory").unwrap();
 
-        let result = TeraEngine::load_data_files(&content);
+        let result = TemplateEngine::load_data_files(&content);
         assert!(result.is_empty());
     }
 
     #[test]
-    fn render_page_propagates_tera_render_errors() {
-        // Covers line 128: `.with_context(...)` on a Tera render Err.
-        // Write a template with a syntax-valid-but-undefined filter.
+    fn render_page_propagates_render_errors() {
         let dir = tempdir().unwrap();
         let tera_dir = dir.path().join("tera");
         fs::create_dir_all(&tera_dir).unwrap();
+        // Undefined filter → render fails
         fs::write(
             tera_dir.join("broken.html"),
-            // `nonexistent_filter` doesn't exist → render fails.
             r"{{ page.title | nonexistent_filter }}",
         )
         .unwrap();
 
-        let config = TeraConfig {
+        let config = TemplateConfig {
             template_dir: tera_dir,
             ..Default::default()
         };
-        let engine = TeraEngine::init(config).unwrap().unwrap();
+        let engine = TemplateEngine::init(config).unwrap().unwrap();
 
         let mut fm = HashMap::new();
         let _ = fm.insert(

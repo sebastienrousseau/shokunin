@@ -108,9 +108,9 @@ site_software: "SSG, Rust"
 
 ## A small London coffee roastery
 
-**Heron Coffee** is a single-origin roaster on Druid Street, Bermondsey. We roast in 12kg batches every Tuesday morning and ship within 48 hours of the roast date.
+**Heron Coffee** is a single-origin roaster on Druid Street, Bermondsey. We roast 12kg batches every Tuesday morning. We ship within 48 hours of the roast date.
 
-The cafe is open **Monday to Saturday, 7:30am to 4pm**. Online orders ship anywhere in the UK and Europe; allow 2-3 working days.
+The cafe is open **Monday to Saturday, 7:30am to 4pm**. Online orders ship across the UK and Europe. Allow 2-3 working days.
 
 ## This week's roasts
 
@@ -143,4 +143,4 @@ Open Mon–Sat 7:30am–4pm. Closed Sundays.
 
 ## Wholesale
 
-We supply 14 cafes across South London. Minimum order is 8kg/week with weekly delivery. Email **wholesale@heron.coffee** for pricing and the full menu of single-origin and blend options.
+We supply 14 cafes across South London. The minimum order is 8kg per week with weekly delivery. Email **wholesale@heron.coffee** for pricing and the full list of origins and blends.

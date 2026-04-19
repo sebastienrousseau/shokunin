@@ -106,31 +106,31 @@ site_software: "SSG, Rust"
 
 ---
 
-## Independent UX research and product design
+## UX research and product design
 
-Hello — I'm **Maya Okafor**, a freelance UX researcher and product designer based in **Lagos and London**.
+Hello — I'm **Maya Okafor**, a freelance UX researcher and designer. I'm based in **Lagos and London**.
 
-I work with founders, charities, and small product teams who need rigorous user research without a six-month engagement contract. Most projects run two to six weeks; some clients keep me on a half-day-a-week retainer for ongoing work.
+I work with founders, charities, and small teams. They need good research without a long contract. Most projects run two to six weeks. Some clients keep me on a weekly retainer.
 
 ## Selected work
 
-- **[Field Notes Collective](/field-notes-collective/)** *(2025)* — research archive for an environmental nonprofit; rebuilt the IA, ran 12 interviews with field researchers, shipped in 6 weeks
-- **[Linden Editions](/linden-editions/)** *(2024)* — editorial site for a quarterly literary journal; print-to-web typography system that reads like a magazine
-- **[Polaris Maps](/polaris-maps/)** *(2024)* — wayfinding system for an independent map publisher; 4-month engagement co-designing with the cartography team
+- **[Field Notes Collective](/field-notes-collective/)** *(2025)* — Archive rebuild for a nonprofit. 12 interviews, full IA rework, shipped in 6 weeks.
+- **[Linden Editions](/linden-editions/)** *(2024)* — Editorial site for a literary journal. Print-to-web type that reads like a magazine.
+- **[Polaris Maps](/polaris-maps/)** *(2024)* — Wayfinding for a map publisher. A 4-month build with the cartography team.
 
-See [all projects](/projects/) or [read about how I work](/about/).
+See [all projects](/projects/) or [how I work](/about/).
 
 ## What I offer
 
-- **Discovery research** — interviews, diary studies, ethnographic field work
-- **Usability testing** — moderated and unmoderated, with full reports written in plain English
-- **Information architecture** — card sorts, tree tests, sitemap design
+- **Discovery research** — interviews, diary studies, field work
+- **Usability testing** — moderated and unmoderated, with clear reports
+- **Info architecture** — card sorts, tree tests, sitemap design
 - **Design system audits** — for teams whose UI is ahead of their docs
 
 ## What I don't offer
 
-Visual rebrands, marketing-site redesigns, or generative-AI roadmap consulting. There are excellent people who do those things; I'm happy to recommend them.
+Visual rebrands, marketing redesigns, or AI roadmap work. Great people do those things. I'm happy to point you to them.
 
 ## Get in touch
 
-Email **hello@mayaokafor.studio**. I answer within two business days. Project enquiries always include a paid one-week discovery before any larger engagement.
+Email **hello@mayaokafor.studio**. I reply within two business days. Projects start with a paid one-week discovery.

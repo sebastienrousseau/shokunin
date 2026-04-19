@@ -5,6 +5,7 @@
 crates/serde_yml/target/
 build/
 *.build-tmp/
+.ssg-deps.json
 
 # Generated output
 /docs/*
@@ -26,6 +27,19 @@ tarpaulin-report.html
 
 # Logs
 *.log
+
+# Secrets & credentials
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+.aws/
+.ssh/
+credentials
+secrets
 
 # IDE / OS
 *.DS_Store
@@ -58,3 +72,4 @@ Icon?
 # Legacy cache locations (cache now lives under target/.ssg-cache/)
 /.ssg-cache.json
 /.ssg-plugins-cache.json
+.claude/worktrees/

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 
 <p align="center">
-  <img src="https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg" alt="SSG logo" width="128" />
+  <img src="https://cloudcdn.pro/static-site-generator/v1/logos/static-site-generator.svg" alt="SSG logo" width="128" />
 </p>
 
 <h1 align="center">Static Site Generator (SSG)</h1>

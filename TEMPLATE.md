@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
 <!-- markdownlint-disable MD033 MD041 -->
-<img src="https://cloudcdn.pro/static-site-generator/images/logos/static-site-generator.svg"
+<img src="https://cloudcdn.pro/static-site-generator/v1/logos/static-site-generator.svg"
 alt="SSG logo" height="66" align="right" />
 <!-- markdownlint-enable MD033 MD041 -->
 
