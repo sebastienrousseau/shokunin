@@ -58,7 +58,7 @@ jobs:
 
       - name: Run accessibility audit
         working-directory: tests/visual
-        run: npx playwright test a11y.spec.ts
+        run: npx playwright test a11y.spec.ts --project=desktop
 
       - name: Upload a11y reports
         if: always()
