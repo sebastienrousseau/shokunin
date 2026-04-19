@@ -7,6 +7,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.37] - 2026-04-19
+
+### Added
+- **WebAssembly**: `ssg-core` and `ssg-wasm` crates for browser/edge compilation
+- **Interactive islands**: `<ssg-island>` Web Components with lazy hydration
+- **Streaming compilation**: batch-based compiler for 100K+ page sites
+- **Local LLM pipeline**: auto-generate alt text, meta descriptions, readability auditing
+- **Dependency graph**: `DepGraph` for incremental rebuild tracking
+- **Browser error overlay**: build errors rendered in-browser via WebSocket
+- **CSS hot reload**: stylesheet changes without full page reload
+- **Property-based testing**: proptest for frontmatter, markdown, shortcode fuzzing
+- **WASM integration tests**: 12 wasm-bindgen-test cases in headless Chrome
+- **llms.txt spec compliance**: section index, language field, disallow patterns
+- **Performance gates**: 8 timed CI assertions (compilation, search, cache, streaming)
+- **Enterprise regression suite**: 27 tests for cache resilience, licence, i18n, pipeline
+
+### Changed
+- Template engine: Tera → MiniJinja (10× smaller binary)
+- Coverage floors raised to 95% (regions, lines, functions)
+- All examples emit build timing and use unique ports (3001–3007)
+- Plugin table descriptions shortened for readability audit compliance
+- 100% API coverage: all 36 modules demonstrated in examples
+
+### Fixed
+- SPDX headers on all 97 source files (100% compliance)
+- Duplicate "All rights reserved" in 5 bench/example files
+- Duplicate server banners in 6 examples
+- `run_fused_transforms` missing from 3 examples
+- Readability audit threshold raised to grade 17 for technical docs
+
+### Security
+- CSP/SRI hardening: extract inline styles/scripts to external files
+- GitHub Actions pinned to commit SHAs
+- Dependabot configuration added
+- `unsafe-inline` eliminated from Content-Security-Policy
+
 ## [0.0.36] - 2026-04-13
 
 ### Added
@@ -302,6 +338,7 @@ See [release notes](https://github.com/sebastienrousseau/static-site-generator/r
 
 See [release notes](https://github.com/sebastienrousseau/static-site-generator/releases/tag/v0.0.33).
 
+[0.0.37]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.36...v0.0.37
 [0.0.36]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.35...v0.0.36
 [0.0.35]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.34...v0.0.35
 [0.0.34]: https://github.com/sebastienrousseau/static-site-generator/compare/v0.0.33...v0.0.34
