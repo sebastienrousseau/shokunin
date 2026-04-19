@@ -137,6 +137,7 @@ fn main() -> Result<()> {
 
     plugins.run_before_compile(&ctx)?;
     plugins.run_after_compile(&ctx)?;
+    plugins.run_fused_transforms(&ctx)?;
     plugins.run_on_serve(&ctx)?;
 
     println!("\n  ✅ Plugin pipeline complete");
