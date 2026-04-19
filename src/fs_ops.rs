@@ -554,3 +554,192 @@ fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn copy_dir_all_copies_files() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), "hello").unwrap();
+        fs::write(src.path().join("b.txt"), "world").unwrap();
+
+        copy_dir_all(src.path(), dst.path()).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(dst.path().join("a.txt")).unwrap(),
+            "hello"
+        );
+        assert_eq!(
+            fs::read_to_string(dst.path().join("b.txt")).unwrap(),
+            "world"
+        );
+    }
+
+    #[test]
+    fn copy_dir_all_nested_preserves_structure() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        let nested = src.path().join("sub").join("deep");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("file.txt"), "nested content").unwrap();
+        fs::write(src.path().join("root.txt"), "root").unwrap();
+
+        copy_dir_all(src.path(), dst.path()).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(dst.path().join("sub/deep/file.txt")).unwrap(),
+            "nested content"
+        );
+        assert_eq!(
+            fs::read_to_string(dst.path().join("root.txt")).unwrap(),
+            "root"
+        );
+    }
+
+    #[test]
+    fn copy_dir_all_nonexistent_src_returns_error() {
+        let dst = tempdir().unwrap();
+        let fake_src = dst.path().join("does_not_exist");
+
+        let result = copy_dir_all(&fake_src, dst.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn is_safe_path_normal_relative() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("safe.txt");
+        fs::write(&file, "ok").unwrap();
+
+        assert!(is_safe_path(&file).unwrap());
+    }
+
+    #[test]
+    fn is_safe_path_with_dotdot_nonexistent() {
+        let path = Path::new("some/../../../etc/passwd");
+        assert!(!is_safe_path(path).unwrap());
+    }
+
+    #[test]
+    fn is_safe_path_with_dotdot_existing() {
+        let tmp = tempdir().unwrap();
+        // Create a path that exists and canonicalises cleanly
+        let safe = tmp.path().join("a");
+        fs::create_dir_all(&safe).unwrap();
+        let dotdot_path = safe.join("..");
+        // canonicalize succeeds → safe
+        assert!(is_safe_path(&dotdot_path).unwrap());
+    }
+
+    #[test]
+    fn is_safe_path_absolute_existing() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("abs.txt");
+        fs::write(&file, "data").unwrap();
+        // Absolute path that exists is safe
+        assert!(is_safe_path(&file).unwrap());
+    }
+
+    #[test]
+    fn verify_file_safety_valid_file() {
+        let tmp = tempdir().unwrap();
+        let file = tmp.path().join("ok.txt");
+        fs::write(&file, "small file").unwrap();
+
+        assert!(verify_file_safety(&file).is_ok());
+    }
+
+    #[test]
+    fn verify_file_safety_nonexistent() {
+        let tmp = tempdir().unwrap();
+        let missing = tmp.path().join("nope.txt");
+
+        // symlink_metadata fails on nonexistent file → Err
+        assert!(verify_file_safety(&missing).is_err());
+    }
+
+    #[test]
+    fn verify_file_safety_directory() {
+        let tmp = tempdir().unwrap();
+        // Directories are not files but should not error (size check skipped)
+        assert!(verify_file_safety(tmp.path()).is_ok());
+    }
+
+    #[test]
+    fn collect_files_recursive_finds_all() {
+        let tmp = tempdir().unwrap();
+        let sub = tmp.path().join("sub");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(tmp.path().join("a.md"), "").unwrap();
+        fs::write(sub.join("b.md"), "").unwrap();
+        fs::write(sub.join("c.txt"), "").unwrap();
+
+        let mut files = Vec::new();
+        collect_files_recursive(tmp.path(), &mut files).unwrap();
+
+        assert_eq!(files.len(), 3);
+    }
+
+    #[test]
+    fn collect_files_recursive_empty_dir() {
+        let tmp = tempdir().unwrap();
+
+        let mut files = Vec::new();
+        collect_files_recursive(tmp.path(), &mut files).unwrap();
+
+        assert!(files.is_empty());
+    }
+
+    #[test]
+    fn collect_files_recursive_only_files_not_dirs() {
+        let tmp = tempdir().unwrap();
+        let sub = tmp.path().join("subdir");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(sub.join("only.txt"), "data").unwrap();
+
+        let mut files = Vec::new();
+        collect_files_recursive(tmp.path(), &mut files).unwrap();
+
+        assert_eq!(files.len(), 1);
+        assert!(files[0].ends_with("only.txt"));
+    }
+
+    #[test]
+    fn verify_and_copy_files_end_to_end() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        let target = dst.path().join("output");
+        fs::write(src.path().join("page.html"), "<h1>Hi</h1>").unwrap();
+
+        verify_and_copy_files(src.path(), &target).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(target.join("page.html")).unwrap(),
+            "<h1>Hi</h1>"
+        );
+    }
+
+    #[test]
+    fn copy_dir_with_progress_smoke() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("f.txt"), "data").unwrap();
+
+        // Should not panic
+        copy_dir_with_progress(src.path(), &dst.path().join("out")).unwrap();
+    }
+
+    #[test]
+    fn copy_dir_with_progress_nonexistent_src() {
+        let tmp = tempdir().unwrap();
+        let fake = tmp.path().join("missing");
+
+        let result = copy_dir_with_progress(&fake, tmp.path());
+        assert!(result.is_err());
+    }
+}
