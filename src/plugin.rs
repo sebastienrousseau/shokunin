@@ -205,7 +205,6 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: None,
             cache: None,
-<<<<<<< HEAD
             memory_budget: None,
             html_files: None,
             dep_graph: None,

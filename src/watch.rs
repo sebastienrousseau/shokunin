@@ -45,6 +45,34 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 
 // ---------------------------------------------------------------------------
+// ChangeKind — file change classification for selective reload
+// ---------------------------------------------------------------------------
+
+/// Categorises a file change for selective reload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChangeKind {
+    /// CSS file — can be hot-reloaded without full page reload.
+    Css,
+    /// Content file (.md, .html) — requires page rebuild + reload.
+    Content,
+    /// Template file — requires full rebuild + reload.
+    Template,
+    /// Other file type.
+    Other,
+}
+
+/// Classifies a changed file path for selective reload.
+#[must_use]
+pub fn classify_change(path: &Path) -> ChangeKind {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("css") => ChangeKind::Css,
+        Some("md" | "markdown") => ChangeKind::Content,
+        Some("html" | "jinja" | "jinja2" | "j2") => ChangeKind::Template,
+        _ => ChangeKind::Other,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // WatchConfig
 // ---------------------------------------------------------------------------
 
@@ -629,5 +657,62 @@ mod tests {
         // Assert — both root and deeply nested files are tracked
         assert_eq!(watcher.tracked_file_count(), 2);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_classify_css() {
+        assert_eq!(
+            classify_change(Path::new("styles/main.css")),
+            ChangeKind::Css
+        );
+    }
+
+    #[test]
+    fn test_classify_markdown() {
+        assert_eq!(
+            classify_change(Path::new("content/post.md")),
+            ChangeKind::Content
+        );
+        assert_eq!(
+            classify_change(Path::new("content/post.markdown")),
+            ChangeKind::Content
+        );
+    }
+
+    #[test]
+    fn test_classify_html() {
+        assert_eq!(
+            classify_change(Path::new("templates/base.html")),
+            ChangeKind::Template
+        );
+        assert_eq!(
+            classify_change(Path::new("templates/base.jinja")),
+            ChangeKind::Template
+        );
+        assert_eq!(
+            classify_change(Path::new("templates/base.jinja2")),
+            ChangeKind::Template
+        );
+        assert_eq!(
+            classify_change(Path::new("templates/base.j2")),
+            ChangeKind::Template
+        );
+    }
+
+    #[test]
+    fn test_classify_other() {
+        assert_eq!(
+            classify_change(Path::new("src/main.rs")),
+            ChangeKind::Other
+        );
+        assert_eq!(
+            classify_change(Path::new("config.toml")),
+            ChangeKind::Other
+        );
+    }
+
+    #[test]
+    fn test_classify_no_extension() {
+        assert_eq!(classify_change(Path::new("Makefile")), ChangeKind::Other);
     }
 }

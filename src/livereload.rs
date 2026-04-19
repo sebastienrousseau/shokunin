@@ -150,6 +150,7 @@ fn livereload_script(port: u16) -> String {
 <script data-ssg-livereload>
 (function(){{
   var url='ws://localhost:{port}',delay=1000,maxDelay=10000,indicator=null;
+  try{{var sp=sessionStorage.getItem('ssg-scroll');if(sp){{sessionStorage.removeItem('ssg-scroll');var p=JSON.parse(sp);setTimeout(function(){{scrollTo(p.x,p.y);}},50);}}}}catch(se){{}}
   function showIndicator(){{
     if(indicator)return;
     indicator=document.createElement('div');
@@ -201,10 +202,17 @@ fn livereload_script(port: u16) -> String {
       var ws=new WebSocket(url);
       ws.onopen=function(){{delay=1000;hideIndicator();}};
       ws.onmessage=function(e){{
-        if(e.data==='reload'){{hideOverlay();location.reload();}}
+        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}location.reload();}}
         try{{var msg=JSON.parse(e.data);
         if(msg.type==='error'){{showOverlay(msg);}}
         else if(msg.type==='clear-error'){{hideOverlay();}}
+        else if(msg.type==='css-reload'){{
+          var links=document.querySelectorAll('link[rel=stylesheet]');
+          links.forEach(function(link){{
+            var href=link.getAttribute('href');
+            if(href){{link.setAttribute('href',href.split('?')[0]+'?v='+Date.now());}}
+          }});
+        }}
         }}catch(x){{}}
       }};
       ws.onclose=function(){{
@@ -228,6 +236,17 @@ fn livereload_script(port: u16) -> String {
 </script>
 "
     )
+}
+
+/// Returns a WebSocket message for CSS-only reload.
+#[must_use]
+#[allow(dead_code)]
+pub fn css_reload_message(css_path: &str) -> String {
+    serde_json::json!({
+        "type": "css-reload",
+        "file": css_path,
+    })
+    .to_string()
 }
 
 #[cfg(test)]
@@ -542,5 +561,36 @@ mod tests {
             script.contains("'reload'"),
             "script must still handle plain 'reload' messages"
         );
+    }
+
+    #[test]
+    fn test_script_contains_css_reload() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("css-reload"),
+            "script must contain css-reload handler"
+        );
+    }
+
+    #[test]
+    fn test_script_contains_scroll_preservation() {
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("ssg-scroll"),
+            "script must contain scroll preservation key"
+        );
+        assert!(
+            script.contains("sessionStorage"),
+            "script must use sessionStorage for scroll"
+        );
+    }
+
+    #[test]
+    fn test_css_reload_message() {
+        let msg = css_reload_message("styles/main.css");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&msg).expect("valid JSON");
+        assert_eq!(parsed["type"], "css-reload");
+        assert_eq!(parsed["file"], "styles/main.css");
     }
 }
