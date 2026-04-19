@@ -51,8 +51,7 @@ use ssg::search::SearchPlugin;
 use ssg::seo::{CanonicalPlugin, RobotsPlugin, SeoPlugin};
 use staticdatagen::compiler::service::compile;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::path::Path;
 
 fn main() -> Result<()> {
     let build_dir = Path::new("./examples/plugins/build");
@@ -89,7 +88,6 @@ fn main() -> Result<()> {
         }
 
         // ── Step 2: Compile the site ─────────────────────────────
-        let start = Instant::now();
         match compile(build_dir, content_dir, site_dir, template_dir) {
             Ok(()) => println!("  ✅ Site compiled successfully"),
             Err(e) => {
@@ -102,9 +100,6 @@ fn main() -> Result<()> {
         cache.update(content_dir)?;
         cache.save()?;
         println!("  💾 Build cache updated ({} entries)", cache.len());
-
-        let elapsed = start.elapsed();
-        println!("  \u{26a1} Compiled in {elapsed:.0?}");
     }
 
     // ── Step 3: Run the plugin pipeline ──────────────────────────
@@ -126,28 +121,6 @@ fn main() -> Result<()> {
     // Search — generate index and inject search UI (Ctrl+K)
     plugins.register(SearchPlugin);
 
-    // AI readiness — llms.txt, alt-text audit, max-snippet meta
-    plugins.register(ssg::ai::AiPlugin);
-
-    // Taxonomy — auto-generate tag/category index pages
-    plugins.register(ssg::taxonomy::TaxonomyPlugin);
-
-    // Pagination — split long listings into pages
-    plugins.register(ssg::pagination::PaginationPlugin::default());
-
-    // Draft filtering — include drafts for dev preview
-    plugins.register(ssg::drafts::DraftPlugin::new(true));
-
-    // Image optimization (WebP, responsive srcset)
-    #[cfg(feature = "image-optimization")]
-    plugins.register(ssg::image_plugin::ImageOptimizationPlugin::default());
-
-    // Accessibility validation
-    plugins.register(ssg::accessibility::AccessibilityPlugin);
-
-    // Asset fingerprinting + SRI
-    plugins.register(ssg::assets::FingerprintPlugin);
-
     // Minify — collapse HTML whitespace (run last, after injections)
     plugins.register(MinifyPlugin);
 
@@ -162,15 +135,11 @@ fn main() -> Result<()> {
         println!("     ↳ {name}");
     }
 
-    let plugin_start = Instant::now();
     plugins.run_before_compile(&ctx)?;
     plugins.run_after_compile(&ctx)?;
-    plugins.run_fused_transforms(&ctx)?;
     plugins.run_on_serve(&ctx)?;
-    let plugin_elapsed = plugin_start.elapsed();
 
     println!("\n  ✅ Plugin pipeline complete");
-    println!("  \u{26a1} Plugins ran in {plugin_elapsed:.0?}");
 
     // ── Step 4: Report what was generated ────────────────────────
     let index_path = site_dir.join("search-index.json");
@@ -183,25 +152,51 @@ fn main() -> Result<()> {
         println!("  🤖 robots.txt generated");
     }
 
-    // ── Step 5: Demonstrate dependency graph (incremental rebuild) ─
-    let mut dep_graph = ssg::depgraph::DepGraph::new();
-    dep_graph.add_dep(
-        Path::new("content/index.md"),
-        Path::new("templates/base.html"),
-    );
-    dep_graph.add_dep(
-        Path::new("content/contact.md"),
-        Path::new("templates/base.html"),
-    );
-    println!("  📊 DepGraph: {} pages tracked", dep_graph.page_count());
+    // ── Step 5: Demonstrate remaining API modules ────────────────
 
-    // Simulate: template changed → which pages need rebuild?
-    let changed = vec![PathBuf::from("templates/base.html")];
-    let invalidated = dep_graph.invalidated_pages(&changed);
+    // File system operations (fs_ops)
+    let safe = ssg::fs_ops::is_safe_path(site_dir)?;
     println!(
-        "  🔄 Template change → {} pages invalidated",
-        invalidated.len()
+        "  \u{1f512} Path safety check: {}",
+        if safe { "PASS" } else { "FAIL" }
     );
+
+    // Streaming I/O (stream)
+    println!(
+        "  \u{1f4be} Stream buffer: {} KB",
+        ssg::stream::STREAM_BUFFER_SIZE / 1024
+    );
+
+    // File watching (watch) — classify changes for selective reload
+    let css_kind = ssg::watch::classify_change(Path::new("style.css"));
+    let md_kind = ssg::watch::classify_change(Path::new("post.md"));
+    println!(
+        "  \u{1f441} Watch: style.css → {css_kind:?}, post.md → {md_kind:?}"
+    );
+
+    // Markdown extensions (markdown_ext)
+    let md = "| Col A | Col B |\n|-------|-------|\n| 1 | 2 |";
+    let html = ssg::markdown_ext::expand_gfm(md);
+    println!("  \u{1f4dd} GFM table \u{2192} {} bytes HTML", html.len());
+
+    // Schema generation (schema)
+    let schema = ssg::schema::generate_schema();
+    println!(
+        "  \u{1f4cb} Config schema: {} properties",
+        schema
+            .get("properties")
+            .and_then(|p| p.as_object())
+            .map_or(0, |o| o.len())
+    );
+
+    // Scaffold (project generation)
+    println!("  \u{1f3d7} Scaffold: ssg::scaffold::scaffold_project(\"my-site\") creates a starter");
+
+    // Logging
+    println!("  \u{1f4c4} Logging: ssg::logging::create_log_file(\"build.log\") for structured logs");
+
+    // Process (CLI argument handling)
+    println!("  \u{2699} Process: ssg::process::args() handles CLI \u{2192} compilation workflow");
 
     println!("\n  Done. Site ready at {}", site_dir.display());
     Ok(())

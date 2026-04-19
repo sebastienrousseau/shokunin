@@ -354,6 +354,13 @@ fn main() -> Result<()> {
     // hardcode for the multilingual example.
     hide_language_icon(&generator.paths.site)?;
 
+    // File watching — classify changes for selective reload
+    println!(
+        "    \u{1f441} Watch: .css → {:?}, .md → {:?}",
+        ssg::watch::classify_change(std::path::Path::new("x.css")),
+        ssg::watch::classify_change(std::path::Path::new("x.md"))
+    );
+
     // Serve the site (this will block until the server is stopped)
     generator.serve()?;
 

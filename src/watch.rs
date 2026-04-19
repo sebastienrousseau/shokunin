@@ -251,11 +251,12 @@ impl FileWatcher {
 ///     false
 /// });
 /// ```
-/// Maximum number of poll iterations before `watch_blocking` exits.
+/// Maximum polling iterations before [`watch_blocking`] exits.
+///
 /// Prevents unbounded loops per Power of Ten Rule 2.
 pub const MAX_WATCH_ITERATIONS: usize = 1_000_000;
 
-/// Polls the watcher in a loop and invokes the callback on each change.
+/// Polls for file changes in a blocking loop, invoking `callback` with changed paths.
 ///
 /// The loop is bounded by [`MAX_WATCH_ITERATIONS`] to prevent runaway
 /// execution. Returns when the callback returns `false` or the
