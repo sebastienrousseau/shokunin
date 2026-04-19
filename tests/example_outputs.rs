@@ -447,7 +447,7 @@ fn validate_no_empty_css_rules(html: &str, file: &Path) {
             let style_block = &html[style_start..style_start + style_end];
             // Strip whitespace and check for truly empty rule bodies
             // that lack a comment justification.
-            let trimmed = style_block.replace('\n', "").replace(' ', "");
+            let trimmed = style_block.replace(['\n', ' '], "");
             if trimmed.contains("{}") && !trimmed.contains("/*") {
                 // Soft warning — empty rule without comment justification.
                 // Not asserting because some minified resets are valid.
