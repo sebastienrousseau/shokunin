@@ -51,7 +51,8 @@ use ssg::search::SearchPlugin;
 use ssg::seo::{CanonicalPlugin, RobotsPlugin, SeoPlugin};
 use staticdatagen::compiler::service::compile;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 fn main() -> Result<()> {
     let build_dir = Path::new("./examples/plugins/build");
@@ -88,6 +89,7 @@ fn main() -> Result<()> {
         }
 
         // ── Step 2: Compile the site ─────────────────────────────
+        let start = Instant::now();
         match compile(build_dir, content_dir, site_dir, template_dir) {
             Ok(()) => println!("  ✅ Site compiled successfully"),
             Err(e) => {
@@ -100,6 +102,9 @@ fn main() -> Result<()> {
         cache.update(content_dir)?;
         cache.save()?;
         println!("  💾 Build cache updated ({} entries)", cache.len());
+
+        let elapsed = start.elapsed();
+        println!("  \u{26a1} Compiled in {elapsed:.0?}");
     }
 
     // ── Step 3: Run the plugin pipeline ──────────────────────────
@@ -121,6 +126,28 @@ fn main() -> Result<()> {
     // Search — generate index and inject search UI (Ctrl+K)
     plugins.register(SearchPlugin);
 
+    // AI readiness — llms.txt, alt-text audit, max-snippet meta
+    plugins.register(ssg::ai::AiPlugin);
+
+    // Taxonomy — auto-generate tag/category index pages
+    plugins.register(ssg::taxonomy::TaxonomyPlugin);
+
+    // Pagination — split long listings into pages
+    plugins.register(ssg::pagination::PaginationPlugin::default());
+
+    // Draft filtering — include drafts for dev preview
+    plugins.register(ssg::drafts::DraftPlugin::new(true));
+
+    // Image optimization (WebP, responsive srcset)
+    #[cfg(feature = "image-optimization")]
+    plugins.register(ssg::image_plugin::ImageOptimizationPlugin::default());
+
+    // Accessibility validation
+    plugins.register(ssg::accessibility::AccessibilityPlugin);
+
+    // Asset fingerprinting + SRI
+    plugins.register(ssg::assets::FingerprintPlugin);
+
     // Minify — collapse HTML whitespace (run last, after injections)
     plugins.register(MinifyPlugin);
 
@@ -135,12 +162,15 @@ fn main() -> Result<()> {
         println!("     ↳ {name}");
     }
 
+    let plugin_start = Instant::now();
     plugins.run_before_compile(&ctx)?;
     plugins.run_after_compile(&ctx)?;
     plugins.run_fused_transforms(&ctx)?;
     plugins.run_on_serve(&ctx)?;
+    let plugin_elapsed = plugin_start.elapsed();
 
     println!("\n  ✅ Plugin pipeline complete");
+    println!("  \u{26a1} Plugins ran in {plugin_elapsed:.0?}");
 
     // ── Step 4: Report what was generated ────────────────────────
     let index_path = site_dir.join("search-index.json");
@@ -152,6 +182,26 @@ fn main() -> Result<()> {
     if robots_path.exists() {
         println!("  🤖 robots.txt generated");
     }
+
+    // ── Step 5: Demonstrate dependency graph (incremental rebuild) ─
+    let mut dep_graph = ssg::depgraph::DepGraph::new();
+    dep_graph.add_dep(
+        Path::new("content/index.md"),
+        Path::new("templates/base.html"),
+    );
+    dep_graph.add_dep(
+        Path::new("content/contact.md"),
+        Path::new("templates/base.html"),
+    );
+    println!("  📊 DepGraph: {} pages tracked", dep_graph.page_count());
+
+    // Simulate: template changed → which pages need rebuild?
+    let changed = vec![PathBuf::from("templates/base.html")];
+    let invalidated = dep_graph.invalidated_pages(&changed);
+    println!(
+        "  🔄 Template change → {} pages invalidated",
+        invalidated.len()
+    );
 
     println!("\n  Done. Site ready at {}", site_dir.display());
     Ok(())

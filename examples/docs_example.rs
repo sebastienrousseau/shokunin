@@ -41,7 +41,7 @@
 //! cargo run --release --example docs
 //! ```
 //!
-//! Then open <http://127.0.0.1:3000> in your browser.
+//! Then open <http://127.0.0.1:3003> in your browser.
 //!
 //! ## How this differs from `blog`
 //!
@@ -58,7 +58,7 @@ use ssg::{
     plugin::{PluginContext, PluginManager},
     Paths,
 };
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, time::Instant};
 
 fn main() -> Result<()> {
     // ---------------------------------------------------------------
@@ -102,7 +102,7 @@ fn main() -> Result<()> {
     // ---------------------------------------------------------------
     let config = SsgConfig::builder()
         .site_name("polaris-docs".to_string())
-        .base_url("http://127.0.0.1:3000".to_string())
+        .base_url("http://127.0.0.1:3003".to_string())
         .content_dir(content_dir.clone())
         .output_dir(output_dir.clone())
         .template_dir(template_dir.clone())
@@ -155,12 +155,23 @@ fn main() -> Result<()> {
     plugins.register(ssg::seo::RobotsPlugin::new(config.base_url.clone()));
     plugins.register(ssg::search::SearchPlugin);
     plugins.register(ssg::accessibility::AccessibilityPlugin);
+    #[cfg(feature = "image-optimization")]
+    plugins.register(ssg::image_plugin::ImageOptimizationPlugin::default());
+    plugins.register(ssg::ai::AiPlugin);
+
+    // LLM content augmentation (graceful skip if no Ollama endpoint)
+    plugins.register(ssg::llm::LlmPlugin::new(ssg::llm::LlmConfig::default()));
+    plugins.register(ssg::taxonomy::TaxonomyPlugin);
+    plugins.register(ssg::pagination::PaginationPlugin::default());
+    plugins.register(ssg::drafts::DraftPlugin::new(false));
+    plugins.register(ssg::assets::FingerprintPlugin);
     plugins.register(ssg::plugins::MinifyPlugin);
 
     // ---------------------------------------------------------------
     // 5. Build the site
     // ---------------------------------------------------------------
     println!("\nBuilding documentation portal...");
+    let start = Instant::now();
     execute_build_pipeline(
         &plugins,
         &ctx,
@@ -170,7 +181,8 @@ fn main() -> Result<()> {
         &config.template_dir,
         false,
     )?;
-    println!("Build complete.");
+    let elapsed = start.elapsed();
+    println!("    \u{26a1} Built in {elapsed:.0?}");
 
     // Single-locale build: hide the language dropdown the templates
     // hardcode for the multilingual example.
@@ -223,13 +235,13 @@ fn main() -> Result<()> {
     // page out of the Topics API. Suppresses the "Browsing Topics API
     // removed" Chrome console message in dev mode.
     let server = Server::builder()
-        .address("127.0.0.1:3000")
+        .address("127.0.0.1:3003")
         .document_root(doc_root.as_str())
         .custom_header("Permissions-Policy", "browsing-topics=()")
         .build()
         .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-    println!("Server running at http://127.0.0.1:3000");
+    println!("Server running at http://127.0.0.1:3003");
     println!("Document root: {doc_root}");
     println!("Press Ctrl+C to stop.");
 
