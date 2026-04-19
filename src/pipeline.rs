@@ -15,6 +15,79 @@ use crate::{
     postprocess, search, seo, shortcodes, streaming, taxonomy, walk,
 };
 
+// ---------------------------------------------------------------------------
+// BuildError — serialisable build error for browser overlay delivery
+// ---------------------------------------------------------------------------
+
+/// Serialisable build error for browser overlay delivery.
+#[derive(Debug, Clone, serde::Serialize)]
+#[allow(dead_code)]
+pub struct BuildError {
+    /// Source file path (if extractable from the error chain).
+    pub file: Option<String>,
+    /// Line number (if extractable).
+    pub line: Option<usize>,
+    /// Human-readable error message.
+    pub message: String,
+}
+
+impl BuildError {
+    /// Creates a `BuildError` from an `anyhow` error, attempting to extract
+    /// file path and line number from the error chain.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn from_anyhow(err: &anyhow::Error) -> Self {
+        let message = format!("{err:#}");
+        let file = extract_file_from_error(&message);
+        Self {
+            file,
+            line: None,
+            message,
+        }
+    }
+
+    /// Serializes to a WebSocket JSON message.
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn to_ws_message(&self) -> String {
+        serde_json::json!({
+            "type": "error",
+            "file": self.file,
+            "line": self.line,
+            "message": self.message,
+        })
+        .to_string()
+    }
+}
+
+/// Returns the JSON message to clear the error overlay.
+#[must_use]
+#[allow(dead_code)]
+pub fn clear_error_message() -> String {
+    r#"{"type":"clear-error"}"#.to_string()
+}
+
+/// Extracts a file path from an error message by scanning for path-like
+/// tokens ending in known extensions.
+#[allow(dead_code)]
+fn extract_file_from_error(msg: &str) -> Option<String> {
+    for word in msg.split_whitespace() {
+        let trimmed = word.trim_matches(|c: char| {
+            !c.is_alphanumeric() && c != '/' && c != '.' && c != '_' && c != '-'
+        });
+        if trimmed.contains('/')
+            && (trimmed.ends_with(".md")
+                || trimmed.ends_with(".html")
+                || trimmed.ends_with(".toml")
+                || trimmed.ends_with(".yml")
+                || trimmed.ends_with(".yaml"))
+        {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
 /// CLI-driven options that don't live in `SsgConfig` itself.
 ///
 /// Extracted from clap matches so the run pipeline can be unit-tested
@@ -313,4 +386,75 @@ pub fn register_default_plugins(
 
     // Dev server
     plugins.register(livereload::LiveReloadPlugin::default());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_error_serialization() {
+        let err = BuildError {
+            file: Some("content/post.md".to_string()),
+            line: Some(42),
+            message: "unexpected token".to_string(),
+        };
+        let json = err.to_ws_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&json).expect("valid JSON");
+        assert_eq!(parsed["type"], "error");
+        assert_eq!(parsed["file"], "content/post.md");
+        assert_eq!(parsed["line"], 42);
+        assert_eq!(parsed["message"], "unexpected token");
+    }
+
+    #[test]
+    fn test_clear_error_message() {
+        let msg = clear_error_message();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&msg).expect("valid JSON");
+        assert_eq!(parsed["type"], "clear-error");
+    }
+
+    #[test]
+    fn test_extract_file_from_error_md() {
+        let msg = "cannot read content/posts/hello.md: permission denied";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("content/posts/hello.md".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_html() {
+        let msg = "template error in templates/base.html";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("templates/base.html".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_toml() {
+        let msg = "parse error in config/site.toml at line 5";
+        assert_eq!(
+            extract_file_from_error(msg),
+            Some("config/site.toml".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_file_from_error_none() {
+        let msg = "something went wrong with no file path";
+        assert_eq!(extract_file_from_error(msg), None);
+    }
+
+    #[test]
+    fn test_build_error_from_anyhow() {
+        let err = anyhow::anyhow!("cannot write output/index.html: disk full");
+        let be = BuildError::from_anyhow(&err);
+        assert_eq!(be.file, Some("output/index.html".to_string()));
+        assert!(be.line.is_none());
+        assert!(be.message.contains("disk full"));
+    }
 }
