@@ -128,8 +128,10 @@ pub fn execute_build_pipeline(
 
     // Load plugin cache for incremental builds
     let cache = plugin::PluginCache::load(site_dir);
+    let dep_graph = crate::depgraph::DepGraph::load(site_dir);
     let mut ctx = ctx.clone();
     ctx.cache = Some(cache);
+    ctx.dep_graph = Some(dep_graph);
 
     plugins.run_before_compile(&ctx)?;
 
@@ -175,6 +177,13 @@ pub fn execute_build_pipeline(
         }
         if let Err(e) = cache.save(site_dir) {
             log::warn!("Failed to save plugin cache: {e}");
+        }
+    }
+
+    // Persist the dependency graph for next incremental build
+    if let Some(ref dg) = ctx.dep_graph {
+        if let Err(e) = dg.save(site_dir) {
+            log::warn!("Failed to save dependency graph: {e}");
         }
     }
 

@@ -163,6 +163,8 @@ pub struct PluginContext {
     /// Cached list of HTML files in `site_dir`, walked once and shared
     /// across all plugins to avoid redundant filesystem traversals.
     pub html_files: Option<Arc<Vec<PathBuf>>>,
+    /// Page dependency graph for incremental rebuilds.
+    pub dep_graph: Option<crate::depgraph::DepGraph>,
 }
 
 impl PluginContext {
@@ -203,8 +205,10 @@ impl PluginContext {
             template_dir: template_dir.to_path_buf(),
             config: None,
             cache: None,
+<<<<<<< HEAD
             memory_budget: None,
             html_files: None,
+            dep_graph: None,
         }
     }
 
@@ -226,6 +230,7 @@ impl PluginContext {
             cache: None,
             memory_budget: None,
             html_files: None,
+            dep_graph: None,
         }
     }
 }

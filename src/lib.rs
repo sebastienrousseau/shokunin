@@ -105,6 +105,8 @@ pub mod cmd;
 pub mod content;
 /// Content Security Policy hardening: inline extraction + SRI.
 pub mod csp;
+/// Page dependency graph for incremental rebuilds.
+pub mod depgraph;
 /// Deployment adapter generation.
 pub mod deploy;
 /// Draft content filtering.

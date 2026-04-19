@@ -5,6 +5,7 @@
 crates/serde_yml/target/
 build/
 *.build-tmp/
+.ssg-deps.json
 
 # Generated output
 /docs/*
@@ -71,3 +72,4 @@ Icon?
 # Legacy cache locations (cache now lives under target/.ssg-cache/)
 /.ssg-cache.json
 /.ssg-plugins-cache.json
+.claude/worktrees/
