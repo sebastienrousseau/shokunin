@@ -153,6 +153,7 @@ impl Cli {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -169,5 +170,79 @@ mod tests {
         assert!(!line.is_empty());
         assert!(title.contains("SSG"));
         assert!(title.contains(version));
+    }
+
+    #[test]
+    fn build_returns_valid_command() {
+        let cmd = Cli::build();
+        assert_eq!(cmd.get_name(), env!("CARGO_PKG_NAME"));
+        // Ensure all expected arguments are registered
+        let arg_names: Vec<&str> =
+            cmd.get_arguments().map(|a| a.get_id().as_str()).collect();
+        for expected in [
+            "config", "new", "content", "output", "template", "serve", "watch",
+            "drafts", "deploy", "validate", "quiet", "verbose", "jobs",
+        ] {
+            assert!(
+                arg_names.contains(&expected),
+                "missing expected arg: {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_minimal_args() {
+        let cmd = Cli::build();
+        let matches = cmd.try_get_matches_from(["ssg"]).unwrap();
+        // No arguments supplied — all should be absent / false
+        assert!(matches.get_one::<PathBuf>("config").is_none());
+        assert!(matches.get_one::<PathBuf>("output").is_none());
+        assert!(!matches.get_flag("watch"));
+        assert!(!matches.get_flag("drafts"));
+    }
+
+    #[test]
+    fn parse_quiet_flag() {
+        let cmd = Cli::build();
+        let matches = cmd.try_get_matches_from(["ssg", "--quiet"]).unwrap();
+        assert!(matches.get_flag("quiet"));
+    }
+
+    #[test]
+    fn parse_verbose_flag() {
+        let cmd = Cli::build();
+        let matches = cmd.try_get_matches_from(["ssg", "--verbose"]).unwrap();
+        assert!(matches.get_flag("verbose"));
+    }
+
+    #[test]
+    fn parse_drafts_flag() {
+        let cmd = Cli::build();
+        let matches = cmd.try_get_matches_from(["ssg", "--drafts"]).unwrap();
+        assert!(matches.get_flag("drafts"));
+    }
+
+    #[test]
+    fn parse_combined_flags_and_values() {
+        let cmd = Cli::build();
+        let matches = cmd
+            .try_get_matches_from([
+                "ssg", "--quiet", "--drafts", "--output", "/tmp/out", "--jobs",
+                "4",
+            ])
+            .unwrap();
+        assert!(matches.get_flag("quiet"));
+        assert!(matches.get_flag("drafts"));
+        assert_eq!(
+            matches.get_one::<PathBuf>("output").unwrap(),
+            &PathBuf::from("/tmp/out")
+        );
+        assert_eq!(*matches.get_one::<usize>("jobs").unwrap(), 4);
+    }
+
+    #[test]
+    fn cli_default_is_unit_struct() {
+        let _cli = Cli::default();
+        // Cli is a ZST — just ensure Default works.
     }
 }

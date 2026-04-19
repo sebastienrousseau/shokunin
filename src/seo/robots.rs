@@ -67,6 +67,7 @@ impl Plugin for RobotsPlugin {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
     use super::*;
     use std::path::Path;
     use tempfile::tempdir;
@@ -149,5 +150,36 @@ mod tests {
             !nonexistent.join("robots.txt").exists(),
             "plugin should not create files in a missing site dir"
         );
+    }
+
+    #[test]
+    fn robots_txt_with_custom_sitemap_url() {
+        let dir = tempdir().unwrap();
+        let plugin = RobotsPlugin::new("https://blog.example.org");
+        plugin.after_compile(&ctx(dir.path())).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert!(
+            body.contains("Sitemap: https://blog.example.org/sitemap.xml"),
+            "sitemap URL should use the custom base_url: {body}"
+        );
+    }
+
+    #[test]
+    fn robots_txt_preserves_existing_disallow() {
+        let dir = tempdir().unwrap();
+        let custom = "User-agent: *\nDisallow: /admin/\nDisallow: /private/\n";
+        fs::write(dir.path().join("robots.txt"), custom).unwrap();
+
+        let plugin = RobotsPlugin::new("https://example.com");
+        plugin.after_compile(&ctx(dir.path())).unwrap();
+
+        let body = fs::read_to_string(dir.path().join("robots.txt")).unwrap();
+        assert_eq!(
+            body, custom,
+            "existing robots.txt with disallow rules must not be overwritten"
+        );
+        assert!(body.contains("Disallow: /admin/"));
+        assert!(body.contains("Disallow: /private/"));
     }
 }

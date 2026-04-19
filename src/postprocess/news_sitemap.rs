@@ -143,6 +143,7 @@ fn build_news_entry(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
     use super::*;
     use crate::plugin::PluginContext;
     use std::collections::HashMap;
@@ -323,6 +324,90 @@ mod tests {
         assert_eq!(
             result, original,
             "Should not modify well-formed news sitemap"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_news_entry_returns_none_for_empty_title() {
+        let meta = HashMap::new();
+        assert!(
+            build_news_entry("slug", &meta, "https://example.com").is_none(),
+            "empty title should produce None"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_returns_none_for_empty_path() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Hello".to_string());
+        assert!(
+            build_news_entry("", &meta, "https://example.com").is_none(),
+            "empty rel_path should produce None"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_valid() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "My Article".to_string());
+        let _ = meta.insert("author".to_string(), "Author".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let entry =
+            build_news_entry("my-article", &meta, "https://example.com")
+                .expect("valid metadata should produce an entry");
+        assert!(entry
+            .contains("<loc>https://example.com/my-article/index.html</loc>"));
+        assert!(entry.contains("<news:name>Author</news:name>"));
+        assert!(entry.contains("<news:title>My Article</news:title>"));
+        assert!(entry.contains("<news:language>en</news:language>"));
+    }
+
+    #[test]
+    fn test_build_news_entry_without_base_url() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        let _ = meta.insert("name".to_string(), "Writer".to_string());
+        let entry = build_news_entry("post", &meta, "")
+            .expect("should produce entry without base_url");
+        assert!(
+            entry.contains("<loc>post/index.html</loc>"),
+            "loc should use relative path when base_url is empty: {entry}"
+        );
+        assert!(
+            entry.contains("<news:name>Writer</news:name>"),
+            "should fall back to 'name' field: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_news_sitemap_no_file_is_noop() -> Result<()> {
+        let tmp = tempdir()?;
+        let ctx = test_ctx(tmp.path());
+        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        assert!(!tmp.path().join("news-sitemap.xml").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_news_sitemap_empty_entries_no_rebuild() -> Result<()> {
+        let tmp = tempdir()?;
+        let news_path = tmp.path().join("news-sitemap.xml");
+        // Has placeholder but no meta sidecars to rebuild from
+        let original = r#"<?xml version="1.0" encoding="UTF-8"?>
+<urlset><url><loc></loc><news:news><news:title>Untitled Article</news:title></news:news></url></urlset>"#;
+        fs::write(&news_path, original)?;
+
+        let ctx = test_ctx(tmp.path());
+        NewsSitemapFixPlugin.after_compile(&ctx)?;
+
+        let result = fs::read_to_string(&news_path)?;
+        assert_eq!(
+            result, original,
+            "should not modify when no meta entries produce valid news entries"
         );
         Ok(())
     }
