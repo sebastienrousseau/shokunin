@@ -7,6 +7,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.38] - 2026-04-20
+
+### Added
+- **Agentic LLM pipeline**: `--ai-fix` CLI flag triggers audit, diagnose, fix, verify, and report cycle with configurable max refinement attempts and JSON output
+- **Multilingual readability**: Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES) with BCP 47 language detection from frontmatter
+- **OG image generation**: auto-generated SVG social cards from page title and site name, injected via `og:image` meta tag, zero new dependencies
+- **Scalability benchmarks**: Criterion benchmarks at 100, 1K, and 10K page tiers with CI job on release tags
+- **axe-core CI**: `@axe-core/playwright` integration for WCAG 2.1 AA audit with JSON report artifacts
+- **CSP whitepaper**: `docs/whitepaper/csp-without-compromise.md` documenting build-time inline extraction and SRI hashing
+- **237 new unit tests**: coverage raised from 94.24% to 95.06% regions (1,640 total)
+
+### Changed
+- CI coverage regions floor raised from 94% to 95%
+- Version bumped from 0.0.37 to 0.0.38
+- README rewritten with updated metrics, feature matrix, and architecture diagram
+
+### Fixed
+- `package-lock.json` synced with `@axe-core/playwright` dependency
+- axe-core a11y audit restricted to desktop project (Chromium only) to avoid missing WebKit binary in CI
+
+### Dependencies
+- `actions/checkout` v4 to v6.0.2
+- `actions/download-artifact` v4 to v8.0.1
+- `actions/attest-build-provenance` v2 to v4.1.0
+- `actions/upload-pages-artifact` v3 to v5.0.0
+- `actions/deploy-pages` v4 to v5.0.0
+- `actions/cache` v4 to v5.0.5
+- `actions/setup-node` v4 to v6.4.0
+- `docker/setup-buildx-action` v3 to v4.0.0
+- `docker/build-push-action` v6 to v7.1.0
+- `docker/login-action` v3 to v4.1.0
+
 ## [0.0.37] - 2026-04-19
 
 ### Added
