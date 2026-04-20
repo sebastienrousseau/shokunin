@@ -191,8 +191,8 @@ jobs:
         shell: pwsh
         run: |
           # cargo-wix expects a wix/main.wxs template; if absent, generate one.
-          if (-not (Test-Path "wix/main.wxs")) { cargo wix init --force }
-          cargo wix --no-build --target ${{ matrix.target }} --output ssg-${env:GITHUB_REF_NAME}-x86_64.msi
+          if (-not (Test-Path "wix/main.wxs")) { cargo wix init --force -p ssg }
+          cargo wix -p ssg --no-build --target ${{ matrix.target }} --output ssg-${env:GITHUB_REF_NAME}-x86_64.msi
           $msi = "ssg-${env:GITHUB_REF_NAME}-x86_64.msi"
           $hash = (Get-FileHash $msi -Algorithm SHA256).Hash.ToLower()
           "$hash  $msi" | Out-File -Encoding ascii "$msi.sha256"
@@ -436,4 +436,4 @@ jobs:
       - name: Publish to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --locked
+        run: cargo publish -p ssg --locked
