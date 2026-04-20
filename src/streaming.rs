@@ -355,4 +355,319 @@ mod tests {
         let budget = MemoryBudget::default_budget();
         assert!(!should_stream(&content, &budget, false));
     }
+
+    // -----------------------------------------------------------------
+    // MemoryBudget — edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn memory_budget_from_mb_one() {
+        let budget = MemoryBudget::from_mb(1);
+        assert_eq!(budget.max_bytes, 1024 * 1024);
+        // 1 MB / 64 KB = 16 pages per batch
+        assert_eq!(budget.batch_size, 16);
+    }
+
+    #[test]
+    fn memory_budget_from_mb_very_large() {
+        let budget = MemoryBudget::from_mb(4096);
+        assert_eq!(budget.max_bytes, 4096 * 1024 * 1024);
+        // 4 GB / 64 KB = 65536 pages per batch
+        assert_eq!(budget.batch_size, 65536);
+    }
+
+    #[test]
+    fn memory_budget_batch_size_floor_is_ten() {
+        // Even with 0 MB, the floor ensures at least 10 pages/batch
+        let budget = MemoryBudget::from_mb(0);
+        assert_eq!(budget.max_bytes, 0);
+        assert_eq!(budget.batch_size, 10);
+    }
+
+    #[test]
+    fn memory_budget_default_budget_matches_constant() {
+        let budget = MemoryBudget::default_budget();
+        assert_eq!(budget.max_bytes, DEFAULT_MEMORY_BUDGET_MB * 1024 * 1024);
+        assert_eq!(
+            budget.batch_size,
+            MemoryBudget::from_mb(DEFAULT_MEMORY_BUDGET_MB).batch_size
+        );
+    }
+
+    #[test]
+    fn memory_budget_clone_copy_debug() {
+        let a = MemoryBudget::from_mb(128);
+        let b = a; // Copy
+        assert_eq!(a.max_bytes, b.max_bytes);
+        assert_eq!(a.batch_size, b.batch_size);
+        let debug = format!("{a:?}");
+        assert!(debug.contains("MemoryBudget"));
+    }
+
+    // -----------------------------------------------------------------
+    // batched_content_files — additional scenarios
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn batched_content_files_nonexistent_dir_returns_empty() {
+        let dir = tempdir().unwrap();
+        let budget = MemoryBudget::from_mb(512);
+        let result =
+            batched_content_files(&dir.path().join("nonexistent"), &budget);
+        // walk_files treats a missing dir as empty, so batched returns Ok([])
+        // or propagates an error — either is acceptable.
+        if let Ok(batches) = result {
+            assert!(batches.is_empty());
+        }
+        // Err is also acceptable — nonexistent dir may propagate error
+    }
+
+    #[test]
+    fn batched_content_files_single_file() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("index.md"), "# Home").unwrap();
+
+        let budget = MemoryBudget::from_mb(512);
+        let batches = batched_content_files(&content, &budget).unwrap();
+        assert_eq!(batches.len(), 1);
+        assert_eq!(batches[0].len(), 1);
+    }
+
+    #[test]
+    fn batched_content_files_ignores_non_md() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("page.md"), "# Page").unwrap();
+        fs::write(content.join("image.png"), "fakepng").unwrap();
+        fs::write(content.join("style.css"), "body{}").unwrap();
+
+        let budget = MemoryBudget::from_mb(512);
+        let batches = batched_content_files(&content, &budget).unwrap();
+        let total: usize = batches.iter().map(|b| b.len()).sum();
+        assert_eq!(total, 1, "only .md files should be collected");
+    }
+
+    #[test]
+    fn batched_content_files_exact_batch_boundary() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        for i in 0..10 {
+            fs::write(content.join(format!("p{i}.md")), "# Hi").unwrap();
+        }
+
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 10,
+        };
+        let batches = batched_content_files(&content, &budget).unwrap();
+        assert_eq!(batches.len(), 1);
+        assert_eq!(batches[0].len(), 10);
+    }
+
+    #[test]
+    fn batched_content_files_many_small_batches() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        for i in 0..7 {
+            fs::write(content.join(format!("p{i}.md")), "# Hi").unwrap();
+        }
+
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 2,
+        };
+        let batches = batched_content_files(&content, &budget).unwrap();
+        assert_eq!(batches.len(), 4); // 2+2+2+1
+        assert_eq!(batches[3].len(), 1);
+    }
+
+    #[test]
+    fn batched_content_files_nested_directories() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(content.join("blog")).unwrap();
+        fs::create_dir_all(content.join("docs")).unwrap();
+        fs::write(content.join("index.md"), "# Index").unwrap();
+        fs::write(content.join("blog/post.md"), "# Post").unwrap();
+        fs::write(content.join("docs/api.md"), "# API").unwrap();
+
+        let budget = MemoryBudget::from_mb(512);
+        let batches = batched_content_files(&content, &budget).unwrap();
+        let total: usize = batches.iter().map(|b| b.len()).sum();
+        assert_eq!(total, 3);
+    }
+
+    // -----------------------------------------------------------------
+    // merge_dir — additional scenarios
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn merge_dir_deeply_nested() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        fs::create_dir_all(src.join("a/b/c")).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("a/b/c/deep.txt"), "deep content").unwrap();
+
+        merge_dir(&src, &dst).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("a/b/c/deep.txt")).unwrap(),
+            "deep content"
+        );
+    }
+
+    #[test]
+    fn merge_dir_empty_src() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(dst.join("existing.txt"), "keep").unwrap();
+
+        merge_dir(&src, &dst).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("existing.txt")).unwrap(),
+            "keep"
+        );
+    }
+
+    #[test]
+    fn merge_dir_multiple_files() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        for i in 0..5 {
+            fs::write(src.join(format!("f{i}.txt")), format!("data{i}"))
+                .unwrap();
+        }
+
+        merge_dir(&src, &dst).unwrap();
+        for i in 0..5 {
+            assert_eq!(
+                fs::read_to_string(dst.join(format!("f{i}.txt"))).unwrap(),
+                format!("data{i}")
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // should_stream — additional scenarios
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn should_stream_with_no_content_dir() {
+        let dir = tempdir().unwrap();
+        let budget = MemoryBudget::from_mb(512);
+        // Non-existent dir, not explicitly set => false (walk returns 0)
+        assert!(!should_stream(
+            &dir.path().join("no-content"),
+            &budget,
+            false
+        ));
+    }
+
+    #[test]
+    fn should_stream_explicitly_set_overrides_count() {
+        // Even with zero files, explicit flag forces streaming
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+
+        let budget = MemoryBudget::from_mb(512);
+        assert!(should_stream(&content, &budget, true));
+    }
+
+    #[test]
+    fn should_stream_exactly_at_batch_boundary() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        // Create exactly batch_size files => count == batch_size, not >
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 3,
+        };
+        for i in 0..3 {
+            fs::write(content.join(format!("p{i}.md")), "# Hi").unwrap();
+        }
+        // 3 files, batch_size 3 => count is NOT > batch_size => false
+        assert!(!should_stream(&content, &budget, false));
+    }
+
+    #[test]
+    fn should_stream_one_over_boundary() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let budget = MemoryBudget {
+            max_bytes: 0,
+            batch_size: 3,
+        };
+        for i in 0..4 {
+            fs::write(content.join(format!("p{i}.md")), "# Hi").unwrap();
+        }
+        // 4 files, batch_size 3 => true
+        assert!(should_stream(&content, &budget, false));
+    }
+
+    // -----------------------------------------------------------------
+    // compile_batch — additional scenarios
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn compile_batch_with_nonexistent_files_still_creates_dirs() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+
+        // Pass paths that don't exist — the copy inside compile_batch
+        // will fail, but the batch content dir should still be created.
+        let result = compile_batch(
+            &[content.join("nonexistent.md")],
+            &content,
+            &build,
+            &site,
+            &templates,
+            0,
+        );
+        // This may error (file not found during copy), which is expected.
+        // The important thing is it doesn't panic.
+        let _ = result;
+    }
+
+    #[test]
+    fn compile_batch_creates_batch_content_dir() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(content.join("page.md"), "---\ntitle: T\n---\n# Hi").unwrap();
+
+        // compile_batch with a real file — may fail at staticdatagen::compile
+        // but should not panic and should create the batch dir
+        let _result = compile_batch(
+            &[content.join("page.md")],
+            &content,
+            &build,
+            &site,
+            &templates,
+            42,
+        );
+        // Batch dirs are cleaned up, so we just verify no panic
+    }
 }

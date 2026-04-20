@@ -1,6 +1,6 @@
 {
   "name": "ssg-visual-tests",
-  "version": "0.0.37",
+  "version": "0.0.38",
   "private": true,
   "description": "Visual regression tests for SSG using Playwright",
   "scripts": {
@@ -8,6 +8,7 @@
     "update-baselines": "npx playwright test --update-snapshots"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0"
+    "@playwright/test": "^1.50.0",
+    "@axe-core/playwright": "^4.10.0"
   }
 }

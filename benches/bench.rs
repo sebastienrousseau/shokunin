@@ -9,6 +9,8 @@ use criterion::Criterion;
 
 /// This is a module for benchmarking file operations.
 mod bench_file;
+/// Scalability benchmarks at 100, 1K, and 10K page counts.
+mod bench_scalability;
 /// End-to-end site generation benchmarks at varying page counts.
 mod bench_site_generation;
 /// This is a module for benchmarking yaml operations.
@@ -28,4 +30,4 @@ criterion::criterion_group! {
 }
 
 // Run benchmarks
-criterion::criterion_main!(benches);
+criterion::criterion_main!(benches, bench_scalability::scalability);

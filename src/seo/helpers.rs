@@ -7,7 +7,7 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 
 /// Extract the page title from the `<title>` tag.
-pub(super) fn extract_title(html: &str) -> String {
+pub fn extract_title(html: &str) -> String {
     if let Some(start) = html.find("<title>") {
         let after = &html[start + 7..];
         if let Some(end) = after.find("</title>") {
@@ -151,7 +151,7 @@ pub(super) fn escape_attr(s: &str) -> String {
 /// <!-- # End Open Graph / Facebook Meta Tags -->
 /// ```
 /// These should NOT count as "tag present" — only real `<meta` tags do.
-pub(super) fn has_meta_tag(html: &str, attr: &str) -> bool {
+pub fn has_meta_tag(html: &str, attr: &str) -> bool {
     html.contains(&format!("<meta property=\"{attr}\""))
         || html.contains(&format!("<meta property='{attr}'"))
         || html.contains(&format!("<meta name=\"{attr}\""))

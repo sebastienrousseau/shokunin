@@ -787,4 +787,729 @@ mod tests {
         );
         Ok(())
     }
+
+    // -----------------------------------------------------------------
+    // Plugin trait coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_plugin_name() {
+        let plugin = AtomFeedPlugin;
+        assert_eq!(plugin.name(), "atom-feed");
+    }
+
+    #[test]
+    fn test_atom_feed_plugin_debug() {
+        let plugin = AtomFeedPlugin;
+        let debug = format!("{plugin:?}");
+        assert!(debug.contains("AtomFeedPlugin"));
+    }
+
+    #[test]
+    fn test_atom_feed_plugin_clone_copy() {
+        let plugin = AtomFeedPlugin;
+        let cloned = plugin;
+        assert_eq!(cloned.name(), "atom-feed");
+    }
+
+    // -----------------------------------------------------------------
+    // Empty site directory
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_empty_site_dir() -> Result<()> {
+        let tmp = tempdir()?;
+        // No sidecars, no rss.xml, nothing
+        let ctx = make_atom_ctx(tmp.path());
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let atom_path = tmp.path().join("atom.xml");
+        assert!(
+            !atom_path.exists(),
+            "Should not create atom.xml with no entries"
+        );
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // Missing sidecar files / fallback paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_falls_back_to_rss_xml() -> Result<()> {
+        let tmp = tempdir()?;
+        // No sidecars, but an rss.xml exists
+        let rss_content = r#"<?xml version="1.0"?>
+<rss version="2.0">
+<channel>
+<title>Test</title>
+<item>
+<title>From RSS</title>
+<description>Extracted from RSS</description>
+<link>https://example.com/rss-post/</link>
+<pubDate>Thu, 11 Apr 2026 06:06:06 +0000</pubDate>
+<author>Alice</author>
+</item>
+</channel>
+</rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+
+        let ctx = make_atom_ctx(tmp.path());
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let atom_path = tmp.path().join("atom.xml");
+        assert!(atom_path.exists(), "Should create atom.xml from rss.xml");
+        let content = fs::read_to_string(&atom_path)?;
+        assert!(
+            content.contains("From RSS"),
+            "Should contain entry from rss.xml"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_atom_feed_rss_multiple_items() -> Result<()> {
+        let tmp = tempdir()?;
+        let rss_content = r#"<?xml version="1.0"?>
+<rss version="2.0">
+<channel>
+<title>Test</title>
+<item>
+<title>Post A</title>
+<description>Desc A</description>
+<link>https://example.com/post-a/</link>
+<pubDate>Thu, 10 Apr 2026 00:00:00 +0000</pubDate>
+</item>
+<item>
+<title>Post B</title>
+<description>Desc B</description>
+<link>https://example.com/post-b/</link>
+<pubDate>Fri, 11 Apr 2026 00:00:00 +0000</pubDate>
+</item>
+</channel>
+</rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+
+        let ctx = make_atom_ctx(tmp.path());
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        assert!(content.contains("Post A"));
+        assert!(content.contains("Post B"));
+        let entry_count = content.matches("<entry>").count();
+        assert_eq!(entry_count, 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_atom_feed_rss_with_cdata() -> Result<()> {
+        let tmp = tempdir()?;
+        let rss_content = r#"<?xml version="1.0"?>
+<rss version="2.0">
+<channel>
+<title>Test</title>
+<item>
+<title><![CDATA[CDATA Title]]></title>
+<description><![CDATA[CDATA Description]]></description>
+<link>https://example.com/cdata-post/</link>
+<pubDate>Thu, 11 Apr 2026 06:06:06 +0000</pubDate>
+</item>
+</channel>
+</rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+
+        let ctx = make_atom_ctx(tmp.path());
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        assert!(content.contains("CDATA Title"), "Should unwrap CDATA");
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // extract_xml_tag
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_xml_tag_simple() {
+        let xml = "<item><title>Hello</title></item>";
+        assert_eq!(extract_xml_tag(xml, "title"), Some("Hello".to_string()));
+    }
+
+    #[test]
+    fn test_extract_xml_tag_with_attributes() {
+        let xml = r#"<item><link href="http://example.com">text</link></item>"#;
+        assert_eq!(extract_xml_tag(xml, "link"), Some("text".to_string()));
+    }
+
+    #[test]
+    fn test_extract_xml_tag_missing() {
+        let xml = "<item><title>Hello</title></item>";
+        assert_eq!(extract_xml_tag(xml, "author"), None);
+    }
+
+    #[test]
+    fn test_extract_xml_tag_empty_content() {
+        let xml = "<item><title></title></item>";
+        assert_eq!(extract_xml_tag(xml, "title"), None);
+    }
+
+    #[test]
+    fn test_extract_xml_tag_cdata() {
+        let xml = "<item><title><![CDATA[My Title]]></title></item>";
+        assert_eq!(extract_xml_tag(xml, "title"), Some("My Title".to_string()));
+    }
+
+    #[test]
+    fn test_extract_xml_tag_decodes_entities() {
+        let xml = "<item><title>Tom &amp; Jerry</title></item>";
+        // The function decodes entities then re-escapes via xml_escape
+        let result = extract_xml_tag(xml, "title").unwrap();
+        assert!(
+            result.contains("Tom") && result.contains("Jerry"),
+            "Should contain decoded text: {result}"
+        );
+    }
+
+    #[test]
+    fn test_extract_xml_tag_whitespace() {
+        let xml = "<item><title>  Hello World  </title></item>";
+        assert_eq!(
+            extract_xml_tag(xml, "title"),
+            Some("Hello World".to_string())
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // extract_entries_from_rss
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_entries_from_rss_no_file() {
+        let tmp = tempdir().unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_extract_entries_from_rss_empty_rss() {
+        let tmp = tempdir().unwrap();
+        fs::write(
+            tmp.path().join("rss.xml"),
+            r#"<?xml version="1.0"?><rss><channel></channel></rss>"#,
+        )
+        .unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_extract_entries_from_rss_item_without_title() {
+        let tmp = tempdir().unwrap();
+        let rss = r#"<?xml version="1.0"?>
+<rss><channel>
+<item>
+<description>No title item</description>
+<link>https://example.com/no-title/</link>
+</item>
+</channel></rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss).unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        // Has a link-derived rel_path and a description but no title,
+        // so it should still be included (meta has no "title" key but
+        // the filter checks contains_key("title") — so it's excluded)
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_extract_entries_from_rss_item_without_link() {
+        let tmp = tempdir().unwrap();
+        let rss = r#"<?xml version="1.0"?>
+<rss><channel>
+<item>
+<title>No Link</title>
+<description>No link item</description>
+</item>
+</channel></rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss).unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        // rel_path is empty without link => skipped
+        assert!(entries.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // build_atom_entry
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_atom_entry_empty_rel_path() {
+        let meta = HashMap::new();
+        assert!(build_atom_entry("", &meta, "https://example.com").is_none());
+    }
+
+    #[test]
+    fn test_build_atom_entry_empty_title() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), String::new());
+        assert!(
+            build_atom_entry("page", &meta, "https://example.com").is_none()
+        );
+    }
+
+    #[test]
+    fn test_build_atom_entry_minimal() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Test".to_string());
+        let result = build_atom_entry("page", &meta, "https://example.com");
+        assert!(result.is_some());
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(entry.title, "Test");
+        assert!(entry.link.contains("example.com/page/"));
+        assert!(entry.author.is_empty());
+        // No pub_date in meta => empty string date key
+        assert!(date_key.is_empty());
+    }
+
+    #[test]
+    fn test_build_atom_entry_empty_base_url() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Test".to_string());
+        let result = build_atom_entry("page", &meta, "");
+        assert!(result.is_some());
+        let (_, entry) = result.unwrap();
+        assert_eq!(entry.link, "page/");
+    }
+
+    #[test]
+    fn test_build_atom_entry_with_all_fields() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Full Entry".to_string());
+        let _ =
+            meta.insert("description".to_string(), "A description".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let _ = meta.insert("author".to_string(), "Alice".to_string());
+
+        let result = build_atom_entry("full", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(entry.title, "Full Entry");
+        assert_eq!(entry.summary, "A description");
+        assert_eq!(entry.author, "Alice");
+        assert!(date_key.contains("2026"));
+    }
+
+    #[test]
+    fn test_build_atom_entry_unparseable_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Bad Date".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
+
+        let result = build_atom_entry("baddate", &meta, "https://example.com");
+        let (date_key, _) = result.unwrap();
+        // Falls back to raw string
+        assert_eq!(date_key, "not-a-date");
+    }
+
+    // -----------------------------------------------------------------
+    // collect_atom_entries
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_collect_atom_entries_empty() {
+        let entries: Vec<(String, HashMap<String, String>)> = vec![];
+        let result = collect_atom_entries(&entries, "https://example.com");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_collect_atom_entries_filters_invalid() {
+        let mut meta1 = HashMap::new();
+        let _ = meta1.insert("title".to_string(), "Valid".to_string());
+        let mut meta2 = HashMap::new();
+        let _ = meta2.insert("title".to_string(), String::new()); // empty title
+
+        let entries =
+            vec![("valid".to_string(), meta1), ("invalid".to_string(), meta2)];
+        let result = collect_atom_entries(&entries, "https://example.com");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].1.title, "Valid");
+    }
+
+    // -----------------------------------------------------------------
+    // build_atom_feed
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_atom_feed_structure() {
+        let entry = AtomEntry {
+            title: "Feed Test".to_string(),
+            link: "https://example.com/test/".to_string(),
+            id: "https://example.com/test/".to_string(),
+            updated: "2026-04-11T00:00:00+00:00".to_string(),
+            published: "2026-04-11T00:00:00+00:00".to_string(),
+            summary: "Summary".to_string(),
+            author: "Bob".to_string(),
+        };
+        let articles = vec![("2026-04-11T00:00:00+00:00".to_string(), entry)];
+        let xml = build_atom_feed("My Feed", "https://example.com", &articles);
+        assert!(xml.starts_with("<?xml"));
+        assert!(xml.contains("xmlns=\"http://www.w3.org/2005/Atom\""));
+        assert!(xml.contains("<title>My Feed</title>"));
+        assert!(xml.contains("rel=\"self\""));
+        assert!(xml.contains("https://example.com/atom.xml"));
+        assert!(xml.contains("<id>https://example.com</id>"));
+        assert!(xml.contains("Feed Test"));
+    }
+
+    #[test]
+    fn test_build_atom_feed_empty_base_url() {
+        let entry = AtomEntry {
+            title: "Test".to_string(),
+            link: "test/".to_string(),
+            id: "test/".to_string(),
+            updated: "2026-01-01T00:00:00+00:00".to_string(),
+            published: "2026-01-01T00:00:00+00:00".to_string(),
+            summary: String::new(),
+            author: String::new(),
+        };
+        let articles = vec![("2026-01-01T00:00:00+00:00".to_string(), entry)];
+        let xml = build_atom_feed("Untitled", "", &articles);
+        assert!(xml.contains("<id>/</id>"));
+        assert!(xml.contains("href=\"atom.xml\""));
+    }
+
+    #[test]
+    fn test_build_atom_feed_xml_escapes_title() {
+        let entry = AtomEntry {
+            title: "A".to_string(),
+            link: "a/".to_string(),
+            id: "a/".to_string(),
+            updated: "2026-01-01T00:00:00+00:00".to_string(),
+            published: "2026-01-01T00:00:00+00:00".to_string(),
+            summary: String::new(),
+            author: String::new(),
+        };
+        let articles = vec![("2026-01-01T00:00:00+00:00".to_string(), entry)];
+        let xml = build_atom_feed(
+            "Tom & Jerry's <Feed>",
+            "https://example.com",
+            &articles,
+        );
+        assert!(xml.contains("Tom &amp; Jerry"));
+        assert!(xml.contains("&lt;Feed&gt;"));
+    }
+
+    // -----------------------------------------------------------------
+    // AtomEntry::to_xml additional coverage
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_entry_to_xml_escapes_all_fields() {
+        let entry = AtomEntry {
+            title: "A & B".to_string(),
+            link: "https://example.com/a&b/".to_string(),
+            id: "https://example.com/a&b/".to_string(),
+            updated: "2026-01-01".to_string(),
+            published: "2026-01-01".to_string(),
+            summary: "\"quoted\" <summary>".to_string(),
+            author: "O'Brien".to_string(),
+        };
+        let xml = entry.to_xml();
+        assert!(xml.contains("A &amp; B"), "Title not escaped");
+        assert!(
+            xml.contains("&quot;quoted&quot;"),
+            "Summary quotes not escaped"
+        );
+        assert!(
+            xml.contains("&lt;summary&gt;"),
+            "Summary angles not escaped"
+        );
+        assert!(
+            xml.contains("O&apos;Brien"),
+            "Author apostrophe not escaped"
+        );
+    }
+
+    #[test]
+    fn test_atom_entry_to_xml_empty_summary() {
+        let entry = AtomEntry {
+            title: "No Summary".to_string(),
+            link: "https://example.com/".to_string(),
+            id: "https://example.com/".to_string(),
+            updated: "2026-01-01".to_string(),
+            published: "2026-01-01".to_string(),
+            summary: String::new(),
+            author: "Alice".to_string(),
+        };
+        let xml = entry.to_xml();
+        assert!(xml.contains("<summary></summary>"));
+    }
+
+    // -----------------------------------------------------------------
+    // Atom feed with config variations
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_untitled_site() -> Result<()> {
+        let tmp = tempdir()?;
+
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        let _ = meta.insert("description".to_string(), "desc".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        write_meta_sidecar(tmp.path(), "post", &meta);
+
+        // Use a config with empty site_name
+        let config = crate::cmd::SsgConfig {
+            base_url: "https://example.com".to_string(),
+            site_name: String::new(),
+            site_title: String::new(),
+            site_description: String::new(),
+            language: "en".to_string(),
+            content_dir: std::path::PathBuf::from("content"),
+            output_dir: std::path::PathBuf::from("build"),
+            template_dir: std::path::PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+        };
+        let ctx = PluginContext::with_config(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+            config,
+        );
+
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        assert!(
+            content.contains("<title>Untitled</title>"),
+            "Empty site_name should produce 'Untitled'"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_atom_feed_no_config() -> Result<()> {
+        let tmp = tempdir()?;
+
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        let _ = meta.insert("description".to_string(), "desc".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        write_meta_sidecar(tmp.path(), "post", &meta);
+
+        // PluginContext without config
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let atom_path = tmp.path().join("atom.xml");
+        if atom_path.exists() {
+            let content = fs::read_to_string(&atom_path)?;
+            assert!(
+                content.contains("<title>Untitled</title>"),
+                "No config should produce 'Untitled'"
+            );
+        }
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // Date format parsing edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_entry_iso8601_date_passthrough() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO Date".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "2026-04-11T12:00:00+00:00".to_string(),
+        );
+        let result = build_atom_entry("iso", &meta, "https://example.com");
+        let (date_key, _) = result.unwrap();
+        // ISO 8601 may not parse as RFC 2822, so raw string is used
+        assert!(date_key.contains("2026"));
+    }
+
+    #[test]
+    fn test_atom_entry_empty_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "No Date".to_string());
+        let result = build_atom_entry("nodate", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert!(date_key.is_empty());
+        assert!(entry.published.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // Truncation to 50 entries
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_truncates_at_50() -> Result<()> {
+        let tmp = tempdir()?;
+
+        for i in 0..60 {
+            let mut meta = HashMap::new();
+            let _ = meta.insert("title".to_string(), format!("Post {i}"));
+            let _ = meta.insert("description".to_string(), format!("Desc {i}"));
+            let _ = meta.insert(
+                "item_pub_date".to_string(),
+                format!(
+                    "Thu, {:02} Apr 2026 {:02}:00:00 +0000",
+                    (i % 28) + 1,
+                    i % 24
+                ),
+            );
+            let _ = meta.insert("author".to_string(), "Bot".to_string());
+            write_meta_sidecar(tmp.path(), &format!("post-{i:03}"), &meta);
+        }
+
+        let ctx = make_atom_ctx(tmp.path());
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let entry_count = content.matches("<entry>").count();
+        assert_eq!(
+            entry_count, 50,
+            "Should truncate to 50 entries, got {entry_count}"
+        );
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // inject_atom_link: multiple HTML files
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_inject_atom_link_multiple_files() -> Result<()> {
+        let tmp = tempdir()?;
+        for name in ["index.html", "about.html", "contact.html"] {
+            fs::write(
+                tmp.path().join(name),
+                "<html><head><title>T</title></head><body></body></html>",
+            )?;
+        }
+
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
+
+        for name in ["index.html", "about.html", "contact.html"] {
+            let content = fs::read_to_string(tmp.path().join(name))?;
+            assert!(
+                content.contains("application/atom+xml"),
+                "{name} should have atom link"
+            );
+        }
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // RSS extraction edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_entries_from_rss_malformed_item() {
+        let tmp = tempdir().unwrap();
+        // Item that opens but never closes
+        let rss = r#"<?xml version="1.0"?>
+<rss><channel>
+<item>
+<title>Unclosed
+</channel></rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss).unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_extract_entries_from_rss_link_trailing_slash() {
+        let tmp = tempdir().unwrap();
+        let rss = r#"<?xml version="1.0"?>
+<rss><channel>
+<item>
+<title>Slash Test</title>
+<link>https://example.com/my-post/</link>
+</item>
+</channel></rss>"#;
+        fs::write(tmp.path().join("rss.xml"), rss).unwrap();
+        let entries = extract_entries_from_rss(tmp.path());
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, "my-post");
+    }
+
+    // -----------------------------------------------------------------
+    // Build dir .meta fallback
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_atom_feed_falls_back_to_build_meta_dir() -> Result<()> {
+        let tmp = tempdir()?;
+        let site_dir = tmp.path().join("site");
+        let build_dir = tmp.path().join("build");
+        let meta_dir = build_dir.join(".meta");
+        fs::create_dir_all(&site_dir)?;
+        fs::create_dir_all(&meta_dir)?;
+
+        // Put sidecar in build/.meta instead of site_dir
+        let page_dir = meta_dir.join("fallback-post");
+        fs::create_dir_all(&page_dir)?;
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Fallback".to_string());
+        let _ = meta
+            .insert("description".to_string(), "From build dir".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let json = serde_json::to_string(&meta).unwrap();
+        fs::write(page_dir.join("page.meta.json"), json)?;
+
+        let config = crate::cmd::SsgConfig {
+            base_url: "https://example.com".to_string(),
+            site_name: "Test".to_string(),
+            site_title: "Test".to_string(),
+            site_description: "Test".to_string(),
+            language: "en".to_string(),
+            content_dir: std::path::PathBuf::from("content"),
+            output_dir: build_dir.clone(),
+            template_dir: std::path::PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+        };
+        let ctx = PluginContext::with_config(
+            Path::new("content"),
+            &build_dir,
+            &site_dir,
+            Path::new("templates"),
+            config,
+        );
+
+        AtomFeedPlugin.after_compile(&ctx)?;
+
+        let atom_path = site_dir.join("atom.xml");
+        assert!(
+            atom_path.exists(),
+            "Should create atom.xml from build/.meta"
+        );
+        let content = fs::read_to_string(&atom_path)?;
+        assert!(content.contains("Fallback"));
+        Ok(())
+    }
 }

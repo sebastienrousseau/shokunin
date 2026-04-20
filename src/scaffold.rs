@@ -542,4 +542,333 @@ mod tests {
         result.expect("scaffold should succeed in a fresh cwd");
         assert!(dir.path().join("from-cwd").join("config.toml").exists());
     }
+
+    // -----------------------------------------------------------------
+    // write_scaffold_file — unit tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_scaffold_file_creates_file() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        write_scaffold_file(&path, "hello", "test.txt").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "hello");
+    }
+
+    #[test]
+    fn write_scaffold_file_overwrites_existing() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("test.txt");
+        fs::write(&path, "old").unwrap();
+        write_scaffold_file(&path, "new", "test.txt").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "new");
+    }
+
+    #[test]
+    fn write_scaffold_file_error_has_label() {
+        let err = write_scaffold_file(
+            Path::new("/no/such/dir/file.txt"),
+            "x",
+            "my-label",
+        )
+        .unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("my-label"),
+            "error should include the label: {msg}"
+        );
+    }
+
+    #[test]
+    fn write_scaffold_file_empty_content() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("empty.txt");
+        write_scaffold_file(&path, "", "empty.txt").unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "");
+    }
+
+    #[test]
+    fn write_scaffold_file_binary_content() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("bin.dat");
+        let data: &[u8] = &[0x00, 0xFF, 0xAB, 0xCD];
+        write_scaffold_file(&path, data, "bin.dat").unwrap();
+        assert_eq!(fs::read(&path).unwrap(), data);
+    }
+
+    // -----------------------------------------------------------------
+    // create_scaffold_dirs — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn create_scaffold_dirs_creates_all_expected_dirs() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        create_scaffold_dirs("proj", &root).unwrap();
+
+        for sub in [
+            "",
+            "content",
+            "content/blog",
+            "templates/tera",
+            "static/css",
+            "data",
+        ] {
+            assert!(root.join(sub).exists(), "{sub} should exist");
+        }
+    }
+
+    #[test]
+    fn create_scaffold_dirs_idempotent() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        create_scaffold_dirs("proj", &root).unwrap();
+        // Calling again should not fail
+        create_scaffold_dirs("proj", &root).unwrap();
+    }
+
+    // -----------------------------------------------------------------
+    // write_config_file — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_config_file_content() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(&root).unwrap();
+        write_config_file("my-site", &root).unwrap();
+
+        let content = fs::read_to_string(root.join("config.toml")).unwrap();
+        assert!(content.contains(r#"site_name = "my-site""#));
+        assert!(content.contains(r#"site_title = "my-site""#));
+        assert!(content.contains(r#"content_dir = "content""#));
+        assert!(content.contains(r#"output_dir = "public""#));
+        assert!(content.contains(r#"template_dir = "templates""#));
+        assert!(content.contains("http://127.0.0.1:8000"));
+        assert!(content.contains(r#"language = "en-GB""#));
+    }
+
+    // -----------------------------------------------------------------
+    // write_content_files — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_content_files_creates_all_content() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        write_content_files("test-proj", &root).unwrap();
+
+        assert!(root.join("content/index.md").exists());
+        assert!(root.join("content/about.md").exists());
+        assert!(root.join("content/blog/first-post.md").exists());
+    }
+
+    #[test]
+    fn write_content_files_about_has_correct_frontmatter() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        write_content_files("test-proj", &root).unwrap();
+
+        let about = fs::read_to_string(root.join("content/about.md")).unwrap();
+        assert!(about.contains("title: About"));
+        assert!(about.contains("layout: page"));
+        assert!(about.contains("static-site-generator.one"));
+    }
+
+    #[test]
+    fn write_content_files_index_has_features_list() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        write_content_files("proj", &root).unwrap();
+
+        let index = fs::read_to_string(root.join("content/index.md")).unwrap();
+        assert!(index.contains("## Features"));
+        assert!(index.contains("- Tera templating"));
+    }
+
+    #[test]
+    fn write_content_files_first_post_has_tags_and_code() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        write_content_files("proj", &root).unwrap();
+
+        let post = fs::read_to_string(root.join("content/blog/first-post.md"))
+            .unwrap();
+        assert!(post.contains("tags:"));
+        assert!(post.contains("- welcome"));
+        assert!(post.contains("```rust"));
+        assert!(post.contains("categories:"));
+    }
+
+    // -----------------------------------------------------------------
+    // write_template_files — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_template_files_creates_all_templates() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera")).unwrap();
+        write_template_files(&root).unwrap();
+
+        for file in [
+            "templates/tera/base.html",
+            "templates/tera/page.html",
+            "templates/tera/post.html",
+            "templates/tera/index.html",
+        ] {
+            assert!(root.join(file).exists(), "{file} should exist");
+        }
+    }
+
+    #[test]
+    fn write_template_files_page_extends_base() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera")).unwrap();
+        write_template_files(&root).unwrap();
+
+        let page =
+            fs::read_to_string(root.join("templates/tera/page.html")).unwrap();
+        assert!(page.contains(r#"extends "base.html""#));
+        assert!(page.contains("block content"));
+    }
+
+    #[test]
+    fn write_template_files_post_has_article_structure() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera")).unwrap();
+        write_template_files(&root).unwrap();
+
+        let post =
+            fs::read_to_string(root.join("templates/tera/post.html")).unwrap();
+        assert!(post.contains("<article>"));
+        assert!(post.contains("page.title"));
+        assert!(post.contains("page.date"));
+        assert!(post.contains("page.tags"));
+        assert!(post.contains("reading_time"));
+    }
+
+    #[test]
+    fn write_template_files_index_extends_base() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera")).unwrap();
+        write_template_files(&root).unwrap();
+
+        let index =
+            fs::read_to_string(root.join("templates/tera/index.html")).unwrap();
+        assert!(index.contains(r#"extends "base.html""#));
+        assert!(index.contains("site.title"));
+    }
+
+    // -----------------------------------------------------------------
+    // write_static_assets — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_static_assets_creates_stylesheet() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("static/css")).unwrap();
+        write_static_assets(&root).unwrap();
+
+        let css =
+            fs::read_to_string(root.join("static/css/style.css")).unwrap();
+        assert!(css.contains(":root"));
+        assert!(css.contains("--text:"));
+        assert!(css.contains("--bg:"));
+        assert!(css.contains("--accent:"));
+        assert!(css.contains("box-sizing: border-box"));
+    }
+
+    // -----------------------------------------------------------------
+    // write_data_files — direct tests
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn write_data_files_creates_nav_toml() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("data")).unwrap();
+        write_data_files(&root).unwrap();
+
+        let nav = fs::read_to_string(root.join("data/nav.toml")).unwrap();
+        assert_eq!(nav.matches("[[links]]").count(), 3);
+        assert!(nav.contains(r#"url = "/""#));
+        assert!(nav.contains(r#"url = "/about.html""#));
+        assert!(nav.contains(r#"url = "/blog/""#));
+    }
+
+    // -----------------------------------------------------------------
+    // scaffold_project_at — name injection edge cases
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn scaffold_project_at_special_chars_in_name() {
+        let dir = tempdir().unwrap();
+        let name = "my-cool_site.2026";
+        scaffold_project_at(name, dir.path()).unwrap();
+
+        let config =
+            fs::read_to_string(dir.path().join(name).join("config.toml"))
+                .unwrap();
+        assert!(config.contains(&format!(r#"site_name = "{name}""#)));
+    }
+
+    #[test]
+    fn scaffold_project_at_single_char_name() {
+        let dir = tempdir().unwrap();
+        scaffold_project_at("z", dir.path()).unwrap();
+        assert!(dir.path().join("z").join("config.toml").exists());
+    }
+
+    // -----------------------------------------------------------------
+    // scaffold_project_at — template content validation
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn scaffold_project_at_base_template_is_valid_html() {
+        let dir = tempdir().unwrap();
+        scaffold_project_at("t", dir.path()).unwrap();
+        let base = fs::read_to_string(
+            dir.path().join("t").join("templates/tera/base.html"),
+        )
+        .unwrap();
+        assert!(base.starts_with("<!DOCTYPE html>"));
+        assert!(base.contains("</html>"));
+        assert!(base.contains("<head>"));
+        assert!(base.contains("</head>"));
+        assert!(base.contains("<body>"));
+        assert!(base.contains("</body>"));
+    }
+
+    #[test]
+    fn scaffold_project_at_config_has_all_required_keys() {
+        let dir = tempdir().unwrap();
+        scaffold_project_at("k", dir.path()).unwrap();
+        let config =
+            fs::read_to_string(dir.path().join("k").join("config.toml"))
+                .unwrap();
+        for key in [
+            "site_name",
+            "content_dir",
+            "output_dir",
+            "template_dir",
+            "base_url",
+            "site_title",
+            "site_description",
+            "language",
+        ] {
+            assert!(
+                config.contains(key),
+                "config.toml should contain key: {key}"
+            );
+        }
+    }
 }

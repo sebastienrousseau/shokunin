@@ -11,6 +11,7 @@ build/
 /docs/*
 !/docs/README.md
 !/docs/guide/
+!/docs/whitepaper/
 /examples/public/
 /examples/build/
 /mysite/
