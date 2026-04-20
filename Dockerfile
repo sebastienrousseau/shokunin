@@ -13,7 +13,7 @@ WORKDIR /usr/src/ssg
 
 # hadolint ignore=DL3008
 RUN apt-get update \
- && apt-get install -y --no-install-recommends pkg-config libssl-dev \
+ && apt-get install -y --no-install-recommends pkg-config libssl-dev perl make \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy everything and build. No dep-caching trick — the workspace's
