@@ -92,6 +92,51 @@ jobs:
         shell: bash
         run: cargo test --test example_outputs --locked -- --test-threads=1
 
+  # ── Reproducible build verification (resolves #424) ─────────────────
+  # Builds the release binary twice on the same SHA and asserts the SHA-256
+  # hashes match. Path remapping via --remap-path-prefix removes the
+  # absolute checkout path from the binary; SOURCE_DATE_EPOCH pins
+  # build-time timestamps. A divergence here means a non-determinism
+  # leaked in (timestamp, $HOME path, parallel codegen ordering, etc.).
+  reproducible:
+    name: reproducible build · linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+      RUSTFLAGS: "--remap-path-prefix=${{ github.workspace }}=/build"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: First build
+        run: |
+          cargo build --release --locked -p ssg
+          sha256sum target/release/ssg > /tmp/build1.sha256
+          echo "Build 1: $(cat /tmp/build1.sha256)"
+      - name: Clean target
+        run: cargo clean -p ssg
+      - name: Second build
+        run: |
+          cargo build --release --locked -p ssg
+          sha256sum target/release/ssg > /tmp/build2.sha256
+          echo "Build 2: $(cat /tmp/build2.sha256)"
+      - name: Compare hashes
+        run: |
+          set -euo pipefail
+          h1=$(awk '{print $1}' /tmp/build1.sha256)
+          h2=$(awk '{print $1}' /tmp/build2.sha256)
+          if [ "$h1" = "$h2" ]; then
+            echo "✓ Reproducible: ${h1}"
+          else
+            echo "::error::Non-reproducible build — hashes differ:"
+            echo "  build1: ${h1}"
+            echo "  build2: ${h2}"
+            echo "Investigate via: diff <(strings target/release/ssg)"
+            exit 1
+          fi
+
   # ── Static musl release binary ──────────────────────────────────────
   musl:
     name: linux · musl static
