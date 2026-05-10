@@ -201,6 +201,14 @@ pub fn build_pipeline(
 ///
 /// Extracted from `run()` so the actual build can be unit-tested
 /// against a tempdir without booting an HTTP server.
+#[cfg_attr(
+    feature = "otel",
+    tracing::instrument(skip(plugins, ctx), fields(
+        content_dir = %content_dir.display(),
+        site_dir = %site_dir.display(),
+        quiet,
+    ))
+)]
 pub fn execute_build_pipeline(
     plugins: &plugin::PluginManager,
     ctx: &plugin::PluginContext,

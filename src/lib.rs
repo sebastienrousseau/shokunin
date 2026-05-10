@@ -134,6 +134,11 @@ pub mod logging;
 pub mod markdown_ext;
 /// Auto-generates Open Graph social card images from page metadata.
 pub mod og_image;
+/// Optional OpenTelemetry build-pipeline tracing (issue #422). The
+/// module compiles to an empty stub when the `otel` feature is off,
+/// so callers can always reference [`otel::init_if_enabled`] without
+/// `#[cfg]`-guarding every call site.
+pub mod otel;
 /// Pagination for listing pages.
 pub mod pagination;
 /// Build pipeline orchestration.
@@ -429,6 +434,12 @@ pub fn run() -> Result<()> {
     let matches = Cli::build().get_matches();
 
     logging::initialize_logging()?;
+
+    // OTel build tracing — only initialises if both the `otel` feature
+    // is compiled in AND `--trace` was passed. No-op otherwise.
+    let trace_flag = matches.get_flag("trace");
+    let _ = otel::init_if_enabled(trace_flag);
+
     info!("Starting site generation process");
 
     let config = SsgConfig::from_matches(&matches)?;

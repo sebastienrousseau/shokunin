@@ -104,6 +104,13 @@ templates = ["minijinja"]               # MiniJinja templating engine with inher
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 
+# OpenTelemetry build-pipeline tracing (issue #422). Off by default —
+# enabling pulls `tracing` + `tracing-subscriber` for stdout JSON
+# export. The OTLP/gRPC + Jaeger exporters are an additive layer
+# tracked separately; introducing them now would pull `tokio` into
+# the dependency graph, which the project otherwise avoids.
+otel = ["dep:tracing", "dep:tracing-subscriber"]
+
 # -----------------------------------------------------------------------------
 # Build Dependencies
 # -----------------------------------------------------------------------------
@@ -148,6 +155,16 @@ image = { version = "0.25", optional = true, default-features = false, features 
 
 # Owned crate for frontmatter parsing
 frontmatter-gen = "0.0.5"
+
+# Optional observability stack (issue #422). Both crates are
+# `optional = true` — they enter the build only when the `otel`
+# feature is enabled. The `dep:` references in the [features]
+# section above wire them up. The OTLP/Jaeger exporter bridge
+# (tracing-opentelemetry + opentelemetry_sdk) is deliberately
+# deferred — it would pull `tokio` and `rt-tokio` into the
+# dependency graph and the rest of SSG is rayon-based.
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
