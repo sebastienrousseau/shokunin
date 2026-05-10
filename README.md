@@ -169,7 +169,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod |
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
-| **Accessibility** | WCAG 2.1 AA validation on every build, axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks |
+| **Accessibility** | WCAG 2.1 AA validation on every build, axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
 | **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
 | **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |

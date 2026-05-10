@@ -109,6 +109,7 @@ The `AccessibilityPlugin` logs warnings but does not fail the build. The report 
 
 ## Next Steps
 
+- [WCAG 2.2 Compliance by Default](wcag-compliance.md) — full criterion-by-criterion mapping and EAA context
 - [Images](images.md) — responsive images with proper alt text
 - [Templates](templates.md) — ensure templates use semantic HTML
 - [SEO](seo.md) — accessibility and SEO overlap
