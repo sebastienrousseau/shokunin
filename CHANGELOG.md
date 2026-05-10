@@ -7,6 +7,158 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.39] - 2026-05-10
+
+### ⚠ BREAKING CHANGES
+
+- **SRI hashes now use real SHA-256.** The previous in-house FNV-1a
+  placeholder in `src/assets.rs::sha256_hex` was producing
+  `integrity="sha256-..."` attributes that no browser would actually
+  validate against. Real SHA-256 + canonical base64 means the hashes
+  emitted by `FingerprintPlugin` are now genuine SRI per the W3C
+  spec. **User impact:** any site that pre-built and checked-in SRI
+  hashes (or fingerprinted filenames) needs a one-time rebuild;
+  the short fingerprint suffix and the long SRI both change shape
+  to canonical SHA-256-derived values.
+- **`RunOptions` demoted to crate-internal.** Was nominally `pub` in
+  `src/pipeline.rs`; now `pub(crate)`. The module is `pub(crate)`
+  too, so the effective surface is unchanged for external consumers
+  that imported via `ssg::pipeline::RunOptions`. No re-export was
+  in place, so this should be a no-op for everyone but the curious.
+- **Six public enums marked `#[non_exhaustive]`:** `DeployTarget`,
+  `FieldType`, `UrlPrefixStrategy`, `ReadabilityFormula`,
+  `ChangeKind`, `ProcessError`. Downstream code that pattern-matches
+  on these without a wildcard arm needs `_ => …` added. This was
+  staged in preparation for `1.0.0-rc.1`.
+
+### Added
+
+- **Build-time CycloneDX SBOM** (`src/sbom.rs`): every build emits a
+  `sbom.cdx.json` at the site root + injects a per-page
+  `<link rel="sbom" type="application/vnd.cyclonedx+json"
+  href="/sbom.cdx.json">` discoverable via the IANA-registered link
+  relation. Closes #457.
+- **Typed content collection API** (`src/collections.rs`):
+  `get_collection::<T>(dir)` / `get_entry::<T>(dir, slug)` for
+  serde-typed Markdown loading, mirroring Astro's `getCollection`
+  ergonomics with compile-time type safety. Closes #456.
+- **WCAG 2.2 build-time checks** (`src/accessibility.rs`):
+  `check_target_size` (2.5.8), `check_focus_appearance` (2.4.13)
+  plus a `wcag-compliance.json` matrix artifact. README claim
+  promoted from "WCAG 2.1 AA" to "WCAG 2.2 AA". Closes #421, #463.
+- **JSON-LD schema.org validation** (`src/seo/jsonld.rs`):
+  `validate_jsonld` checks required fields per `@type`; new CI
+  step walks every example output. Closes #467.
+- **CSS `url()` rewriting in `FingerprintPlugin`** (`src/assets.rs`):
+  three-pass fingerprint pipeline so CSS-embedded image and font
+  references stay valid after content-hashed renames. Closes #468.
+- **Content-addressable assets widened to 14 extensions**: CSS, JS,
+  MJS plus 7 image formats + 4 font formats. Per-platform
+  `Cache-Control: immutable` rules emitted for Netlify, Vercel,
+  Cloudflare Pages.
+- **Reproducible-build verification job** in `scheduled.yml`:
+  double-build with `--locked --offline` + SHA-256 hash diff.
+  Closes #424.
+- **SECURITY.md** (canonical security policy): disclosure SLA,
+  threat model, security defaults, reproducible-build recipe,
+  build-provenance verification.
+- **WCAG 2.2 + EAA compliance guide**
+  (`docs/guide/wcag-compliance.md`): full criterion mapping, EAA
+  enforcement context (28 June 2025), member-state implementations,
+  before/after migration metrics. Closes #470.
+- **API stabilisation audit**
+  (`docs/architecture/api-stability-audit.md`): 4-tier inventory of
+  ~79 public types + Plugin trait. Closes #427.
+- **Perf baseline doc** (`docs/perf/baseline-100p.md`): 18.7 ms
+  100-page measurement + 6-subsystem hotspot inventory + profiling
+  recipes. Closes #471.
+- **Regression contract** (`docs/architecture/regression-contract.md`):
+  canonical inventory of every CI gate and its user-facing promise.
+- **`tests/chaos.rs`** — 9 chaos-engineering tests (corrupt
+  frontmatter, symlink loops, concurrent builds). Closes #423.
+- **`tests/element_presence.rs`** — universal HTML invariants gate
+  (lang, title, main, charset) on every example page.
+- **`tests/perf_budgets.rs`** — hard wall-clock budgets: 10-page <
+  100 ms, 100-page < 500 ms, 500-page < 2 s.
+- **`tests/jsonld_validation.rs`** — schema.org required-field
+  validation across every example output, wired into CI.
+- **`tests/golden_files.rs`** — golden-file regression framework
+  with normalisation (timestamps, fingerprints, SRI) and
+  `UPDATE_GOLDEN=1` workflow. Closes #466 (framework phase).
+- **`tests/docs_accuracy.rs`** — verifies README claims match
+  source-of-truth files (test count, WCAG version, coverage floors,
+  MSRV, version sync).
+- **`tests/doc_links.rs`** — every internal Markdown link in
+  README/CHANGELOG/SECURITY/docs/* resolves to an existing file.
+- **OpenTelemetry feature-gate scaffolding** (`src/otel.rs`):
+  `otel` Cargo feature, `--trace` CLI flag, one demo span around
+  `execute_build_pipeline`. Closes #422 phase A.
+- **Multi-OS `example_outputs` portability job** in `scheduled.yml`:
+  weekly macOS + Windows runs. Closes #473.
+- **Per-criterion SEO comparison matrices** in
+  `docs/compare/ssg-vs-{hugo,zola,astro}.md` covering 17–18 SEO
+  criteria each. Closes #461.
+
+### Changed
+
+- **README test-count claim refreshed** from 1,640 → 1,685+ lib
+  tests, plus mention of new `collections` + `sbom` + `otel`
+  modules.
+- **Cargo.toml keywords**: `["cli","generator","ssg","static-site",
+  "wasm"]` → `["rust","markdown","jamstack","ssg","wasm"]` for
+  better crates.io discoverability. Closes #428.
+- **`FingerprintPlugin` rename suffix** is still the first 8 hex
+  chars but now derived from real SHA-256 instead of FNV-1a.
+
+### Fixed
+
+- **Security:** `sha256_hex` was FNV-1a, not SHA-256.
+  `integrity="sha256-..."` attributes were silently invalid. Now
+  real SHA-256 via the `sha2` crate + canonical base64 via the
+  `base64` crate. Verified against NIST test vectors.
+- **CSS `url()` references broke** after image/font fingerprinting
+  because the CSS file content wasn't patched before the CSS file
+  was itself hashed. Three-pass pipeline fixes the ordering.
+- **CSS parser false positives in WCAG checks** —
+  `/* width: 10px */` no longer triggers 2.5.8; `@media print {
+  button { width: 10px } }` no longer fires unconditionally;
+  multiple `<style>` blocks now all scanned.
+- **JSON-LD validator over-strictness** — `WebPage` requires only
+  `name` (per Google rich-results docs), not `name + url +
+  inLanguage`. The latter two are Recommended only.
+- **`tests/chaos.rs::read_only_output_directory_returns_clean_error`**
+  now uses a Drop guard for permission restoration so panics don't
+  leave stale 0o555 tempdirs on CI disk.
+- **Reproducible-build job** runs `cargo fetch --locked` then both
+  build invocations as `--locked --offline` to eliminate transient
+  registry state.
+
+### Dependencies
+
+- Cargo (`Cargo.toml` + `Cargo.lock`):
+  - `rustls-webpki` 0.103.12 → 0.103.13 (resolves Dependabot #487)
+  - `clap` 4.6.0 → 4.6.1 (#490)
+  - `openssl` 0.10.77 → **0.10.79** (#490 + #492)
+  - `uuid` 1.22.0 → 1.23.1 (#490)
+  - **NEW** `sha2` = `"0.10"` (required for real SHA-256 SRI)
+  - **NEW** `base64` = `"0.22"` (canonical base64 SRI encoding)
+- GitHub Actions:
+  - `actions/upload-artifact` v4 → **v7.0.1** (#489), 4 workflows
+  - `crazy-max/ghaction-import-gpg` v6 → **v7.0.0** (#488),
+    release.yml gpg-sign job
+- npm (`tests/visual/`):
+  - `@axe-core/playwright` 4.10.0 → **4.11.3** (#491)
+
+### Security
+
+- **Resolves 8 Dependabot security advisories on the default
+  branch**: 6× openssl (alerts #29–#33, #35, #36; all `< 0.10.79`),
+  1× rustls-webpki (#34; `< 0.103.13`). Severity mix: 6 high + 1
+  moderate + 1 low.
+- **Real SHA-256 for SRI** (above).
+- **Reproducible-build verification** in CI.
+- **`SECURITY.md`** canonical security policy.
+
 ## [0.0.38] - 2026-04-20
 
 ### Added

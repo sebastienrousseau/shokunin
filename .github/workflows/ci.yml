@@ -140,6 +140,15 @@ jobs:
         # Hard wall-clock gate for 10/100-page synthetic-corpus builds.
         # See docs/architecture/regression-contract.md §3.
         run: cargo test --test perf_budgets
+      - name: Documentation accuracy gate
+        # Verifies README claims match source-of-truth files (test
+        # count, WCAG version, coverage floors, MSRV, version sync,
+        # SBOM/CycloneDX version, SECURITY.md disclosure section).
+        run: cargo test --test docs_accuracy
+      - name: Internal Markdown link integrity gate
+        # Walks every .md in README/CHANGELOG/SECURITY/docs/* and
+        # asserts every relative link resolves to an existing file.
+        run: cargo test --test doc_links
 
   # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
   coverage:

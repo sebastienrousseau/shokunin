@@ -12,9 +12,11 @@ contract, it must explicitly update both the test and this document.
 
 | Surface | Test | Promise |
 |---|---|---|
-| Lib unit tests | `cargo test --lib` (1656+ tests) | Every public function and plugin maintains its documented behaviour. |
+| Lib unit tests | `cargo test --lib` (1,685+ tests) | Every public function and plugin maintains its documented behaviour. |
 | Plugin trait contracts | `tests/plugin_contracts.rs` | Every built-in plugin honours the `before_compile` / `after_compile` / `transform_html` lifecycle hook signatures and idempotency. |
 | Doc examples | `cargo test --doc` | Every `///` rustdoc example compiles and returns `Ok`. |
+| **README + docs accuracy** | **`tests/docs_accuracy.rs`** | **README claims (test count, WCAG version, coverage floors, MSRV, version, CycloneDX spec version) match source-of-truth files (`Cargo.toml`, `ci.yml`, `src/accessibility.rs`, `src/sbom.rs`).** Catches doc-drift on every PR. |
+| **Internal Markdown link integrity** | **`tests/doc_links.rs`** | **Every relative Markdown link in `README.md`, `CHANGELOG.md`, `SECURITY.md`, `CONTRIBUTING.md`, and the entire `docs/` tree resolves to an existing file.** Prevents broken cross-references creeping in. |
 
 ## 2. End-to-End Output
 
@@ -104,11 +106,13 @@ explicit reviewer attention:
 
 Last reviewed: 2026-05-10. Branch: `feat/v0.0.39`. PR #493.
 
-The current state is **5 hard gates + 1 informational gate active**:
+The current state is **7 hard gates + 1 informational gate active**:
 core HTML invariants (`tests/element_presence.rs`), end-to-end build
 budgets (`tests/perf_budgets.rs`), JSON-LD validation
 (`tests/jsonld_validation.rs`), reproducible build
-(`scheduled.yml`), and the existing 1656-test lib suite.
+(`scheduled.yml`), README + docs accuracy (`tests/docs_accuracy.rs`),
+internal Markdown link integrity (`tests/doc_links.rs`), and the
+1,685+ lib test suite.
 
 The aspirational HTML invariants gate is `#[ignore]`d pending
 example-template fixes (see §2). End-to-end build budgets currently

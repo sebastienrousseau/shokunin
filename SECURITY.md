@@ -149,6 +149,61 @@ gh attestation verify ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
                       --owner sebastienrousseau
 ```
 
+## SBOM (Software Bill of Materials)
+
+SSG ships **two** CycloneDX SBOMs that procurement and security
+reviewers can consume without privileged repository access:
+
+### Per-site embedded SBOM (`SbomPlugin`, build time)
+
+Every site built with SSG contains `sbom.cdx.json` at the site root
+and a per-page `<link>` element pointing at it:
+
+```html
+<link rel="sbom"
+      type="application/vnd.cyclonedx+json"
+      href="/sbom.cdx.json">
+```
+
+`rel="sbom"` is the [IANA-registered link
+relation](https://www.iana.org/assignments/link-relations/) for SBOM
+discovery (registered 2023). The file is CycloneDX 1.5 JSON
+covering the SSG generator (purl, licences, externalReferences) and
+the site itself as a top-level `metadata.component`. Transitive
+Cargo dependencies are **not** in this file — they live in the
+CI-generated SBOM (next section).
+
+To fetch and validate against the spec:
+
+```sh
+# Fetch from any deployed site
+curl -sL https://example.com/sbom.cdx.json | jq '.metadata.timestamp'
+
+# Validate against the CycloneDX 1.5 JSON Schema
+cyclonedx validate --input-file sbom.cdx.json \
+                   --input-version v1_5 \
+                   --input-format json
+```
+
+### Release-artifact SBOM (CI, with transitive deps)
+
+The `scheduled.yml` `sbom` job runs `cargo cyclonedx --format json`
+and uploads `*.cdx.json` as the `sbom-cyclonedx` build artifact.
+This covers every transitive Cargo dependency, attested by Sigstore
+via `actions/attest-build-provenance`.
+
+To fetch the CI-generated SBOM for a specific release:
+
+```sh
+gh run download <run-id> --repo sebastienrousseau/static-site-generator \
+                          --name sbom-cyclonedx
+```
+
+### Verification of the per-page link
+
+The build-time link injection is idempotent: pages already
+containing `rel="sbom"` are left unchanged. Source: `src/sbom.rs`.
+
 ## Cryptographic Material
 
 SSG itself does not generate or store cryptographic keys at runtime.
