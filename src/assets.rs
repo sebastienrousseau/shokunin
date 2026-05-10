@@ -224,8 +224,7 @@ fn rewrite_css_urls(
         };
 
         let resolved = resolve_css_url(url, css_dir, site_dir);
-        let hit = resolved
-            .and_then(|key| manifest.get(&key).map(|i| (key, i)));
+        let hit = resolved.and_then(|key| manifest.get(&key).map(|i| (key, i)));
 
         out.push_str("url(");
         if let Some((_, info)) = hit {

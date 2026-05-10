@@ -108,8 +108,8 @@ fn fresh_layout() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf, PathBuf) {
 /// `None` if templates are missing on this checkout (rare).
 fn compile_n_pages(n: usize) -> Option<Duration> {
     let (_tmp, content, build, site, template) = fresh_layout();
-    let template_empty = fs::read_dir(&template)
-        .map_or(true, |mut d| d.next().is_none());
+    let template_empty =
+        fs::read_dir(&template).map_or(true, |mut d| d.next().is_none());
     if template_empty {
         return None;
     }
