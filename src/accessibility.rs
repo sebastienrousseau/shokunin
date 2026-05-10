@@ -150,7 +150,7 @@ impl Plugin for AccessibilityPlugin {
             let issues = check_page(&html);
             if !issues.is_empty() {
                 for issue in &issues {
-                    failed_criteria.insert(issue.criterion.clone());
+                    let _ = failed_criteria.insert(issue.criterion.clone());
                     log::warn!(
                         "[a11y] {} — [{}] {}",
                         rel,
