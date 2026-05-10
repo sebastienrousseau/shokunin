@@ -13,6 +13,7 @@ build/
 !/docs/guide/
 !/docs/whitepaper/
 !/docs/architecture/
+!/docs/compare/
 !/docs/perf/
 /examples/public/
 /examples/build/
