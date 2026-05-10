@@ -334,7 +334,8 @@ impl std::fmt::Display for JsonLdValidationError {
 /// Supported types (with their required-field guards):
 ///
 /// - **`Article`** — `headline`, `datePublished`, `author`, `image`
-/// - **`WebPage`** — `name`, `url`, `inLanguage`
+/// - **`WebPage`** — `name` (Google rich-results requirement; `url`
+///   and `inLanguage` are Recommended only and not flagged here)
 /// - **`BreadcrumbList`** — `itemListElement` (non-empty array)
 /// - **`FAQPage`** — `mainEntity` (non-empty array of `Question`)
 /// - **`LocalBusiness`** — `name`, `address`
@@ -537,11 +538,23 @@ fn validate_one(
         .unwrap_or("Unknown")
         .to_string();
 
+    // Required-field sets aligned with Google's rich-results
+    // requirements (https://developers.google.com/search/docs/appearance/structured-data),
+    // not the broader schema.org vocabulary. schema.org marks many
+    // useful fields as `Recommended` rather than `Required` — this
+    // validator only fires on truly-missing fields the search
+    // engines actually penalise.
     let required: &[&str] = match schema_type.as_str() {
         "Article" | "NewsArticle" | "BlogPosting" => {
+            // Google requires headline + datePublished + author +
+            // image for Article rich results.
             &["headline", "datePublished", "author", "image"]
         }
-        "WebPage" => &["name", "url", "inLanguage"],
+        // WebPage's only hard requirement is `name`. `url` and
+        // `inLanguage` are Recommended but not penalised when
+        // absent — auto-generated stub pages (taxonomy indexes,
+        // 404, offline) routinely omit them.
+        "WebPage" => &["name"],
         "BreadcrumbList" => &["itemListElement"],
         "FAQPage" => &["mainEntity"],
         "LocalBusiness" | "Restaurant" | "Store" => &["name", "address"],
@@ -963,19 +976,25 @@ mod tests {
 
     #[test]
     fn validate_descends_into_graph() {
+        // Article inside @graph missing required fields exercises the
+        // descent path. Article has 4 required fields; this provides 1.
         let html = r#"<script type="application/ld+json">
             {"@context":"https://schema.org","@graph":[
-                {"@type":"WebPage","name":"H"}
+                {"@type":"Article","headline":"H"}
             ]}
         </script>"#;
         let errs = validate_jsonld(html);
-        // WebPage missing url and inLanguage
+        // Article requires headline + datePublished + author + image;
+        // we only provided headline, so the other 3 fire.
         assert!(errs
             .iter()
-            .any(|e| e.schema_type == "WebPage" && e.field == "url"));
+            .any(|e| e.schema_type == "Article" && e.field == "datePublished"));
         assert!(errs
             .iter()
-            .any(|e| e.schema_type == "WebPage" && e.field == "inLanguage"));
+            .any(|e| e.schema_type == "Article" && e.field == "author"));
+        assert!(errs
+            .iter()
+            .any(|e| e.schema_type == "Article" && e.field == "image"));
     }
 
     #[test]
