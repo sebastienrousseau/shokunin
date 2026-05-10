@@ -333,12 +333,12 @@ impl std::fmt::Display for JsonLdValidationError {
 ///
 /// Supported types (with their required-field guards):
 ///
-/// - **Article** — `headline`, `datePublished`, `author`, `image`
-/// - **WebPage** — `name`, `url`, `inLanguage`
-/// - **BreadcrumbList** — `itemListElement` (non-empty array)
-/// - **FAQPage** — `mainEntity` (non-empty array of `Question`)
-/// - **LocalBusiness** — `name`, `address`
-/// - **Organization** — `name`, `url`
+/// - **`Article`** — `headline`, `datePublished`, `author`, `image`
+/// - **`WebPage`** — `name`, `url`, `inLanguage`
+/// - **`BreadcrumbList`** — `itemListElement` (non-empty array)
+/// - **`FAQPage`** — `mainEntity` (non-empty array of `Question`)
+/// - **`LocalBusiness`** — `name`, `address`
+/// - **`Organization`** — `name`, `url`
 ///
 /// Returns the empty vector if every block parses and passes its
 /// required-field check. Unknown `@type` values are treated as

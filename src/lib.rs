@@ -134,9 +134,10 @@ pub mod logging;
 pub mod markdown_ext;
 /// Auto-generates Open Graph social card images from page metadata.
 pub mod og_image;
-/// Optional OpenTelemetry build-pipeline tracing (issue #422). The
-/// module compiles to an empty stub when the `otel` feature is off,
-/// so callers can always reference [`otel::init_if_enabled`] without
+/// Optional OpenTelemetry build-pipeline tracing (issue #422).
+///
+/// Compiles to an empty stub when the `otel` feature is off, so
+/// callers can always reference [`otel::init_if_enabled`] without
 /// `#[cfg]`-guarding every call site.
 pub mod otel;
 /// Pagination for listing pages.

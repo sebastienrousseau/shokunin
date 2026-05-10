@@ -206,49 +206,43 @@ fn strip_fingerprint_hashes(s: &str) -> String {
 }
 
 fn strip_sri(s: &str) -> String {
-    // sha{256,384,512}-<base64-or-hex characters until ' or " or whitespace>
+    // Replaces every `sha{256,384,512}-<value>` occurrence with `<SRI>`.
+    // The value runs until a quote, whitespace, or angle bracket.
+    //
+    // Implementation: find each prefix via str::find in turn, copy
+    // the prefix-free chunk verbatim, emit `<SRI>`, skip the value.
+    // No interleaved index control between fast/slow paths — every
+    // iteration consumes either an SRI hash or zero characters
+    // (then advances by one to make progress).
+    const PREFIXES: &[&str] = &["sha256-", "sha384-", "sha512-"];
+    const VALUE_TERMINATORS: &[char] =
+        &['"', '\'', ' ', '\n', '\t', '<', '>'];
+
     let mut out = String::with_capacity(s.len());
-    let mut i = 0;
-    let bytes = s.as_bytes();
-    while i < bytes.len() {
-        let rest = &s[i..];
-        for prefix in ["sha256-", "sha384-", "sha512-"] {
-            if rest.starts_with(prefix) {
+    let mut remaining = s;
+    loop {
+        // Find the earliest match across all three prefixes.
+        let next_match = PREFIXES
+            .iter()
+            .filter_map(|p| remaining.find(p).map(|i| (i, *p)))
+            .min_by_key(|(i, _)| *i);
+
+        match next_match {
+            None => {
+                out.push_str(remaining);
+                return out;
+            }
+            Some((idx, prefix)) => {
+                out.push_str(&remaining[..idx]);
                 out.push_str("<SRI>");
-                let mut j = prefix.len();
-                while j < rest.len() {
-                    let b = rest.as_bytes()[j];
-                    if b == b'"' || b == b'\'' || b == b' '
-                        || b == b'\n' || b == b'\t' || b == b'<'
-                        || b == b'>'
-                    {
-                        break;
-                    }
-                    j += 1;
-                }
-                i += j;
-                break;
+                let after_prefix = &remaining[idx + prefix.len()..];
+                let value_end = after_prefix
+                    .find(VALUE_TERMINATORS)
+                    .unwrap_or(after_prefix.len());
+                remaining = &after_prefix[value_end..];
             }
         }
-        if i >= bytes.len() {
-            break;
-        }
-        let ch = match s[i..].chars().next() {
-            Some(c) => c,
-            None => break,
-        };
-        // If we just emitted <SRI>, skip the consumed prefix; the
-        // outer loop already advanced i.
-        let consumed = i + ch.len_utf8();
-        if consumed != bytes.len() && bytes[i..consumed] != *ch.to_string().as_bytes() {
-            // Defensive: if we somehow over-advanced, bail.
-            i = consumed;
-            continue;
-        }
-        out.push(ch);
-        i = consumed;
     }
-    out
 }
 
 /// Compares `actual` (as normalised) against the golden file at

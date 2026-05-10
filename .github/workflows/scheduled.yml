@@ -110,16 +110,21 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Pre-fetch all dependencies
+        # Populates the local cargo cache so the second build can run
+        # `--offline` without any network nondeterminism leaking in
+        # (transient registry state, sparse-index timing, etc.).
+        run: cargo fetch --locked
       - name: First build
         run: |
-          cargo build --release --locked -p ssg
+          cargo build --release --locked --offline -p ssg
           sha256sum target/release/ssg > /tmp/build1.sha256
           echo "Build 1: $(cat /tmp/build1.sha256)"
       - name: Clean target
         run: cargo clean -p ssg
       - name: Second build
         run: |
-          cargo build --release --locked -p ssg
+          cargo build --release --locked --offline -p ssg
           sha256sum target/release/ssg > /tmp/build2.sha256
           echo "Build 2: $(cat /tmp/build2.sha256)"
       - name: Compare hashes

@@ -108,7 +108,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Streaming compilation** -- configurable memory budgets for 100K+ page sites
-- **WCAG 2.2 AA** -- accessibility compliance validated on every build with build-time checks + axe-core CI; per-criterion compliance matrix emitted as `wcag-compliance.json`
+- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (planned for v0.0.40)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
 ---

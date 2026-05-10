@@ -92,13 +92,15 @@ fn extract_file_from_error(msg: &str) -> Option<String> {
 ///
 /// Extracted from clap matches so the run pipeline can be unit-tested
 /// without going through `Cli::build()`. **Internal**: this is a
-/// CLI-implementation type, not part of the library surface — it is
-/// `pub(crate)` for in-crate test access only. See
+/// CLI-implementation type, not part of the library surface. The
+/// containing module is `pub(crate)`, so this `pub` is effectively
+/// crate-local — clippy's `redundant_pub_crate` flagged the prior
+/// `pub(crate)` here. See
 /// [API stability audit](../../docs/architecture/api-stability-audit.md)
 /// (Tier C) for context.
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
-pub(crate) struct RunOptions {
+pub struct RunOptions {
     /// Suppress banner and timing print-outs.
     pub quiet: bool,
     /// Include draft files (skip the `DraftPlugin` filter).

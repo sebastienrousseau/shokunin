@@ -206,7 +206,7 @@ fn build_compliance_report(
     pages_scanned: usize,
     failed: &std::collections::HashSet<String>,
 ) -> WcagComplianceReport {
-    use CriterionStatus::*;
+    use CriterionStatus::{Automated, Manual, NotApplicable, Runtime};
     let did_pass = |sc: &str| !failed.contains(sc);
     let row = |sc: &str, level: &str, title: &str, status: CriterionStatus| {
         CriterionEntry {

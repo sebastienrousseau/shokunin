@@ -175,6 +175,18 @@ fn deeply_nested_directory_does_not_overflow_stack() {
 fn read_only_output_directory_returns_clean_error() {
     use std::os::unix::fs::PermissionsExt;
 
+    /// RAII guard that restores 0o755 on drop so tempdir cleanup
+    /// succeeds even if the build panics between set and restore.
+    struct PermsGuard<'a>(&'a Path);
+    impl Drop for PermsGuard<'_> {
+        fn drop(&mut self) {
+            let _ = fs::set_permissions(
+                self.0,
+                fs::Permissions::from_mode(0o755),
+            );
+        }
+    }
+
     let (_tmp, content, build, site, template) = fresh_layout();
     fs::write(content.join("page.md"), "---\ntitle: x\n---\n# Hi\n")
         .unwrap();
@@ -182,16 +194,17 @@ fn read_only_output_directory_returns_clean_error() {
     // permission-denied error, not a panic.
     fs::set_permissions(&site, fs::Permissions::from_mode(0o555))
         .unwrap();
+    let _guard = PermsGuard(&site);
     let result = try_build(&build, &content, &site, &template);
-    // Restore permissions so tempdir cleanup succeeds.
-    fs::set_permissions(&site, fs::Permissions::from_mode(0o755))
-        .unwrap();
+    // _guard drops here (or on panic) and restores 0o755 so tempdir
+    // cleanup succeeds.
     // Either:
     //  - error returned (preferred — clean failure), or
     //  - build succeeded by writing elsewhere (also acceptable).
     // The only failure mode is a panic, which would have aborted
     // the test before reaching this point.
     let _ = result;
+    drop(_guard);
 }
 
 // =====================================================================
