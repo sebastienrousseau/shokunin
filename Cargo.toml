@@ -146,6 +146,13 @@ serde_json = "1.0.149"
 staticdatagen = "0.0.8"
 toml = "1.1.2"
 
+# Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
+# Replaces the previous FNV-1a placeholder that emitted invalid `sha256-`
+# integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
+# `base64` emits the canonical base64 encoding that browsers expect.
+sha2 = "0.10"
+base64 = "0.22"
+
 
 # Optional dependencies (feature-gated)
 fail = { version = "0.5", optional = true }

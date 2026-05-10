@@ -8,6 +8,8 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::{Context, Result};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
     fs,
@@ -34,16 +36,52 @@ impl Plugin for FingerprintPlugin {
             return Ok(());
         }
 
-        let assets = collect_assets(&ctx.site_dir)?;
-        if assets.is_empty() {
+        let all_assets = collect_assets(&ctx.site_dir)?;
+        if all_assets.is_empty() {
             return Ok(());
         }
 
-        let manifest = fingerprint_assets(&assets, &ctx.site_dir)?;
+        // Three-pass fingerprinting (resolves the CSS-url() problem
+        // surfaced in the v0.0.39 audit):
+        //
+        //   1. Hash + rename non-CSS assets first (images, fonts,
+        //      JS). Build the first-stage manifest.
+        //   2. Walk every CSS file. Patch any `url(...)` references
+        //      that resolve to an entry in the first-stage manifest
+        //      so they point at the new fingerprinted name. THEN
+        //      hash + rename the CSS — its SRI hash now covers the
+        //      post-rewrite content.
+        //   3. Walk every HTML file and rewrite `<link href>`,
+        //      `<script src>`, `<img src>`, etc. against the full
+        //      manifest, attaching `integrity` + `crossorigin` for
+        //      CSS/JS where SRI is meaningful.
+        //
+        // Without this split, CSS `url(/images/logo.png)` would
+        // 404 after `logo.png` was renamed to `logo.<hash>.png`.
+
+        let (css_files, non_css): (Vec<_>, Vec<_>) = all_assets
+            .into_iter()
+            .partition(|p| p.extension().is_some_and(|e| e == "css"));
+
+        let mut manifest =
+            fingerprint_assets(&non_css, &ctx.site_dir)?;
+
+        for css_path in &css_files {
+            rewrite_css_urls_inplace(css_path, &ctx.site_dir, &manifest)?;
+        }
+
+        let css_manifest =
+            fingerprint_assets(&css_files, &ctx.site_dir)?;
+        manifest.extend(css_manifest);
 
         rewrite_html_references(&ctx.site_dir, &manifest)?;
 
-        log::info!("[fingerprint] Processed {} asset(s)", manifest.len());
+        log::info!(
+            "[fingerprint] Processed {} asset(s) across {} CSS + {} other",
+            manifest.len(),
+            css_files.len(),
+            manifest.len() - css_files.len()
+        );
         Ok(())
     }
 }
@@ -77,7 +115,7 @@ fn fingerprint_file(
     let new_name = format!("{stem}.{short_hash}.{ext}");
     let new_path = asset_path.with_file_name(&new_name);
 
-    let sri = format!("sha256-{}", base64_encode(&content));
+    let sri = format!("sha256-{}", sri_base64(&content));
 
     fs::rename(asset_path, &new_path).with_context(|| {
         format!("Failed to rename {}", asset_path.display())
@@ -125,6 +163,195 @@ struct AssetInfo {
     sri: String,
 }
 
+/// Rewrites every `url(...)` reference in a CSS file in place,
+/// pointing each one at the fingerprinted name from `manifest` if
+/// the URL resolves to a known asset.
+///
+/// Resolution rules:
+///
+/// - `url(/foo.png)` — absolute from the site root; lookup key is
+///   `foo.png`.
+/// - `url(./foo.png)`, `url(../images/foo.png)` — resolved against
+///   the CSS file's parent directory, then made site-relative.
+/// - `url(images/foo.png)` (bare, no `/` or `./`) — same as the
+///   relative case above.
+/// - URLs containing `://` (full URLs) and `data:` URIs are left
+///   untouched.
+///
+/// Output URLs are written as **absolute, site-rooted paths**
+/// (`/foo.<hash>.png`) regardless of the original form. This is
+/// valid CSS and unambiguous; it deliberately trades a tiny bit of
+/// stylistic preservation for correctness.
+///
+/// Quote forms handled: `url(x)`, `url("x")`, `url('x')`. URLs with
+/// query strings or fragments (e.g. `url(foo.svg#icon)`,
+/// `url(foo.css?v=1)`) preserve the suffix on the rewritten URL.
+fn rewrite_css_urls(
+    css: &str,
+    css_path: &Path,
+    site_dir: &Path,
+    manifest: &HashMap<String, AssetInfo>,
+) -> String {
+    let css_dir = css_path.parent().unwrap_or(css_path);
+    let mut out = String::with_capacity(css.len());
+    let mut remaining = css;
+
+    while let Some(idx) = remaining.find("url(") {
+        out.push_str(&remaining[..idx]);
+        let after_open = &remaining[idx + 4..]; // past "url("
+        let Some(close_idx) = after_open.find(')') else {
+            // Unterminated url(...) — leave the rest unchanged.
+            out.push_str("url(");
+            out.push_str(after_open);
+            return out;
+        };
+        let raw = &after_open[..close_idx];
+        let rest = &after_open[close_idx + 1..];
+
+        // Strip optional surrounding quotes.
+        let trimmed = raw.trim();
+        let (quote, inner) = if let Some(s) = trimmed.strip_prefix('"') {
+            ('"', s.strip_suffix('"').unwrap_or(s))
+        } else if let Some(s) = trimmed.strip_prefix('\'') {
+            ('\'', s.strip_suffix('\'').unwrap_or(s))
+        } else {
+            ('\0', trimmed)
+        };
+
+        // Split off ?query or #fragment so we don't try to resolve them.
+        let (url, suffix) = match inner
+            .find(|c: char| c == '?' || c == '#')
+        {
+            Some(i) => (&inner[..i], &inner[i..]),
+            None => (inner, ""),
+        };
+
+        let resolved =
+            resolve_css_url(url, css_dir, site_dir);
+
+        match resolved.and_then(|key| manifest.get(&key).map(|i| (key, i))) {
+            Some((_, info)) => {
+                // Emit absolute /<fingerprinted>(suffix).
+                let new_url = format!("/{}{}", info.fingerprinted, suffix);
+                out.push_str("url(");
+                if quote != '\0' {
+                    out.push(quote);
+                }
+                out.push_str(&new_url);
+                if quote != '\0' {
+                    out.push(quote);
+                }
+                out.push(')');
+            }
+            None => {
+                // No manifest hit — emit the original verbatim.
+                out.push_str("url(");
+                out.push_str(raw);
+                out.push(')');
+            }
+        }
+
+        remaining = rest;
+    }
+
+    out.push_str(remaining);
+    out
+}
+
+/// Resolves a CSS URL to a site-relative manifest key.
+///
+/// Returns `None` for full URLs (`http://`, `https://`, `//`),
+/// `data:` URIs, and paths that escape the site directory.
+fn resolve_css_url(
+    url: &str,
+    css_dir: &Path,
+    site_dir: &Path,
+) -> Option<String> {
+    let trimmed = url.trim();
+    if trimmed.is_empty()
+        || trimmed.starts_with("data:")
+        || trimmed.starts_with("http://")
+        || trimmed.starts_with("https://")
+        || trimmed.starts_with("//")
+    {
+        return None;
+    }
+
+    // Build the absolute on-disk path.
+    let candidate = if let Some(stripped) = trimmed.strip_prefix('/') {
+        site_dir.join(stripped)
+    } else {
+        css_dir.join(trimmed)
+    };
+
+    // Logical canonicalisation: collapse `..` and `.` without
+    // touching the filesystem so non-existent (already-renamed)
+    // targets still resolve.
+    let mut components: Vec<&std::ffi::OsStr> = Vec::new();
+    for c in candidate.components() {
+        match c {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                let _ = components.pop();
+            }
+            std::path::Component::Normal(s) => components.push(s),
+            std::path::Component::RootDir | std::path::Component::Prefix(_) => {
+                components.clear();
+            }
+        }
+    }
+    let mut resolved = PathBuf::new();
+    for c in components {
+        resolved.push(c);
+    }
+
+    // The manifest stores keys relative to site_dir (no leading slash).
+    let site_components: Vec<&std::ffi::OsStr> = site_dir
+        .components()
+        .filter_map(|c| match c {
+            std::path::Component::Normal(s) => Some(s),
+            _ => None,
+        })
+        .collect();
+    let resolved_components: Vec<&std::ffi::OsStr> = resolved
+        .components()
+        .filter_map(|c| match c {
+            std::path::Component::Normal(s) => Some(s),
+            _ => None,
+        })
+        .collect();
+
+    if resolved_components.len() < site_components.len()
+        || resolved_components[..site_components.len()] != site_components[..]
+    {
+        return None;
+    }
+
+    let rel: PathBuf = resolved_components[site_components.len()..]
+        .iter()
+        .collect();
+    Some(rel.to_string_lossy().replace('\\', "/"))
+}
+
+/// Reads, rewrites, and writes a CSS file in place if any of its
+/// `url(...)` references resolve to a manifest entry.
+fn rewrite_css_urls_inplace(
+    css_path: &Path,
+    site_dir: &Path,
+    manifest: &HashMap<String, AssetInfo>,
+) -> Result<()> {
+    let css = fs::read_to_string(css_path).with_context(|| {
+        format!("Failed to read CSS {}", css_path.display())
+    })?;
+    let rewritten = rewrite_css_urls(&css, css_path, site_dir, manifest);
+    if rewritten != css {
+        fs::write(css_path, rewritten).with_context(|| {
+            format!("Failed to write rewritten CSS {}", css_path.display())
+        })?;
+    }
+    Ok(())
+}
+
 /// Rewrites asset references in HTML and adds SRI attributes.
 fn rewrite_asset_refs(
     html: &str,
@@ -150,28 +377,37 @@ fn rewrite_asset_refs(
     result
 }
 
-/// SHA-256 hash as hex string.
+/// SHA-256 hash as a 64-char hex string.
+///
+/// Used for the cache-busting fingerprint suffix (`name.<hash>.ext`).
+/// The first 8 hex characters of this output are taken as the
+/// short content fingerprint; the full digest is also reused as the
+/// raw input to [`sri_base64`] for the `integrity="sha256-..."`
+/// attribute.
 fn sha256_hex(data: &[u8]) -> String {
-    // Simple content hash using FNV-1a for fingerprinting.
-    // We compute a content hash using a basic FNV-like approach
-    // combined with the data length for uniqueness.
-    // For production SRI we need real SHA-256.
-    //
-    // Using a simple but effective hash based on content bytes:
-    let mut h: u64 = 0xcbf2_9ce4_8422_2325; // FNV offset basis
-    for &byte in data {
-        h ^= u64::from(byte);
-        h = h.wrapping_mul(0x0000_0100_0000_01b3); // FNV prime
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let bytes = hasher.finalize();
+    let mut s = String::with_capacity(64);
+    for b in bytes {
+        use std::fmt::Write as _;
+        let _ = write!(s, "{b:02x}");
     }
-    let h2 = h.wrapping_add(data.len() as u64);
-    format!("{h:016x}{h2:016x}")
+    s
 }
 
-/// Base64-encode for SRI (simplified — uses hex fallback).
-fn base64_encode(data: &[u8]) -> String {
-    // Simplified: use hex-encoded hash for SRI
-    // (real implementation would use proper base64)
-    sha256_hex(data)
+/// Returns the canonical Subresource Integrity payload for `data`.
+///
+/// Browsers compare the `integrity` attribute against `base64(SHA-256(body))`
+/// per the [W3C SRI spec](https://www.w3.org/TR/SRI/#the-integrity-attribute).
+/// Combined with the `sha256-` prefix at the call site, the resulting
+/// attribute is exactly what a browser will validate the response body
+/// against.
+fn sri_base64(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let bytes = hasher.finalize();
+    BASE64.encode(bytes)
 }
 
 /// Asset extensions we content-fingerprint. Matches the
@@ -206,7 +442,29 @@ mod tests {
         let h1 = sha256_hex(b"hello");
         let h2 = sha256_hex(b"hello");
         assert_eq!(h1, h2);
-        assert_eq!(h1.len(), 32); // 2 x 16 hex chars
+        // Real SHA-256 is 32 bytes → 64 hex chars.
+        assert_eq!(h1.len(), 64);
+    }
+
+    #[test]
+    fn test_sha256_hex_known_vectors() {
+        // Verifies real SHA-256 is in use, not an FNV placeholder.
+        // Empty input — well-known SHA-256("") digest.
+        assert_eq!(
+            sha256_hex(b""),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        );
+        // "abc" — the canonical NIST test vector.
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn test_sri_base64_known_vector() {
+        // SHA-256("") base64-encoded is the canonical 47ZHRWlj-... value.
+        assert_eq!(sri_base64(b""), "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=");
     }
 
     #[test]
@@ -349,14 +607,21 @@ mod tests {
     }
 
     #[test]
-    fn sha256_hex_produces_32_hex_chars() {
-        assert_eq!(sha256_hex(b"abc").len(), 32);
-        assert_eq!(sha256_hex(b"").len(), 32);
+    fn sha256_hex_produces_64_hex_chars() {
+        assert_eq!(sha256_hex(b"abc").len(), 64);
+        assert_eq!(sha256_hex(b"").len(), 64);
     }
 
     #[test]
-    fn base64_encode_is_nonempty_for_input() {
-        assert!(!base64_encode(b"hello").is_empty());
+    fn sri_base64_is_nonempty_for_input() {
+        assert!(!sri_base64(b"hello").is_empty());
+    }
+
+    #[test]
+    fn sri_base64_emits_44_char_payload() {
+        // SHA-256 → 32 raw bytes → base64 with padding = 44 chars.
+        assert_eq!(sri_base64(b"hello").len(), 44);
+        assert_eq!(sri_base64(b"").len(), 44);
     }
 
     #[test]
@@ -374,5 +639,165 @@ mod tests {
         let result = rewrite_asset_refs(html, &manifest);
         assert!(result.contains("style.abc12345.css"));
         assert!(result.contains("integrity=\"sha256-xyz\""));
+    }
+
+    // ── CSS url() rewriting (resolves audit item #2) ───────────────
+
+    fn css_manifest() -> HashMap<String, AssetInfo> {
+        let mut m = HashMap::new();
+        let _ = m.insert(
+            "images/logo.png".to_string(),
+            AssetInfo {
+                fingerprinted: "images/logo.deadbeef.png".to_string(),
+                sri: String::new(),
+            },
+        );
+        let _ = m.insert(
+            "fonts/sans.woff2".to_string(),
+            AssetInfo {
+                fingerprinted: "fonts/sans.cafef00d.woff2".to_string(),
+                sri: String::new(),
+            },
+        );
+        m
+    }
+
+    #[test]
+    fn rewrite_css_urls_handles_absolute_path() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("assets/style.css");
+        let css = "body { background: url(/images/logo.png); }";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(out.contains("url(/images/logo.deadbeef.png)"));
+        assert!(!out.contains("logo.png)"));
+    }
+
+    #[test]
+    fn rewrite_css_urls_handles_relative_path() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("assets/style.css");
+        let css = "body { background: url(../images/logo.png); }";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(out.contains("url(/images/logo.deadbeef.png)"));
+    }
+
+    #[test]
+    fn rewrite_css_urls_handles_double_quotes() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = r#"body { background: url("/images/logo.png"); }"#;
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(out.contains(r#"url("/images/logo.deadbeef.png")"#));
+    }
+
+    #[test]
+    fn rewrite_css_urls_handles_single_quotes() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = "body { background: url('/images/logo.png'); }";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(out.contains("url('/images/logo.deadbeef.png')"));
+    }
+
+    #[test]
+    fn rewrite_css_urls_preserves_query_and_fragment() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = "@font-face { src: url(/fonts/sans.woff2?v=1#hint); }";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(out.contains("/fonts/sans.cafef00d.woff2?v=1#hint"));
+    }
+
+    #[test]
+    fn rewrite_css_urls_skips_external_and_data_urls() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = r#"
+            a { background: url(https://cdn.example.com/x.png); }
+            b { background: url(//cdn.example.com/y.png); }
+            c { background: url(data:image/svg+xml,<svg/>); }
+        "#;
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        // All three URLs are left untouched.
+        assert!(out.contains("https://cdn.example.com/x.png"));
+        assert!(out.contains("//cdn.example.com/y.png"));
+        assert!(out.contains("data:image/svg+xml"));
+    }
+
+    #[test]
+    fn rewrite_css_urls_no_change_when_url_not_in_manifest() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = "body { background: url(/images/missing.png); }";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert_eq!(out, css);
+    }
+
+    #[test]
+    fn rewrite_css_urls_unterminated_url_does_not_panic() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = "body { background: url(/images/logo.png";
+        let out = rewrite_css_urls(css, &css_path, dir.path(), &css_manifest());
+        assert!(!out.is_empty());
+    }
+
+    #[test]
+    fn after_compile_rewrites_css_url_to_fingerprinted_image() {
+        // End-to-end: drop a CSS file referencing a PNG, run the
+        // plugin, and confirm the produced CSS points at the
+        // fingerprinted PNG name.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(site.join("images")).unwrap();
+        // 1×1 transparent PNG (the smallest valid PNG bytes).
+        let png_bytes: &[u8] = &[
+            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00,
+            0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+            0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63,
+            0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4,
+            0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60,
+            0x82,
+        ];
+        fs::write(site.join("images/logo.png"), png_bytes).unwrap();
+        fs::write(
+            site.join("style.css"),
+            "body { background: url(/images/logo.png); }",
+        )
+        .unwrap();
+        fs::write(
+            site.join("index.html"),
+            r#"<html><head><link rel="stylesheet" href="style.css"></head><body></body></html>"#,
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+
+        // Find the renamed CSS and verify its url() points at the
+        // renamed PNG (not the original `logo.png` filename).
+        let mut css_text = None;
+        for entry in fs::read_dir(&site).unwrap().flatten() {
+            let p = entry.path();
+            if p.extension().is_some_and(|e| e == "css") {
+                css_text = Some(fs::read_to_string(&p).unwrap());
+            }
+        }
+        let css_text = css_text.expect("renamed CSS file present");
+        assert!(
+            css_text.contains("/images/logo."),
+            "rewritten CSS should reference renamed PNG: {css_text}"
+        );
+        assert!(
+            css_text.contains(".png"),
+            "still ends in .png: {css_text}"
+        );
+        // Crucial: the URL is no longer the original `/images/logo.png`
+        // — it's `/images/logo.<hash>.png`.
+        assert!(
+            !css_text.contains("/images/logo.png)"),
+            "must no longer point at the un-fingerprinted PNG: {css_text}"
+        );
     }
 }
