@@ -117,7 +117,7 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
 serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
-uuid = { version = "1.22.0", features = ["v4"] }
+uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
@@ -128,7 +128,7 @@ proptest = "1"
 [dependencies]
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
-clap = { version = "4.6.0", features = ["derive", "cargo", "env"] }
+clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.4"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
@@ -150,7 +150,7 @@ frontmatter-gen = "0.0.5"
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.77", features = ["vendored"] }
+openssl = { version = "0.10.79", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
