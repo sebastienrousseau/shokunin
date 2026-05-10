@@ -94,7 +94,7 @@ pub fn read_sidecar_for_html(
 }
 
 /// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible `HashMap`.
-fn frontmatter_to_json(
+pub(crate) fn frontmatter_to_json(
     fm: &frontmatter_gen::Frontmatter,
 ) -> HashMap<String, serde_json::Value> {
     let mut map = HashMap::new();

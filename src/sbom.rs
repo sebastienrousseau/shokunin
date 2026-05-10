@@ -54,7 +54,7 @@ use anyhow::Result;
 use std::fs;
 use std::path::Path;
 
-/// Plugin that emits a CycloneDX SBOM and links to it from every
+/// Plugin that emits a `CycloneDX` SBOM and links to it from every
 /// HTML page.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SbomPlugin;
@@ -112,7 +112,7 @@ impl Plugin for SbomPlugin {
     }
 }
 
-/// Builds the minimal CycloneDX 1.5 SBOM document for this site.
+/// Builds the minimal `CycloneDX` 1.5 SBOM document for this site.
 fn build_sbom() -> serde_json::Value {
     let now = current_iso_timestamp();
     let ssg_version = env!("CARGO_PKG_VERSION");
@@ -160,8 +160,7 @@ fn current_iso_timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+        .map_or(0, |d| d.as_secs());
     epoch_to_iso(secs)
 }
 

@@ -101,6 +101,8 @@ pub mod assets;
 /// Content fingerprinting for incremental builds.
 pub mod cache;
 pub mod cmd;
+/// Typed content collection API — `get_collection` / `get_entry` (issue #456).
+pub mod collections;
 /// Typed content collections with frontmatter schema validation.
 pub mod content;
 /// Content Security Policy hardening: inline extraction + SRI.
