@@ -32,7 +32,8 @@ categories = [
 ]
 
 # Keywords for easier discoverability on Crates.io
-keywords = ["cli", "generator", "ssg", "static-site", "wasm"]
+# (max 5 keywords; chosen for SEO across crates.io search and lib.rs).
+keywords = ["rust", "markdown", "jamstack", "ssg", "wasm"]
 
 # Excluding unnecessary files from the package
 exclude = [
