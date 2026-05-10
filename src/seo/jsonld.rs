@@ -302,6 +302,198 @@ impl Plugin for JsonLdPlugin {
     }
 }
 
+// =====================================================================
+// JSON-LD validation (resolves #467)
+// =====================================================================
+
+/// A single validation failure against a JSON-LD block.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JsonLdValidationError {
+    /// The schema.org `@type` of the block (or "Unknown" if absent).
+    pub schema_type: String,
+    /// Required field that was missing or had the wrong shape.
+    pub field: String,
+    /// Human-readable reason.
+    pub reason: String,
+}
+
+impl std::fmt::Display for JsonLdValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}] missing/invalid `{}` — {}",
+            self.schema_type, self.field, self.reason
+        )
+    }
+}
+
+/// Walks an HTML string, extracts every `<script type="application/ld+json">`
+/// block, parses it as JSON, and validates required fields per
+/// schema.org `@type`.
+///
+/// Supported types (with their required-field guards):
+///
+/// - **Article** — `headline`, `datePublished`, `author`, `image`
+/// - **WebPage** — `name`, `url`, `inLanguage`
+/// - **BreadcrumbList** — `itemListElement` (non-empty array)
+/// - **FAQPage** — `mainEntity` (non-empty array of `Question`)
+/// - **LocalBusiness** — `name`, `address`
+/// - **Organization** — `name`, `url`
+///
+/// Returns the empty vector if every block parses and passes its
+/// required-field check. Unknown `@type` values are treated as
+/// pass-through (no required fields enforced) so user-extended
+/// schemas don't trigger false negatives.
+#[must_use]
+pub fn validate_jsonld(html: &str) -> Vec<JsonLdValidationError> {
+    let mut errors = Vec::new();
+
+    for block in extract_jsonld_blocks(html) {
+        match serde_json::from_str::<serde_json::Value>(&block) {
+            Ok(value) => validate_one(&value, &mut errors),
+            Err(parse_err) => {
+                errors.push(JsonLdValidationError {
+                    schema_type: "Unparseable".to_string(),
+                    field: "(payload)".to_string(),
+                    reason: format!("invalid JSON: {parse_err}"),
+                });
+            }
+        }
+    }
+
+    errors
+}
+
+/// Returns the inner JSON of every `<script type="application/ld+json">`
+/// block. Tolerant of attribute order and whitespace.
+fn extract_jsonld_blocks(html: &str) -> Vec<String> {
+    let mut blocks = Vec::new();
+    let lower = html.to_lowercase();
+    let mut cursor = 0;
+
+    while let Some(open) = lower[cursor..].find("<script") {
+        let abs_open = cursor + open;
+        let Some(open_end) = lower[abs_open..].find('>') else {
+            break;
+        };
+        let tag = &lower[abs_open..abs_open + open_end];
+        cursor = abs_open + open_end + 1;
+
+        if !tag.contains("application/ld+json") {
+            continue;
+        }
+
+        let Some(close) = lower[cursor..].find("</script>") else {
+            break;
+        };
+        // Use the original-case slice for the actual JSON payload —
+        // schema.org values are case-sensitive.
+        blocks.push(html[cursor..cursor + close].trim().to_string());
+        cursor += close + "</script>".len();
+    }
+
+    blocks
+}
+
+/// Validates a single parsed JSON-LD value (object or array).
+fn validate_one(
+    value: &serde_json::Value,
+    errors: &mut Vec<JsonLdValidationError>,
+) {
+    // schema.org allows top-level @graph arrays; descend into them.
+    if let Some(graph) = value.get("@graph").and_then(|v| v.as_array()) {
+        for entry in graph {
+            validate_one(entry, errors);
+        }
+        return;
+    }
+
+    // Array at top level — validate each entry.
+    if let Some(array) = value.as_array() {
+        for entry in array {
+            validate_one(entry, errors);
+        }
+        return;
+    }
+
+    let schema_type = value
+        .get("@type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    let required: &[&str] = match schema_type.as_str() {
+        "Article" | "NewsArticle" | "BlogPosting" => {
+            &["headline", "datePublished", "author", "image"]
+        }
+        "WebPage" => &["name", "url", "inLanguage"],
+        "BreadcrumbList" => &["itemListElement"],
+        "FAQPage" => &["mainEntity"],
+        "LocalBusiness" | "Restaurant" | "Store" => &["name", "address"],
+        "Organization" => &["name", "url"],
+        // Unknown types: don't enforce required fields. Users may ship
+        // custom @types that are still valid schema.org extensions.
+        _ => return,
+    };
+
+    for field in required {
+        match value.get(*field) {
+            None => errors.push(JsonLdValidationError {
+                schema_type: schema_type.clone(),
+                field: (*field).to_string(),
+                reason: "field absent".to_string(),
+            }),
+            Some(serde_json::Value::Null) => errors.push(JsonLdValidationError {
+                schema_type: schema_type.clone(),
+                field: (*field).to_string(),
+                reason: "field is null".to_string(),
+            }),
+            Some(serde_json::Value::String(s)) if s.trim().is_empty() => {
+                errors.push(JsonLdValidationError {
+                    schema_type: schema_type.clone(),
+                    field: (*field).to_string(),
+                    reason: "field is empty string".to_string(),
+                });
+            }
+            Some(serde_json::Value::Array(a)) if a.is_empty() => {
+                errors.push(JsonLdValidationError {
+                    schema_type: schema_type.clone(),
+                    field: (*field).to_string(),
+                    reason: "array is empty".to_string(),
+                });
+            }
+            _ => {}
+        }
+    }
+
+    // BreadcrumbList: itemListElement entries should each be ListItem
+    // with a `position` and `name`. Catch the most common regression.
+    if schema_type == "BreadcrumbList" {
+        if let Some(items) = value
+            .get("itemListElement")
+            .and_then(|v| v.as_array())
+        {
+            for (idx, item) in items.iter().enumerate() {
+                if item.get("position").is_none() {
+                    errors.push(JsonLdValidationError {
+                        schema_type: schema_type.clone(),
+                        field: format!("itemListElement[{idx}].position"),
+                        reason: "ListItem missing position".to_string(),
+                    });
+                }
+                if item.get("name").is_none() && item.get("item").is_none() {
+                    errors.push(JsonLdValidationError {
+                        schema_type: schema_type.clone(),
+                        field: format!("itemListElement[{idx}].name|item"),
+                        reason: "ListItem missing name and item"
+                            .to_string(),
+                    });
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -591,5 +783,99 @@ mod tests {
             .transform_html(raw, &page_path, &c)
             .unwrap();
         assert_eq!(after, raw);
+    }
+
+    // ── JSON-LD validation (issue #467) ────────────────────────────
+
+    #[test]
+    fn validate_extracts_block() {
+        let html = r#"<html><head>
+            <script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"WebPage",
+             "name":"Hi","url":"https://x.test/","inLanguage":"en"}
+            </script></head><body></body></html>"#;
+        assert!(validate_jsonld(html).is_empty());
+    }
+
+    #[test]
+    fn validate_flags_missing_required_field_on_article() {
+        let html = r#"<script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"Article",
+             "headline":"H","datePublished":"2026-05-10","author":"A"}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter().any(|e| e.schema_type == "Article" && e.field == "image"),
+            "expected Article.image violation, got {errs:?}"
+        );
+    }
+
+    #[test]
+    fn validate_flags_empty_breadcrumb_list() {
+        let html = r#"<script type="application/ld+json">
+            {"@context":"https://schema.org","@type":"BreadcrumbList",
+             "itemListElement":[]}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter().any(|e| e.field == "itemListElement"),
+            "expected itemListElement empty-array error, got {errs:?}"
+        );
+    }
+
+    #[test]
+    fn validate_breadcrumb_listitem_missing_position() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"BreadcrumbList",
+             "itemListElement":[{"name":"Home","item":"https://x/"}]}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter().any(|e| e.field == "itemListElement[0].position"),
+            "expected position-missing error, got {errs:?}"
+        );
+    }
+
+    #[test]
+    fn validate_unparseable_json() {
+        let html = r#"<script type="application/ld+json">{not json}</script>"#;
+        let errs = validate_jsonld(html);
+        assert_eq!(errs.len(), 1);
+        assert_eq!(errs[0].schema_type, "Unparseable");
+    }
+
+    #[test]
+    fn validate_descends_into_graph() {
+        let html = r#"<script type="application/ld+json">
+            {"@context":"https://schema.org","@graph":[
+                {"@type":"WebPage","name":"H"}
+            ]}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        // WebPage missing url and inLanguage
+        assert!(errs.iter().any(|e| e.schema_type == "WebPage" && e.field == "url"));
+        assert!(errs
+            .iter()
+            .any(|e| e.schema_type == "WebPage" && e.field == "inLanguage"));
+    }
+
+    #[test]
+    fn validate_unknown_type_passes_through() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"CustomThing","foo":"bar"}
+        </script>"#;
+        assert!(validate_jsonld(html).is_empty());
+    }
+
+    #[test]
+    fn validate_handles_multiple_blocks() {
+        let html = r#"
+            <script type="application/ld+json">{"@type":"Organization","name":"O","url":"https://o/"}</script>
+            <script type="application/ld+json">{"@type":"Article","headline":"H"}</script>
+        "#;
+        let errs = validate_jsonld(html);
+        // Org passes; Article missing 3 of 4 required.
+        assert_eq!(errs.iter().filter(|e| e.schema_type == "Organization").count(), 0);
+        assert!(errs.iter().filter(|e| e.schema_type == "Article").count() >= 3);
     }
 }

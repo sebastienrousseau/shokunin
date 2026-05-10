@@ -17,7 +17,9 @@ mod robots;
 mod seo_plugin;
 
 pub use canonical::CanonicalPlugin;
-pub use jsonld::{JsonLdConfig, JsonLdPlugin};
+pub use jsonld::{
+    validate_jsonld, JsonLdConfig, JsonLdPlugin, JsonLdValidationError,
+};
 pub use robots::RobotsPlugin;
 pub use seo_plugin::SeoPlugin;
 
