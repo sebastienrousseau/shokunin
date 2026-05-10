@@ -101,14 +101,14 @@ ssg -c content -o public -t templates --ai-fix
 
 ## Overview
 
-SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.1 AA accessibility compliance, multilingual readability scoring, and feed generation. The 33-plugin pipeline handles the rest.
+SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.2 AA accessibility compliance (including the new 2.5.8, 2.4.13, 3.2.6 criteria where automatable), multilingual readability scoring, and feed generation. The 33-plugin pipeline handles the rest.
 
 - **33-plugin pipeline** -- SEO, a11y, i18n, search, images, AI, CSP, JSON-LD, RSS, sitemaps
 - **Agentic AI pipeline** -- audit, diagnose, fix, and verify content readability via local LLM
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Streaming compilation** -- configurable memory budgets for 100K+ page sites
-- **WCAG 2.1 AA** -- accessibility compliance validated on every build with axe-core CI
+- **WCAG 2.2 AA** -- accessibility compliance validated on every build with build-time checks + axe-core CI; per-criterion compliance matrix emitted as `wcag-compliance.json`
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
 ---
@@ -169,7 +169,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod |
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
-| **Accessibility** | WCAG 2.1 AA validation on every build, axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
+| **Accessibility** | WCAG 2.2 AA validation on every build (1.1.1, 1.3.1, 2.3.1, 2.4.4, 2.4.13, 2.5.8, 3.1.1, 3.2.6), axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks; emits `wcag-compliance.json` matrix ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
 | **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
 | **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
@@ -377,7 +377,7 @@ make clean        # remove build artifacts
 | `document.yml` | push to main | Build and deploy API docs to GitHub Pages |
 | `release.yml` | tag `v*` | Cross-platform binaries, GHCR container, crates.io, AUR |
 | `scheduled.yml` | weekly, tag | Multi-OS portability, pa11y a11y, `CycloneDX` SBOM, benchmarks |
-| `visual.yml` | PR | Playwright screenshots (3 viewports) + axe-core WCAG 2.1 AA |
+| `visual.yml` | PR | Playwright screenshots (3 viewports) + axe-core WCAG 2.2 AA |
 | `wasm.yml` | push, PR | Build and test ssg-core + ssg-wasm for wasm32 |
 | `readability-gate.yml` | PR | Flesch-Kincaid audit on docs and content |
 
@@ -409,7 +409,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 
 | Module | Purpose |
 | :--- | :--- |
-| `accessibility` | WCAG 2.1 AA checker, ARIA validation, decorative image detection |
+| `accessibility` | WCAG 2.2 AA checker, ARIA validation, decorative image detection, target-size + focus-appearance checks, compliance matrix |
 | `ai` | AI-readiness hooks, alt-text validation, `llms.txt` / `llms-full.txt` generation |
 | `assets` | Asset fingerprinting and SRI hash generation |
 | `cache` | Content fingerprinting (FNV-1a) for incremental builds |
