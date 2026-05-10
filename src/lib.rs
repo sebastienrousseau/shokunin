@@ -153,6 +153,8 @@ pub mod plugins;
 pub mod postprocess;
 /// Command-line argument processing and site compilation.
 pub mod process;
+/// Build-time CycloneDX SBOM generation (issue #457).
+pub mod sbom;
 /// Project scaffolding for `--new`.
 pub mod scaffold;
 /// JSON Schema generation for configuration.

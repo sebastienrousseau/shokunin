@@ -384,6 +384,11 @@ pub fn register_default_plugins(
     // CSP hardening: extract inline styles/scripts to external files with SRI
     plugins.register(csp::CspPlugin);
 
+    // SBOM emission + per-page link (resolves #457). Runs before
+    // FingerprintPlugin so the SBOM filename itself isn't subject to
+    // content-hash renaming (consumers fetch a stable URL).
+    plugins.register(crate::sbom::SbomPlugin);
+
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);
 
