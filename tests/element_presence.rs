@@ -46,7 +46,9 @@
 use std::{fs, path::Path};
 
 fn collect_html(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
-    let Ok(entries) = fs::read_dir(dir) else { return };
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let p = entry.path();
         if p.is_dir() {
@@ -85,7 +87,9 @@ fn meta_content(html: &str, name_value: &str) -> Option<String> {
     let start = lower.find(&pat).or_else(|| lower.find(&pat_single))?;
     // Walk forward to find content="..." or content='...'.
     let after = &lower[start..];
-    let cstart = after.find("content=\"").or_else(|| after.find("content='"))?;
+    let cstart = after
+        .find("content=\"")
+        .or_else(|| after.find("content='"))?;
     let q = after.as_bytes()[cstart + "content=".len()];
     let after_q = &after[cstart + "content=".len() + 1..];
     let end = after_q.find(q as char)?;
@@ -107,10 +111,10 @@ fn is_exempt(rel_path: &str) -> bool {
     lower.ends_with("/404.html")
         || lower.ends_with("/offline.html")
         || lower.contains("/search/")
-        // staticdatagen produces some auxiliary HTML files (e.g.
-        // category indexes, taxonomy stubs) that share the universal
-        // template — keep the gate minimal here and let
-        // example_outputs.rs cover the auxiliaries.
+    // staticdatagen produces some auxiliary HTML files (e.g.
+    // category indexes, taxonomy stubs) that share the universal
+    // template — keep the gate minimal here and let
+    // example_outputs.rs cover the auxiliaries.
 }
 
 #[derive(Debug)]
@@ -158,10 +162,7 @@ fn check_invariants(
             if let Some(end) = lower[start..].find("</title>") {
                 let inner = html[start + 7..start + end].trim();
                 if inner.is_empty() {
-                    fail(
-                        "title-empty",
-                        format!("page {rel}: <title> empty"),
-                    );
+                    fail("title-empty", format!("page {rel}: <title> empty"));
                 }
             }
         }
@@ -198,10 +199,7 @@ fn check_invariants(
     if !contains_ci(html, "rel=\"canonical\"")
         && !contains_ci(html, "rel='canonical'")
     {
-        fail(
-            "canonical",
-            format!("page {rel}: no <link rel=canonical>"),
-        );
+        fail("canonical", format!("page {rel}: no <link rel=canonical>"));
     }
 
     // 7. Open Graph chain
@@ -217,20 +215,14 @@ fn check_invariants(
     if !contains_ci(html, "name=\"twitter:card\"")
         && !contains_ci(html, "name='twitter:card'")
     {
-        fail(
-            "twitter-card",
-            format!("page {rel}: no twitter:card meta"),
-        );
+        fail("twitter-card", format!("page {rel}: no twitter:card meta"));
     }
 
     // 9. Viewport
     if !contains_ci(html, "name=\"viewport\"")
         && !contains_ci(html, "name='viewport'")
     {
-        fail(
-            "viewport",
-            format!("page {rel}: no viewport meta (mobile)"),
-        );
+        fail("viewport", format!("page {rel}: no viewport meta (mobile)"));
     }
 
     // 10. charset
@@ -433,10 +425,7 @@ fn check_core_invariants(
     if !contains_ci(html, "name=\"twitter:card\"")
         && !contains_ci(html, "name='twitter:card'")
     {
-        fail(
-            "twitter-card",
-            format!("page {rel}: no twitter:card meta"),
-        );
+        fail("twitter-card", format!("page {rel}: no twitter:card meta"));
     }
 }
 

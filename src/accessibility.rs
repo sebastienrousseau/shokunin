@@ -169,15 +169,10 @@ impl Plugin for AccessibilityPlugin {
         fs::write(&report_path, json)?;
 
         // Write the WCAG 2.2 compliance matrix.
-        let compliance = build_compliance_report(
-            html_files.len(),
-            &failed_criteria,
-        );
+        let compliance =
+            build_compliance_report(html_files.len(), &failed_criteria);
         let matrix_path = ctx.site_dir.join("wcag-compliance.json");
-        fs::write(
-            &matrix_path,
-            serde_json::to_string_pretty(&compliance)?,
-        )?;
+        fs::write(&matrix_path, serde_json::to_string_pretty(&compliance)?)?;
 
         if report.total_issues > 0 {
             log::warn!(
@@ -239,7 +234,12 @@ fn build_compliance_report(
         // a help mechanism); the per-page validator can't decide it.
         row("3.2.6", "A", "Consistent Help", Manual),
         row("3.3.7", "A", "Redundant Entry", NotApplicable),
-        row("3.3.8", "AA", "Accessible Authentication (Minimum)", NotApplicable),
+        row(
+            "3.3.8",
+            "AA",
+            "Accessible Authentication (Minimum)",
+            NotApplicable,
+        ),
         // Robust
         row("4.1.3", "AA", "Status Messages", Runtime),
     ];
@@ -348,7 +348,8 @@ fn first_px_value(css: &str, prop: &str) -> Option<u32> {
     let start = css.find(&pat)?;
     let after = &css[start + pat.len()..];
     let value = after.split(';').next()?.trim();
-    let digits: String = value.chars().take_while(|c| c.is_ascii_digit()).collect();
+    let digits: String =
+        value.chars().take_while(|c| c.is_ascii_digit()).collect();
     if digits.is_empty() {
         return None;
     }
@@ -364,10 +365,7 @@ fn first_px_value(css: &str, prop: &str) -> Option<u32> {
 /// Detects `:focus { outline: none }` (or `outline: 0`) without a
 /// compensating `outline-style`, `box-shadow`, or `border` declaration
 /// in the same rule.
-fn check_focus_appearance(
-    html: &str,
-    issues: &mut Vec<AccessibilityIssue>,
-) {
+fn check_focus_appearance(html: &str, issues: &mut Vec<AccessibilityIssue>) {
     for css in extract_all_style_blocks(html) {
         let cleaned = preprocess_css(&css);
         for (selector, body) in parse_top_level_rules(&cleaned) {
@@ -387,11 +385,10 @@ fn check_focus_appearance(
                 issues.push(AccessibilityIssue {
                     criterion: "2.4.13".to_string(),
                     severity: "warning".to_string(),
-                    message:
-                        "`:focus { outline: none }` without a \
+                    message: "`:focus { outline: none }` without a \
                          compensating outline-style/box-shadow/border \
                          (WCAG 2.2 AAA — Focus Appearance)"
-                            .to_string(),
+                        .to_string(),
                 });
             }
         }
@@ -1219,7 +1216,8 @@ mod tests {
         // help link), but the helper itself still works and we want
         // it covered for future cross-page use.
         let html_with = r#"<html lang="en"><body><a href="/contact">Contact</a></body></html>"#;
-        let html_without = r#"<html lang="en"><body><p>nothing</p></body></html>"#;
+        let html_without =
+            r#"<html lang="en"><body><p>nothing</p></body></html>"#;
         let mut buf = Vec::new();
         check_consistent_help(html_with, &mut buf);
         assert!(buf.is_empty(), "with link, no issue");
@@ -1255,8 +1253,11 @@ mod tests {
         assert_eq!(matrix.pages_scanned, 1);
         // The matrix carries every WCAG 2.2 row we listed in
         // build_compliance_report, including the three additions.
-        let names: Vec<&str> =
-            matrix.criteria.iter().map(|c| c.criterion.as_str()).collect();
+        let names: Vec<&str> = matrix
+            .criteria
+            .iter()
+            .map(|c| c.criterion.as_str())
+            .collect();
         assert!(names.contains(&"2.4.13"));
         assert!(names.contains(&"2.5.8"));
         assert!(names.contains(&"3.2.6"));
@@ -1359,7 +1360,8 @@ mod tests {
 
     #[test]
     fn extract_all_style_blocks_returns_every_block() {
-        let html = "<html><head><style>x{}</style><style>y{}</style></head></html>";
+        let html =
+            "<html><head><style>x{}</style><style>y{}</style></head></html>";
         let blocks = extract_all_style_blocks(html);
         assert_eq!(blocks.len(), 2);
         assert_eq!(blocks[0].trim(), "x{}");
@@ -1368,7 +1370,8 @@ mod tests {
 
     #[test]
     fn extract_all_style_blocks_handles_attributes_with_quoted_gt() {
-        let html = r#"<html><head><style data-tag="x>y">a{}</style></head></html>"#;
+        let html =
+            r#"<html><head><style data-tag="x>y">a{}</style></head></html>"#;
         let blocks = extract_all_style_blocks(html);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].trim(), "a{}");

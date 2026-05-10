@@ -46,9 +46,7 @@ pub fn init_if_enabled(enabled: bool) -> bool {
 
 #[cfg(feature = "otel")]
 mod real {
-    use tracing_subscriber::{
-        fmt::format::FmtSpan, prelude::*, EnvFilter,
-    };
+    use tracing_subscriber::{fmt::format::FmtSpan, prelude::*, EnvFilter};
 
     pub(super) fn init() -> bool {
         // Idempotent: if a subscriber is already installed (e.g.

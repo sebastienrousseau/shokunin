@@ -95,21 +95,18 @@ fn strip_iso_datetimes(s: &str) -> String {
             // Optional fractional seconds .fff
             if rest.as_bytes().get(j) == Some(&b'.') {
                 j += 1;
-                while j < rest.len()
-                    && rest.as_bytes()[j].is_ascii_digit()
-                {
+                while j < rest.len() && rest.as_bytes()[j].is_ascii_digit() {
                     j += 1;
                 }
             }
             // Optional Z or ±HH:MM
             if rest.as_bytes().get(j) == Some(&b'Z') {
                 j += 1;
-            } else if rest.as_bytes().get(j) == Some(&b'+')
-                || rest.as_bytes().get(j) == Some(&b'-')
+            } else if (rest.as_bytes().get(j) == Some(&b'+')
+                || rest.as_bytes().get(j) == Some(&b'-'))
+                && j + 6 <= rest.len()
             {
-                if j + 6 <= rest.len() {
-                    j += 6;
-                }
+                j += 6;
             }
             i += j;
             continue;
@@ -167,8 +164,8 @@ fn strip_fingerprint_hashes(s: &str) -> String {
     // Match `.<8 hex>.<ext>` where ext is one of our fingerprinted
     // extensions. Cheap: walk by '.' anchor.
     let exts = [
-        "css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif",
-        "gif", "svg", "woff", "woff2", "ttf", "otf",
+        "css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
+        "woff", "woff2", "ttf", "otf",
     ];
     let mut out = String::with_capacity(s.len());
     let bytes = s.as_bytes();
@@ -180,9 +177,9 @@ fn strip_fingerprint_hashes(s: &str) -> String {
                 && bytes.get(i + 9) == Some(&b'.')
             {
                 let after = &s[i + 10..];
-                if let Some(ext_end) = after.find(|c: char| {
-                    !c.is_ascii_alphanumeric() && c != '-'
-                }) {
+                if let Some(ext_end) =
+                    after.find(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+                {
                     let ext = &after[..ext_end];
                     if exts.contains(&ext) {
                         out.push_str(".<HASH>.");
@@ -215,8 +212,7 @@ fn strip_sri(s: &str) -> String {
     // iteration consumes either an SRI hash or zero characters
     // (then advances by one to make progress).
     const PREFIXES: &[&str] = &["sha256-", "sha384-", "sha512-"];
-    const VALUE_TERMINATORS: &[char] =
-        &['"', '\'', ' ', '\n', '\t', '<', '>'];
+    const VALUE_TERMINATORS: &[char] = &['"', '\'', ' ', '\n', '\t', '<', '>'];
 
     let mut out = String::with_capacity(s.len());
     let mut remaining = s;
@@ -315,10 +311,7 @@ fn scaffold_config_toml_stays_stable() {
 
     let config = dir.path().join("golden-test-site/config.toml");
     let body = fs::read_to_string(&config).unwrap_or_else(|e| {
-        panic!(
-            "scaffold did not produce {}: {e}",
-            config.display()
-        )
+        panic!("scaffold did not produce {}: {e}", config.display())
     });
     assert_or_update_golden("scaffold_config_toml.golden", &body);
 }

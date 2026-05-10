@@ -97,23 +97,26 @@ fn generate_netlify(site_dir: &std::path::Path) -> Result<()> {
     headers.push_str(
         "\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n",
     );
-    for ext in
-        ["css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif",
-         "gif", "svg", "woff", "woff2"]
-    {
+    for ext in [
+        "css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
+        "woff", "woff2",
+    ] {
         headers.push_str(&format!(
             "\n/*.{ext}\n  Cache-Control: public, max-age=31536000, immutable\n"
         ));
     }
     // HTML and feed/index files always revalidate so content updates
     // are visible immediately.
-    headers.push_str(
-        "\n/*.html\n  Cache-Control: no-cache, must-revalidate\n",
-    );
-    for path in ["/sitemap.xml", "/sitemap-news.xml", "/atom.xml",
-                 "/rss.xml", "/manifest.json", "/robots.txt",
-                 "/search-index.json"]
-    {
+    headers.push_str("\n/*.html\n  Cache-Control: no-cache, must-revalidate\n");
+    for path in [
+        "/sitemap.xml",
+        "/sitemap-news.xml",
+        "/atom.xml",
+        "/rss.xml",
+        "/manifest.json",
+        "/robots.txt",
+        "/search-index.json",
+    ] {
         headers.push_str(&format!(
             "\n{path}\n  Cache-Control: no-cache, must-revalidate\n"
         ));
@@ -179,20 +182,22 @@ fn generate_cloudflare(site_dir: &std::path::Path) -> Result<()> {
     headers.push_str(
         "\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n",
     );
-    for ext in
-        ["css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif",
-         "gif", "svg", "woff", "woff2"]
-    {
+    for ext in [
+        "css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
+        "woff", "woff2",
+    ] {
         headers.push_str(&format!(
             "\n/*.{ext}\n  Cache-Control: public, max-age=31536000, immutable\n"
         ));
     }
-    headers.push_str(
-        "\n/*.html\n  Cache-Control: no-cache, must-revalidate\n",
-    );
-    for path in ["/sitemap.xml", "/atom.xml", "/rss.xml",
-                 "/manifest.json", "/robots.txt"]
-    {
+    headers.push_str("\n/*.html\n  Cache-Control: no-cache, must-revalidate\n");
+    for path in [
+        "/sitemap.xml",
+        "/atom.xml",
+        "/rss.xml",
+        "/manifest.json",
+        "/robots.txt",
+    ] {
         headers.push_str(&format!(
             "\n{path}\n  Cache-Control: no-cache, must-revalidate\n"
         ));

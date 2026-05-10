@@ -45,8 +45,8 @@ fn fresh_layout() -> (
     (tmp, content, build, site, template)
 }
 
-/// Convenience: invoke compile_site and return any error chain as a
-/// flattened string. Returns `Ok(())` on success.
+/// Convenience: invoke `compile_site` and return any error chain as
+/// a flattened string. Returns `Ok(())` on success.
 fn try_build(
     build: &Path,
     content: &Path,
@@ -162,11 +162,7 @@ fn deeply_nested_directory_does_not_overflow_stack() {
         deep = deep.join(format!("d{i}"));
     }
     fs::create_dir_all(&deep).unwrap();
-    fs::write(
-        deep.join("buried.md"),
-        "---\ntitle: buried\n---\n",
-    )
-    .unwrap();
+    fs::write(deep.join("buried.md"), "---\ntitle: buried\n---\n").unwrap();
     let _ = try_build(&build, &content, &site, &template);
 }
 
@@ -180,23 +176,19 @@ fn read_only_output_directory_returns_clean_error() {
     struct PermsGuard<'a>(&'a Path);
     impl Drop for PermsGuard<'_> {
         fn drop(&mut self) {
-            let _ = fs::set_permissions(
-                self.0,
-                fs::Permissions::from_mode(0o755),
-            );
+            let _ =
+                fs::set_permissions(self.0, fs::Permissions::from_mode(0o755));
         }
     }
 
     let (_tmp, content, build, site, template) = fresh_layout();
-    fs::write(content.join("page.md"), "---\ntitle: x\n---\n# Hi\n")
-        .unwrap();
+    fs::write(content.join("page.md"), "---\ntitle: x\n---\n# Hi\n").unwrap();
     // 0o555 = r-x for owner (no write). Build must surface a clean
     // permission-denied error, not a panic.
-    fs::set_permissions(&site, fs::Permissions::from_mode(0o555))
-        .unwrap();
-    let _guard = PermsGuard(&site);
+    fs::set_permissions(&site, fs::Permissions::from_mode(0o555)).unwrap();
+    let guard = PermsGuard(&site);
     let result = try_build(&build, &content, &site, &template);
-    // _guard drops here (or on panic) and restores 0o755 so tempdir
+    // `guard` drops here (or on panic) and restores 0o755 so tempdir
     // cleanup succeeds.
     // Either:
     //  - error returned (preferred — clean failure), or
@@ -204,7 +196,7 @@ fn read_only_output_directory_returns_clean_error() {
     // The only failure mode is a panic, which would have aborted
     // the test before reaching this point.
     let _ = result;
-    drop(_guard);
+    drop(guard);
 }
 
 // =====================================================================
@@ -224,11 +216,8 @@ fn concurrent_builds_to_same_site_dir_do_not_panic() {
     for d in [&*content, &*build, &*site, &*template] {
         fs::create_dir_all(d).unwrap();
     }
-    fs::write(
-        content.join("page.md"),
-        "---\ntitle: race\n---\n# Hi\n",
-    )
-    .unwrap();
+    fs::write(content.join("page.md"), "---\ntitle: race\n---\n# Hi\n")
+        .unwrap();
 
     let handles: Vec<_> = (0..3)
         .map(|_| {

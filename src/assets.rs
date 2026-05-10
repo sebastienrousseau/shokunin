@@ -63,15 +63,13 @@ impl Plugin for FingerprintPlugin {
             .into_iter()
             .partition(|p| p.extension().is_some_and(|e| e == "css"));
 
-        let mut manifest =
-            fingerprint_assets(&non_css, &ctx.site_dir)?;
+        let mut manifest = fingerprint_assets(&non_css, &ctx.site_dir)?;
 
         for css_path in &css_files {
             rewrite_css_urls_inplace(css_path, &ctx.site_dir, &manifest)?;
         }
 
-        let css_manifest =
-            fingerprint_assets(&css_files, &ctx.site_dir)?;
+        let css_manifest = fingerprint_assets(&css_files, &ctx.site_dir)?;
         manifest.extend(css_manifest);
 
         rewrite_html_references(&ctx.site_dir, &manifest)?;
@@ -219,37 +217,32 @@ fn rewrite_css_urls(
         };
 
         // Split off ?query or #fragment so we don't try to resolve them.
-        let (url, suffix) = match inner
-            .find(|c: char| c == '?' || c == '#')
-        {
-            Some(i) => (&inner[..i], &inner[i..]),
-            None => (inner, ""),
+        let (url, suffix) = if let Some(i) = inner.find(['?', '#']) {
+            (&inner[..i], &inner[i..])
+        } else {
+            (inner, "")
         };
 
-        let resolved =
-            resolve_css_url(url, css_dir, site_dir);
+        let resolved = resolve_css_url(url, css_dir, site_dir);
+        let hit = resolved
+            .and_then(|key| manifest.get(&key).map(|i| (key, i)));
 
-        match resolved.and_then(|key| manifest.get(&key).map(|i| (key, i))) {
-            Some((_, info)) => {
-                // Emit absolute /<fingerprinted>(suffix).
-                let new_url = format!("/{}{}", info.fingerprinted, suffix);
-                out.push_str("url(");
-                if quote != '\0' {
-                    out.push(quote);
-                }
-                out.push_str(&new_url);
-                if quote != '\0' {
-                    out.push(quote);
-                }
-                out.push(')');
+        out.push_str("url(");
+        if let Some((_, info)) = hit {
+            // Emit absolute /<fingerprinted>(suffix).
+            let new_url = format!("/{}{}", info.fingerprinted, suffix);
+            if quote != '\0' {
+                out.push(quote);
             }
-            None => {
-                // No manifest hit — emit the original verbatim.
-                out.push_str("url(");
-                out.push_str(raw);
-                out.push(')');
+            out.push_str(&new_url);
+            if quote != '\0' {
+                out.push(quote);
             }
+        } else {
+            // No manifest hit — emit the original verbatim.
+            out.push_str(raw);
         }
+        out.push(')');
 
         remaining = rest;
     }
@@ -417,8 +410,7 @@ fn sri_base64(data: &[u8]) -> String {
 /// and an SRI hash; deploy configs serve them with
 /// `Cache-Control: public, max-age=31536000, immutable`.
 const FINGERPRINTED_EXTENSIONS: &[&str] = &[
-    "css", "js", "mjs",
-    "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
+    "css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
     "woff", "woff2", "ttf", "otf",
 ];
 
@@ -464,7 +456,10 @@ mod tests {
     #[test]
     fn test_sri_base64_known_vector() {
         // SHA-256("") base64-encoded is the canonical 47ZHRWlj-... value.
-        assert_eq!(sri_base64(b""), "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=");
+        assert_eq!(
+            sri_base64(b""),
+            "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+        );
     }
 
     #[test]
@@ -789,10 +784,7 @@ mod tests {
             css_text.contains("/images/logo."),
             "rewritten CSS should reference renamed PNG: {css_text}"
         );
-        assert!(
-            css_text.contains(".png"),
-            "still ends in .png: {css_text}"
-        );
+        assert!(css_text.contains(".png"), "still ends in .png: {css_text}");
         // Crucial: the URL is no longer the original `/images/logo.png`
         // — it's `/images/logo.<hash>.png`.
         assert!(

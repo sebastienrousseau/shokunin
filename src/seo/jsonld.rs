@@ -414,8 +414,7 @@ fn extract_jsonld_blocks(html: &str) -> Vec<String> {
 /// substring match).
 fn is_jsonld_script_tag(tag: &str) -> bool {
     extract_attr(tag, "type")
-        .map(|v| v.eq_ignore_ascii_case("application/ld+json"))
-        .unwrap_or(false)
+        .is_some_and(|v| v.eq_ignore_ascii_case("application/ld+json"))
 }
 
 /// Extracts the value of an HTML attribute from an open-tag string.
@@ -559,11 +558,13 @@ fn validate_one(
                 field: (*field).to_string(),
                 reason: "field absent".to_string(),
             }),
-            Some(serde_json::Value::Null) => errors.push(JsonLdValidationError {
-                schema_type: schema_type.clone(),
-                field: (*field).to_string(),
-                reason: "field is null".to_string(),
-            }),
+            Some(serde_json::Value::Null) => {
+                errors.push(JsonLdValidationError {
+                    schema_type: schema_type.clone(),
+                    field: (*field).to_string(),
+                    reason: "field is null".to_string(),
+                });
+            }
             Some(serde_json::Value::String(s)) if s.trim().is_empty() => {
                 errors.push(JsonLdValidationError {
                     schema_type: schema_type.clone(),
@@ -585,9 +586,8 @@ fn validate_one(
     // BreadcrumbList: itemListElement entries should each be ListItem
     // with a `position` and `name`. Catch the most common regression.
     if schema_type == "BreadcrumbList" {
-        if let Some(items) = value
-            .get("itemListElement")
-            .and_then(|v| v.as_array())
+        if let Some(items) =
+            value.get("itemListElement").and_then(|v| v.as_array())
         {
             for (idx, item) in items.iter().enumerate() {
                 if item.get("position").is_none() {
@@ -601,8 +601,7 @@ fn validate_one(
                     errors.push(JsonLdValidationError {
                         schema_type: schema_type.clone(),
                         field: format!("itemListElement[{idx}].name|item"),
-                        reason: "ListItem missing name and item"
-                            .to_string(),
+                        reason: "ListItem missing name and item".to_string(),
                     });
                 }
             }
@@ -921,7 +920,8 @@ mod tests {
         </script>"#;
         let errs = validate_jsonld(html);
         assert!(
-            errs.iter().any(|e| e.schema_type == "Article" && e.field == "image"),
+            errs.iter()
+                .any(|e| e.schema_type == "Article" && e.field == "image"),
             "expected Article.image violation, got {errs:?}"
         );
     }
@@ -947,7 +947,8 @@ mod tests {
         </script>"#;
         let errs = validate_jsonld(html);
         assert!(
-            errs.iter().any(|e| e.field == "itemListElement[0].position"),
+            errs.iter()
+                .any(|e| e.field == "itemListElement[0].position"),
             "expected position-missing error, got {errs:?}"
         );
     }
@@ -969,7 +970,9 @@ mod tests {
         </script>"#;
         let errs = validate_jsonld(html);
         // WebPage missing url and inLanguage
-        assert!(errs.iter().any(|e| e.schema_type == "WebPage" && e.field == "url"));
+        assert!(errs
+            .iter()
+            .any(|e| e.schema_type == "WebPage" && e.field == "url"));
         assert!(errs
             .iter()
             .any(|e| e.schema_type == "WebPage" && e.field == "inLanguage"));
@@ -991,8 +994,15 @@ mod tests {
         "#;
         let errs = validate_jsonld(html);
         // Org passes; Article missing 3 of 4 required.
-        assert_eq!(errs.iter().filter(|e| e.schema_type == "Organization").count(), 0);
-        assert!(errs.iter().filter(|e| e.schema_type == "Article").count() >= 3);
+        assert_eq!(
+            errs.iter()
+                .filter(|e| e.schema_type == "Organization")
+                .count(),
+            0
+        );
+        assert!(
+            errs.iter().filter(|e| e.schema_type == "Article").count() >= 3
+        );
     }
 
     // ── Strict type-attribute parsing (audit fix item #4) ──────────
@@ -1067,9 +1077,6 @@ mod tests {
     #[test]
     fn extract_attr_rejects_substring_match_in_other_attribute() {
         // `data-mytype="foo"` must NOT match a `type=` query.
-        assert_eq!(
-            extract_attr(r#"<script data-mytype="foo">"#, "type"),
-            None
-        );
+        assert_eq!(extract_attr(r#"<script data-mytype="foo">"#, "type"), None);
     }
 }

@@ -82,13 +82,7 @@ fn generate_corpus(dir: &Path, n: usize) {
 }
 
 /// Returns a fresh tempdir + the four directories the build needs.
-fn fresh_layout() -> (
-    tempfile::TempDir,
-    PathBuf,
-    PathBuf,
-    PathBuf,
-    PathBuf,
-) {
+fn fresh_layout() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf, PathBuf) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let content = tmp.path().join("content");
     let build = tmp.path().join("build");
@@ -104,10 +98,7 @@ fn fresh_layout() -> (
     let src_tpl = workspace.join("examples/templates/en");
     if src_tpl.is_dir() {
         for entry in fs::read_dir(&src_tpl).unwrap().flatten() {
-            let _ = fs::copy(
-                entry.path(),
-                template.join(entry.file_name()),
-            );
+            let _ = fs::copy(entry.path(), template.join(entry.file_name()));
         }
     }
     (tmp, content, build, site, template)
@@ -117,10 +108,9 @@ fn fresh_layout() -> (
 /// `None` if templates are missing on this checkout (rare).
 fn compile_n_pages(n: usize) -> Option<Duration> {
     let (_tmp, content, build, site, template) = fresh_layout();
-    if fs::read_dir(&template)
-        .map(|mut d| d.next().is_none())
-        .unwrap_or(true)
-    {
+    let template_empty = fs::read_dir(&template)
+        .map_or(true, |mut d| d.next().is_none());
+    if template_empty {
         return None;
     }
     generate_corpus(&content, n);
@@ -183,5 +173,5 @@ fn build_500_pages_within_budget() {
         eprintln!("[perf_budgets] templates missing — skipping 500-page");
         return;
     };
-    assert_under_budget("500-page build", t, Duration::from_millis(2000));
+    assert_under_budget("500-page build", t, Duration::from_secs(2));
 }
