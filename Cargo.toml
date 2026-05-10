@@ -156,10 +156,14 @@ openssl = { version = "0.10.79", features = ["vendored"] }
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
+# benches/bench.rs is the umbrella entry — it `mod`s the per-area files
+# and lists their criterion groups as targets. Adding new bench files
+# requires both a `mod` line and a target entry in bench.rs (NOT a new
+# [[bench]] section here — those would collide with bench.rs's
+# criterion_main!).
 [[bench]]
-# Benchmarking configuration for performance testing.
-name = "bench"                              # Name of the benchmark
-harness = false                             # Disable the default benchmark harness (used by Criterion)
+name = "bench"
+harness = false
 
 # -----------------------------------------------------------------------------
 # Examples
