@@ -130,6 +130,16 @@ jobs:
         # all <script type="application/ld+json"> blocks, and validates
         # required fields per schema.org @type. Resolves #467.
         run: cargo test --test jsonld_validation
+      - name: Universal HTML element-presence gate
+        # Asserts every page in every example output satisfies the 10
+        # universal invariants (lang, title, meta description, main,
+        # h1, canonical, og:* chain, twitter:card, viewport, charset).
+        # See docs/architecture/regression-contract.md §2.
+        run: cargo test --test element_presence
+      - name: End-to-end build performance budgets
+        # Hard wall-clock gate for 10/100-page synthetic-corpus builds.
+        # See docs/architecture/regression-contract.md §3.
+        run: cargo test --test perf_budgets
 
   # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
   coverage:
