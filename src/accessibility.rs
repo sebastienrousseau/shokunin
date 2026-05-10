@@ -301,46 +301,14 @@ fn check_page(html: &str) -> Vec<AccessibilityIssue> {
 /// time (that's the runtime axe-core gate's job) but explicit
 /// sub-24 px declarations are unambiguous regressions.
 fn check_target_size(html: &str, issues: &mut Vec<AccessibilityIssue>) {
-    let Some(style_start) = html.find("<style") else {
-        return;
-    };
-    let after_open = &html[style_start..];
-    let Some(open_end) = after_open.find('>') else {
-        return;
-    };
-    let body = &after_open[open_end + 1..];
-    let Some(close_idx) = body.find("</style>") else {
-        return;
-    };
-    let css = &body[..close_idx].to_lowercase();
-
-    // Extract `selector { ... width: NNpx ... }` blocks. Cheap
-    // string scan — no nesting, no @media support (those are stripped
-    // elsewhere). Good enough to catch the regression class.
-    let mut i = 0;
-    let bytes = css.as_bytes();
-    while i < bytes.len() {
-        let Some(open) = css[i..].find('{') else {
-            break;
-        };
-        let selector_end = i + open;
-        let selector = css[i..selector_end].trim();
-        let block_end = css[selector_end..]
-            .find('}')
-            .map_or(css.len(), |e| selector_end + e);
-        let block = &css[selector_end + 1..block_end];
-
-        let is_interactive = selector.contains("button")
-            || selector.contains("input")
-            || selector.contains("[role=\"button\"]")
-            || selector.contains("[role='button']")
-            || selector.contains("[role=button]")
-            // bare `a` selector (rare; usually `nav a`/`a:hover` etc.)
-            || (selector == "a" || selector.starts_with("a "));
-
-        if is_interactive {
+    for css in extract_all_style_blocks(html) {
+        let cleaned = preprocess_css(&css);
+        for (selector, body) in parse_top_level_rules(&cleaned) {
+            if !selector_targets_interactive(&selector) {
+                continue;
+            }
             for prop in ["width", "height"] {
-                if let Some(px) = first_px_value(block, prop) {
+                if let Some(px) = first_px_value(&body, prop) {
                     if px > 0 && px < 24 {
                         issues.push(AccessibilityIssue {
                             criterion: "2.5.8".to_string(),
@@ -354,9 +322,24 @@ fn check_target_size(html: &str, issues: &mut Vec<AccessibilityIssue>) {
                 }
             }
         }
-
-        i = block_end + 1;
     }
+}
+
+/// Returns `true` if `selector` (already lowercased + trimmed)
+/// targets an interactive element class for WCAG 2.5.8.
+fn selector_targets_interactive(selector: &str) -> bool {
+    selector.contains("button")
+        || selector.contains("input")
+        || selector.contains("[role=\"button\"]")
+        || selector.contains("[role='button']")
+        || selector.contains("[role=button]")
+        // Bare `a` or `a ...` selector. Excludes `area`, `aside`, etc.
+        || selector == "a"
+        || selector.starts_with("a ")
+        || selector.starts_with("a:")
+        || selector.starts_with("a.")
+        || selector.starts_with("a#")
+        || selector.starts_with("a[")
 }
 
 /// Returns the first `<prop>: NNpx` value (in pixels) inside `css`.
@@ -381,55 +364,206 @@ fn first_px_value(css: &str, prop: &str) -> Option<u32> {
 /// Detects `:focus { outline: none }` (or `outline: 0`) without a
 /// compensating `outline-style`, `box-shadow`, or `border` declaration
 /// in the same rule.
-fn check_focus_appearance(html: &str, issues: &mut Vec<AccessibilityIssue>) {
-    let Some(style_start) = html.find("<style") else {
-        return;
-    };
-    let after_open = &html[style_start..];
-    let Some(open_end) = after_open.find('>') else {
-        return;
-    };
-    let body = &after_open[open_end + 1..];
-    let Some(close_idx) = body.find("</style>") else {
-        return;
-    };
-    let css = &body[..close_idx].to_lowercase();
+fn check_focus_appearance(
+    html: &str,
+    issues: &mut Vec<AccessibilityIssue>,
+) {
+    for css in extract_all_style_blocks(html) {
+        let cleaned = preprocess_css(&css);
+        for (selector, body) in parse_top_level_rules(&cleaned) {
+            if !selector.contains(":focus") {
+                continue;
+            }
+            let kills_outline = body.contains("outline:none")
+                || body.contains("outline: none")
+                || body.contains("outline:0")
+                || body.contains("outline: 0");
+            let has_replacement = body.contains("outline-style")
+                || body.contains("outline-color")
+                || body.contains("box-shadow")
+                || body.contains("border:");
 
-    // Find every `:focus {` block.
-    let mut i = 0;
-    while let Some(focus_at) = css[i..].find(":focus") {
-        let abs = i + focus_at;
-        let Some(brace_open) = css[abs..].find('{') else {
+            if kills_outline && !has_replacement {
+                issues.push(AccessibilityIssue {
+                    criterion: "2.4.13".to_string(),
+                    severity: "warning".to_string(),
+                    message:
+                        "`:focus { outline: none }` without a \
+                         compensating outline-style/box-shadow/border \
+                         (WCAG 2.2 AAA — Focus Appearance)"
+                            .to_string(),
+                });
+            }
+        }
+    }
+}
+
+// =====================================================================
+// CSS preprocessor (audit fix for items #3)
+// =====================================================================
+//
+// The previous WCAG 2.2 checks parsed only the *first* `<style>`
+// block, did not strip `/* ... */` comments, and did not skip rules
+// nested inside `@media` / `@supports`. Common false positives:
+//
+//   /* width: 10px */     — flagged as a 2.5.8 violation
+//   @media print { button { width: 10px } }
+//                         — flagged as a 2.5.8 violation though
+//                           the rule only applies on print
+//
+// `extract_all_style_blocks` + `preprocess_css` + `parse_top_level_rules`
+// fix all three. They lowercase as they go so downstream checks
+// continue to do case-insensitive matching.
+
+/// Returns the inner CSS of every `<style>...</style>` block in the
+/// document. Tolerant of `<style data-foo="bar">` and other
+/// attribute-bearing forms (uses `find_tag_end` so quoted `>` inside
+/// attribute values doesn't truncate the open tag).
+fn extract_all_style_blocks(html: &str) -> Vec<String> {
+    let mut blocks = Vec::new();
+    let lower = html.to_lowercase();
+    let mut cursor = 0;
+
+    while let Some(rel_open) = lower[cursor..].find("<style") {
+        let abs_open = cursor + rel_open;
+        let tag_end = find_tag_end(&lower, abs_open);
+        cursor = tag_end;
+
+        let Some(rel_close) = lower[cursor..].find("</style>") else {
             break;
         };
-        let block_start = abs + brace_open + 1;
-        let block_end = css[block_start..]
-            .find('}')
-            .map_or(css.len(), |e| block_start + e);
-        let block = &css[block_start..block_end];
-
-        let kills_outline = block.contains("outline:none")
-            || block.contains("outline: none")
-            || block.contains("outline:0")
-            || block.contains("outline: 0");
-        let has_replacement = block.contains("outline-style")
-            || block.contains("outline-color")
-            || block.contains("box-shadow")
-            || block.contains("border:");
-
-        if kills_outline && !has_replacement {
-            issues.push(AccessibilityIssue {
-                criterion: "2.4.13".to_string(),
-                severity: "warning".to_string(),
-                message: "`:focus { outline: none }` without a \
-                          compensating outline-style/box-shadow/border \
-                          (WCAG 2.2 AAA — Focus Appearance)"
-                    .to_string(),
-            });
-        }
-
-        i = block_end + 1;
+        // Use the original-case slice (we lowercase later in
+        // `preprocess_css` so case-sensitive selectors don't get
+        // inadvertently normalised before extraction).
+        blocks.push(html[cursor..cursor + rel_close].to_string());
+        cursor += rel_close + "</style>".len();
     }
+
+    blocks
+}
+
+/// CSS preprocessor: lowercases, strips `/* ... */` comments, and
+/// removes the body of any `@media` / `@supports` / `@keyframes`
+/// at-rule. The returned string contains only the top-level rules
+/// that apply unconditionally to every viewport.
+///
+/// At-rule body removal is brace-balanced — it correctly skips over
+/// nested blocks inside `@supports (display: grid) { @media (prefers
+/// ...) { ... } }`. The at-rule's own preamble (the `@supports (...)`
+/// part) is dropped along with its body.
+fn preprocess_css(css: &str) -> String {
+    let lower = css.to_lowercase();
+    let no_comments = strip_css_comments(&lower);
+    strip_at_rules(&no_comments)
+}
+
+fn strip_css_comments(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if i + 1 < bytes.len() && &bytes[i..i + 2] == b"/*" {
+            // Skip until the matching `*/`.
+            i += 2;
+            while i + 1 < bytes.len() && &bytes[i..i + 2] != b"*/" {
+                i += 1;
+            }
+            i = (i + 2).min(bytes.len());
+            // Replace the comment with a single space so adjacent
+            // tokens don't accidentally merge (`/*x*/y` → ` y`).
+            out.push(' ');
+        } else {
+            out.push(bytes[i] as char);
+            i += 1;
+        }
+    }
+    out
+}
+
+fn strip_at_rules(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'@' {
+            // Skip the at-rule preamble until either `;` (rule
+            // terminator, e.g. `@import`) or `{` (block start).
+            let mut j = i;
+            while j < bytes.len() && bytes[j] != b'{' && bytes[j] != b';' {
+                j += 1;
+            }
+            if j >= bytes.len() {
+                break;
+            }
+            if bytes[j] == b';' {
+                // Bare at-rule with no block — skip including the `;`.
+                i = j + 1;
+                continue;
+            }
+            // Brace-balanced skip of the at-rule body.
+            let mut depth = 0_i32;
+            let mut k = j;
+            while k < bytes.len() {
+                match bytes[k] {
+                    b'{' => depth += 1,
+                    b'}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            k += 1;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                k += 1;
+            }
+            i = k;
+            continue;
+        }
+        out.push(bytes[i] as char);
+        i += 1;
+    }
+    out
+}
+
+/// Splits CSS into `(selector, body)` pairs at the top level. Comments
+/// and at-rules must already be removed.
+fn parse_top_level_rules(css: &str) -> Vec<(String, String)> {
+    let mut rules = Vec::new();
+    let bytes = css.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let Some(open_rel) = css[i..].find('{') else {
+            break;
+        };
+        let open = i + open_rel;
+        let selector = css[i..open].trim().to_string();
+        if selector.is_empty() {
+            i = open + 1;
+            continue;
+        }
+        // Brace-balanced body extraction (handles nested `{}` even
+        // though plain CSS doesn't use them — defensive).
+        let mut depth = 1_i32;
+        let mut j = open + 1;
+        while j < bytes.len() {
+            match bytes[j] {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            j += 1;
+        }
+        let body = css[open + 1..j].to_string();
+        rules.push((selector, body));
+        i = j + 1;
+    }
+    rules
 }
 
 /// WCAG 2.2 — 3.2.6 Consistent Help (Level A).
@@ -1126,5 +1260,117 @@ mod tests {
         assert!(names.contains(&"2.4.13"));
         assert!(names.contains(&"2.5.8"));
         assert!(names.contains(&"3.2.6"));
+    }
+
+    // ── CSS preprocessor (audit fix item #3) ───────────────────────
+
+    #[test]
+    fn target_size_ignores_value_inside_css_comment() {
+        // Pre-fix: `/* width: 10px */` inside a button rule
+        // triggered a false 2.5.8 violation.
+        let html = r#"<html lang="en"><head><style>
+            button { /* width: 10px */ width: 32px; height: 32px; }
+        </style></head><body><main></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "2.5.8"),
+            "comment must not trigger 2.5.8, got {issues:?}"
+        );
+    }
+
+    #[test]
+    fn target_size_ignores_rule_inside_media_query() {
+        // Rules nested in `@media` only apply conditionally; they
+        // must not be treated as unconditional violations.
+        let html = r#"<html lang="en"><head><style>
+            @media print { button { width: 10px; height: 10px; } }
+            button { width: 32px; height: 32px; }
+        </style></head><body><main></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "2.5.8"),
+            "@media-nested 10px must not flag 2.5.8, got {issues:?}"
+        );
+    }
+
+    #[test]
+    fn target_size_scans_every_style_block() {
+        // Pre-fix: only the first <style> was inspected.
+        let html = r#"<html lang="en">
+            <head>
+                <style>p { color: red }</style>
+                <style>button { width: 8px; height: 8px; }</style>
+            </head>
+            <body><main></main></body>
+        </html>"#;
+        let issues = check_page(html);
+        assert!(
+            issues.iter().any(|i| i.criterion == "2.5.8"),
+            "second <style> block's button rule must be inspected, got {issues:?}"
+        );
+    }
+
+    #[test]
+    fn focus_appearance_ignores_outline_none_inside_supports() {
+        // `outline:none` inside `@supports` only applies under that
+        // condition; not an unconditional 2.4.13 violation.
+        let html = r#"<html lang="en"><head><style>
+            @supports (display: grid) { a:focus { outline: none; } }
+            a:focus { outline: 2px solid blue; }
+        </style></head><body><main></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "2.4.13"),
+            "@supports-nested outline:none must not flag 2.4.13, got {issues:?}"
+        );
+    }
+
+    #[test]
+    fn parse_top_level_rules_skips_empty_selector() {
+        let rules = parse_top_level_rules("{ width: 10px; }");
+        assert!(rules.is_empty());
+    }
+
+    #[test]
+    fn strip_at_rules_handles_nested_media() {
+        let css = "a { color: red } @media print { a { color: blue } } b { color: green }";
+        let stripped = strip_at_rules(css);
+        assert!(stripped.contains("a { color: red }"));
+        assert!(stripped.contains("b { color: green }"));
+        assert!(!stripped.contains("@media"));
+        // The print rule's `color: blue` declaration must be gone.
+        assert!(!stripped.contains("blue"));
+    }
+
+    #[test]
+    fn strip_css_comments_removes_block_comments() {
+        let css = "a { /* hidden */ color: red; }";
+        let stripped = strip_css_comments(css);
+        assert!(!stripped.contains("hidden"));
+        assert!(stripped.contains("color: red"));
+    }
+
+    #[test]
+    fn strip_css_comments_handles_unterminated_comment() {
+        // Defensive: an unterminated /* should not loop forever.
+        let css = "a { /* never closes";
+        let _ = strip_css_comments(css);
+    }
+
+    #[test]
+    fn extract_all_style_blocks_returns_every_block() {
+        let html = "<html><head><style>x{}</style><style>y{}</style></head></html>";
+        let blocks = extract_all_style_blocks(html);
+        assert_eq!(blocks.len(), 2);
+        assert_eq!(blocks[0].trim(), "x{}");
+        assert_eq!(blocks[1].trim(), "y{}");
+    }
+
+    #[test]
+    fn extract_all_style_blocks_handles_attributes_with_quoted_gt() {
+        let html = r#"<html><head><style data-tag="x>y">a{}</style></head></html>"#;
+        let blocks = extract_all_style_blocks(html);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].trim(), "a{}");
     }
 }

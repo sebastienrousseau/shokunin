@@ -366,33 +366,149 @@ pub fn validate_jsonld(html: &str) -> Vec<JsonLdValidationError> {
 
 /// Returns the inner JSON of every `<script type="application/ld+json">`
 /// block. Tolerant of attribute order and whitespace.
+///
+/// Resolves audit items #4 + #5:
+/// - `type` is parsed as a discrete attribute value rather than
+///   substring-matched, so `type="application/ld+json/extra"` no
+///   longer falsely qualifies.
+/// - The `</script>` close finder is JSON-string-aware: a literal
+///   `</script>` *inside* a JSON string value (e.g.
+///   `"description": "code: </script>"`) is correctly skipped over.
+///   The HTML5 spec actually forbids `</script>` inside script
+///   bodies even in strings — most authors escape as `<\/script>`
+///   — but our extractor handles either form gracefully.
 fn extract_jsonld_blocks(html: &str) -> Vec<String> {
     let mut blocks = Vec::new();
     let lower = html.to_lowercase();
     let mut cursor = 0;
 
-    while let Some(open) = lower[cursor..].find("<script") {
-        let abs_open = cursor + open;
-        let Some(open_end) = lower[abs_open..].find('>') else {
-            break;
-        };
-        let tag = &lower[abs_open..abs_open + open_end];
-        cursor = abs_open + open_end + 1;
+    while let Some(rel_open) = lower[cursor..].find("<script") {
+        let abs_open = cursor + rel_open;
+        // Use find_tag_end equivalent: advance past `>` while
+        // skipping any `>` characters that appear inside quoted
+        // attribute values. Without this, `<script type="text/x>y">`
+        // would close prematurely at the inner `>`.
+        let tag_end = find_html_tag_end(&lower, abs_open);
+        let tag = &lower[abs_open..tag_end];
+        cursor = tag_end;
 
-        if !tag.contains("application/ld+json") {
+        if !is_jsonld_script_tag(tag) {
             continue;
         }
 
-        let Some(close) = lower[cursor..].find("</script>") else {
+        let Some(close) = find_script_close_skipping_strings(&html[cursor..])
+        else {
             break;
         };
-        // Use the original-case slice for the actual JSON payload —
+        // Use the original-case slice for the JSON payload —
         // schema.org values are case-sensitive.
         blocks.push(html[cursor..cursor + close].trim().to_string());
         cursor += close + "</script>".len();
     }
 
     blocks
+}
+
+/// Returns `true` if the `<script ...>` tag declares
+/// `type="application/ld+json"` exactly (any quoting; no
+/// substring match).
+fn is_jsonld_script_tag(tag: &str) -> bool {
+    extract_attr(tag, "type")
+        .map(|v| v.eq_ignore_ascii_case("application/ld+json"))
+        .unwrap_or(false)
+}
+
+/// Extracts the value of an HTML attribute from an open-tag string.
+/// Tolerant of quoting and whitespace. Returns `None` if the
+/// attribute is absent or has no value.
+fn extract_attr(tag: &str, name: &str) -> Option<String> {
+    let lower = tag.to_lowercase();
+    let needle = format!("{}=", name.to_lowercase());
+    let idx = lower.find(&needle)?;
+    // Make sure the match starts at a token boundary (preceding
+    // char is whitespace or `<` or the very start of `tag`).
+    let pre = lower.as_bytes().get(idx.wrapping_sub(1));
+    let boundary_ok = idx == 0
+        || matches!(pre, Some(b) if b.is_ascii_whitespace() || *b == b'<');
+    if !boundary_ok {
+        return None;
+    }
+    let rest = &tag[idx + needle.len()..];
+    let trimmed = rest.trim_start();
+    if let Some(s) = trimmed.strip_prefix('"') {
+        s.find('"').map(|e| s[..e].to_string())
+    } else if let Some(s) = trimmed.strip_prefix('\'') {
+        s.find('\'').map(|e| s[..e].to_string())
+    } else {
+        let end = trimmed
+            .find(|c: char| c.is_whitespace() || c == '>')
+            .unwrap_or(trimmed.len());
+        Some(trimmed[..end].to_string())
+    }
+}
+
+/// Returns the byte offset of `</script>` in `body` while ignoring
+/// occurrences that appear *inside* a JSON string literal.
+///
+/// The walker tracks two pieces of state: whether we're currently
+/// inside a `"..."` string, and whether the previous byte was the
+/// JSON escape character `\`. Scanning is done in bytes (UTF-8 is
+/// not relevant for the ASCII-only delimiters we care about).
+fn find_script_close_skipping_strings(body: &str) -> Option<usize> {
+    let bytes = body.as_bytes();
+    let needle = b"</script>";
+    let mut i = 0;
+    let mut in_string = false;
+    let mut escape = false;
+    while i < bytes.len() {
+        if in_string {
+            if escape {
+                escape = false;
+            } else if bytes[i] == b'\\' {
+                escape = true;
+            } else if bytes[i] == b'"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        if bytes[i] == b'"' {
+            in_string = true;
+            i += 1;
+            continue;
+        }
+        // Case-insensitive check for `</script>`.
+        if i + needle.len() <= bytes.len()
+            && bytes[i..i + needle.len()].eq_ignore_ascii_case(needle)
+        {
+            return Some(i);
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Like `accessibility::find_tag_end` — returns the index just past
+/// the `>` that closes the open tag at `tag_start`, while skipping
+/// `>` characters that occur inside quoted attribute values.
+fn find_html_tag_end(html: &str, tag_start: usize) -> usize {
+    let bytes = html.as_bytes();
+    let mut i = tag_start;
+    let mut quote: Option<u8> = None;
+    while i < bytes.len() {
+        let b = bytes[i];
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None => match b {
+                b'"' | b'\'' => quote = Some(b),
+                b'>' => return i + 1,
+                _ => {}
+            },
+        }
+        i += 1;
+    }
+    bytes.len()
 }
 
 /// Validates a single parsed JSON-LD value (object or array).
@@ -877,5 +993,83 @@ mod tests {
         // Org passes; Article missing 3 of 4 required.
         assert_eq!(errs.iter().filter(|e| e.schema_type == "Organization").count(), 0);
         assert!(errs.iter().filter(|e| e.schema_type == "Article").count() >= 3);
+    }
+
+    // ── Strict type-attribute parsing (audit fix item #4) ──────────
+
+    #[test]
+    fn validate_skips_extra_qualified_type() {
+        // `application/ld+json/extra` must NOT be treated as JSON-LD.
+        // Pre-fix: `tag.contains("application/ld+json")` falsely
+        // matched this.
+        let html = r#"<script type="application/ld+json/extra">
+            {"@type":"Article"}
+        </script>"#;
+        assert!(
+            validate_jsonld(html).is_empty(),
+            "non-JSON-LD type must not be validated"
+        );
+    }
+
+    #[test]
+    fn validate_recognises_type_with_single_quotes() {
+        let html = r#"<script type='application/ld+json'>
+            {"@type":"Organization","name":"O","url":"https://o/"}
+        </script>"#;
+        assert!(validate_jsonld(html).is_empty());
+    }
+
+    #[test]
+    fn validate_recognises_type_after_other_attrs() {
+        let html = r#"<script id="ld1" type="application/ld+json">
+            {"@type":"Organization","name":"O","url":"https://o/"}
+        </script>"#;
+        assert!(validate_jsonld(html).is_empty());
+    }
+
+    // ── String-literal-aware </script> finder (audit fix item #5) ──
+
+    #[test]
+    fn validate_handles_close_script_inside_json_string() {
+        // The old extractor truncated at the first `</script>` inside
+        // a string value, producing parse-failure noise. The fixed
+        // extractor only honours `</script>` outside JSON strings.
+        let html = r#"<script type="application/ld+json">
+            {"@type":"Article",
+             "headline":"H","datePublished":"2026-01-01",
+             "author":"A","image":"https://x/i.png",
+             "description":"this contains a </script> inside the string and is still valid JSON"}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        // Article has all 4 required fields. The pre-fix bug would
+        // have produced an Unparseable error because the extractor
+        // would close at the inner `</script>`, leaving truncated
+        // JSON.
+        assert!(
+            errs.iter().all(|e| e.schema_type != "Unparseable"),
+            "no parse errors expected, got {errs:?}"
+        );
+    }
+
+    #[test]
+    fn extract_attr_returns_none_when_attribute_absent() {
+        assert_eq!(extract_attr("<script src=x>", "type"), None);
+    }
+
+    #[test]
+    fn extract_attr_handles_double_quoted_value() {
+        assert_eq!(
+            extract_attr(r#"<script type="application/ld+json">"#, "type"),
+            Some("application/ld+json".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_attr_rejects_substring_match_in_other_attribute() {
+        // `data-mytype="foo"` must NOT match a `type=` query.
+        assert_eq!(
+            extract_attr(r#"<script data-mytype="foo">"#, "type"),
+            None
+        );
     }
 }
