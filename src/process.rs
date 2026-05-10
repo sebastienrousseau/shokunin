@@ -22,7 +22,11 @@ use anyhow::Result;
 use clap::ArgMatches;
 use std::{fs, path::Path};
 /// Represents errors that may occur during argument processing.
+///
+/// Marked `#[non_exhaustive]` so new error cases can be added in minor
+/// versions. Consumers should always include a wildcard arm.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ProcessError {
     /// Occurs when a directory cannot be created.
     ///

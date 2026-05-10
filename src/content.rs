@@ -51,7 +51,11 @@ use crate::plugin::{Plugin, PluginContext};
 // -----------------------------------------------------------------------
 
 /// The type of a frontmatter field.
+///
+/// Marked `#[non_exhaustive]` so additional validators (`Uuid`, `Slug`,
+/// `Email`, `Url`) can land without a breaking release.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum FieldType {
     /// Free-form string.
     String,

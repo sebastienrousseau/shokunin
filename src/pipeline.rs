@@ -91,10 +91,14 @@ fn extract_file_from_error(msg: &str) -> Option<String> {
 /// CLI-driven options that don't live in `SsgConfig` itself.
 ///
 /// Extracted from clap matches so the run pipeline can be unit-tested
-/// without going through `Cli::build()`.
+/// without going through `Cli::build()`. **Internal**: this is a
+/// CLI-implementation type, not part of the library surface — it is
+/// `pub(crate)` for in-crate test access only. See
+/// [API stability audit](../../docs/architecture/api-stability-audit.md)
+/// (Tier C) for context.
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
-pub struct RunOptions {
+pub(crate) struct RunOptions {
     /// Suppress banner and timing print-outs.
     pub quiet: bool,
     /// Include draft files (skip the `DraftPlugin` filter).

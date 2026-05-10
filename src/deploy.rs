@@ -11,7 +11,12 @@ use anyhow::Result;
 use std::fs;
 
 /// Supported deployment targets.
+///
+/// Marked `#[non_exhaustive]` so future targets (AWS, Azure Static Web
+/// Apps, Cloudflare R2 sites) can be added without a major version bump.
+/// Downstream consumers must use a wildcard arm in `match` expressions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DeployTarget {
     /// Netlify (`netlify.toml`).
     Netlify,

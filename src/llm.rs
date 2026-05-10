@@ -746,7 +746,11 @@ fn extract_attr(tag: &str, attr: &str) -> Option<String> {
 // =====================================================================
 
 /// Readability formula selection based on content language.
+///
+/// Marked `#[non_exhaustive]` so additional formulae (Dale-Chall,
+/// Linsear-Write, Coleman-Liau) can ship in minor versions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ReadabilityFormula {
     /// Flesch-Kincaid (English).
     FleschKincaid,

@@ -239,6 +239,29 @@ impl PluginContext {
 /// Implement this trait to create a plugin that hooks into the site
 /// generation lifecycle. All hooks have default no-op implementations,
 /// so you only need to override the ones you care about.
+///
+/// # Stability contract
+///
+/// This trait is part of the SSG public API. The stability commitment
+/// for the `1.0` line is:
+///
+/// 1. **All current hook signatures are frozen.** Once `1.0` ships, no
+///    parameter, return type, or trait bound on an existing method
+///    will change without a major version bump.
+/// 2. **New hooks land with a default `Ok(())` implementation.**
+///    Adding a new hook is therefore non-breaking — existing
+///    `impl Plugin for …` blocks continue to compile.
+/// 3. **`PluginContext` is `#[non_exhaustive]`.** New fields (e.g.
+///    additional caches, link graphs, image metadata) can be added
+///    without breaking downstream construction sites — those are
+///    constructed inside SSG, not by plugin authors.
+/// 4. **Removing a hook requires a major bump.** Hook removal is rare
+///    and always preceded by a deprecation cycle of at least one
+///    minor release with `#[deprecated]` and a migration note in the
+///    CHANGELOG.
+///
+/// See [API stability audit](../../docs/architecture/api-stability-audit.md)
+/// for the full Tier-A inventory.
 pub trait Plugin: fmt::Debug + Send + Sync {
     /// Returns the unique name of this plugin.
     fn name(&self) -> &str;
