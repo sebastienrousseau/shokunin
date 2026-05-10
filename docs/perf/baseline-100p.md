@@ -45,15 +45,37 @@ local M-class Apple Silicon developer machine (release profile,
 `CARGO_PROFILE_DEV_DEBUG=0`, no `incremental`, fresh tempdir each
 iteration).
 
-| Tier | Local M-arm64 | GitHub `ubuntu-latest` (target) | Goal v0.0.41 |
+| Tier | Local M-arm64 (this branch, 2026-05-10) | GitHub `ubuntu-latest` (target) | Goal v0.0.41 |
 |---|---|---|---|
-| 100 pages | _captured separately — see criterion report at `target/criterion/scalability/compile/100 pages/`_ | TBD on next CI bench job | **< 50 ms** |
-| 1K pages | _captured separately_ | TBD | **< 500 ms** |
-| 10K pages | _captured separately_ | TBD | < 5 s (stretch) |
+| 100 pages | **18.45 – 19.00 ms** (mean 18.71 ms, 95 % CI) | TBD on next CI bench job | **< 50 ms** |
+| 1K pages | _to be measured_ | TBD | **< 500 ms** |
+| 10K pages | _to be measured_ | TBD | < 5 s (stretch) |
+
+⚠️ **Caveat on the 100-page number.** The synthetic corpus generated
+by `bench_scalability.rs` triggers a `MiniJinja` "Unresolved template
+tag: charset" error during render — the bundled benchmark template
+references variables the synthetic frontmatter doesn't supply. The
+benchmark's `compile_site` call therefore exits *early* on render and
+the 18 ms number reflects:
+
+- tempdir setup + corpus generation (excluded from the timing per
+  criterion's `iter_with_setup`)
+- file walk + frontmatter parse for 100 pages
+- pipeline scaffolding up to the first render failure
+- partial cleanup
+
+It does **not** reflect the cost of full HTML rendering, plugin
+fan-out, search-index construction, asset fingerprinting, or sitemap
+emission. For a true cold-build baseline, the synthetic corpus
+generator must seed the template variables the layout expects
+(charset, lang, viewport, og:title chain). Treat the 18 ms as a
+floor — the realistic 100-page cold build is meaningfully higher and
+should be re-measured once the bench corpus is template-complete.
 
 The CI bench job already exists in `scheduled.yml` and runs on tag
 push. To establish the per-platform baselines, push a `v*` tag (or
-trigger `workflow_dispatch`) and pull the `benchmark-results` artifact.
+trigger `workflow_dispatch`) and pull the `benchmark-results` artifact
+— but the corpus fix is a prerequisite for trustworthy CI numbers.
 
 ## Bench Infrastructure Notes (Discovered During Audit)
 
