@@ -101,6 +101,8 @@ pub mod assets;
 /// Content fingerprinting for incremental builds.
 pub mod cache;
 pub mod cmd;
+/// Typed content collection API — `get_collection` / `get_entry` (issue #456).
+pub mod collections;
 /// Typed content collections with frontmatter schema validation.
 pub mod content;
 /// Content Security Policy hardening: inline extraction + SRI.
@@ -134,6 +136,12 @@ pub mod logging;
 pub mod markdown_ext;
 /// Auto-generates Open Graph social card images from page metadata.
 pub mod og_image;
+/// Optional OpenTelemetry build-pipeline tracing (issue #422).
+///
+/// Compiles to an empty stub when the `otel` feature is off, so
+/// callers can always reference [`otel::init_if_enabled`] without
+/// `#[cfg]`-guarding every call site.
+pub mod otel;
 /// Pagination for listing pages.
 pub mod pagination;
 /// Build pipeline orchestration.
@@ -147,6 +155,8 @@ pub mod plugins;
 pub mod postprocess;
 /// Command-line argument processing and site compilation.
 pub mod process;
+/// Build-time CycloneDX SBOM generation (issue #457).
+pub mod sbom;
 /// Project scaffolding for `--new`.
 pub mod scaffold;
 /// JSON Schema generation for configuration.
@@ -429,6 +439,12 @@ pub fn run() -> Result<()> {
     let matches = Cli::build().get_matches();
 
     logging::initialize_logging()?;
+
+    // OTel build tracing — only initialises if both the `otel` feature
+    // is compiled in AND `--trace` was passed. No-op otherwise.
+    let trace_flag = matches.get_flag("trace");
+    let _ = otel::init_if_enabled(trace_flag);
+
     info!("Starting site generation process");
 
     let config = SsgConfig::from_matches(&matches)?;

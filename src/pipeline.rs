@@ -91,7 +91,13 @@ fn extract_file_from_error(msg: &str) -> Option<String> {
 /// CLI-driven options that don't live in `SsgConfig` itself.
 ///
 /// Extracted from clap matches so the run pipeline can be unit-tested
-/// without going through `Cli::build()`.
+/// without going through `Cli::build()`. **Internal**: this is a
+/// CLI-implementation type, not part of the library surface. The
+/// containing module is `pub(crate)`, so this `pub` is effectively
+/// crate-local — clippy's `redundant_pub_crate` flagged the prior
+/// `pub(crate)` here. See
+/// [API stability audit](../../docs/architecture/api-stability-audit.md)
+/// (Tier C) for context.
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct RunOptions {
@@ -197,6 +203,14 @@ pub fn build_pipeline(
 ///
 /// Extracted from `run()` so the actual build can be unit-tested
 /// against a tempdir without booting an HTTP server.
+#[cfg_attr(
+    feature = "otel",
+    tracing::instrument(skip(plugins, ctx), fields(
+        content_dir = %content_dir.display(),
+        site_dir = %site_dir.display(),
+        quiet,
+    ))
+)]
 pub fn execute_build_pipeline(
     plugins: &plugin::PluginManager,
     ctx: &plugin::PluginContext,
@@ -369,6 +383,11 @@ pub fn register_default_plugins(
 
     // CSP hardening: extract inline styles/scripts to external files with SRI
     plugins.register(csp::CspPlugin);
+
+    // SBOM emission + per-page link (resolves #457). Runs before
+    // FingerprintPlugin so the SBOM filename itself isn't subject to
+    // content-hash renaming (consumers fetch a stable URL).
+    plugins.register(crate::sbom::SbomPlugin);
 
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);

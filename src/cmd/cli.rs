@@ -106,6 +106,17 @@ impl Cli {
                     .action(ArgAction::SetTrue),
             )
             .arg(
+                // Resolves #422. The flag is always parsed so scripts
+                // are stable across feature-on/feature-off builds; if
+                // the binary was compiled without the `otel` feature
+                // we accept the flag and emit a warning when it's
+                // present but the runtime support isn't compiled in.
+                Arg::new("trace")
+                    .help("Enable OpenTelemetry build tracing (requires `otel` feature)")
+                    .long("trace")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
                 Arg::new("jobs")
                     .help("Number of parallel threads (default: num CPUs)")
                     .long("jobs")

@@ -62,6 +62,86 @@ jobs:
         env: { RUSTDOCFLAGS: -D warnings }
         run: cargo doc --no-deps -p ssg
 
+  # ── Multi-OS example_outputs validators (resolves #473) ─────────────
+  # Mirrors the `examples` job in ci.yml but on macOS + Windows runners.
+  # Kept out of the per-PR `examples` job because the cargo build of every
+  # example on a cold macOS/Windows runner is ~3× slower than Linux; running
+  # weekly + on tag is the right cadence for catching platform regressions.
+  examples-portability:
+    name: example_outputs · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: examples-${{ matrix.os }}
+          save-if: ${{ github.event_name == 'schedule' }}
+      - name: Build all examples
+        shell: bash
+        run: cargo build --examples --quiet --locked
+      - name: Validator regression suite
+        # `--test-threads=1` because examples bind 127.0.0.1:3000.
+        shell: bash
+        run: cargo test --test example_outputs --locked -- --test-threads=1
+
+  # ── Reproducible build verification (resolves #424) ─────────────────
+  # Builds the release binary twice on the same SHA and asserts the SHA-256
+  # hashes match. Path remapping via --remap-path-prefix removes the
+  # absolute checkout path from the binary; SOURCE_DATE_EPOCH pins
+  # build-time timestamps. A divergence here means a non-determinism
+  # leaked in (timestamp, $HOME path, parallel codegen ordering, etc.).
+  reproducible:
+    name: reproducible build · linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SOURCE_DATE_EPOCH: "1700000000"
+      RUSTFLAGS: "--remap-path-prefix=${{ github.workspace }}=/build"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Pre-fetch all dependencies
+        # Populates the local cargo cache so the second build can run
+        # `--offline` without any network nondeterminism leaking in
+        # (transient registry state, sparse-index timing, etc.).
+        run: cargo fetch --locked
+      - name: First build
+        run: |
+          cargo build --release --locked --offline -p ssg
+          sha256sum target/release/ssg > /tmp/build1.sha256
+          echo "Build 1: $(cat /tmp/build1.sha256)"
+      - name: Clean target
+        run: cargo clean -p ssg
+      - name: Second build
+        run: |
+          cargo build --release --locked --offline -p ssg
+          sha256sum target/release/ssg > /tmp/build2.sha256
+          echo "Build 2: $(cat /tmp/build2.sha256)"
+      - name: Compare hashes
+        run: |
+          set -euo pipefail
+          h1=$(awk '{print $1}' /tmp/build1.sha256)
+          h2=$(awk '{print $1}' /tmp/build2.sha256)
+          if [ "$h1" = "$h2" ]; then
+            echo "✓ Reproducible: ${h1}"
+          else
+            echo "::error::Non-reproducible build — hashes differ:"
+            echo "  build1: ${h1}"
+            echo "  build2: ${h2}"
+            echo "Investigate via: diff <(strings target/release/ssg)"
+            exit 1
+          fi
+
   # ── Static musl release binary ──────────────────────────────────────
   musl:
     name: linux · musl static
@@ -204,7 +284,7 @@ jobs:
         # by default when using --format json.
         run: cargo cyclonedx --format json
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-cyclonedx
           path: ./*.cdx.json
@@ -234,7 +314,7 @@ jobs:
       - name: Run scalability benchmarks
         run: cargo bench --bench bench -- scalability
       - name: Upload benchmark results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: benchmark-results
           path: target/criterion/

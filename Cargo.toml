@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.38"                      # The version of the library
+version = "0.0.39"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -32,7 +32,8 @@ categories = [
 ]
 
 # Keywords for easier discoverability on Crates.io
-keywords = ["cli", "generator", "ssg", "static-site", "wasm"]
+# (max 5 keywords; chosen for SEO across crates.io search and lib.rs).
+keywords = ["rust", "markdown", "jamstack", "ssg", "wasm"]
 
 # Excluding unnecessary files from the package
 exclude = [
@@ -103,6 +104,13 @@ templates = ["minijinja"]               # MiniJinja templating engine with inher
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 
+# OpenTelemetry build-pipeline tracing (issue #422). Off by default —
+# enabling pulls `tracing` + `tracing-subscriber` for stdout JSON
+# export. The OTLP/gRPC + Jaeger exporters are an additive layer
+# tracked separately; introducing them now would pull `tokio` into
+# the dependency graph, which the project otherwise avoids.
+otel = ["dep:tracing", "dep:tracing-subscriber"]
+
 # -----------------------------------------------------------------------------
 # Build Dependencies
 # -----------------------------------------------------------------------------
@@ -117,7 +125,7 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
 serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
-uuid = { version = "1.22.0", features = ["v4"] }
+uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
@@ -128,7 +136,7 @@ proptest = "1"
 [dependencies]
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
-clap = { version = "4.6.0", features = ["derive", "cargo", "env"] }
+clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.4"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
@@ -137,6 +145,13 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 staticdatagen = "0.0.8"
 toml = "1.1.2"
+
+# Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
+# Replaces the previous FNV-1a placeholder that emitted invalid `sha256-`
+# integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
+# `base64` emits the canonical base64 encoding that browsers expect.
+sha2 = "0.10"
+base64 = "0.22"
 
 
 # Optional dependencies (feature-gated)
@@ -148,17 +163,31 @@ image = { version = "0.25", optional = true, default-features = false, features 
 # Owned crate for frontmatter parsing
 frontmatter-gen = "0.0.5"
 
+# Optional observability stack (issue #422). Both crates are
+# `optional = true` — they enter the build only when the `otel`
+# feature is enabled. The `dep:` references in the [features]
+# section above wire them up. The OTLP/Jaeger exporter bridge
+# (tracing-opentelemetry + opentelemetry_sdk) is deliberately
+# deferred — it would pull `tokio` and `rt-tokio` into the
+# dependency graph and the rest of SSG is rayon-based.
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
+
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.77", features = ["vendored"] }
+openssl = { version = "0.10.79", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
+# benches/bench.rs is the umbrella entry — it `mod`s the per-area files
+# and lists their criterion groups as targets. Adding new bench files
+# requires both a `mod` line and a target entry in bench.rs (NOT a new
+# [[bench]] section here — those would collide with bench.rs's
+# criterion_main!).
 [[bench]]
-# Benchmarking configuration for performance testing.
-name = "bench"                              # Name of the benchmark
-harness = false                             # Disable the default benchmark harness (used by Criterion)
+name = "bench"
+harness = false
 
 # -----------------------------------------------------------------------------
 # Examples

@@ -2,7 +2,7 @@
 
 # Accessibility
 
-SSG validates generated HTML against WCAG 2.1 Level AA on every build via the `AccessibilityPlugin`.
+SSG validates generated HTML against WCAG 2.2 Level AA on every build via the `AccessibilityPlugin`. The plugin emits two artifacts in the site directory: `accessibility-report.json` (per-page issue list) and `wcag-compliance.json` (criterion-by-criterion matrix). See the [WCAG 2.2 Compliance guide](wcag-compliance.md) for the full criterion mapping.
 
 ## Automatic Checks
 
@@ -65,7 +65,7 @@ The CI workflow (`.github/workflows/`) runs pa11y on every push:
 1. Builds the example site with `cargo run`
 2. Starts the dev server
 3. Runs pa11y against all pages
-4. Fails the build if any WCAG 2.1 AA violations are found
+4. Fails the build if any WCAG 2.2 AA violations are found
 
 ### Running Locally
 
@@ -109,6 +109,7 @@ The `AccessibilityPlugin` logs warnings but does not fail the build. The report 
 
 ## Next Steps
 
+- [WCAG 2.2 Compliance by Default](wcag-compliance.md) — full criterion-by-criterion mapping and EAA context
 - [Images](images.md) — responsive images with proper alt text
 - [Templates](templates.md) — ensure templates use semantic HTML
 - [SEO](seo.md) — accessibility and SEO overlap

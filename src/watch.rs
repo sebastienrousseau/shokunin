@@ -49,7 +49,12 @@ use std::time::{Duration, SystemTime};
 // ---------------------------------------------------------------------------
 
 /// Categorises a file change for selective reload.
+///
+/// Marked `#[non_exhaustive]` so new classifications (e.g. asset
+/// fingerprint invalidation, schema change) can be added without
+/// breaking downstream watchers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ChangeKind {
     /// CSS file — can be hot-reloaded without full page reload.
     Css,

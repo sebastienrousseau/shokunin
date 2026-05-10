@@ -32,9 +32,13 @@ use std::{
 // ── Configuration ────────────────────────────────────────────────────
 
 /// Strategy for constructing locale-specific URLs.
+///
+/// Marked `#[non_exhaustive]` so future strategies (e.g. query-string,
+/// custom plugin-driven mapping) can be added non-breakingly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[derive(Default)]
+#[non_exhaustive]
 pub enum UrlPrefixStrategy {
     /// Locale appears as a path prefix: `https://example.com/fr/about`
     #[default]

@@ -125,6 +125,30 @@ jobs:
       - name: Validator regression suite
         # `--test-threads=1` because examples bind 127.0.0.1:3000.
         run: cargo test --test example_outputs -- --test-threads=1
+      - name: JSON-LD schema validation
+        # Walks every examples/*/public HTML produced above, extracts
+        # all <script type="application/ld+json"> blocks, and validates
+        # required fields per schema.org @type. Resolves #467.
+        run: cargo test --test jsonld_validation
+      - name: Universal HTML element-presence gate
+        # Asserts every page in every example output satisfies the 10
+        # universal invariants (lang, title, meta description, main,
+        # h1, canonical, og:* chain, twitter:card, viewport, charset).
+        # See docs/architecture/regression-contract.md §2.
+        run: cargo test --test element_presence
+      - name: End-to-end build performance budgets
+        # Hard wall-clock gate for 10/100-page synthetic-corpus builds.
+        # See docs/architecture/regression-contract.md §3.
+        run: cargo test --test perf_budgets
+      - name: Documentation accuracy gate
+        # Verifies README claims match source-of-truth files (test
+        # count, WCAG version, coverage floors, MSRV, version sync,
+        # SBOM/CycloneDX version, SECURITY.md disclosure section).
+        run: cargo test --test docs_accuracy
+      - name: Internal Markdown link integrity gate
+        # Walks every .md in README/CHANGELOG/SECURITY/docs/* and
+        # asserts every relative link resolves to an existing file.
+        run: cargo test --test doc_links
 
   # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
   coverage:

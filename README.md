@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.38-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.39-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -27,7 +27,7 @@
 - [Overview](#overview) -- what SSG does
 - [Architecture](#architecture) -- build pipeline diagram
 - [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.38 capability matrix
+- [Features](#features) -- v0.0.39 capability matrix
 - [The CLI](#the-cli) -- flags and usage
 - [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
 - [Examples](#examples) -- 8 branded examples
@@ -41,7 +41,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.38"
+ssg = "0.0.39"
 ```
 
 ### Prebuilt binaries
@@ -57,7 +57,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu
-sudo dpkg -i ssg_0.0.38_amd64.deb
+sudo dpkg -i ssg_0.0.39_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -101,14 +101,14 @@ ssg -c content -o public -t templates --ai-fix
 
 ## Overview
 
-SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.1 AA accessibility compliance, multilingual readability scoring, and feed generation. The 33-plugin pipeline handles the rest.
+SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.2 AA accessibility compliance (including the new 2.5.8, 2.4.13, 3.2.6 criteria where automatable), multilingual readability scoring, and feed generation. The 33-plugin pipeline handles the rest.
 
 - **33-plugin pipeline** -- SEO, a11y, i18n, search, images, AI, CSP, JSON-LD, RSS, sitemaps
 - **Agentic AI pipeline** -- audit, diagnose, fix, and verify content readability via local LLM
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Streaming compilation** -- configurable memory budgets for 100K+ page sites
-- **WCAG 2.1 AA** -- accessibility compliance validated on every build with axe-core CI
+- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (planned for v0.0.40)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
 ---
@@ -169,7 +169,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod |
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
-| **Accessibility** | WCAG 2.1 AA validation on every build, axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks |
+| **Accessibility** | WCAG 2.2 AA validation on every build (1.1.1, 1.3.1, 2.3.1, 2.4.4, 2.4.13, 2.5.8, 3.1.1, 3.2.6), axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks; emits `wcag-compliance.json` matrix ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
 | **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
 | **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
@@ -377,7 +377,7 @@ make clean        # remove build artifacts
 | `document.yml` | push to main | Build and deploy API docs to GitHub Pages |
 | `release.yml` | tag `v*` | Cross-platform binaries, GHCR container, crates.io, AUR |
 | `scheduled.yml` | weekly, tag | Multi-OS portability, pa11y a11y, `CycloneDX` SBOM, benchmarks |
-| `visual.yml` | PR | Playwright screenshots (3 viewports) + axe-core WCAG 2.1 AA |
+| `visual.yml` | PR | Playwright screenshots (3 viewports) + axe-core WCAG 2.2 AA |
 | `wasm.yml` | push, PR | Build and test ssg-core + ssg-wasm for wasm32 |
 | `readability-gate.yml` | PR | Flesch-Kincaid audit on docs and content |
 
@@ -409,7 +409,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 
 | Module | Purpose |
 | :--- | :--- |
-| `accessibility` | WCAG 2.1 AA checker, ARIA validation, decorative image detection |
+| `accessibility` | WCAG 2.2 AA checker, ARIA validation, decorative image detection, target-size + focus-appearance checks, compliance matrix |
 | `ai` | AI-readiness hooks, alt-text validation, `llms.txt` / `llms-full.txt` generation |
 | `assets` | Asset fingerprinting and SRI hash generation |
 | `cache` | Content fingerprinting (FNV-1a) for incremental builds |
