@@ -1,6 +1,6 @@
 {
   "name": "ssg-visual-tests",
-  "version": "0.0.38",
+  "version": "0.0.39",
   "private": true,
   "description": "Visual regression tests for SSG using Playwright",
   "scripts": {
