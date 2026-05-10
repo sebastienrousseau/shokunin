@@ -90,10 +90,34 @@ fn generate_netlify(site_dir: &std::path::Path) -> Result<()> {
     for (k, v) in SECURITY_HEADERS {
         headers.push_str(&format!("  {k} = {v}\n"));
     }
+    // Content-addressable assets (CSS/JS/images/fonts) — see issue
+    // #468. The fingerprint plugin renames every *.{css,js,png,jpg,
+    // webp,svg,woff2,...} to *.<hash>.<ext>, so each emit is
+    // intrinsically immutable.
     headers.push_str(
         "\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n",
     );
-    headers.push_str("\n/*.html\n  Cache-Control: public, max-age=3600\n");
+    for ext in
+        ["css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif",
+         "gif", "svg", "woff", "woff2"]
+    {
+        headers.push_str(&format!(
+            "\n/*.{ext}\n  Cache-Control: public, max-age=31536000, immutable\n"
+        ));
+    }
+    // HTML and feed/index files always revalidate so content updates
+    // are visible immediately.
+    headers.push_str(
+        "\n/*.html\n  Cache-Control: no-cache, must-revalidate\n",
+    );
+    for path in ["/sitemap.xml", "/sitemap-news.xml", "/atom.xml",
+                 "/rss.xml", "/manifest.json", "/robots.txt",
+                 "/search-index.json"]
+    {
+        headers.push_str(&format!(
+            "\n{path}\n  Cache-Control: no-cache, must-revalidate\n"
+        ));
+    }
 
     fs::write(site_dir.join("_headers"), &headers)?;
     fs::write(site_dir.join("_redirects"), "")?;
@@ -117,16 +141,27 @@ fn generate_vercel(site_dir: &std::path::Path) -> Result<()> {
         headers_arr.push(serde_json::json!({"key": k, "value": v}));
     }
 
+    // Per-extension immutable headers for content-addressable assets
+    // (#468). The fingerprint plugin renames these to name.hash.ext
+    // so the file body is bound to its name.
+    let immutable = serde_json::json!([
+        {"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}
+    ]);
+    let no_cache = serde_json::json!([
+        {"key": "Cache-Control", "value": "no-cache, must-revalidate"}
+    ]);
+
     let config = serde_json::json!({
         "headers": [
-            {
-                "source": "/(.*)",
-                "headers": headers_arr
-            },
-            {
-                "source": "/assets/(.*)",
-                "headers": [{"key": "Cache-Control", "value": "public, max-age=31536000, immutable"}]
-            }
+            {"source": "/(.*)", "headers": headers_arr},
+            {"source": "/assets/(.*)", "headers": immutable},
+            {"source": "/(.*)\\.(css|js|mjs|png|jpg|jpeg|webp|avif|gif|svg|woff|woff2)",
+             "headers": immutable},
+            {"source": "/(.*)\\.html", "headers": no_cache},
+            {"source": "/(sitemap|sitemap-news|atom|rss)\\.xml",
+             "headers": no_cache},
+            {"source": "/(manifest|search-index)\\.json", "headers": no_cache},
+            {"source": "/robots\\.txt", "headers": no_cache}
         ]
     });
 
@@ -140,9 +175,28 @@ fn generate_cloudflare(site_dir: &std::path::Path) -> Result<()> {
     for (k, v) in SECURITY_HEADERS {
         headers.push_str(&format!("  {k} : {v}\n"));
     }
+    // Content-addressable assets (#468) — same set as Netlify.
     headers.push_str(
         "\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n",
     );
+    for ext in
+        ["css", "js", "mjs", "png", "jpg", "jpeg", "webp", "avif",
+         "gif", "svg", "woff", "woff2"]
+    {
+        headers.push_str(&format!(
+            "\n/*.{ext}\n  Cache-Control: public, max-age=31536000, immutable\n"
+        ));
+    }
+    headers.push_str(
+        "\n/*.html\n  Cache-Control: no-cache, must-revalidate\n",
+    );
+    for path in ["/sitemap.xml", "/atom.xml", "/rss.xml",
+                 "/manifest.json", "/robots.txt"]
+    {
+        headers.push_str(&format!(
+            "\n{path}\n  Cache-Control: no-cache, must-revalidate\n"
+        ));
+    }
 
     fs::write(site_dir.join("_headers"), &headers)?;
     fs::write(site_dir.join("_redirects"), "")?;
@@ -393,12 +447,17 @@ mod tests {
 
         let body = fs::read_to_string(dir.path().join("_headers"))
             .expect("read _headers");
-        // Long-lived asset caching + short-lived HTML caching.
+        // Issue #468: long-lived immutable for content-addressable
+        // assets (CSS/JS/images/fonts) + always-revalidate for HTML
+        // and feeds.
         assert!(body.contains("/assets/*"));
         assert!(body.contains("max-age=31536000"));
         assert!(body.contains("immutable"));
         assert!(body.contains("/*.html"));
-        assert!(body.contains("max-age=3600"));
+        assert!(body.contains("no-cache"));
+        // Per-extension immutable rules now exist for the wider asset set.
+        assert!(body.contains("/*.png"));
+        assert!(body.contains("/*.woff2"));
     }
 
     #[test]

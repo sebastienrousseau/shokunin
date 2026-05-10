@@ -174,9 +174,21 @@ fn base64_encode(data: &[u8]) -> String {
     sha256_hex(data)
 }
 
-/// Collects all `.css` and `.js` files from site dir.
+/// Asset extensions we content-fingerprint. Matches the
+/// "content-addressable asset pipeline" intent of issue #468:
+/// CSS/JS for code, common raster + vector image formats for art,
+/// font formats for typography. Each gets a `name.hash.ext` rename
+/// and an SRI hash; deploy configs serve them with
+/// `Cache-Control: public, max-age=31536000, immutable`.
+const FINGERPRINTED_EXTENSIONS: &[&str] = &[
+    "css", "js", "mjs",
+    "png", "jpg", "jpeg", "webp", "avif", "gif", "svg",
+    "woff", "woff2", "ttf", "otf",
+];
+
+/// Collects every fingerprintable asset from site dir.
 fn collect_assets(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files_multi(dir, &["css", "js"])
+    crate::walk::walk_files_multi(dir, FINGERPRINTED_EXTENSIONS)
 }
 
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -300,14 +312,20 @@ mod tests {
     }
 
     #[test]
-    fn collect_assets_filters_non_css_js_extensions() {
+    fn collect_assets_picks_up_fingerprintable_extensions() {
+        // Issue #468 widened the fingerprinted set from {css, js}
+        // to also include images and fonts. css/js/png/woff2 are in;
+        // html/txt/md are out.
         let dir = tempdir().unwrap();
         fs::write(dir.path().join("a.css"), "").unwrap();
         fs::write(dir.path().join("b.js"), "").unwrap();
         fs::write(dir.path().join("c.html"), "").unwrap();
         fs::write(dir.path().join("d.png"), "").unwrap();
+        fs::write(dir.path().join("e.woff2"), "").unwrap();
+        fs::write(dir.path().join("f.txt"), "").unwrap();
         let files = collect_assets(dir.path()).unwrap();
-        assert_eq!(files.len(), 2);
+        // 4 fingerprintable: css, js, png, woff2.
+        assert_eq!(files.len(), 4);
     }
 
     #[test]
