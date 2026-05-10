@@ -184,9 +184,8 @@ fn every_markdown_link_in_docs_resolves() {
     let mut broken: Vec<(PathBuf, usize, String, PathBuf)> = Vec::new();
 
     for source in &files {
-        let text = match fs::read_to_string(source) {
-            Ok(t) => t,
-            Err(_) => continue,
+        let Ok(text) = fs::read_to_string(source) else {
+            continue;
         };
         for (line_no, raw) in extract_links(&text) {
             let (path_part, _anchor) = split_anchor(&raw);

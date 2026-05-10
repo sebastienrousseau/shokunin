@@ -118,10 +118,9 @@ fn readme_version_matches_cargo_toml() {
     // README often cites the version in `cargo install ssg --version
     // X.Y.Z` or the docs.rs link `docs.rs/ssg/X.Y.Z`. We assert at
     // least one full-form occurrence.
-    let full = format!("{cargo_version}");
     let badge = format!("v{cargo_version}");
     assert!(
-        readme.contains(&full) || readme.contains(&badge),
+        readme.contains(&cargo_version) || readme.contains(&badge),
         "Cargo.toml version `{cargo_version}` does not appear in README. \
          Either bump the README claim or revert the Cargo.toml change. \
          Soft-mention forms (~X.Y, latest, etc.) don't satisfy this gate."
