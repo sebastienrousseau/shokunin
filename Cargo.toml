@@ -175,7 +175,7 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.79", features = ["vendored"] }
+openssl = { version = "0.10.80", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
