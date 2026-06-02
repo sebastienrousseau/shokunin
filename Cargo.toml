@@ -124,8 +124,8 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
-serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
-uuid = { version = "1.23.1", features = ["v4"] }
+serial_test = "3.5"                        # Serialise fail-rs failpoint tests so they don't race
+uuid = { version = "1.23.2", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
@@ -138,11 +138,11 @@ proptest = "1"
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.4"
-log = { version = "0.4.29", features = ["std"] }
+log = { version = "0.4.30", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 staticdatagen = "0.0.8"
 toml = "1.1.2"
 
@@ -175,7 +175,7 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter
 
 # Platform-specific dependency for Unix with OpenSSL
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.79", features = ["vendored"] }
+openssl = { version = "0.10.80", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
