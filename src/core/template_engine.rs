@@ -1,7 +1,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Template engine integration (MiniJinja).
+//! Template engine integration (`MiniJinja`).
 //!
 //! Wraps the [MiniJinja](https://docs.rs/minijinja) template engine to
 //! provide Jinja2-style templating with inheritance, conditionals, loops,

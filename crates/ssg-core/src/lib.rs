@@ -251,6 +251,7 @@ pub fn slugify(input: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

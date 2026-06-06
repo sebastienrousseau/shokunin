@@ -3,7 +3,7 @@
 
 //! Build-time SBOM generation (issue #457).
 //!
-//! Emits a CycloneDX 1.5 JSON Software Bill of Materials at the
+//! Emits a `CycloneDX` 1.5 JSON Software Bill of Materials at the
 //! root of the generated site (`sbom.cdx.json`) and links to it
 //! from every HTML page via `<link rel="sbom" type="application/vnd.cyclonedx+json">`.
 //!
@@ -12,7 +12,7 @@
 //! Procurement teams in regulated industries (finance, healthcare,
 //! government) increasingly require SBOMs for any deployed software
 //! — including the build pipeline that produced static assets. The
-//! `scheduled.yml` workflow already generates a CycloneDX SBOM via
+//! `scheduled.yml` workflow already generates a `CycloneDX` SBOM via
 //! `cargo cyclonedx` and attaches a Sigstore provenance attestation,
 //! but those artifacts live in CI; they're not discoverable from
 //! the deployed site. This plugin fixes that gap by **embedding**
@@ -21,13 +21,13 @@
 //!
 //! # Format
 //!
-//! Minimal CycloneDX 1.5 (the JSON Schema is documented at
+//! Minimal `CycloneDX` 1.5 (the JSON Schema is documented at
 //! <https://cyclonedx.org/docs/1.5/json/>). The component list
 //! covers the SSG package itself; transitive Cargo dependencies
 //! are out of scope here (they're in the CI-generated SBOM
 //! published as a release artifact). The rendered SBOM declares:
 //!
-//! - `bomFormat`: "CycloneDX"
+//! - `bomFormat`: "`CycloneDX`"
 //! - `specVersion`: "1.5"
 //! - `version`: 1
 //! - `metadata.timestamp`: build time (ISO 8601, UTC)

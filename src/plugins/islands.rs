@@ -5,7 +5,7 @@
 //!
 //! Provides an `<ssg-island>` custom element that lazily loads JavaScript
 //! component bundles based on configurable hydration strategies:
-//! `visible` (IntersectionObserver), `idle` (requestIdleCallback), or
+//! `visible` (`IntersectionObserver`), `idle` (requestIdleCallback), or
 //! `interaction` (click/focus/hover).
 //!
 //! ## Architecture

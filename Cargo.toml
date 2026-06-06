@@ -304,7 +304,7 @@ eula         = false
 # safe-only implementation.
 # -----------------------------------------------------------------------------
 [workspace]
-members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+members = [".", "crates/ssg-core", "crates/ssg-wasm", "crates/serde_yml"]
 default-members = ["."]
 
 [workspace.lints.rust]

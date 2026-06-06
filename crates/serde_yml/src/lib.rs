@@ -9,6 +9,7 @@
 //! dependency on the unsafe `libyml` C library.
 
 #![forbid(unsafe_code)]
+#![allow(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
 pub mod de;
 pub mod error;
