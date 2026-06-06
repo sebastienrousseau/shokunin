@@ -719,6 +719,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn test_template_plugin_after_compile_read_html_error() {
         let dir = tempdir().unwrap();
         let site_dir = dir.path().join("site");
