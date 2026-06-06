@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use crate::error::SsgError;
 use staticdatagen::compile;
 
 use crate::cmd::SsgConfig;
@@ -32,11 +32,11 @@ pub struct BuildError {
 }
 
 impl BuildError {
-    /// Creates a `BuildError` from an `anyhow` error, attempting to extract
+    /// Creates a `BuildError` from an `SsgError` error, attempting to extract
     /// file path and line number from the error chain.
     #[must_use]
     #[allow(dead_code)]
-    pub fn from_anyhow(err: &anyhow::Error) -> Self {
+    pub fn from_error(err: &SsgError) -> Self {
         let message = format!("{err:#}");
         let file = extract_file_from_error(&message);
         Self {
@@ -219,7 +219,7 @@ pub fn execute_build_pipeline(
     site_dir: &Path,
     template_dir: &Path,
     quiet: bool,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let start = std::time::Instant::now();
 
     // Load plugin cache for incremental builds
@@ -300,10 +300,10 @@ pub fn compile_site(
     content_dir: &Path,
     site_dir: &Path,
     template_dir: &Path,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     compile(build_dir, content_dir, site_dir, template_dir).map_err(|e| {
         eprintln!("    Error compiling site: {e:?}");
-        anyhow!("Failed to compile site: {e:?}")
+        SsgError::io(std::io::Error::other(format!("Failed to compile site: {e:?}")), build_dir)
     })
 }
 
@@ -422,6 +422,7 @@ pub fn register_default_plugins(
 mod tests {
     use super::*;
 
+
     #[test]
     fn test_build_error_serialization() {
         let err = BuildError {
@@ -480,9 +481,12 @@ mod tests {
     }
 
     #[test]
-    fn test_build_error_from_anyhow() {
-        let err = anyhow::anyhow!("cannot write output/index.html: disk full");
-        let be = BuildError::from_anyhow(&err);
+    fn test_build_error_from_error() {
+        let err = SsgError::Io {
+            path: PathBuf::from("output/index.html"),
+            source: std::io::Error::other("disk full"),
+        };
+        let be = BuildError::from_error(&err);
         assert_eq!(be.file, Some("output/index.html".to_string()));
         assert!(be.line.is_none());
         assert!(be.message.contains("disk full"));
@@ -534,24 +538,32 @@ mod tests {
     }
 
     #[test]
-    fn test_build_error_from_anyhow_no_file() {
-        let err = anyhow::anyhow!("generic error without any file path");
-        let be = BuildError::from_anyhow(&err);
+    fn test_build_error_from_error_no_file() {
+        let err = SsgError::Core(ssg_core::Error::FrontmatterParse {
+            syntax: "generic error without any file path".to_string(),
+        });
+        let be = BuildError::from_error(&err);
         assert!(be.file.is_none());
         assert!(be.message.contains("generic error"));
     }
 
     #[test]
-    fn test_build_error_from_anyhow_yml_extension() {
-        let err = anyhow::anyhow!("parse error in config/site.yml");
-        let be = BuildError::from_anyhow(&err);
+    fn test_build_error_from_error_yml_extension() {
+        let err = SsgError::Io {
+            path: PathBuf::from("config/site.yml"),
+            source: std::io::Error::other("parse error"),
+        };
+        let be = BuildError::from_error(&err);
         assert_eq!(be.file, Some("config/site.yml".to_string()));
     }
 
     #[test]
-    fn test_build_error_from_anyhow_yaml_extension() {
-        let err = anyhow::anyhow!("error in data/settings.yaml at line 3");
-        let be = BuildError::from_anyhow(&err);
+    fn test_build_error_from_error_yaml_extension() {
+        let err = SsgError::Io {
+            path: PathBuf::from("data/settings.yaml"),
+            source: std::io::Error::other("error at line 3"),
+        };
+        let be = BuildError::from_error(&err);
         assert_eq!(be.file, Some("data/settings.yaml".to_string()));
     }
 

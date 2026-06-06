@@ -18,7 +18,6 @@
 //! directly; the helpers here are exposed for tests and embedders that
 //! need a smaller building block than the full pipeline.
 
-use anyhow::Result;
 use clap::ArgMatches;
 use std::{fs, path::Path};
 /// Represents errors that may occur during argument processing.
@@ -315,6 +314,7 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use clap::{arg, Command};
     use std::fs::{self, File};
     use tempfile::tempdir;

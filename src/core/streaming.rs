@@ -12,7 +12,7 @@
 //! (sitemap, search index, feeds).
 
 use crate::walk;
-use anyhow::{Context, Result};
+use crate::error::{SsgError, PathErrorExt};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -59,9 +59,8 @@ impl MemoryBudget {
 pub fn batched_content_files(
     content_dir: &Path,
     budget: &MemoryBudget,
-) -> Result<Vec<Vec<PathBuf>>> {
-    let all_files = walk::walk_files(content_dir, "md")
-        .with_context(|| format!("cannot walk {}", content_dir.display()))?;
+) -> Result<Vec<Vec<PathBuf>>, SsgError> {
+    let all_files = walk::walk_files(content_dir, "md")?;
 
     if all_files.is_empty() {
         return Ok(vec![]);
@@ -95,30 +94,30 @@ pub fn compile_batch(
     site_dir: &Path,
     template_dir: &Path,
     batch_idx: usize,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     if batch.is_empty() {
         return Ok(());
     }
 
     // Create a temporary batch content directory
     let batch_content = build_dir.join(format!(".batch-{batch_idx}"));
-    fs::create_dir_all(&batch_content)?;
+    fs::create_dir_all(&batch_content).with_path(&batch_content)?;
 
     // Copy batch files preserving directory structure
     for file in batch {
         let rel = file.strip_prefix(content_dir).unwrap_or(file);
         let dest = batch_content.join(rel);
         if let Some(parent) = dest.parent() {
-            fs::create_dir_all(parent)?;
+            fs::create_dir_all(parent).with_path(parent)?;
         }
-        let _ = fs::copy(file, &dest)?;
+        let _ = fs::copy(file, &dest).with_path(&dest)?;
     }
 
     // Compile the batch
     let batch_build = build_dir.join(format!(".batch-{batch_idx}-build"));
     let batch_site = build_dir.join(format!(".batch-{batch_idx}-site"));
-    fs::create_dir_all(&batch_build)?;
-    fs::create_dir_all(&batch_site)?;
+    fs::create_dir_all(&batch_build).with_path(&batch_build)?;
+    fs::create_dir_all(&batch_site).with_path(&batch_site)?;
 
     let compile_result = staticdatagen::compile(
         &batch_build,
@@ -129,7 +128,7 @@ pub fn compile_batch(
 
     // Merge batch output into the main site directory
     if compile_result.is_ok() {
-        fs::create_dir_all(site_dir)?;
+        fs::create_dir_all(site_dir).with_path(site_dir)?;
         merge_dir(&batch_site, site_dir)?;
     }
 
@@ -138,25 +137,25 @@ pub fn compile_batch(
     let _ = fs::remove_dir_all(&batch_build);
     let _ = fs::remove_dir_all(&batch_site);
 
-    compile_result.map_err(|e| anyhow::anyhow!("batch {batch_idx}: {e:?}"))
+    compile_result.map_err(|e| SsgError::io(std::io::Error::other(format!("batch {batch_idx}: {e:?}")), build_dir))
 }
 
 /// Recursively merges files from `src` into `dst`, overwriting on conflict.
-fn merge_dir(src: &Path, dst: &Path) -> Result<()> {
+fn merge_dir(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
         return Ok(());
     }
 
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
+    for entry in fs::read_dir(src).with_path(src)? {
+        let entry = entry.with_path(src)?;
         let path = entry.path();
         let dest = dst.join(entry.file_name());
 
         if path.is_dir() {
-            fs::create_dir_all(&dest)?;
+            fs::create_dir_all(&dest).with_path(&dest)?;
             merge_dir(&path, &dest)?;
         } else {
-            let _ = fs::copy(&path, &dest)?;
+            let _ = fs::copy(&path, &dest).with_path(&dest)?;
         }
     }
     Ok(())

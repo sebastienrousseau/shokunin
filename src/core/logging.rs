@@ -3,10 +3,10 @@
 
 //! Logging infrastructure for the static site generator.
 
+use crate::error::SsgError;
 use std::fs::File;
 use std::io::Write;
-
-use anyhow::{Context, Result};
+use std::path::PathBuf;
 use log::{info, LevelFilter};
 
 // Constants for configuration
@@ -53,7 +53,7 @@ impl log::Log for SimpleLogger {
 }
 
 /// Initializes the logging system based on environment variables.
-pub(crate) fn initialize_logging() -> Result<()> {
+pub(crate) fn initialize_logging() -> Result<(), SsgError> {
     let log_level = std::env::var(ENV_LOG_LEVEL)
         .unwrap_or_else(|_| DEFAULT_LOG_LEVEL.to_string());
 
@@ -98,8 +98,11 @@ pub(crate) fn initialize_logging() -> Result<()> {
 /// * The specified path is invalid
 /// * File creation permissions are insufficient
 /// * The parent directory is not writable
-pub fn create_log_file(file_path: &str) -> Result<File> {
-    File::create(file_path).context("Failed to create log file")
+pub fn create_log_file(file_path: &str) -> Result<File, SsgError> {
+    File::create(file_path).map_err(|source| SsgError::Io {
+        path: PathBuf::from(file_path),
+        source,
+    })
 }
 
 /// Records system initialisation in the logging system.
@@ -132,12 +135,15 @@ pub fn create_log_file(file_path: &str) -> Result<File> {
 ///     Ok(())
 /// }
 /// ```
-pub fn log_initialization(log_file: &mut File, date: &str) -> Result<()> {
+pub fn log_initialization(log_file: &mut File, date: &str) -> Result<(), SsgError> {
     writeln!(
         log_file,
         "[{date}] INFO process: System initialization complete"
     )
-    .context("Failed to write banner log")
+    .map_err(|source| SsgError::Io {
+        path: PathBuf::from("log"),
+        source,
+    })
 }
 
 /// Logs processed command-line arguments for debugging and auditing.
@@ -169,9 +175,12 @@ pub fn log_initialization(log_file: &mut File, date: &str) -> Result<()> {
 ///     Ok(())
 /// }
 /// ```
-pub fn log_arguments(log_file: &mut File, date: &str) -> Result<()> {
+pub fn log_arguments(log_file: &mut File, date: &str) -> Result<(), SsgError> {
     writeln!(log_file, "[{date}] INFO process: Arguments processed")
-        .context("Failed to write arguments log")
+        .map_err(|source| SsgError::Io {
+            path: PathBuf::from("log"),
+            source,
+        })
 }
 
 #[cfg(test)]
