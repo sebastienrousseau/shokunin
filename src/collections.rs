@@ -60,7 +60,7 @@
 //!
 //! # Single-entry access
 //!
-//! [`get_entry`] loads exactly one file by slug, returning
+//! [`get_entry`](crate::collections::get_entry) loads exactly one file by slug, returning
 //! `Ok(None)` if no matching `.md` is found. Use this when a page
 //! references another by its known slug (sidebar layouts, related
 //! posts).

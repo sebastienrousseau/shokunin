@@ -23,3 +23,6 @@ wasm-opt = false
 [dev-dependencies]
 js-sys = "0.3"
 wasm-bindgen-test = "0.3"
+
+[lints.rust]
+unsafe_code = "allow"

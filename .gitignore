@@ -77,3 +77,5 @@ Icon?
 /.ssg-cache.json
 /.ssg-plugins-cache.json
 .claude/worktrees/
+tests/visual/a11y-reports/
+tests/visual/test-results/

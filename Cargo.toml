@@ -235,7 +235,79 @@ path = "examples/portfolio_example.rs"    # Path to the example file
 # -----------------------------------------------------------------------------
 # Linting Configuration
 # -----------------------------------------------------------------------------
-[lints.rust]
+[lints]
+workspace = true
+
+[profile.dev]
+# Development profile configuration for fast builds and debugging.
+codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
+debug = 1                                   # Line tables only — saves ~60% disk vs full debuginfo
+debug-assertions = true                     # Enable debug assertions
+incremental = true                          # Enable incremental compilation
+lto = false                                 # Disable link-time optimization for development
+opt-level = 0                               # No optimizations in development
+overflow-checks = true                      # Enable overflow checks for arithmetic operations
+panic = 'unwind'                            # Enable unwinding for panics (useful in development)
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in development builds
+
+[profile.release]
+# Release profile configuration for optimized builds.
+codegen-units = 1                           # Reduce codegen units for better performance
+debug = false                               # Disable debug symbols in release builds
+debug-assertions = false                    # Disable debug assertions
+incremental = false                         # Disable incremental compilation for optimal binary size
+lto = true                                  # Enable link-time optimization for smaller and faster binaries
+opt-level = 3                               # Optimize for runtime speed
+overflow-checks = true                      # Enable overflow checks for safety
+panic = "abort"                             # Use abort on panic for minimal overhead
+rpath = false                               # Disable rpath generation
+strip = "symbols"                           # Strip symbols for smaller binary size
+
+[profile.test]
+# Test profile configuration for debugging and development.
+codegen-units = 16                          # Balance between compile speed and disk usage
+debug = 1                                   # Line tables only — enough for backtraces, saves disk
+debug-assertions = true                     # Enable debug assertions for tests
+incremental = true                          # Enable incremental compilation for tests
+lto = false                                 # Disable link-time optimization during testing
+opt-level = 0                               # No optimizations in test builds
+overflow-checks = true                      # Enable overflow checks for tests
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in test builds
+
+# -----------------------------------------------------------------------------
+# Packaging metadata
+# -----------------------------------------------------------------------------
+
+# cargo-generate-rpm — used by .github/workflows/release.yml to produce
+# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
+    { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
+    { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
+    { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
+]
+
+# cargo-wix — used to produce a Windows MSI installer. Generates
+# `wix/main.wxs` lazily on first build via `cargo wix init --force` if
+# the template is absent.
+[package.metadata.wix]
+upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
+path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
+license      = false
+eula         = false
+
+# -----------------------------------------------------------------------------
+# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
+# safe-only implementation.
+# -----------------------------------------------------------------------------
+[workspace]
+members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+default-members = ["."]
+
+[workspace.lints.rust]
 # Linting rules for the project.
 
 ## Warnings
@@ -285,7 +357,7 @@ variant_size_differences = "deny"           # Deny enum variants with significan
 # -----------------------------------------------------------------------------
 # Clippy Configuration
 # -----------------------------------------------------------------------------
-[lints.clippy]
+[workspace.lints.clippy]
 # Clippy lint configuration for enhanced code analysis.
 
 ## Warnings
@@ -356,74 +428,10 @@ literal_string_with_formatting_args = "allow" # Test data containing `{n}` shoul
 # -----------------------------------------------------------------------------
 # Profiles
 # -----------------------------------------------------------------------------
-[profile.dev]
-# Development profile configuration for fast builds and debugging.
-codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
-debug = 1                                   # Line tables only — saves ~60% disk vs full debuginfo
-debug-assertions = true                     # Enable debug assertions
-incremental = true                          # Enable incremental compilation
-lto = false                                 # Disable link-time optimization for development
-opt-level = 0                               # No optimizations in development
-overflow-checks = true                      # Enable overflow checks for arithmetic operations
-panic = 'unwind'                            # Enable unwinding for panics (useful in development)
-rpath = false                               # Disable rpath generation
-strip = false                               # Do not strip symbols in development builds
 
-[profile.release]
-# Release profile configuration for optimized builds.
-codegen-units = 1                           # Reduce codegen units for better performance
-debug = false                               # Disable debug symbols in release builds
-debug-assertions = false                    # Disable debug assertions
-incremental = false                         # Disable incremental compilation for optimal binary size
-lto = true                                  # Enable link-time optimization for smaller and faster binaries
-opt-level = 3                               # Optimize for runtime speed
-overflow-checks = true                      # Enable overflow checks for safety
-panic = "abort"                             # Use abort on panic for minimal overhead
-rpath = false                               # Disable rpath generation
-strip = "symbols"                           # Strip symbols for smaller binary size
-
-[profile.test]
-# Test profile configuration for debugging and development.
-codegen-units = 16                          # Balance between compile speed and disk usage
-debug = 1                                   # Line tables only — enough for backtraces, saves disk
-debug-assertions = true                     # Enable debug assertions for tests
-incremental = true                          # Enable incremental compilation for tests
-lto = false                                 # Disable link-time optimization during testing
-opt-level = 0                               # No optimizations in test builds
-overflow-checks = true                      # Enable overflow checks for tests
-rpath = false                               # Disable rpath generation
-strip = false                               # Do not strip symbols in test builds
-
-# -----------------------------------------------------------------------------
-# Packaging metadata
-# -----------------------------------------------------------------------------
-
-# cargo-generate-rpm — used by .github/workflows/release.yml to produce
-# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
-    { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
-    { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
-    { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
-]
-
-# cargo-wix — used to produce a Windows MSI installer. Generates
-# `wix/main.wxs` lazily on first build via `cargo wix init --force` if
-# the template is absent.
-[package.metadata.wix]
-upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
-path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
-license      = false
-eula         = false
-
-# -----------------------------------------------------------------------------
-# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
-# safe-only implementation.
-# -----------------------------------------------------------------------------
-[workspace]
-members = [".", "crates/ssg-core", "crates/ssg-wasm"]
-default-members = ["."]
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
 
 [patch.crates-io]
 serde_yml = { path = "crates/serde_yml" }

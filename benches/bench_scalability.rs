@@ -67,6 +67,7 @@ fn generate_corpus(dir: &Path, n: usize) {
     }
 }
 
+#[allow(unused_results)]
 fn bench_build_at_scale(c: &mut Criterion) {
     let tiers: &[(usize, &str)] = &[
         (100, "100 pages"),
