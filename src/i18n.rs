@@ -294,6 +294,15 @@ fn inject_hreflang_all(
                 strategy,
             );
 
+            // Rewrite existing ap-lang-item links to the exact localized page path
+            let html = rewrite_ap_lang_items(
+                &html,
+                page_locales,
+                base,
+                strategy,
+                rel_path,
+            );
+
             fs::write(&file, html).with_context(|| {
                 format!("Failed to write {}", file.display())
             })?;
@@ -308,6 +317,84 @@ fn inject_hreflang_all(
     }
 
     Ok(())
+}
+
+/// Rewrites existing ap-lang-item links in the page to point to the exact localized path
+fn rewrite_ap_lang_items(
+    html: &str,
+    page_locales: &HashSet<String>,
+    base: &str,
+    strategy: &UrlPrefixStrategy,
+    rel_path: &str,
+) -> String {
+    if !html.contains("ap-lang-item") {
+        return html.to_string();
+    }
+
+    let mut result = String::with_capacity(html.len());
+    let mut remaining = html;
+
+    while let Some(start_idx) = remaining.find("<a ") {
+        result.push_str(&remaining[..start_idx]);
+        let tag_content = &remaining[start_idx..];
+
+        let Some(end_idx) = tag_content.find('>') else {
+            result.push_str(remaining);
+            return result;
+        };
+
+        let tag_inner = &tag_content[..end_idx + 1];
+        let mut rewritten_tag = tag_inner.to_string();
+
+        if tag_inner.contains("ap-lang-item") {
+            let mut data_lang = None;
+            for quote in ['"', '\''] {
+                let pattern = format!("data-lang={quote}");
+                if let Some(pos) = tag_inner.find(&pattern) {
+                    let val_start = pos + pattern.len();
+                    if let Some(val_end) = tag_inner[val_start..].find(quote) {
+                        data_lang = Some(tag_inner[val_start..val_start + val_end].trim().to_string());
+                        break;
+                    }
+                }
+            }
+
+            if let Some(lang) = data_lang {
+                if page_locales.contains(&lang) {
+                    let full_url = build_url(base, &lang, rel_path, strategy);
+                    let new_href = if full_url.starts_with("http://") || full_url.starts_with("https://") {
+                        let after_scheme = full_url.split("://").collect::<Vec<_>>()[1];
+                        if let Some(slash_idx) = after_scheme.find('/') {
+                            after_scheme[slash_idx..].to_string()
+                        } else {
+                            "/".to_string()
+                        }
+                    } else {
+                        full_url
+                    };
+
+                    for quote in ['"', '\''] {
+                        let href_pattern = format!("href={quote}");
+                        if let Some(pos) = tag_inner.find(&href_pattern) {
+                            let val_start = pos + href_pattern.len();
+                            if let Some(val_end) = tag_inner[val_start..].find(quote) {
+                                let before = &rewritten_tag[..val_start];
+                                let after = &rewritten_tag[val_start + val_end..];
+                                rewritten_tag = format!("{before}{new_href}{after}");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result.push_str(&rewritten_tag);
+        remaining = &tag_content[end_idx + 1..];
+    }
+
+    result.push_str(remaining);
+    result
 }
 
 /// Replaces the `<!-- ssg:lang-switcher -->` marker with a full language
@@ -622,6 +709,22 @@ mod tests {
     use crate::plugin::PluginContext;
     use std::path::Path;
     use tempfile::tempdir;
+
+    #[test]
+    fn test_rewrite_ap_lang_items() {
+        let input = r#"<a class="ap-lang-item" href="/fr/" data-lang="fr" role="menuitem">Français</a>"#;
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        let _ = locales.insert("en".to_string());
+        let output = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://sebastienrousseau.com",
+            &UrlPrefixStrategy::SubPath,
+            "posts/hello.html",
+        );
+        assert!(output.contains(r#"href="/fr/posts/hello.html""#));
+    }
 
     fn make_ctx(site_dir: &Path) -> PluginContext {
         let config = crate::cmd::SsgConfig::builder()

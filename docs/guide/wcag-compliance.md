@@ -305,7 +305,7 @@ on judgement calls, not hunting empty `alt=""` tags.
 
 ---
 
-*This guide reflects SSG v0.0.39. The build-time validator is
+*This guide reflects SSG v0.0.40. The build-time validator is
 defined in [`src/accessibility.rs`](../../src/accessibility.rs);
 runtime audit configuration is in
 [`tests/visual/a11y.spec.ts`](../../tests/visual/a11y.spec.ts).*

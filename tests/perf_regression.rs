@@ -572,7 +572,7 @@ fn markdown_rendering_unicode_safe() {
 
     for input in &inputs {
         let result = std::panic::catch_unwind(|| {
-            let _ = ssg::markdown_ext::expand_gfm(input);
+            let _ = ssg::markdown_ext::expand_gfm(input, None);
         });
         assert!(
             result.is_ok(),
@@ -617,7 +617,7 @@ fn reading_time_multilingual() {
     // CJK text — word splitting differs but must not panic
     let cjk = "日本語のテキスト ".repeat(100);
     let result = std::panic::catch_unwind(|| {
-        let _ = ssg::markdown_ext::expand_gfm(&cjk);
+        let _ = ssg::markdown_ext::expand_gfm(&cjk, None);
     });
     assert!(result.is_ok(), "CJK processing must not panic");
 }

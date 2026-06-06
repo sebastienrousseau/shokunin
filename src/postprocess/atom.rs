@@ -385,6 +385,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             serve_dir: None,
             i18n: None,
+            cdn_prefix: None,
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -1277,6 +1278,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             serve_dir: None,
             i18n: None,
+            cdn_prefix: None,
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1492,6 +1494,7 @@ mod tests {
             template_dir: std::path::PathBuf::from("templates"),
             serve_dir: None,
             i18n: None,
+            cdn_prefix: None,
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),

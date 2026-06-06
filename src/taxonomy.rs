@@ -49,7 +49,7 @@ impl Plugin for TaxonomyPlugin {
             return Ok(());
         }
 
-        let (tags, categories) = collect_taxonomy_entries(&sidecar_dir)?;
+        let (tags, categories, topics) = collect_taxonomy_entries(&sidecar_dir)?;
 
         if !tags.is_empty() {
             generate_taxonomy_pages(&ctx.site_dir, "tags", &tags)?;
@@ -64,35 +64,58 @@ impl Plugin for TaxonomyPlugin {
             );
         }
 
+        if !topics.is_empty() {
+            generate_taxonomy_pages(&ctx.site_dir, "topics", &topics)?;
+            log::info!("[taxonomy] Generated {} topic page(s)", topics.len());
+        }
+
         Ok(())
     }
 }
 
-/// Extracts string terms from a JSON array value into the given map.
-fn extract_terms_from_array(
+/// Extracts string terms from a JSON value (array of strings or comma-separated string) into the given map.
+fn extract_terms_from_value(
     value: &serde_json::Value,
     map: &mut HashMap<String, Vec<(String, String)>>,
     title: &str,
     url: &str,
+    allow_string: bool,
 ) {
     if let Some(arr) = value.as_array() {
         for item in arr {
             if let Some(s) = item.as_str() {
-                map.entry(s.to_string())
-                    .or_default()
-                    .push((title.to_string(), url.to_string()));
+                for part in s.split(',') {
+                    let trimmed = part.trim();
+                    if !trimmed.is_empty() {
+                        map.entry(trimmed.to_string())
+                            .or_default()
+                            .push((title.to_string(), url.to_string()));
+                    }
+                }
+            }
+        }
+    } else if allow_string {
+        if let Some(s) = value.as_str() {
+            for part in s.split(',') {
+                let trimmed = part.trim();
+                if !trimmed.is_empty() {
+                    map.entry(trimmed.to_string())
+                        .or_default()
+                        .push((title.to_string(), url.to_string()));
+                }
             }
         }
     }
 }
 
-/// Collects taxonomy entries (tags and categories) from sidecar JSON files.
+/// Collects taxonomy entries (tags, categories, topics) from sidecar JSON files.
 fn collect_taxonomy_entries(
     sidecar_dir: &Path,
-) -> Result<(TaxonomyMap, TaxonomyMap)> {
+) -> Result<(TaxonomyMap, TaxonomyMap, TaxonomyMap)> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut tags: TaxonomyMap = HashMap::new();
     let mut categories: TaxonomyMap = HashMap::new();
+    let mut topics: TaxonomyMap = HashMap::new();
 
     for sidecar_path in &sidecars {
         let content = fs::read_to_string(sidecar_path)?;
@@ -116,14 +139,17 @@ fn collect_taxonomy_entries(
         let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
 
         if let Some(tag_arr) = meta.get("tags") {
-            extract_terms_from_array(tag_arr, &mut tags, &title, &url);
+            extract_terms_from_value(tag_arr, &mut tags, &title, &url, false);
         }
         if let Some(cat_arr) = meta.get("categories") {
-            extract_terms_from_array(cat_arr, &mut categories, &title, &url);
+            extract_terms_from_value(cat_arr, &mut categories, &title, &url, false);
+        }
+        if let Some(topic_arr) = meta.get("topic_clusters") {
+            extract_terms_from_value(topic_arr, &mut topics, &title, &url, true);
         }
     }
 
-    Ok((tags, categories))
+    Ok((tags, categories, topics))
 }
 
 /// Generates index and term pages for a taxonomy.
@@ -511,6 +537,20 @@ mod tests {
         TaxonomyPlugin.after_compile(&ctx).unwrap();
         assert!(site.join("categories/index.html").exists());
         assert!(site.join("categories/tutorials/index.html").exists());
+    }
+
+    #[test]
+    fn after_compile_generates_index_and_term_pages_for_topics() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p1.meta.json"),
+            r#"{"title": "P1", "topic_clusters": "cloud-native-banking"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("topics/index.html").exists());
+        assert!(site.join("topics/cloud-native-banking/index.html").exists());
     }
 
     #[test]

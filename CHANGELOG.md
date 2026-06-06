@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.40] - 2026-06-06
+
+### Added
+- Native asset minification (JS/CSS) inside the asset pipeline.
+- Localized switchers for language alternates using matched slugs.
+- First-class Topic taxonomy type with hub/pillar page generation.
+- Overlapping-tag similarity indexing for Related Posts.
+- Word count and estimated reading time calculations in frontmatter metadata.
+- Configurable CDN URL prefixing for markdown images.
+
 ## [0.0.39] - 2026-05-10
 
 ### ⚠ BREAKING CHANGES

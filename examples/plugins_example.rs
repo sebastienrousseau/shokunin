@@ -177,8 +177,8 @@ fn main() -> Result<()> {
 
     // Markdown extensions (markdown_ext)
     let md = "| Col A | Col B |\n|-------|-------|\n| 1 | 2 |";
-    let html = ssg::markdown_ext::expand_gfm(md);
-    println!("  \u{1f4dd} GFM table \u{2192} {} bytes HTML", html.len());
+    let html = ssg::markdown_ext::expand_gfm(md, None);
+    println!("  📝 GFM table → {} bytes HTML", html.len());
 
     // Schema generation (schema)
     let schema = ssg::schema::generate_schema();

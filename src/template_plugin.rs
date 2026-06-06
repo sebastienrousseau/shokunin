@@ -101,17 +101,20 @@ impl Plugin for TemplatePlugin {
 
         let sidecar_dir = ctx.build_dir.join(".meta");
         let html_files = collect_html_files(&ctx.site_dir)?;
+        let enriched_fm_map = enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
 
         let mut rendered = 0usize;
         for html_path in &html_files {
             let content = fs::read_to_string(html_path)?;
 
-            // Read frontmatter sidecar
-            let fm = read_frontmatter_for_html(
-                html_path,
-                &ctx.site_dir,
-                &sidecar_dir,
-            );
+            // Read frontmatter sidecar (enriched with related posts)
+            let fm = enriched_fm_map.get(html_path).cloned().unwrap_or_else(|| {
+                read_frontmatter_for_html(
+                    html_path,
+                    &ctx.site_dir,
+                    &sidecar_dir,
+                )
+            });
 
             // Determine template from `layout` field
             let layout =
@@ -169,6 +172,96 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
     crate::walk::walk_files_bounded_depth(dir, "html", MAX_DIR_DEPTH)
 }
 
+/// Natively calculates top-3 related articles for each page based on overlapping tags/categories.
+#[cfg(feature = "templates")]
+fn enrich_with_related_posts(
+    html_files: &[PathBuf],
+    site_dir: &Path,
+    sidecar_dir: &Path,
+) -> HashMap<PathBuf, HashMap<String, serde_json::Value>> {
+    let mut pages_meta = HashMap::new();
+
+    for html_path in html_files {
+        let fm = read_frontmatter_for_html(html_path, site_dir, sidecar_dir);
+        let mut terms = std::collections::HashSet::new();
+
+        if let Some(tags_val) = fm.get("tags") {
+            if let Some(arr) = tags_val.as_array() {
+                for item in arr {
+                    if let Some(s) = item.as_str() {
+                        let _ = terms.insert(s.to_string());
+                    }
+                }
+            } else if let Some(s) = tags_val.as_str() {
+                for part in s.split(',') {
+                    let trimmed = part.trim();
+                    if !trimmed.is_empty() {
+                        let _ = terms.insert(trimmed.to_string());
+                    }
+                }
+            }
+        }
+        if let Some(cats_val) = fm.get("categories") {
+            if let Some(arr) = cats_val.as_array() {
+                for item in arr {
+                    if let Some(s) = item.as_str() {
+                        let _ = terms.insert(s.to_string());
+                    }
+                }
+            } else if let Some(s) = cats_val.as_str() {
+                for part in s.split(',') {
+                    let trimmed = part.trim();
+                    if !trimmed.is_empty() {
+                        let _ = terms.insert(trimmed.to_string());
+                    }
+                }
+            }
+        }
+
+        let title = fm.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").to_string();
+        let date = fm.get("date").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
+        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+
+        let _ = pages_meta.insert(html_path.clone(), (fm, title, terms, date, url));
+    }
+
+    let mut enriched = HashMap::new();
+    for (html_path, (fm, _title, terms, _date, _url)) in &pages_meta {
+        let mut candidates = Vec::new();
+
+        for (other_path, (_other_fm, other_title, other_terms, other_date, other_url)) in &pages_meta {
+            if other_path == html_path {
+                continue;
+            }
+
+            let overlap = terms.intersection(other_terms).count();
+            if overlap > 0 {
+                candidates.push((overlap, other_date.clone(), other_title.clone(), other_url.clone()));
+            }
+        }
+
+        candidates.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| b.1.cmp(&a.1))
+        });
+
+        let top_3: Vec<serde_json::Value> = candidates.into_iter().take(3).map(|(_overlap, other_date, other_title, other_url)| {
+            let mut obj = serde_json::Map::new();
+            let _ = obj.insert("title".to_string(), serde_json::Value::String(other_title));
+            let _ = obj.insert("url".to_string(), serde_json::Value::String(other_url));
+            let _ = obj.insert("date".to_string(), serde_json::Value::String(other_date));
+            serde_json::Value::Object(obj)
+        }).collect();
+
+        let mut new_fm = fm.clone();
+        let _ = new_fm.insert("related_posts".to_string(), serde_json::Value::Array(top_3));
+        let _ = enriched.insert(html_path.clone(), new_fm);
+    }
+
+    enriched
+}
+
 #[cfg(all(test, feature = "templates"))]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -207,6 +300,7 @@ mod tests {
             template_dir: root.join("templates"),
             serve_dir: None,
             i18n: None,
+            cdn_prefix: None,
         }
     }
 
@@ -273,6 +367,7 @@ mod tests {
             template_dir: dir.path().join("templates"),
             serve_dir: None,
             i18n: None,
+            cdn_prefix: None,
         };
 
         let content_dir = config.content_dir.clone();

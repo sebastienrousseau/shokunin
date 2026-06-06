@@ -39,6 +39,9 @@ pub struct SsgConfig {
     /// Optional i18n configuration for multi-locale sites.
     #[serde(default)]
     pub i18n: Option<crate::i18n::I18nConfig>,
+    /// Optional CDN prefix for markdown images.
+    #[serde(default)]
+    pub cdn_prefix: Option<String>,
 }
 
 impl Default for SsgConfig {
@@ -261,6 +264,12 @@ impl SsgConfigBuilder {
     #[must_use]
     pub fn i18n(mut self, i18n: Option<crate::i18n::I18nConfig>) -> Self {
         self.config.i18n = i18n;
+        self
+    }
+    /// Sets the CDN prefix configuration.
+    #[must_use]
+    pub fn cdn_prefix(mut self, prefix: Option<String>) -> Self {
+        self.config.cdn_prefix = prefix;
         self
     }
     /// Builds the final `SsgConfig` instance.

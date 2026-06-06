@@ -70,6 +70,8 @@ impl Plugin for MarkdownExtPlugin {
                     )
                 })?;
 
+        let cdn_prefix = ctx.config.as_ref().and_then(|c| c.cdn_prefix.as_ref()).map(|s| s.as_str());
+
         let mut transformed = 0usize;
         for path in &files {
             fail_point!("markdown_ext::read", |_| {
@@ -79,7 +81,7 @@ impl Plugin for MarkdownExtPlugin {
                 format!("Failed to read {}", path.display())
             })?;
 
-            let new = expand_gfm(&raw);
+            let new = expand_gfm(&raw, cdn_prefix);
             if new != raw {
                 fail_point!("markdown_ext::write", |_| {
                     anyhow::bail!("injected: markdown_ext::write")
@@ -118,14 +120,29 @@ fn split_frontmatter(input: &str) -> (&str, &str) {
 }
 
 /// Expands all GFM constructs in `input`, returning a new string.
-///
-/// If no GFM features are present, returns the input unchanged
-/// (modulo no allocation when avoidable).
+/// Also prefixes local images with a CDN URL if `cdn_prefix` is set.
 #[must_use]
-pub fn expand_gfm(input: &str) -> String {
-    let (frontmatter, body) = split_frontmatter(input);
+pub fn expand_gfm(input: &str, cdn_prefix: Option<&str>) -> String {
+    let (frontmatter, body_raw) = split_frontmatter(input);
+
+    let body_owned;
+    let body = if let Some(prefix) = cdn_prefix {
+        let md_rewritten = rewrite_markdown_images(body_raw, prefix);
+        body_owned = rewrite_html_images(&md_rewritten, prefix);
+        &body_owned
+    } else {
+        body_raw
+    };
+
     if !needs_expansion(body) {
-        return input.to_string();
+        if cdn_prefix.is_none() {
+            return input.to_string();
+        } else {
+            let mut out = String::with_capacity(frontmatter.len() + body.len());
+            out.push_str(frontmatter);
+            out.push_str(body);
+            return out;
+        }
     }
 
     let mut out = String::with_capacity(input.len() + 256);
@@ -371,6 +388,99 @@ fn find_strike_close(line: &str, from: usize) -> Option<usize> {
     None
 }
 
+fn rewrite_markdown_images(body: &str, cdn_prefix: &str) -> String {
+    let mut result = String::with_capacity(body.len());
+    let mut remaining = body;
+
+    while let Some(start_idx) = remaining.find("![") {
+        result.push_str(&remaining[..start_idx]);
+        let post_bracket = &remaining[start_idx + 2..];
+
+        let Some(close_bracket_idx) = post_bracket.find(']') else {
+            result.push_str("![");
+            remaining = post_bracket;
+            continue;
+        };
+
+        let alt_text = &post_bracket[..close_bracket_idx];
+        let post_alt = &post_bracket[close_bracket_idx + 1..];
+
+        if post_alt.starts_with('(') {
+            let Some(close_paren_idx) = post_alt.find(')') else {
+                result.push_str("![");
+                result.push_str(alt_text);
+                result.push_str("]");
+                remaining = post_alt;
+                continue;
+            };
+
+            let url = &post_alt[1..close_paren_idx];
+
+            let new_url = if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("//") && !url.starts_with("data:") {
+                format!("{}{}&w=1600&format=webp&q=85", cdn_prefix, url)
+            } else {
+                url.to_string()
+            };
+
+            result.push_str(&format!("![{alt_text}]({new_url})"));
+            remaining = &post_alt[close_paren_idx + 1..];
+        } else {
+            result.push_str("![");
+            result.push_str(alt_text);
+            result.push_str("]");
+            remaining = post_alt;
+        }
+    }
+
+    result.push_str(remaining);
+    result
+}
+
+fn rewrite_html_images(body: &str, cdn_prefix: &str) -> String {
+    let mut result = String::with_capacity(body.len());
+    let mut remaining = body;
+
+    while let Some(start_idx) = remaining.find("<img ") {
+        result.push_str(&remaining[..start_idx]);
+        let tag_content = &remaining[start_idx..];
+
+        let Some(end_idx) = tag_content.find('>') else {
+            result.push_str(remaining);
+            return result;
+        };
+
+        let tag_inner = &tag_content[..end_idx + 1];
+        let mut rewritten_tag = tag_inner.to_string();
+
+        let mut src_val = None;
+        for quote in ['"', '\''] {
+            let pattern = format!("src={quote}");
+            if let Some(pos) = tag_inner.find(&pattern) {
+                let val_start = pos + pattern.len();
+                if let Some(val_end) = tag_inner[val_start..].find(quote) {
+                    src_val = Some((val_start, val_end, tag_inner[val_start..val_start + val_end].to_string(), quote));
+                    break;
+                }
+            }
+        }
+
+        if let Some((val_start, val_end, url, _quote)) = src_val {
+            if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("//") && !url.starts_with("data:") {
+                let new_url = format!("{}{}&w=1600&format=webp&q=85", cdn_prefix, url);
+                let before = &rewritten_tag[..val_start];
+                let after = &rewritten_tag[val_start + val_end..];
+                rewritten_tag = format!("{before}{new_url}{after}");
+            }
+        }
+
+        result.push_str(&rewritten_tag);
+        remaining = &tag_content[end_idx + 1..];
+    }
+
+    result.push_str(remaining);
+    result
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -457,7 +567,7 @@ mod tests {
     #[test]
     fn expand_gfm_renders_table_block() {
         let input = "Intro\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nOutro\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert!(out.contains("<table>"), "got: {out}");
         assert!(out.contains("<th>a</th>"));
         assert!(out.contains("<td>1</td>"));
@@ -468,7 +578,7 @@ mod tests {
     #[test]
     fn expand_gfm_renders_task_list_block() {
         let input = "- [ ] one\n- [x] two\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert!(out.contains("<ul>"), "got: {out}");
         assert!(out.contains("type=\"checkbox\""));
         assert!(out.contains("disabled"));
@@ -478,7 +588,7 @@ mod tests {
     #[test]
     fn expand_gfm_renders_strikethrough_inline() {
         let input = "Some ~~old~~ new text\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert_eq!(out, "Some <del>old</del> new text\n");
     }
 
@@ -486,7 +596,7 @@ mod tests {
     fn expand_gfm_preserves_fenced_code_contents() {
         let input =
             "```\n| a | b |\n|---|---|\n~~not strike~~\n- [ ] not task\n```\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         // Nothing inside the fence should be transformed.
         assert!(out.contains("| a | b |"));
         assert!(out.contains("~~not strike~~"));
@@ -498,7 +608,7 @@ mod tests {
     #[test]
     fn expand_gfm_preserves_frontmatter_unchanged() {
         let input = "---\ntitle: Test\n---\n~~strike~~ this\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert!(out.starts_with("---\ntitle: Test\n---\n"));
         assert!(out.contains("<del>strike</del>"));
     }
@@ -506,7 +616,7 @@ mod tests {
     #[test]
     fn expand_gfm_returns_input_unchanged_when_no_features() {
         let input = "# Heading\n\nA paragraph with no extensions.\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert_eq!(out, input);
     }
 
@@ -514,7 +624,7 @@ mod tests {
     fn expand_gfm_handles_tildes_in_tilde_fenced_code() {
         // ~~~ fences must also protect contents.
         let input = "~~~\n~~text~~\n~~~\n";
-        let out = expand_gfm(input);
+        let out = expand_gfm(input, None);
         assert!(out.contains("~~text~~"));
         assert!(!out.contains("<del>"));
     }
@@ -560,5 +670,14 @@ mod tests {
     #[test]
     fn plugin_name_is_markdown_ext() {
         assert_eq!(MarkdownExtPlugin.name(), "markdown-ext");
+    }
+
+    #[test]
+    fn test_cdn_prefix_rewrites_images() {
+        let input = "![Alt text](/images/pic.png)\n<img src=\"/images/pic2.png\" alt=\"HTML img\">";
+        let prefix = "https://cloudcdn.pro/api/transform?url=";
+        let out = expand_gfm(input, Some(prefix));
+        assert!(out.contains("![Alt text](https://cloudcdn.pro/api/transform?url=/images/pic.png&w=1600&format=webp&q=85)"));
+        assert!(out.contains("src=\"https://cloudcdn.pro/api/transform?url=/images/pic2.png&w=1600&format=webp&q=85\""));
     }
 }

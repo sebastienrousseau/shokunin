@@ -9,6 +9,8 @@
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
@@ -215,10 +217,13 @@ fn fnv_hash(data: &[u8]) -> u64 {
     h
 }
 
-/// Computes an SRI hash string: `sha256-<hex>`.
+/// Computes an SRI hash string: `sha256-<base64>`.
 fn compute_sri(data: &[u8]) -> String {
-    let hash = fnv_hash(data);
-    format!("sha256-{hash:016x}")
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let bytes = hasher.finalize();
+    let b64 = BASE64.encode(bytes);
+    format!("sha256-{b64}")
 }
 
 #[cfg(test)]

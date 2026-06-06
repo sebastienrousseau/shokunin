@@ -104,20 +104,43 @@ fn fingerprint_file(
     asset_path: &Path,
     site_dir: &Path,
 ) -> Result<(String, AssetInfo)> {
-    let content = fs::read(asset_path)?;
+    let mut content = fs::read(asset_path)?;
+    let ext = asset_path.extension().unwrap_or_default().to_string_lossy().to_string();
+    let mut minified = false;
+
+    if ext == "css" {
+        if let Ok(css_str) = std::str::from_utf8(&content) {
+            content = minify_css(css_str).into_bytes();
+            minified = true;
+        }
+    } else if ext == "js" || ext == "mjs" {
+        if let Ok(js_str) = std::str::from_utf8(&content) {
+            content = minify_js(js_str).into_bytes();
+            minified = true;
+        }
+    }
+
     let hash = sha256_hex(&content);
     let short_hash = &hash[..8];
 
     let stem = asset_path.file_stem().unwrap_or_default().to_string_lossy();
-    let ext = asset_path.extension().unwrap_or_default().to_string_lossy();
     let new_name = format!("{stem}.{short_hash}.{ext}");
     let new_path = asset_path.with_file_name(&new_name);
 
     let sri = format!("sha256-{}", sri_base64(&content));
 
-    fs::rename(asset_path, &new_path).with_context(|| {
-        format!("Failed to rename {}", asset_path.display())
-    })?;
+    if minified {
+        fs::write(&new_path, &content).with_context(|| {
+            format!("Failed to write minified asset {}", new_path.display())
+        })?;
+        fs::remove_file(asset_path).with_context(|| {
+            format!("Failed to remove original asset {}", asset_path.display())
+        })?;
+    } else {
+        fs::rename(asset_path, &new_path).with_context(|| {
+            format!("Failed to rename {}", asset_path.display())
+        })?;
+    }
 
     let rel_old = asset_path
         .strip_prefix(site_dir)
@@ -402,6 +425,188 @@ fn sri_base64(data: &[u8]) -> String {
     BASE64.encode(bytes)
 }
 
+/// Minimal CSS minifier that removes comments and compresses whitespace.
+fn minify_css(css: &str) -> String {
+    let mut result = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+    let mut in_comment = false;
+    let mut in_string = None;
+
+    while let Some(ch) = chars.next() {
+        if in_comment {
+            if ch == '*' && chars.peek() == Some(&'/') {
+                let _ = chars.next();
+                in_comment = false;
+            }
+            continue;
+        }
+
+        if let Some(quote) = in_string {
+            result.push(ch);
+            if ch == quote {
+                let mut backslashes = 0;
+                let mut temp = result.as_bytes().len() as isize - 2;
+                while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
+                    backslashes += 1;
+                    temp -= 1;
+                }
+                if backslashes % 2 == 0 {
+                    in_string = None;
+                }
+            }
+            continue;
+        }
+
+        if ch == '/' && chars.peek() == Some(&'*') {
+            let _ = chars.next();
+            in_comment = true;
+            continue;
+        }
+
+        if ch == '\'' || ch == '"' {
+            in_string = Some(ch);
+            result.push(ch);
+            continue;
+        }
+
+        if ch.is_whitespace() {
+            result.push(' ');
+            continue;
+        }
+
+        result.push(ch);
+    }
+
+    let mut clean = String::with_capacity(result.len());
+    let chars: Vec<char> = result.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch == ' ' {
+            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
+            let next = if i + 1 < chars.len() { Some(chars[i + 1]) } else { None };
+
+            let is_needed = match (prev, next) {
+                (Some(p), Some(n)) => {
+                    let is_p_word = p.is_alphanumeric() || p == '-' || p == '_' || p == '#' || p == '.' || p == '@' || p == '%' || p == '$';
+                    let is_n_word = n.is_alphanumeric() || n == '-' || n == '_' || n == '#' || n == '.' || n == '@' || n == '%' || n == '$';
+                    is_p_word && is_n_word
+                }
+                _ => false,
+            };
+            if is_needed {
+                clean.push(' ');
+            }
+        } else {
+            clean.push(ch);
+        }
+        i += 1;
+    }
+
+    clean.trim().to_string()
+}
+
+/// Minimal JS minifier that removes comments and compresses whitespace/newlines safely.
+fn minify_js(js: &str) -> String {
+    let mut result = String::with_capacity(js.len());
+    let mut chars = js.chars().peekable();
+    let mut in_multi_comment = false;
+    let mut in_single_comment = false;
+    let mut in_string = None;
+
+    while let Some(ch) = chars.next() {
+        if in_multi_comment {
+            if ch == '*' && chars.peek() == Some(&'/') {
+                let _ = chars.next();
+                in_multi_comment = false;
+            }
+            continue;
+        }
+
+        if in_single_comment {
+            if ch == '\n' || ch == '\r' {
+                in_single_comment = false;
+                result.push('\n');
+            }
+            continue;
+        }
+
+        if let Some(quote) = in_string {
+            result.push(ch);
+            if ch == quote {
+                let mut backslashes = 0;
+                let mut temp = result.as_bytes().len() as isize - 2;
+                while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
+                    backslashes += 1;
+                    temp -= 1;
+                }
+                if backslashes % 2 == 0 {
+                    in_string = None;
+                }
+            }
+            continue;
+        }
+
+        if ch == '/' {
+            if chars.peek() == Some(&'*') {
+                let _ = chars.next();
+                in_multi_comment = true;
+                continue;
+            } else if chars.peek() == Some(&'/') {
+                let _ = chars.next();
+                in_single_comment = true;
+                continue;
+            }
+        }
+
+        if ch == '\'' || ch == '"' || ch == '`' {
+            in_string = Some(ch);
+            result.push(ch);
+            continue;
+        }
+
+        if ch.is_whitespace() {
+            if ch == '\n' || ch == '\r' {
+                if !result.ends_with('\n') && !result.is_empty() {
+                    result.push('\n');
+                }
+            } else if !result.ends_with(' ') && !result.ends_with('\n') && !result.is_empty() {
+                result.push(' ');
+            }
+            continue;
+        }
+
+        result.push(ch);
+    }
+
+    let mut clean = String::with_capacity(result.len());
+    let chars: Vec<char> = result.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let ch = chars[i];
+        if ch == ' ' || ch == '\n' {
+            let prev = if i > 0 { Some(chars[i - 1]) } else { None };
+            let next = if i + 1 < chars.len() { Some(chars[i + 1]) } else { None };
+
+            let is_needed = match (prev, next) {
+                (Some(p), Some(n)) => {
+                    let is_p_word = p.is_alphanumeric() || p == '_' || p == '$';
+                    let is_n_word = n.is_alphanumeric() || n == '_' || n == '$';
+                    is_p_word && is_n_word
+                }
+                _ => false,
+            };
+            if is_needed {
+                clean.push(ch);
+            }
+        } else {
+            clean.push(ch);
+        }
+        i += 1;
+    }
+    clean.trim().to_string()
+}
+
 /// Asset extensions we content-fingerprint. Matches the
 /// "content-addressable asset pipeline" intent of issue #468:
 /// CSS/JS for code, common raster + vector image formats for art,
@@ -427,6 +632,20 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn test_minify_css() {
+        let input = "body {\n  color: red;\n  background-color: #ffffff; /* comment */\n}";
+        let expected = "body{color:red;background-color:#ffffff;}";
+        assert_eq!(minify_css(input), expected);
+    }
+
+    #[test]
+    fn test_minify_js() {
+        let input = "const x = 5; // comment\n/* multi\ncomment */\nconst y = 10;\nconsole.log(x + y);";
+        let expected = "const x=5;const y=10;console.log(x+y);";
+        assert_eq!(minify_js(input), expected);
+    }
 
     #[test]
     fn test_sha256_hex_deterministic() {

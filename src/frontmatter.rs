@@ -33,7 +33,14 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
             .with_context(|| format!("Failed to read {}", md_path.display()))?;
 
         let meta = match frontmatter_gen::extract(&content) {
-            Ok((fm, _body)) => frontmatter_to_json(&fm),
+            Ok((fm, body)) => {
+                let mut m = frontmatter_to_json(&fm);
+                let word_count = body.split_whitespace().count();
+                let reading_time = (word_count / 200).max(1);
+                let _ = m.insert("word_count".to_string(), serde_json::Value::Number(word_count.into()));
+                let _ = m.insert("reading_time".to_string(), serde_json::Value::Number(reading_time.into()));
+                m
+            }
             Err(_) => continue, // no frontmatter — skip
         };
 
@@ -177,6 +184,8 @@ mod tests {
         let parsed: HashMap<String, serde_json::Value> =
             serde_json::from_str(&body).unwrap();
         assert!(parsed.contains_key("title"));
+        assert_eq!(parsed.get("word_count").unwrap().as_u64().unwrap(), 2);
+        assert_eq!(parsed.get("reading_time").unwrap().as_u64().unwrap(), 1);
     }
 
     #[test]
