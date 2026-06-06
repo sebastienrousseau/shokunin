@@ -24,10 +24,6 @@ macro_rules! fail_point {
     ($name:expr, $body:expr) => {};
 }
 
-/// Shared bounded directory walkers used by every plugin's
-/// `collect_*_files` helper.
-#[allow(unreachable_pub)]
-pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
@@ -92,109 +88,77 @@ const fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
-/// Automated WCAG accessibility checker.
-pub mod accessibility;
-/// AI-readiness content hooks (GEO/AEO).
-pub mod ai;
-/// Asset fingerprinting, SRI hashes, and minification.
-pub mod assets;
-/// Content fingerprinting for incremental builds.
-pub mod cache;
+#[path = "core/mod.rs"]
+pub(crate) mod core_group;
+#[path = "plugins/mod.rs"]
+pub(crate) mod plugins_group;
+#[path = "server/mod.rs"]
+pub(crate) mod server_group;
 pub mod cmd;
-/// Typed content collection API — `get_collection` / `get_entry` (issue #456).
-pub mod collections;
-/// Typed content collections with frontmatter schema validation.
-pub mod content;
-/// Content Security Policy hardening: inline extraction + SRI.
-pub mod csp;
-/// Page dependency graph for incremental rebuilds.
-pub mod depgraph;
-/// Deployment adapter generation.
-pub mod deploy;
-/// Draft content filtering.
-pub mod drafts;
-/// Shared frontmatter extraction and `.meta.json` sidecar files.
-pub mod frontmatter;
-/// File system operations: directory copying, safety validation, and traversal.
-pub mod fs_ops;
-/// Syntax highlighting for code blocks.
-pub mod highlight;
-/// Internationalisation: hreflang injection, per-locale sitemaps, lang switcher.
-pub mod i18n;
-/// Image optimization with WebP and responsive srcset.
+
+// Re-export core modules for public API compatibility
+pub use crate::core_group::cache;
+pub use crate::core_group::collections;
+pub use crate::core_group::content;
+pub use crate::core_group::depgraph;
+pub use crate::core_group::deploy;
+pub use crate::core_group::frontmatter;
+pub use crate::core_group::fs_ops;
+pub use crate::core_group::logging;
+pub use crate::core_group::otel;
+pub use crate::core_group::pipeline;
+pub use crate::core_group::process;
+pub use crate::core_group::scaffold;
+pub use crate::core_group::schema;
+pub use crate::core_group::stream;
+pub use crate::core_group::streaming;
+#[cfg(feature = "templates")]
+pub use crate::core_group::template_engine;
+pub use crate::core_group::walk;
+
+// Re-export plugin modules
+pub use crate::plugins_group::accessibility;
+pub use crate::plugins_group::ai;
+pub use crate::plugins_group::assets;
+pub use crate::plugins_group::csp;
+pub use crate::plugins_group::drafts;
+pub use crate::plugins_group::highlight;
+pub use crate::plugins_group::i18n;
 #[cfg(feature = "image-optimization")]
-pub mod image_plugin;
-/// Interactive islands — lazy-hydrating Web Components.
-pub mod islands;
-/// WebSocket-based live-reload script injection.
-pub mod livereload;
-/// Local LLM content augmentation plugin.
-pub mod llm;
-/// Logging infrastructure.
-pub mod logging;
-/// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
-pub mod markdown_ext;
-/// Auto-generates Open Graph social card images from page metadata.
-pub mod og_image;
-/// Optional OpenTelemetry build-pipeline tracing (issue #422).
-///
-/// Compiles to an empty stub when the `otel` feature is off, so
-/// callers can always reference [`otel::init_if_enabled`] without
-/// `#[cfg]`-guarding every call site.
-pub mod otel;
-/// Pagination for listing pages.
-pub mod pagination;
-/// Build pipeline orchestration.
-#[allow(unreachable_pub)]
-pub(crate) mod pipeline;
-/// Lifecycle hook plugin system.
-pub mod plugin;
-/// Built-in plugins for common tasks.
-pub mod plugins;
-/// Post-processing fixes for staticdatagen output.
-pub mod postprocess;
-/// Command-line argument processing and site compilation.
-pub mod process;
-/// Build-time CycloneDX SBOM generation (issue #457).
-pub mod sbom;
-/// Project scaffolding for `--new`.
-pub mod scaffold;
-/// JSON Schema generation for configuration.
-pub mod schema;
-/// Client-side search index generator and search UI.
-pub mod search;
-/// SEO plugins: meta tags, robots.txt, and canonical URLs.
-pub mod seo;
-/// Dev server infrastructure.
-pub mod server;
-/// Shortcode expansion for Markdown content.
-pub mod shortcodes;
-/// High-performance streaming file processor.
-pub mod stream;
-/// Streaming compilation for large (100K+ page) sites.
-pub mod streaming;
-/// Taxonomy generation (tags, categories).
-pub mod taxonomy;
-/// Template engine integration (MiniJinja).
+pub use crate::plugins_group::image_plugin;
+pub use crate::plugins_group::islands;
+pub use crate::plugins_group::llm;
+pub use crate::plugins_group::markdown_ext;
+pub use crate::plugins_group::og_image;
+pub use crate::plugins_group::pagination;
+pub use crate::plugins_group::plugin;
+pub use crate::plugins_group::plugins;
+pub use crate::plugins_group::postprocess;
+pub use crate::plugins_group::sbom;
+pub use crate::plugins_group::search;
+pub use crate::plugins_group::seo;
+pub use crate::plugins_group::shortcodes;
+pub use crate::plugins_group::taxonomy;
 #[cfg(feature = "templates")]
-pub mod template_engine;
-/// Template rendering plugin.
-#[cfg(feature = "templates")]
-pub mod template_plugin;
-/// File-watching for live rebuild.
-pub mod watch;
+pub use crate::plugins_group::template_plugin;
+
+// Re-export server modules
+pub use crate::server_group::livereload;
+pub use crate::server_group::server;
+pub use crate::server_group::watch;
+
 /// Re-exports
 pub use staticdatagen;
 
 // Re-export everything that was previously pub in lib.rs
-pub use fs_ops::{
+pub use crate::core_group::fs_ops::{
     collect_files_recursive, copy_dir_all, copy_dir_all_async,
     copy_dir_with_progress, is_safe_path, verify_and_copy_files,
     verify_and_copy_files_async, verify_file_safety,
 };
-pub use logging::{create_log_file, log_arguments, log_initialization};
-pub use pipeline::{compile_site, execute_build_pipeline};
-pub use server::{
+pub use crate::core_group::logging::{create_log_file, log_arguments, log_initialization};
+pub use crate::core_group::pipeline::{compile_site, execute_build_pipeline};
+pub use crate::server_group::server::{
     generate_locale_redirect, handle_server, prepare_serve_dir, serve_site,
     serve_site_with, HttpTransport, ServeTransport,
 };

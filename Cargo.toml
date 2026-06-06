@@ -323,7 +323,7 @@ elided_lifetimes_in_paths = "allow"         # Allow lifetimes to be elided in pa
 non_camel_case_types = "allow"              # Allow non-camel-case types
 non_upper_case_globals = "allow"            # Allow non-uppercase global variables
 trivial_bounds = "allow"                    # Allow trivial bounds in trait definitions
-unsafe_code = "forbid"                       # Forbid the usage of unsafe code blocks
+unsafe_code = "deny"                         # Deny the usage of unsafe code blocks
 
 ## Forbidden
 missing_debug_implementations = "forbid"    # Forbid missing `Debug` implementations

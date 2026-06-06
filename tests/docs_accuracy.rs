@@ -231,9 +231,9 @@ fn readme_coverage_claims_match_ci_floors() {
 
 #[test]
 fn readme_wcag_version_matches_accessibility_module() {
-    // src/accessibility.rs declares the WCAG version in its module
+    // src/plugins/accessibility.rs declares the WCAG version in its module
     // docstring and uses it as the `wcag_version` field default.
-    let accessibility = read("src/accessibility.rs");
+    let accessibility = read("src/plugins/accessibility.rs");
     let readme = read("README.md");
 
     // Pull "WCAG 2.X" from the accessibility module (first match).
@@ -302,10 +302,10 @@ fn security_md_exists_and_mentions_disclosure() {
 
 #[test]
 fn sbom_cyclondx_version_matches_module_claim() {
-    // src/sbom.rs commits to "1.5" in both the rustdoc and the
+    // src/plugins/sbom.rs commits to "1.5" in both the rustdoc and the
     // emitted JSON. If those drift, downstream tooling that expects
     // the docstring version will validate against the wrong schema.
-    let sbom = read("src/sbom.rs");
+    let sbom = read("src/plugins/sbom.rs");
     let docstring_v = sbom.contains("CycloneDX 1.5");
     let emit_v = sbom.contains("\"specVersion\": \"1.5\"");
     assert!(
