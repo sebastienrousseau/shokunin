@@ -27,8 +27,8 @@
 //!   analysis, see runtime axe-core gate)
 //! - ARIA landmarks (single `<main>`, `<nav aria-label>`)
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
 use serde::Serialize;
 use std::fs;
 
@@ -122,7 +122,7 @@ impl Plugin for AccessibilityPlugin {
         "accessibility"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -140,7 +140,7 @@ impl Plugin for AccessibilityPlugin {
             std::collections::HashSet::new();
 
         for path in &html_files {
-            let html = fs::read_to_string(path)?;
+            let html = fs::read_to_string(path).with_path(path)?;
             let rel = path
                 .strip_prefix(&ctx.site_dir)
                 .unwrap_or(path)
@@ -165,14 +165,21 @@ impl Plugin for AccessibilityPlugin {
 
         // Write the per-page issue report.
         let report_path = ctx.site_dir.join("accessibility-report.json");
-        let json = serde_json::to_string_pretty(&report)?;
-        fs::write(&report_path, json)?;
+        let json = serde_json::to_string_pretty(&report).map_err(|e| SsgError::Io {
+            path: report_path.clone(),
+            source: std::io::Error::other(e),
+        })?;
+        fs::write(&report_path, json).with_path(&report_path)?;
 
         // Write the WCAG 2.2 compliance matrix.
         let compliance =
             build_compliance_report(html_files.len(), &failed_criteria);
         let matrix_path = ctx.site_dir.join("wcag-compliance.json");
-        fs::write(&matrix_path, serde_json::to_string_pretty(&compliance)?)?;
+        let json_compliance = serde_json::to_string_pretty(&compliance).map_err(|e| SsgError::Io {
+            path: matrix_path.clone(),
+            source: std::io::Error::other(e),
+        })?;
+        fs::write(&matrix_path, json_compliance).with_path(&matrix_path)?;
 
         if report.total_issues > 0 {
             log::warn!(
@@ -876,11 +883,23 @@ fn strip_tags_simple(html: &str) -> String {
     result
 }
 
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+#[cfg(test)]
+fn map_anyhow_to_io(err: anyhow::Error, path: &std::path::Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
+}
+
 #[cfg(test)]
 fn collect_html_files(
     dir: &std::path::Path,
-) -> Result<Vec<std::path::PathBuf>> {
-    crate::walk::walk_files(dir, "html")
+) -> Result<Vec<std::path::PathBuf>, SsgError> {
+    crate::walk::walk_files(dir, "html").map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -1409,5 +1428,24 @@ mod tests {
         let blocks = extract_all_style_blocks(html);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].trim(), "a{}");
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempdir().unwrap();
+        
+        // Create a file where it expects the site directory to be.
+        let file_path = dir.path().join("site");
+        fs::write(&file_path, "").unwrap();
+        
+        let ctx = test_ctx(&file_path);
+        let res = AccessibilityPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &file_path.join("accessibility-report.json"));
+        }
     }
 }
