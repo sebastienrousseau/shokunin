@@ -6,9 +6,9 @@
 //! Removes content files with `draft: true` in their frontmatter
 //! before compilation, unless the `--drafts` flag is set.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::MAX_DIR_DEPTH;
-use anyhow::Result;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -39,7 +39,7 @@ impl Plugin for DraftPlugin {
         "drafts"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if self.include_drafts || !ctx.content_dir.exists() {
             return Ok(());
         }
@@ -50,7 +50,7 @@ impl Plugin for DraftPlugin {
         for path in &md_files {
             if is_draft(path)? {
                 let draft_path = path.with_extension("md.draft");
-                fs::rename(path, &draft_path)?;
+                fs::rename(path, &draft_path).with_path(path)?;
                 hidden += 1;
             }
         }
@@ -63,7 +63,7 @@ impl Plugin for DraftPlugin {
         Ok(())
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if self.include_drafts || !ctx.content_dir.exists() {
             return Ok(());
         }
@@ -73,7 +73,7 @@ impl Plugin for DraftPlugin {
         for draft_path in &draft_files {
             let original = draft_path.with_extension("");
             if !original.exists() {
-                fs::rename(draft_path, &original)?;
+                fs::rename(draft_path, &original).with_path(draft_path)?;
             }
         }
         Ok(())
@@ -81,8 +81,8 @@ impl Plugin for DraftPlugin {
 }
 
 /// Checks if a Markdown file has `draft: true` in its frontmatter.
-fn is_draft(path: &Path) -> Result<bool> {
-    let content = fs::read_to_string(path)?;
+fn is_draft(path: &Path) -> Result<bool, SsgError> {
+    let content = fs::read_to_string(path).with_path(path)?;
 
     // Quick check: look for draft field in YAML frontmatter
     if !content.starts_with("---") {
@@ -108,12 +108,25 @@ fn is_draft(path: &Path) -> Result<bool> {
     Ok(false)
 }
 
-fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
 }
 
-fn collect_draft_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
+    crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
+        .map_err(|e| map_anyhow_to_io(e, dir))
+}
+
+fn collect_draft_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_depth(dir, "draft", MAX_DIR_DEPTH)
+        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -262,8 +275,14 @@ mod tests {
     #[test]
     fn is_draft_missing_file_returns_err() {
         let dir = tempdir().expect("tempdir");
-        let result = is_draft(&dir.path().join("does-not-exist.md"));
+        let missing = dir.path().join("does-not-exist.md");
+        let result = is_draft(&missing);
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = err {
+            assert_eq!(path, missing);
+        }
     }
 
     // -------------------------------------------------------------------
