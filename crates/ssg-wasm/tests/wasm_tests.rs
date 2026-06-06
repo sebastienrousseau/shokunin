@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![cfg(target_arch = "wasm32")]
+#![allow(missing_docs, dead_code)]
 
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;

@@ -4604,7 +4604,6 @@ dependencies = [
 name = "ssg-core"
 version = "0.0.40"
 dependencies = [
- "anyhow",
  "log",
  "pulldown-cmark 0.13.4",
  "serde",

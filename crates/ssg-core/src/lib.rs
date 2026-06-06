@@ -17,8 +17,49 @@
 //! - SEO metadata generation
 //! - Search index generation
 
-use anyhow::Result;
 use std::collections::HashMap;
+use std::fmt;
+
+/// The error type for ssg-core operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Error {
+    /// TOML/YAML/JSON parsing failures.
+    FrontmatterParse {
+        /// The syntax format (e.g. "toml", "yaml", "json") or parse error detail.
+        syntax: String,
+    },
+    /// Markdown rendering bugs.
+    MarkdownCompile {
+        /// Detail about what failed.
+        source: String,
+    },
+    /// Slugification layout validation failures.
+    InvalidSlug {
+        /// The invalid input string.
+        input: String,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FrontmatterParse { syntax } => {
+                write!(f, "Frontmatter parse error: {syntax}")
+            }
+            Self::MarkdownCompile { source } => {
+                write!(f, "Markdown compilation error: {source}")
+            }
+            Self::InvalidSlug { input } => {
+                write!(f, "Invalid slug input: {input}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/// Specialized Result type for ssg-core operations.
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Compile a Markdown string to HTML.
 ///
