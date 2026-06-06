@@ -139,7 +139,7 @@ graph TD
 | :--- | :--- |
 | **Source** | 39,103 lines across 38 modules |
 | **Test suite** | 1,640 unit tests + 14 integration test suites |
-| **Coverage** | 94% region, 94% line, 94% function |
+| **Coverage** | 95% region, 95% line, 95% function |
 | **Plugin pipeline** | 33 plugins, Rayon-parallelised |
 | **Examples** | 8 branded examples |
 | **Dependencies** | 15 runtime |
@@ -190,7 +190,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | CSP/SRI auto-extraction | Yes | No | No | Plugin |
 | axe-core CI gate | Yes | No | No | No |
 | WebAssembly target | Yes | No | No | N/A |
-| 94% CI coverage floors | Yes | No | No | No |
+| 95% CI coverage floors | Yes | No | No | No |
 | Zero unsafe code | Yes | Yes | Yes | N/A |
 
 ---
