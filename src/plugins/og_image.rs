@@ -9,9 +9,9 @@
 //!
 //! No external dependencies — uses inline SVG generation.
 
+use crate::error::PathErrorExt;
 use crate::plugin::{Plugin, PluginContext};
 use crate::seo::helpers::{extract_title, has_meta_tag};
-use anyhow::Result;
 use std::{fs, path::Path};
 
 /// Plugin that auto-generates Open Graph social card images.
@@ -131,7 +131,8 @@ fn escape_svg(text: &str) -> String {
 fn slug_from_path(path: &Path, site_dir: &Path) -> String {
     let rel = path.strip_prefix(site_dir).unwrap_or(path);
     let stem = rel.with_extension("");
-    stem.to_string_lossy()
+    let stem_str = stem.to_string_lossy();
+    stem_str
         .replace(['/', '\\'], "-")
         .trim_matches('-')
         .to_string()
@@ -142,7 +143,7 @@ impl Plugin for OgImagePlugin {
         "og-image"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -179,7 +180,7 @@ impl Plugin for OgImagePlugin {
                 &self.brand_color,
                 &self.text_color,
             );
-            fs::write(&svg_path, &svg)?;
+            fs::write(&svg_path, &svg).with_path(&svg_path)?;
 
             // Inject og:image meta tag
             let og_url = format!("{base}/{svg_filename}");
@@ -192,7 +193,7 @@ impl Plugin for OgImagePlugin {
             if let Some(pos) = html.find("</head>") {
                 let mut modified = html.clone();
                 modified.insert_str(pos, &meta);
-                fs::write(path, &modified)?;
+                fs::write(path, &modified).with_path(path)?;
                 generated += 1;
             }
         }
@@ -205,10 +206,12 @@ impl Plugin for OgImagePlugin {
     }
 }
 
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use crate::error::SsgError;
 
     #[test]
     fn generate_og_svg_basic() {
@@ -363,5 +366,31 @@ mod tests {
         );
         assert_eq!(plugin.brand_color, "#ff0000");
         assert_eq!(plugin.text_color, "#00ff00");
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        let html = "<html><head><title>Test Page</title></head><body></body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
+
+        // Create a directory where the SVG is expected to be written, causing fs::write to fail.
+        let svg_dir = site.join("og-index.svg");
+        fs::create_dir(&svg_dir).unwrap();
+
+        let plugin = OgImagePlugin::new("https://example.com");
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        
+        let res = plugin.after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &svg_dir);
+        }
     }
 }
