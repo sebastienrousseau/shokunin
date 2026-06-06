@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{ensure, Context, Result};
+use crate::error::{SsgError, PathErrorExt};
 use rayon::prelude::*;
 
 use crate::MAX_DIR_DEPTH;
@@ -38,7 +38,7 @@ pub(crate) const PARALLEL_THRESHOLD: usize = 16;
 /// use std::path::Path;
 /// use ssg::verify_and_copy_files;
 ///
-/// fn main() -> anyhow::Result<()> {
+/// fn main() -> Result<(), ssg::error::SsgError> {
 ///     let source = Path::new("source_directory");
 ///     let destination = Path::new("destination_directory");
 ///
@@ -55,15 +55,18 @@ pub(crate) const PARALLEL_THRESHOLD: usize = 16;
 /// * Symlink restriction
 /// * File size limits
 /// * Permission validation
-pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
-    ensure!(
-        is_safe_path(src)?,
-        "Source directory is unsafe or inaccessible: {}",
-        src.display()
-    );
+pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<(), SsgError> {
+    if !is_safe_path(src)? {
+        return Err(SsgError::PathTraversal {
+            path: src.to_path_buf(),
+        });
+    }
 
     if !src.exists() {
-        anyhow::bail!("Source directory does not exist: {}", src.display());
+        return Err(SsgError::Validation {
+            field: "src".to_string(),
+            message: format!("Source directory does not exist: {}", src.display()),
+        });
     }
 
     // If source is a file, verify its safety
@@ -72,21 +75,10 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
     }
 
     // Ensure the destination directory exists
-    fs::create_dir_all(dst).with_context(|| {
-        format!(
-            "Failed to create or access destination directory at path: {}",
-            dst.display()
-        )
-    })?;
+    fs::create_dir_all(dst).with_path(dst)?;
 
     // Copy directory contents with safety checks
-    copy_dir_all(src, dst).with_context(|| {
-        format!(
-            "Failed to copy files from source: {} to destination: {}",
-            src.display(),
-            dst.display()
-        )
-    })?;
+    copy_dir_all(src, dst)?;
 
     Ok(())
 }
@@ -95,38 +87,37 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<()> {
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
-pub fn verify_and_copy_files_async(src: &Path, dst: &Path) -> Result<()> {
+pub fn verify_and_copy_files_async(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
-        return Err(anyhow::anyhow!(
-            "Source directory does not exist: {}",
-            src.display()
-        ));
+        return Err(SsgError::Validation {
+            field: "src".to_string(),
+            message: format!("Source directory does not exist: {}", src.display()),
+        });
     }
 
-    fs::create_dir_all(dst).with_context(|| {
-        format!(
-            "Failed to create or access destination directory at path: {}",
-            dst.display()
-        )
-    })?;
+    fs::create_dir_all(dst).with_path(dst)?;
 
     copy_directory_recursive(src, dst)
 }
 
 /// Iteratively copies a directory tree with depth bounds and safety checks.
-fn copy_directory_recursive(src: &Path, dst: &Path) -> Result<()> {
+fn copy_directory_recursive(src: &Path, dst: &Path) -> Result<(), SsgError> {
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
     while let Some((src_dir, dst_dir, depth)) = stack.pop() {
-        ensure!(
-            depth < MAX_DIR_DEPTH,
-            "Directory nesting exceeds maximum depth of {}: {}",
-            MAX_DIR_DEPTH,
-            src_dir.display()
-        );
+        if depth >= MAX_DIR_DEPTH {
+            return Err(SsgError::Validation {
+                field: "directory_depth".to_string(),
+                message: format!(
+                    "Directory nesting exceeds maximum depth of {}: {}",
+                    MAX_DIR_DEPTH,
+                    src_dir.display()
+                ),
+            });
+        }
 
-        for entry in fs::read_dir(&src_dir)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&src_dir).with_path(&src_dir)? {
+            let entry = entry.with_path(&src_dir)?;
             copy_entry(&entry, &dst_dir, depth, &mut stack)?;
         }
     }
@@ -140,16 +131,16 @@ fn copy_entry(
     dst_dir: &Path,
     depth: usize,
     stack: &mut Vec<(PathBuf, PathBuf, usize)>,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let src_path = entry.path();
     let dst_path = dst_dir.join(entry.file_name());
 
     if src_path.is_dir() {
-        fs::create_dir_all(&dst_path)?;
+        fs::create_dir_all(&dst_path).with_path(&dst_path)?;
         stack.push((src_path, dst_path, depth + 1));
     } else {
         verify_file_safety(&src_path)?;
-        _ = fs::copy(&src_path, &dst_path)?;
+        _ = fs::copy(&src_path, &dst_path).with_path(&dst_path)?;
     }
     Ok(())
 }
@@ -158,14 +149,15 @@ fn copy_entry(
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
-pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
+pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
-        anyhow::bail!("Source directory does not exist: {}", src.display());
+        return Err(SsgError::Validation {
+            field: "src".to_string(),
+            message: format!("Source directory does not exist: {}", src.display()),
+        });
     }
 
-    fs::create_dir_all(dst).with_context(|| {
-        format!("Failed to create destination directory: {}", dst.display())
-    })?;
+    fs::create_dir_all(dst).with_path(dst)?;
 
     let mut file_count: u64 = 0;
 
@@ -173,29 +165,31 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
     while let Some((src_dir, dst_dir, depth)) = stack.pop() {
-        ensure!(
-            depth < MAX_DIR_DEPTH,
-            "Directory nesting exceeds maximum depth of {}: {}",
-            MAX_DIR_DEPTH,
-            src_dir.display()
-        );
+        if depth >= MAX_DIR_DEPTH {
+            return Err(SsgError::Validation {
+                field: "directory_depth".to_string(),
+                message: format!(
+                    "Directory nesting exceeds maximum depth of {}: {}",
+                    MAX_DIR_DEPTH,
+                    src_dir.display()
+                ),
+            });
+        }
 
         let entries: Vec<_> = fs::read_dir(&src_dir)
-            .context(format!(
-                "Failed to read source directory: {}",
-                src_dir.display()
-            ))?
-            .collect::<std::io::Result<Vec<_>>>()?;
+            .with_path(&src_dir)?
+            .collect::<std::io::Result<Vec<_>>>()
+            .with_path(&src_dir)?;
 
         for entry in &entries {
             let src_path = entry.path();
             let dst_path = dst_dir.join(entry.file_name());
 
             if src_path.is_dir() {
-                fs::create_dir_all(&dst_path)?;
+                fs::create_dir_all(&dst_path).with_path(&dst_path)?;
                 stack.push((src_path, dst_path, depth + 1));
             } else {
-                let _ = fs::copy(&src_path, &dst_path)?;
+                _ = fs::copy(&src_path, &dst_path).with_path(&dst_path)?;
             }
             file_count += 1;
         }
@@ -227,7 +221,7 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<()> {
 /// * Checking for parent directory references (`..`)
 /// * Validating path components
 ///
-pub fn is_safe_path(path: &Path) -> Result<bool> {
+pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
     // Check for traversal patterns in non-existent paths
     if !path.exists() {
         let path_str = path.to_string_lossy();
@@ -242,7 +236,7 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
     // A failure here (e.g. broken symlink) means the path is unsafe.
     let _canonical = path
         .canonicalize()
-        .context(format!("Failed to canonicalize path {}", path.display()))?;
+        .with_path(path)?;
 
     Ok(true)
 }
@@ -278,7 +272,7 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
 /// use ssg::verify_file_safety;
 /// use tempfile::tempdir;
 ///
-/// # fn main() -> anyhow::Result<()> {
+/// # fn main() -> Result<(), ssg::error::SsgError> {
 /// // Create temporary directory
 /// let temp_dir = tempdir()?;
 /// let file_path = temp_dir.path().join("index.md");
@@ -300,35 +294,31 @@ pub fn is_safe_path(path: &Path) -> Result<bool> {
 /// * File is a symlink
 /// * File size exceeds 10MB
 /// * Cannot read file metadata
-pub fn verify_file_safety(path: &Path) -> Result<()> {
+pub fn verify_file_safety(path: &Path) -> Result<(), SsgError> {
     const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10MB limit
 
     // Get symlink metadata without following the symlink
-    let symlink_metadata = path.symlink_metadata().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to get symlink metadata for {}: {}",
-            path.display(),
-            e
-        )
-    })?;
+    let symlink_metadata = path.symlink_metadata().with_path(path)?;
 
     // Explicitly check for symlinks first
     if symlink_metadata.file_type().is_symlink() {
-        return Err(anyhow::anyhow!(
-            "Symlinks are not allowed: {}",
-            path.display()
-        ));
+        return Err(SsgError::SymlinkForbidden {
+            path: path.to_path_buf(),
+        });
     }
 
     // Only check size if it's a regular file
     if symlink_metadata.file_type().is_file()
         && symlink_metadata.len() > MAX_FILE_SIZE
     {
-        return Err(anyhow::anyhow!(
-            "File exceeds maximum allowed size of {} bytes: {}",
-            MAX_FILE_SIZE,
-            path.display()
-        ));
+        return Err(SsgError::Validation {
+            field: "file_size".to_string(),
+            message: format!(
+                "File exceeds maximum allowed size of {} bytes: {}",
+                MAX_FILE_SIZE,
+                path.display()
+            ),
+        });
     }
 
     Ok(())
@@ -355,7 +345,7 @@ pub fn verify_file_safety(path: &Path) -> Result<()> {
 /// use std::path::{Path, PathBuf};
 /// use ssg::collect_files_recursive;
 ///
-/// fn main() -> anyhow::Result<()> {
+/// fn main() -> Result<(), ssg::error::SsgError> {
 ///     let mut files = Vec::new();
 ///     let dir_path = Path::new("./examples/content");
 ///
@@ -378,20 +368,24 @@ pub fn verify_file_safety(path: &Path) -> Result<()> {
 pub fn collect_files_recursive(
     dir: &Path,
     files: &mut Vec<PathBuf>,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     // (directory, depth)
     let mut stack = vec![(dir.to_path_buf(), 0usize)];
 
     while let Some((current_dir, depth)) = stack.pop() {
-        ensure!(
-            depth < MAX_DIR_DEPTH,
-            "Directory nesting exceeds maximum depth of {}: {}",
-            MAX_DIR_DEPTH,
-            current_dir.display()
-        );
+        if depth >= MAX_DIR_DEPTH {
+            return Err(SsgError::Validation {
+                field: "directory_depth".to_string(),
+                message: format!(
+                    "Directory nesting exceeds maximum depth of {}: {}",
+                    MAX_DIR_DEPTH,
+                    current_dir.display()
+                ),
+            });
+        }
 
-        for entry in fs::read_dir(&current_dir)? {
-            let path = entry?.path();
+        for entry in fs::read_dir(&current_dir).with_path(&current_dir)? {
+            let path = entry.with_path(&current_dir)?.path();
 
             if path.is_dir() {
                 stack.push((path, depth + 1));
@@ -428,29 +422,35 @@ pub fn collect_files_recursive(
 /// * Verifies file safety before copying
 /// * Maintains original file permissions
 /// * Handles circular references
-pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
-    fs::create_dir_all(dst)?;
+pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), SsgError> {
+    fs::create_dir_all(dst).with_path(dst)?;
 
     // (source_dir, dest_dir, depth)
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
     while let Some((src_dir, dst_dir, depth)) = stack.pop() {
-        ensure!(
-            depth < MAX_DIR_DEPTH,
-            "Directory nesting exceeds maximum depth of {}: {}",
-            MAX_DIR_DEPTH,
-            src_dir.display()
-        );
+        if depth >= MAX_DIR_DEPTH {
+            return Err(SsgError::Validation {
+                field: "directory_depth".to_string(),
+                message: format!(
+                    "Directory nesting exceeds maximum depth of {}: {}",
+                    MAX_DIR_DEPTH,
+                    src_dir.display()
+                ),
+            });
+        }
 
         let entries: Vec<_> =
-            fs::read_dir(&src_dir)?.collect::<std::io::Result<Vec<_>>>()?;
+            fs::read_dir(&src_dir).with_path(&src_dir)?
+            .collect::<std::io::Result<Vec<_>>>()
+            .with_path(&src_dir)?;
 
         let (files, subdirs) = partition_entries(&entries, &dst_dir);
 
         copy_files_maybe_parallel(&files, &dst_dir)?;
 
         for (sub_src, sub_dst) in subdirs {
-            fs::create_dir_all(&sub_dst)?;
+            fs::create_dir_all(&sub_dst).with_path(&sub_dst)?;
             stack.push((sub_src, sub_dst, depth + 1));
         }
     }
@@ -483,12 +483,12 @@ fn partition_entries<'a>(
 fn copy_files_maybe_parallel(
     files: &[&fs::DirEntry],
     dst_dir: &Path,
-) -> Result<()> {
-    let copy_file = |entry: &&fs::DirEntry| -> Result<()> {
+) -> Result<(), SsgError> {
+    let copy_file = |entry: &&fs::DirEntry| -> Result<(), SsgError> {
         let src_path = entry.path();
         let dst_path = dst_dir.join(entry.file_name());
         verify_file_safety(&src_path)?;
-        _ = fs::copy(&src_path, &dst_path)?;
+        _ = fs::copy(&src_path, &dst_path).with_path(&dst_path)?;
         Ok(())
     };
 
@@ -519,35 +519,39 @@ fn copy_files_maybe_parallel(
 ///
 /// * `std::io::Error`: If an error occurs during directory creation, file copying, or permission issues.
 /// * `anyhow::Error`: If a file safety check fails.
-pub fn copy_dir_all_async(src: &Path, dst: &Path) -> Result<()> {
+pub fn copy_dir_all_async(src: &Path, dst: &Path) -> Result<(), SsgError> {
     internal_copy_dir_async(src, dst)
 }
 
-fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<()> {
-    fs::create_dir_all(dst)?;
+fn internal_copy_dir_async(src: &Path, dst: &Path) -> Result<(), SsgError> {
+    fs::create_dir_all(dst).with_path(dst)?;
 
     // (source_dir, dest_dir, depth)
     let mut stack = vec![(src.to_path_buf(), dst.to_path_buf(), 0usize)];
 
     while let Some((src_path, dst_path, depth)) = stack.pop() {
-        ensure!(
-            depth < MAX_DIR_DEPTH,
-            "Directory nesting exceeds maximum depth of {}: {}",
-            MAX_DIR_DEPTH,
-            src_path.display()
-        );
+        if depth >= MAX_DIR_DEPTH {
+            return Err(SsgError::Validation {
+                field: "directory_depth".to_string(),
+                message: format!(
+                    "Directory nesting exceeds maximum depth of {}: {}",
+                    MAX_DIR_DEPTH,
+                    src_path.display()
+                ),
+            });
+        }
 
-        for entry in fs::read_dir(&src_path)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&src_path).with_path(&src_path)? {
+            let entry = entry.with_path(&src_path)?;
             let src_entry = entry.path();
             let dst_entry = dst_path.join(entry.file_name());
 
             if src_entry.is_dir() {
-                fs::create_dir_all(&dst_entry)?;
+                fs::create_dir_all(&dst_entry).with_path(&dst_entry)?;
                 stack.push((src_entry, dst_entry, depth + 1));
             } else {
                 verify_file_safety(&src_entry)?;
-                _ = fs::copy(&src_entry, &dst_entry)?;
+                _ = fs::copy(&src_entry, &dst_entry).with_path(&dst_entry)?;
             }
         }
     }

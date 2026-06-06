@@ -782,8 +782,8 @@ mod tests {
         let err = result.unwrap_err();
         println!("Error message: {err}");
         assert!(
-            err.to_string().contains("Symlinks are not allowed"),
-            "Unexpected error message: {err}"
+            matches!(err, SsgError::SymlinkForbidden { ref path } if path == &symlink_path),
+            "expected SsgError::SymlinkForbidden, got: {err:?}"
         );
 
         Ok(())
@@ -2148,10 +2148,10 @@ mod tests {
         let bad_dst = blocker.join("sub");
         let result = verify_and_copy_files(temp.path(), &bad_dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
+        let err = result.unwrap_err();
         assert!(
-            msg.contains("Failed to create or access destination"),
-            "expected with_context message, got: {msg}"
+            matches!(err, SsgError::Io { ref path, .. } if path == &bad_dst),
+            "expected SsgError::Io for bad_dst, got: {err:?}"
         );
         Ok(())
     }
@@ -2185,10 +2185,10 @@ mod tests {
 
         let result = copy_dir_with_progress(&src_file, &dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
+        let err = result.unwrap_err();
         assert!(
-            msg.contains("Failed to read source directory"),
-            "expected with_context message, got: {msg}"
+            matches!(err, SsgError::Io { ref path, .. } if path == &src_file),
+            "expected SsgError::Io for src_file, got: {err:?}"
         );
         Ok(())
     }
@@ -2203,8 +2203,11 @@ mod tests {
         let bad_dst = blocker.join("sub");
         let result = verify_and_copy_files_async(temp.path(), &bad_dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
-        assert!(msg.contains("Failed to create or access destination"));
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &bad_dst),
+            "expected SsgError::Io for bad_dst, got: {err:?}"
+        );
         Ok(())
     }
 
