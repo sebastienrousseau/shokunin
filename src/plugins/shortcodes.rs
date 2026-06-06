@@ -6,9 +6,9 @@
 //! Preprocesses Markdown content before compilation, expanding
 //! `{{< shortcode args >}}` patterns into HTML fragments.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::MAX_DIR_DEPTH;
-use anyhow::Result;
 use std::{
     collections::HashMap,
     fs,
@@ -36,7 +36,7 @@ impl Plugin for ShortcodePlugin {
         "shortcodes"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.content_dir.exists() {
             return Ok(());
         }
@@ -45,10 +45,10 @@ impl Plugin for ShortcodePlugin {
         let mut expanded = 0usize;
 
         for path in &md_files {
-            let content = fs::read_to_string(path)?;
+            let content = fs::read_to_string(path).with_path(path)?;
             let result = expand_shortcodes(&content);
             if result != content {
-                fs::write(path, &result)?;
+                fs::write(path, &result).with_path(path)?;
                 expanded += 1;
             }
         }
@@ -281,8 +281,20 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
+}
+
+fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
+        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -566,6 +578,28 @@ title: Test
 
         let result = fs::read_to_string(content.join("test.md")).unwrap();
         assert!(result.contains("youtube-nocookie.com"));
+    }
+
+    #[test]
+    fn before_compile_read_failure_returns_io_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        
+        // Create a file with invalid UTF-8 to make read_to_string fail.
+        let file_path = content.join("fail.md");
+        fs::write(&file_path, &[0xFF, 0xFE, 0xFD]).unwrap();
+        
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let res = ShortcodePlugin.before_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &file_path);
+        }
     }
 }
 
