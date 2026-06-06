@@ -6,8 +6,8 @@
 //! Reads `tags` and `categories` from frontmatter sidecars and
 //! generates index pages for each taxonomy term.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
 use std::{
     collections::HashMap,
     fs,
@@ -43,7 +43,7 @@ impl Plugin for TaxonomyPlugin {
         "taxonomy"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         let sidecar_dir = ctx.build_dir.join(".meta");
         if !sidecar_dir.exists() {
             return Ok(());
@@ -112,14 +112,14 @@ fn extract_terms_from_value(
 /// Collects taxonomy entries (tags, categories, topics) from sidecar JSON files.
 fn collect_taxonomy_entries(
     sidecar_dir: &Path,
-) -> Result<(TaxonomyMap, TaxonomyMap, TaxonomyMap)> {
+) -> Result<(TaxonomyMap, TaxonomyMap, TaxonomyMap), SsgError> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut tags: TaxonomyMap = HashMap::new();
     let mut categories: TaxonomyMap = HashMap::new();
     let mut topics: TaxonomyMap = HashMap::new();
 
     for sidecar_path in &sidecars {
-        let content = fs::read_to_string(sidecar_path)?;
+        let content = fs::read_to_string(sidecar_path).with_path(sidecar_path)?;
         let meta: HashMap<String, serde_json::Value> =
             match serde_json::from_str(&content) {
                 Ok(m) => m,
@@ -170,9 +170,9 @@ fn generate_taxonomy_pages(
     site_dir: &Path,
     taxonomy_name: &str,
     terms: &HashMap<String, Vec<(String, String)>>,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let tax_dir = site_dir.join(taxonomy_name);
-    fs::create_dir_all(&tax_dir)?;
+    fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
 
     // Generate index page listing all terms
     let mut index_html = format!(
@@ -199,7 +199,7 @@ fn generate_taxonomy_pages(
 
         // Generate individual term page
         let term_dir = tax_dir.join(&slug);
-        fs::create_dir_all(&term_dir)?;
+        fs::create_dir_all(&term_dir).with_path(&term_dir)?;
 
         let mut term_html = format!(
             "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
@@ -213,11 +213,13 @@ fn generate_taxonomy_pages(
         }
         term_html.push_str("</ul>\n</main>\n</body>\n</html>\n");
 
-        fs::write(term_dir.join("index.html"), term_html)?;
+        let out_file = term_dir.join("index.html");
+        fs::write(&out_file, term_html).with_path(&out_file)?;
     }
 
     index_html.push_str("</ul>\n</main>\n</body>\n</html>\n");
-    fs::write(tax_dir.join("index.html"), index_html)?;
+    let out_index = tax_dir.join("index.html");
+    fs::write(&out_index, index_html).with_path(&out_index)?;
 
     Ok(())
 }
@@ -241,8 +243,19 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "json")
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
+}
+
+fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
+    crate::walk::walk_files(dir, "json").map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -742,6 +755,21 @@ mod tests {
         assert_eq!(copy.name, "Rust");
         assert_eq!(copy.slug, "rust");
         assert_eq!(copy.pages.len(), 1);
+    }
+
+    #[test]
+    fn test_generate_taxonomy_pages_invalid_dir_returns_io_error() {
+        let tmp = tempdir().unwrap();
+        let file_path = tmp.path().join("file");
+        fs::write(&file_path, "").unwrap();
+
+        let mut terms = HashMap::new();
+        let _ = terms.insert("rust".to_string(), vec![("Title".to_string(), "/hello.html".to_string())]);
+
+        let res = generate_taxonomy_pages(&file_path, "tags", &terms);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
     }
 }
 
