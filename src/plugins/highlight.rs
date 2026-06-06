@@ -7,10 +7,13 @@
 //! blocks. Uses class-based highlighting with a generated CSS file,
 //! avoiding inline styles for better performance and cacheability.
 
+use crate::error::PathErrorExt;
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
 use std::fs;
 use std::path::Path;
+
+#[cfg(test)]
+use crate::error::SsgError;
 
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
@@ -54,7 +57,7 @@ impl Plugin for HighlightPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> anyhow::Result<String> {
         let result = add_highlight_markup(html);
         if result == html {
             return Ok(html.to_string());
@@ -66,14 +69,15 @@ impl Plugin for HighlightPlugin {
         }
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
         // Generate highlight.css
         let css = generate_highlight_css(&self.theme);
-        fs::write(ctx.site_dir.join("highlight.css"), &css)?;
+        let path = ctx.site_dir.join("highlight.css");
+        fs::write(&path, &css).with_path(&path)?;
 
         Ok(())
     }
@@ -168,8 +172,19 @@ pre.highlight code {
 }
 
 #[cfg(test)]
-fn collect_html_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
-    crate::walk::walk_files(dir, "html")
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
+}
+
+#[cfg(test)]
+fn collect_html_files(dir: &Path) -> Result<Vec<std::path::PathBuf>, SsgError> {
+    crate::walk::walk_files(dir, "html").map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -324,5 +339,26 @@ mod tests {
             .unwrap();
         assert!(output.contains("highlight.css"));
         assert!(output.contains("highlight language-js"));
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        // Create a directory where highlight.css is expected to be written, causing fs::write to fail.
+        let css_dir = site.join("highlight.css");
+        fs::create_dir(&css_dir).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = HighlightPlugin::default().after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &css_dir);
+        }
     }
 }
