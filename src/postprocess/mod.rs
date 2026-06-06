@@ -27,6 +27,7 @@ mod html_fix;
 mod manifest;
 mod news_sitemap;
 mod rss;
+mod sbom;
 mod sitemap;
 
 pub use atom::AtomFeedPlugin;
@@ -34,4 +35,5 @@ pub use html_fix::HtmlFixPlugin;
 pub use manifest::ManifestFixPlugin;
 pub use news_sitemap::NewsSitemapFixPlugin;
 pub use rss::RssAggregatePlugin;
+pub use sbom::SbomPlugin;
 pub use sitemap::SitemapFixPlugin;

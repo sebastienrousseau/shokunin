@@ -343,6 +343,7 @@ pub fn register_default_plugins(
     plugins.register(postprocess::AtomFeedPlugin);
     plugins.register(postprocess::ManifestFixPlugin);
     plugins.register(postprocess::HtmlFixPlugin);
+    plugins.register(postprocess::SbomPlugin);
 
     // Syntax highlighting
     plugins.register(highlight::HighlightPlugin::default());
