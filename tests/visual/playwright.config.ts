@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: ".",
   snapshotPathTemplate:
-    "{testDir}/../visual-baselines/{testName}/{arg}{ext}",
+    "{testDir}/../visual-baselines/{projectName}/{testName}/{arg}{ext}",
   timeout: 30_000,
   expect: {
     toHaveScreenshot: {
