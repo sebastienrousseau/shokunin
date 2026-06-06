@@ -105,7 +105,11 @@ fn fingerprint_file(
     site_dir: &Path,
 ) -> Result<(String, AssetInfo)> {
     let mut content = fs::read(asset_path)?;
-    let ext = asset_path.extension().unwrap_or_default().to_string_lossy().to_string();
+    let ext = asset_path
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
     let mut minified = false;
 
     if ext == "css" {
@@ -445,7 +449,7 @@ fn minify_css(css: &str) -> String {
             result.push(ch);
             if ch == quote {
                 let mut backslashes = 0;
-                let mut temp = result.as_bytes().len() as isize - 2;
+                let mut temp = result.len() as isize - 2;
                 while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
                     backslashes += 1;
                     temp -= 1;
@@ -484,12 +488,30 @@ fn minify_css(css: &str) -> String {
         let ch = chars[i];
         if ch == ' ' {
             let prev = if i > 0 { Some(chars[i - 1]) } else { None };
-            let next = if i + 1 < chars.len() { Some(chars[i + 1]) } else { None };
+            let next = if i + 1 < chars.len() {
+                Some(chars[i + 1])
+            } else {
+                None
+            };
 
             let is_needed = match (prev, next) {
                 (Some(p), Some(n)) => {
-                    let is_p_word = p.is_alphanumeric() || p == '-' || p == '_' || p == '#' || p == '.' || p == '@' || p == '%' || p == '$';
-                    let is_n_word = n.is_alphanumeric() || n == '-' || n == '_' || n == '#' || n == '.' || n == '@' || n == '%' || n == '$';
+                    let is_p_word = p.is_alphanumeric()
+                        || p == '-'
+                        || p == '_'
+                        || p == '#'
+                        || p == '.'
+                        || p == '@'
+                        || p == '%'
+                        || p == '$';
+                    let is_n_word = n.is_alphanumeric()
+                        || n == '-'
+                        || n == '_'
+                        || n == '#'
+                        || n == '.'
+                        || n == '@'
+                        || n == '%'
+                        || n == '$';
                     is_p_word && is_n_word
                 }
                 _ => false,
@@ -535,7 +557,7 @@ fn minify_js(js: &str) -> String {
             result.push(ch);
             if ch == quote {
                 let mut backslashes = 0;
-                let mut temp = result.as_bytes().len() as isize - 2;
+                let mut temp = result.len() as isize - 2;
                 while temp >= 0 && result.as_bytes()[temp as usize] == b'\\' {
                     backslashes += 1;
                     temp -= 1;
@@ -570,7 +592,10 @@ fn minify_js(js: &str) -> String {
                 if !result.ends_with('\n') && !result.is_empty() {
                     result.push('\n');
                 }
-            } else if !result.ends_with(' ') && !result.ends_with('\n') && !result.is_empty() {
+            } else if !result.ends_with(' ')
+                && !result.ends_with('\n')
+                && !result.is_empty()
+            {
                 result.push(' ');
             }
             continue;
@@ -586,7 +611,11 @@ fn minify_js(js: &str) -> String {
         let ch = chars[i];
         if ch == ' ' || ch == '\n' {
             let prev = if i > 0 { Some(chars[i - 1]) } else { None };
-            let next = if i + 1 < chars.len() { Some(chars[i + 1]) } else { None };
+            let next = if i + 1 < chars.len() {
+                Some(chars[i + 1])
+            } else {
+                None
+            };
 
             let is_needed = match (prev, next) {
                 (Some(p), Some(n)) => {

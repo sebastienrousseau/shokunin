@@ -769,7 +769,7 @@ fn check_banned_elements(html: &str, issues: &mut Vec<AccessibilityIssue>) {
 /// ARIA landmark checks: one <main>, nav has aria-label.
 fn strip_non_content_blocks(html: &str) -> String {
     let mut clean = html.to_lowercase();
-    
+
     // Remove HTML comments
     while let Some(start) = clean.find("<!--") {
         if let Some(end) = clean[start..].find("-->") {
@@ -778,7 +778,7 @@ fn strip_non_content_blocks(html: &str) -> String {
             break;
         }
     }
-    
+
     // Remove style blocks
     while let Some(start) = clean.find("<style") {
         if let Some(end) = clean[start..].find("</style>") {
@@ -787,7 +787,7 @@ fn strip_non_content_blocks(html: &str) -> String {
             break;
         }
     }
-    
+
     // Remove script blocks
     while let Some(start) = clean.find("<script") {
         if let Some(end) = clean[start..].find("</script>") {
@@ -796,7 +796,7 @@ fn strip_non_content_blocks(html: &str) -> String {
             break;
         }
     }
-    
+
     clean
 }
 

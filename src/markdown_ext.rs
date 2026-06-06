@@ -70,7 +70,11 @@ impl Plugin for MarkdownExtPlugin {
                     )
                 })?;
 
-        let cdn_prefix = ctx.config.as_ref().and_then(|c| c.cdn_prefix.as_ref()).map(|s| s.as_str());
+        let cdn_prefix = ctx
+            .config
+            .as_ref()
+            .and_then(|c| c.cdn_prefix.as_ref())
+            .map(|s| s.as_str());
 
         let mut transformed = 0usize;
         for path in &files {
@@ -137,12 +141,11 @@ pub fn expand_gfm(input: &str, cdn_prefix: Option<&str>) -> String {
     if !needs_expansion(body) {
         if cdn_prefix.is_none() {
             return input.to_string();
-        } else {
-            let mut out = String::with_capacity(frontmatter.len() + body.len());
-            out.push_str(frontmatter);
-            out.push_str(body);
-            return out;
         }
+        let mut out = String::with_capacity(frontmatter.len() + body.len());
+        out.push_str(frontmatter);
+        out.push_str(body);
+        return out;
     }
 
     let mut out = String::with_capacity(input.len() + 256);
@@ -409,14 +412,18 @@ fn rewrite_markdown_images(body: &str, cdn_prefix: &str) -> String {
             let Some(close_paren_idx) = post_alt.find(')') else {
                 result.push_str("![");
                 result.push_str(alt_text);
-                result.push_str("]");
+                result.push(']');
                 remaining = post_alt;
                 continue;
             };
 
             let url = &post_alt[1..close_paren_idx];
 
-            let new_url = if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("//") && !url.starts_with("data:") {
+            let new_url = if !url.starts_with("http://")
+                && !url.starts_with("https://")
+                && !url.starts_with("//")
+                && !url.starts_with("data:")
+            {
                 format!("{}{}&w=1600&format=webp&q=85", cdn_prefix, url)
             } else {
                 url.to_string()
@@ -427,7 +434,7 @@ fn rewrite_markdown_images(body: &str, cdn_prefix: &str) -> String {
         } else {
             result.push_str("![");
             result.push_str(alt_text);
-            result.push_str("]");
+            result.push(']');
             remaining = post_alt;
         }
     }
@@ -458,15 +465,25 @@ fn rewrite_html_images(body: &str, cdn_prefix: &str) -> String {
             if let Some(pos) = tag_inner.find(&pattern) {
                 let val_start = pos + pattern.len();
                 if let Some(val_end) = tag_inner[val_start..].find(quote) {
-                    src_val = Some((val_start, val_end, tag_inner[val_start..val_start + val_end].to_string(), quote));
+                    src_val = Some((
+                        val_start,
+                        val_end,
+                        tag_inner[val_start..val_start + val_end].to_string(),
+                        quote,
+                    ));
                     break;
                 }
             }
         }
 
         if let Some((val_start, val_end, url, _quote)) = src_val {
-            if !url.starts_with("http://") && !url.starts_with("https://") && !url.starts_with("//") && !url.starts_with("data:") {
-                let new_url = format!("{}{}&w=1600&format=webp&q=85", cdn_prefix, url);
+            if !url.starts_with("http://")
+                && !url.starts_with("https://")
+                && !url.starts_with("//")
+                && !url.starts_with("data:")
+            {
+                let new_url =
+                    format!("{}{}&w=1600&format=webp&q=85", cdn_prefix, url);
                 let before = &rewritten_tag[..val_start];
                 let after = &rewritten_tag[val_start + val_end..];
                 rewritten_tag = format!("{before}{new_url}{after}");

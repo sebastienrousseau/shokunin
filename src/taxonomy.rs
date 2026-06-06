@@ -49,7 +49,8 @@ impl Plugin for TaxonomyPlugin {
             return Ok(());
         }
 
-        let (tags, categories, topics) = collect_taxonomy_entries(&sidecar_dir)?;
+        let (tags, categories, topics) =
+            collect_taxonomy_entries(&sidecar_dir)?;
 
         if !tags.is_empty() {
             generate_taxonomy_pages(&ctx.site_dir, "tags", &tags)?;
@@ -142,10 +143,22 @@ fn collect_taxonomy_entries(
             extract_terms_from_value(tag_arr, &mut tags, &title, &url, false);
         }
         if let Some(cat_arr) = meta.get("categories") {
-            extract_terms_from_value(cat_arr, &mut categories, &title, &url, false);
+            extract_terms_from_value(
+                cat_arr,
+                &mut categories,
+                &title,
+                &url,
+                false,
+            );
         }
         if let Some(topic_arr) = meta.get("topic_clusters") {
-            extract_terms_from_value(topic_arr, &mut topics, &title, &url, true);
+            extract_terms_from_value(
+                topic_arr,
+                &mut topics,
+                &title,
+                &url,
+                true,
+            );
         }
     }
 

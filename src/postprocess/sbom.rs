@@ -1,14 +1,14 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! SBOM (Software Bill of Materials) generation plugin in CycloneDX v1.5 format.
+//! SBOM (Software Bill of Materials) generation plugin in `CycloneDX` v1.5 format.
 
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use serde_json::json;
 use std::fs;
 
-/// A post-processing plugin that generates a CycloneDX v1.5 SBOM (`sbom.cdx.json`)
+/// A post-processing plugin that generates a `CycloneDX` v1.5 SBOM (`sbom.cdx.json`)
 /// for the built website.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SbomPlugin;
@@ -90,7 +90,9 @@ impl Plugin for SbomPlugin {
 
 fn current_timestamp() -> String {
     let now = std::time::SystemTime::now();
-    let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    let duration = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
     let secs = duration.as_secs();
 
     let days_since_epoch = secs / 86400;
@@ -132,7 +134,10 @@ fn current_timestamp() -> String {
     }
     let day = days + 1;
 
-    format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", year, month, day, hours, minutes, seconds)
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        year, month, day, hours, minutes, seconds
+    )
 }
 
 #[cfg(test)]
@@ -141,12 +146,7 @@ mod tests {
     use tempfile::tempdir;
 
     fn test_ctx(dir: &std::path::Path) -> PluginContext {
-        PluginContext::new(
-            dir,
-            dir,
-            dir,
-            dir,
-        )
+        PluginContext::new(dir, dir, dir, dir)
     }
 
     #[test]

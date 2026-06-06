@@ -37,8 +37,14 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
                 let mut m = frontmatter_to_json(&fm);
                 let word_count = body.split_whitespace().count();
                 let reading_time = (word_count / 200).max(1);
-                let _ = m.insert("word_count".to_string(), serde_json::Value::Number(word_count.into()));
-                let _ = m.insert("reading_time".to_string(), serde_json::Value::Number(reading_time.into()));
+                let _ = m.insert(
+                    "word_count".to_string(),
+                    serde_json::Value::Number(word_count.into()),
+                );
+                let _ = m.insert(
+                    "reading_time".to_string(),
+                    serde_json::Value::Number(reading_time.into()),
+                );
                 m
             }
             Err(_) => continue, // no frontmatter — skip

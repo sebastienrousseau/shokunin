@@ -353,7 +353,11 @@ fn rewrite_ap_lang_items(
                 if let Some(pos) = tag_inner.find(&pattern) {
                     let val_start = pos + pattern.len();
                     if let Some(val_end) = tag_inner[val_start..].find(quote) {
-                        data_lang = Some(tag_inner[val_start..val_start + val_end].trim().to_string());
+                        data_lang = Some(
+                            tag_inner[val_start..val_start + val_end]
+                                .trim()
+                                .to_string(),
+                        );
                         break;
                     }
                 }
@@ -362,8 +366,11 @@ fn rewrite_ap_lang_items(
             if let Some(lang) = data_lang {
                 if page_locales.contains(&lang) {
                     let full_url = build_url(base, &lang, rel_path, strategy);
-                    let new_href = if full_url.starts_with("http://") || full_url.starts_with("https://") {
-                        let after_scheme = full_url.split("://").collect::<Vec<_>>()[1];
+                    let new_href = if full_url.starts_with("http://")
+                        || full_url.starts_with("https://")
+                    {
+                        let after_scheme =
+                            full_url.split("://").nth(1).unwrap_or("");
                         if let Some(slash_idx) = after_scheme.find('/') {
                             after_scheme[slash_idx..].to_string()
                         } else {
@@ -377,10 +384,14 @@ fn rewrite_ap_lang_items(
                         let href_pattern = format!("href={quote}");
                         if let Some(pos) = tag_inner.find(&href_pattern) {
                             let val_start = pos + href_pattern.len();
-                            if let Some(val_end) = tag_inner[val_start..].find(quote) {
+                            if let Some(val_end) =
+                                tag_inner[val_start..].find(quote)
+                            {
                                 let before = &rewritten_tag[..val_start];
-                                let after = &rewritten_tag[val_start + val_end..];
-                                rewritten_tag = format!("{before}{new_href}{after}");
+                                let after =
+                                    &rewritten_tag[val_start + val_end..];
+                                rewritten_tag =
+                                    format!("{before}{new_href}{after}");
                                 break;
                             }
                         }

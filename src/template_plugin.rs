@@ -101,20 +101,22 @@ impl Plugin for TemplatePlugin {
 
         let sidecar_dir = ctx.build_dir.join(".meta");
         let html_files = collect_html_files(&ctx.site_dir)?;
-        let enriched_fm_map = enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
+        let enriched_fm_map =
+            enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
 
         let mut rendered = 0usize;
         for html_path in &html_files {
             let content = fs::read_to_string(html_path)?;
 
             // Read frontmatter sidecar (enriched with related posts)
-            let fm = enriched_fm_map.get(html_path).cloned().unwrap_or_else(|| {
-                read_frontmatter_for_html(
-                    html_path,
-                    &ctx.site_dir,
-                    &sidecar_dir,
-                )
-            });
+            let fm =
+                enriched_fm_map.get(html_path).cloned().unwrap_or_else(|| {
+                    read_frontmatter_for_html(
+                        html_path,
+                        &ctx.site_dir,
+                        &sidecar_dir,
+                    )
+                });
 
             // Determine template from `layout` field
             let layout =
@@ -218,44 +220,75 @@ fn enrich_with_related_posts(
             }
         }
 
-        let title = fm.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled").to_string();
-        let date = fm.get("date").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let title = fm
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Untitled")
+            .to_string();
+        let date = fm
+            .get("date")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
         let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
         let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
 
-        let _ = pages_meta.insert(html_path.clone(), (fm, title, terms, date, url));
+        let _ =
+            pages_meta.insert(html_path.clone(), (fm, title, terms, date, url));
     }
 
     let mut enriched = HashMap::new();
     for (html_path, (fm, _title, terms, _date, _url)) in &pages_meta {
         let mut candidates = Vec::new();
 
-        for (other_path, (_other_fm, other_title, other_terms, other_date, other_url)) in &pages_meta {
+        for (
+            other_path,
+            (_other_fm, other_title, other_terms, other_date, other_url),
+        ) in &pages_meta
+        {
             if other_path == html_path {
                 continue;
             }
 
             let overlap = terms.intersection(other_terms).count();
             if overlap > 0 {
-                candidates.push((overlap, other_date.clone(), other_title.clone(), other_url.clone()));
+                candidates.push((
+                    overlap,
+                    other_date.clone(),
+                    other_title.clone(),
+                    other_url.clone(),
+                ));
             }
         }
 
-        candidates.sort_by(|a, b| {
-            b.0.cmp(&a.0)
-                .then_with(|| b.1.cmp(&a.1))
-        });
+        candidates.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)));
 
-        let top_3: Vec<serde_json::Value> = candidates.into_iter().take(3).map(|(_overlap, other_date, other_title, other_url)| {
-            let mut obj = serde_json::Map::new();
-            let _ = obj.insert("title".to_string(), serde_json::Value::String(other_title));
-            let _ = obj.insert("url".to_string(), serde_json::Value::String(other_url));
-            let _ = obj.insert("date".to_string(), serde_json::Value::String(other_date));
-            serde_json::Value::Object(obj)
-        }).collect();
+        let top_3: Vec<serde_json::Value> = candidates
+            .into_iter()
+            .take(3)
+            .map(|(_overlap, other_date, other_title, other_url)| {
+                let mut obj = serde_json::Map::new();
+                let _ = obj.insert(
+                    "title".to_string(),
+                    serde_json::Value::String(other_title),
+                );
+                let _ = obj.insert(
+                    "url".to_string(),
+                    serde_json::Value::String(other_url),
+                );
+                let _ = obj.insert(
+                    "date".to_string(),
+                    serde_json::Value::String(other_date),
+                );
+                serde_json::Value::Object(obj)
+            })
+            .collect();
 
         let mut new_fm = fm.clone();
-        let _ = new_fm.insert("related_posts".to_string(), serde_json::Value::Array(top_3));
+        let _ = new_fm.insert(
+            "related_posts".to_string(),
+            serde_json::Value::Array(top_3),
+        );
         let _ = enriched.insert(html_path.clone(), new_fm);
     }
 
