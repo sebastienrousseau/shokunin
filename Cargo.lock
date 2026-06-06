@@ -4588,7 +4588,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.1.0"
+version = "0.0.40"
 dependencies = [
  "anyhow",
  "base64",
@@ -4621,7 +4621,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.1.0"
+version = "0.0.40"
 dependencies = [
  "log",
  "pulldown-cmark 0.13.4",
@@ -4632,7 +4632,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.1.0"
+version = "0.0.40"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
