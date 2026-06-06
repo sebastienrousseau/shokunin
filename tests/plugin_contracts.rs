@@ -56,15 +56,15 @@ impl Plugin for TraceTPlugin {
     fn name(&self) -> &'static str {
         self.name
     }
-    fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, _ctx: &PluginContext) -> Result<(), ssg::error::SsgError> {
         self.log.lock().unwrap().push((self.name, "before"));
         Ok(())
     }
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), ssg::error::SsgError> {
         self.log.lock().unwrap().push((self.name, "after"));
         Ok(())
     }
-    fn on_serve(&self, _ctx: &PluginContext) -> Result<()> {
+    fn on_serve(&self, _ctx: &PluginContext) -> Result<(), ssg::error::SsgError> {
         self.log.lock().unwrap().push((self.name, "serve"));
         Ok(())
     }

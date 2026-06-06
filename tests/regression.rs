@@ -444,7 +444,7 @@ impl Plugin for TestPlugin {
     fn name(&self) -> &str {
         self.name
     }
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 }

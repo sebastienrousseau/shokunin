@@ -29,7 +29,7 @@
 //! impl Plugin for MinifyPlugin {
 //!     fn name(&self) -> &str { "minify" }
 //!
-//!     fn after_compile(&self, ctx: &PluginContext) -> std::result::Result<(), crate::error::SsgError> {
+//!     fn after_compile(&self, ctx: &PluginContext) -> std::result::Result<(), ssg::error::SsgError> {
 //!         println!("Minifying files in {:?}", ctx.site_dir);
 //!         // Walk site_dir and minify HTML/CSS/JS files
 //!         Ok(())

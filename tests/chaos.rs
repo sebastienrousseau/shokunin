@@ -54,9 +54,11 @@ fn try_build(
     template: &Path,
 ) -> Result<(), String> {
     ssg::compile_site(build, content, site, template).map_err(|e| {
-        let mut msg = String::new();
-        for cause in e.chain() {
-            msg.push_str(&format!("{cause}\n"));
+        let mut msg = e.to_string();
+        let mut opt_source = std::error::Error::source(&e);
+        while let Some(source) = opt_source {
+            msg.push_str(&format!("\ncaused by: {source}"));
+            opt_source = std::error::Error::source(source);
         }
         msg
     })

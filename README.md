@@ -229,7 +229,7 @@ Options:
 <summary><b>Minimal pipeline</b></summary>
 
 ```rust,no_run
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), ssg::error::SsgError> {
     ssg::run()
 }
 ```
@@ -241,7 +241,7 @@ fn main() -> anyhow::Result<()> {
 
 ```rust,no_run
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
-use anyhow::Result;
+use ssg::error::SsgError;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -249,13 +249,13 @@ struct LogPlugin;
 
 impl Plugin for LogPlugin {
     fn name(&self) -> &str { "logger" }
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         println!("Site compiled to {:?}", ctx.site_dir);
         Ok(())
     }
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), SsgError> {
     let mut pm = PluginManager::new();
     pm.register(LogPlugin);
     pm.register(ssg::plugins::MinifyPlugin);

@@ -272,7 +272,7 @@ pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
 /// use ssg::verify_file_safety;
 /// use tempfile::tempdir;
 ///
-/// # fn main() -> Result<(), ssg::error::SsgError> {
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // Create temporary directory
 /// let temp_dir = tempdir()?;
 /// let file_path = temp_dir.path().join("index.md");
