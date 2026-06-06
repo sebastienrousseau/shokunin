@@ -336,7 +336,7 @@ impl PathsBuilder {
 /// use std::path::PathBuf;
 /// use ssg::{Paths, create_directories};
 ///
-/// fn main() -> anyhow::Result<()> {
+/// fn main() -> Result<(), ssg::SsgError> {
 ///     let paths = Paths {
 ///         site: PathBuf::from("public"),
 ///         content: PathBuf::from("content"),
