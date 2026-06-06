@@ -16,8 +16,8 @@
 //!
 //! The search UI is a modal overlay activated by `Ctrl+K` / `Cmd+K`.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -55,17 +55,15 @@ impl SearchIndex {
     ///
     /// Walks the directory recursively, extracts content from each
     /// `.html` file, and returns the populated index.
-    pub fn build(site_dir: &Path) -> Result<Self> {
+    pub fn build(site_dir: &Path) -> Result<Self, SsgError> {
         let html_files = collect_html_files(site_dir)?;
         let capped: Vec<_> =
             html_files.into_iter().take(MAX_INDEX_ENTRIES).collect();
 
         let entries: Vec<SearchEntry> = capped
             .par_iter()
-            .map(|path| -> Result<SearchEntry> {
-                let html = fs::read_to_string(path).with_context(|| {
-                    format!("cannot read {}", path.display())
-                })?;
+            .map(|path| -> Result<SearchEntry, SsgError> {
+                let html = fs::read_to_string(path).with_path(path)?;
 
                 let rel_url = path
                     .strip_prefix(site_dir)
@@ -84,18 +82,19 @@ impl SearchIndex {
                     headings,
                 })
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<Vec<_>, SsgError>>()?;
 
         Ok(Self { entries })
     }
 
     /// Write the index to `search-index.json` in the given directory.
-    pub fn write(&self, site_dir: &Path) -> Result<()> {
-        let json = serde_json::to_string(self)
-            .context("failed to serialize search index")?;
+    pub fn write(&self, site_dir: &Path) -> Result<(), SsgError> {
+        let json = serde_json::to_string(self).map_err(|e| SsgError::Io {
+            path: site_dir.join("search-index.json"),
+            source: std::io::Error::other(e),
+        })?;
         let path = site_dir.join("search-index.json");
-        fs::write(&path, json)
-            .with_context(|| format!("cannot write {}", path.display()))?;
+        fs::write(&path, json).with_path(&path)?;
         Ok(())
     }
 
@@ -269,12 +268,12 @@ impl Plugin for SearchPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
-        transform_search_html(html, &SearchLabels::english())
+    ) -> anyhow::Result<String> {
+        transform_search_html(html, &SearchLabels::english()).map_err(Into::into)
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        run_search_index(ctx)
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+        run_search_index(ctx).map_err(Into::into)
     }
 }
 
@@ -317,17 +316,17 @@ impl Plugin for LocalizedSearchPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
-        transform_search_html(html, &self.labels)
+    ) -> anyhow::Result<String> {
+        transform_search_html(html, &self.labels).map_err(Into::into)
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        run_search_index(ctx)
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+        run_search_index(ctx).map_err(Into::into)
     }
 }
 
 /// Builds the search index and writes it to disk (`after_compile` phase).
-fn run_search_index(ctx: &PluginContext) -> Result<()> {
+fn run_search_index(ctx: &PluginContext) -> Result<(), SsgError> {
     if !ctx.site_dir.exists() {
         return Ok(());
     }
@@ -347,7 +346,7 @@ fn run_search_index(ctx: &PluginContext) -> Result<()> {
 }
 
 /// Injects the search widget into an HTML string (`transform_html` phase).
-fn transform_search_html(html: &str, labels: &SearchLabels) -> Result<String> {
+fn transform_search_html(html: &str, labels: &SearchLabels) -> Result<String, SsgError> {
     if html.contains("ssg-search-widget") {
         return Ok(html.to_string()); // Already injected
     }
@@ -491,9 +490,21 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
+}
+
 /// Collect all `.html` files under `dir` (delegates to `crate::walk`).
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_count(dir, "html", MAX_INDEX_ENTRIES)
+        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 /// Inject the search UI script into an HTML file.
@@ -505,9 +516,8 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 /// 4. Displays results with highlighted snippets
 /// 5. Activates on `Ctrl+K` / `Cmd+K`
 #[cfg(test)]
-fn inject_search_ui(path: &Path, script: &str) -> Result<()> {
-    let html = fs::read_to_string(path)
-        .with_context(|| format!("cannot read {}", path.display()))?;
+fn inject_search_ui(path: &Path, script: &str) -> Result<(), SsgError> {
+    let html = fs::read_to_string(path).with_path(path)?;
 
     if html.contains("ssg-search-widget") {
         return Ok(()); // Already injected
@@ -519,8 +529,7 @@ fn inject_search_ui(path: &Path, script: &str) -> Result<()> {
         format!("{html}{script}")
     };
 
-    fs::write(path, injected)
-        .with_context(|| format!("cannot write {}", path.display()))?;
+    fs::write(path, injected).with_path(path)?;
     Ok(())
 }
 
@@ -708,6 +717,8 @@ if(e.key==='Enter'){e.preventDefault();var items=results.querySelectorAll('.ssg-
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
+    use crate::error::SsgError;
     use tempfile::tempdir;
 
     fn make_html(title: &str, body: &str) -> String {
@@ -1476,6 +1487,35 @@ mod tests {
             "French label 'Rechercher' should appear in injected UI"
         );
         Ok(())
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        // Write an HTML file so it actually attempts to build and write index
+        fs::write(site.join("index.html"), "<html><head><title>Test</title></head><body></body></html>").unwrap();
+
+        // Create a directory where search-index.json should be written, causing fs::write to fail
+        let index_dir = site.join("search-index.json");
+        fs::create_dir(&index_dir).unwrap();
+
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            &site,
+            Path::new("t"),
+        );
+        let res = SearchPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &index_dir);
+        }
     }
 }
 
