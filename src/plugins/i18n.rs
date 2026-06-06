@@ -20,8 +20,8 @@
 //! The injection is **idempotent** — pages that already contain hreflang
 //! links are skipped.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -99,7 +99,7 @@ impl Plugin for I18nPlugin {
         "i18n"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -177,7 +177,7 @@ fn detect_locale_dirs(site_dir: &Path, locales: &[String]) -> Vec<String> {
 fn collect_locale_pages(
     site_dir: &Path,
     locales: &[String],
-) -> Result<HashMap<String, HashSet<String>>> {
+) -> Result<HashMap<String, HashSet<String>>, SsgError> {
     let mut map: HashMap<String, HashSet<String>> = HashMap::new();
 
     for locale in locales {
@@ -202,13 +202,11 @@ fn collect_html_files_recursive(
     current: &Path,
     locale: &str,
     map: &mut HashMap<String, HashSet<String>>,
-) -> Result<()> {
-    let entries = fs::read_dir(current).with_context(|| {
-        format!("Failed to read directory {}", current.display())
-    })?;
+) -> Result<(), SsgError> {
+    let entries = fs::read_dir(current).with_path(current)?;
 
     for entry in entries {
-        let entry = entry?;
+        let entry = entry.with_path(current)?;
         let path = entry.path();
         if path.is_dir() {
             collect_html_files_recursive(root, &path, locale, map)?;
@@ -239,7 +237,7 @@ fn inject_hreflang_all(
     default_locale: &str,
     base_url: &str,
     strategy: &UrlPrefixStrategy,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let base = base_url.trim_end_matches('/');
     let mut count = 0usize;
 
@@ -259,9 +257,7 @@ fn inject_hreflang_all(
                 continue;
             }
 
-            let html = fs::read_to_string(&file).with_context(|| {
-                format!("Failed to read {}", file.display())
-            })?;
+            let html = fs::read_to_string(&file).with_path(&file)?;
 
             // Idempotency: skip if already injected.
             if html.contains(HREFLANG_MARKER) {
@@ -303,9 +299,7 @@ fn inject_hreflang_all(
                 rel_path,
             );
 
-            fs::write(&file, html).with_context(|| {
-                format!("Failed to write {}", file.display())
-            })?;
+            fs::write(&file, html).with_path(&file)?;
             count += 1;
         }
     }
@@ -512,7 +506,7 @@ fn generate_locale_sitemaps(
     default_locale: &str,
     base_url: &str,
     strategy: &UrlPrefixStrategy,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let base = base_url.trim_end_matches('/');
 
     for locale in locales {
@@ -559,9 +553,7 @@ fn generate_locale_sitemaps(
         xml.push_str("</urlset>\n");
 
         let sitemap_path = site_dir.join(format!("sitemap-{locale}.xml"));
-        fs::write(&sitemap_path, &xml).with_context(|| {
-            format!("Failed to write {}", sitemap_path.display())
-        })?;
+        fs::write(&sitemap_path, &xml).with_path(&sitemap_path)?;
     }
 
     println!("[i18n] Generated {} locale sitemaps", locales.len());
@@ -1394,5 +1386,43 @@ mod tests {
         assert!(content.contains("ssg-locale-redirect"));
         assert!(content.contains("\"en\""));
         assert!(content.contains("\"fr\""));
+    }
+
+    #[test]
+    fn test_collect_html_files_recursive_missing_dir_returns_io_error() {
+        let tmp = tempdir().unwrap();
+        let missing = tmp.path().join("missing");
+        let mut map = HashMap::new();
+        let res = collect_html_files_recursive(&missing, &missing, "en", &mut map);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = err {
+            assert_eq!(path, missing);
+        }
+    }
+
+    #[test]
+    fn test_generate_locale_sitemaps_invalid_dir_returns_io_error() {
+        let tmp = tempdir().unwrap();
+        let file_path = tmp.path().join("file");
+        fs::write(&file_path, "").unwrap();
+        
+        let mut pages = HashMap::new();
+        let mut locales = HashSet::new();
+        let _ = locales.insert("en".to_string());
+        let _ = pages.insert("index.html".to_string(), locales);
+        
+        let res = generate_locale_sitemaps(
+            &file_path,
+            &pages,
+            &["en".to_string()],
+            "en",
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+        );
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
     }
 }
