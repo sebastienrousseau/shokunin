@@ -767,11 +767,45 @@ fn check_banned_elements(html: &str, issues: &mut Vec<AccessibilityIssue>) {
 }
 
 /// ARIA landmark checks: one <main>, nav has aria-label.
+fn strip_non_content_blocks(html: &str) -> String {
+    let mut clean = html.to_lowercase();
+    
+    // Remove HTML comments
+    while let Some(start) = clean.find("<!--") {
+        if let Some(end) = clean[start..].find("-->") {
+            clean.replace_range(start..start + end + 3, "");
+        } else {
+            break;
+        }
+    }
+    
+    // Remove style blocks
+    while let Some(start) = clean.find("<style") {
+        if let Some(end) = clean[start..].find("</style>") {
+            clean.replace_range(start..start + end + 8, "");
+        } else {
+            break;
+        }
+    }
+    
+    // Remove script blocks
+    while let Some(start) = clean.find("<script") {
+        if let Some(end) = clean[start..].find("</script>") {
+            clean.replace_range(start..start + end + 9, "");
+        } else {
+            break;
+        }
+    }
+    
+    clean
+}
+
+/// ARIA landmark checks: one <main>, nav has aria-label.
 fn check_aria_landmarks(html: &str, issues: &mut Vec<AccessibilityIssue>) {
-    let lower = html.to_lowercase();
+    let clean = strip_non_content_blocks(html);
 
     // Count <main> elements
-    let main_count = lower.matches("<main").count();
+    let main_count = clean.matches("<main").count();
     if main_count == 0 {
         issues.push(AccessibilityIssue {
             criterion: "ARIA".to_string(),
@@ -790,10 +824,10 @@ fn check_aria_landmarks(html: &str, issues: &mut Vec<AccessibilityIssue>) {
 
     // Check <nav> elements have aria-label
     let mut pos = 0;
-    while let Some(start) = lower[pos..].find("<nav") {
+    while let Some(start) = clean[pos..].find("<nav") {
         let abs = pos + start;
-        let tag_end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e);
-        let tag = &lower[abs..tag_end];
+        let tag_end = clean[abs..].find('>').map_or(clean.len(), |e| abs + e);
+        let tag = &clean[abs..tag_end];
         if !tag.contains("aria-label") && !tag.contains("aria-labelledby") {
             issues.push(AccessibilityIssue {
                 criterion: "ARIA".to_string(),
