@@ -25,7 +25,7 @@ use ssg::{
     collect_files_recursive, copy_dir_all, copy_dir_with_progress,
     create_directories, create_log_file, is_safe_path, log_arguments,
     log_initialization, verify_and_copy_files, verify_file_safety, Paths,
-    MAX_DIR_DEPTH,
+    MAX_DIR_DEPTH, SsgError,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -80,14 +80,14 @@ fn paths_builder_relative_to() -> Result<()> {
 
 #[test]
 fn paths_validate_rejects_traversal() {
-    let result = Paths::builder().site("../escape").build();
-    assert!(result.is_err());
+    let err = Paths::builder().site("../escape").build().unwrap_err();
+    assert!(matches!(err, SsgError::PathTraversal { .. }));
 }
 
 #[test]
 fn paths_validate_rejects_double_slash() {
-    let result = Paths::builder().site("bad//path").build();
-    assert!(result.is_err());
+    let err = Paths::builder().site("bad//path").build().unwrap_err();
+    assert!(matches!(err, SsgError::Validation { .. }));
 }
 
 // =====================================================================

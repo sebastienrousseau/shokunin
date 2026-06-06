@@ -205,7 +205,7 @@ impl Paths {
 // Modify the validate method in Paths impl
 impl Paths {
     /// Validates all paths in the configuration
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> std::result::Result<(), SsgError> {
         // Check for path traversal and other security concerns
         for (name, path) in [
             ("site", &self.site),
@@ -216,32 +216,23 @@ impl Paths {
             // For non-existent paths, validate their components
             let path_str = path.to_string_lossy();
             if path_str.contains("..") {
-                anyhow::bail!(
-                    "{} path contains directory traversal: {}",
-                    name,
-                    path.display()
-                );
+                return Err(SsgError::PathTraversal { path: path.clone() });
             }
             if path_str.contains("//") {
-                anyhow::bail!(
-                    "{} path contains invalid double slashes: {}",
-                    name,
-                    path.display()
-                );
+                return Err(SsgError::Validation {
+                    field: name.to_string(),
+                    message: format!("path contains invalid double slashes: {}", path.display()),
+                });
             }
 
             // If path exists, perform additional checks
             if path.exists() {
                 let metadata = path
                     .symlink_metadata()
-                    .context(format!("Failed to get metadata for {name}"))?;
+                    .with_path(path)?;
 
                 if metadata.file_type().is_symlink() {
-                    anyhow::bail!(
-                        "{} path is a symlink which is not allowed: {}",
-                        name,
-                        path.display()
-                    );
+                    return Err(SsgError::SymlinkForbidden { path: path.clone() });
                 }
             }
         }
@@ -309,7 +300,7 @@ impl PathsBuilder {
     /// * Required paths are missing
     /// * Paths are invalid or unsafe
     /// * Unable to create necessary directories
-    pub fn build(self) -> Result<Paths> {
+    pub fn build(self) -> std::result::Result<Paths, SsgError> {
         let paths = Paths {
             site: self.site.unwrap_or_else(|| PathBuf::from("public")),
             content: self.content.unwrap_or_else(|| PathBuf::from("content")),
@@ -1123,28 +1114,12 @@ mod tests {
     #[test]
     fn test_paths_validation() -> Result<()> {
         // Test directory traversal
-        let result = Paths::builder().site("../invalid").build();
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("directory traversal"),
-            "Expected error about directory traversal"
-        );
+        let err = Paths::builder().site("../invalid").build().unwrap_err();
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
 
         // Test double slashes
-        let result = Paths::builder().site("invalid//path").build();
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("invalid double slashes"),
-            "Expected error about invalid double slashes"
-        );
+        let err = Paths::builder().site("invalid//path").build().unwrap_err();
+        assert!(matches!(err, SsgError::Validation { .. }));
 
         // Test symlinks if possible
         #[cfg(unix)]
@@ -1157,13 +1132,8 @@ mod tests {
             fs::create_dir(&real_path)?;
             symlink(&real_path, &symlink_path)?;
 
-            let result = Paths::builder().site(symlink_path).build();
-
-            assert!(result.is_err());
-            assert!(
-                result.unwrap_err().to_string().contains("symlink"),
-                "Expected error about symlinks"
-            );
+            let err = Paths::builder().site(symlink_path).build().unwrap_err();
+            assert!(matches!(err, SsgError::SymlinkForbidden { .. }));
         }
 
         Ok(())
@@ -1874,9 +1844,8 @@ mod tests {
             build: PathBuf::from("build"),
             template: PathBuf::from("templates"),
         };
-        let result = paths.validate();
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("symlink"));
+        let err = paths.validate().unwrap_err();
+        assert!(matches!(err, SsgError::SymlinkForbidden { .. }));
         Ok(())
     }
 
@@ -2654,7 +2623,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     #[test]
@@ -2666,7 +2635,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("directory traversal"));
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
     }
 
     #[test]
@@ -2678,7 +2647,7 @@ mod tests {
             template: PathBuf::from("../templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("directory traversal"));
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
     }
 
     #[test]
@@ -2690,7 +2659,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     #[test]
@@ -2702,7 +2671,7 @@ mod tests {
             template: PathBuf::from("templates//sub"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     // -----------------------------------------------------------------
