@@ -3,8 +3,8 @@
 
 //! SBOM (Software Bill of Materials) generation plugin in `CycloneDX` v1.5 format.
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use serde_json::json;
 use std::fs;
 

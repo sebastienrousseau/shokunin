@@ -25,7 +25,9 @@ pub enum SsgError {
     },
 
     /// Path traversal detected in configuration paths.
-    #[error("Security violation: path contains directory traversal ('..'): {path}")]
+    #[error(
+        "Security violation: path contains directory traversal ('..'): {path}"
+    )]
     PathTraversal {
         /// The path violating safety requirements.
         path: PathBuf,
@@ -57,16 +59,15 @@ impl SsgError {
     /// Converts a generic error and path context into an `SsgError::Io` variant.
     pub fn io(err: impl Into<anyhow::Error>, path: impl Into<PathBuf>) -> Self {
         let anyhow_err = err.into();
-        let io_err = anyhow_err.downcast::<std::io::Error>().unwrap_or_else(|e| {
-            std::io::Error::other(e.to_string())
-        });
+        let io_err = anyhow_err
+            .downcast::<std::io::Error>()
+            .unwrap_or_else(|e| std::io::Error::other(e.to_string()));
         Self::Io {
             path: path.into(),
             source: io_err,
         }
     }
 }
-
 
 /// Context extension trait for mapping `std::io::Error` contexts with path info.
 pub trait PathErrorExt<T> {
@@ -115,7 +116,8 @@ mod tests {
             path: PathBuf::from("../escaped"),
         };
         let msg = format!("{err}");
-        assert!(msg.contains("Security violation: path contains directory traversal"));
+        assert!(msg
+            .contains("Security violation: path contains directory traversal"));
     }
 
     #[test]
@@ -151,10 +153,8 @@ mod tests {
 
     #[test]
     fn test_path_error_ext() {
-        let res: io::Result<()> = Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            "denied",
-        ));
+        let res: io::Result<()> =
+            Err(io::Error::new(io::ErrorKind::PermissionDenied, "denied"));
         let ssg_res = res.with_path("restricted/file");
         assert!(ssg_res.is_err());
         let err = ssg_res.unwrap_err();

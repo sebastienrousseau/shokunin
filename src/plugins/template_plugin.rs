@@ -77,7 +77,8 @@ impl Plugin for TemplatePlugin {
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let Some(engine) = TemplateEngine::init(self.config.clone())
-            .map_err(|e| SsgError::io(e, &self.config.template_dir))? else {
+            .map_err(|e| SsgError::io(e, &self.config.template_dir))?
+        else {
             log::info!(
                 "[templates] No templates at {}, skipping",
                 self.config.template_dir.display()

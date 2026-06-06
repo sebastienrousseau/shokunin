@@ -306,7 +306,8 @@ fn sbom_cyclondx_version_matches_module_claim() {
     // emitted JSON. If those drift, downstream tooling that expects
     // the docstring version will validate against the wrong schema.
     let sbom = read("src/plugins/sbom.rs");
-    let docstring_v = sbom.contains("CycloneDX 1.5") || sbom.contains("`CycloneDX` 1.5");
+    let docstring_v =
+        sbom.contains("CycloneDX 1.5") || sbom.contains("`CycloneDX` 1.5");
     let emit_v = sbom.contains("\"specVersion\": \"1.5\"");
     assert!(
         docstring_v && emit_v,

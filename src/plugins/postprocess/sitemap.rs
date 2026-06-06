@@ -6,8 +6,8 @@
 use super::helpers::{
     normalise_url_in_xml_line, read_meta_sidecars, rfc2822_to_iso_date,
 };
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::collections::HashMap;
 use std::fs;
 
@@ -27,7 +27,8 @@ impl Plugin for SitemapFixPlugin {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&sitemap_path).with_path(&sitemap_path)?;
+        let content =
+            fs::read_to_string(&sitemap_path).with_path(&sitemap_path)?;
 
         let meta_entries =
             read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
@@ -157,8 +158,8 @@ pub(super) fn update_lastmod_from_loc(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
+    use anyhow::Result;
     use std::path::Path;
     use tempfile::tempdir;
 

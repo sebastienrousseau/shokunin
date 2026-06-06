@@ -6,7 +6,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::error::{SsgError, PathErrorExt};
+use crate::error::{PathErrorExt, SsgError};
 use rayon::prelude::*;
 
 use crate::MAX_DIR_DEPTH;
@@ -65,7 +65,10 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
         return Err(SsgError::Validation {
             field: "src".to_string(),
-            message: format!("Source directory does not exist: {}", src.display()),
+            message: format!(
+                "Source directory does not exist: {}",
+                src.display()
+            ),
         });
     }
 
@@ -87,11 +90,17 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<(), SsgError> {
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
-pub fn verify_and_copy_files_async(src: &Path, dst: &Path) -> Result<(), SsgError> {
+pub fn verify_and_copy_files_async(
+    src: &Path,
+    dst: &Path,
+) -> Result<(), SsgError> {
     if !src.exists() {
         return Err(SsgError::Validation {
             field: "src".to_string(),
-            message: format!("Source directory does not exist: {}", src.display()),
+            message: format!(
+                "Source directory does not exist: {}",
+                src.display()
+            ),
         });
     }
 
@@ -153,7 +162,10 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
         return Err(SsgError::Validation {
             field: "src".to_string(),
-            message: format!("Source directory does not exist: {}", src.display()),
+            message: format!(
+                "Source directory does not exist: {}",
+                src.display()
+            ),
         });
     }
 
@@ -234,9 +246,7 @@ pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
     // canonicalize() resolves symlinks and all `..' components,
     // so the resulting path is always absolute with no parent refs.
     // A failure here (e.g. broken symlink) means the path is unsafe.
-    let _canonical = path
-        .canonicalize()
-        .with_path(path)?;
+    let _canonical = path.canonicalize().with_path(path)?;
 
     Ok(true)
 }
@@ -440,8 +450,8 @@ pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), SsgError> {
             });
         }
 
-        let entries: Vec<_> =
-            fs::read_dir(&src_dir).with_path(&src_dir)?
+        let entries: Vec<_> = fs::read_dir(&src_dir)
+            .with_path(&src_dir)?
             .collect::<std::io::Result<Vec<_>>>()
             .with_path(&src_dir)?;
 

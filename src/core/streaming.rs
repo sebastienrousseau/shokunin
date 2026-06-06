@@ -11,8 +11,8 @@
 //! the next. After all chunks, a merge pass unifies cross-page artefacts
 //! (sitemap, search index, feeds).
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::walk;
-use crate::error::{SsgError, PathErrorExt};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -137,7 +137,12 @@ pub fn compile_batch(
     let _ = fs::remove_dir_all(&batch_build);
     let _ = fs::remove_dir_all(&batch_site);
 
-    compile_result.map_err(|e| SsgError::io(std::io::Error::other(format!("batch {batch_idx}: {e:?}")), build_dir))
+    compile_result.map_err(|e| {
+        SsgError::io(
+            std::io::Error::other(format!("batch {batch_idx}: {e:?}")),
+            build_dir,
+        )
+    })
 }
 
 /// Recursively merges files from `src` into `dst`, overwriting on conflict.

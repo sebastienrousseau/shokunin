@@ -7,8 +7,8 @@
 //! with Subresource Integrity (SRI) hashes, eliminating the need for
 //! `'unsafe-inline'` in the Content-Security-Policy header.
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};

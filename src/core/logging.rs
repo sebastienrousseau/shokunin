@@ -4,10 +4,10 @@
 //! Logging infrastructure for the static site generator.
 
 use crate::error::SsgError;
+use log::{info, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use log::{info, LevelFilter};
 
 // Constants for configuration
 pub(crate) const DEFAULT_LOG_LEVEL: &str = "info";
@@ -135,7 +135,10 @@ pub fn create_log_file(file_path: &str) -> Result<File, SsgError> {
 ///     Ok(())
 /// }
 /// ```
-pub fn log_initialization(log_file: &mut File, date: &str) -> Result<(), SsgError> {
+pub fn log_initialization(
+    log_file: &mut File,
+    date: &str,
+) -> Result<(), SsgError> {
     writeln!(
         log_file,
         "[{date}] INFO process: System initialization complete"
@@ -176,11 +179,12 @@ pub fn log_initialization(log_file: &mut File, date: &str) -> Result<(), SsgErro
 /// }
 /// ```
 pub fn log_arguments(log_file: &mut File, date: &str) -> Result<(), SsgError> {
-    writeln!(log_file, "[{date}] INFO process: Arguments processed")
-        .map_err(|source| SsgError::Io {
+    writeln!(log_file, "[{date}] INFO process: Arguments processed").map_err(
+        |source| SsgError::Io {
             path: PathBuf::from("log"),
             source,
-        })
+        },
+    )
 }
 
 #[cfg(test)]

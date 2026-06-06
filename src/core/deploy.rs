@@ -6,8 +6,8 @@
 //! Generates platform-specific configuration files for common hosting
 //! providers, including cache headers and security headers.
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::SsgError;
+use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use std::fs;
 

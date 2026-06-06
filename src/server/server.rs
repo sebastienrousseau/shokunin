@@ -7,7 +7,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::error::{SsgError, PathErrorExt};
+use crate::error::{PathErrorExt, SsgError};
 use http_handle::Server;
 
 use crate::cmd;
@@ -46,17 +46,17 @@ impl ServeTransport for HttpTransport {
 ///
 /// Extracted from `serve_site` so the path-to-string conversion can
 /// be unit-tested without invoking a transport.
-pub(crate) fn build_serve_address(site_dir: &Path) -> Result<(String, String), SsgError> {
+pub(crate) fn build_serve_address(
+    site_dir: &Path,
+) -> Result<(String, String), SsgError> {
     let root = site_dir
         .to_str()
-        .ok_or_else(|| {
-            SsgError::Validation {
-                field: "site_dir".to_string(),
-                message: format!(
-                    "Site directory path contains invalid UTF-8: {}",
-                    site_dir.display()
-                ),
-            }
+        .ok_or_else(|| SsgError::Validation {
+            field: "site_dir".to_string(),
+            message: format!(
+                "Site directory path contains invalid UTF-8: {}",
+                site_dir.display()
+            ),
         })?
         .to_string();
     let addr = format!("{}:{}", cmd::DEFAULT_HOST, cmd::DEFAULT_PORT);
@@ -243,8 +243,7 @@ pub fn generate_locale_redirect(
 "#
     );
 
-    fs::write(&index_path, &html)
-        .with_path(&index_path)?;
+    fs::write(&index_path, &html).with_path(&index_path)?;
 
     println!(
         "[i18n] Generated locale redirect at {}",
@@ -254,9 +253,11 @@ pub fn generate_locale_redirect(
 }
 
 /// Prepares the serve directory by creating it and copying site files.
-pub fn prepare_serve_dir(paths: &Paths, serve_dir: &PathBuf) -> Result<(), SsgError> {
-    fs::create_dir_all(serve_dir)
-        .with_path(serve_dir)?;
+pub fn prepare_serve_dir(
+    paths: &Paths,
+    serve_dir: &PathBuf,
+) -> Result<(), SsgError> {
+    fs::create_dir_all(serve_dir).with_path(serve_dir)?;
 
     println!("Setting up server...");
     println!("Source: {}", paths.site.display());

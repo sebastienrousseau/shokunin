@@ -23,9 +23,9 @@
 //! instead, so the browser fetches them immediately.
 
 #[cfg(feature = "image-optimization")]
-use crate::plugin::{Plugin, PluginContext};
-#[cfg(feature = "image-optimization")]
 use crate::error::{PathErrorExt, SsgError};
+#[cfg(feature = "image-optimization")]
+use crate::plugin::{Plugin, PluginContext};
 
 #[cfg(feature = "image-optimization")]
 use std::{
@@ -187,8 +187,7 @@ fn process_image(
     breakpoints: &[u32],
     _quality: u8,
 ) -> Result<ImageManifest, SsgError> {
-    let img = image::open(img_path)
-        .map_err(|e| SsgError::io(e, img_path))?;
+    let img = image::open(img_path).map_err(|e| SsgError::io(e, img_path))?;
 
     let (orig_w, orig_h) = (img.width(), img.height());
     let rel = img_path
@@ -218,7 +217,9 @@ fn process_image(
         // Save WebP variant
         let variant_name = format!("{stem}-{width}w.webp");
         let variant_path = optimized_dir.join(&variant_name);
-        resized.save(&variant_path).map_err(|e| SsgError::io(e, &variant_path))?;
+        resized
+            .save(&variant_path)
+            .map_err(|e| SsgError::io(e, &variant_path))?;
 
         let variant_rel = format!("optimized/{variant_name}");
         webp_variants.push(ImageVariant {

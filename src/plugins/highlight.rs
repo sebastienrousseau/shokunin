@@ -348,6 +348,8 @@ mod tests {
         let res = HighlightPlugin::default().after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &css_dir));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &css_dir)
+        );
     }
 }

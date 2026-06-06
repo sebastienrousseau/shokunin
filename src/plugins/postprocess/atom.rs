@@ -4,8 +4,8 @@
 //! Atom 1.0 feed plugin.
 
 use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars, xml_escape};
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 use std::path::Path;
 
@@ -326,7 +326,10 @@ fn extract_xml_tag(xml: &str, tag: &str) -> Option<String> {
 
 /// Inject `<link rel="alternate" type="application/atom+xml">` into
 /// HTML files that don't already have one.
-pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<(), SsgError> {
+pub(super) fn inject_atom_link(
+    site_dir: &Path,
+    atom_url: &str,
+) -> Result<(), SsgError> {
     let html_files = crate::walk::walk_files(site_dir, "html")
         .map_err(|e| SsgError::io(e, site_dir))?;
     for path in &html_files {
@@ -353,8 +356,8 @@ pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<(), Ss
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
+    use anyhow::Result;
     use std::collections::HashMap;
     use std::path::Path;
     use tempfile::tempdir;

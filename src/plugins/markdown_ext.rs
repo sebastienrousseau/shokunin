@@ -36,10 +36,10 @@
 //! pm.register(MarkdownExtPlugin);
 //! ```
 
+use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 use crate::walk::walk_files_bounded_depth;
 use crate::MAX_DIR_DEPTH;
-use crate::error::SsgError;
 use pulldown_cmark::{html as cmark_html, Options, Parser};
 use std::fs;
 
@@ -76,22 +76,25 @@ impl Plugin for MarkdownExtPlugin {
             fail_point!("markdown_ext::read", |_| {
                 Err(SsgError::Io {
                     path: path.clone(),
-                    source: std::io::Error::other("injected: markdown_ext::read"),
+                    source: std::io::Error::other(
+                        "injected: markdown_ext::read",
+                    ),
                 })
             });
-            let raw = fs::read_to_string(path)
-                .map_err(|e| SsgError::io(e, path))?;
+            let raw =
+                fs::read_to_string(path).map_err(|e| SsgError::io(e, path))?;
 
             let new = expand_gfm(&raw, cdn_prefix);
             if new != raw {
                 fail_point!("markdown_ext::write", |_| {
                     Err(SsgError::Io {
                         path: path.clone(),
-                        source: std::io::Error::other("injected: markdown_ext::write"),
+                        source: std::io::Error::other(
+                            "injected: markdown_ext::write",
+                        ),
                     })
                 });
-                fs::write(path, &new)
-                    .map_err(|e| SsgError::io(e, path))?;
+                fs::write(path, &new).map_err(|e| SsgError::io(e, path))?;
                 transformed += 1;
             }
         }

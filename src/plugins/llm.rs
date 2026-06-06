@@ -17,8 +17,8 @@
 //!
 //! Graceful fallback: if no LLM is reachable, logs a warning and skips.
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use std::{fs, path::Path, process::Command};
 

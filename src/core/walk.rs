@@ -21,7 +21,7 @@
 //! not exist or is not a directory — matching the convention used by
 //! every previous local collector in the crate.
 
-use crate::error::{SsgError, PathErrorExt};
+use crate::error::{PathErrorExt, SsgError};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -31,7 +31,10 @@ use std::{
 ///
 /// Sorted output, no recursion (uses an explicit stack), no depth or
 /// count bounds. Returns `Ok(Vec::new())` if `dir` does not exist.
-pub fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>, SsgError> {
+pub fn walk_files(
+    dir: &Path,
+    extension: &str,
+) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {

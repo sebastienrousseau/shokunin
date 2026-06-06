@@ -7,8 +7,8 @@ use super::helpers::{
     extract_date_from_html, extract_description, extract_first_content_image,
     extract_html_lang, extract_meta_author, extract_meta_date, extract_title,
 };
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::SsgError;
+use crate::plugin::{Plugin, PluginContext};
 use std::path::Path;
 
 /// Configuration for the JSON-LD structured data plugin.

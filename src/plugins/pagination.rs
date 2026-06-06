@@ -6,8 +6,8 @@
 //! Generates paginated index pages (`/page/2/`, `/page/3/`, etc.)
 //! from frontmatter sidecars when `paginate` is specified.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use crate::error::{SsgError, PathErrorExt};
 use std::{
     collections::HashMap,
     fs,
@@ -101,7 +101,9 @@ impl Plugin for PaginationPlugin {
 }
 
 /// Collects page entries with dates from sidecar JSON files.
-fn collect_page_entries(sidecar_dir: &Path) -> Result<Vec<PageEntry>, SsgError> {
+fn collect_page_entries(
+    sidecar_dir: &Path,
+) -> Result<Vec<PageEntry>, SsgError> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut entries = Vec::new();
 

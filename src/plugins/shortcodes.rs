@@ -573,17 +573,19 @@ title: Test
         let dir = tempfile::tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
-        
+
         // Create a file with invalid UTF-8 to make read_to_string fail.
         let file_path = content.join("fail.md");
-        fs::write(&file_path, &[0xFF, 0xFE, 0xFD]).unwrap();
-        
+        fs::write(&file_path, [0xFF, 0xFE, 0xFD]).unwrap();
+
         let ctx =
             PluginContext::new(&content, dir.path(), dir.path(), dir.path());
         let res = ShortcodePlugin.before_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &file_path));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &file_path)
+        );
     }
 }
 

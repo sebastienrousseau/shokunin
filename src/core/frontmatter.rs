@@ -147,7 +147,8 @@ fn fm_value_to_json(value: &frontmatter_gen::Value) -> serde_json::Value {
 
 /// Recursively collects `.md` files from a directory, bounded by depth.
 fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH).map_err(Into::into)
+    crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

@@ -10,8 +10,8 @@
 //! - Validate all `<img>` elements have alt text (log warnings)
 //! - Generate `llms.txt` and `llms-full.txt` for AI crawler guidance
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::SsgError;
+use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use std::{
     collections::BTreeMap,

@@ -4,8 +4,8 @@
 //! HTML fix plugin.
 
 use super::helpers::rfc2822_to_iso8601;
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::SsgError;
+use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use std::path::Path;
 

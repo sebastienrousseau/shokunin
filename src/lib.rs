@@ -25,7 +25,6 @@ macro_rules! fail_point {
     ($name:expr, $body:expr) => {};
 }
 
-
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
 #[allow(unreachable_pub, clippy::unwrap_used, clippy::expect_used)]
@@ -88,15 +87,15 @@ const fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
+pub mod cmd;
 #[path = "core/mod.rs"]
 pub(crate) mod core_group;
+pub mod error;
 #[path = "plugins/mod.rs"]
 pub(crate) mod plugins_group;
 #[path = "server/mod.rs"]
 pub(crate) mod server_group;
-pub mod cmd;
-pub mod error;
-pub use error::{SsgError, PathErrorExt};
+pub use error::{PathErrorExt, SsgError};
 
 // Re-export core modules for public API compatibility
 pub use crate::core_group::cache;
@@ -158,7 +157,9 @@ pub use crate::core_group::fs_ops::{
     copy_dir_with_progress, is_safe_path, verify_and_copy_files,
     verify_and_copy_files_async, verify_file_safety,
 };
-pub use crate::core_group::logging::{create_log_file, log_arguments, log_initialization};
+pub use crate::core_group::logging::{
+    create_log_file, log_arguments, log_initialization,
+};
 pub use crate::core_group::pipeline::{compile_site, execute_build_pipeline};
 pub use crate::server_group::server::{
     generate_locale_redirect, handle_server, prepare_serve_dir, serve_site,
@@ -220,18 +221,21 @@ impl Paths {
             if path_str.contains("//") {
                 return Err(SsgError::Validation {
                     field: name.to_string(),
-                    message: format!("path contains invalid double slashes: {}", path.display()),
+                    message: format!(
+                        "path contains invalid double slashes: {}",
+                        path.display()
+                    ),
                 });
             }
 
             // If path exists, perform additional checks
             if path.exists() {
-                let metadata = path
-                    .symlink_metadata()
-                    .with_path(path)?;
+                let metadata = path.symlink_metadata().with_path(path)?;
 
                 if metadata.file_type().is_symlink() {
-                    return Err(SsgError::SymlinkForbidden { path: path.clone() });
+                    return Err(SsgError::SymlinkForbidden {
+                        path: path.clone(),
+                    });
                 }
             }
         }
@@ -369,16 +373,24 @@ pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
 
     // Path safety check with additional context
     if !is_safe_path(&paths.content)? {
-        return Err(SsgError::PathTraversal { path: paths.content.clone() });
+        return Err(SsgError::PathTraversal {
+            path: paths.content.clone(),
+        });
     }
     if !is_safe_path(&paths.build)? {
-        return Err(SsgError::PathTraversal { path: paths.build.clone() });
+        return Err(SsgError::PathTraversal {
+            path: paths.build.clone(),
+        });
     }
     if !is_safe_path(&paths.site)? {
-        return Err(SsgError::PathTraversal { path: paths.site.clone() });
+        return Err(SsgError::PathTraversal {
+            path: paths.site.clone(),
+        });
     }
     if !is_safe_path(&paths.template)? {
-        return Err(SsgError::PathTraversal { path: paths.template.clone() });
+        return Err(SsgError::PathTraversal {
+            path: paths.template.clone(),
+        });
     }
 
     Ok(())
@@ -404,9 +416,11 @@ pub fn run() -> Result<(), SsgError> {
 
     info!("Starting site generation process");
 
-    let config = SsgConfig::from_matches(&matches).map_err(|e| SsgError::Validation {
-        field: "config".to_string(),
-        message: e.to_string(),
+    let config = SsgConfig::from_matches(&matches).map_err(|e| {
+        SsgError::Validation {
+            field: "config".to_string(),
+            message: e.to_string(),
+        }
     })?;
     let opts = pipeline::RunOptions::from_matches(&matches);
 
@@ -424,9 +438,11 @@ pub fn run() -> Result<(), SsgError> {
 
     // --validate: validate content schemas and exit without building.
     if opts.validate_only {
-        return content::validate_only(&config.content_dir).map_err(|e| SsgError::Validation {
-            field: "content".to_string(),
-            message: e.to_string(),
+        return content::validate_only(&config.content_dir).map_err(|e| {
+            SsgError::Validation {
+                field: "content".to_string(),
+                message: e.to_string(),
+            }
         });
     }
 
@@ -461,7 +477,6 @@ pub fn run() -> Result<(), SsgError> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::cmd::Cli;
     use crate::logging::{SimpleLogger, DEFAULT_LOG_LEVEL, ENV_LOG_LEVEL};
     use crate::pipeline::{
@@ -469,6 +484,7 @@ mod tests {
         RunOptions,
     };
     use crate::server::build_serve_address;
+    use anyhow::Result;
     use log::Log;
     use std::env;
     use std::{
@@ -2116,7 +2132,11 @@ mod tests {
     }
 
     impl ServeTransport for RecordingTransport {
-        fn start(&self, addr: &str, root: &str) -> std::result::Result<(), SsgError> {
+        fn start(
+            &self,
+            addr: &str,
+            root: &str,
+        ) -> std::result::Result<(), SsgError> {
             self.calls
                 .lock()
                 .unwrap()
@@ -2131,7 +2151,11 @@ mod tests {
     struct FailingTransport;
 
     impl ServeTransport for FailingTransport {
-        fn start(&self, _addr: &str, _root: &str) -> std::result::Result<(), SsgError> {
+        fn start(
+            &self,
+            _addr: &str,
+            _root: &str,
+        ) -> std::result::Result<(), SsgError> {
             Err(SsgError::Validation {
                 field: "transport".to_string(),
                 message: "transport failed".to_string(),

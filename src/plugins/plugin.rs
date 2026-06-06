@@ -104,12 +104,13 @@ impl PluginCache {
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
-        let json = serde_json::to_string_pretty(&serialisable).map_err(|e| {
-            SsgError::Io {
-                path: path.clone(),
-                source: std::io::Error::other(e),
-            }
-        })?;
+        let json =
+            serde_json::to_string_pretty(&serialisable).map_err(|e| {
+                SsgError::Io {
+                    path: path.clone(),
+                    source: std::io::Error::other(e),
+                }
+            })?;
         fs::write(&path, json).with_path(&path)?;
         Ok(())
     }
@@ -393,7 +394,10 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+    pub fn run_before_compile(
+        &self,
+        ctx: &PluginContext,
+    ) -> Result<(), SsgError> {
         for plugin in &self.plugins {
             plugin.before_compile(ctx)?;
         }
@@ -404,7 +408,10 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+    pub fn run_after_compile(
+        &self,
+        ctx: &PluginContext,
+    ) -> Result<(), SsgError> {
         for plugin in &self.plugins {
             plugin.after_compile(ctx)?;
         }
@@ -416,7 +423,10 @@ impl PluginManager {
     ///
     /// This eliminates N separate read/write cycles (where N = number of
     /// transform plugins) per HTML file.
-    pub fn run_fused_transforms(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+    pub fn run_fused_transforms(
+        &self,
+        ctx: &PluginContext,
+    ) -> Result<(), SsgError> {
         use rayon::prelude::*;
 
         let transform_plugins: Vec<_> =
@@ -429,21 +439,23 @@ impl PluginManager {
         let html_files = ctx.get_html_files();
         let transformed = std::sync::atomic::AtomicUsize::new(0);
 
-        html_files.par_iter().try_for_each(|path| -> Result<(), SsgError> {
-            let original = fs::read_to_string(path).with_path(path)?;
-            let mut html = original.clone();
+        html_files
+            .par_iter()
+            .try_for_each(|path| -> Result<(), SsgError> {
+                let original = fs::read_to_string(path).with_path(path)?;
+                let mut html = original.clone();
 
-            for plugin in &transform_plugins {
-                html = plugin.transform_html(&html, path, ctx)?;
-            }
+                for plugin in &transform_plugins {
+                    html = plugin.transform_html(&html, path, ctx)?;
+                }
 
-            if html != original {
-                fs::write(path, &html).with_path(path)?;
-                let _ = transformed
-                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            }
-            Ok(())
-        })?;
+                if html != original {
+                    fs::write(path, &html).with_path(path)?;
+                    let _ = transformed
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                Ok(())
+            })?;
 
         let count = transformed.load(std::sync::atomic::Ordering::Relaxed);
         if count > 0 {

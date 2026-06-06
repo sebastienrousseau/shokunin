@@ -303,7 +303,10 @@ pub fn compile_site(
 ) -> Result<(), SsgError> {
     compile(build_dir, content_dir, site_dir, template_dir).map_err(|e| {
         eprintln!("    Error compiling site: {e:?}");
-        SsgError::io(std::io::Error::other(format!("Failed to compile site: {e:?}")), build_dir)
+        SsgError::io(
+            std::io::Error::other(format!("Failed to compile site: {e:?}")),
+            build_dir,
+        )
     })
 }
 
@@ -421,7 +424,6 @@ pub fn register_default_plugins(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_build_error_serialization() {

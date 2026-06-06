@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.40-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.1.0-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -27,7 +27,7 @@
 - [Overview](#overview) -- what SSG does
 - [Architecture](#architecture) -- build pipeline diagram
 - [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.40 capability matrix
+- [Features](#features) -- v0.1.0 capability matrix
 - [The CLI](#the-cli) -- flags and usage
 - [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
 - [Examples](#examples) -- 8 branded examples
@@ -41,7 +41,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.40"
+ssg = "0.1.0"
 ```
 
 ### Prebuilt binaries
@@ -57,7 +57,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu
-sudo dpkg -i ssg_0.0.40_amd64.deb
+sudo dpkg -i ssg_0.1.0_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -108,7 +108,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Streaming compilation** -- configurable memory budgets for 100K+ page sites
-- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (planned for v0.0.40)
+- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.1.0)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
 ---

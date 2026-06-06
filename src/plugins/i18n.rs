@@ -134,7 +134,8 @@ impl Plugin for I18nPlugin {
             &self.config.default_locale,
             &base_url,
             &self.config.url_prefix,
-        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        )
+        .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Generate per-locale sitemaps.
         generate_locale_sitemaps(
@@ -144,14 +145,16 @@ impl Plugin for I18nPlugin {
             &self.config.default_locale,
             &base_url,
             &self.config.url_prefix,
-        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        )
+        .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Generate locale redirect index.html at site root.
         crate::server::generate_locale_redirect(
             &ctx.site_dir,
             &present_locales,
             &self.config.default_locale,
-        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        )
+        .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         Ok(())
     }
@@ -1394,7 +1397,8 @@ mod tests {
         let tmp = tempdir().unwrap();
         let missing = tmp.path().join("missing");
         let mut map = HashMap::new();
-        let res = collect_html_files_recursive(&missing, &missing, "en", &mut map);
+        let res =
+            collect_html_files_recursive(&missing, &missing, "en", &mut map);
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(matches!(err, SsgError::Io { .. }));
@@ -1408,12 +1412,12 @@ mod tests {
         let tmp = tempdir().unwrap();
         let file_path = tmp.path().join("file");
         fs::write(&file_path, "").unwrap();
-        
+
         let mut pages = HashMap::new();
         let mut locales = HashSet::new();
         let _ = locales.insert("en".to_string());
         let _ = pages.insert("index.html".to_string(), locales);
-        
+
         let res = generate_locale_sitemaps(
             &file_path,
             &pages,

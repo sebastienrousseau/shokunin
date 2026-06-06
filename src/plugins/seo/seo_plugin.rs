@@ -52,7 +52,10 @@ impl Plugin for SeoPlugin {
             .map_err(|e| crate::error::SsgError::io(e, path))
     }
 
-    fn after_compile(&self, _ctx: &PluginContext) -> std::result::Result<(), crate::error::SsgError> {
+    fn after_compile(
+        &self,
+        _ctx: &PluginContext,
+    ) -> std::result::Result<(), crate::error::SsgError> {
         Ok(())
     }
 }

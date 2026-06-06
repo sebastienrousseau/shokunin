@@ -206,7 +206,6 @@ impl Plugin for OgImagePlugin {
     }
 }
 
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -374,7 +373,8 @@ mod tests {
         let site = dir.path().join("site");
         fs::create_dir_all(&site).unwrap();
 
-        let html = "<html><head><title>Test Page</title></head><body></body></html>";
+        let html =
+            "<html><head><title>Test Page</title></head><body></body></html>";
         fs::write(site.join("index.html"), html).unwrap();
 
         // Create a directory where the SVG is expected to be written, causing fs::write to fail.
@@ -383,10 +383,12 @@ mod tests {
 
         let plugin = OgImagePlugin::new("https://example.com");
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
-        
+
         let res = plugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &svg_dir));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &svg_dir)
+        );
     }
 }

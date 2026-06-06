@@ -6,8 +6,8 @@
 use super::helpers::{
     extract_xml_value, parse_rfc2822_lenient, read_meta_sidecars, xml_escape,
 };
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 
 /// Aggregates per-page RSS items into the root `rss.xml` feed.
@@ -265,8 +265,8 @@ fn extract_last_build_date(articles: &[(String, String)]) -> String {
 mod tests {
 
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
+    use anyhow::Result;
     use std::collections::HashMap;
     use std::path::Path;
     use tempfile::tempdir;

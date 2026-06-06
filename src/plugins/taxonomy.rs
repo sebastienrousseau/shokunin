@@ -119,7 +119,8 @@ fn collect_taxonomy_entries(
     let mut topics: TaxonomyMap = HashMap::new();
 
     for sidecar_path in &sidecars {
-        let content = fs::read_to_string(sidecar_path).with_path(sidecar_path)?;
+        let content =
+            fs::read_to_string(sidecar_path).with_path(sidecar_path)?;
         let meta: HashMap<String, serde_json::Value> =
             match serde_json::from_str(&content) {
                 Ok(m) => m,
@@ -753,7 +754,10 @@ mod tests {
         fs::write(&file_path, "").unwrap();
 
         let mut terms = HashMap::new();
-        let _ = terms.insert("rust".to_string(), vec![("Title".to_string(), "/hello.html".to_string())]);
+        let _ = terms.insert(
+            "rust".to_string(),
+            vec![("Title".to_string(), "/hello.html".to_string())],
+        );
 
         let res = generate_taxonomy_pages(&file_path, "tags", &terms);
         assert!(res.is_err());

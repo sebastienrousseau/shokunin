@@ -17,8 +17,8 @@
 //!    (1s, 2s, 4s, capped at 10s) and shows a small "Connecting..."
 //!    indicator in the bottom-right corner.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use crate::error::{SsgError, PathErrorExt};
 use std::fs;
 use std::path::{Path, PathBuf};
 

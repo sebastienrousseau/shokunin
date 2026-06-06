@@ -77,10 +77,11 @@ impl Plugin for SbomPlugin {
         }
         let sbom = build_sbom();
         let path = ctx.site_dir.join(Self::sbom_path());
-        let json = serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
-            path: path.clone(),
-            source: std::io::Error::other(e),
-        })?;
+        let json =
+            serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
+                path: path.clone(),
+                source: std::io::Error::other(e),
+            })?;
         fs::write(&path, json).with_path(&path)?;
         log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
         Ok(())
@@ -310,6 +311,8 @@ mod tests {
         let res = SbomPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir)
+        );
     }
 }

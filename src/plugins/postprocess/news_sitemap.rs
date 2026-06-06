@@ -4,8 +4,8 @@
 //! News sitemap fix plugin.
 
 use super::helpers::{read_meta_sidecars, rfc2822_to_iso8601, xml_escape};
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 
 /// Repairs news-sitemap.xml by populating entries from front-matter
@@ -143,8 +143,8 @@ fn build_news_entry(
 mod tests {
 
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
+    use anyhow::Result;
     use std::collections::HashMap;
     use std::path::Path;
     use tempfile::tempdir;

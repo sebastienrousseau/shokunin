@@ -4,8 +4,8 @@
 //! Manifest fix plugin.
 
 use super::helpers::{read_meta_sidecars, truncate_at_word};
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 
 /// Fixes manifest.json description truncation by using full text or
@@ -120,8 +120,8 @@ fn fix_truncated_description(current: &str) -> Option<String> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
+    use anyhow::Result;
     use std::path::Path;
     use tempfile::tempdir;
 

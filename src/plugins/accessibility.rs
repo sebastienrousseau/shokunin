@@ -165,9 +165,11 @@ impl Plugin for AccessibilityPlugin {
 
         // Write the per-page issue report.
         let report_path = ctx.site_dir.join("accessibility-report.json");
-        let json = serde_json::to_string_pretty(&report).map_err(|e| SsgError::Io {
-            path: report_path.clone(),
-            source: std::io::Error::other(e),
+        let json = serde_json::to_string_pretty(&report).map_err(|e| {
+            SsgError::Io {
+                path: report_path.clone(),
+                source: std::io::Error::other(e),
+            }
         })?;
         fs::write(&report_path, json).with_path(&report_path)?;
 
@@ -175,10 +177,11 @@ impl Plugin for AccessibilityPlugin {
         let compliance =
             build_compliance_report(html_files.len(), &failed_criteria);
         let matrix_path = ctx.site_dir.join("wcag-compliance.json");
-        let json_compliance = serde_json::to_string_pretty(&compliance).map_err(|e| SsgError::Io {
-            path: matrix_path.clone(),
-            source: std::io::Error::other(e),
-        })?;
+        let json_compliance = serde_json::to_string_pretty(&compliance)
+            .map_err(|e| SsgError::Io {
+                path: matrix_path.clone(),
+                source: std::io::Error::other(e),
+            })?;
         fs::write(&matrix_path, json_compliance).with_path(&matrix_path)?;
 
         if report.total_issues > 0 {
@@ -1421,15 +1424,17 @@ mod tests {
     #[test]
     fn after_compile_write_failure_returns_io_error() {
         let dir = tempdir().unwrap();
-        
+
         // Create a file where it expects the site directory to be.
         let file_path = dir.path().join("site");
         fs::write(&file_path, "").unwrap();
-        
+
         let ctx = test_ctx(&file_path);
         let res = AccessibilityPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &file_path.join("accessibility-report.json")));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &file_path.join("accessibility-report.json"))
+        );
     }
 }

@@ -306,7 +306,9 @@ pub(super) fn extract_meta_date(html: &str) -> Option<String> {
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
 #[allow(dead_code)] // used only by tests in seo::mod
-pub(super) fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
+pub(super) fn collect_html_files_recursive(
+    dir: &Path,
+) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 

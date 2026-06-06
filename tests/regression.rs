@@ -25,7 +25,7 @@ use ssg::{
     collect_files_recursive, copy_dir_all, copy_dir_with_progress,
     create_directories, create_log_file, is_safe_path, log_arguments,
     log_initialization, verify_and_copy_files, verify_file_safety, Paths,
-    MAX_DIR_DEPTH, SsgError,
+    SsgError, MAX_DIR_DEPTH,
 };
 use std::fs;
 use std::path::{Path, PathBuf};

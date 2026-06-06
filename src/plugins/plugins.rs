@@ -9,8 +9,8 @@
 //! - `ImageOptiPlugin` — Logs image files for optimization (stub for external tooling).
 //! - `DeployPlugin` — Logs deployment target after build (stub for CI integration).
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use rayon::prelude::*;
 use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -55,25 +55,31 @@ impl Plugin for MinifyPlugin {
 
         let count = AtomicUsize::new(0);
 
-        html_files.par_iter().try_for_each(|path| -> Result<(), SsgError> {
-            fail_point!("plugins::minify-read", |_| {
-                Err(SsgError::Io {
-                    path: path.clone(),
-                    source: std::io::Error::other("injected: plugins::minify-read"),
-                })
-            });
-            let content = fs::read_to_string(path).with_path(path)?;
-            let minified = minify_html(&content);
-            fail_point!("plugins::minify-write", |_| {
-                Err(SsgError::Io {
-                    path: path.clone(),
-                    source: std::io::Error::other("injected: plugins::minify-write"),
-                })
-            });
-            fs::write(path, &minified).with_path(path)?;
-            let _ = count.fetch_add(1, Ordering::Relaxed);
-            Ok(())
-        })?;
+        html_files
+            .par_iter()
+            .try_for_each(|path| -> Result<(), SsgError> {
+                fail_point!("plugins::minify-read", |_| {
+                    Err(SsgError::Io {
+                        path: path.clone(),
+                        source: std::io::Error::other(
+                            "injected: plugins::minify-read",
+                        ),
+                    })
+                });
+                let content = fs::read_to_string(path).with_path(path)?;
+                let minified = minify_html(&content);
+                fail_point!("plugins::minify-write", |_| {
+                    Err(SsgError::Io {
+                        path: path.clone(),
+                        source: std::io::Error::other(
+                            "injected: plugins::minify-write",
+                        ),
+                    })
+                });
+                fs::write(path, &minified).with_path(path)?;
+                let _ = count.fetch_add(1, Ordering::Relaxed);
+                Ok(())
+            })?;
 
         let total = count.load(Ordering::Relaxed);
         if total > 0 {
@@ -207,9 +213,9 @@ impl Plugin for DeployPlugin {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::plugin::PluginContext;
     use crate::test_support::init_logger;
+    use anyhow::Result;
     use std::path::Path;
     use tempfile::tempdir;
 

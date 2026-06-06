@@ -3,8 +3,8 @@
 
 //! robots.txt generation plugin.
 
-use crate::plugin::{Plugin, PluginContext};
 use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 
 /// Generates a `robots.txt` file in the site directory.

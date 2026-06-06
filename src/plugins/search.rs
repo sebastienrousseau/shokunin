@@ -346,7 +346,10 @@ fn run_search_index(ctx: &PluginContext) -> Result<(), SsgError> {
 }
 
 /// Injects the search widget into an HTML string (`transform_html` phase).
-fn transform_search_html(html: &str, labels: &SearchLabels) -> Result<String, SsgError> {
+fn transform_search_html(
+    html: &str,
+    labels: &SearchLabels,
+) -> Result<String, SsgError> {
     if html.contains("ssg-search-widget") {
         return Ok(html.to_string()); // Already injected
     }
@@ -705,8 +708,8 @@ if(e.key==='Enter'){e.preventDefault();var items=results.querySelectorAll('.ssg-
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use crate::error::SsgError;
+    use anyhow::Result;
     use tempfile::tempdir;
 
     fn make_html(title: &str, body: &str) -> String {
@@ -1484,7 +1487,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
 
         // Write an HTML file so it actually attempts to build and write index
-        fs::write(site.join("index.html"), "<html><head><title>Test</title></head><body></body></html>").unwrap();
+        fs::write(
+            site.join("index.html"),
+            "<html><head><title>Test</title></head><body></body></html>",
+        )
+        .unwrap();
 
         // Create a directory where search-index.json should be written, causing fs::write to fail
         let index_dir = site.join("search-index.json");
@@ -1499,7 +1506,9 @@ mod tests {
         let res = SearchPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &index_dir));
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &index_dir)
+        );
     }
 }
 
