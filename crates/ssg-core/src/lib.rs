@@ -64,10 +64,10 @@ pub fn parse_frontmatter(
     let trimmed = input.trim_start();
 
     // TOML frontmatter: +++...+++
-    if trimmed.starts_with("+++") {
-        if let Some(end) = trimmed[3..].find("+++") {
-            let fm_str = &trimmed[3..3 + end];
-            let body = &trimmed[3 + end + 3..];
+    if let Some(after) = trimmed.strip_prefix("+++") {
+        if let Some(end) = after.find("+++") {
+            let fm_str = &after[..end];
+            let body = &after[end + 3..];
             if let Ok(value) = toml::from_str::<serde_json::Value>(fm_str) {
                 if let Some(map) = value.as_object() {
                     return (
@@ -83,10 +83,10 @@ pub fn parse_frontmatter(
     }
 
     // YAML frontmatter: ---...---
-    if trimmed.starts_with("---") {
-        if let Some(end) = trimmed[3..].find("---") {
-            let fm_str = &trimmed[3..3 + end].trim();
-            let body = &trimmed[3 + end + 3..];
+    if let Some(after) = trimmed.strip_prefix("---") {
+        if let Some(end) = after.find("---") {
+            let fm_str = &after[..end].trim();
+            let body = &after[end + 3..];
             // Simple key: value parser for common YAML frontmatter
             let mut map = HashMap::new();
             for line in fm_str.lines() {
