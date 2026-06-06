@@ -56,7 +56,6 @@ use std::{
 use crate::cmd::{Cli, SsgConfig};
 
 // Third-party imports
-use anyhow::{Context, Result};
 use log::info;
 
 /// Returns the current time as an ISO 8601 UTC string.
@@ -205,7 +204,7 @@ impl Paths {
 // Modify the validate method in Paths impl
 impl Paths {
     /// Validates all paths in the configuration
-    pub fn validate(&self) -> std::result::Result<(), SsgError> {
+    pub fn validate(&self) -> Result<(), SsgError> {
         // Check for path traversal and other security concerns
         for (name, path) in [
             ("site", &self.site),
@@ -300,7 +299,7 @@ impl PathsBuilder {
     /// * Required paths are missing
     /// * Paths are invalid or unsafe
     /// * Unable to create necessary directories
-    pub fn build(self) -> std::result::Result<Paths, SsgError> {
+    pub fn build(self) -> Result<Paths, SsgError> {
         let paths = Paths {
             site: self.site.unwrap_or_else(|| PathBuf::from("public")),
             content: self.content.unwrap_or_else(|| PathBuf::from("content")),
@@ -357,29 +356,29 @@ impl PathsBuilder {
 /// * Path traversal prevention
 /// * Permission validation
 /// * Safe path verification
-pub fn create_directories(paths: &Paths) -> Result<()> {
+pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
     // Ensure each directory exists, with custom error messages for each.
-    for (name, path) in [
+    for (_name, path) in [
         ("content", &paths.content),
         ("build", &paths.build),
         ("site", &paths.site),
         ("template", &paths.template),
     ] {
-        fs::create_dir_all(path).with_context(|| {
-            format!(
-                "Failed to create or access {name} directory at path: {}",
-                path.display()
-            )
-        })?;
+        fs::create_dir_all(path).with_path(path)?;
     }
 
     // Path safety check with additional context
-    if !is_safe_path(&paths.content)?
-        || !is_safe_path(&paths.build)?
-        || !is_safe_path(&paths.site)?
-        || !is_safe_path(&paths.template)?
-    {
-        anyhow::bail!("One or more paths are unsafe. Ensure paths do not contain '..' and are accessible.");
+    if !is_safe_path(&paths.content)? {
+        return Err(SsgError::PathTraversal { path: paths.content.clone() });
+    }
+    if !is_safe_path(&paths.build)? {
+        return Err(SsgError::PathTraversal { path: paths.build.clone() });
+    }
+    if !is_safe_path(&paths.site)? {
+        return Err(SsgError::PathTraversal { path: paths.site.clone() });
+    }
+    if !is_safe_path(&paths.template)? {
+        return Err(SsgError::PathTraversal { path: paths.template.clone() });
     }
 
     Ok(())
@@ -390,7 +389,7 @@ pub fn create_directories(paths: &Paths) -> Result<()> {
 /// Parses CLI arguments, runs the plugin pipeline around compilation,
 /// and starts a local dev server. This function blocks indefinitely
 /// while the server is running.
-pub fn run() -> Result<()> {
+pub fn run() -> Result<(), SsgError> {
     // Parse CLI arguments first so that `--help` and `--version`
     // short-circuit *before* the logger emits its banner. clap exits
     // the process for those flags, so we never reach the lines below.
@@ -405,7 +404,10 @@ pub fn run() -> Result<()> {
 
     info!("Starting site generation process");
 
-    let config = SsgConfig::from_matches(&matches)?;
+    let config = SsgConfig::from_matches(&matches).map_err(|e| SsgError::Validation {
+        field: "config".to_string(),
+        message: e.to_string(),
+    })?;
     let opts = pipeline::RunOptions::from_matches(&matches);
 
     // Configure Rayon global thread pool from --jobs flag.
@@ -413,13 +415,19 @@ pub fn run() -> Result<()> {
         rayon::ThreadPoolBuilder::new()
             .num_threads(n)
             .build_global()
-            .context("failed to configure Rayon thread pool")?;
+            .map_err(|e| SsgError::Validation {
+                field: "jobs".to_string(),
+                message: format!("failed to configure Rayon thread pool: {e}"),
+            })?;
         info!("Rayon thread pool configured with {n} threads");
     }
 
     // --validate: validate content schemas and exit without building.
     if opts.validate_only {
-        return content::validate_only(&config.content_dir);
+        return content::validate_only(&config.content_dir).map_err(|e| SsgError::Validation {
+            field: "content".to_string(),
+            message: e.to_string(),
+        });
     }
 
     if !opts.quiet {
@@ -453,6 +461,7 @@ pub fn run() -> Result<()> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use crate::cmd::Cli;
     use crate::logging::{SimpleLogger, DEFAULT_LOG_LEVEL, ENV_LOG_LEVEL};
     use crate::pipeline::{
@@ -460,7 +469,6 @@ mod tests {
         RunOptions,
     };
     use crate::server::build_serve_address;
-    use anyhow::Result;
     use log::Log;
     use std::env;
     use std::{
@@ -2108,7 +2116,7 @@ mod tests {
     }
 
     impl ServeTransport for RecordingTransport {
-        fn start(&self, addr: &str, root: &str) -> Result<()> {
+        fn start(&self, addr: &str, root: &str) -> std::result::Result<(), SsgError> {
             self.calls
                 .lock()
                 .unwrap()
@@ -2123,8 +2131,11 @@ mod tests {
     struct FailingTransport;
 
     impl ServeTransport for FailingTransport {
-        fn start(&self, _addr: &str, _root: &str) -> Result<()> {
-            Err(anyhow::anyhow!("transport failed"))
+        fn start(&self, _addr: &str, _root: &str) -> std::result::Result<(), SsgError> {
+            Err(SsgError::Validation {
+                field: "transport".to_string(),
+                message: "transport failed".to_string(),
+            })
         }
     }
 
