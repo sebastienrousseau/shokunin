@@ -21,7 +21,7 @@
 //! not exist or is not a directory — matching the convention used by
 //! every previous local collector in the crate.
 
-use anyhow::{Context, Result};
+use crate::error::{SsgError, PathErrorExt};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -31,15 +31,15 @@ use std::{
 ///
 /// Sorted output, no recursion (uses an explicit stack), no depth or
 /// count bounds. Returns `Ok(Vec::new())` if `dir` does not exist.
-pub fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
+pub fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
         if !current.is_dir() {
             continue;
         }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&current).with_path(&current)? {
+            let entry = entry.with_path(&current)?;
             let path = entry.path();
             if path.is_dir() {
                 stack.push(path);
@@ -60,15 +60,15 @@ pub fn walk_files(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 pub fn walk_files_multi(
     dir: &Path,
     extensions: &[&str],
-) -> Result<Vec<PathBuf>> {
+) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(current) = stack.pop() {
         if !current.is_dir() {
             continue;
         }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&current).with_path(&current)? {
+            let entry = entry.with_path(&current)?;
             let path = entry.path();
             if path.is_dir() {
                 stack.push(path);
@@ -93,15 +93,15 @@ pub fn walk_files_bounded_depth(
     dir: &Path,
     extension: &str,
     max_depth: usize,
-) -> Result<Vec<PathBuf>> {
+) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
     let mut stack: Vec<(PathBuf, usize)> = vec![(dir.to_path_buf(), 0)];
     while let Some((current, depth)) = stack.pop() {
         if depth > max_depth || !current.is_dir() {
             continue;
         }
-        for entry in fs::read_dir(&current)? {
-            let entry = entry?;
+        for entry in fs::read_dir(&current).with_path(&current)? {
+            let entry = entry.with_path(&current)?;
             let path = entry.path();
             if path.is_dir() {
                 stack.push((path, depth + 1));
@@ -124,7 +124,7 @@ pub fn walk_files_bounded_count(
     dir: &Path,
     extension: &str,
     max_files: usize,
-) -> Result<Vec<PathBuf>> {
+) -> Result<Vec<PathBuf>, SsgError> {
     let mut files = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
 
@@ -135,10 +135,9 @@ pub fn walk_files_bounded_count(
         if !current.is_dir() {
             continue;
         }
-        let entries = fs::read_dir(&current)
-            .with_context(|| format!("cannot read {}", current.display()))?;
+        let entries = fs::read_dir(&current).with_path(&current)?;
         for entry in entries {
-            let path = entry?.path();
+            let path = entry.with_path(&current)?.path();
             if path.is_dir() {
                 stack.push(path);
             } else if path.extension().is_some_and(|e| e == extension) {

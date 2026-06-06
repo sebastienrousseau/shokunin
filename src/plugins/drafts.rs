@@ -108,25 +108,12 @@ fn is_draft(path: &Path) -> Result<bool, SsgError> {
     Ok(false)
 }
 
-/// Helper to map anyhow errors from path walkers to `SsgError`.
-fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
-    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
-        std::io::Error::other(e.to_string())
-    });
-    SsgError::Io {
-        path: path.to_path_buf(),
-        source: io_err,
-    }
-}
-
 fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
-        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 fn collect_draft_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_depth(dir, "draft", MAX_DIR_DEPTH)
-        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]

@@ -490,21 +490,9 @@ fn truncate(s: &str, max: usize) -> String {
     }
 }
 
-/// Helper to map anyhow errors from path walkers to `SsgError`.
-fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
-    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
-        std::io::Error::other(e.to_string())
-    });
-    SsgError::Io {
-        path: path.to_path_buf(),
-        source: io_err,
-    }
-}
-
 /// Collect all `.html` files under `dir` (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_count(dir, "html", MAX_INDEX_ENTRIES)
-        .map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 /// Inject the search UI script into an HTML file.

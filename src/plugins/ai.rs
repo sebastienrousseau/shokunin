@@ -479,7 +479,7 @@ fn count_missing_alt(html: &str) -> usize {
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "html")
+    crate::walk::walk_files(dir, "html").map_err(Into::into)
 }
 
 #[cfg(test)]

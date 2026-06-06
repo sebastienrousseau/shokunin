@@ -883,23 +883,11 @@ fn strip_tags_simple(html: &str) -> String {
     result
 }
 
-/// Helper to map anyhow errors from path walkers to `SsgError`.
-#[cfg(test)]
-fn map_anyhow_to_io(err: anyhow::Error, path: &std::path::Path) -> SsgError {
-    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
-        std::io::Error::other(e.to_string())
-    });
-    SsgError::Io {
-        path: path.to_path_buf(),
-        source: io_err,
-    }
-}
-
 #[cfg(test)]
 fn collect_html_files(
     dir: &std::path::Path,
 ) -> Result<Vec<std::path::PathBuf>, SsgError> {
-    crate::walk::walk_files(dir, "html").map_err(|e| map_anyhow_to_io(e, dir))
+    crate::walk::walk_files(dir, "html")
 }
 
 #[cfg(test)]

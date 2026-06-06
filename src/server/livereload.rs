@@ -18,8 +18,7 @@
 //!    indicator in the bottom-right corner.
 
 use crate::plugin::{Plugin, PluginContext};
-use crate::error::SsgError;
-use anyhow::{Context, Result};
+use crate::error::{SsgError, PathErrorExt};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -89,15 +88,13 @@ impl Plugin for LiveReloadPlugin {
             return Ok(());
         }
 
-        let html_files = collect_html_files(&ctx.site_dir)
-            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        let html_files = collect_html_files(&ctx.site_dir)?;
         if html_files.is_empty() {
             return Ok(());
         }
 
         for path in &html_files {
-            inject_livereload(path, self.port)
-                .map_err(|e| SsgError::io(e, path))?;
+            inject_livereload(path, self.port)?;
         }
 
         println!(
@@ -110,7 +107,7 @@ impl Plugin for LiveReloadPlugin {
 }
 
 /// Collect all `.html` files under `dir` (iterative, bounded).
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_count(dir, "html", MAX_FILES)
 }
 
@@ -124,9 +121,8 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
 ///
 /// The injection is idempotent — if the marker is already present,
 /// the file is left unchanged.
-fn inject_livereload(path: &Path, port: u16) -> Result<()> {
-    let html = fs::read_to_string(path)
-        .with_context(|| format!("cannot read {}", path.display()))?;
+fn inject_livereload(path: &Path, port: u16) -> Result<(), SsgError> {
+    let html = fs::read_to_string(path).with_path(path)?;
 
     if html.contains(MARKER) {
         return Ok(()); // Already injected
@@ -140,8 +136,7 @@ fn inject_livereload(path: &Path, port: u16) -> Result<()> {
         format!("{html}{script}")
     };
 
-    fs::write(path, injected)
-        .with_context(|| format!("cannot write {}", path.display()))?;
+    fs::write(path, injected).with_path(path)?;
     Ok(())
 }
 
@@ -256,6 +251,7 @@ pub fn css_reload_message(css_path: &str) -> String {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use tempfile::tempdir;
 
     fn make_html(body: &str) -> String {

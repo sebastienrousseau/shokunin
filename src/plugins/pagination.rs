@@ -7,8 +7,7 @@
 //! from frontmatter sidecars when `paginate` is specified.
 
 use crate::plugin::{Plugin, PluginContext};
-use crate::error::SsgError;
-use anyhow::Result;
+use crate::error::{SsgError, PathErrorExt};
 use std::{
     collections::HashMap,
     fs,
@@ -65,8 +64,7 @@ impl Plugin for PaginationPlugin {
             return Ok(());
         }
 
-        let mut entries = collect_page_entries(&sidecar_dir)
-            .map_err(|e| SsgError::io(e, &sidecar_dir))?;
+        let mut entries = collect_page_entries(&sidecar_dir)?;
         if entries.is_empty() {
             return Ok(());
         }
@@ -89,7 +87,7 @@ impl Plugin for PaginationPlugin {
                 page_num,
                 total_pages,
                 page_entries,
-            ).map_err(|e| SsgError::io(e, &page_dir))?;
+            )?;
         }
 
         log::info!(
@@ -103,7 +101,7 @@ impl Plugin for PaginationPlugin {
 }
 
 /// Collects page entries with dates from sidecar JSON files.
-fn collect_page_entries(sidecar_dir: &Path) -> Result<Vec<PageEntry>> {
+fn collect_page_entries(sidecar_dir: &Path) -> Result<Vec<PageEntry>, SsgError> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut entries = Vec::new();
 
@@ -156,9 +154,9 @@ fn write_pagination_page(
     page_num: usize,
     total_pages: usize,
     page_entries: &[PageEntry],
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let dir = page_dir.join(page_num.to_string());
-    fs::create_dir_all(&dir)?;
+    fs::create_dir_all(&dir).with_path(&dir)?;
 
     let prev_url = if page_num == 2 {
         "/".to_string()
@@ -197,11 +195,12 @@ fn write_pagination_page(
     }
     html.push_str("</nav>\n</main>\n</body>\n</html>\n");
 
-    fs::write(dir.join("index.html"), html)?;
+    let out_file = dir.join("index.html");
+    fs::write(&out_file, html).with_path(&out_file)?;
     Ok(())
 }
 
-fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "json")
 }
 

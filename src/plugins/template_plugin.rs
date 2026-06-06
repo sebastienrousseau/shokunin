@@ -14,8 +14,7 @@ use crate::{
     template_engine::{TemplateConfig, TemplateEngine},
     MAX_DIR_DEPTH,
 };
-#[cfg(feature = "templates")]
-use anyhow::Result;
+
 #[cfg(feature = "templates")]
 use std::{
     collections::HashMap,
@@ -103,8 +102,7 @@ impl Plugin for TemplatePlugin {
         }
 
         let sidecar_dir = ctx.build_dir.join(".meta");
-        let html_files = collect_html_files(&ctx.site_dir)
-            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        let html_files = collect_html_files(&ctx.site_dir)?;
         let enriched_fm_map =
             enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
 
@@ -174,7 +172,7 @@ fn read_frontmatter_for_html(
 
 /// Recursively collects `.html` files (delegates to `crate::walk`).
 #[cfg(feature = "templates")]
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files_bounded_depth(dir, "html", MAX_DIR_DEPTH)
 }
 

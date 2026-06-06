@@ -26,8 +26,7 @@
 use crate::plugin::{Plugin, PluginContext};
 #[cfg(feature = "image-optimization")]
 use crate::error::{PathErrorExt, SsgError};
-#[cfg(feature = "image-optimization")]
-use anyhow::{Context, Result};
+
 #[cfg(feature = "image-optimization")]
 use std::{
     collections::HashMap,
@@ -82,8 +81,7 @@ impl Plugin for ImageOptimizationPlugin {
             return Ok(());
         }
 
-        let images = collect_images(&ctx.site_dir)
-            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        let images = collect_images(&ctx.site_dir)?;
         if images.is_empty() {
             return Ok(());
         }
@@ -99,8 +97,7 @@ impl Plugin for ImageOptimizationPlugin {
             self.quality,
         );
 
-        rewrite_html_img_tags(&ctx.site_dir, &manifest)
-            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        rewrite_html_img_tags(&ctx.site_dir, &manifest)?;
 
         log::info!(
             "[image] Optimised {} image(s), {} variant(s) generated",
@@ -168,13 +165,13 @@ fn optimize_all_images(
 fn rewrite_html_img_tags(
     site_dir: &Path,
     manifest: &HashMap<String, ImageManifest>,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let html_files = collect_html_files(site_dir)?;
     for html_path in &html_files {
-        let html = fs::read_to_string(html_path)?;
+        let html = fs::read_to_string(html_path).with_path(html_path)?;
         let rewritten = rewrite_img_tags(&html, manifest);
         if rewritten != html {
-            fs::write(html_path, rewritten)?;
+            fs::write(html_path, rewritten).with_path(html_path)?;
         }
     }
     Ok(())
@@ -189,9 +186,9 @@ fn process_image(
     optimized_dir: &Path,
     breakpoints: &[u32],
     _quality: u8,
-) -> Result<ImageManifest> {
+) -> Result<ImageManifest, SsgError> {
     let img = image::open(img_path)
-        .with_context(|| format!("Failed to open {}", img_path.display()))?;
+        .map_err(|e| SsgError::io(e, img_path))?;
 
     let (orig_w, orig_h) = (img.width(), img.height());
     let rel = img_path
@@ -221,9 +218,7 @@ fn process_image(
         // Save WebP variant
         let variant_name = format!("{stem}-{width}w.webp");
         let variant_path = optimized_dir.join(&variant_name);
-        resized.save(&variant_path).with_context(|| {
-            format!("Failed to save {}", variant_path.display())
-        })?;
+        resized.save(&variant_path).map_err(|e| SsgError::io(e, &variant_path))?;
 
         let variant_rel = format!("optimized/{variant_name}");
         webp_variants.push(ImageVariant {
@@ -399,7 +394,7 @@ fn extract_attr(tag: &str, attr: &str) -> Option<String> {
 /// that live inside an `optimized/` subdirectory (the plugin's own
 /// output directory — must not be re-processed).
 #[cfg(feature = "image-optimization")]
-fn collect_images(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_images(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     let all = crate::walk::walk_files_multi(dir, &["jpg", "jpeg", "png"])?;
     Ok(all
         .into_iter()
@@ -408,7 +403,7 @@ fn collect_images(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 #[cfg(feature = "image-optimization")]
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 

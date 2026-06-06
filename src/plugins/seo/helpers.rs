@@ -3,7 +3,7 @@
 
 //! Internal helper functions for SEO plugins.
 
-use anyhow::Result;
+use crate::error::SsgError;
 use std::path::{Path, PathBuf};
 
 /// Extract the page title from the `<title>` tag.
@@ -131,7 +131,7 @@ pub(super) fn strip_tags(html: &str) -> String {
 
 /// Collect all `.html` files under `dir` (delegates to `crate::walk`).
 #[allow(dead_code)] // used only by tests in seo::mod
-pub(super) fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+pub(super) fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 
@@ -306,7 +306,7 @@ pub(super) fn extract_meta_date(html: &str) -> Option<String> {
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
 #[allow(dead_code)] // used only by tests in seo::mod
-pub(super) fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>> {
+pub(super) fn collect_html_files_recursive(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 

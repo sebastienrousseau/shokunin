@@ -243,19 +243,8 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-/// Helper to map anyhow errors from path walkers to `SsgError`.
-fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
-    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
-        std::io::Error::other(e.to_string())
-    });
-    SsgError::Io {
-        path: path.to_path_buf(),
-        source: io_err,
-    }
-}
-
 fn collect_json_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
-    crate::walk::walk_files(dir, "json").map_err(|e| map_anyhow_to_io(e, dir))
+    crate::walk::walk_files(dir, "json")
 }
 
 #[cfg(test)]
