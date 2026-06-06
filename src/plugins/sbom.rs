@@ -49,8 +49,8 @@
 //! `rel="sbom"` are left unchanged. The JSON file is rewritten on
 //! every build (so timestamps stay current).
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
 use std::fs;
 use std::path::Path;
 
@@ -71,13 +71,17 @@ impl Plugin for SbomPlugin {
         "sbom"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
         let sbom = build_sbom();
         let path = ctx.site_dir.join(Self::sbom_path());
-        fs::write(&path, serde_json::to_string_pretty(&sbom)?)?;
+        let json = serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
+            path: path.clone(),
+            source: std::io::Error::other(e),
+        })?;
+        fs::write(&path, json).with_path(&path)?;
         log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
         Ok(())
     }
@@ -91,7 +95,7 @@ impl Plugin for SbomPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> anyhow::Result<String> {
         // Idempotent: skip if an SBOM link is already present.
         if html.contains("rel=\"sbom\"") || html.contains("rel='sbom'") {
             return Ok(html.to_string());
@@ -290,5 +294,26 @@ mod tests {
     #[test]
     fn sbom_path_constant() {
         assert_eq!(SbomPlugin::sbom_path(), "sbom.cdx.json");
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        // Create a directory where the SBOM is expected to be written, causing fs::write to fail.
+        let sbom_dir = site.join(SbomPlugin::sbom_path());
+        fs::create_dir(&sbom_dir).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = SbomPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
+        assert!(matches!(ssg_err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = ssg_err {
+            assert_eq!(path, &sbom_dir);
+        }
     }
 }
