@@ -304,7 +304,8 @@ mod tests {
         entries.push(("root".to_string(), meta1));
 
         let mut meta2 = std::collections::HashMap::new();
-        let _ = meta2.insert("description".to_string(), "Fallback desc".to_string());
+        let _ = meta2
+            .insert("description".to_string(), "Fallback desc".to_string());
         entries.push(("subpage".to_string(), meta2));
 
         let desc = find_full_description(&entries);
