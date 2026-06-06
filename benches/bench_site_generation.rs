@@ -1,13 +1,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-#![allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    missing_docs,
-    dead_code,
-    unused
-)]
+#![allow(clippy::unwrap_used, clippy::expect_used, missing_docs, dead_code)]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
