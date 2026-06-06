@@ -301,10 +301,6 @@ path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
 license      = false
 eula         = false
 
-# -----------------------------------------------------------------------------
-# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
-# safe-only implementation.
-# -----------------------------------------------------------------------------
 [workspace]
 members = [".", "crates/ssg-core", "crates/ssg-wasm"]
 default-members = ["."]
