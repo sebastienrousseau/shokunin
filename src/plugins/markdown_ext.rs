@@ -699,4 +699,93 @@ mod tests {
         assert!(out.contains("![Alt text](https://cloudcdn.pro/api/transform?url=/images/pic.png&w=1600&format=webp&q=85)"));
         assert!(out.contains("src=\"https://cloudcdn.pro/api/transform?url=/images/pic2.png&w=1600&format=webp&q=85\""));
     }
+
+    #[test]
+    fn split_frontmatter_optional_trailing_newline() {
+        let input = "---\ntitle: Hello\n---Body here";
+        let (fm, body) = split_frontmatter(input);
+        assert_eq!(fm, "---\ntitle: Hello\n---");
+        assert_eq!(body, "Body here");
+    }
+
+    #[test]
+    fn test_cdn_prefix_no_gfm_expansion() {
+        let input = "![Alt](/img.png)";
+        let prefix = "https://cdn.example.com/";
+        let out = expand_gfm(input, Some(prefix));
+        assert!(out.contains("https://cdn.example.com//img.png"));
+    }
+
+    #[test]
+    fn test_rewrite_html_images_edge_cases() {
+        let prefix = "https://cdn/";
+
+        let out1 = rewrite_html_images("<img src='foo.png'>", prefix);
+        assert!(out1.contains("https://cdn/foo.png"));
+
+        assert_eq!(
+            rewrite_html_images("<img src=\"http://foo.com/a.png\">", prefix),
+            "<img src=\"http://foo.com/a.png\">"
+        );
+        assert_eq!(
+            rewrite_html_images("<img src=\"https://foo.com/a.png\">", prefix),
+            "<img src=\"https://foo.com/a.png\">"
+        );
+        assert_eq!(
+            rewrite_html_images("<img src=\"//foo.com/a.png\">", prefix),
+            "<img src=\"//foo.com/a.png\">"
+        );
+        assert_eq!(
+            rewrite_html_images(
+                "<img src=\"data:image/png;base64,...\">",
+                prefix
+            ),
+            "<img src=\"data:image/png;base64,...\">"
+        );
+
+        assert_eq!(
+            rewrite_html_images("<img src=\"foo.png\"", prefix),
+            "<img src=\"foo.png\""
+        );
+    }
+
+    #[test]
+    fn test_rewrite_markdown_images_edge_cases() {
+        let prefix = "https://cdn/";
+
+        assert_eq!(
+            rewrite_markdown_images("![unclosed alt text", prefix),
+            "![unclosed alt text"
+        );
+
+        assert_eq!(
+            rewrite_markdown_images("![alt](unclosed-paren", prefix),
+            "![alt](unclosed-paren"
+        );
+
+        assert_eq!(
+            rewrite_markdown_images("![alt] no paren", prefix),
+            "![alt] no paren"
+        );
+
+        assert_eq!(
+            rewrite_markdown_images("![alt](http://site.com/img.png)", prefix),
+            "![alt](http://site.com/img.png)"
+        );
+        assert_eq!(
+            rewrite_markdown_images("![alt](https://site.com/img.png)", prefix),
+            "![alt](https://site.com/img.png)"
+        );
+        assert_eq!(
+            rewrite_markdown_images("![alt](//site.com/img.png)", prefix),
+            "![alt](//site.com/img.png)"
+        );
+        assert_eq!(
+            rewrite_markdown_images(
+                "![alt](data:image/png;base64,123)",
+                prefix
+            ),
+            "![alt](data:image/png;base64,123)"
+        );
+    }
 }

@@ -689,4 +689,113 @@ mod tests {
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
         assert!(result.is_empty());
     }
+
+    #[test]
+    fn test_template_plugin_from_template_dir() {
+        let p = TemplatePlugin::from_template_dir(Path::new("t"));
+        assert_eq!(p.name(), "templates");
+    }
+
+    #[test]
+    fn test_template_plugin_before_compile_error() {
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::write(content_dir.join("index.md"), "---\ntitle: test\n---\n")
+            .unwrap();
+
+        let build_file = dir.path().join("build_file");
+        fs::write(&build_file, "").unwrap();
+
+        let ctx = PluginContext::new(
+            &content_dir,
+            &build_file,
+            dir.path(),
+            dir.path(),
+        );
+        let res =
+            TemplatePlugin::new(TemplateConfig::default()).before_compile(&ctx);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_template_plugin_after_compile_read_html_error() {
+        let dir = tempdir().unwrap();
+        let site_dir = dir.path().join("site");
+        fs::create_dir_all(&site_dir).unwrap();
+        let html_path = site_dir.join("test.html");
+        fs::write(&html_path, "test").unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&html_path, fs::Permissions::from_mode(0o000))
+                .unwrap();
+        }
+
+        let templates = dir.path().join("tera");
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(templates.join("base.html"), "").unwrap();
+
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), &site_dir, &templates);
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: templates,
+            ..Default::default()
+        });
+        let res = plugin.after_compile(&ctx);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = fs::set_permissions(
+                &html_path,
+                fs::Permissions::from_mode(0o644),
+            );
+        }
+        #[cfg(unix)]
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_enrich_with_related_posts_direct() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let html1 = site.join("p1.html");
+        let html2 = site.join("p2.html");
+        let html3 = site.join("p3.html");
+        fs::write(&html1, "").unwrap();
+        fs::write(&html2, "").unwrap();
+        fs::write(&html3, "").unwrap();
+
+        // p1: tags as array, categories as string
+        fs::write(sidecars.join("p1.meta.json"), r#"{"title": "P1", "date": "2026-06-01", "tags": ["rust", "web"], "categories": "coding,tech"}"#).unwrap();
+        // p2: tags as string (with overlapping "rust"), categories as array
+        fs::write(sidecars.join("p2.meta.json"), r#"{"title": "P2", "date": "2026-06-02", "tags": "rust,systems", "categories": ["coding"]}"#).unwrap();
+        // p3: no overlap
+        fs::write(
+            sidecars.join("p3.meta.json"),
+            r#"{"title": "P3", "date": "2026-06-03", "tags": ["other"]}"#,
+        )
+        .unwrap();
+
+        let files = vec![html1.clone(), html2.clone(), html3.clone()];
+        let enriched = enrich_with_related_posts(&files, &site, &sidecars);
+
+        let p1_fm = enriched.get(&html1).unwrap();
+        let related_p1 =
+            p1_fm.get("related_posts").unwrap().as_array().unwrap();
+        assert_eq!(related_p1.len(), 1);
+        assert_eq!(related_p1[0]["title"], "P2");
+        assert_eq!(related_p1[0]["url"], "/p2.html");
+        assert_eq!(related_p1[0]["date"], "2026-06-02");
+
+        let p3_fm = enriched.get(&html3).unwrap();
+        let related_p3 =
+            p3_fm.get("related_posts").unwrap().as_array().unwrap();
+        assert!(related_p3.is_empty());
+    }
 }

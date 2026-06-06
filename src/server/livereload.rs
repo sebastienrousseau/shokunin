@@ -592,4 +592,42 @@ mod tests {
         assert_eq!(parsed["type"], "css-reload");
         assert_eq!(parsed["file"], "styles/main.css");
     }
+
+    #[test]
+    fn test_inject_fails_on_nonexistent_file() {
+        let tmp = tempdir().unwrap();
+        let path = tmp.path().join("nonexistent.html");
+        let res = inject_livereload(&path, DEFAULT_PORT);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_inject_fails_on_directory() {
+        let tmp = tempdir().unwrap();
+        let res = inject_livereload(tmp.path(), DEFAULT_PORT);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_on_serve_collect_html_files_error() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let unreadable = tmp.path().join("unreadable");
+        fs::create_dir(&unreadable).unwrap();
+        fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            &unreadable,
+            Path::new("templates"),
+        );
+        let res = LiveReloadPlugin::new().on_serve(&ctx);
+
+        let _ =
+            fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o755));
+        assert!(res.is_err());
+    }
 }

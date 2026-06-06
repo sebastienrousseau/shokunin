@@ -622,4 +622,168 @@ mod tests {
         let count = result.matches("name=\"mobile-web-app-capable\"").count();
         assert_eq!(count, 1, "no duplicate injection, got: {result}");
     }
+
+    #[test]
+    fn test_apply_html_fixes_idempotent_on_modern_meta_single_quotes() {
+        let input = r#"<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name='mobile-web-app-capable' content="yes"></head>"#;
+        let result = apply_html_fixes(input);
+        assert!(
+            !result.contains("name=\"mobile-web-app-capable\""),
+            "Should not inject modern meta when single quoted one exists"
+        );
+    }
+
+    #[test]
+    fn test_apply_html_fixes_idempotent_on_modern_meta_unquoted() {
+        let input = r#"<head><meta name="apple-mobile-web-app-capable" content="yes"><meta name=mobile-web-app-capable content="yes"></head>"#;
+        let result = apply_html_fixes(input);
+        assert!(
+            !result.contains("name=\"mobile-web-app-capable\""),
+            "Should not inject modern meta when unquoted one exists"
+        );
+    }
+
+    #[test]
+    fn test_html_fix_plugin_metadata() {
+        assert_eq!(HtmlFixPlugin.name(), "html-fix");
+        assert!(HtmlFixPlugin.has_transform());
+        let tmp = tempdir().unwrap();
+        let ctx = test_ctx(tmp.path());
+        assert!(HtmlFixPlugin.after_compile(&ctx).is_ok());
+    }
+
+    #[test]
+    fn test_needs_schema_context_fix() {
+        assert!(needs_schema_context_fix("\"http://schema.org/\""));
+        assert!(needs_schema_context_fix("\"http://schema.org\""));
+        assert!(!needs_schema_context_fix("\"https://schema.org\""));
+    }
+
+    #[test]
+    fn test_needs_class_syntax_fix() {
+        assert!(needs_class_syntax_fix(".class=&quot;foo&quot;"));
+        assert!(needs_class_syntax_fix(".class=\"foo\""));
+        assert!(!needs_class_syntax_fix("class=\"foo\""));
+    }
+
+    #[test]
+    fn test_has_empty_preload() {
+        assert!(has_empty_preload("<link rel=\"preload\" href=\"\">"));
+        assert!(has_empty_preload("<link rel='preload' href=''>"));
+        assert!(has_empty_preload("<link rel=preload href>"));
+        assert!(!has_empty_preload("<link rel=\"preload\" href=\"/foo\">"));
+        assert!(!has_empty_preload("<link rel=\"stylesheet\" href=\"\">"));
+    }
+
+    #[test]
+    fn test_remove_empty_preload_unclosed_tag() {
+        let input = "<link rel=\"preload\" href=\"\"";
+        let result = remove_empty_preload_links(input);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_remove_empty_preload_unclosed_quotes() {
+        let input = "<link rel=\"preload href=\"\" >";
+        let result = remove_empty_preload_links(input);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_href_is_present_and_non_empty_edge_cases() {
+        assert!(!href_is_present_and_non_empty(""));
+        assert!(!href_is_present_and_non_empty("src=foo"));
+        assert!(!href_is_present_and_non_empty("href"));
+        assert!(!href_is_present_and_non_empty("href  "));
+        assert!(!href_is_present_and_non_empty("href = >"));
+        assert!(!href_is_present_and_non_empty("href = \"\""));
+        assert!(!href_is_present_and_non_empty("href = ''"));
+        assert!(!href_is_present_and_non_empty("href =  "));
+        assert!(!href_is_present_and_non_empty("href="));
+        assert!(!href_is_present_and_non_empty("href=>"));
+        assert!(!href_is_present_and_non_empty("href=  "));
+        assert!(!href_is_present_and_non_empty("href=\""));
+        assert!(!href_is_present_and_non_empty("href='"));
+        assert!(href_is_present_and_non_empty("href = \"/a\""));
+        assert!(href_is_present_and_non_empty("href = '/a'"));
+        assert!(href_is_present_and_non_empty("href=foo"));
+    }
+
+    #[test]
+    fn test_needs_mobile_web_app_capable_meta() {
+        assert!(needs_mobile_web_app_capable_meta(
+            "apple-mobile-web-app-capable"
+        ));
+        assert!(!needs_mobile_web_app_capable_meta(
+            "apple-mobile-web-app-capable and name=\"mobile-web-app-capable\""
+        ));
+        assert!(!needs_mobile_web_app_capable_meta("no legacy meta"));
+    }
+
+    #[test]
+    fn test_inject_mobile_web_app_capable_meta_edge_cases() {
+        // Missing apple meta
+        assert_eq!(
+            inject_mobile_web_app_capable_meta("<head></head>"),
+            "<head></head>"
+        );
+        // Unclosed tag
+        assert_eq!(
+            inject_mobile_web_app_capable_meta(
+                "<meta name=\"apple-mobile-web-app-capable\""
+            ),
+            "<meta name=\"apple-mobile-web-app-capable\""
+        );
+    }
+
+    #[test]
+    fn test_fix_jsonld_dates_invalid_rfc2822() {
+        // String too short
+        let input = r#"{"datePublished":"Mon"}"#;
+        assert_eq!(fix_jsonld_dates(input), input);
+
+        // Doesn't start with day abbreviation / comma
+        let input2 = r#"{"datePublished":"2026, 11 Apr 2026"}"#;
+        assert_eq!(fix_jsonld_dates(input2), input2);
+
+        // Non-matching field
+        let input3 = r#"{"dateCreated":"Thu, 11 Apr 2026 06:06:06 +0000"}"#;
+        assert_eq!(fix_jsonld_dates(input3), input3);
+
+        // Missing quote
+        let input4 = r#"{"datePublished":"Thu, 11 Apr 2026"#;
+        assert_eq!(fix_jsonld_dates(input4), input4);
+    }
+
+    #[test]
+    fn test_fix_broken_img_tags_edge_cases() {
+        // Missing quote for src
+        let input = r#"<img <p src=image.jpg>"#;
+        assert_eq!(fix_broken_img_tags(input), input);
+
+        // No img tag before p
+        let input2 = r#"<p src="image.jpg">"#;
+        assert_eq!(fix_broken_img_tags(input2), input2);
+    }
+
+    #[test]
+    fn test_fix_literal_class_syntax_edge_cases() {
+        // Unclosed class syntax
+        let input = r#"<img src="img.jpg">.class="my-class"#;
+        assert_eq!(fix_literal_class_syntax(input), input);
+    }
+
+    #[test]
+    fn test_inject_class_attr_edge_cases() {
+        // No preceding tag
+        let mut html = "some text without tags".to_string();
+        inject_class_attr(&mut html, 10, "foo");
+        assert_eq!(html, "some text without tags");
+
+        // Preceding tag already has class
+        let mut html2 = "<img class=\"existing\"> some text".to_string();
+        let len = html2.len();
+        inject_class_attr(&mut html2, len, "foo");
+        assert_eq!(html2, "<img class=\"existing\"> some text");
+    }
 }

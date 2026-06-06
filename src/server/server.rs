@@ -486,4 +486,22 @@ mod tests {
         assert!(html.contains("/es/"));
         assert!(html.contains("<!-- ssg-locale-redirect -->"));
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_handle_server_invalid_utf8_serve_dir() {
+        use std::os::unix::ffi::OsStringExt;
+        let dir = std::ffi::OsString::from_vec(vec![0xff, 0xfe, 0xfd]);
+        let serve_dir = PathBuf::from(dir);
+        let mut log_file = tempfile::tempfile().unwrap();
+        let paths = Paths {
+            site: PathBuf::from("site"),
+            content: PathBuf::from("content"),
+            build: PathBuf::from("build"),
+            template: PathBuf::from("templates"),
+        };
+        let res =
+            handle_server(&mut log_file, "2026-06-06", &paths, &serve_dir);
+        assert!(res.is_err());
+    }
 }

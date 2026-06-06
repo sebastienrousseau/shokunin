@@ -1099,4 +1099,31 @@ mod tests {
         // `data-mytype="foo"` must NOT match a `type=` query.
         assert_eq!(extract_attr(r#"<script data-mytype="foo">"#, "type"), None);
     }
+
+    #[test]
+    fn extract_attr_quoting_and_boundaries() {
+        assert_eq!(
+            extract_attr("<script type=\"foo\"", "type"),
+            Some("foo".to_string())
+        );
+        assert_eq!(
+            extract_attr("<script type='bar'", "type"),
+            Some("bar".to_string())
+        );
+        assert_eq!(
+            extract_attr("<script type=baz", "type"),
+            Some("baz".to_string())
+        );
+        // Missing close quote
+        assert_eq!(extract_attr("<script type=\"foo", "type"), None);
+        assert_eq!(extract_attr("<script type='bar", "type"), None);
+        // Not a boundary
+        assert_eq!(extract_attr("<script subtype=\"foo\"", "type"), None);
+    }
+
+    #[test]
+    fn test_find_script_close_escaped_quotes() {
+        let body = r#"{"msg":"escaped \" quote"}</script>"#;
+        assert_eq!(find_script_close_skipping_strings(body), Some(26));
+    }
 }

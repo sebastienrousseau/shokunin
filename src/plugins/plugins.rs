@@ -697,4 +697,24 @@ mod tests {
         let debug = format!("{:?}", ImageOptiPlugin);
         assert!(debug.contains("ImageOptiPlugin"));
     }
+
+    #[test]
+    fn test_minify_plugin_read_dir_error() {
+        let temp = tempdir().unwrap();
+        let file_path = temp.path().join("not_a_dir");
+        fs::write(&file_path, "").unwrap();
+        let ctx = test_ctx_with(&file_path);
+        let res = MinifyPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_image_opti_plugin_read_dir_error() {
+        let temp = tempdir().unwrap();
+        let file_path = temp.path().join("not_a_dir");
+        fs::write(&file_path, "").unwrap();
+        let ctx = test_ctx_with(&file_path);
+        let res = ImageOptiPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+    }
 }

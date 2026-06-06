@@ -1437,4 +1437,29 @@ mod tests {
             matches!(err, SsgError::Io { ref path, .. } if path == &file_path.join("accessibility-report.json"))
         );
     }
+
+    #[test]
+    fn test_extract_attr_value_quoting_styles() {
+        assert_eq!(
+            extract_attr_value("<img alt=\"hello\">", "alt"),
+            Some("hello".to_string())
+        );
+        assert_eq!(
+            extract_attr_value("<img alt='single'>", "alt"),
+            Some("single".to_string())
+        );
+        assert_eq!(
+            extract_attr_value("<img alt=unquoted>", "alt"),
+            Some("unquoted".to_string())
+        );
+        assert_eq!(
+            extract_attr_value("<img alt=unquoted-space class=x>", "alt"),
+            Some("unquoted-space".to_string())
+        );
+        // Missing closing quotes
+        assert_eq!(extract_attr_value("<img alt=\"unclosed>", "alt"), None);
+        assert_eq!(extract_attr_value("<img alt='unclosed>", "alt"), None);
+        // Attribute not found
+        assert_eq!(extract_attr_value("<img alt=\"hello\">", "width"), None);
+    }
 }

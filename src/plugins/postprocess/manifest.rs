@@ -295,4 +295,30 @@ mod tests {
         assert!(desc.ends_with("..."));
         Ok(())
     }
+
+    #[test]
+    fn test_find_full_description_fallback() {
+        let mut entries = Vec::new();
+        let mut meta1 = std::collections::HashMap::new();
+        meta1.insert("title".to_string(), "No description".to_string());
+        entries.push(("root".to_string(), meta1));
+
+        let mut meta2 = std::collections::HashMap::new();
+        meta2.insert("description".to_string(), "Fallback desc".to_string());
+        entries.push(("subpage".to_string(), meta2));
+
+        let desc = find_full_description(&entries);
+        assert_eq!(desc.as_deref(), Some("Fallback desc"));
+    }
+
+    #[test]
+    fn test_find_full_description_none() {
+        let mut entries = Vec::new();
+        let mut meta1 = std::collections::HashMap::new();
+        meta1.insert("title".to_string(), "No description".to_string());
+        entries.push(("root".to_string(), meta1));
+
+        let desc = find_full_description(&entries);
+        assert!(desc.is_none());
+    }
 }
