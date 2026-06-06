@@ -31,7 +31,7 @@ impl Plugin for FingerprintPlugin {
         "fingerprint"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }

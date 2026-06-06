@@ -7,6 +7,7 @@
 //! from frontmatter sidecars when `paginate` is specified.
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::SsgError;
 use anyhow::Result;
 use std::{
     collections::HashMap,
@@ -58,13 +59,14 @@ impl Plugin for PaginationPlugin {
         "pagination"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let sidecar_dir = ctx.build_dir.join(".meta");
         if !sidecar_dir.exists() {
             return Ok(());
         }
 
-        let mut entries = collect_page_entries(&sidecar_dir)?;
+        let mut entries = collect_page_entries(&sidecar_dir)
+            .map_err(|e| SsgError::io(e, &sidecar_dir))?;
         if entries.is_empty() {
             return Ok(());
         }
@@ -87,7 +89,7 @@ impl Plugin for PaginationPlugin {
                 page_num,
                 total_pages,
                 page_entries,
-            )?;
+            ).map_err(|e| SsgError::io(e, &page_dir))?;
         }
 
         log::info!(

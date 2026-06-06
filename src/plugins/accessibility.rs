@@ -122,7 +122,7 @@ impl Plugin for AccessibilityPlugin {
         "accessibility"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -1442,10 +1442,6 @@ mod tests {
         let res = AccessibilityPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &file_path.join("accessibility-report.json"));
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &file_path.join("accessibility-report.json")));
     }
 }

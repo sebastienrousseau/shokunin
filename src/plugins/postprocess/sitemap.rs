@@ -7,7 +7,7 @@ use super::helpers::{
     normalise_url_in_xml_line, read_meta_sidecars, rfc2822_to_iso_date,
 };
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::collections::HashMap;
 use std::fs;
 
@@ -21,15 +21,13 @@ impl Plugin for SitemapFixPlugin {
         "sitemap-fix"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let sitemap_path = ctx.site_dir.join("sitemap.xml");
         if !sitemap_path.exists() {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&sitemap_path).with_context(|| {
-            format!("cannot read {}", sitemap_path.display())
-        })?;
+        let content = fs::read_to_string(&sitemap_path).with_path(&sitemap_path)?;
 
         let meta_entries =
             read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
@@ -40,9 +38,7 @@ impl Plugin for SitemapFixPlugin {
         // Second pass: update lastmod based on the <loc> in each <url> block
         let updated = update_lastmod_from_loc(&result, &date_map);
 
-        fs::write(&sitemap_path, updated).with_context(|| {
-            format!("cannot write {}", sitemap_path.display())
-        })?;
+        fs::write(&sitemap_path, updated).with_path(&sitemap_path)?;
 
         log::info!("[sitemap-fix] Repaired sitemap.xml");
         Ok(())
@@ -161,6 +157,7 @@ pub(super) fn update_lastmod_from_loc(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use std::path::Path;
     use tempfile::tempdir;

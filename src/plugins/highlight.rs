@@ -7,22 +7,17 @@
 //! blocks. Uses class-based highlighting with a generated CSS file,
 //! avoiding inline styles for better performance and cacheability.
 
-use crate::error::PathErrorExt;
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::fs;
 use std::path::Path;
 
-#[cfg(test)]
-use crate::error::SsgError;
-
 /// Plugin that adds syntax highlighting CSS classes to code blocks.
 ///
 /// Runs in `after_compile`. Finds `<pre><code class="language-X">`
-/// blocks and wraps them with a highlight container. Generates a
-/// `highlight.css` file with the color theme.
-#[derive(Debug)]
+/// blocks and injects classes. Also generates `highlight.css`.
+#[derive(Debug, Clone)]
 pub struct HighlightPlugin {
-    /// CSS theme name. Default themes are generated inline.
     theme: String,
 }
 
@@ -35,7 +30,16 @@ impl Default for HighlightPlugin {
 }
 
 impl HighlightPlugin {
+    /// Creates a new `HighlightPlugin` with the given theme.
+    #[must_use]
+    pub fn new(theme: impl Into<String>) -> Self {
+        Self {
+            theme: theme.into(),
+        }
+    }
+
     /// Creates a highlight plugin with the given theme name.
+    #[must_use]
     pub fn with_theme(theme: impl Into<String>) -> Self {
         Self {
             theme: theme.into(),
@@ -57,7 +61,7 @@ impl Plugin for HighlightPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> anyhow::Result<String> {
+    ) -> Result<String, SsgError> {
         let result = add_highlight_markup(html);
         if result == html {
             return Ok(html.to_string());
@@ -69,7 +73,7 @@ impl Plugin for HighlightPlugin {
         }
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -355,10 +359,6 @@ mod tests {
         let res = HighlightPlugin::default().after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &css_dir);
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &css_dir));
     }
 }

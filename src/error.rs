@@ -53,6 +53,21 @@ pub enum SsgError {
     Template(#[from] minijinja::Error),
 }
 
+impl SsgError {
+    /// Converts a generic error and path context into an `SsgError::Io` variant.
+    pub fn io(err: impl Into<anyhow::Error>, path: impl Into<PathBuf>) -> Self {
+        let anyhow_err = err.into();
+        let io_err = anyhow_err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+            std::io::Error::other(e.to_string())
+        });
+        Self::Io {
+            path: path.into(),
+            source: io_err,
+        }
+    }
+}
+
+
 /// Context extension trait for mapping `std::io::Error` contexts with path info.
 pub trait PathErrorExt<T> {
     /// Converts a `std::io::Result` into an `SsgError` mapping the path context.

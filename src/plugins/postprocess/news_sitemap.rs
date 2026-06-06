@@ -5,7 +5,7 @@
 
 use super::helpers::{read_meta_sidecars, rfc2822_to_iso8601, xml_escape};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::fs;
 
 /// Repairs news-sitemap.xml by populating entries from front-matter
@@ -18,14 +18,13 @@ impl Plugin for NewsSitemapFixPlugin {
         "news-sitemap-fix"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let path = ctx.site_dir.join("news-sitemap.xml");
         if !path.exists() {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("cannot read {}", path.display()))?;
+        let content = fs::read_to_string(&path).with_path(&path)?;
 
         // If no placeholder issues, skip
         if !content.contains("Unnamed Publication")
@@ -68,8 +67,7 @@ impl Plugin for NewsSitemapFixPlugin {
             news_entries.join("\n")
         );
 
-        fs::write(&path, rebuilt)
-            .with_context(|| format!("cannot write {}", path.display()))?;
+        fs::write(&path, rebuilt).with_path(&path)?;
 
         log::info!(
             "[news-sitemap-fix] Rebuilt news-sitemap.xml with {} entries",
@@ -145,6 +143,7 @@ fn build_news_entry(
 mod tests {
 
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use std::collections::HashMap;
     use std::path::Path;

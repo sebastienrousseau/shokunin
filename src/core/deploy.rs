@@ -7,6 +7,7 @@
 //! providers, including cache headers and security headers.
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::SsgError;
 use anyhow::Result;
 use std::fs;
 
@@ -47,19 +48,23 @@ impl Plugin for DeployPlugin {
         "deploy"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
         match self.target {
-            DeployTarget::Netlify => generate_netlify(&ctx.site_dir)?,
-            DeployTarget::Vercel => generate_vercel(&ctx.site_dir)?,
+            DeployTarget::Netlify => generate_netlify(&ctx.site_dir)
+                .map_err(|e| SsgError::io(e, &ctx.site_dir))?,
+            DeployTarget::Vercel => generate_vercel(&ctx.site_dir)
+                .map_err(|e| SsgError::io(e, &ctx.site_dir))?,
             DeployTarget::CloudflarePages => {
-                generate_cloudflare(&ctx.site_dir)?;
+                generate_cloudflare(&ctx.site_dir)
+                    .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
             }
             DeployTarget::GithubPages => {
-                generate_github_pages(&ctx.site_dir)?;
+                generate_github_pages(&ctx.site_dir)
+                    .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
             }
         }
 

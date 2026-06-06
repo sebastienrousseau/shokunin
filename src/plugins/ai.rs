@@ -11,6 +11,7 @@
 //! - Generate `llms.txt` and `llms-full.txt` for AI crawler guidance
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::SsgError;
 use anyhow::Result;
 use std::{
     collections::BTreeMap,
@@ -32,17 +33,21 @@ impl Plugin for AiPlugin {
         "ai"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
-        generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())?;
-        generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())?;
+        generate_llms_txt(&ctx.site_dir, ctx.config.as_ref())
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
+        generate_llms_full_txt(&ctx.site_dir, ctx.config.as_ref())
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = collect_html_files(&ctx.site_dir)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
         let pages_with_missing_alt =
-            process_html_for_ai(&html_files, &ctx.site_dir)?;
+            process_html_for_ai(&html_files, &ctx.site_dir)
+                .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         if pages_with_missing_alt > 0 {
             log::warn!(

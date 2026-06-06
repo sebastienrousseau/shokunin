@@ -4,7 +4,7 @@
 //! SBOM (Software Bill of Materials) generation plugin in `CycloneDX` v1.5 format.
 
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
+use crate::error::{PathErrorExt, SsgError};
 use serde_json::json;
 use std::fs;
 
@@ -18,7 +18,7 @@ impl Plugin for SbomPlugin {
         "sbom-generator"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -81,8 +81,9 @@ impl Plugin for SbomPlugin {
         });
 
         let sbom_path = ctx.site_dir.join("sbom.cdx.json");
-        let content = serde_json::to_string_pretty(&sbom)?;
-        fs::write(&sbom_path, content)?;
+        let content = serde_json::to_string_pretty(&sbom)
+            .map_err(|e| SsgError::io(e, &sbom_path))?;
+        fs::write(&sbom_path, content).with_path(&sbom_path)?;
 
         Ok(())
     }
@@ -143,6 +144,7 @@ fn current_timestamp() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use tempfile::tempdir;
 
     fn test_ctx(dir: &std::path::Path) -> PluginContext {

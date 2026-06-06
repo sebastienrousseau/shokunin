@@ -9,7 +9,7 @@
 //!
 //! No external dependencies — uses inline SVG generation.
 
-use crate::error::PathErrorExt;
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::seo::helpers::{extract_title, has_meta_tag};
 use std::{fs, path::Path};
@@ -143,7 +143,7 @@ impl Plugin for OgImagePlugin {
         "og-image"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -387,10 +387,6 @@ mod tests {
         let res = plugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &svg_dir);
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &svg_dir));
     }
 }

@@ -44,6 +44,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 
 // -----------------------------------------------------------------------
@@ -458,9 +459,10 @@ impl Plugin for ContentValidationPlugin {
         "content-validation"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let schema_path = ctx.content_dir.join("content.schema.toml");
-        let schemas = load_schemas(&schema_path)?;
+        let schemas = load_schemas(&schema_path)
+            .map_err(|e| SsgError::io(e, &schema_path))?;
 
         if schemas.is_empty() {
             info!("No content schemas found — skipping validation");
@@ -473,7 +475,8 @@ impl Plugin for ContentValidationPlugin {
             ctx.content_dir.display()
         );
 
-        let errors = validate_content_dir(&ctx.content_dir, &schemas)?;
+        let errors = validate_content_dir(&ctx.content_dir, &schemas)
+            .map_err(|e| SsgError::io(e, &ctx.content_dir))?;
 
         if errors.is_empty() {
             info!("All content files passed schema validation");
@@ -486,7 +489,10 @@ impl Plugin for ContentValidationPlugin {
             for err in &errors {
                 msg.push_str(&format!("  {err}\n"));
             }
-            Err(anyhow::anyhow!("{msg}"))
+            Err(SsgError::Validation {
+                field: "frontmatter".to_string(),
+                message: msg,
+            })
         }
     }
 }

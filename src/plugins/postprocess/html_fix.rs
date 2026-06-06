@@ -5,6 +5,7 @@
 
 use super::helpers::rfc2822_to_iso8601;
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::SsgError;
 use anyhow::Result;
 use std::path::Path;
 
@@ -30,11 +31,11 @@ impl Plugin for HtmlFixPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         Ok(apply_html_fixes(html))
     }
 
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 }

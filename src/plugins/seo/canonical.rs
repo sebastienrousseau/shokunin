@@ -4,6 +4,7 @@
 //! Canonical URL injection plugin.
 
 use super::helpers::escape_attr;
+use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
 use std::path::Path;
@@ -33,6 +34,7 @@ pub struct CanonicalPlugin {
 
 impl CanonicalPlugin {
     /// Creates a new `CanonicalPlugin` with the given base URL.
+    #[must_use]
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into(),
@@ -54,7 +56,7 @@ impl Plugin for CanonicalPlugin {
         html: &str,
         path: &Path,
         ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         let base = self.base_url.trim_end_matches('/');
 
         let rel_path = path
@@ -77,7 +79,7 @@ impl Plugin for CanonicalPlugin {
         Ok(result)
     }
 
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 }

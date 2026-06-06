@@ -268,12 +268,12 @@ impl Plugin for SearchPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> anyhow::Result<String> {
-        transform_search_html(html, &SearchLabels::english()).map_err(Into::into)
+    ) -> Result<String, SsgError> {
+        transform_search_html(html, &SearchLabels::english())
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
-        run_search_index(ctx).map_err(Into::into)
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        run_search_index(ctx)
     }
 }
 
@@ -316,12 +316,12 @@ impl Plugin for LocalizedSearchPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> anyhow::Result<String> {
-        transform_search_html(html, &self.labels).map_err(Into::into)
+    ) -> Result<String, SsgError> {
+        transform_search_html(html, &self.labels)
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
-        run_search_index(ctx).map_err(Into::into)
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        run_search_index(ctx)
     }
 }
 
@@ -1511,11 +1511,7 @@ mod tests {
         let res = SearchPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &index_dir);
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &index_dir));
     }
 }
 

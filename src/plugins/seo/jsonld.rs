@@ -8,7 +8,7 @@ use super::helpers::{
     extract_html_lang, extract_meta_author, extract_meta_date, extract_title,
 };
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
+use crate::error::SsgError;
 use std::path::Path;
 
 /// Configuration for the JSON-LD structured data plugin.
@@ -258,7 +258,7 @@ impl Plugin for JsonLdPlugin {
         html: &str,
         path: &Path,
         ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         if html.contains("application/ld+json") {
             return Ok(html.to_string());
         }
@@ -286,7 +286,8 @@ impl Plugin for JsonLdPlugin {
 
         let mut injection = String::new();
         for script in &scripts {
-            let json = serde_json::to_string(script)?;
+            let json = serde_json::to_string(script)
+                .map_err(|e| SsgError::io(e, path))?;
             injection.push_str(&format!(
                 "<script type=\"application/ld+json\">{json}</script>\n"
             ));
@@ -297,7 +298,7 @@ impl Plugin for JsonLdPlugin {
         Ok(result)
     }
 
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 }

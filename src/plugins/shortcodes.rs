@@ -36,7 +36,7 @@ impl Plugin for ShortcodePlugin {
         "shortcodes"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.content_dir.exists() {
             return Ok(());
         }
@@ -595,11 +595,7 @@ title: Test
         let res = ShortcodePlugin.before_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &file_path);
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &file_path));
     }
 }
 

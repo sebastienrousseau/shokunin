@@ -43,7 +43,7 @@ impl Plugin for TaxonomyPlugin {
         "taxonomy"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let sidecar_dir = ctx.build_dir.join(".meta");
         if !sidecar_dir.exists() {
             return Ok(());

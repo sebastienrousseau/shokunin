@@ -99,7 +99,7 @@ impl Plugin for I18nPlugin {
         "i18n"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -117,7 +117,8 @@ impl Plugin for I18nPlugin {
         }
 
         // Collect the set of relative page paths per locale.
-        let pages = collect_locale_pages(&ctx.site_dir, &present_locales)?;
+        let pages = collect_locale_pages(&ctx.site_dir, &present_locales)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Determine the base URL (needed for sitemaps).
         let base_url = ctx.config.as_ref().map_or_else(
@@ -133,7 +134,7 @@ impl Plugin for I18nPlugin {
             &self.config.default_locale,
             &base_url,
             &self.config.url_prefix,
-        )?;
+        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Generate per-locale sitemaps.
         generate_locale_sitemaps(
@@ -143,14 +144,14 @@ impl Plugin for I18nPlugin {
             &self.config.default_locale,
             &base_url,
             &self.config.url_prefix,
-        )?;
+        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Generate locale redirect index.html at site root.
         crate::server::generate_locale_redirect(
             &ctx.site_dir,
             &present_locales,
             &self.config.default_locale,
-        )?;
+        ).map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         Ok(())
     }

@@ -18,6 +18,7 @@
 //! Graceful fallback: if no LLM is reachable, logs a warning and skips.
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::{PathErrorExt, SsgError};
 use anyhow::Result;
 use std::{fs, path::Path, process::Command};
 
@@ -501,7 +502,7 @@ impl Plugin for LlmPlugin {
         "llm"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -519,7 +520,7 @@ impl Plugin for LlmPlugin {
         let mut augmented = 0usize;
 
         for path in &html_files {
-            let html = fs::read_to_string(path)?;
+            let html = fs::read_to_string(path).with_path(path)?;
             let mut modified = html.clone();
 
             // Auto-generate meta descriptions for pages with short/missing ones
@@ -563,7 +564,7 @@ impl Plugin for LlmPlugin {
             );
 
             if !self.config.dry_run && modified != html {
-                fs::write(path, &modified)?;
+                fs::write(path, &modified).with_path(path)?;
                 augmented += 1;
             }
 

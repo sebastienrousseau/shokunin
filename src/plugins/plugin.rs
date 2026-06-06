@@ -29,7 +29,7 @@
 //! impl Plugin for MinifyPlugin {
 //!     fn name(&self) -> &str { "minify" }
 //!
-//!     fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+//!     fn after_compile(&self, ctx: &PluginContext) -> std::result::Result<(), crate::error::SsgError> {
 //!         println!("Minifying files in {:?}", ctx.site_dir);
 //!         // Walk site_dir and minify HTML/CSS/JS files
 //!         Ok(())
@@ -38,7 +38,7 @@
 //! ```
 
 use crate::cmd::SsgConfig;
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::{
     collections::HashMap,
     fmt, fs,
@@ -97,17 +97,20 @@ impl PluginCache {
     }
 
     /// Persists the cache to `site_dir/.ssg-plugin-cache.json`.
-    pub fn save(&self, site_dir: &Path) -> Result<()> {
+    pub fn save(&self, site_dir: &Path) -> Result<(), SsgError> {
         let path = site_dir.join(CACHE_FILENAME);
         let serialisable: HashMap<String, u64> = self
             .entries
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
-        let json = serde_json::to_string_pretty(&serialisable)
-            .context("failed to serialise plugin cache")?;
-        fs::write(&path, json)
-            .with_context(|| format!("cannot write {}", path.display()))?;
+        let json = serde_json::to_string_pretty(&serialisable).map_err(|e| {
+            SsgError::Io {
+                path: path.clone(),
+                source: std::io::Error::other(e),
+            }
+        })?;
+        fs::write(&path, json).with_path(&path)?;
         Ok(())
     }
 
@@ -270,7 +273,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
     ///
     /// Use this hook to preprocess content files, inject metadata,
     /// or validate source directories.
-    fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 
@@ -278,7 +281,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
     ///
     /// Use this hook to post-process generated HTML, optimize assets,
     /// generate sitemaps, or perform any output transformation.
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 
@@ -296,7 +299,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         Ok(html.to_string())
     }
 
@@ -310,7 +313,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
     ///
     /// Use this hook to inject dev-mode scripts, set up live-reload,
     /// or modify the serve directory.
-    fn on_serve(&self, _ctx: &PluginContext) -> Result<()> {
+    fn on_serve(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
 }
@@ -321,7 +324,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
 ///
 /// ```rust
 /// use ssg::plugin::{PluginManager, PluginContext, Plugin};
-/// use anyhow::Result;
+/// use ssg::error::SsgError;
 /// use std::path::Path;
 ///
 /// #[derive(Debug)]
@@ -329,7 +332,7 @@ pub trait Plugin: fmt::Debug + Send + Sync {
 ///
 /// impl Plugin for LogPlugin {
 ///     fn name(&self) -> &str { "logger" }
-///     fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+///     fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
 ///         println!("Compiling from {:?}", ctx.content_dir);
 ///         Ok(())
 ///     }
@@ -390,15 +393,9 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    pub fn run_before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         for plugin in &self.plugins {
-            plugin.before_compile(ctx).map_err(|e| {
-                anyhow::anyhow!(
-                    "Plugin '{}' failed in before_compile: {}",
-                    plugin.name(),
-                    e
-                )
-            })?;
+            plugin.before_compile(ctx)?;
         }
         Ok(())
     }
@@ -407,15 +404,9 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    pub fn run_after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         for plugin in &self.plugins {
-            plugin.after_compile(ctx).map_err(|e| {
-                anyhow::anyhow!(
-                    "Plugin '{}' failed in after_compile: {}",
-                    plugin.name(),
-                    e
-                )
-            })?;
+            plugin.after_compile(ctx)?;
         }
         Ok(())
     }
@@ -425,7 +416,7 @@ impl PluginManager {
     ///
     /// This eliminates N separate read/write cycles (where N = number of
     /// transform plugins) per HTML file.
-    pub fn run_fused_transforms(&self, ctx: &PluginContext) -> Result<()> {
+    pub fn run_fused_transforms(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         use rayon::prelude::*;
 
         let transform_plugins: Vec<_> =
@@ -438,8 +429,8 @@ impl PluginManager {
         let html_files = ctx.get_html_files();
         let transformed = std::sync::atomic::AtomicUsize::new(0);
 
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
-            let original = fs::read_to_string(path)?;
+        html_files.par_iter().try_for_each(|path| -> Result<(), SsgError> {
+            let original = fs::read_to_string(path).with_path(path)?;
             let mut html = original.clone();
 
             for plugin in &transform_plugins {
@@ -447,7 +438,7 @@ impl PluginManager {
             }
 
             if html != original {
-                fs::write(path, &html)?;
+                fs::write(path, &html).with_path(path)?;
                 let _ = transformed
                     .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             }
@@ -468,15 +459,9 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
-    pub fn run_on_serve(&self, ctx: &PluginContext) -> Result<()> {
+    pub fn run_on_serve(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         for plugin in &self.plugins {
-            plugin.on_serve(ctx).map_err(|e| {
-                anyhow::anyhow!(
-                    "Plugin '{}' failed in on_serve: {}",
-                    plugin.name(),
-                    e
-                )
-            })?;
+            plugin.on_serve(ctx)?;
         }
         Ok(())
     }
@@ -500,15 +485,15 @@ mod tests {
         fn name(&self) -> &str {
             self.name
         }
-        fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
+        fn before_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             let _ = self.before.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
-        fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+        fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             let _ = self.after.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
-        fn on_serve(&self, _ctx: &PluginContext) -> Result<()> {
+        fn on_serve(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             let _ = self.serve.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
@@ -523,21 +508,30 @@ mod tests {
         fn name(&self) -> &'static str {
             "fail-plugin"
         }
-        fn before_compile(&self, _ctx: &PluginContext) -> Result<()> {
+        fn before_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             if self.hook == "before" {
-                anyhow::bail!("before_compile failed");
+                return Err(SsgError::Io {
+                    path: PathBuf::from("fail"),
+                    source: std::io::Error::other("before_compile failed"),
+                });
             }
             Ok(())
         }
-        fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+        fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             if self.hook == "after" {
-                anyhow::bail!("after_compile failed");
+                return Err(SsgError::Io {
+                    path: PathBuf::from("fail"),
+                    source: std::io::Error::other("after_compile failed"),
+                });
             }
             Ok(())
         }
-        fn on_serve(&self, _ctx: &PluginContext) -> Result<()> {
+        fn on_serve(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
             if self.hook == "serve" {
-                anyhow::bail!("on_serve failed");
+                return Err(SsgError::Io {
+                    path: PathBuf::from("fail"),
+                    source: std::io::Error::other("on_serve failed"),
+                });
             }
             Ok(())
         }
@@ -637,8 +631,10 @@ mod tests {
         pm.register(FailPlugin { hook: "before" });
         let ctx = test_ctx();
         let err = pm.run_before_compile(&ctx).unwrap_err();
-        assert!(err.to_string().contains("fail-plugin"));
-        assert!(err.to_string().contains("before_compile"));
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { source, .. } = err {
+            assert!(source.to_string().contains("before_compile failed"));
+        }
     }
 
     #[test]
@@ -647,8 +643,10 @@ mod tests {
         pm.register(FailPlugin { hook: "after" });
         let ctx = test_ctx();
         let err = pm.run_after_compile(&ctx).unwrap_err();
-        assert!(err.to_string().contains("fail-plugin"));
-        assert!(err.to_string().contains("after_compile"));
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { source, .. } = err {
+            assert!(source.to_string().contains("after_compile failed"));
+        }
     }
 
     #[test]
@@ -657,8 +655,10 @@ mod tests {
         pm.register(FailPlugin { hook: "serve" });
         let ctx = test_ctx();
         let err = pm.run_on_serve(&ctx).unwrap_err();
-        assert!(err.to_string().contains("fail-plugin"));
-        assert!(err.to_string().contains("on_serve"));
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { source, .. } = err {
+            assert!(source.to_string().contains("on_serve failed"));
+        }
     }
 
     #[test]

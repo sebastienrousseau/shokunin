@@ -39,7 +39,7 @@
 use crate::plugin::{Plugin, PluginContext};
 use crate::walk::walk_files_bounded_depth;
 use crate::MAX_DIR_DEPTH;
-use anyhow::{Context, Result};
+use crate::error::SsgError;
 use pulldown_cmark::{html as cmark_html, Options, Parser};
 use std::fs;
 
@@ -56,19 +56,14 @@ impl Plugin for MarkdownExtPlugin {
         "markdown-ext"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.content_dir.exists() {
             return Ok(());
         }
 
         let files =
             walk_files_bounded_depth(&ctx.content_dir, "md", MAX_DIR_DEPTH)
-                .with_context(|| {
-                    format!(
-                        "Failed to walk content dir {}",
-                        ctx.content_dir.display()
-                    )
-                })?;
+                .map_err(|e| SsgError::io(e, &ctx.content_dir))?;
 
         let cdn_prefix = ctx
             .config
@@ -79,20 +74,24 @@ impl Plugin for MarkdownExtPlugin {
         let mut transformed = 0usize;
         for path in &files {
             fail_point!("markdown_ext::read", |_| {
-                anyhow::bail!("injected: markdown_ext::read")
+                Err(SsgError::Io {
+                    path: path.clone(),
+                    source: std::io::Error::other("injected: markdown_ext::read"),
+                })
             });
-            let raw = fs::read_to_string(path).with_context(|| {
-                format!("Failed to read {}", path.display())
-            })?;
+            let raw = fs::read_to_string(path)
+                .map_err(|e| SsgError::io(e, path))?;
 
             let new = expand_gfm(&raw, cdn_prefix);
             if new != raw {
                 fail_point!("markdown_ext::write", |_| {
-                    anyhow::bail!("injected: markdown_ext::write")
+                    Err(SsgError::Io {
+                        path: path.clone(),
+                        source: std::io::Error::other("injected: markdown_ext::write"),
+                    })
                 });
-                fs::write(path, &new).with_context(|| {
-                    format!("Failed to write {}", path.display())
-                })?;
+                fs::write(path, &new)
+                    .map_err(|e| SsgError::io(e, path))?;
                 transformed += 1;
             }
         }

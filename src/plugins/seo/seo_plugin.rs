@@ -45,13 +45,14 @@ impl Plugin for SeoPlugin {
     fn transform_html(
         &self,
         html: &str,
-        _path: &Path,
+        path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> std::result::Result<String, crate::error::SsgError> {
         inject_seo_tags_html(html)
+            .map_err(|e| crate::error::SsgError::io(e, path))
     }
 
-    fn after_compile(&self, _ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, _ctx: &PluginContext) -> std::result::Result<(), crate::error::SsgError> {
         Ok(())
     }
 }

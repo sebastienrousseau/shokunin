@@ -7,7 +7,7 @@ use super::helpers::{
     extract_xml_value, parse_rfc2822_lenient, read_meta_sidecars, xml_escape,
 };
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::fs;
 
 /// Aggregates per-page RSS items into the root `rss.xml` feed.
@@ -155,14 +155,13 @@ impl Plugin for RssAggregatePlugin {
         "rss-aggregate"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let rss_path = ctx.site_dir.join("rss.xml");
         if !rss_path.exists() {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&rss_path)
-            .with_context(|| format!("cannot read {}", rss_path.display()))?;
+        let content = fs::read_to_string(&rss_path).with_path(&rss_path)?;
 
         if content.matches("<item>").count() > 1 {
             return Ok(());
@@ -214,8 +213,7 @@ impl Plugin for RssAggregatePlugin {
             &items_xml,
         );
 
-        fs::write(&rss_path, rebuilt)
-            .with_context(|| format!("cannot write {}", rss_path.display()))?;
+        fs::write(&rss_path, rebuilt).with_path(&rss_path)?;
 
         log::info!(
             "[rss-aggregate] Rebuilt rss.xml with {} article items",
@@ -267,6 +265,7 @@ fn extract_last_build_date(articles: &[(String, String)]) -> String {
 mod tests {
 
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use std::collections::HashMap;
     use std::path::Path;

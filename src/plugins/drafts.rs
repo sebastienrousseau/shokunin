@@ -39,7 +39,7 @@ impl Plugin for DraftPlugin {
         "drafts"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if self.include_drafts || !ctx.content_dir.exists() {
             return Ok(());
         }
@@ -63,7 +63,7 @@ impl Plugin for DraftPlugin {
         Ok(())
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if self.include_drafts || !ctx.content_dir.exists() {
             return Ok(());
         }

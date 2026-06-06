@@ -25,6 +25,8 @@
 #[cfg(feature = "image-optimization")]
 use crate::plugin::{Plugin, PluginContext};
 #[cfg(feature = "image-optimization")]
+use crate::error::{PathErrorExt, SsgError};
+#[cfg(feature = "image-optimization")]
 use anyhow::{Context, Result};
 #[cfg(feature = "image-optimization")]
 use std::{
@@ -75,18 +77,19 @@ impl Plugin for ImageOptimizationPlugin {
         "image-optimization"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
-        let images = collect_images(&ctx.site_dir)?;
+        let images = collect_images(&ctx.site_dir)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
         if images.is_empty() {
             return Ok(());
         }
 
         let optimized_dir = ctx.site_dir.join("optimized");
-        fs::create_dir_all(&optimized_dir)?;
+        fs::create_dir_all(&optimized_dir).with_path(&optimized_dir)?;
 
         let manifest = optimize_all_images(
             &images,
@@ -96,7 +99,8 @@ impl Plugin for ImageOptimizationPlugin {
             self.quality,
         );
 
-        rewrite_html_img_tags(&ctx.site_dir, &manifest)?;
+        rewrite_html_img_tags(&ctx.site_dir, &manifest)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         log::info!(
             "[image] Optimised {} image(s), {} variant(s) generated",

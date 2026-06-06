@@ -17,13 +17,27 @@
 //!    - Generates `_islands/manifest.json` listing all referenced components
 //!    - Injects the `ssg-island.js` custom element loader into pages
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::Result;
 use std::{collections::BTreeSet, fs, path::Path};
 
 /// Plugin that enables interactive islands via Web Components.
 #[derive(Debug, Clone, Copy)]
 pub struct IslandPlugin;
+
+impl Default for IslandPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl IslandPlugin {
+    /// Creates a new `IslandPlugin`.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+}
 
 impl Plugin for IslandPlugin {
     fn name(&self) -> &'static str {
@@ -39,7 +53,7 @@ impl Plugin for IslandPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         if !html.contains("<ssg-island") {
             return Ok(html.to_string());
         }
@@ -60,7 +74,7 @@ impl Plugin for IslandPlugin {
         Ok(output)
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -71,7 +85,7 @@ impl Plugin for IslandPlugin {
         let mut components = BTreeSet::new();
 
         for path in &html_files {
-            let html = fs::read_to_string(path)?;
+            let html = fs::read_to_string(path).with_path(path)?;
             let page_components = extract_island_components(&html);
             components.extend(page_components);
         }
@@ -81,7 +95,7 @@ impl Plugin for IslandPlugin {
         }
 
         let islands_dir = ctx.site_dir.join("_islands");
-        fs::create_dir_all(&islands_dir)?;
+        fs::create_dir_all(&islands_dir).with_path(&islands_dir)?;
 
         // Copy user-provided island bundles from source islands/ dir
         let source_islands = ctx
@@ -95,7 +109,7 @@ impl Plugin for IslandPlugin {
                 let src = source_islands.join(format!("{component}.js"));
                 if src.exists() {
                     let dst = islands_dir.join(format!("{component}.js"));
-                    let _ = fs::copy(&src, &dst)?;
+                    let _ = fs::copy(&src, &dst).with_path(&dst)?;
                 }
             }
         }
@@ -104,10 +118,12 @@ impl Plugin for IslandPlugin {
         let manifest: Vec<_> = components.iter().collect();
         let manifest_json = serde_json::to_string_pretty(&manifest)
             .unwrap_or_else(|_| "[]".to_string());
-        fs::write(islands_dir.join("manifest.json"), manifest_json)?;
+        let manifest_path = islands_dir.join("manifest.json");
+        fs::write(&manifest_path, manifest_json).with_path(&manifest_path)?;
 
         // Write the ssg-island.js custom element loader
-        fs::write(islands_dir.join("ssg-island.js"), ISLAND_LOADER_JS)?;
+        let loader_path = islands_dir.join("ssg-island.js");
+        fs::write(&loader_path, ISLAND_LOADER_JS).with_path(&loader_path)?;
 
         log::info!("[islands] {} component(s) bundled", components.len());
         Ok(())
@@ -144,10 +160,9 @@ fn extract_island_components(html: &str) -> BTreeSet<String> {
     components
 }
 
-/// Injects the island loader `<script>` before `</body>`.
 #[cfg(test)]
-fn inject_island_loader(path: &Path) -> Result<()> {
-    let html = fs::read_to_string(path)?;
+fn inject_island_loader(path: &Path) -> Result<(), SsgError> {
+    let html = fs::read_to_string(path).with_path(path)?;
 
     if html.contains("ssg-island.js") {
         return Ok(()); // Already injected
@@ -162,7 +177,7 @@ fn inject_island_loader(path: &Path) -> Result<()> {
         format!("{html}{script}")
     };
 
-    fs::write(path, output)?;
+    fs::write(path, output).with_path(path)?;
     Ok(())
 }
 

@@ -71,7 +71,7 @@ impl Plugin for SbomPlugin {
         "sbom"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -95,7 +95,7 @@ impl Plugin for SbomPlugin {
         html: &str,
         _path: &Path,
         _ctx: &PluginContext,
-    ) -> anyhow::Result<String> {
+    ) -> Result<String, SsgError> {
         // Idempotent: skip if an SBOM link is already present.
         if html.contains("rel=\"sbom\"") || html.contains("rel='sbom'") {
             return Ok(html.to_string());
@@ -310,10 +310,6 @@ mod tests {
         let res = SbomPlugin.after_compile(&ctx);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        let ssg_err = err.downcast_ref::<SsgError>().unwrap();
-        assert!(matches!(ssg_err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = ssg_err {
-            assert_eq!(path, &sbom_dir);
-        }
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir));
     }
 }

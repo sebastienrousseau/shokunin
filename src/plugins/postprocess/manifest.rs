@@ -5,7 +5,7 @@
 
 use super::helpers::{read_meta_sidecars, truncate_at_word};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::fs;
 
 /// Fixes manifest.json description truncation by using full text or
@@ -18,21 +18,17 @@ impl Plugin for ManifestFixPlugin {
         "manifest-fix"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let manifest_path = ctx.site_dir.join("manifest.json");
         if !manifest_path.exists() {
             return Ok(());
         }
 
         let content =
-            fs::read_to_string(&manifest_path).with_context(|| {
-                format!("cannot read {}", manifest_path.display())
-            })?;
+            fs::read_to_string(&manifest_path).with_path(&manifest_path)?;
 
         let mut manifest: serde_json::Value = serde_json::from_str(&content)
-            .with_context(|| {
-                format!("invalid JSON in {}", manifest_path.display())
-            })?;
+            .map_err(|e| SsgError::io(e, &manifest_path))?;
 
         let meta_entries =
             read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
@@ -55,10 +51,9 @@ impl Plugin for ManifestFixPlugin {
         // when it tries to fetch them.
         drop_empty_icons(&mut manifest);
 
-        let output = serde_json::to_string_pretty(&manifest)?;
-        fs::write(&manifest_path, output).with_context(|| {
-            format!("cannot write {}", manifest_path.display())
-        })?;
+        let output = serde_json::to_string_pretty(&manifest)
+            .map_err(|e| SsgError::io(e, &manifest_path))?;
+        fs::write(&manifest_path, output).with_path(&manifest_path)?;
 
         log::info!("[manifest-fix] Fixed manifest.json description");
         Ok(())
@@ -125,6 +120,7 @@ fn fix_truncated_description(current: &str) -> Option<String> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use std::path::Path;
     use tempfile::tempdir;

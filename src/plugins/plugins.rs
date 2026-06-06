@@ -10,7 +10,7 @@
 //! - `DeployPlugin` — Logs deployment target after build (stub for CI integration).
 
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use rayon::prelude::*;
 use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -37,7 +37,7 @@ impl Plugin for MinifyPlugin {
         "minify"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -45,8 +45,9 @@ impl Plugin for MinifyPlugin {
         let cache = ctx.cache.as_ref();
 
         // Collect HTML files (top-level only, matching previous behaviour).
-        let html_files: Vec<_> = fs::read_dir(&ctx.site_dir)?
-            .filter_map(std::result::Result::ok)
+        let html_files: Vec<_> = fs::read_dir(&ctx.site_dir)
+            .with_path(&ctx.site_dir)?
+            .filter_map(|r| r.ok())
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|e| e == "html"))
             .filter(|p| cache.is_none_or(|c| c.has_changed(p)))
@@ -54,20 +55,22 @@ impl Plugin for MinifyPlugin {
 
         let count = AtomicUsize::new(0);
 
-        html_files.par_iter().try_for_each(|path| -> Result<()> {
+        html_files.par_iter().try_for_each(|path| -> Result<(), SsgError> {
             fail_point!("plugins::minify-read", |_| {
-                anyhow::bail!("injected: plugins::minify-read")
+                Err(SsgError::Io {
+                    path: path.clone(),
+                    source: std::io::Error::other("injected: plugins::minify-read"),
+                })
             });
-            let content = fs::read_to_string(path).with_context(|| {
-                format!("Failed to read {}", path.display())
-            })?;
+            let content = fs::read_to_string(path).with_path(path)?;
             let minified = minify_html(&content);
             fail_point!("plugins::minify-write", |_| {
-                anyhow::bail!("injected: plugins::minify-write")
+                Err(SsgError::Io {
+                    path: path.clone(),
+                    source: std::io::Error::other("injected: plugins::minify-write"),
+                })
             });
-            fs::write(path, &minified).with_context(|| {
-                format!("Failed to write {}", path.display())
-            })?;
+            fs::write(path, &minified).with_path(path)?;
             let _ = count.fetch_add(1, Ordering::Relaxed);
             Ok(())
         })?;
@@ -128,13 +131,14 @@ impl Plugin for ImageOptiPlugin {
         "image-opti"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
         let mut images = Vec::new();
-        for entry in fs::read_dir(&ctx.site_dir)? {
-            let path = entry?.path();
+        for entry in fs::read_dir(&ctx.site_dir).with_path(&ctx.site_dir)? {
+            let entry = entry.with_path(&ctx.site_dir)?;
+            let path = entry.path();
             if let Some(ext) = path.extension() {
                 let ext = ext.to_string_lossy().to_lowercase();
                 if matches!(
@@ -189,7 +193,7 @@ impl Plugin for DeployPlugin {
         "deploy"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         println!(
             "[deploy] Site at {} ready for deployment to '{}'",
             ctx.site_dir.display(),
@@ -203,6 +207,7 @@ impl Plugin for DeployPlugin {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use crate::test_support::init_logger;
     use std::path::Path;

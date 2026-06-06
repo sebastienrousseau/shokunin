@@ -8,6 +8,7 @@
 
 #[cfg(feature = "templates")]
 use crate::{
+    error::{PathErrorExt, SsgError},
     frontmatter,
     plugin::{Plugin, PluginContext},
     template_engine::{TemplateConfig, TemplateEngine},
@@ -64,18 +65,20 @@ impl Plugin for TemplatePlugin {
         "templates"
     }
 
-    fn before_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         // Emit .meta.json sidecars for all markdown content
         let sidecar_dir = ctx.build_dir.join(".meta");
-        let count = frontmatter::emit_sidecars(&ctx.content_dir, &sidecar_dir)?;
+        let count = frontmatter::emit_sidecars(&ctx.content_dir, &sidecar_dir)
+            .map_err(|e| SsgError::io(e, &sidecar_dir))?;
         if count > 0 {
             log::info!("[templates] Emitted {count} frontmatter sidecar(s)");
         }
         Ok(())
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
-        let Some(engine) = TemplateEngine::init(self.config.clone())? else {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        let Some(engine) = TemplateEngine::init(self.config.clone())
+            .map_err(|e| SsgError::io(e, &self.config.template_dir))? else {
             log::info!(
                 "[templates] No templates at {}, skipping",
                 self.config.template_dir.display()
@@ -100,13 +103,14 @@ impl Plugin for TemplatePlugin {
         }
 
         let sidecar_dir = ctx.build_dir.join(".meta");
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = collect_html_files(&ctx.site_dir)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
         let enriched_fm_map =
             enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
 
         let mut rendered = 0usize;
         for html_path in &html_files {
-            let content = fs::read_to_string(html_path)?;
+            let content = fs::read_to_string(html_path).with_path(html_path)?;
 
             // Read frontmatter sidecar (enriched with related posts)
             let fm =
@@ -130,7 +134,7 @@ impl Plugin for TemplatePlugin {
                 &site_globals,
             ) {
                 Ok(output) => {
-                    fs::write(html_path, output)?;
+                    fs::write(html_path, output).with_path(html_path)?;
                     rendered += 1;
                 }
                 Err(e) => {

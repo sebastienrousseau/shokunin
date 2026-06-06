@@ -18,6 +18,7 @@
 //!    indicator in the bottom-right corner.
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::SsgError;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -83,18 +84,20 @@ impl Plugin for LiveReloadPlugin {
         "livereload"
     }
 
-    fn on_serve(&self, ctx: &PluginContext) -> Result<()> {
+    fn on_serve(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
-        let html_files = collect_html_files(&ctx.site_dir)?;
+        let html_files = collect_html_files(&ctx.site_dir)
+            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
         if html_files.is_empty() {
             return Ok(());
         }
 
         for path in &html_files {
-            inject_livereload(path, self.port)?;
+            inject_livereload(path, self.port)
+                .map_err(|e| SsgError::io(e, path))?;
         }
 
         println!(

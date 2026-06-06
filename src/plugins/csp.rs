@@ -8,6 +8,7 @@
 //! `'unsafe-inline'` in the Content-Security-Policy header.
 
 use crate::plugin::{Plugin, PluginContext};
+use crate::error::{PathErrorExt, SsgError};
 use anyhow::Result;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
@@ -26,8 +27,16 @@ use std::{fs, path::Path};
 ///
 /// Blocks with `type="application/ld+json"` or `data-ssg-livereload`
 /// attributes are skipped (structured data / dev-only scripts).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct CspPlugin;
+
+impl CspPlugin {
+    /// Creates a new `CspPlugin`.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+}
 
 impl Plugin for CspPlugin {
     fn name(&self) -> &'static str {
@@ -41,12 +50,13 @@ impl Plugin for CspPlugin {
     fn transform_html(
         &self,
         html: &str,
-        _path: &Path,
+        path: &Path,
         ctx: &PluginContext,
-    ) -> Result<String> {
+    ) -> Result<String, SsgError> {
         let csp_dir = ctx.site_dir.join("_csp");
         let (rewritten, extracted) =
-            extract_inline_blocks(html, &csp_dir, &ctx.site_dir)?;
+            extract_inline_blocks(html, &csp_dir, &ctx.site_dir)
+                .map_err(|e| SsgError::io(e, path))?;
 
         if extracted > 0 {
             let final_html = remove_unsafe_inline_from_csp(&rewritten);
@@ -56,14 +66,14 @@ impl Plugin for CspPlugin {
         }
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
 
         // Pre-create _csp/ dir so transform_html writers have the directory
         let csp_dir = ctx.site_dir.join("_csp");
-        fs::create_dir_all(&csp_dir)?;
+        fs::create_dir_all(&csp_dir).with_path(&csp_dir)?;
 
         Ok(())
     }

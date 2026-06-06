@@ -5,7 +5,7 @@
 
 use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars, xml_escape};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::fs;
 use std::path::Path;
 
@@ -21,7 +21,7 @@ impl Plugin for AtomFeedPlugin {
         "atom-feed"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         let mut meta_entries =
             read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
 
@@ -71,8 +71,7 @@ impl Plugin for AtomFeedPlugin {
         let feed_xml = build_atom_feed(&feed_title, &base_url, &articles);
 
         let atom_path = ctx.site_dir.join("atom.xml");
-        fs::write(&atom_path, &feed_xml)
-            .with_context(|| format!("cannot write {}", atom_path.display()))?;
+        fs::write(&atom_path, &feed_xml).with_path(&atom_path)?;
 
         let atom_self_link = if base_url.is_empty() {
             "atom.xml".to_string()
@@ -327,11 +326,11 @@ fn extract_xml_tag(xml: &str, tag: &str) -> Option<String> {
 
 /// Inject `<link rel="alternate" type="application/atom+xml">` into
 /// HTML files that don't already have one.
-pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<()> {
-    let html_files = crate::walk::walk_files(site_dir, "html")?;
+pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<(), SsgError> {
+    let html_files = crate::walk::walk_files(site_dir, "html")
+        .map_err(|e| SsgError::io(e, site_dir))?;
     for path in &html_files {
-        let html = fs::read_to_string(path)
-            .with_context(|| format!("cannot read {}", path.display()))?;
+        let html = fs::read_to_string(path).with_path(path)?;
 
         if html.contains("application/atom+xml") {
             continue;
@@ -344,8 +343,7 @@ pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<()> {
             );
             let modified =
                 format!("{}{}{}", &html[..pos], link_tag, &html[pos..]);
-            fs::write(path, &modified)
-                .with_context(|| format!("cannot write {}", path.display()))?;
+            fs::write(path, &modified).with_path(path)?;
         }
     }
     Ok(())
@@ -355,6 +353,7 @@ pub(super) fn inject_atom_link(site_dir: &Path, atom_url: &str) -> Result<()> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use anyhow::Result;
     use crate::plugin::PluginContext;
     use std::collections::HashMap;
     use std::path::Path;

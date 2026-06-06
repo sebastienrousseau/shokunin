@@ -4,7 +4,7 @@
 //! robots.txt generation plugin.
 
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
+use crate::error::{PathErrorExt, SsgError};
 use std::fs;
 
 /// Generates a `robots.txt` file in the site directory.
@@ -41,7 +41,7 @@ impl Plugin for RobotsPlugin {
         "robots"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -56,9 +56,7 @@ impl Plugin for RobotsPlugin {
             self.base_url.trim_end_matches('/')
         );
 
-        fs::write(&robots_path, content).with_context(|| {
-            format!("cannot write {}", robots_path.display())
-        })?;
+        fs::write(&robots_path, content).with_path(&robots_path)?;
 
         Ok(())
     }
