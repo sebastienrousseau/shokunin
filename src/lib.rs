@@ -96,6 +96,8 @@ pub(crate) mod plugins_group;
 #[path = "server/mod.rs"]
 pub(crate) mod server_group;
 pub mod cmd;
+pub mod error;
+pub use error::{SsgError, PathErrorExt};
 
 // Re-export core modules for public API compatibility
 pub use crate::core_group::cache;
