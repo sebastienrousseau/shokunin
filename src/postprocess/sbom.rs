@@ -179,6 +179,17 @@ mod tests {
     }
 
     #[test]
+    fn test_sbom_plugin_nonexistent_site_dir() -> Result<()> {
+        let tmp = tempdir()?;
+        let non_existent = tmp.path().join("non_existent_dir");
+        let ctx = test_ctx(&non_existent);
+        SbomPlugin.after_compile(&ctx)?;
+        let sbom_path = non_existent.join("sbom.cdx.json");
+        assert!(!sbom_path.exists());
+        Ok(())
+    }
+
+    #[test]
     fn test_current_timestamp_format() {
         let ts = current_timestamp();
         assert!(ts.contains('T'));

@@ -275,4 +275,28 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn test_manifest_fix_uses_sidecar_description() -> Result<()> {
+        let tmp = tempdir()?;
+        let manifest_path = tmp.path().join("manifest.json");
+        fs::write(
+            &manifest_path,
+            r#"{"name":"Test","description":"Short description"}"#,
+        )?;
+        fs::write(
+            tmp.path().join("index.meta.json"),
+            r#"{"description":"This is a very long description that we are using to test manifest metadata sidecar description truncation logic in the manifest fix plugin. We need to make sure that the total length of this text exceeds two hundred characters so that the truncation is triggered."}"#,
+        )?;
+
+        let ctx = test_ctx(tmp.path());
+        ManifestFixPlugin.after_compile(&ctx)?;
+
+        let result = fs::read_to_string(&manifest_path)?;
+        let manifest: serde_json::Value = serde_json::from_str(&result)?;
+        let desc = manifest["description"].as_str().unwrap();
+        assert!(desc.starts_with("This is a very long"));
+        assert!(desc.ends_with("..."));
+        Ok(())
+    }
 }
