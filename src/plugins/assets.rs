@@ -6,8 +6,8 @@
 //! Provides cache-busting via content-hash filenames and Subresource
 //! Integrity attributes for CSS and JS files.
 
+use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
 use std::{
@@ -31,7 +31,7 @@ impl Plugin for FingerprintPlugin {
         "fingerprint"
     }
 
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> anyhow::Result<()> {
         if !ctx.site_dir.exists() {
             return Ok(());
         }
@@ -88,7 +88,7 @@ impl Plugin for FingerprintPlugin {
 fn fingerprint_assets(
     assets: &[PathBuf],
     site_dir: &Path,
-) -> Result<HashMap<String, AssetInfo>> {
+) -> Result<HashMap<String, AssetInfo>, SsgError> {
     let mut manifest = HashMap::new();
 
     for asset_path in assets {
@@ -103,8 +103,8 @@ fn fingerprint_assets(
 fn fingerprint_file(
     asset_path: &Path,
     site_dir: &Path,
-) -> Result<(String, AssetInfo)> {
-    let mut content = fs::read(asset_path)?;
+) -> Result<(String, AssetInfo), SsgError> {
+    let mut content = fs::read(asset_path).with_path(asset_path)?;
     let ext = asset_path
         .extension()
         .unwrap_or_default()
@@ -134,16 +134,10 @@ fn fingerprint_file(
     let sri = format!("sha256-{}", sri_base64(&content));
 
     if minified {
-        fs::write(&new_path, &content).with_context(|| {
-            format!("Failed to write minified asset {}", new_path.display())
-        })?;
-        fs::remove_file(asset_path).with_context(|| {
-            format!("Failed to remove original asset {}", asset_path.display())
-        })?;
+        fs::write(&new_path, &content).with_path(&new_path)?;
+        fs::remove_file(asset_path).with_path(asset_path)?;
     } else {
-        fs::rename(asset_path, &new_path).with_context(|| {
-            format!("Failed to rename {}", asset_path.display())
-        })?;
+        fs::rename(asset_path, &new_path).with_path(asset_path)?;
     }
 
     let rel_old = asset_path
@@ -170,13 +164,13 @@ fn fingerprint_file(
 fn rewrite_html_references(
     site_dir: &Path,
     manifest: &HashMap<String, AssetInfo>,
-) -> Result<()> {
+) -> Result<(), SsgError> {
     let html_files = collect_html_files(site_dir)?;
     for html_path in &html_files {
-        let html = fs::read_to_string(html_path)?;
+        let html = fs::read_to_string(html_path).with_path(html_path)?;
         let rewritten = rewrite_asset_refs(&html, manifest);
         if rewritten != html {
-            fs::write(html_path, rewritten)?;
+            fs::write(html_path, rewritten).with_path(html_path)?;
         }
     }
     Ok(())
@@ -358,15 +352,11 @@ fn rewrite_css_urls_inplace(
     css_path: &Path,
     site_dir: &Path,
     manifest: &HashMap<String, AssetInfo>,
-) -> Result<()> {
-    let css = fs::read_to_string(css_path).with_context(|| {
-        format!("Failed to read CSS {}", css_path.display())
-    })?;
+) -> Result<(), SsgError> {
+    let css = fs::read_to_string(css_path).with_path(css_path)?;
     let rewritten = rewrite_css_urls(&css, css_path, site_dir, manifest);
     if rewritten != css {
-        fs::write(css_path, rewritten).with_context(|| {
-            format!("Failed to write rewritten CSS {}", css_path.display())
-        })?;
+        fs::write(css_path, rewritten).with_path(css_path)?;
     }
     Ok(())
 }
@@ -647,13 +637,25 @@ const FINGERPRINTED_EXTENSIONS: &[&str] = &[
     "woff", "woff2", "ttf", "otf",
 ];
 
-/// Collects every fingerprintable asset from site dir.
-fn collect_assets(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files_multi(dir, FINGERPRINTED_EXTENSIONS)
+/// Helper to map anyhow errors from path walkers to `SsgError`.
+fn map_anyhow_to_io(err: anyhow::Error, path: &Path) -> SsgError {
+    let io_err = err.downcast::<std::io::Error>().unwrap_or_else(|e| {
+        std::io::Error::other(e.to_string())
+    });
+    SsgError::Io {
+        path: path.to_path_buf(),
+        source: io_err,
+    }
 }
 
-fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
-    crate::walk::walk_files(dir, "html")
+/// Collects every fingerprintable asset from site dir.
+fn collect_assets(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
+    crate::walk::walk_files_multi(dir, FINGERPRINTED_EXTENSIONS)
+        .map_err(|e| map_anyhow_to_io(e, dir))
+}
+
+fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
+    crate::walk::walk_files(dir, "html").map_err(|e| map_anyhow_to_io(e, dir))
 }
 
 #[cfg(test)]
@@ -738,7 +740,7 @@ mod tests {
         // Fingerprinted file should exist
         let entries: Vec<_> = fs::read_dir(&site)
             .unwrap()
-            .filter_map(std::result::Result::ok)
+            .filter_map(Result::ok)
             .filter(|e| {
                 e.path()
                     .file_name()
@@ -1038,5 +1040,32 @@ mod tests {
             !css_text.contains("/images/logo.png)"),
             "must no longer point at the un-fingerprinted PNG: {css_text}"
         );
+    }
+
+    #[test]
+    fn test_fingerprint_file_missing_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing.css");
+        let res = fingerprint_file(&missing, dir.path());
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = err {
+            assert_eq!(path, missing);
+        }
+    }
+
+    #[test]
+    fn test_rewrite_css_urls_inplace_missing_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing.css");
+        let manifest = HashMap::new();
+        let res = rewrite_css_urls_inplace(&missing, dir.path(), &manifest);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(matches!(err, SsgError::Io { .. }));
+        if let SsgError::Io { path, .. } = err {
+            assert_eq!(path, missing);
+        }
     }
 }
