@@ -306,7 +306,7 @@ eula         = false
 # safe-only implementation.
 # -----------------------------------------------------------------------------
 [workspace]
-members = [".", "crates/ssg-core", "crates/ssg-wasm", "crates/serde_yml"]
+members = [".", "crates/ssg-core", "crates/ssg-wasm"]
 default-members = ["."]
 
 [workspace.lints.rust]
@@ -435,5 +435,4 @@ literal_string_with_formatting_args = "allow" # Test data containing `{n}` shoul
 broken_intra_doc_links = "deny"
 private_intra_doc_links = "deny"
 
-[patch.crates-io]
-serde_yml = { path = "crates/serde_yml" }
+
