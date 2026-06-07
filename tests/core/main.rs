@@ -20,3 +20,5 @@
 //!   * `cargo test --test core -- some_fn_name` — specific test by name
 
 mod cache;
+mod frontmatter;
+mod walk;
