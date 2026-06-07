@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned / Upcoming
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
+- **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.30% / 96.25% / 96.90% with `--lib --tests`. The remaining ~1100 uncovered regions sit in I/O-heavy production glue that needs source-level seams before it can be exercised: (1) add a `ServeTransport`-style trait seam to `src/server/server.rs::handle_server` to mirror `serve_site_with`'s pattern, (2) instrument ~30 additional `fail_point!()` sites across `src/lib.rs::run()`, `src/core/stream.rs`, and `src/plugins/search.rs` for the error branches that don't yet have failpoints, (3) add a mock HTTP/WebSocket transport for `src/server/livereload.rs`'s file watcher, (4) write ~40 fault-injection tests against the new instrumentation. Realistic effort: 1-2 weeks of dedicated work.
 
 ## [0.0.40] - 2026-06-06
 
