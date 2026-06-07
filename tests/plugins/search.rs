@@ -6,9 +6,7 @@
 use std::fs;
 
 use ssg::plugin::Plugin;
-use ssg::search::{
-    SearchEntry, SearchIndex, SearchLabels, SearchPlugin,
-};
+use ssg::search::{SearchEntry, SearchIndex, SearchLabels, SearchPlugin};
 use tempfile::tempdir;
 
 #[test]

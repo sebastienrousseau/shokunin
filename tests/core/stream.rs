@@ -61,4 +61,3 @@ fn stream_hash_returns_a_non_empty_hex_string() {
     assert!(!h.is_empty());
     assert!(h.chars().all(|c| c.is_ascii_hexdigit()));
 }
-

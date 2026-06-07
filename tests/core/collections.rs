@@ -34,15 +34,13 @@ fn get_collection_empty_dir_yields_empty_vec() {
 fn get_entry_finds_existing_post() {
     let dir = tempdir().unwrap();
     fs::write(dir.path().join("hello.md"), "---\ntitle: H\n---\n# H").unwrap();
-    let entry: Option<Entry<Post>> =
-        get_entry(dir.path(), "hello").unwrap();
+    let entry: Option<Entry<Post>> = get_entry(dir.path(), "hello").unwrap();
     assert_eq!(entry.unwrap().data.title, "H");
 }
 
 #[test]
 fn get_entry_returns_none_for_missing_slug() {
     let dir = tempdir().unwrap();
-    let entry: Option<Entry<Post>> =
-        get_entry(dir.path(), "missing").unwrap();
+    let entry: Option<Entry<Post>> = get_entry(dir.path(), "missing").unwrap();
     assert!(entry.is_none());
 }

@@ -9,8 +9,14 @@ use ssg::accessibility::{
 
 #[test]
 fn criterion_status_variants_are_distinguishable() {
-    assert!(!matches!(CriterionStatus::Automated, CriterionStatus::Manual));
-    assert!(!matches!(CriterionStatus::Runtime, CriterionStatus::NotApplicable));
+    assert!(!matches!(
+        CriterionStatus::Automated,
+        CriterionStatus::Manual
+    ));
+    assert!(!matches!(
+        CriterionStatus::Runtime,
+        CriterionStatus::NotApplicable
+    ));
 }
 
 #[test]

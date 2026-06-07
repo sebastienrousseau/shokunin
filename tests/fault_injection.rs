@@ -34,8 +34,8 @@
 use serial_test::serial;
 use ssg::cache::BuildCache;
 use ssg::cmd::SsgConfig;
-use ssg::plugin::{Plugin, PluginContext};
 use ssg::markdown_ext::MarkdownExtPlugin;
+use ssg::plugin::{Plugin, PluginContext};
 use ssg::plugins::MinifyPlugin;
 use ssg::scaffold::scaffold_project_at;
 use std::fs;

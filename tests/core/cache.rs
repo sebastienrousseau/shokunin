@@ -22,8 +22,8 @@ fn write_file(path: &Path, body: &str) {
 #[test]
 fn load_missing_cache_yields_empty_state() {
     let dir = tempdir().unwrap();
-    let cache = BuildCache::load(&dir.path().join(".ssg-cache.json"))
-        .expect("load");
+    let cache =
+        BuildCache::load(&dir.path().join(".ssg-cache.json")).expect("load");
     assert!(cache.is_empty());
     assert_eq!(cache.len(), 0);
 }
@@ -34,8 +34,8 @@ fn new_file_is_reported_as_changed() {
     let content = dir.path().join("content");
     write_file(&content.join("post.md"), "# Hello");
 
-    let cache = BuildCache::load(&dir.path().join(".ssg-cache.json"))
-        .expect("load");
+    let cache =
+        BuildCache::load(&dir.path().join(".ssg-cache.json")).expect("load");
     let changed = cache.changed_files(&content).expect("changed_files");
 
     assert_eq!(changed.len(), 1, "single new file should appear once");

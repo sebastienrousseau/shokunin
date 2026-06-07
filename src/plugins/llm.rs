@@ -2452,7 +2452,8 @@ mod tests {
     // --- extract_page_text ---
     #[test]
     fn extract_page_text_strips_html_tags() {
-        let html = "<html><body><h1>Title</h1><p>Paragraph body.</p></body></html>";
+        let html =
+            "<html><body><h1>Title</h1><p>Paragraph body.</p></body></html>";
         let text = extract_page_text(html, 1000);
         assert!(!text.contains('<'));
         assert!(text.contains("Title"));

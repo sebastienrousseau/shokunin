@@ -19,8 +19,7 @@ fn bench_create_log_file_and_banner(c: &mut Criterion) {
             |dir| {
                 let dir = dir.unwrap();
                 let path = dir.path().join("ssg.log");
-                let mut f =
-                    create_log_file(path.to_str().unwrap()).unwrap();
+                let mut f = create_log_file(path.to_str().unwrap()).unwrap();
                 log_initialization(&mut f, "2026-06-07").unwrap();
             },
             BatchSize::SmallInput,

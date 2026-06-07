@@ -13,12 +13,7 @@ use ssg::og_image::generate_og_svg;
 fn bench_generate_og_svg(c: &mut Criterion) {
     c.bench_function("og_image::generate_og_svg", |b| {
         b.iter(|| {
-            generate_og_svg(
-                "Hello World",
-                "Example Site",
-                "#1a1a2e",
-                "#e9ecef",
-            )
+            generate_og_svg("Hello World", "Example Site", "#1a1a2e", "#e9ecef")
         });
     });
 }

@@ -42,7 +42,11 @@ fn walk_files_multi_is_case_insensitive_on_extensions() {
     let dir = tempdir().unwrap();
     seed_tree(dir.path());
     let found = walk_files_multi(dir.path(), &["jpg"]).unwrap();
-    assert_eq!(found.len(), 1, "photo.JPG must match jpg case-insensitively");
+    assert_eq!(
+        found.len(),
+        1,
+        "photo.JPG must match jpg case-insensitively"
+    );
 }
 
 #[test]

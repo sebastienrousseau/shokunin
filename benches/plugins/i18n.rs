@@ -19,7 +19,11 @@ fn bench_parse_accept_language(c: &mut Criterion) {
 
 fn bench_negotiate_locale(c: &mut Criterion) {
     let user = vec!["fr-FR".to_string(), "en-US".to_string()];
-    let avail = vec!["en-US".to_string(), "fr-FR".to_string(), "de-DE".to_string()];
+    let avail = vec![
+        "en-US".to_string(),
+        "fr-FR".to_string(),
+        "de-DE".to_string(),
+    ];
     c.bench_function("i18n::negotiate_locale", |b| {
         b.iter(|| negotiate_locale(&user, &avail, "en-US"));
     });

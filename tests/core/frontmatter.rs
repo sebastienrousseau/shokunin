@@ -65,8 +65,9 @@ fn read_sidecar_returns_word_count_and_reading_time() {
     .unwrap();
     let _ = emit_sidecars(&content, &sidecar).unwrap();
 
-    let meta =
-        read_sidecar(&sidecar.join("post.html")).unwrap().expect("sidecar");
+    let meta = read_sidecar(&sidecar.join("post.html"))
+        .unwrap()
+        .expect("sidecar");
     assert!(meta.contains_key("word_count"));
     assert!(meta.contains_key("reading_time"));
 }
@@ -90,5 +91,8 @@ fn read_sidecar_for_html_resolves_md_mapping() {
     // The function looks up `.html` paths by mapping back to `.md`.
     let html = site.join("post.html");
     let meta = read_sidecar_for_html(&html, &site, &sidecar).unwrap();
-    assert!(meta.is_some(), "should resolve post.html → post.md.meta.json");
+    assert!(
+        meta.is_some(),
+        "should resolve post.html → post.md.meta.json"
+    );
 }
