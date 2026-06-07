@@ -35,28 +35,28 @@ categories = [
 # (max 5 keywords; chosen for SEO across crates.io search and lib.rs).
 keywords = ["rust", "markdown", "jamstack", "ssg", "wasm"]
 
-# Excluding unnecessary files from the package
-exclude = [
-    "/.git/*",                          # Exclude version control files
-    "/.github/*",                       # Exclude GitHub workflows
-    "/.gitignore",                      # Ignore Git ignore file
-    "/.vscode/*"                        # Ignore VSCode settings
-]
+# Note: `exclude` was removed in v0.0.41 prep. Cargo warns when both
+# `include` and `exclude` are set ("the exclude list will be ignored"),
+# and the slimmer `include` below is exhaustive — `.git/`, `.github/`,
+# `.gitignore`, and `.vscode/` are naturally excluded because they're
+# not listed in `include`.
 
 # Including necessary files in the package
+# Crates.io package contents — kept tight so downstream consumers don't
+# pay for example sites, test fixtures, bench files, or node_modules in
+# their `cargo build`. The 44.9MB v0.0.40 publish (which 408'd on the
+# upload step) was bloated by /examples/**, /tests/**, and /benches/**;
+# none of those are loaded at compile time by anything in /src/ (the
+# sole `include_str!()` is /README.md, kept below).
 include = [
+    "/src/**",
+    "/build.rs",
+    "/Cargo.toml",
+    "/README.md",
+    "/CHANGELOG.md",
     "/CONTRIBUTING.md",
     "/LICENSE-APACHE",
     "/LICENSE-MIT",
-    "/benches/**",
-    "/build.rs",
-    "/Cargo.toml",
-    "/content/**",
-    "/examples/**",
-    "/README.md",
-    "/src/**",
-    "/template/**",
-    "/tests/**",
 ]
 
 
