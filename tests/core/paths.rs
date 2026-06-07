@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 
-use ssg::Paths;
+use ssg::{create_directories, Paths};
 use tempfile::tempdir;
 
 #[test]
@@ -45,3 +45,25 @@ fn builder_default_falls_back_to_relative_defaults() {
     assert_eq!(p.build, PathBuf::from("build"));
     assert_eq!(p.template, PathBuf::from("templates"));
 }
+
+#[test]
+fn create_directories_creates_all_four_dirs() {
+    let dir = tempdir().unwrap();
+    let p = Paths {
+        site: dir.path().join("public"),
+        content: dir.path().join("content"),
+        build: dir.path().join("build"),
+        template: dir.path().join("templates"),
+    };
+    create_directories(&p).expect("create");
+    assert!(p.site.is_dir());
+    assert!(p.content.is_dir());
+    assert!(p.build.is_dir());
+    assert!(p.template.is_dir());
+}
+
+// Note: `create_directories`'s PathTraversal branches at lib.rs:374-394
+// are functionally unreachable in normal use because `fs::create_dir_all`
+// runs BEFORE `is_safe_path`, and `is_safe_path` only flags `..` for
+// non-existent paths. The branches will be addressed in P3.2 via either
+// a refactor or a `#[coverage(off)]` annotation.
