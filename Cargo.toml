@@ -204,6 +204,14 @@ path = "tests/core/main.rs"
 name = "core"
 path = "benches/core/main.rs"
 
+[[test]]
+name = "plugins"
+path = "tests/plugins/main.rs"
+
+[[bench]]
+name = "plugins"
+path = "benches/plugins/main.rs"
+
 # -----------------------------------------------------------------------------
 # Examples
 # -----------------------------------------------------------------------------
