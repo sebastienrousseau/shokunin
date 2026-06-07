@@ -152,7 +152,7 @@ toml = "1.1.2"
 # Replaces the previous FNV-1a placeholder that emitted invalid `sha256-`
 # integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
 # `base64` emits the canonical base64 encoding that browsers expect.
-sha2 = "0.10"
+sha2 = "0.11"
 base64 = "0.22"
 
 
