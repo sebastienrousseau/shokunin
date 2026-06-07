@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use ssg::error::SsgError;
 use ssg::{create_directories, Paths};
 use tempfile::tempdir;
 
@@ -62,8 +63,54 @@ fn create_directories_creates_all_four_dirs() {
     assert!(p.template.is_dir());
 }
 
-// Note: `create_directories`'s PathTraversal branches at lib.rs:374-394
-// are functionally unreachable in normal use because `fs::create_dir_all`
-// runs BEFORE `is_safe_path`, and `is_safe_path` only flags `..` for
-// non-existent paths. The branches will be addressed in P3.2 via either
-// a refactor or a `#[coverage(off)]` annotation.
+#[test]
+fn create_directories_rejects_traversal_in_content() {
+    let dir = tempdir().unwrap();
+    let p = Paths {
+        site: dir.path().join("public"),
+        content: dir.path().join("subdir/../escape/content"),
+        build: dir.path().join("build"),
+        template: dir.path().join("templates"),
+    };
+    let err = create_directories(&p).unwrap_err();
+    assert!(matches!(err, SsgError::PathTraversal { .. }));
+}
+
+#[test]
+fn create_directories_rejects_traversal_in_build() {
+    let dir = tempdir().unwrap();
+    let p = Paths {
+        site: dir.path().join("public"),
+        content: dir.path().join("content"),
+        build: dir.path().join("subdir/../escape/build"),
+        template: dir.path().join("templates"),
+    };
+    let err = create_directories(&p).unwrap_err();
+    assert!(matches!(err, SsgError::PathTraversal { .. }));
+}
+
+#[test]
+fn create_directories_rejects_traversal_in_site() {
+    let dir = tempdir().unwrap();
+    let p = Paths {
+        site: dir.path().join("subdir/../escape/site"),
+        content: dir.path().join("content"),
+        build: dir.path().join("build"),
+        template: dir.path().join("templates"),
+    };
+    let err = create_directories(&p).unwrap_err();
+    assert!(matches!(err, SsgError::PathTraversal { .. }));
+}
+
+#[test]
+fn create_directories_rejects_traversal_in_template() {
+    let dir = tempdir().unwrap();
+    let p = Paths {
+        site: dir.path().join("public"),
+        content: dir.path().join("content"),
+        build: dir.path().join("build"),
+        template: dir.path().join("subdir/../escape/template"),
+    };
+    let err = create_directories(&p).unwrap_err();
+    assert!(matches!(err, SsgError::PathTraversal { .. }));
+}

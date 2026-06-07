@@ -361,17 +361,12 @@ impl PathsBuilder {
 /// * Permission validation
 /// * Safe path verification
 pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
-    // Ensure each directory exists, with custom error messages for each.
-    for (_name, path) in [
-        ("content", &paths.content),
-        ("build", &paths.build),
-        ("site", &paths.site),
-        ("template", &paths.template),
-    ] {
-        fs::create_dir_all(path).with_path(path)?;
-    }
-
-    // Path safety check with additional context
+    // Path safety check FIRST — `is_safe_path` only flags `..` for
+    // non-existent paths, so we must validate before
+    // `fs::create_dir_all` materialises any traversal target on disk.
+    // Reordering also closes a TOCTOU-style gap where the previous
+    // implementation could create `..`-relative directories and then
+    // fail to detect them because they now existed.
     if !is_safe_path(&paths.content)? {
         return Err(SsgError::PathTraversal {
             path: paths.content.clone(),
@@ -391,6 +386,16 @@ pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
         return Err(SsgError::PathTraversal {
             path: paths.template.clone(),
         });
+    }
+
+    // Materialise each directory after safety validation passes.
+    for (_name, path) in [
+        ("content", &paths.content),
+        ("build", &paths.build),
+        ("site", &paths.site),
+        ("template", &paths.template),
+    ] {
+        fs::create_dir_all(path).with_path(path)?;
     }
 
     Ok(())
