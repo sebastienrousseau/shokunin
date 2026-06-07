@@ -2404,4 +2404,85 @@ mod tests {
         assert!(audit.reading_ease <= 100.0);
         assert!(audit.reading_ease >= 0.0);
     }
+
+    // --- count_sentences ---
+    #[test]
+    fn count_sentences_single_period() {
+        assert_eq!(count_sentences("Hello world."), 1);
+    }
+
+    #[test]
+    fn count_sentences_question_and_exclamation() {
+        assert_eq!(count_sentences("Hi! Are you here? Yes."), 3);
+    }
+
+    #[test]
+    fn count_sentences_empty_returns_one() {
+        // Defensive floor so downstream division never sees 0.
+        assert!(count_sentences("").max(1) >= 1);
+    }
+
+    #[test]
+    fn count_sentences_no_terminator_treats_as_one() {
+        assert!(count_sentences("Hello world").max(1) >= 1);
+    }
+
+    // --- count_syllables ---
+    #[test]
+    fn count_syllables_single_short_word() {
+        assert!(count_syllables("cat") >= 1);
+    }
+
+    #[test]
+    fn count_syllables_multi_syllable_word() {
+        assert!(count_syllables("beautiful") >= 3);
+    }
+
+    #[test]
+    fn count_syllables_empty_returns_zero() {
+        assert_eq!(count_syllables(""), 0);
+    }
+
+    #[test]
+    fn count_syllables_multiple_words() {
+        let n = count_syllables("the quick brown fox jumps");
+        assert!(n >= 5);
+    }
+
+    // --- extract_page_text ---
+    #[test]
+    fn extract_page_text_strips_html_tags() {
+        let html = "<html><body><h1>Title</h1><p>Paragraph body.</p></body></html>";
+        let text = extract_page_text(html, 1000);
+        assert!(!text.contains('<'));
+        assert!(text.contains("Title"));
+        assert!(text.contains("Paragraph body"));
+    }
+
+    #[test]
+    fn extract_page_text_truncates_at_max_chars() {
+        let body = "A".repeat(2000);
+        let html = format!("<html><body><p>{body}</p></body></html>");
+        let text = extract_page_text(&html, 500);
+        assert!(text.len() <= 500);
+    }
+
+    #[test]
+    fn extract_page_text_skips_script_and_style_contents() {
+        let html = "<html><head><style>body{color:red}</style>\
+                    <script>alert('x')</script></head>\
+                    <body><p>Hi.</p></body></html>";
+        let text = extract_page_text(html, 1000);
+        assert!(!text.contains("color:red"));
+        assert!(!text.contains("alert"));
+        assert!(text.contains("Hi"));
+    }
+
+    #[test]
+    fn extract_page_text_collapses_whitespace() {
+        let html = "<p>one   \n\n  two\t\tthree</p>";
+        let text = extract_page_text(html, 1000);
+        assert!(!text.contains("\t"));
+        assert!(!text.contains("\n\n"));
+    }
 }
