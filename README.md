@@ -165,16 +165,17 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Performance** | Parallel file operations with Rayon, fused single-pass HTML transforms, content-addressed caching (FNV-1a), dependency graph for incremental rebuilds, streaming compilation for 100K+ pages, `--jobs N` thread control, `--max-memory MB` budget |
 | **AI Pipeline** | Agentic LLM pipeline (`--ai-fix`): audit content readability, diagnose failing files, generate fixes via local LLM (Ollama), verify improvement, produce JSON report. Dry-run mode (`--ai-fix-dry-run`). Auto-generate alt text, meta descriptions, and JSON-LD via LLM |
 | **Readability** | Multilingual scoring: Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES). BCP 47 language detection from frontmatter. CI readability gate |
-| **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation, shortcodes (youtube, gist, figure, admonition) |
-| **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod |
+| **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation, shortcodes (youtube, gist, figure, admonition), compile-time word count + estimated reading time injected into `.meta.json` sidecars |
+| **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod, first-class topic-cluster taxonomy (hub + pillar indexes), related-post discovery via Jaccard tag/category overlap |
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
 | **Accessibility** | WCAG 2.2 AA validation on every build (1.1.1, 1.3.1, 2.3.1, 2.4.4, 2.4.13, 2.5.8, 3.1.1, 3.2.6), axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks; emits `wcag-compliance.json` matrix ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
 | **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
-| **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention |
+| **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention, optional `cdn_prefix` for serving local image assets from a CDN host |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
 | **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `Cmd+K` |
-| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, asset fingerprinting, path traversal prevention |
+| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, native JS/CSS minification, asset fingerprinting, path traversal prevention, structured `SsgError` type-safe error hierarchy |
+| **Supply Chain** | Automated CycloneDX 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
 | **WebAssembly** | ssg-core + ssg-wasm compile to `wasm32-unknown-unknown` with wasm-bindgen |
 | **Islands** | Web Components with lazy hydration (visible, idle, interaction) |

@@ -11,7 +11,7 @@ edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
-A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
+A secure-by-default static site generator built in Rust. WCAG 2.2 AA validation, CSP/SRI hardening, native JS/CSS minification, automated CycloneDX SBOM, local LLM content pipeline, WebAssembly target, interactive islands, streaming compilation for 100K+ pages, 28-locale i18n, and one-command deployment.
 """
 homepage = "https://github.com/sebastienrousseau/static-site-generator" # The project's homepage
 documentation = "https://docs.rs/ssg" # Doc URL
