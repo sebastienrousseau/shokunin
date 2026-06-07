@@ -414,11 +414,24 @@ jobs:
 
           BODY
 
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --notes-file /tmp/release-body.md \
-            --generate-notes \
-            artifacts/*
+          # Idempotent: create the release if it doesn't exist, else
+          # edit-in-place and upload artifacts with --clobber. This
+          # makes the job safe to re-run after a partial failure
+          # (e.g. crates.io token rotation between attempts) without
+          # the "release already exists" abort.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists — updating in place"
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file /tmp/release-body.md
+            gh release upload "$GITHUB_REF_NAME" artifacts/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file /tmp/release-body.md \
+              --generate-notes \
+              artifacts/*
+          fi
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
