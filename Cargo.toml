@@ -192,6 +192,19 @@ name = "bench"
 harness = false
 
 # -----------------------------------------------------------------------------
+# Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
+# Each binary's `main.rs` declares the per-module submodules under it; see
+# `tests/core/main.rs` for the canonical layout commentary.
+# -----------------------------------------------------------------------------
+[[test]]
+name = "core"
+path = "tests/core/main.rs"
+
+[[bench]]
+name = "core"
+path = "benches/core/main.rs"
+
+# -----------------------------------------------------------------------------
 # Examples
 # -----------------------------------------------------------------------------
 [[example]]
