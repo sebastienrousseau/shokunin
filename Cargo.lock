@@ -797,6 +797,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-channel"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1838,13 +1847,15 @@ dependencies = [
 
 [[package]]
 name = "http-handle"
-version = "0.0.4"
+version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168bdf0482e99f2193ebe6df957fc0456f7f2c17c44146edc9326f8f5a48ac79"
+checksum = "3cf34d328daadca2f19e07da47d9485568162ab9f6514cd7304580871205e8d9"
 dependencies = [
+ "crossbeam-channel",
  "ctrlc",
  "euxis-commons",
  "log",
+ "memchr",
  "regex",
  "serde",
  "serde_json",
@@ -4596,7 +4607,7 @@ dependencies = [
  "criterion",
  "fail",
  "frontmatter-gen 0.0.5",
- "http-handle 0.0.4",
+ "http-handle 0.0.5",
  "image",
  "log",
  "minijinja",
