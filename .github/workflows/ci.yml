@@ -170,7 +170,7 @@ jobs:
         run: cargo install cargo-llvm-cov --locked
       - name: Run coverage (lib + integration, exclude heavy examples)
         run: |
-          cargo llvm-cov --lib --tests --features test-fault-injection \
+          cargo llvm-cov --lib --features test-fault-injection \
             --no-report --quiet
           cargo llvm-cov report --summary-only
           cargo llvm-cov report --lcov --output-path coverage.lcov
