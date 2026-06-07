@@ -1,0 +1,318 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! Build-time SBOM generation (issue #457).
+//!
+//! Emits a `CycloneDX` 1.5 JSON Software Bill of Materials at the
+//! root of the generated site (`sbom.cdx.json`) and links to it
+//! from every HTML page via `<link rel="sbom" type="application/vnd.cyclonedx+json">`.
+//!
+//! # Why ship an SBOM with the static site?
+//!
+//! Procurement teams in regulated industries (finance, healthcare,
+//! government) increasingly require SBOMs for any deployed software
+//! — including the build pipeline that produced static assets. The
+//! `scheduled.yml` workflow already generates a `CycloneDX` SBOM via
+//! `cargo cyclonedx` and attaches a Sigstore provenance attestation,
+//! but those artifacts live in CI; they're not discoverable from
+//! the deployed site. This plugin fixes that gap by **embedding**
+//! the SBOM into every site, making the supply chain machine-
+//! introspectable from the consumer's browser.
+//!
+//! # Format
+//!
+//! Minimal `CycloneDX` 1.5 (the JSON Schema is documented at
+//! <https://cyclonedx.org/docs/1.5/json/>). The component list
+//! covers the SSG package itself; transitive Cargo dependencies
+//! are out of scope here (they're in the CI-generated SBOM
+//! published as a release artifact). The rendered SBOM declares:
+//!
+//! - `bomFormat`: "`CycloneDX`"
+//! - `specVersion`: "1.5"
+//! - `version`: 1
+//! - `metadata.timestamp`: build time (ISO 8601, UTC)
+//! - `metadata.tools[]`: SSG name + version
+//! - `metadata.component`: the site itself (type: "application")
+//! - `components[]`: SSG generator
+//!
+//! # Discoverability
+//!
+//! Every HTML page emitted by the build receives a
+//! `<link rel="sbom" type="application/vnd.cyclonedx+json"
+//!  href="/sbom.cdx.json">` element in `<head>`. This is the
+//! IANA-registered link relation for SBOM discovery (registered
+//! 2023; see <https://www.iana.org/assignments/link-relations/>).
+//!
+//! # Idempotency
+//!
+//! The HTML transform is idempotent — pages that already contain
+//! `rel="sbom"` are left unchanged. The JSON file is rewritten on
+//! every build (so timestamps stay current).
+
+use crate::error::{PathErrorExt, SsgError};
+use crate::plugin::{Plugin, PluginContext};
+use std::fs;
+use std::path::Path;
+
+/// Plugin that emits a `CycloneDX` SBOM and links to it from every
+/// HTML page.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SbomPlugin;
+
+impl SbomPlugin {
+    /// Returns the relative path of the SBOM file under `site_dir`.
+    pub const fn sbom_path() -> &'static str {
+        "sbom.cdx.json"
+    }
+}
+
+impl Plugin for SbomPlugin {
+    fn name(&self) -> &'static str {
+        "sbom"
+    }
+
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        if !ctx.site_dir.exists() {
+            return Ok(());
+        }
+        let sbom = build_sbom();
+        let path = ctx.site_dir.join(Self::sbom_path());
+        let json =
+            serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
+                path: path.clone(),
+                source: std::io::Error::other(e),
+            })?;
+        fs::write(&path, json).with_path(&path)?;
+        log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
+        Ok(())
+    }
+
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    fn transform_html(
+        &self,
+        html: &str,
+        _path: &Path,
+        _ctx: &PluginContext,
+    ) -> Result<String, SsgError> {
+        // Idempotent: skip if an SBOM link is already present.
+        if html.contains("rel=\"sbom\"") || html.contains("rel='sbom'") {
+            return Ok(html.to_string());
+        }
+        let Some(head_close) = html.find("</head>") else {
+            return Ok(html.to_string());
+        };
+        let link = format!(
+            "<link rel=\"sbom\" type=\"application/vnd.cyclonedx+json\" \
+             href=\"/{}\">\n",
+            Self::sbom_path()
+        );
+        let mut out = String::with_capacity(html.len() + link.len());
+        out.push_str(&html[..head_close]);
+        out.push_str(&link);
+        out.push_str(&html[head_close..]);
+        Ok(out)
+    }
+}
+
+/// Builds the minimal `CycloneDX` 1.5 SBOM document for this site.
+fn build_sbom() -> serde_json::Value {
+    let now = current_iso_timestamp();
+    let ssg_version = env!("CARGO_PKG_VERSION");
+    serde_json::json!({
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "version": 1,
+        "metadata": {
+            "timestamp": now,
+            "tools": [{
+                "vendor": "SSG Contributors",
+                "name": "ssg",
+                "version": ssg_version,
+            }],
+            "component": {
+                "type": "application",
+                "bom-ref": "site",
+                "name": "static-site",
+                "description": "Site generated by SSG",
+            }
+        },
+        "components": [{
+            "type": "application",
+            "bom-ref": format!("ssg@{ssg_version}"),
+            "name": "ssg",
+            "version": ssg_version,
+            "description": "Static site generator",
+            "purl": format!("pkg:cargo/ssg@{ssg_version}"),
+            "licenses": [
+                {"license": {"id": "MIT"}},
+                {"license": {"id": "Apache-2.0"}}
+            ],
+            "externalReferences": [
+                {"type": "vcs", "url": "https://github.com/sebastienrousseau/static-site-generator"},
+                {"type": "documentation", "url": "https://docs.rs/ssg"}
+            ]
+        }]
+    })
+}
+
+/// Cheap ISO 8601 timestamp without pulling in a date crate.
+/// Uses `std::time::SystemTime` and converts `UNIX_EPOCH` seconds to
+/// `YYYY-MM-DDTHH:MM:SSZ` via the proleptic Gregorian calendar.
+fn current_iso_timestamp() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    epoch_to_iso(secs)
+}
+
+/// Converts seconds since UNIX epoch to ISO 8601 `YYYY-MM-DDTHH:MM:SSZ`.
+fn epoch_to_iso(secs: u64) -> String {
+    // Days since 1970-01-01 + seconds within day.
+    let days = secs / 86_400;
+    let sec_in_day = secs % 86_400;
+    let hour = (sec_in_day / 3600) as u32;
+    let minute = ((sec_in_day % 3600) / 60) as u32;
+    let second = (sec_in_day % 60) as u32;
+
+    // Convert `days` to YYYY-MM-DD via proleptic Gregorian rules.
+    // Algorithm from Howard Hinnant's date library (public domain).
+    let z = days as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let y = (yoe as i64) + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    let year = if month <= 2 { y + 1 } else { y };
+
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    #[test]
+    fn epoch_to_iso_handles_unix_epoch() {
+        assert_eq!(epoch_to_iso(0), "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn epoch_to_iso_handles_known_timestamps() {
+        // 1700000000 = 2023-11-14 22:13:20 UTC
+        assert_eq!(epoch_to_iso(1_700_000_000), "2023-11-14T22:13:20Z");
+        // 1577836800 = 2020-01-01 00:00:00 UTC
+        assert_eq!(epoch_to_iso(1_577_836_800), "2020-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn build_sbom_includes_required_cyclonedx_fields() {
+        let sbom = build_sbom();
+        assert_eq!(sbom["bomFormat"], "CycloneDX");
+        assert_eq!(sbom["specVersion"], "1.5");
+        assert_eq!(sbom["version"], 1);
+        assert!(sbom["metadata"]["timestamp"].as_str().is_some());
+        assert!(sbom["metadata"]["tools"].as_array().is_some());
+        let components = sbom["components"].as_array().unwrap();
+        assert!(!components.is_empty());
+        // Every component must have a name and a purl.
+        for c in components {
+            assert!(c["name"].as_str().is_some());
+            assert!(c["purl"].as_str().is_some());
+        }
+    }
+
+    #[test]
+    fn sbom_plugin_writes_file_after_compile() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        SbomPlugin.after_compile(&ctx).unwrap();
+        let sbom_file = site.join(SbomPlugin::sbom_path());
+        assert!(sbom_file.exists());
+        let body = fs::read_to_string(&sbom_file).unwrap();
+        assert!(body.contains("\"CycloneDX\""));
+        assert!(body.contains("\"specVersion\": \"1.5\""));
+    }
+
+    #[test]
+    fn sbom_plugin_injects_link_into_head() {
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = "<html><head><title>x</title></head><body></body></html>";
+        let out = SbomPlugin
+            .transform_html(html, Path::new("x.html"), &ctx)
+            .unwrap();
+        assert!(out.contains("rel=\"sbom\""));
+        assert!(out.contains("application/vnd.cyclonedx+json"));
+        assert!(out.contains("href=\"/sbom.cdx.json\""));
+    }
+
+    #[test]
+    fn sbom_plugin_is_idempotent() {
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = r#"<html><head><link rel="sbom" type="application/vnd.cyclonedx+json" href="/sbom.cdx.json"></head><body></body></html>"#;
+        let out = SbomPlugin
+            .transform_html(html, Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn sbom_plugin_skips_pages_without_head_tag() {
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = "<p>orphan content with no head</p>";
+        let out = SbomPlugin
+            .transform_html(html, Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn sbom_plugin_after_compile_noop_when_site_missing() {
+        let dir = tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), &missing, dir.path());
+        SbomPlugin.after_compile(&ctx).unwrap();
+        assert!(!missing.exists());
+    }
+
+    #[test]
+    fn sbom_path_constant() {
+        assert_eq!(SbomPlugin::sbom_path(), "sbom.cdx.json");
+    }
+
+    #[test]
+    fn after_compile_write_failure_returns_io_error() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        // Create a directory where the SBOM is expected to be written, causing fs::write to fail.
+        let sbom_dir = site.join(SbomPlugin::sbom_path());
+        fs::create_dir(&sbom_dir).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = SbomPlugin.after_compile(&ctx);
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir)
+        );
+    }
+}

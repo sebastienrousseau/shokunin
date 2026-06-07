@@ -103,6 +103,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             site_description: "A site built with SSG".to_string(),
             language: "en-GB".to_string(),
             i18n: None,
+            cdn_prefix: None,
         })
     })
 }

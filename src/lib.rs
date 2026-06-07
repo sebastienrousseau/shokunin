@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 #![doc = include_str!("../README.md")]
@@ -23,11 +24,6 @@ macro_rules! fail_point {
 macro_rules! fail_point {
     ($name:expr, $body:expr) => {};
 }
-
-/// Shared bounded directory walkers used by every plugin's
-/// `collect_*_files` helper.
-#[allow(unreachable_pub)]
-pub(crate) mod walk;
 
 /// Test-only utilities shared across unit test modules.
 #[cfg(test)]
@@ -59,7 +55,6 @@ use std::{
 use crate::cmd::{Cli, SsgConfig};
 
 // Third-party imports
-use anyhow::{Context, Result};
 use log::info;
 
 /// Returns the current time as an ISO 8601 UTC string.
@@ -92,109 +87,81 @@ const fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
-/// Automated WCAG accessibility checker.
-pub mod accessibility;
-/// AI-readiness content hooks (GEO/AEO).
-pub mod ai;
-/// Asset fingerprinting, SRI hashes, and minification.
-pub mod assets;
-/// Content fingerprinting for incremental builds.
-pub mod cache;
 pub mod cmd;
-/// Typed content collection API — `get_collection` / `get_entry` (issue #456).
-pub mod collections;
-/// Typed content collections with frontmatter schema validation.
-pub mod content;
-/// Content Security Policy hardening: inline extraction + SRI.
-pub mod csp;
-/// Page dependency graph for incremental rebuilds.
-pub mod depgraph;
-/// Deployment adapter generation.
-pub mod deploy;
-/// Draft content filtering.
-pub mod drafts;
-/// Shared frontmatter extraction and `.meta.json` sidecar files.
-pub mod frontmatter;
-/// File system operations: directory copying, safety validation, and traversal.
-pub mod fs_ops;
-/// Syntax highlighting for code blocks.
-pub mod highlight;
-/// Internationalisation: hreflang injection, per-locale sitemaps, lang switcher.
-pub mod i18n;
-/// Image optimization with WebP and responsive srcset.
+#[path = "core/mod.rs"]
+pub(crate) mod core_group;
+pub mod error;
+#[path = "plugins/mod.rs"]
+pub(crate) mod plugins_group;
+#[path = "server/mod.rs"]
+pub(crate) mod server_group;
+pub use error::{PathErrorExt, SsgError};
+
+// Re-export core modules for public API compatibility
+pub use crate::core_group::cache;
+pub use crate::core_group::collections;
+pub use crate::core_group::content;
+pub use crate::core_group::depgraph;
+pub use crate::core_group::deploy;
+pub use crate::core_group::frontmatter;
+pub use crate::core_group::fs_ops;
+pub use crate::core_group::logging;
+pub use crate::core_group::otel;
+pub use crate::core_group::pipeline;
+pub use crate::core_group::process;
+pub use crate::core_group::scaffold;
+pub use crate::core_group::schema;
+pub use crate::core_group::stream;
+pub use crate::core_group::streaming;
+#[cfg(feature = "templates")]
+pub use crate::core_group::template_engine;
+pub use crate::core_group::walk;
+
+// Re-export plugin modules
+pub use crate::plugins_group::accessibility;
+pub use crate::plugins_group::ai;
+pub use crate::plugins_group::assets;
+pub use crate::plugins_group::csp;
+pub use crate::plugins_group::drafts;
+pub use crate::plugins_group::highlight;
+pub use crate::plugins_group::i18n;
 #[cfg(feature = "image-optimization")]
-pub mod image_plugin;
-/// Interactive islands — lazy-hydrating Web Components.
-pub mod islands;
-/// WebSocket-based live-reload script injection.
-pub mod livereload;
-/// Local LLM content augmentation plugin.
-pub mod llm;
-/// Logging infrastructure.
-pub mod logging;
-/// GitHub Flavored Markdown (GFM) extensions: tables, strikethrough, task lists.
-pub mod markdown_ext;
-/// Auto-generates Open Graph social card images from page metadata.
-pub mod og_image;
-/// Optional OpenTelemetry build-pipeline tracing (issue #422).
-///
-/// Compiles to an empty stub when the `otel` feature is off, so
-/// callers can always reference [`otel::init_if_enabled`] without
-/// `#[cfg]`-guarding every call site.
-pub mod otel;
-/// Pagination for listing pages.
-pub mod pagination;
-/// Build pipeline orchestration.
-#[allow(unreachable_pub)]
-pub(crate) mod pipeline;
-/// Lifecycle hook plugin system.
-pub mod plugin;
-/// Built-in plugins for common tasks.
-pub mod plugins;
-/// Post-processing fixes for staticdatagen output.
-pub mod postprocess;
-/// Command-line argument processing and site compilation.
-pub mod process;
-/// Build-time CycloneDX SBOM generation (issue #457).
-pub mod sbom;
-/// Project scaffolding for `--new`.
-pub mod scaffold;
-/// JSON Schema generation for configuration.
-pub mod schema;
-/// Client-side search index generator and search UI.
-pub mod search;
-/// SEO plugins: meta tags, robots.txt, and canonical URLs.
-pub mod seo;
-/// Dev server infrastructure.
-pub mod server;
-/// Shortcode expansion for Markdown content.
-pub mod shortcodes;
-/// High-performance streaming file processor.
-pub mod stream;
-/// Streaming compilation for large (100K+ page) sites.
-pub mod streaming;
-/// Taxonomy generation (tags, categories).
-pub mod taxonomy;
-/// Template engine integration (MiniJinja).
+pub use crate::plugins_group::image_plugin;
+pub use crate::plugins_group::islands;
+pub use crate::plugins_group::llm;
+pub use crate::plugins_group::markdown_ext;
+pub use crate::plugins_group::og_image;
+pub use crate::plugins_group::pagination;
+pub use crate::plugins_group::plugin;
+pub use crate::plugins_group::plugins;
+pub use crate::plugins_group::postprocess;
+pub use crate::plugins_group::sbom;
+pub use crate::plugins_group::search;
+pub use crate::plugins_group::seo;
+pub use crate::plugins_group::shortcodes;
+pub use crate::plugins_group::taxonomy;
 #[cfg(feature = "templates")]
-pub mod template_engine;
-/// Template rendering plugin.
-#[cfg(feature = "templates")]
-pub mod template_plugin;
-/// File-watching for live rebuild.
-pub mod watch;
+pub use crate::plugins_group::template_plugin;
+
+// Re-export server modules
+pub use crate::server_group::livereload;
+pub use crate::server_group::server;
+pub use crate::server_group::watch;
+
 /// Re-exports
 pub use staticdatagen;
 
 // Re-export everything that was previously pub in lib.rs
-pub use fs_ops::{
+pub use crate::core_group::fs_ops::{
     collect_files_recursive, copy_dir_all, copy_dir_all_async,
     copy_dir_with_progress, is_safe_path, verify_and_copy_files,
     verify_and_copy_files_async, verify_file_safety,
 };
-pub use logging::{create_log_file, log_arguments, log_initialization};
-pub use pipeline::{compile_site, execute_build_pipeline};
-pub use server::{
+pub use crate::core_group::logging::{
+    create_log_file, log_arguments, log_initialization,
+};
+pub use crate::core_group::pipeline::{compile_site, execute_build_pipeline};
+pub use crate::server_group::server::{
     generate_locale_redirect, handle_server, prepare_serve_dir, serve_site,
     serve_site_with, HttpTransport, ServeTransport,
 };
@@ -238,7 +205,7 @@ impl Paths {
 // Modify the validate method in Paths impl
 impl Paths {
     /// Validates all paths in the configuration
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<(), SsgError> {
         // Check for path traversal and other security concerns
         for (name, path) in [
             ("site", &self.site),
@@ -249,32 +216,26 @@ impl Paths {
             // For non-existent paths, validate their components
             let path_str = path.to_string_lossy();
             if path_str.contains("..") {
-                anyhow::bail!(
-                    "{} path contains directory traversal: {}",
-                    name,
-                    path.display()
-                );
+                return Err(SsgError::PathTraversal { path: path.clone() });
             }
             if path_str.contains("//") {
-                anyhow::bail!(
-                    "{} path contains invalid double slashes: {}",
-                    name,
-                    path.display()
-                );
+                return Err(SsgError::Validation {
+                    field: name.to_string(),
+                    message: format!(
+                        "path contains invalid double slashes: {}",
+                        path.display()
+                    ),
+                });
             }
 
             // If path exists, perform additional checks
             if path.exists() {
-                let metadata = path
-                    .symlink_metadata()
-                    .context(format!("Failed to get metadata for {name}"))?;
+                let metadata = path.symlink_metadata().with_path(path)?;
 
                 if metadata.file_type().is_symlink() {
-                    anyhow::bail!(
-                        "{} path is a symlink which is not allowed: {}",
-                        name,
-                        path.display()
-                    );
+                    return Err(SsgError::SymlinkForbidden {
+                        path: path.clone(),
+                    });
                 }
             }
         }
@@ -342,7 +303,7 @@ impl PathsBuilder {
     /// * Required paths are missing
     /// * Paths are invalid or unsafe
     /// * Unable to create necessary directories
-    pub fn build(self) -> Result<Paths> {
+    pub fn build(self) -> Result<Paths, SsgError> {
         let paths = Paths {
             site: self.site.unwrap_or_else(|| PathBuf::from("public")),
             content: self.content.unwrap_or_else(|| PathBuf::from("content")),
@@ -379,7 +340,7 @@ impl PathsBuilder {
 /// use std::path::PathBuf;
 /// use ssg::{Paths, create_directories};
 ///
-/// fn main() -> anyhow::Result<()> {
+/// fn main() -> Result<(), ssg::SsgError> {
 ///     let paths = Paths {
 ///         site: PathBuf::from("public"),
 ///         content: PathBuf::from("content"),
@@ -399,29 +360,42 @@ impl PathsBuilder {
 /// * Path traversal prevention
 /// * Permission validation
 /// * Safe path verification
-pub fn create_directories(paths: &Paths) -> Result<()> {
-    // Ensure each directory exists, with custom error messages for each.
-    for (name, path) in [
+pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
+    // Path safety check FIRST — `is_safe_path` only flags `..` for
+    // non-existent paths, so we must validate before
+    // `fs::create_dir_all` materialises any traversal target on disk.
+    // Reordering also closes a TOCTOU-style gap where the previous
+    // implementation could create `..`-relative directories and then
+    // fail to detect them because they now existed.
+    if !is_safe_path(&paths.content)? {
+        return Err(SsgError::PathTraversal {
+            path: paths.content.clone(),
+        });
+    }
+    if !is_safe_path(&paths.build)? {
+        return Err(SsgError::PathTraversal {
+            path: paths.build.clone(),
+        });
+    }
+    if !is_safe_path(&paths.site)? {
+        return Err(SsgError::PathTraversal {
+            path: paths.site.clone(),
+        });
+    }
+    if !is_safe_path(&paths.template)? {
+        return Err(SsgError::PathTraversal {
+            path: paths.template.clone(),
+        });
+    }
+
+    // Materialise each directory after safety validation passes.
+    for (_name, path) in [
         ("content", &paths.content),
         ("build", &paths.build),
         ("site", &paths.site),
         ("template", &paths.template),
     ] {
-        fs::create_dir_all(path).with_context(|| {
-            format!(
-                "Failed to create or access {name} directory at path: {}",
-                path.display()
-            )
-        })?;
-    }
-
-    // Path safety check with additional context
-    if !is_safe_path(&paths.content)?
-        || !is_safe_path(&paths.build)?
-        || !is_safe_path(&paths.site)?
-        || !is_safe_path(&paths.template)?
-    {
-        anyhow::bail!("One or more paths are unsafe. Ensure paths do not contain '..' and are accessible.");
+        fs::create_dir_all(path).with_path(path)?;
     }
 
     Ok(())
@@ -432,7 +406,7 @@ pub fn create_directories(paths: &Paths) -> Result<()> {
 /// Parses CLI arguments, runs the plugin pipeline around compilation,
 /// and starts a local dev server. This function blocks indefinitely
 /// while the server is running.
-pub fn run() -> Result<()> {
+pub fn run() -> Result<(), SsgError> {
     // Parse CLI arguments first so that `--help` and `--version`
     // short-circuit *before* the logger emits its banner. clap exits
     // the process for those flags, so we never reach the lines below.
@@ -447,7 +421,12 @@ pub fn run() -> Result<()> {
 
     info!("Starting site generation process");
 
-    let config = SsgConfig::from_matches(&matches)?;
+    let config = SsgConfig::from_matches(&matches).map_err(|e| {
+        SsgError::Validation {
+            field: "config".to_string(),
+            message: e.to_string(),
+        }
+    })?;
     let opts = pipeline::RunOptions::from_matches(&matches);
 
     // Configure Rayon global thread pool from --jobs flag.
@@ -455,13 +434,21 @@ pub fn run() -> Result<()> {
         rayon::ThreadPoolBuilder::new()
             .num_threads(n)
             .build_global()
-            .context("failed to configure Rayon thread pool")?;
+            .map_err(|e| SsgError::Validation {
+                field: "jobs".to_string(),
+                message: format!("failed to configure Rayon thread pool: {e}"),
+            })?;
         info!("Rayon thread pool configured with {n} threads");
     }
 
     // --validate: validate content schemas and exit without building.
     if opts.validate_only {
-        return content::validate_only(&config.content_dir);
+        return content::validate_only(&config.content_dir).map_err(|e| {
+            SsgError::Validation {
+                field: "content".to_string(),
+                message: e.to_string(),
+            }
+        });
     }
 
     if !opts.quiet {
@@ -824,8 +811,8 @@ mod tests {
         let err = result.unwrap_err();
         println!("Error message: {err}");
         assert!(
-            err.to_string().contains("Symlinks are not allowed"),
-            "Unexpected error message: {err}"
+            matches!(err, SsgError::SymlinkForbidden { ref path } if path == &symlink_path),
+            "expected SsgError::SymlinkForbidden, got: {err:?}"
         );
 
         Ok(())
@@ -1156,28 +1143,12 @@ mod tests {
     #[test]
     fn test_paths_validation() -> Result<()> {
         // Test directory traversal
-        let result = Paths::builder().site("../invalid").build();
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("directory traversal"),
-            "Expected error about directory traversal"
-        );
+        let err = Paths::builder().site("../invalid").build().unwrap_err();
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
 
         // Test double slashes
-        let result = Paths::builder().site("invalid//path").build();
-
-        assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("invalid double slashes"),
-            "Expected error about invalid double slashes"
-        );
+        let err = Paths::builder().site("invalid//path").build().unwrap_err();
+        assert!(matches!(err, SsgError::Validation { .. }));
 
         // Test symlinks if possible
         #[cfg(unix)]
@@ -1190,13 +1161,8 @@ mod tests {
             fs::create_dir(&real_path)?;
             symlink(&real_path, &symlink_path)?;
 
-            let result = Paths::builder().site(symlink_path).build();
-
-            assert!(result.is_err());
-            assert!(
-                result.unwrap_err().to_string().contains("symlink"),
-                "Expected error about symlinks"
-            );
+            let err = Paths::builder().site(symlink_path).build().unwrap_err();
+            assert!(matches!(err, SsgError::SymlinkForbidden { .. }));
         }
 
         Ok(())
@@ -1907,9 +1873,8 @@ mod tests {
             build: PathBuf::from("build"),
             template: PathBuf::from("templates"),
         };
-        let result = paths.validate();
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("symlink"));
+        let err = paths.validate().unwrap_err();
+        assert!(matches!(err, SsgError::SymlinkForbidden { .. }));
         Ok(())
     }
 
@@ -2172,7 +2137,11 @@ mod tests {
     }
 
     impl ServeTransport for RecordingTransport {
-        fn start(&self, addr: &str, root: &str) -> Result<()> {
+        fn start(
+            &self,
+            addr: &str,
+            root: &str,
+        ) -> std::result::Result<(), SsgError> {
             self.calls
                 .lock()
                 .unwrap()
@@ -2187,8 +2156,15 @@ mod tests {
     struct FailingTransport;
 
     impl ServeTransport for FailingTransport {
-        fn start(&self, _addr: &str, _root: &str) -> Result<()> {
-            Err(anyhow::anyhow!("transport failed"))
+        fn start(
+            &self,
+            _addr: &str,
+            _root: &str,
+        ) -> std::result::Result<(), SsgError> {
+            Err(SsgError::Validation {
+                field: "transport".to_string(),
+                message: "transport failed".to_string(),
+            })
         }
     }
 
@@ -2212,10 +2188,10 @@ mod tests {
         let bad_dst = blocker.join("sub");
         let result = verify_and_copy_files(temp.path(), &bad_dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
+        let err = result.unwrap_err();
         assert!(
-            msg.contains("Failed to create or access destination"),
-            "expected with_context message, got: {msg}"
+            matches!(err, SsgError::Io { ref path, .. } if path == &bad_dst),
+            "expected SsgError::Io for bad_dst, got: {err:?}"
         );
         Ok(())
     }
@@ -2249,10 +2225,10 @@ mod tests {
 
         let result = copy_dir_with_progress(&src_file, &dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
+        let err = result.unwrap_err();
         assert!(
-            msg.contains("Failed to read source directory"),
-            "expected with_context message, got: {msg}"
+            matches!(err, SsgError::Io { ref path, .. } if path == &src_file),
+            "expected SsgError::Io for src_file, got: {err:?}"
         );
         Ok(())
     }
@@ -2267,8 +2243,11 @@ mod tests {
         let bad_dst = blocker.join("sub");
         let result = verify_and_copy_files_async(temp.path(), &bad_dst);
         assert!(result.is_err());
-        let msg = format!("{:?}", result.unwrap_err());
-        assert!(msg.contains("Failed to create or access destination"));
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &bad_dst),
+            "expected SsgError::Io for bad_dst, got: {err:?}"
+        );
         Ok(())
     }
 
@@ -2687,7 +2666,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     #[test]
@@ -2699,7 +2678,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("directory traversal"));
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
     }
 
     #[test]
@@ -2711,7 +2690,7 @@ mod tests {
             template: PathBuf::from("../templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("directory traversal"));
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
     }
 
     #[test]
@@ -2723,7 +2702,7 @@ mod tests {
             template: PathBuf::from("templates"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     #[test]
@@ -2735,7 +2714,7 @@ mod tests {
             template: PathBuf::from("templates//sub"),
         };
         let err = paths.validate().unwrap_err();
-        assert!(err.to_string().contains("invalid double slashes"));
+        assert!(matches!(err, SsgError::Validation { .. }));
     }
 
     // -----------------------------------------------------------------

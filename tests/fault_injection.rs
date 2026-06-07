@@ -34,6 +34,7 @@
 use serial_test::serial;
 use ssg::cache::BuildCache;
 use ssg::cmd::SsgConfig;
+use ssg::markdown_ext::MarkdownExtPlugin;
 use ssg::plugin::{Plugin, PluginContext};
 use ssg::plugins::MinifyPlugin;
 use ssg::scaffold::scaffold_project_at;
@@ -252,3 +253,31 @@ fn plugins_fault_minify_write_returns_err() {
         .expect_err("after_compile should fail when write failpoint is active");
     assert!(format!("{err:?}").contains("injected: plugins::minify-write"));
 }
+
+// =====================================================================
+// plugins::markdown_ext read + write
+// =====================================================================
+
+#[test]
+#[serial]
+fn markdown_ext_fault_read_returns_err() {
+    let _guard = FailGuard("markdown_ext::read");
+    fail::cfg("markdown_ext::read", "return").expect("activate failpoint");
+
+    let dir = tempdir().expect("tempdir");
+    let site = dir.path().to_path_buf();
+    fs::write(site.join("post.md"), "# Hi").expect("seed md");
+
+    let ctx = PluginContext::new(&site, &site, &site, &site);
+    let err = MarkdownExtPlugin.before_compile(&ctx).expect_err(
+        "before_compile should fail when markdown_ext::read is active",
+    );
+    assert!(format!("{err:?}").contains("injected: markdown_ext::read"));
+}
+
+// markdown_ext::write failpoint sits behind an `if new != raw` gate
+// (src/plugins/markdown_ext.rs:88) that is non-trivial to trigger
+// from a minimal test fixture — apply_strikethrough emits identical
+// output for "hello ~~world~~" because the transformation is a
+// pure-text substitution. Covering this branch organically is part
+// of the v0.0.41 coverage push.

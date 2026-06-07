@@ -38,7 +38,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
     let _ = group.bench_function("small_files", |b| {
         b.iter_with_setup(
             || setup_test_files(100, 1024),
-            |(src, dst)| {
+            |(_tmp, src, dst)| {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
@@ -49,7 +49,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
     let _ = group.bench_function("medium_files", |b| {
         b.iter_with_setup(
             || setup_test_files(10, 1024 * 1024),
-            |(src, dst)| {
+            |(_tmp, src, dst)| {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
@@ -60,7 +60,7 @@ pub fn bench_concurrent_copy(c: &mut Criterion) {
     let _ = group.bench_function("large_files", |b| {
         b.iter_with_setup(
             || setup_test_files(5, 10 * 1024 * 1024),
-            |(src, dst)| {
+            |(_tmp, src, dst)| {
                 copy_dir_all(&src, &dst).unwrap();
                 black_box(());
             },
@@ -88,7 +88,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
 
     // Benchmark regular file verification
     let _ = group.bench_function("regular_files", |b| {
-        b.iter_with_setup(setup_regular_files, |path| {
+        b.iter_with_setup(setup_regular_files, |(_tmp, path)| {
             verify_file_safety(&path).unwrap();
             black_box(());
         });
@@ -96,7 +96,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
 
     // Benchmark nested directory verification
     let _ = group.bench_function("nested_directories", |b| {
-        b.iter_with_setup(setup_nested_directories, |(src, dst)| {
+        b.iter_with_setup(setup_nested_directories, |(_tmp, src, dst)| {
             verify_and_copy_files(&src, &dst).unwrap();
             black_box(());
         });
@@ -104,7 +104,7 @@ pub fn bench_verify_files(c: &mut Criterion) {
 
     // Benchmark mixed content verification
     let _ = group.bench_function("mixed_content", |b| {
-        b.iter_with_setup(setup_mixed_content, |(src, dst)| {
+        b.iter_with_setup(setup_mixed_content, |(_tmp, src, dst)| {
             verify_and_copy_files(&src, &dst).unwrap();
             black_box(());
         });
@@ -124,8 +124,11 @@ pub fn bench_verify_files(c: &mut Criterion) {
 ///
 /// # Returns
 ///
-/// * Tuple of (source `PathBuf`, destination `PathBuf`)
-fn setup_test_files(count: u32, size: u64) -> (PathBuf, PathBuf) {
+/// * Tuple of (temp_dir, source `PathBuf`, destination `PathBuf`)
+fn setup_test_files(
+    count: u32,
+    size: u64,
+) -> (tempfile::TempDir, PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
     let dst_dir = temp_dir.path().join("dst");
@@ -143,27 +146,27 @@ fn setup_test_files(count: u32, size: u64) -> (PathBuf, PathBuf) {
         file.write_all(&data).unwrap();
     }
 
-    (src_dir, dst_dir)
+    (temp_dir, src_dir, dst_dir)
 }
 
 /// Sets up regular files for verification benchmarking.
 ///
 /// # Returns
 ///
-/// * `PathBuf` to the test file
-fn setup_regular_files() -> PathBuf {
+/// * Tuple of (temp_dir, `PathBuf` to the test file)
+fn setup_regular_files() -> (tempfile::TempDir, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let file_path = temp_dir.path().join("test.txt");
     fs::write(&file_path, "test content").unwrap();
-    file_path
+    (temp_dir, file_path)
 }
 
 /// Sets up nested directory structure for verification benchmarking.
 ///
 /// # Returns
 ///
-/// * Tuple of (source `PathBuf`, destination `PathBuf`)
-fn setup_nested_directories() -> (PathBuf, PathBuf) {
+/// * Tuple of (temp_dir, source `PathBuf`, destination `PathBuf`)
+fn setup_nested_directories() -> (tempfile::TempDir, PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
     let dst_dir = temp_dir.path().join("dst");
@@ -179,15 +182,15 @@ fn setup_nested_directories() -> (PathBuf, PathBuf) {
         }
     }
 
-    (src_dir, dst_dir)
+    (temp_dir, src_dir, dst_dir)
 }
 
 /// Sets up mixed content (files and directories) for verification benchmarking.
 ///
 /// # Returns
 ///
-/// * Tuple of (source `PathBuf`, destination `PathBuf`)
-fn setup_mixed_content() -> (PathBuf, PathBuf) {
+/// * Tuple of (temp_dir, source `PathBuf`, destination `PathBuf`)
+fn setup_mixed_content() -> (tempfile::TempDir, PathBuf, PathBuf) {
     let temp_dir = tempdir().unwrap();
     let src_dir = temp_dir.path().join("src");
     let dst_dir = temp_dir.path().join("dst");
@@ -213,7 +216,7 @@ fn setup_mixed_content() -> (PathBuf, PathBuf) {
         fs::create_dir_all(sub_dir.join("empty")).unwrap();
     }
 
-    (src_dir, dst_dir)
+    (temp_dir, src_dir, dst_dir)
 }
 
 criterion_group!(benches, bench_concurrent_copy, bench_verify_files);
@@ -229,7 +232,7 @@ mod tests {
         ignore = "requires benchmark feature"
     )]
     fn test_setup_test_files() {
-        let (src, dst) = setup_test_files(5, 1024);
+        let (_tmp, src, dst) = setup_test_files(5, 1024);
         assert!(src.exists());
         assert!(dst.exists());
 
@@ -249,7 +252,7 @@ mod tests {
         ignore = "requires benchmark feature"
     )]
     fn test_setup_nested_directories() {
-        let (src, _) = setup_nested_directories();
+        let (_tmp, src, _) = setup_nested_directories();
 
         // Verify directory structure
         for i in 0..5 {
@@ -272,7 +275,7 @@ mod tests {
         ignore = "requires benchmark feature"
     )]
     fn test_setup_mixed_content() {
-        let (src, _) = setup_mixed_content();
+        let (_tmp, src, _) = setup_mixed_content();
 
         // Verify root files
         for i in 0..5 {

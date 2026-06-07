@@ -5,13 +5,13 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.39"                      # The version of the library
+version = "0.0.40"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
 license = "MIT OR Apache-2.0"           # Dual licensing strategy
 description = """
-A Content-First Open Source Static Site Generator (SSG) crafted in Rust.
+A secure-by-default static site generator built in Rust. WCAG 2.2 AA validation, CSP/SRI hardening, native JS/CSS minification, automated CycloneDX SBOM, local LLM content pipeline, WebAssembly target, interactive islands, streaming compilation for 100K+ pages, 28-locale i18n, and one-command deployment.
 """
 homepage = "https://github.com/sebastienrousseau/static-site-generator" # The project's homepage
 documentation = "https://docs.rs/ssg" # Doc URL
@@ -143,6 +143,8 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
+ssg-core = { path = "crates/ssg-core" }
+thiserror = "2"
 staticdatagen = "0.0.8"
 toml = "1.1.2"
 
@@ -190,6 +192,35 @@ name = "bench"
 harness = false
 
 # -----------------------------------------------------------------------------
+# Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
+# Each binary's `main.rs` declares the per-module submodules under it; see
+# `tests/core/main.rs` for the canonical layout commentary.
+# -----------------------------------------------------------------------------
+[[test]]
+name = "core"
+path = "tests/core/main.rs"
+
+[[bench]]
+name = "core"
+path = "benches/core/main.rs"
+
+[[test]]
+name = "plugins"
+path = "tests/plugins/main.rs"
+
+[[bench]]
+name = "plugins"
+path = "benches/plugins/main.rs"
+
+[[test]]
+name = "server"
+path = "tests/server/main.rs"
+
+[[test]]
+name = "cmd"
+path = "tests/cmd/main.rs"
+
+# -----------------------------------------------------------------------------
 # Examples
 # -----------------------------------------------------------------------------
 [[example]]
@@ -235,7 +266,75 @@ path = "examples/portfolio_example.rs"    # Path to the example file
 # -----------------------------------------------------------------------------
 # Linting Configuration
 # -----------------------------------------------------------------------------
-[lints.rust]
+[lints]
+workspace = true
+
+[profile.dev]
+# Development profile configuration for fast builds and debugging.
+codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
+debug = 1                                   # Line tables only — saves ~60% disk vs full debuginfo
+debug-assertions = true                     # Enable debug assertions
+incremental = true                          # Enable incremental compilation
+lto = false                                 # Disable link-time optimization for development
+opt-level = 0                               # No optimizations in development
+overflow-checks = true                      # Enable overflow checks for arithmetic operations
+panic = 'unwind'                            # Enable unwinding for panics (useful in development)
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in development builds
+
+[profile.release]
+# Release profile configuration for optimized builds.
+codegen-units = 1                           # Reduce codegen units for better performance
+debug = false                               # Disable debug symbols in release builds
+debug-assertions = false                    # Disable debug assertions
+incremental = false                         # Disable incremental compilation for optimal binary size
+lto = true                                  # Enable link-time optimization for smaller and faster binaries
+opt-level = 3                               # Optimize for runtime speed
+overflow-checks = true                      # Enable overflow checks for safety
+panic = "abort"                             # Use abort on panic for minimal overhead
+rpath = false                               # Disable rpath generation
+strip = "symbols"                           # Strip symbols for smaller binary size
+
+[profile.test]
+# Test profile configuration for debugging and development.
+codegen-units = 16                          # Balance between compile speed and disk usage
+debug = 1                                   # Line tables only — enough for backtraces, saves disk
+debug-assertions = true                     # Enable debug assertions for tests
+incremental = true                          # Enable incremental compilation for tests
+lto = false                                 # Disable link-time optimization during testing
+opt-level = 0                               # No optimizations in test builds
+overflow-checks = true                      # Enable overflow checks for tests
+rpath = false                               # Disable rpath generation
+strip = false                               # Do not strip symbols in test builds
+
+# -----------------------------------------------------------------------------
+# Packaging metadata
+# -----------------------------------------------------------------------------
+
+# cargo-generate-rpm — used by .github/workflows/release.yml to produce
+# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
+    { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
+    { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
+    { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
+]
+
+# cargo-wix — used to produce a Windows MSI installer. Generates
+# `wix/main.wxs` lazily on first build via `cargo wix init --force` if
+# the template is absent.
+[package.metadata.wix]
+upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
+path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
+license      = false
+eula         = false
+
+[workspace]
+members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+default-members = ["."]
+
+[workspace.lints.rust]
 # Linting rules for the project.
 
 ## Warnings
@@ -251,7 +350,7 @@ elided_lifetimes_in_paths = "allow"         # Allow lifetimes to be elided in pa
 non_camel_case_types = "allow"              # Allow non-camel-case types
 non_upper_case_globals = "allow"            # Allow non-uppercase global variables
 trivial_bounds = "allow"                    # Allow trivial bounds in trait definitions
-unsafe_code = "forbid"                       # Forbid the usage of unsafe code blocks
+unsafe_code = "deny"                         # Deny the usage of unsafe code blocks
 
 ## Forbidden
 missing_debug_implementations = "forbid"    # Forbid missing `Debug` implementations
@@ -285,7 +384,7 @@ variant_size_differences = "deny"           # Deny enum variants with significan
 # -----------------------------------------------------------------------------
 # Clippy Configuration
 # -----------------------------------------------------------------------------
-[lints.clippy]
+[workspace.lints.clippy]
 # Clippy lint configuration for enhanced code analysis.
 
 ## Warnings
@@ -356,74 +455,9 @@ literal_string_with_formatting_args = "allow" # Test data containing `{n}` shoul
 # -----------------------------------------------------------------------------
 # Profiles
 # -----------------------------------------------------------------------------
-[profile.dev]
-# Development profile configuration for fast builds and debugging.
-codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
-debug = 1                                   # Line tables only — saves ~60% disk vs full debuginfo
-debug-assertions = true                     # Enable debug assertions
-incremental = true                          # Enable incremental compilation
-lto = false                                 # Disable link-time optimization for development
-opt-level = 0                               # No optimizations in development
-overflow-checks = true                      # Enable overflow checks for arithmetic operations
-panic = 'unwind'                            # Enable unwinding for panics (useful in development)
-rpath = false                               # Disable rpath generation
-strip = false                               # Do not strip symbols in development builds
 
-[profile.release]
-# Release profile configuration for optimized builds.
-codegen-units = 1                           # Reduce codegen units for better performance
-debug = false                               # Disable debug symbols in release builds
-debug-assertions = false                    # Disable debug assertions
-incremental = false                         # Disable incremental compilation for optimal binary size
-lto = true                                  # Enable link-time optimization for smaller and faster binaries
-opt-level = 3                               # Optimize for runtime speed
-overflow-checks = true                      # Enable overflow checks for safety
-panic = "abort"                             # Use abort on panic for minimal overhead
-rpath = false                               # Disable rpath generation
-strip = "symbols"                           # Strip symbols for smaller binary size
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+private_intra_doc_links = "deny"
 
-[profile.test]
-# Test profile configuration for debugging and development.
-codegen-units = 16                          # Balance between compile speed and disk usage
-debug = 1                                   # Line tables only — enough for backtraces, saves disk
-debug-assertions = true                     # Enable debug assertions for tests
-incremental = true                          # Enable incremental compilation for tests
-lto = false                                 # Disable link-time optimization during testing
-opt-level = 0                               # No optimizations in test builds
-overflow-checks = true                      # Enable overflow checks for tests
-rpath = false                               # Disable rpath generation
-strip = false                               # Do not strip symbols in test builds
 
-# -----------------------------------------------------------------------------
-# Packaging metadata
-# -----------------------------------------------------------------------------
-
-# cargo-generate-rpm — used by .github/workflows/release.yml to produce
-# `ssg-X.Y.Z-1.x86_64.rpm` for Fedora / RHEL / openSUSE consumers.
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/x86_64-unknown-linux-gnu/release/ssg", dest = "/usr/bin/ssg", mode = "755" },
-    { source = "LICENSE-MIT",    dest = "/usr/share/doc/ssg/LICENSE-MIT",    mode = "644", doc = true },
-    { source = "LICENSE-APACHE", dest = "/usr/share/doc/ssg/LICENSE-APACHE", mode = "644", doc = true },
-    { source = "README.md",      dest = "/usr/share/doc/ssg/README.md",      mode = "644", doc = true },
-]
-
-# cargo-wix — used to produce a Windows MSI installer. Generates
-# `wix/main.wxs` lazily on first build via `cargo wix init --force` if
-# the template is absent.
-[package.metadata.wix]
-upgrade-guid = "B7C9E10D-3F4E-4F12-9E86-2C9D7E45A1B0"
-path-guid    = "C8DA01EE-401F-4E13-AF97-3DAEAF56B2C1"
-license      = false
-eula         = false
-
-# -----------------------------------------------------------------------------
-# Patch: replace upstream serde_yml (which uses unsafe libyml) with a local
-# safe-only implementation.
-# -----------------------------------------------------------------------------
-[workspace]
-members = [".", "crates/ssg-core", "crates/ssg-wasm"]
-default-members = ["."]
-
-[patch.crates-io]
-serde_yml = { path = "crates/serde_yml" }

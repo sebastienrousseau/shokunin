@@ -64,6 +64,30 @@ fn generate_corpus(dir: &Path, n: usize) {
              language: \"en-GB\"\n\
              layout: \"page\"\n\
              permalink: \"https://example.com/page-{i}\"\n\
+             charset: \"utf-8\"\n\
+             viewport: \"width=device-width, initial-scale=1, shrink-to-fit=no\"\n\
+             author: \"hello@example.com\"\n\
+             cdn: \"https://cloudcdn.pro\"\n\
+             copyright: \"Copyright © 2026. All rights reserved.\"\n\
+             hreflang: \"en\"\n\
+             id: \"https://example.com\"\n\
+             image: \"data:image/svg+xml;utf8,<svg></svg>\"\n\
+             logo_alt: \"Logo\"\n\
+             logo_height: \"33\"\n\
+             logo_width: \"100\"\n\
+             logo: \"\"\n\
+             name: \"Benchmark\"\n\
+             short_name: \"kaishi\"\n\
+             subtitle: \"Performance budget page {i}\"\n\
+             theme-color: \"26, 58, 138\"\n\
+             url: \"https://example.com/page-{i}\"\n\
+             item_pub_date: \"2026-01-15T09:00:00+00:00\"\n\
+             last_build_date: \"2026-01-15T09:00:00+00:00\"\n\
+             primary: \"\"\n\
+             opengraph: \"\"\n\
+             apple: \"\"\n\
+             microsoft: \"\"\n\
+             twitter: \"\"\n\
              ---\n\n\
              # Page {i}\n\n\
              Body content for performance budget testing.\n\n\

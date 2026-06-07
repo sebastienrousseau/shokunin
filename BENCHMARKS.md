@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance measurements for SSG v0.0.37.
+Reproducible performance measurements for SSG v0.0.40.
 
 ## CI Performance Gates
 

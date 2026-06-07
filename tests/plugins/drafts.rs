@@ -1,0 +1,17 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! Integration tests for `ssg::plugins::DraftPlugin`.
+
+use ssg::drafts::DraftPlugin;
+use ssg::plugin::Plugin;
+
+#[test]
+fn drafts_plugin_name_is_stable() {
+    assert!(!DraftPlugin::new(false).name().is_empty());
+}
+
+#[test]
+fn drafts_plugin_with_include_flag_constructs() {
+    let _ = DraftPlugin::new(true);
+}

@@ -27,7 +27,7 @@ behavioural rules.
 
 A static site is the cheapest path to compliance because the entire output
 surface is inspectable at build time. SSG's
-[`AccessibilityPlugin`](../../src/accessibility.rs) runs after every
+[`AccessibilityPlugin`](../../src/plugins/accessibility.rs) runs after every
 compile, walks every emitted HTML file, and writes
 `accessibility-report.json` next to the build output.
 
@@ -305,7 +305,7 @@ on judgement calls, not hunting empty `alt=""` tags.
 
 ---
 
-*This guide reflects SSG v0.0.39. The build-time validator is
-defined in [`src/accessibility.rs`](../../src/accessibility.rs);
+*This guide reflects SSG v0.0.40. The build-time validator is
+defined in [`src/plugins/accessibility.rs`](../../src/plugins/accessibility.rs);
 runtime audit configuration is in
 [`tests/visual/a11y.spec.ts`](../../tests/visual/a11y.spec.ts).*

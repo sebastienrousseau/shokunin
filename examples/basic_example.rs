@@ -94,8 +94,9 @@ fn main() -> Result<()> {
     println!("    ⚡ Built in {elapsed:.0?}");
 
     // Markdown GFM support
-    let gfm_sample = ssg::markdown_ext::expand_gfm("**bold** and ~~strike~~");
-    println!("    \u{1f4dd} GFM: {} chars processed", gfm_sample.len());
+    let gfm_sample =
+        ssg::markdown_ext::expand_gfm("**bold** and ~~strike~~", None);
+    println!("    📝 GFM: {} chars processed", gfm_sample.len());
 
     // 3. Hide template UI that doesn't apply to this template:
     //    - the language dropdown (single-locale site)

@@ -17,8 +17,49 @@
 //! - SEO metadata generation
 //! - Search index generation
 
-use anyhow::Result;
 use std::collections::HashMap;
+use std::fmt;
+
+/// The error type for ssg-core operations.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Error {
+    /// TOML/YAML/JSON parsing failures.
+    FrontmatterParse {
+        /// The syntax format (e.g. "toml", "yaml", "json") or parse error detail.
+        syntax: String,
+    },
+    /// Markdown rendering bugs.
+    MarkdownCompile {
+        /// Detail about what failed.
+        source: String,
+    },
+    /// Slugification layout validation failures.
+    InvalidSlug {
+        /// The invalid input string.
+        input: String,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FrontmatterParse { syntax } => {
+                write!(f, "Frontmatter parse error: {syntax}")
+            }
+            Self::MarkdownCompile { source } => {
+                write!(f, "Markdown compilation error: {source}")
+            }
+            Self::InvalidSlug { input } => {
+                write!(f, "Invalid slug input: {input}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/// Specialized Result type for ssg-core operations.
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// Compile a Markdown string to HTML.
 ///
@@ -64,10 +105,10 @@ pub fn parse_frontmatter(
     let trimmed = input.trim_start();
 
     // TOML frontmatter: +++...+++
-    if trimmed.starts_with("+++") {
-        if let Some(end) = trimmed[3..].find("+++") {
-            let fm_str = &trimmed[3..3 + end];
-            let body = &trimmed[3 + end + 3..];
+    if let Some(after) = trimmed.strip_prefix("+++") {
+        if let Some(end) = after.find("+++") {
+            let fm_str = &after[..end];
+            let body = &after[end + 3..];
             if let Ok(value) = toml::from_str::<serde_json::Value>(fm_str) {
                 if let Some(map) = value.as_object() {
                     return (
@@ -83,10 +124,10 @@ pub fn parse_frontmatter(
     }
 
     // YAML frontmatter: ---...---
-    if trimmed.starts_with("---") {
-        if let Some(end) = trimmed[3..].find("---") {
-            let fm_str = &trimmed[3..3 + end].trim();
-            let body = &trimmed[3 + end + 3..];
+    if let Some(after) = trimmed.strip_prefix("---") {
+        if let Some(end) = after.find("---") {
+            let fm_str = &after[..end].trim();
+            let body = &after[end + 3..];
             // Simple key: value parser for common YAML frontmatter
             let mut map = HashMap::new();
             for line in fm_str.lines() {
@@ -210,6 +251,7 @@ pub fn slugify(input: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

@@ -38,7 +38,7 @@ jobs:
         working-directory: tests/visual
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
 
       - name: Run visual tests
         working-directory: tests/visual

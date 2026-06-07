@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.39-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.40-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -27,7 +27,7 @@
 - [Overview](#overview) -- what SSG does
 - [Architecture](#architecture) -- build pipeline diagram
 - [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.39 capability matrix
+- [Features](#features) -- v0.0.40 capability matrix
 - [The CLI](#the-cli) -- flags and usage
 - [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
 - [Examples](#examples) -- 8 branded examples
@@ -41,7 +41,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.39"
+ssg = "0.0.40"
 ```
 
 ### Prebuilt binaries
@@ -57,7 +57,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu
-sudo dpkg -i ssg_0.0.39_amd64.deb
+sudo dpkg -i ssg_0.0.40_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -108,7 +108,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Streaming compilation** -- configurable memory budgets for 100K+ page sites
-- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (planned for v0.0.40)
+- **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.0.40)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
 ---
@@ -139,7 +139,7 @@ graph TD
 | :--- | :--- |
 | **Source** | 39,103 lines across 38 modules |
 | **Test suite** | 1,640 unit tests + 14 integration test suites |
-| **Coverage** | 95% region, 97% line, 96% function |
+| **Coverage** | 95% region, 95% line, 95% function |
 | **Plugin pipeline** | 33 plugins, Rayon-parallelised |
 | **Examples** | 8 branded examples |
 | **Dependencies** | 15 runtime |
@@ -165,16 +165,17 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Performance** | Parallel file operations with Rayon, fused single-pass HTML transforms, content-addressed caching (FNV-1a), dependency graph for incremental rebuilds, streaming compilation for 100K+ pages, `--jobs N` thread control, `--max-memory MB` budget |
 | **AI Pipeline** | Agentic LLM pipeline (`--ai-fix`): audit content readability, diagnose failing files, generate fixes via local LLM (Ollama), verify improvement, produce JSON report. Dry-run mode (`--ai-fix-dry-run`). Auto-generate alt text, meta descriptions, and JSON-LD via LLM |
 | **Readability** | Multilingual scoring: Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES). BCP 47 language detection from frontmatter. CI readability gate |
-| **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation, shortcodes (youtube, gist, figure, admonition) |
-| **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod |
+| **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation, shortcodes (youtube, gist, figure, admonition), compile-time word count + estimated reading time injected into `.meta.json` sidecars |
+| **SEO** | Meta description, Open Graph (title, description, type, url, image, locale), auto-generated OG social cards (SVG), Twitter Cards, canonical URLs, robots.txt, sitemaps with per-page lastmod, first-class topic-cluster taxonomy (hub + pillar indexes), related-post discovery via `Jaccard` tag/category overlap |
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
 | **Accessibility** | WCAG 2.2 AA validation on every build (1.1.1, 1.3.1, 2.3.1, 2.4.4, 2.4.13, 2.5.8, 3.1.1, 3.2.6), axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks; emits `wcag-compliance.json` matrix ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
 | **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
-| **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention |
+| **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention, optional `cdn_prefix` for serving local image assets from a CDN host |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
 | **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `Cmd+K` |
-| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, asset fingerprinting, path traversal prevention |
+| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, native JS/CSS minification, asset fingerprinting, path traversal prevention, structured `SsgError` type-safe error hierarchy |
+| **Supply Chain** | Automated `CycloneDX` 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
 | **WebAssembly** | ssg-core + ssg-wasm compile to `wasm32-unknown-unknown` with wasm-bindgen |
 | **Islands** | Web Components with lazy hydration (visible, idle, interaction) |
@@ -229,7 +230,7 @@ Options:
 <summary><b>Minimal pipeline</b></summary>
 
 ```rust,no_run
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), ssg::error::SsgError> {
     ssg::run()
 }
 ```
@@ -241,7 +242,7 @@ fn main() -> anyhow::Result<()> {
 
 ```rust,no_run
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
-use anyhow::Result;
+use ssg::error::SsgError;
 use std::path::Path;
 
 #[derive(Debug)]
@@ -249,13 +250,13 @@ struct LogPlugin;
 
 impl Plugin for LogPlugin {
     fn name(&self) -> &str { "logger" }
-    fn after_compile(&self, ctx: &PluginContext) -> Result<()> {
+    fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         println!("Site compiled to {:?}", ctx.site_dir);
         Ok(())
     }
 }
 
-fn main() -> Result<()> {
+fn main() -> Result<(), SsgError> {
     let mut pm = PluginManager::new();
     pm.register(LogPlugin);
     pm.register(ssg::plugins::MinifyPlugin);
