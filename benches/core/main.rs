@@ -26,9 +26,29 @@
 //!   * `cargo bench --bench core -- cache::` — only `cache` benchmarks
 
 mod cache;
+mod collections;
+mod content;
+mod depgraph;
+mod deploy;
 mod frontmatter;
+mod fs_ops;
+mod logging;
+mod schema;
+mod stream;
 mod walk;
 
 use criterion::criterion_main;
 
-criterion_main!(cache::benches, frontmatter::benches, walk::benches);
+criterion_main!(
+    cache::benches,
+    collections::benches,
+    content::benches,
+    depgraph::benches,
+    deploy::benches,
+    frontmatter::benches,
+    fs_ops::benches,
+    logging::benches,
+    schema::benches,
+    stream::benches,
+    walk::benches
+);

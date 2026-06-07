@@ -63,7 +63,7 @@ fn read_sidecar_returns_word_count_and_reading_time() {
         "---\ntitle: Post\n---\n# Heading\n\nBody words here.",
     )
     .unwrap();
-    emit_sidecars(&content, &sidecar).unwrap();
+    let _ = emit_sidecars(&content, &sidecar).unwrap();
 
     let meta =
         read_sidecar(&sidecar.join("post.html")).unwrap().expect("sidecar");
@@ -85,7 +85,7 @@ fn read_sidecar_for_html_resolves_md_mapping() {
         "---\ntitle: Post\n---\n# H\n\nBody.",
     )
     .unwrap();
-    emit_sidecars(&content, &sidecar).unwrap();
+    let _ = emit_sidecars(&content, &sidecar).unwrap();
 
     // The function looks up `.html` paths by mapping back to `.md`.
     let html = site.join("post.html");

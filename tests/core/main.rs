@@ -20,5 +20,19 @@
 //!   * `cargo test --test core -- some_fn_name` — specific test by name
 
 mod cache;
+mod collections;
+mod content;
+mod depgraph;
+mod deploy;
 mod frontmatter;
+mod fs_ops;
+mod logging;
+mod otel;
+mod pipeline;
+mod process;
+mod scaffold;
+mod schema;
+mod stream;
+mod streaming;
+mod template_engine;
 mod walk;
