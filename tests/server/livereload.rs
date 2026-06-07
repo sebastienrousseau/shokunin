@@ -3,7 +3,31 @@
 
 //! Integration tests for `ssg::livereload`.
 
-use ssg::livereload::css_reload_message;
+use ssg::livereload::{css_reload_message, LiveReloadPlugin};
+use ssg::plugin::Plugin;
+
+#[test]
+fn livereload_plugin_default_uses_known_port() {
+    let p = LiveReloadPlugin::new();
+    assert_eq!(p.port(), 35729);
+}
+
+#[test]
+fn livereload_plugin_with_port_overrides_default() {
+    let p = LiveReloadPlugin::with_port(9999);
+    assert_eq!(p.port(), 9999);
+}
+
+#[test]
+fn livereload_plugin_default_trait_matches_new() {
+    let p = LiveReloadPlugin::default();
+    assert_eq!(p.port(), 35729);
+}
+
+#[test]
+fn livereload_plugin_name_is_stable() {
+    assert!(!LiveReloadPlugin::new().name().is_empty());
+}
 
 #[test]
 fn css_reload_message_contains_path() {

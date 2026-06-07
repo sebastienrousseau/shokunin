@@ -3,8 +3,13 @@
 
 //! Integration tests for `ssg::plugins::search`.
 
+use std::fs;
+
 use ssg::plugin::Plugin;
-use ssg::search::{SearchEntry, SearchIndex, SearchPlugin};
+use ssg::search::{
+    SearchEntry, SearchIndex, SearchLabels, SearchPlugin,
+};
+use tempfile::tempdir;
 
 #[test]
 fn search_plugin_name_is_stable() {
@@ -20,6 +25,61 @@ fn search_entry_constructs_with_explicit_fields() {
         headings: vec![],
     };
     assert_eq!(entry.title, "Hello");
+}
+
+#[test]
+fn search_labels_english_returns_english_strings() {
+    let l = SearchLabels::english();
+    assert!(!l.button_text.is_empty());
+    assert!(!l.input_placeholder.is_empty());
+}
+
+#[test]
+fn search_labels_french_returns_french_strings() {
+    let l = SearchLabels::french();
+    assert!(!l.button_text.is_empty());
+}
+
+#[test]
+fn search_labels_for_locale_recognises_known_codes() {
+    let en = SearchLabels::for_locale("en-US");
+    let fr = SearchLabels::for_locale("fr-FR");
+    let unknown = SearchLabels::for_locale("xx-XX");
+    assert!(!en.button_text.is_empty());
+    assert!(!fr.button_text.is_empty());
+    assert!(!unknown.button_text.is_empty()); // fallback to english
+}
+
+#[test]
+fn search_index_build_from_html_site_returns_entries() {
+    let dir = tempdir().unwrap();
+    let site = dir.path();
+    fs::write(
+        site.join("a.html"),
+        "<html><head><title>A</title></head><body>body a</body></html>",
+    )
+    .unwrap();
+    fs::write(
+        site.join("b.html"),
+        "<html><head><title>B</title></head><body>body b</body></html>",
+    )
+    .unwrap();
+    let idx = SearchIndex::build(site).expect("build");
+    assert!(idx.entries.len() >= 2);
+}
+
+#[test]
+fn search_index_write_persists_json_artefact() {
+    let dir = tempdir().unwrap();
+    let site = dir.path();
+    fs::write(
+        site.join("x.html"),
+        "<html><head><title>X</title></head><body>x</body></html>",
+    )
+    .unwrap();
+    let idx = SearchIndex::build(site).expect("build");
+    idx.write(site).expect("write");
+    assert!(site.join("search-index.json").exists());
 }
 
 #[test]

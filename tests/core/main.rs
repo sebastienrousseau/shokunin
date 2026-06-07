@@ -28,6 +28,7 @@ mod frontmatter;
 mod fs_ops;
 mod logging;
 mod otel;
+mod paths;
 mod pipeline;
 mod process;
 mod scaffold;
