@@ -192,7 +192,7 @@ jobs:
           [ "$ok" = "1" ]
       - name: Upload to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: coverage.lcov
           fail_ci_if_error: false

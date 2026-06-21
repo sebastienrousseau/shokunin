@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.40"                      # The version of the library
+version = "0.0.41"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -137,22 +137,22 @@ proptest = "1"
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-http-handle = "0.0.4"
+http-handle = "0.0.5"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.40" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.41" }
 thiserror = "2"
-staticdatagen = "0.0.8"
+staticdatagen = "0.0.9"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
 # Replaces the previous FNV-1a placeholder that emitted invalid `sha256-`
 # integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
 # `base64` emits the canonical base64 encoding that browsers expect.
-sha2 = "0.10"
+sha2 = "0.11"
 base64 = "0.22"
 
 
@@ -163,7 +163,7 @@ minijinja = { version = "2", optional = true, features = ["loader"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
 
 # Owned crate for frontmatter parsing
-frontmatter-gen = "0.0.5"
+frontmatter-gen = "0.0.6"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`
