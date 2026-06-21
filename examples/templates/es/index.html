@@ -4,16 +4,16 @@
   <meta charset="{{charset}}" />
   <link rel="preconnect" href="https://cloudcdn.pro" crossorigin />
   <title>{{title}}</title>
-  {{primary}}
-  {{opengraph}}
+  {{!primary}}
+  {{!opengraph}}
   <meta name="accessibility" content="ARIA" />
   <meta name="accessibility" content="fullKeyboardControl" />
   <meta name="accessibility" content="noFlashingHazard" />
-  {{apple}}
+  {{!apple}}
   <meta name="mobile-web-app-capable" content="yes" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src 'self';" />
-  {{microsoft}}
-  {{twitter}}
+  {{!microsoft}}
+  {{!twitter}}
   <link rel="alternate" href="{{url}}" hreflang="{{hreflang}}" />
   <link rel="canonical" href="{{url}}" />
   <link rel="icon" type="image/x-icon" href="{{cdn}}/{{short_name}}/images/favicon.ico" />
@@ -105,7 +105,7 @@ pre code{background:none;padding:0}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--vp-br);outline:2px solid var(--vp-br);outline-offset:1px}
 .form-group textarea{resize:vertical;min-height:120px}
 :focus-visible{outline:2px solid var(--vp-br);outline-offset:2px}
-/* Style the {{navigation}} output (Bootstrap classes from staticdatagen) */
+/* Style the {{!navigation}} output (Bootstrap classes from staticdatagen) */
 .navbar-nav{display:flex;align-items:center;gap:0;list-style:none;margin:0;padding:0}
 .nav-item{display:inline-flex}
 .nav-item a{display:block;padding:4px 12px;color:var(--vp-t1);font-size:14px;font-weight:500;text-decoration:none;text-transform:none}
@@ -238,7 +238,7 @@ pre code{background:none;padding:0}
     </div>
   </header>
   <main id="main" class="content-wrap" aria-label="Contenido principal">
-    <div class="content">{{content}}</div>
+    <div class="content">{{!content}}</div>
   </main>
   <footer class="footer" id="footer" aria-label="Pie de página">
     <div class="footer-inner">
