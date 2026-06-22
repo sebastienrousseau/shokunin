@@ -163,7 +163,7 @@ minijinja = { version = "2", optional = true, features = ["loader"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
 
 # Owned crate for frontmatter parsing
-frontmatter-gen = "0.0.5"
+frontmatter-gen = "0.0.6"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

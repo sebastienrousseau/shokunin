@@ -1420,22 +1420,23 @@ dependencies = [
 
 [[package]]
 name = "frontmatter-gen"
-version = "0.0.5"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73ffa823be6d8f1edb3785ddf46d97558f51ea470874a04eb51c3bf37c7c73f5"
+checksum = "05ce7e5bf87bc3550840886b912ccefd0ef5188e69e750b121e19168192445c8"
 dependencies = [
  "anyhow",
  "env_logger",
+ "euxis-commons",
  "log",
+ "noyalib",
  "serde",
  "serde_json",
- "serde_yml",
  "simple_logger",
  "tempfile",
  "thiserror 2.0.18",
  "time",
  "tokio",
- "toml 0.8.23",
+ "toml 1.1.2+spec-1.1.0",
  "uuid",
  "version_check",
 ]
@@ -2657,6 +2658,19 @@ name = "nonmax"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
+
+[[package]]
+name = "noyalib"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14057395c16a4230575c6f86bfa074db87e8458626d3e56b20c2454334a7e50c"
+dependencies = [
+ "indexmap",
+ "memchr",
+ "rustc-hash 2.1.2",
+ "serde",
+ "smallvec",
+]
 
 [[package]]
 name = "nu-ansi-term"
@@ -4595,7 +4609,7 @@ dependencies = [
  "clap",
  "criterion",
  "fail",
- "frontmatter-gen 0.0.5",
+ "frontmatter-gen 0.0.6",
  "http-handle 0.0.4",
  "image",
  "log",
