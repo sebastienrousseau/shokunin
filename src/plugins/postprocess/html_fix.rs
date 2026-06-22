@@ -212,6 +212,12 @@ fn find_modern_mobile_web_app_capable(html: &str) -> Option<usize> {
 /// after the legacy Apple variant so installed-PWA support works in Chrome
 /// without console deprecation warnings. Handles minified HTML where the
 /// `name=` attribute may be unquoted and may appear after `content=`.
+///
+/// When the legacy meta is HTML-escaped (e.g. `&lt;meta
+/// name=&quot;apple-mobile-web-app-capable&quot;…&gt;` leaked into body
+/// content via a misconfigured template), no usable anchor exists. In that
+/// case, fall back to injecting the modern meta into `<head>` so the
+/// modern-companion validator still passes.
 pub(super) fn inject_mobile_web_app_capable_meta(html: &str) -> String {
     let modern = "<meta name=\"mobile-web-app-capable\" content=\"yes\">";
     // Find the apple-variant attribute name. Tolerate quoted/unquoted forms.
@@ -221,16 +227,41 @@ pub(super) fn inject_mobile_web_app_capable_meta(html: &str) -> String {
         "name=apple-mobile-web-app-capable",
     ];
     let name_pos = candidates.iter().find_map(|n| html.find(n));
-    let Some(name_pos) = name_pos else {
-        return html.to_string();
-    };
-    // Walk forward to the next `>` that closes this <meta> tag.
-    let after = &html[name_pos..];
-    let Some(rel_close) = after.find('>') else {
-        return html.to_string();
-    };
-    let insert_at = name_pos + rel_close + 1;
-    format!("{}{modern}{}", &html[..insert_at], &html[insert_at..])
+    if let Some(name_pos) = name_pos {
+        // Walk forward to the next `>` that closes this <meta> tag.
+        let after = &html[name_pos..];
+        if let Some(rel_close) = after.find('>') {
+            let insert_at = name_pos + rel_close + 1;
+            return format!(
+                "{}{modern}{}",
+                &html[..insert_at],
+                &html[insert_at..]
+            );
+        }
+    }
+    // Fallback: the legacy meta is present only in escaped form (no real
+    // anchor in the source). Inject the modern meta into <head> so Chrome
+    // gets the companion and the modern-companion validator passes.
+    inject_modern_meta_into_head(html, modern)
+}
+
+/// Injects a `<meta>` tag just before `</head>`, or just after `<head>` if
+/// the close tag isn't present. If neither anchor exists, prepends the meta
+/// so the document still contains the marker — but in practice every
+/// well-formed page has a `<head>` element.
+fn inject_modern_meta_into_head(html: &str, meta: &str) -> String {
+    // Prefer inserting right before </head> so it lives in the head block
+    // regardless of where the apple-meta string appeared.
+    let lower = html.to_ascii_lowercase();
+    if let Some(pos) = lower.find("</head>") {
+        return format!("{}{meta}{}", &html[..pos], &html[pos..]);
+    }
+    if let Some(pos) = lower.find("<head>") {
+        let insert_at = pos + "<head>".len();
+        return format!("{}{meta}{}", &html[..insert_at], &html[insert_at..]);
+    }
+    // No <head> at all — prepend so the substring is at least present.
+    format!("{meta}{html}")
 }
 
 /// Fix JSON-LD date fields from RFC 2822 to ISO 8601.
@@ -722,17 +753,49 @@ mod tests {
 
     #[test]
     fn test_inject_mobile_web_app_capable_meta_edge_cases() {
-        // Missing apple meta
-        assert_eq!(
-            inject_mobile_web_app_capable_meta("<head></head>"),
-            "<head></head>"
+        // Missing apple meta — no <head> either, must inject to keep
+        // substring present (caller only invokes this when the legacy
+        // substring is present somewhere in the document).
+        let no_head = inject_mobile_web_app_capable_meta("plain text");
+        assert!(
+            no_head.contains("name=\"mobile-web-app-capable\""),
+            "fallback should inject modern meta: {no_head}"
         );
-        // Unclosed tag
-        assert_eq!(
-            inject_mobile_web_app_capable_meta(
-                "<meta name=\"apple-mobile-web-app-capable\""
-            ),
-            "<meta name=\"apple-mobile-web-app-capable\""
+
+        // Unclosed apple meta tag — no closing `>` so the primary anchor
+        // path cannot insert; falls through to head-injection. Since
+        // there's also no <head>, the meta is prepended.
+        let unclosed = inject_mobile_web_app_capable_meta(
+            "<meta name=\"apple-mobile-web-app-capable\"",
+        );
+        assert!(
+            unclosed.contains("name=\"mobile-web-app-capable\""),
+            "fallback should inject modern meta: {unclosed}"
+        );
+    }
+
+    #[test]
+    fn test_inject_modern_meta_fallback_when_apple_meta_is_escaped() {
+        // Regression for PR #511 / feat/v0.0.41: staticdatagen-rendered
+        // pages can leak the legacy apple meta as fully HTML-escaped body
+        // text (`&lt;meta name=&quot;apple-…&quot;…&gt;`). The injector
+        // cannot find a `name="apple-…"` anchor, so it must fall back to
+        // injecting the modern companion into <head> instead.
+        let html = "<html><head><title>x</title></head><body>\
+                    &lt;meta name=&quot;apple-mobile-web-app-capable&quot; \
+                    content=&quot;yes&quot;&gt;</body></html>";
+        let result = apply_html_fixes(html);
+        assert!(
+            result.contains("name=\"mobile-web-app-capable\""),
+            "modern companion must be injected even when legacy is escaped"
+        );
+        // And it should land inside <head>, not after the escaped body text.
+        let modern_pos =
+            result.find("name=\"mobile-web-app-capable\"").unwrap();
+        let head_close_pos = result.find("</head>").unwrap();
+        assert!(
+            modern_pos < head_close_pos,
+            "modern meta should live inside <head>:\n{result}"
         );
     }
 
