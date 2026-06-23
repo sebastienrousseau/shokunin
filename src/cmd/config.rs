@@ -157,6 +157,43 @@ impl SsgConfig {
         // 3) Return the result
         Ok(config)
     }
+
+    /// Subcommand variant: subcommand parsers re-use the same
+    /// `--config / --content / --output / --template / --serve` flag
+    /// names but omit the legacy `--new` (project scaffolding is its
+    /// own command). The override logic is identical otherwise, so we
+    /// just delegate through a thin shim that skips the missing
+    /// `--new` lookup.
+    ///
+    /// # Errors
+    /// Returns [`CliError`] under the same conditions as
+    /// [`Self::from_matches`].
+    pub fn from_subcommand_matches(
+        sub_m: &ArgMatches,
+    ) -> Result<Self, CliError> {
+        if let Some(config_path) = sub_m.get_one::<PathBuf>("config") {
+            return Self::from_file(config_path);
+        }
+
+        let mut config = Self::default();
+        if let Some(content_dir) = sub_m.get_one::<PathBuf>("content") {
+            config.content_dir.clone_from(content_dir);
+        }
+        if let Some(output_dir) = sub_m.get_one::<PathBuf>("output") {
+            config.output_dir.clone_from(output_dir);
+        }
+        if let Some(template_dir) = sub_m.get_one::<PathBuf>("template") {
+            config.template_dir.clone_from(template_dir);
+        }
+        // `dev` exposes `--serve`; `build` / `check` / `deploy` do not.
+        if sub_m.try_contains_id("serve").unwrap_or(false) {
+            if let Some(serve_dir) = sub_m.get_one::<PathBuf>("serve") {
+                config.serve_dir = Some(serve_dir.clone());
+            }
+        }
+        config.validate()?;
+        Ok(config)
+    }
     /// Loads configuration from a TOML file, enforcing a maximum file size limit.
     ///
     /// # Arguments

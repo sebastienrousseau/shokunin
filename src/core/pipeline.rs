@@ -137,6 +137,46 @@ impl RunOptions {
             ai_fix_dry_run: matches.get_flag("ai-fix-dry-run"),
         }
     }
+
+    /// Builds a `RunOptions` from subcommand-style matches.
+    ///
+    /// The subcommand parser exposes a narrower flag set — `--quiet`,
+    /// `--drafts`, `--jobs`, and on the `build` subcommand
+    /// `--max-memory`. Anything else falls back to the defaults so
+    /// downstream callers don't have to special-case missing IDs.
+    pub fn from_subcommand_matches(sub_m: &clap::ArgMatches) -> Self {
+        let opt_flag = |name: &str| -> bool {
+            sub_m.try_contains_id(name).unwrap_or(false) && sub_m.get_flag(name)
+        };
+        let opt_one = |name: &str| -> Option<usize> {
+            if sub_m.try_contains_id(name).unwrap_or(false) {
+                sub_m.get_one::<usize>(name).copied()
+            } else {
+                None
+            }
+        };
+        let opt_str = |name: &str| -> Option<String> {
+            if sub_m.try_contains_id(name).unwrap_or(false) {
+                sub_m.get_one::<String>(name).cloned()
+            } else {
+                None
+            }
+        };
+        Self {
+            quiet: opt_flag("quiet"),
+            include_drafts: opt_flag("drafts"),
+            // `deploy` lives on the deploy subcommand as `--target`.
+            // We map it across so the existing
+            // `register_default_plugins(..., deploy_target)` keeps its
+            // contract.
+            deploy_target: opt_str("target"),
+            validate_only: false,
+            jobs: opt_one("jobs"),
+            max_memory_mb: opt_one("max-memory"),
+            ai_fix: false,
+            ai_fix_dry_run: false,
+        }
+    }
 }
 
 /// Resolves distinct build and site directories for compilation.

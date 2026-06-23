@@ -169,6 +169,11 @@ pub struct PluginContext {
     pub html_files: Option<Arc<Vec<PathBuf>>>,
     /// Page dependency graph for incremental rebuilds.
     pub dep_graph: Option<crate::depgraph::DepGraph>,
+    /// When `true`, plugins should perform validation passes only and
+    /// must not write to disk. Set by the `ssg check` subcommand
+    /// (issue #527). Plugins that don't have a meaningful read-only
+    /// mode may safely ignore this flag.
+    pub dry_run: bool,
 }
 
 impl PluginContext {
@@ -212,6 +217,7 @@ impl PluginContext {
             memory_budget: None,
             html_files: None,
             dep_graph: None,
+            dry_run: false,
         }
     }
 
@@ -234,7 +240,19 @@ impl PluginContext {
             memory_budget: None,
             html_files: None,
             dep_graph: None,
+            dry_run: false,
         }
+    }
+
+    /// Sets the `dry_run` flag and returns the modified context.
+    ///
+    /// Used by the `ssg check` subcommand (issue #527) to signal to
+    /// plugins that they should run their validation passes without
+    /// writing to disk.
+    #[must_use]
+    pub const fn with_dry_run(mut self, dry_run: bool) -> Self {
+        self.dry_run = dry_run;
+        self
     }
 }
 

@@ -36,7 +36,9 @@ mod config;
 mod error;
 mod validation;
 
-pub use cli::Cli;
+pub use cli::{
+    Cli, CliInvocation, DEPLOY_TARGETS, LEGACY_DEPRECATION_WARNING, SUBCOMMANDS,
+};
 pub use config::{ImageConfig, SsgConfig, SsgConfigBuilder};
 pub use error::{CliError, LanguageCode};
 pub use validation::{is_valid_url, validate_url};

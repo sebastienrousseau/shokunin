@@ -52,7 +52,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::cmd::{Cli, SsgConfig};
+use crate::cmd::{Cli, CliInvocation, SsgConfig};
 
 // Third-party imports
 use log::info;
@@ -103,6 +103,7 @@ pub use crate::core_group::collections;
 pub use crate::core_group::content;
 pub use crate::core_group::depgraph;
 pub use crate::core_group::deploy;
+pub use crate::core_group::deploy_adapter;
 pub use crate::core_group::frontmatter;
 pub use crate::core_group::fs_ops;
 pub use crate::core_group::logging;
@@ -403,45 +404,66 @@ pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
 
 /// Executes the static site generation process.
 ///
-/// Parses CLI arguments, runs the plugin pipeline around compilation,
-/// and starts a local dev server. This function blocks indefinitely
-/// while the server is running.
+/// Parses CLI arguments via [`Cli::parse_and_dispatch`], then routes to
+/// either a subcommand handler (issue #527) or the legacy flag-driven
+/// pipeline. This function blocks indefinitely while the dev server is
+/// running.
 pub fn run() -> Result<(), SsgError> {
-    // Parse CLI arguments first so that `--help` and `--version`
-    // short-circuit *before* the logger emits its banner. clap exits
-    // the process for those flags, so we never reach the lines below.
-    let matches = Cli::build().get_matches();
+    // Parse argv via the unified subcommand-aware dispatcher. clap
+    // short-circuits `--help` / `--version` inside this call so the
+    // logger banner never prints for those flags.
+    let argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
+    let (invocation, matches) = match Cli::parse_and_dispatch(argv) {
+        Ok(pair) => pair,
+        // clap errors render themselves and exit with the right code
+        // (0 for `--help` / `--version`, 2 for parse failures), so
+        // we delegate rather than wrap into SsgError.
+        Err(e) => e.exit(),
+    };
 
     logging::initialize_logging()?;
 
     // OTel build tracing — only initialises if both the `otel` feature
-    // is compiled in AND `--trace` was passed. No-op otherwise.
-    let trace_flag = matches.get_flag("trace");
+    // is compiled in AND `--trace` was passed. The subcommand parser
+    // doesn't (yet) expose `--trace`; `try_contains_id` keeps the
+    // call safe on both code paths.
+    let trace_flag = if matches.try_contains_id("trace").unwrap_or(false) {
+        matches.get_flag("trace")
+    } else {
+        false
+    };
     let _ = otel::init_if_enabled(trace_flag);
 
     info!("Starting site generation process");
 
-    let config = SsgConfig::from_matches(&matches).map_err(|e| {
-        SsgError::Validation {
+    dispatch_invocation(invocation, &matches)
+}
+
+/// Routes a parsed [`CliInvocation`] to the appropriate handler.
+fn dispatch_invocation(
+    invocation: CliInvocation,
+    matches: &clap::ArgMatches,
+) -> Result<(), SsgError> {
+    match invocation {
+        CliInvocation::Legacy => run_legacy(matches),
+        CliInvocation::Build => run_subcommand(matches, "build", false),
+        CliInvocation::Dev => run_subcommand(matches, "dev", true),
+        CliInvocation::Check => run_check(matches),
+        CliInvocation::Deploy { target } => run_deploy(matches, &target),
+    }
+}
+
+/// Legacy code path: behaves exactly like 0.0.42 `ssg` did.
+fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
+    let config =
+        SsgConfig::from_matches(matches).map_err(|e| SsgError::Validation {
             field: "config".to_string(),
             message: e.to_string(),
-        }
-    })?;
-    let opts = pipeline::RunOptions::from_matches(&matches);
+        })?;
+    let opts = pipeline::RunOptions::from_matches(matches);
 
-    // Configure Rayon global thread pool from --jobs flag.
-    if let Some(n) = opts.jobs {
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(n)
-            .build_global()
-            .map_err(|e| SsgError::Validation {
-                field: "jobs".to_string(),
-                message: format!("failed to configure Rayon thread pool: {e}"),
-            })?;
-        info!("Rayon thread pool configured with {n} threads");
-    }
+    apply_rayon_thread_pool(opts.jobs)?;
 
-    // --validate: validate content schemas and exit without building.
     if opts.validate_only {
         return content::validate_only(&config.content_dir).map_err(|e| {
             SsgError::Validation {
@@ -468,14 +490,179 @@ pub fn run() -> Result<(), SsgError> {
         opts.quiet,
     )?;
 
-    // Only start the dev server if `--serve` was explicitly requested.
-    // Without this guard the binary blocks indefinitely, breaking CI.
+    // Legacy contract: `--serve` boots the dev server.
     if config.serve_dir.is_some() {
         plugins.run_on_serve(&ctx)?;
         serve_site(&site_dir)
     } else {
         Ok(())
     }
+}
+
+/// Run handler shared by the `ssg build` and `ssg dev` subcommands.
+///
+/// `start_server` controls whether the dev server is booted after the
+/// build completes.
+fn run_subcommand(
+    matches: &clap::ArgMatches,
+    name: &str,
+    start_server: bool,
+) -> Result<(), SsgError> {
+    let sub_m = matches.subcommand_matches(name).ok_or_else(|| {
+        SsgError::Validation {
+            field: "subcommand".to_string(),
+            message: format!("missing matches for `{name}`"),
+        }
+    })?;
+
+    let config = build_config_from_subcommand_matches(sub_m)?;
+    let opts = pipeline::RunOptions::from_subcommand_matches(sub_m);
+
+    apply_rayon_thread_pool(opts.jobs)?;
+
+    if !opts.quiet {
+        Cli::print_banner();
+    }
+
+    let (plugins, ctx, build_dir, site_dir) =
+        pipeline::build_pipeline(&config, &opts);
+
+    execute_build_pipeline(
+        &plugins,
+        &ctx,
+        &build_dir,
+        &config.content_dir,
+        &site_dir,
+        &config.template_dir,
+        opts.quiet,
+    )?;
+
+    if start_server {
+        plugins.run_on_serve(&ctx)?;
+        serve_site(&site_dir)
+    } else {
+        Ok(())
+    }
+}
+
+/// Run handler for the `ssg check` subcommand (issue #527 AC3).
+///
+/// Runs the full plugin pipeline with `dry_run: true` so plugins know
+/// to skip writes. Exits 0 iff every plugin's validation pass
+/// succeeded.
+fn run_check(matches: &clap::ArgMatches) -> Result<(), SsgError> {
+    let sub_m = matches.subcommand_matches("check").ok_or_else(|| {
+        SsgError::Validation {
+            field: "subcommand".to_string(),
+            message: "missing matches for `check`".to_string(),
+        }
+    })?;
+
+    let config = build_config_from_subcommand_matches(sub_m)?;
+    let opts = pipeline::RunOptions::from_subcommand_matches(sub_m);
+
+    apply_rayon_thread_pool(opts.jobs)?;
+
+    // First, validate content schemas — cheap and catches the largest
+    // class of authoring mistakes before we bother with the rest of
+    // the plugin pipeline.
+    content::validate_only(&config.content_dir).map_err(|e| {
+        SsgError::Validation {
+            field: "content".to_string(),
+            message: e.to_string(),
+        }
+    })?;
+
+    // Run the before_compile hooks under dry_run. These are the hooks
+    // that perform validation (ContentValidationPlugin,
+    // AccessibilityPlugin, SeoPlugin, JsonLdPlugin, CspPlugin). We
+    // deliberately skip after_compile / on_serve — those would write
+    // to disk.
+    let (plugins, ctx, _build_dir, _site_dir) =
+        pipeline::build_pipeline(&config, &opts);
+    let ctx = ctx.with_dry_run(true);
+    plugins.run_before_compile(&ctx)?;
+
+    if !opts.quiet {
+        println!("check: all validators passed");
+    }
+    Ok(())
+}
+
+/// Run handler for the `ssg deploy` subcommand (issue #527 AC4).
+///
+/// Builds the site, then invokes the deploy adapter for the chosen
+/// target. Stubs print a `not yet implemented` message and exit
+/// cleanly.
+fn run_deploy(
+    matches: &clap::ArgMatches,
+    target: &str,
+) -> Result<(), SsgError> {
+    let sub_m = matches.subcommand_matches("deploy").ok_or_else(|| {
+        SsgError::Validation {
+            field: "subcommand".to_string(),
+            message: "missing matches for `deploy`".to_string(),
+        }
+    })?;
+
+    let config = build_config_from_subcommand_matches(sub_m)?;
+    let opts = pipeline::RunOptions::from_subcommand_matches(sub_m);
+
+    apply_rayon_thread_pool(opts.jobs)?;
+
+    if !opts.quiet {
+        Cli::print_banner();
+    }
+
+    let (plugins, ctx, build_dir, site_dir) =
+        pipeline::build_pipeline(&config, &opts);
+
+    execute_build_pipeline(
+        &plugins,
+        &ctx,
+        &build_dir,
+        &config.content_dir,
+        &site_dir,
+        &config.template_dir,
+        opts.quiet,
+    )?;
+
+    let target_enum = deploy_adapter::Target::from_cli(target)?;
+    let adapter = deploy_adapter::adapter_for(target_enum);
+    if !opts.quiet {
+        println!("deploy: invoking adapter `{}`", adapter.name());
+    }
+    adapter.deploy(&site_dir)
+}
+
+/// Builds an `SsgConfig` from subcommand-style matches. The
+/// subcommand parser uses the same flag names as the legacy parser
+/// (`--config`, `--content`, `--output`, `--template`, etc.) but no
+/// `--new`, so we re-use the existing override machinery.
+fn build_config_from_subcommand_matches(
+    sub_m: &clap::ArgMatches,
+) -> Result<SsgConfig, SsgError> {
+    SsgConfig::from_subcommand_matches(sub_m).map_err(|e| {
+        SsgError::Validation {
+            field: "config".to_string(),
+            message: e.to_string(),
+        }
+    })
+}
+
+/// Helper: configure the global Rayon thread pool from `--jobs`.
+fn apply_rayon_thread_pool(jobs: Option<usize>) -> Result<(), SsgError> {
+    if let Some(n) = jobs {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(n)
+            .build_global()
+            .map_err(|e| SsgError::Validation {
+                field: "jobs".to_string(),
+                message: format!("failed to configure Rayon thread pool: {e}"),
+            })?;
+        info!("Rayon thread pool configured with {n} threads");
+    }
+    Ok(())
 }
 
 #[cfg(test)]
