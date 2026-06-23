@@ -12,6 +12,10 @@
 #   data tables. OSI-approved. Predates Unicode-3.0; both are acceptable here.
 # Zlib: used by foldhash (OSI-approved, FSF-free, permissive)
 # CC0-1.0: used by tiny-keccak → const-random → dlv-list (public-domain dedication)
+# NCSA: used by libfuzzer-sys (transitive via rav1e → ravif, our AVIF chain
+#   added in v0.0.42). OSI-approved, FSF Free/Libre, BSD-like permissive.
+# CDLA-Permissive-2.0: used by webpki-roots (transitive via ureq, our LLM
+#   chain added in v0.0.42). Permissive Community Data License Agreement.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -27,6 +31,8 @@ allow = [
     "AGPL-3.0-only",
     "Zlib",
     "CC0-1.0",
+    "NCSA",
+    "CDLA-Permissive-2.0",
 ]
 
 [bans]
