@@ -28,7 +28,7 @@ const MAX_ITEMS: usize = 50;
 ///
 /// Runs in `after_compile`, alongside `RssAggregatePlugin` and
 /// `AtomFeedPlugin`. Mirrors the sidecar discovery logic of
-/// `AtomFeedPlugin` (site_dir → build_dir/.meta → rss.xml fallback)
+/// `AtomFeedPlugin` (`site_dir` → `build_dir/.meta` → `rss.xml` fallback)
 /// so the three feeds stay in sync.
 #[derive(Debug, Clone, Copy)]
 pub struct JsonFeedPlugin;

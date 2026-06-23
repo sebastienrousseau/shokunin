@@ -38,7 +38,7 @@ pub struct ImageConfig {
     pub lazy_avif: bool,
 }
 
-fn default_avif_quality() -> u8 {
+const fn default_avif_quality() -> u8 {
     70
 }
 
