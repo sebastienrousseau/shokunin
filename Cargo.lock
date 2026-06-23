@@ -4123,9 +4123,16 @@ dependencies = [
  "frontmatter-gen",
  "http-handle 0.0.5",
  "image",
+ "lightningcss",
  "log",
+ "minify-html 0.15.0",
  "minijinja",
  "openssl",
+ "oxc_allocator",
+ "oxc_codegen",
+ "oxc_minifier",
+ "oxc_parser",
+ "oxc_span",
  "proptest",
  "pulldown-cmark",
  "rayon",
@@ -4142,6 +4149,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "version_check",
+ "walkdir",
 ]
 
 [[package]]

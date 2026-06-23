@@ -174,7 +174,8 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention, optional `cdn_prefix` for serving local image assets from a CDN host |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
 | **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `Cmd+K` |
-| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, native JS/CSS minification, asset fingerprinting, path traversal prevention, structured `SsgError` type-safe error hierarchy |
+| **Security** | CSP build-time extraction (zero `unsafe-inline`), SRI hash generation, asset fingerprinting, path traversal prevention, structured `SsgError` type-safe error hierarchy |
+| **Minification** | Native HTML / JS / CSS minification (opt-in `minify` feature) via [`minify-html`](https://crates.io/crates/minify-html/0.15.0) `0.15` (HTML, `<pre>` preserved), [`oxc_minifier`](https://crates.io/crates/oxc_minifier/0.95.0) `0.95` (JS, mangle + DCE), and [`lightningcss`](https://crates.io/crates/lightningcss/1.0.0-alpha.71) `1.0.0-alpha.71` (CSS). Recursive walk processes every `.html`, `.css`, and `.js` file under `site_dir` regardless of depth. |
 | **Supply Chain** | Automated `CycloneDX` 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
 | **WebAssembly** | ssg-core + ssg-wasm compile to `wasm32-unknown-unknown` with wasm-bindgen |
