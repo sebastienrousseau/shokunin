@@ -20,7 +20,22 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use std::{fs, path::Path, process::Command};
+use std::{fs, path::Path, time::Duration};
+
+/// Default per-call timeout for the local LLM HTTP roundtrip.
+///
+/// Matches the `llm.timeout_secs` config field (issue #520). Two
+/// minutes covers a cold-load of a ~7B parameter model on a
+/// modest workstation while still failing fast in the common
+/// "endpoint refused" path.
+const DEFAULT_LLM_TIMEOUT_SECS: u64 = 120;
+
+/// Short timeout used for the "is the endpoint alive?" probe.
+///
+/// Keeps build pipelines fast: if the user does not have Ollama
+/// running locally, the plugin must bail in well under a second
+/// rather than blocking the whole compile on a 2-minute timeout.
+const HEALTH_CHECK_TIMEOUT_SECS: u64 = 2;
 
 /// Configuration for the LLM plugin.
 #[derive(Debug, Clone)]
@@ -35,6 +50,13 @@ pub struct LlmConfig {
     pub target_grade: f64,
     /// Max refinement attempts if readability exceeds target (default: 1).
     pub max_refinement_attempts: usize,
+    /// Per-call HTTP timeout for the local LLM endpoint, in seconds
+    /// (default: `120`). Set via `llm.timeout_secs` in `ssg.toml`.
+    /// Exceeding this budget returns
+    /// [`SsgError::LlmTimeout`](crate::error::SsgError::LlmTimeout) —
+    /// no zombie subprocess is left behind because the call goes
+    /// through `ureq`, not `curl` (issue #520).
+    pub timeout_secs: u64,
 }
 
 impl Default for LlmConfig {
@@ -45,6 +67,7 @@ impl Default for LlmConfig {
             dry_run: false,
             target_grade: 8.0,
             max_refinement_attempts: 1,
+            timeout_secs: DEFAULT_LLM_TIMEOUT_SECS,
         }
     }
 }
@@ -585,12 +608,17 @@ impl Plugin for LlmPlugin {
 }
 
 /// Checks if Ollama is reachable at the given endpoint.
+///
+/// Uses an in-process `ureq` GET with a short
+/// `HEALTH_CHECK_TIMEOUT_SECS` budget. Replaces the previous
+/// `curl` shellout (issue #520) so the probe works on Windows
+/// runners without `curl.exe` in `$PATH` and cannot fail
+/// silently in restricted environments.
 fn is_ollama_available(endpoint: &str) -> bool {
-    // Try a simple HTTP health check via curl
-    Command::new("curl")
-        .args(["-sf", "--max-time", "2", endpoint])
-        .output()
-        .is_ok_and(|o| o.status.success())
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(HEALTH_CHECK_TIMEOUT_SECS))
+        .build();
+    matches!(agent.get(endpoint).call(), Ok(resp) if resp.status() < 500)
 }
 
 /// Returns true if the page needs a meta description (missing or < 50 chars).
@@ -1095,7 +1123,38 @@ fn inject_jsonld_description(html: &str, description: &str) -> String {
 }
 
 /// Calls the Ollama API to generate text.
+///
+/// Backward-compatible `Option<String>` wrapper around
+/// [`query_ollama`] for the in-tree call sites that expect a
+/// graceful `None` fallback (no LLM available, model errored,
+/// etc.). New code should prefer [`query_ollama`] for typed
+/// `SsgError` returns (issue #520, AC4/AC5).
 fn call_ollama(endpoint: &str, model: &str, prompt: &str) -> Option<String> {
+    query_ollama(endpoint, model, prompt, DEFAULT_LLM_TIMEOUT_SECS).ok()
+}
+
+/// Typed Ollama generation call backed by `ureq` (issue #520).
+///
+/// All HTTP traffic flows through `ureq::post(...).send_json(...)`
+/// — no subprocess is spawned, so prompts containing shell
+/// metacharacters (`$(`, backticks, `;`, `&`, `|`) traverse the
+/// transport as a JSON body byte-for-byte unchanged (AC3).
+///
+/// # Errors
+///
+/// - [`SsgError::LlmTimeout`] when the call exceeds `timeout_secs`.
+/// - [`SsgError::LlmEndpointUnreachable`] when the TCP connection
+///   is refused, the host is unresolvable, or any other transport
+///   failure occurs before a response is received.
+/// - [`SsgError::LlmInvalidResponse`] when the server returns a
+///   non-2xx status, the body is not valid JSON, or the JSON does
+///   not carry a non-empty `response` field.
+pub fn query_ollama(
+    endpoint: &str,
+    model: &str,
+    prompt: &str,
+    timeout_secs: u64,
+) -> Result<String, SsgError> {
     let url = format!("{}/api/generate", endpoint.trim_end_matches('/'));
     let payload = serde_json::json!({
         "model": model,
@@ -1103,33 +1162,100 @@ fn call_ollama(endpoint: &str, model: &str, prompt: &str) -> Option<String> {
         "stream": false,
     });
 
-    let output = Command::new("curl")
-        .args([
-            "-sf",
-            "--max-time",
-            "30",
-            "-X",
-            "POST",
-            &url,
-            "-H",
-            "Content-Type: application/json",
-            "-d",
-            &payload.to_string(),
-        ])
-        .output()
-        .ok()?;
+    let timeout = Duration::from_secs(timeout_secs);
+    let agent = ureq::AgentBuilder::new().timeout(timeout).build();
 
-    if !output.status.success() {
-        return None;
-    }
+    let response = agent
+        .post(&url)
+        .set("Content-Type", "application/json")
+        .send_json(payload)
+        .map_err(|err| classify_ureq_error(err, &url, timeout))?;
 
-    let response: serde_json::Value =
-        serde_json::from_slice(&output.stdout).ok()?;
-    response
-        .get("response")
+    let body: serde_json::Value = response.into_json().map_err(|e| {
+        SsgError::LlmInvalidResponse {
+            message: format!("malformed JSON response body: {e}"),
+        }
+    })?;
+
+    body.get("response")
         .and_then(|v| v.as_str())
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+        .ok_or_else(|| SsgError::LlmInvalidResponse {
+            message: "missing or empty 'response' field".into(),
+        })
+}
+
+/// Maps a `ureq::Error` into the right [`SsgError`] variant.
+///
+/// `ureq` does not surface a dedicated "timeout" enum arm; the
+/// underlying `io::Error` carries `ErrorKind::TimedOut`. We unwrap
+/// the transport layer so callers get
+/// [`SsgError::LlmTimeout`] for timeouts and
+/// [`SsgError::LlmEndpointUnreachable`] for every other transport
+/// failure, while HTTP non-2xx responses become
+/// [`SsgError::LlmInvalidResponse`].
+fn classify_ureq_error(
+    err: ureq::Error,
+    url: &str,
+    timeout: Duration,
+) -> SsgError {
+    match err {
+        ureq::Error::Status(code, resp) => SsgError::LlmInvalidResponse {
+            message: format!(
+                "HTTP {code} from {url}: {}",
+                resp.into_string().unwrap_or_default()
+            ),
+        },
+        ureq::Error::Transport(transport) => {
+            // `ureq` exposes the kind enum but not the inner
+            // `io::Error` directly on stable; the timeout case is
+            // signalled by `ErrorKind::Io` whose message contains
+            // "timed out", or by `Kind::ConnectionFailed` with a
+            // wrapped `io::ErrorKind::TimedOut`. We detect via the
+            // formatted message which is stable across versions.
+            let kind = transport.kind();
+            let msg = transport.to_string();
+            let looks_like_timeout = matches!(
+                kind,
+                ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+            ) && (msg.contains("timed out")
+                || msg.contains("timeout")
+                || msg.contains("deadline"));
+            if looks_like_timeout {
+                SsgError::LlmTimeout { duration: timeout }
+            } else {
+                SsgError::LlmEndpointUnreachable {
+                    url: url.to_string(),
+                    source: Box::new(transport),
+                }
+            }
+        }
+    }
+}
+
+impl LlmPlugin {
+    /// Typed entry point for invoking the configured local LLM
+    /// (issue #520, AC4/AC5).
+    ///
+    /// Unlike the in-tree augmentation helpers which swallow
+    /// errors and fall back to leaving content untouched, `query`
+    /// surfaces transport and protocol failures as typed
+    /// [`SsgError`] variants so external callers (CLI commands,
+    /// integration tests, custom pipelines) can react
+    /// appropriately.
+    ///
+    /// # Errors
+    ///
+    /// See [`query_ollama`] for the exact variants.
+    pub fn query(&self, prompt: &str) -> Result<String, SsgError> {
+        query_ollama(
+            &self.config.endpoint,
+            &self.config.model,
+            prompt,
+            self.config.timeout_secs,
+        )
+    }
 }
 
 #[cfg(test)]

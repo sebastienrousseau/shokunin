@@ -103,6 +103,13 @@ benchmark = ["tempfile"]                 # Enable benchmark-specific functionali
 templates = ["minijinja"]               # MiniJinja templating engine with inheritance, loops, conditionals
 image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
+# Marker feature for the AI / local-LLM content pipeline (`LlmPlugin`).
+# The plugin module is unconditional so existing API consumers keep
+# compiling, but enabling `ai` is required by the integration tests
+# under `tests/llm_no_shellout.rs` and signals intent to exercise the
+# HTTP roundtrip. No additional optional deps are pulled in — `ureq`
+# is an unconditional dep because the plugin module is too.
+ai = []
 
 # Native HTML / JS / CSS minification (issue #519).
 # Off by default — opting in pulls `minify-html`, `oxc_minifier`,
@@ -145,6 +152,12 @@ uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
+# Captures `tracing` events emitted inside test bodies so the
+# `llm_no_shellout` integration test (issue #520) can assert no
+# subprocess-spawn span ever fires after the curl shellout was
+# ported to `ureq`.
+tracing = "0.1"
+tracing-test = "0.2"
 
 # -----------------------------------------------------------------------------
 # Dependencies
@@ -170,6 +183,15 @@ toml = "1.1.2"
 # `base64` emits the canonical base64 encoding that browsers expect.
 sha2 = "0.11"
 base64 = "0.22"
+
+# Synchronous, blocking, pure-Rust HTTP client for the local-LLM content
+# pipeline (`LlmPlugin`). Replaces the previous `curl` subprocess shellout
+# (issue #520) so the AI plugin works on Windows runners without `curl.exe`,
+# closes a shell-injection surface, and surfaces network failures as typed
+# `SsgError` variants instead of stderr strings. Pure rustls — no native
+# OpenSSL link, no tokio runtime — fits ssg's tokio-free Rayon-only
+# architecture.
+ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 
 
 # Optional dependencies (feature-gated)
