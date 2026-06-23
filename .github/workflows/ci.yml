@@ -70,7 +70,12 @@ jobs:
     name: test · ${{ matrix.os }}
     needs: lint
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
+    # Bumped from 8 → 15 in v0.0.42 because the new tests (ravif AVIF
+    # encoding in particular — ~1.2s per 1024×768 image on the runner)
+    # push lib-test wall-time past the prior ceiling on ubuntu/windows.
+    # macos-latest happens to be on a faster M-series runner and stayed
+    # under 8m. Long-term: triage slow tests behind a `slow` feature flag.
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
