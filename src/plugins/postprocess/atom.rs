@@ -225,7 +225,7 @@ impl AtomEntry {
 
 /// Extracts entry metadata from an existing `rss.xml` when no sidecars
 /// are available. Returns entries in the same format as `read_meta_sidecars`.
-fn extract_entries_from_rss(
+pub(super) fn extract_entries_from_rss(
     site_dir: &Path,
 ) -> Vec<(String, std::collections::HashMap<String, String>)> {
     let rss_path = site_dir.join("rss.xml");

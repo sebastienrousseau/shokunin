@@ -653,6 +653,7 @@ fn blog_example_clean_output() {
             "wcag-2-1-vs-2-2/index.html",
             "rss.xml",
             "atom.xml",
+            "feed.json",
             "manifest.json",
             "search-index.json",
             "accessibility-report.json",

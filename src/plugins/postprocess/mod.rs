@@ -19,11 +19,14 @@
 //!   and Fix 7: upgrades JSON-LD `@context` from `http` to `https`.
 //! - `AtomFeedPlugin` -- Generates an Atom 1.0 `atom.xml` feed from
 //!   `.meta.json` sidecars.
+//! - `JsonFeedPlugin` -- Generates a JSON Feed 1.1 `feed.json` from
+//!   `.meta.json` sidecars (alongside the RSS/Atom feeds).
 
 pub(crate) mod helpers;
 
 mod atom;
 mod html_fix;
+mod json_feed;
 mod manifest;
 mod news_sitemap;
 mod rss;
@@ -32,6 +35,7 @@ mod sitemap;
 
 pub use atom::AtomFeedPlugin;
 pub use html_fix::HtmlFixPlugin;
+pub use json_feed::JsonFeedPlugin;
 pub use manifest::ManifestFixPlugin;
 pub use news_sitemap::NewsSitemapFixPlugin;
 pub use rss::RssAggregatePlugin;
