@@ -378,138 +378,132 @@ pub fn encode_avif(
 ///
 /// Images with `fetchpriority="high"` get `loading="eager"` instead of
 /// `loading="lazy"`.
+///
+/// **Streaming parser:** uses `lol_html` so HTML comments, character
+/// entities in `alt`, and pre-existing `srcset` are all handled
+/// correctly (issue #525 AC1–AC3). Only the first match per manifest
+/// entry is rewritten, matching the previous `str::find`-based
+/// behaviour so existing tests continue to pass.
 #[cfg(feature = "image-optimization")]
 fn rewrite_img_tags(
     html: &str,
     manifest: &HashMap<String, ImageManifest>,
 ) -> String {
-    let mut result = html.to_string();
+    use crate::util::html_rewriter::rewrite_html;
+    use lol_html::element;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
-    for (original_rel, entry) in manifest {
+    // Tracks which manifest entries have already been rewritten so the
+    // "first-occurrence-only" invariant survives the streaming pass.
+    let consumed: Rc<RefCell<std::collections::HashSet<String>>> =
+        Rc::new(RefCell::new(std::collections::HashSet::new()));
+    let manifest = manifest.clone();
+
+    let consumed_cb = Rc::clone(&consumed);
+    let handler = element!("img", move |el| {
+        let Some(src) = el.get_attribute("src") else {
+            return Ok(());
+        };
+        // Normalise to the manifest-relative key (drop leading slash if any).
+        let key = src.strip_prefix('/').unwrap_or(&src).to_string();
+        let Some(entry) = manifest.get(&key) else {
+            return Ok(());
+        };
         if entry.webp_variants.is_empty() && entry.avif_variants.is_empty() {
-            continue;
+            return Ok(());
+        }
+        let original_rel = &entry.original_rel;
+        {
+            let mut consumed = consumed_cb.borrow_mut();
+            if consumed.contains(original_rel) {
+                return Ok(());
+            }
+            let _ = consumed.insert(original_rel.clone());
         }
 
-        // Build WebP srcset
+        let alt = el.get_attribute("alt").unwrap_or_default();
+        let fetchpriority = el.get_attribute("fetchpriority");
+        let loading = if fetchpriority.as_deref() == Some("high") {
+            "eager"
+        } else {
+            "lazy"
+        };
+        let width = el
+            .get_attribute("width")
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(entry.original_width);
+        let height = el
+            .get_attribute("height")
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(entry.original_height);
+
+        // Author-supplied srcset is replaced (issue #525 AC3) — log so
+        // the build output makes the swap visible. lol_html guarantees
+        // exactly one `srcset` on the emitted `<source>` elements.
+        if el.has_attribute("srcset") {
+            log::info!(
+                "[image] replacing author-supplied srcset on '{src}' with responsive variants"
+            );
+        }
+
         let webp_srcset: String = entry
             .webp_variants
             .iter()
             .map(|v| format!("/{} {}w", v.rel_path, v.width))
             .collect::<Vec<_>>()
             .join(", ");
-
-        // Build AVIF srcset
         let avif_srcset: String = entry
             .avif_variants
             .iter()
             .map(|v| format!("/{} {}w", v.rel_path, v.width))
             .collect::<Vec<_>>()
             .join(", ");
+        let sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
 
-        // Find and replace <img src="...original_rel...">
-        let patterns = [
-            format!("\"{original_rel}\""),
-            format!("\"/{original_rel}\""),
-        ];
+        let mut picture = String::from("<picture>");
+        if !avif_srcset.is_empty() {
+            picture.push_str(&format!(
+                "<source type=\"image/avif\" srcset=\"{avif_srcset}\" sizes=\"{sizes}\">"
+            ));
+        }
+        if !webp_srcset.is_empty() {
+            picture.push_str(&format!(
+                "<source type=\"image/webp\" srcset=\"{webp_srcset}\" sizes=\"{sizes}\">"
+            ));
+        }
 
-        for pattern in &patterns {
-            if let Some(img_start) = result.find(pattern) {
-                // Find the <img that contains this src
-                let search_back = &result[..img_start + pattern.len()];
-                if let Some(tag_start) = search_back.rfind("<img") {
-                    let tag_end = result[tag_start..]
-                        .find('>')
-                        .map_or(result.len(), |e| tag_start + e + 1);
+        let fp_attr = match fetchpriority {
+            Some(ref fp) => format!(" fetchpriority=\"{fp}\""),
+            None => String::new(),
+        };
+        picture.push_str(&format!(
+            "<img src=\"/{original_rel}\" alt=\"{alt}\" \
+             width=\"{width}\" height=\"{height}\" \
+             loading=\"{loading}\" decoding=\"async\"{fp_attr}>",
+        ));
+        picture.push_str("</picture>");
 
-                    let old_tag = &result[tag_start..tag_end];
+        el.replace(&picture, lol_html::html_content::ContentType::Html);
+        Ok(())
+    });
 
-                    // Extract existing attributes
-                    let alt = extract_attr(old_tag, "alt").unwrap_or_default();
-                    let fetchpriority = extract_attr(old_tag, "fetchpriority");
-
-                    // Determine loading strategy
-                    let loading = if fetchpriority.as_deref() == Some("high") {
-                        "eager"
-                    } else {
-                        "lazy"
-                    };
-
-                    // Preserve original width/height if present, else use source dimensions
-                    let width = extract_attr(old_tag, "width")
-                        .and_then(|v| v.parse::<u32>().ok())
-                        .unwrap_or(entry.original_width);
-                    let height = extract_attr(old_tag, "height")
-                        .and_then(|v| v.parse::<u32>().ok())
-                        .unwrap_or(entry.original_height);
-
-                    let sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
-
-                    // Build <picture> element
-                    let mut picture = String::from("<picture>");
-
-                    // AVIF source (if variants exist)
-                    if !avif_srcset.is_empty() {
-                        picture.push_str(&format!(
-                            "<source type=\"image/avif\" srcset=\"{avif_srcset}\" sizes=\"{sizes}\">"
-                        ));
-                    }
-
-                    // WebP source
-                    if !webp_srcset.is_empty() {
-                        picture.push_str(&format!(
-                            "<source type=\"image/webp\" srcset=\"{webp_srcset}\" sizes=\"{sizes}\">"
-                        ));
-                    }
-
-                    // Fallback <img>
-                    picture.push_str(&format!(
-                        "<img src=\"/{original_rel}\" alt=\"{alt}\" \
-                         width=\"{width}\" height=\"{height}\" \
-                         loading=\"{loading}\" decoding=\"async\">"
-                    ));
-
-                    // fetchpriority on the img if present
-                    if let Some(ref fp) = fetchpriority {
-                        // Re-build: remove the closing > we just added, insert fetchpriority
-                        // Actually, let's build it properly from scratch
-                        picture = String::from("<picture>");
-                        if !avif_srcset.is_empty() {
-                            picture.push_str(&format!(
-                                "<source type=\"image/avif\" srcset=\"{avif_srcset}\" sizes=\"{sizes}\">"
-                            ));
-                        }
-                        if !webp_srcset.is_empty() {
-                            picture.push_str(&format!(
-                                "<source type=\"image/webp\" srcset=\"{webp_srcset}\" sizes=\"{sizes}\">"
-                            ));
-                        }
-                        picture.push_str(&format!(
-                            "<img src=\"/{original_rel}\" alt=\"{alt}\" \
-                             width=\"{width}\" height=\"{height}\" \
-                             loading=\"{loading}\" decoding=\"async\" \
-                             fetchpriority=\"{fp}\">"
-                        ));
-                    }
-
-                    picture.push_str("</picture>");
-
-                    result = format!(
-                        "{}{}{}",
-                        &result[..tag_start],
-                        picture,
-                        &result[tag_end..]
-                    );
-                    break; // Only replace first occurrence per image
-                }
-            }
+    match rewrite_html(html, vec![handler]) {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!(
+                "[image] HTML rewrite failed, leaving page unchanged: {e}"
+            );
+            html.to_string()
         }
     }
-
-    result
 }
 
-#[cfg(feature = "image-optimization")]
+#[cfg(all(test, feature = "image-optimization"))]
 fn extract_attr(tag: &str, attr: &str) -> Option<String> {
+    // Retained as a test helper for the legacy `extract_attr_table_driven`
+    // unit test; the production `rewrite_img_tags` path now uses
+    // `lol_html`'s attribute API directly.
     let pattern = format!("{attr}=\"");
     let start = tag.find(&pattern)? + pattern.len();
     let end = tag[start..].find('"')? + start;

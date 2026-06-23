@@ -217,6 +217,62 @@ fn remove_unsafe_inline_from_csp(html: &str) -> String {
     html.replace("'unsafe-inline'", "").replace("  ;", " ;")
 }
 
+/// Inserts a `<meta http-equiv="Content-Security-Policy" content="...">`
+/// tag immediately after the `<head>` opening tag.
+///
+/// Uses `lol_html` so the insertion point is the correct one regardless
+/// of whitespace, comments, or `<title>` placement inside the head
+/// (issue #525 AC7). If the document already contains a CSP meta tag
+/// (either matching `policy` exactly or any other CSP policy), the
+/// input is returned unchanged so successive calls are idempotent.
+/// If no `<head>` element exists in the input, the function returns
+/// the input verbatim — this matches the convention used by the
+/// rest of the SSG HTML post-processors (no implicit head injection).
+///
+/// # Errors
+///
+/// Returns the input unchanged when the underlying `lol_html` rewrite
+/// fails; in practice the only failure mode is allocation exhaustion.
+#[must_use]
+pub fn inject_csp_meta(html: &str, policy: &str) -> String {
+    use crate::util::html_rewriter::rewrite_html;
+    use lol_html::element;
+    use lol_html::html_content::ContentType;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    // Idempotency: if a CSP meta already exists anywhere in the
+    // document, do nothing. lol_html visits comments-aware so this
+    // false-positive-free.
+    let already_present = Rc::new(Cell::new(false));
+    let already_present_cb = Rc::clone(&already_present);
+    let detect = element!(
+        "meta[http-equiv=\"Content-Security-Policy\" i]",
+        move |_el| {
+            already_present_cb.set(true);
+            Ok(())
+        }
+    );
+    let _ = rewrite_html(html, vec![detect]);
+    if already_present.get() {
+        return html.to_string();
+    }
+
+    let policy = policy.to_string();
+    let injected = Rc::new(Cell::new(false));
+    let injected_cb = Rc::clone(&injected);
+    let head_handler = element!("head", move |el| {
+        let meta = format!(
+            "<meta http-equiv=\"Content-Security-Policy\" content=\"{policy}\">"
+        );
+        el.prepend(&meta, ContentType::Html);
+        injected_cb.set(true);
+        Ok(())
+    });
+
+    rewrite_html(html, vec![head_handler]).unwrap_or_else(|_| html.to_string())
+}
+
 /// FNV-1a 64-bit hash.
 fn fnv_hash(data: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
