@@ -388,6 +388,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -1281,6 +1282,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1497,6 +1499,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),

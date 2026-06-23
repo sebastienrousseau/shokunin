@@ -101,7 +101,7 @@ default = ["templates", "image-optimization"]
 cli = []                                # Enable command-line interface support
 benchmark = ["tempfile"]                 # Enable benchmark-specific functionality
 templates = ["minijinja"]               # MiniJinja templating engine with inheritance, loops, conditionals
-image-optimization = ["image"]          # Image optimization with WebP output and responsive srcset
+image-optimization = ["image", "ravif", "rgb"] # Image optimization with WebP + AVIF output and responsive srcset
 test-fault-injection = ["fail/failpoints"]   # Test-only fault injection for fs error paths
 # Marker feature for the AI / local-LLM content pipeline (`LlmPlugin`).
 # The plugin module is unconditional so existing API consumers keep
@@ -199,6 +199,12 @@ fail = { version = "0.5", optional = true }
 tempfile = { version = "3.27.0", optional = true }
 minijinja = { version = "2", optional = true, features = ["loader"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "tiff"] }
+# AVIF encoding (issue #521). Pure-Rust rav1e-backed encoder; pulls
+# `rgb` and `imgref` types we feed from `image::DynamicImage`. The
+# `threading` default feature wires `rayon` for parallel tile encoding
+# — matches our rayon-based build pipeline. No C dependencies.
+ravif = { version = "0.13", optional = true, default-features = false, features = ["threading"] }
+rgb = { version = "0.8", optional = true }
 
 # Native HTML / JS / CSS minification (feature = "minify", issue #519).
 # Versions pinned to those already resolved transitively via
@@ -240,6 +246,16 @@ openssl = { version = "0.10.79", features = ["vendored"] }
 [[bench]]
 name = "bench"
 harness = false
+
+# AVIF-vs-WebP encoder comparison (issue #521 AC3). Standalone bench
+# rather than a sibling of `plugins/og_image.rs` because criterion
+# `bench_function`s rooted at the workspace top-level are what the
+# acceptance command runs (`cargo bench --features image-optimization
+# avif_vs_webp`). Requires `image-optimization` for `encode_avif`.
+[[bench]]
+name = "avif_vs_webp"
+harness = false
+required-features = ["image-optimization"]
 
 # -----------------------------------------------------------------------------
 # Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
