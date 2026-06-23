@@ -88,9 +88,8 @@ fn ac4_unreachable_endpoint_returns_typed_error() {
     let plugin = LlmPlugin::new(config);
 
     let result = plugin.query("hello");
-    let err = result.expect_err(
-        "query against 127.0.0.1:1 must fail with a typed error",
-    );
+    let err = result
+        .expect_err("query against 127.0.0.1:1 must fail with a typed error");
     assert!(
         matches!(
             err,

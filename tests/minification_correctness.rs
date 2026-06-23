@@ -82,9 +82,8 @@ fn pre_block_with_html_entities_semantically_preserved() {
 fn pre_block_indent_preserved_through_plugin() {
     let temp = tempdir().unwrap();
     let body = "    indented\n      deeper\n    back out";
-    let original = format!(
-        "<html><body><pre><code>{body}</code></pre></body></html>"
-    );
+    let original =
+        format!("<html><body><pre><code>{body}</code></pre></body></html>");
     let path = temp.path().join("page.html");
     fs::write(&path, &original).unwrap();
 
@@ -132,10 +131,7 @@ fn minify_plugin_walks_recursively() {
         assert!(
             after.len() < payload.len(),
             "file at depth {} ({path:?}) was not minified ({} >= {} bytes)",
-            path.strip_prefix(temp.path())
-                .unwrap()
-                .components()
-                .count(),
+            path.strip_prefix(temp.path()).unwrap().components().count(),
             after.len(),
             payload.len()
         );
@@ -226,8 +222,7 @@ fn js_minification_round_trips() {
         "function greet(name) { return 'hello, ' + name + '!'; } greet('world');";
     let minified = minify_js(input).expect("JS should minify");
     assert!(minified.len() < input.len());
-    let _round_trip =
-        minify_js(&minified).expect("minified JS must re-parse");
+    let _round_trip = minify_js(&minified).expect("minified JS must re-parse");
 }
 
 #[test]

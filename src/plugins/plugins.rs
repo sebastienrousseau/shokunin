@@ -92,25 +92,25 @@ impl Plugin for MinifyPlugin {
         // are no-ops.
         #[cfg(feature = "minify")]
         {
-            css_files
-                .par_iter()
-                .try_for_each(|path| -> Result<(), SsgError> {
+            css_files.par_iter().try_for_each(
+                |path| -> Result<(), SsgError> {
                     let content = fs::read_to_string(path).with_path(path)?;
                     let minified = minify_css(&content).unwrap_or(content);
                     fs::write(path, &minified).with_path(path)?;
                     let _ = count.fetch_add(1, Ordering::Relaxed);
                     Ok(())
-                })?;
+                },
+            )?;
 
-            js_files
-                .par_iter()
-                .try_for_each(|path| -> Result<(), SsgError> {
+            js_files.par_iter().try_for_each(
+                |path| -> Result<(), SsgError> {
                     let content = fs::read_to_string(path).with_path(path)?;
                     let minified = minify_js(&content).unwrap_or(content);
                     fs::write(path, &minified).with_path(path)?;
                     let _ = count.fetch_add(1, Ordering::Relaxed);
                     Ok(())
-                })?;
+                },
+            )?;
         }
 
         // Suppress unused-binding warnings on the default build where
@@ -247,12 +247,9 @@ pub fn minify_html(html: &str) -> String {
 #[cfg(feature = "minify")]
 pub fn minify_css(css: &str) -> Option<String> {
     use lightningcss::printer::PrinterOptions;
-    use lightningcss::stylesheet::{
-        MinifyOptions, ParserOptions, StyleSheet,
-    };
+    use lightningcss::stylesheet::{MinifyOptions, ParserOptions, StyleSheet};
 
-    let mut sheet =
-        StyleSheet::parse(css, ParserOptions::default()).ok()?;
+    let mut sheet = StyleSheet::parse(css, ParserOptions::default()).ok()?;
     sheet.minify(MinifyOptions::default()).ok()?;
     let opts = PrinterOptions {
         minify: true,
@@ -287,9 +284,7 @@ pub fn minify_js(js: &str) -> Option<String> {
         minify: true,
         ..CodegenOptions::default()
     };
-    let out = Codegen::new()
-        .with_options(codegen_options)
-        .build(&program);
+    let out = Codegen::new().with_options(codegen_options).build(&program);
     Some(out.code)
 }
 
@@ -928,9 +923,8 @@ mod tests {
     #[test]
     fn minify_html_preserves_pre_content_bit_identical() {
         let body = "fn main() {\n    println!(\"hi\");\n}";
-        let input = format!(
-            "<html><body><pre><code>{body}</code></pre></body></html>"
-        );
+        let input =
+            format!("<html><body><pre><code>{body}</code></pre></body></html>");
         let out = minify_html(&input);
         // The exact whitespace inside <pre><code>…</code></pre> must
         // survive minification untouched. We only check containment
@@ -944,7 +938,8 @@ mod tests {
     #[cfg(feature = "minify")]
     #[test]
     fn minify_css_compresses_input() {
-        let input = "body  {\n  color:   red;\n  margin:  0px  0px  0px  0px;\n}";
+        let input =
+            "body  {\n  color:   red;\n  margin:  0px  0px  0px  0px;\n}";
         let out = minify_css(input).expect("css minification");
         assert!(out.len() < input.len());
         assert!(out.contains("red"));

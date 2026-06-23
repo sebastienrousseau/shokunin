@@ -51,8 +51,7 @@ impl Plugin for JsonFeedPlugin {
         }
 
         if meta_entries.is_empty() {
-            meta_entries =
-                super::atom::extract_entries_from_rss(&ctx.site_dir);
+            meta_entries = super::atom::extract_entries_from_rss(&ctx.site_dir);
         }
 
         let base_url = ctx
@@ -75,8 +74,7 @@ impl Plugin for JsonFeedPlugin {
         let default_locale = extract_default_locale(ctx);
         let known_locales = extract_known_locales(ctx);
 
-        let mut items =
-            collect_items(&meta_entries, &base_url, &known_locales);
+        let mut items = collect_items(&meta_entries, &base_url, &known_locales);
         items.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
         items.truncate(MAX_ITEMS);
 
@@ -138,8 +136,7 @@ impl JsonFeedItem {
         let mut obj = Map::new();
         let _ = obj.insert("id".into(), Value::String(self.id.clone()));
         let _ = obj.insert("url".into(), Value::String(self.url.clone()));
-        let _ =
-            obj.insert("title".into(), Value::String(self.title.clone()));
+        let _ = obj.insert("title".into(), Value::String(self.title.clone()));
         let _ = obj.insert(
             "content_html".into(),
             Value::String(self.content_html.clone()),
@@ -168,16 +165,12 @@ impl JsonFeedItem {
         let _ = obj.insert(
             "tags".into(),
             Value::Array(
-                self.tags
-                    .iter()
-                    .map(|t| Value::String(t.clone()))
-                    .collect(),
+                self.tags.iter().map(|t| Value::String(t.clone())).collect(),
             ),
         );
 
         if let Some(ref lang) = self.language {
-            let _ =
-                obj.insert("language".into(), Value::String(lang.clone()));
+            let _ = obj.insert("language".into(), Value::String(lang.clone()));
         }
 
         Value::Object(obj)
@@ -205,15 +198,10 @@ pub(super) fn build_feed_json(
         "home_page_url".into(),
         Value::String(home_page_url.to_string()),
     );
-    let _ = feed.insert(
-        "feed_url".into(),
-        Value::String(feed_url.to_string()),
-    );
+    let _ = feed.insert("feed_url".into(), Value::String(feed_url.to_string()));
     if !language.is_empty() {
-        let _ = feed.insert(
-            "language".into(),
-            Value::String(language.to_string()),
-        );
+        let _ =
+            feed.insert("language".into(), Value::String(language.to_string()));
     }
     let _ = feed.insert("items".into(), Value::Array(items_json));
     Value::Object(feed)
@@ -367,8 +355,7 @@ pub(super) fn inject_json_feed_link(
         let link_tag = format!(
             "  <link rel=\"alternate\" type=\"application/feed+json\" title=\"JSON Feed\" href=\"{feed_url}\"/>\n"
         );
-        let modified =
-            format!("{}{}{}", &html[..pos], link_tag, &html[pos..]);
+        let modified = format!("{}{}{}", &html[..pos], link_tag, &html[pos..]);
         fs::write(path, &modified).with_path(path)?;
     }
     Ok(())
@@ -462,8 +449,8 @@ mod tests {
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Item Test".to_string());
-        let _ = meta
-            .insert("description".to_string(), "<p>body</p>".to_string());
+        let _ =
+            meta.insert("description".to_string(), "<p>body</p>".to_string());
         let _ = meta.insert(
             "item_pub_date".to_string(),
             "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
@@ -543,10 +530,7 @@ mod tests {
         for i in 0..60 {
             let mut meta = HashMap::new();
             let _ = meta.insert("title".to_string(), format!("P{i}"));
-            let _ = meta.insert(
-                "description".to_string(),
-                format!("body {i}"),
-            );
+            let _ = meta.insert("description".to_string(), format!("body {i}"));
             let _ = meta.insert(
                 "item_pub_date".to_string(),
                 format!(
@@ -612,9 +596,8 @@ mod tests {
         let _ = meta.insert("title".to_string(), "T".to_string());
         let _ = meta.insert("description".to_string(), "x".to_string());
         let _ = meta.insert("language".to_string(), "de".to_string());
-        let item =
-            build_item("fr/post", &meta, "https://example.com", &known)
-                .unwrap();
+        let item = build_item("fr/post", &meta, "https://example.com", &known)
+            .unwrap();
         assert_eq!(item.language, Some("de".to_string()));
     }
 
@@ -622,8 +605,7 @@ mod tests {
     fn test_json_feed_skips_empty_title() {
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), String::new());
-        assert!(build_item("post", &meta, "https://example.com", &[])
-            .is_none());
+        assert!(build_item("post", &meta, "https://example.com", &[]).is_none());
     }
 
     #[test]
@@ -638,8 +620,7 @@ mod tests {
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "T".to_string());
         let _ = meta.insert("description".to_string(), "x".to_string());
-        let item =
-            build_item("p", &meta, "https://example.com", &[]).unwrap();
+        let item = build_item("p", &meta, "https://example.com", &[]).unwrap();
         assert_eq!(item.id, item.url);
         assert_eq!(item.url, "https://example.com/p/");
     }
@@ -771,10 +752,8 @@ mod tests {
     fn test_tags_fallback_to_category() {
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "T".to_string());
-        let _ =
-            meta.insert("category".to_string(), "Tech".to_string());
-        let item =
-            build_item("p", &meta, "https://example.com", &[]).unwrap();
+        let _ = meta.insert("category".to_string(), "Tech".to_string());
+        let item = build_item("p", &meta, "https://example.com", &[]).unwrap();
         assert_eq!(item.tags, vec!["Tech"]);
     }
 

@@ -111,8 +111,11 @@ fn run_blog_example(timeout: Duration) {
 fn ensure_blog_feed() -> PathBuf {
     let _guard = build_lock().lock().unwrap_or_else(|p| p.into_inner());
     let root = workspace_root();
-    let feed =
-        root.join("examples").join("blog").join("public").join("feed.json");
+    let feed = root
+        .join("examples")
+        .join("blog")
+        .join("public")
+        .join("feed.json");
     if !feed.exists() {
         run_blog_example(Duration::from_secs(120));
     }
@@ -141,8 +144,8 @@ fn looks_like_rfc3339(s: &str) -> bool {
 fn blog_feed_json_is_valid_json_feed_1_1() {
     let feed_path = ensure_blog_feed();
     let raw = fs::read_to_string(&feed_path).expect("read feed.json");
-    let value: Value = serde_json::from_str(&raw)
-        .expect("feed.json should parse as JSON");
+    let value: Value =
+        serde_json::from_str(&raw).expect("feed.json should parse as JSON");
 
     // AC2: required top-level fields
     assert_eq!(
@@ -154,14 +157,9 @@ fn blog_feed_json_is_valid_json_feed_1_1() {
         value["home_page_url"].is_string(),
         "home_page_url must be a string"
     );
-    assert!(
-        value["feed_url"].is_string(),
-        "feed_url must be a string"
-    );
+    assert!(value["feed_url"].is_string(), "feed_url must be a string");
 
-    let items = value["items"]
-        .as_array()
-        .expect("items must be an array");
+    let items = value["items"].as_array().expect("items must be an array");
     assert!(!items.is_empty(), "blog example must emit ≥1 items");
 
     // AC5: top-level language should be the site's default locale
@@ -190,14 +188,12 @@ fn blog_feed_json_items_have_required_fields() {
     )
     .expect("parse feed.json");
 
-    let items = value["items"]
-        .as_array()
-        .expect("items must be an array");
+    let items = value["items"].as_array().expect("items must be an array");
 
     for (i, item) in items.iter().enumerate() {
-        let obj = item.as_object().unwrap_or_else(|| {
-            panic!("item {i} must be an object: {item}")
-        });
+        let obj = item
+            .as_object()
+            .unwrap_or_else(|| panic!("item {i} must be an object: {item}"));
 
         // AC3: every required per-item field
         assert!(
@@ -223,9 +219,7 @@ fn blog_feed_json_items_have_required_fields() {
         let date_pub = obj
             .get("date_published")
             .and_then(Value::as_str)
-            .unwrap_or_else(|| {
-                panic!("item {i} missing date_published")
-            });
+            .unwrap_or_else(|| panic!("item {i} missing date_published"));
         assert!(
             looks_like_rfc3339(date_pub),
             "item {i} date_published `{date_pub}` is not RFC 3339"
@@ -234,9 +228,7 @@ fn blog_feed_json_items_have_required_fields() {
         let date_mod = obj
             .get("date_modified")
             .and_then(Value::as_str)
-            .unwrap_or_else(|| {
-                panic!("item {i} missing date_modified")
-            });
+            .unwrap_or_else(|| panic!("item {i} missing date_modified"));
         assert!(
             looks_like_rfc3339(date_mod),
             "item {i} date_modified `{date_mod}` is not RFC 3339"
@@ -246,10 +238,7 @@ fn blog_feed_json_items_have_required_fields() {
             .get("authors")
             .and_then(Value::as_array)
             .unwrap_or_else(|| panic!("item {i} missing authors[]"));
-        assert!(
-            !authors.is_empty(),
-            "item {i} authors[] must have ≥1 entry"
-        );
+        assert!(!authors.is_empty(), "item {i} authors[] must have ≥1 entry");
         for (j, author) in authors.iter().enumerate() {
             assert!(
                 author.get("name").is_some_and(Value::is_string),
@@ -278,11 +267,13 @@ fn blog_feed_json_items_have_required_fields() {
 #[test]
 fn blog_pages_inject_json_feed_alternate_link() {
     let feed_path = ensure_blog_feed();
-    let public = feed_path
-        .parent()
-        .expect("feed.json must have a parent");
+    let public = feed_path.parent().expect("feed.json must have a parent");
     let index = public.join("index.html");
-    assert!(index.exists(), "index.html must exist at {}", index.display());
+    assert!(
+        index.exists(),
+        "index.html must exist at {}",
+        index.display()
+    );
 
     let html = fs::read_to_string(&index).expect("read index.html");
     assert!(

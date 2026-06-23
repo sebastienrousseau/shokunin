@@ -1171,11 +1171,12 @@ pub fn query_ollama(
         .send_json(payload)
         .map_err(|err| classify_ureq_error(err, &url, timeout))?;
 
-    let body: serde_json::Value = response.into_json().map_err(|e| {
-        SsgError::LlmInvalidResponse {
-            message: format!("malformed JSON response body: {e}"),
-        }
-    })?;
+    let body: serde_json::Value =
+        response
+            .into_json()
+            .map_err(|e| SsgError::LlmInvalidResponse {
+                message: format!("malformed JSON response body: {e}"),
+            })?;
 
     body.get("response")
         .and_then(|v| v.as_str())

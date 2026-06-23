@@ -189,7 +189,8 @@ mod tests {
 
     #[test]
     fn test_llm_endpoint_unreachable() {
-        let io_err = io::Error::new(io::ErrorKind::ConnectionRefused, "refused");
+        let io_err =
+            io::Error::new(io::ErrorKind::ConnectionRefused, "refused");
         let err = SsgError::LlmEndpointUnreachable {
             url: "http://localhost:11434".into(),
             source: Box::new(io_err),
