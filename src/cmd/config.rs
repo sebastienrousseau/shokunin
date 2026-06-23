@@ -15,6 +15,42 @@ use std::{
     str::FromStr,
 };
 
+/// Image-optimization tunables (issue #521). Surfaces the
+/// `[image]` section of `ssg.toml`:
+///
+/// ```toml
+/// [image]
+/// avif_quality = 70   # 1..=100, default 70 (visually transparent)
+/// lazy_avif    = false  # set true to skip AVIF for non-priority images
+/// ```
+///
+/// Both fields are optional; absent fields fall back to the same
+/// defaults baked into [`crate::plugins_group::image_plugin::ImageOptimizationPlugin`].
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ImageConfig {
+    /// AVIF encoding quality (1..=100). Defaults to 70.
+    #[serde(default = "default_avif_quality")]
+    pub avif_quality: u8,
+    /// If true, AVIF encoding is skipped for images without a
+    /// `priority="high"` shortcode marker — see issue #521 AC5.
+    /// Defaults to false (AVIF for every responsive variant).
+    #[serde(default)]
+    pub lazy_avif: bool,
+}
+
+const fn default_avif_quality() -> u8 {
+    70
+}
+
+impl Default for ImageConfig {
+    fn default() -> Self {
+        Self {
+            avif_quality: default_avif_quality(),
+            lazy_avif: false,
+        }
+    }
+}
+
 /// Core configuration for the static site generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SsgConfig {
@@ -42,6 +78,9 @@ pub struct SsgConfig {
     /// Optional CDN prefix for markdown images.
     #[serde(default)]
     pub cdn_prefix: Option<String>,
+    /// Optional image-pipeline tunables (issue #521).
+    #[serde(default)]
+    pub image: ImageConfig,
 }
 
 impl Default for SsgConfig {

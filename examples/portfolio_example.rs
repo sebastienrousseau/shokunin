@@ -153,6 +153,7 @@ impl PortfolioSiteGenerator {
         plugins.register(ssg::postprocess::NewsSitemapFixPlugin);
         plugins.register(ssg::postprocess::RssAggregatePlugin);
         plugins.register(ssg::postprocess::AtomFeedPlugin);
+        plugins.register(ssg::postprocess::JsonFeedPlugin);
         plugins.register(ssg::postprocess::ManifestFixPlugin);
         plugins.register(ssg::postprocess::HtmlFixPlugin);
         plugins.register(ssg::highlight::HighlightPlugin::default());

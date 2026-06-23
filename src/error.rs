@@ -53,6 +53,42 @@ pub enum SsgError {
     #[cfg(feature = "templates")]
     #[error("Template engine error: {0}")]
     Template(#[from] minijinja::Error),
+
+    /// The local LLM endpoint (Ollama, llama.cpp) could not be
+    /// reached. Surfaced from the `ureq`-backed `LlmPlugin` HTTP
+    /// path (issue #520) when the TCP connection is refused, the
+    /// host is unresolvable, or the transport layer fails before
+    /// the request is sent.
+    #[error("LLM endpoint unreachable at '{url}': {source}")]
+    LlmEndpointUnreachable {
+        /// The endpoint URL that failed to connect.
+        url: String,
+        /// The underlying transport error from `ureq`.
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    /// The local LLM call exceeded the configured `llm.timeout_secs`
+    /// budget before returning a response. Reported as a typed error
+    /// (issue #520) so callers can distinguish a slow model from a
+    /// genuine network outage. There is no zombie subprocess to
+    /// reap — the previous `curl` shellout has been removed.
+    #[error("LLM call timed out after {duration:?}")]
+    LlmTimeout {
+        /// The timeout budget that was exceeded.
+        duration: std::time::Duration,
+    },
+
+    /// The LLM responded but the payload was not a well-formed JSON
+    /// generation response (missing the `response` field, non-UTF-8
+    /// body, malformed JSON, or HTTP non-2xx status code without a
+    /// usable error envelope). Surfaced from the `ureq` HTTP path
+    /// (issue #520).
+    #[error("LLM returned an invalid response: {message}")]
+    LlmInvalidResponse {
+        /// Human-readable description of what was malformed.
+        message: String,
+    },
 }
 
 impl SsgError {
@@ -149,6 +185,39 @@ mod tests {
         let err = SsgError::from(source);
         let msg = format!("{err}");
         assert!(msg.contains("Template engine error"));
+    }
+
+    #[test]
+    fn test_llm_endpoint_unreachable() {
+        let io_err =
+            io::Error::new(io::ErrorKind::ConnectionRefused, "refused");
+        let err = SsgError::LlmEndpointUnreachable {
+            url: "http://localhost:11434".into(),
+            source: Box::new(io_err),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("LLM endpoint unreachable"));
+        assert!(msg.contains("http://localhost:11434"));
+    }
+
+    #[test]
+    fn test_llm_timeout() {
+        let err = SsgError::LlmTimeout {
+            duration: std::time::Duration::from_secs(60),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("LLM call timed out"));
+        assert!(msg.contains("60"));
+    }
+
+    #[test]
+    fn test_llm_invalid_response() {
+        let err = SsgError::LlmInvalidResponse {
+            message: "missing 'response' field".into(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("LLM returned an invalid response"));
+        assert!(msg.contains("missing 'response' field"));
     }
 
     #[test]

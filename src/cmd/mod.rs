@@ -37,7 +37,7 @@ mod error;
 mod validation;
 
 pub use cli::Cli;
-pub use config::{SsgConfig, SsgConfigBuilder};
+pub use config::{ImageConfig, SsgConfig, SsgConfigBuilder};
 pub use error::{CliError, LanguageCode};
 pub use validation::{is_valid_url, validate_url};
 
@@ -104,6 +104,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             language: "en-GB".to_string(),
             i18n: None,
             cdn_prefix: None,
+            image: ImageConfig::default(),
         })
     })
 }

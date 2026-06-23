@@ -225,7 +225,7 @@ impl AtomEntry {
 
 /// Extracts entry metadata from an existing `rss.xml` when no sidecars
 /// are available. Returns entries in the same format as `read_meta_sidecars`.
-fn extract_entries_from_rss(
+pub(super) fn extract_entries_from_rss(
     site_dir: &Path,
 ) -> Vec<(String, std::collections::HashMap<String, String>)> {
     let rss_path = site_dir.join("rss.xml");
@@ -388,6 +388,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -1281,6 +1282,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1497,6 +1499,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),

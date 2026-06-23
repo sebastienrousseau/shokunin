@@ -337,6 +337,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         }
     }
 
@@ -404,6 +405,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
         };
 
         let content_dir = config.content_dir.clone();

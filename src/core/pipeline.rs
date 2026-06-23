@@ -344,6 +344,7 @@ pub fn register_default_plugins(
     plugins.register(postprocess::NewsSitemapFixPlugin);
     plugins.register(postprocess::RssAggregatePlugin);
     plugins.register(postprocess::AtomFeedPlugin);
+    plugins.register(postprocess::JsonFeedPlugin);
     plugins.register(postprocess::ManifestFixPlugin);
     plugins.register(postprocess::HtmlFixPlugin);
     plugins.register(postprocess::SbomPlugin);
