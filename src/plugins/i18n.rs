@@ -26,7 +26,8 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::Path,
+    path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 // ── Configuration ────────────────────────────────────────────────────
@@ -80,17 +81,68 @@ impl Default for I18nConfig {
 
 // ── Plugin ───────────────────────────────────────────────────────────
 
+/// Cached locale matrix shared between `after_compile` and `transform_html`.
+///
+/// Built lazily on first invocation per `(site_dir, locales)` pairing so
+/// that the per-file `transform_html` hook does not re-walk the locale
+/// directories for every HTML file processed in the fused transform pass.
+#[derive(Debug, Default)]
+struct LocaleMatrixCache {
+    site_dir: Option<PathBuf>,
+    present_locales: Vec<String>,
+    pages: HashMap<String, HashSet<String>>,
+}
+
 /// I18n plugin that injects hreflang links and generates per-locale sitemaps.
+///
+/// Implements two complementary phases:
+///
+/// 1. **`transform_html`** — per-file hreflang `<link>` injection that runs
+///    inside the fused transform pass, ensuring Taxonomy/Pagination output
+///    is covered alongside template-engine pages.
+/// 2. **`after_compile`** — per-locale sitemap generation and the root-level
+///    locale-redirect index page (whole-site artefacts that cannot be
+///    produced from a per-file hook).
 #[derive(Debug)]
 pub struct I18nPlugin {
     config: I18nConfig,
+    /// Lazily-populated locale matrix shared by hooks.
+    matrix: Mutex<LocaleMatrixCache>,
 }
 
 impl I18nPlugin {
     /// Creates a new `I18nPlugin` with the given i18n configuration.
     #[must_use]
-    pub const fn new(config: I18nConfig) -> Self {
-        Self { config }
+    pub fn new(config: I18nConfig) -> Self {
+        Self {
+            config,
+            matrix: Mutex::new(LocaleMatrixCache::default()),
+        }
+    }
+
+    /// Ensures the locale matrix cache is populated for the given site
+    /// directory. Cheap on subsequent calls — the directory walk only
+    /// executes once per `site_dir`.
+    fn ensure_matrix(&self, site_dir: &Path) -> Result<(), SsgError> {
+        let mut cache = self
+            .matrix
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if cache.site_dir.as_deref() == Some(site_dir) {
+            return Ok(());
+        }
+        let present_locales =
+            detect_locale_dirs(site_dir, &self.config.locales);
+        let pages = if present_locales.len() >= 2 {
+            collect_locale_pages(site_dir, &present_locales)
+                .map_err(|e| SsgError::io(e, site_dir))?
+        } else {
+            HashMap::new()
+        };
+        cache.site_dir = Some(site_dir.to_path_buf());
+        cache.present_locales = present_locales;
+        cache.pages = pages;
+        Ok(())
     }
 }
 
@@ -109,16 +161,30 @@ impl Plugin for I18nPlugin {
             return Ok(());
         }
 
-        // Detect which locale directories actually exist on disk.
-        let present_locales =
-            detect_locale_dirs(&ctx.site_dir, &self.config.locales);
+        // Re-walk the locale matrix here so that pages emitted by
+        // Taxonomy/Pagination during their own `after_compile` hooks are
+        // picked up. Always rebuild on `after_compile` to guarantee the
+        // matrix reflects the final on-disk state.
+        {
+            let mut cache = self
+                .matrix
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            cache.site_dir = None;
+        }
+        self.ensure_matrix(&ctx.site_dir)?;
+
+        let (present_locales, pages) = {
+            let cache = self
+                .matrix
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            (cache.present_locales.clone(), cache.pages.clone())
+        };
+
         if present_locales.len() < 2 {
             return Ok(());
         }
-
-        // Collect the set of relative page paths per locale.
-        let pages = collect_locale_pages(&ctx.site_dir, &present_locales)
-            .map_err(|e| SsgError::io(e, &ctx.site_dir))?;
 
         // Determine the base URL (needed for sitemaps).
         let base_url = ctx.config.as_ref().map_or_else(
@@ -158,6 +224,120 @@ impl Plugin for I18nPlugin {
 
         Ok(())
     }
+
+    fn has_transform(&self) -> bool {
+        true
+    }
+
+    /// Per-file hreflang injection.
+    ///
+    /// Runs inside the fused transform pass so it covers HTML produced by
+    /// any plugin (Taxonomy, Pagination, template engine). Idempotent — a
+    /// page that already carries hreflang `<link>` tags is returned
+    /// unchanged. Pages without parallel translations are left untouched
+    /// so that missing translations never yield broken hreflang entries.
+    fn transform_html(
+        &self,
+        html: &str,
+        path: &Path,
+        ctx: &PluginContext,
+    ) -> Result<String, SsgError> {
+        if self.config.locales.len() < 2 {
+            return Ok(html.to_string());
+        }
+        if html.contains(HREFLANG_MARKER) {
+            return Ok(html.to_string());
+        }
+        self.ensure_matrix(&ctx.site_dir)?;
+
+        // Snapshot the cached matrix data we need.
+        let (locale_for_file, rel_path, page_locales) = {
+            let cache = self
+                .matrix
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if cache.present_locales.len() < 2 {
+                return Ok(html.to_string());
+            }
+            let Some((locale, rel)) = resolve_locale_and_rel(
+                path,
+                &ctx.site_dir,
+                &cache.present_locales,
+            ) else {
+                return Ok(html.to_string());
+            };
+            let Some(page_locales) = cache.pages.get(&rel).cloned() else {
+                return Ok(html.to_string());
+            };
+            (locale, rel, page_locales)
+        };
+
+        // Skip pages that only exist in one locale — AC4 (no broken
+        // hreflangs).
+        if page_locales.len() < 2 {
+            return Ok(html.to_string());
+        }
+
+        let base_url = ctx.config.as_ref().map_or_else(
+            || "https://example.com".to_string(),
+            |c| c.base_url.clone(),
+        );
+        let base = base_url.trim_end_matches('/');
+
+        let links = build_hreflang_links(
+            &rel_path,
+            &page_locales,
+            &self.config.default_locale,
+            base,
+            &self.config.url_prefix,
+        );
+
+        let Some(mut out) = inject_before_head_close(html, &links) else {
+            return Ok(html.to_string());
+        };
+
+        // Lang switcher + ap-lang-item rewrite (kept consistent with the
+        // `after_compile` injection path).
+        out = inject_lang_switcher(
+            &out,
+            &locale_for_file,
+            &rel_path,
+            &page_locales.iter().cloned().collect::<Vec<_>>(),
+            base,
+            &self.config.url_prefix,
+        );
+        out = rewrite_ap_lang_items(
+            &out,
+            &page_locales,
+            base,
+            &self.config.url_prefix,
+            &rel_path,
+        );
+
+        Ok(out)
+    }
+}
+
+/// Splits an absolute HTML path inside `site_dir` into (locale, rel-path)
+/// where `locale` is the top-level segment matching a known locale and
+/// `rel-path` is the remaining slash-joined path.
+fn resolve_locale_and_rel(
+    path: &Path,
+    site_dir: &Path,
+    locales: &[String],
+) -> Option<(String, String)> {
+    let rel = path.strip_prefix(site_dir).ok()?;
+    let mut comps = rel.components();
+    let first = comps.next()?.as_os_str().to_string_lossy().into_owned();
+    if !locales.contains(&first) {
+        return None;
+    }
+    let remaining: PathBuf = comps.as_path().to_path_buf();
+    if remaining.as_os_str().is_empty() {
+        return None;
+    }
+    let rel_str = remaining.to_string_lossy().replace('\\', "/");
+    Some((first, rel_str))
 }
 
 // ── Locale detection ─────────────────────────────────────────────────
@@ -1429,5 +1609,386 @@ mod tests {
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(matches!(err, SsgError::Io { .. }));
+    }
+
+    // ── transform_html (issue #522 fused-transform pass) ────────────
+
+    #[test]
+    fn has_transform_is_true() {
+        let p = I18nPlugin::new(I18nConfig::default());
+        assert!(p.has_transform());
+    }
+
+    #[test]
+    fn transform_html_single_locale_returns_unchanged() {
+        let tmp = tempdir().unwrap();
+        let ctx = make_ctx(tmp.path());
+        let p = I18nPlugin::new(I18nConfig::default());
+        let out = p
+            .transform_html("<html><head></head></html>", tmp.path(), &ctx)
+            .unwrap();
+        assert_eq!(out, "<html><head></head></html>");
+    }
+
+    #[test]
+    fn transform_html_already_injected_is_idempotent() {
+        let tmp = tempdir().unwrap();
+        let ctx = make_ctx(tmp.path());
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let html = "<html><head><link rel=\"alternate\" hreflang=\"en\" href=\"x\" /></head></html>";
+        let out = p.transform_html(html, tmp.path(), &ctx).unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn transform_html_fewer_than_two_locales_on_disk_returns_unchanged() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/index.html", "EN");
+        // Only one locale dir → cache.present_locales.len() < 2 path.
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        let path = site.join("en/index.html");
+        let out = p
+            .transform_html("<html><head></head></html>", &path, &ctx)
+            .unwrap();
+        assert_eq!(out, "<html><head></head></html>");
+    }
+
+    #[test]
+    fn transform_html_path_outside_locale_returns_unchanged() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/index.html", "EN");
+        write_html(site, "fr/index.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        // Path has no recognised locale prefix segment.
+        let path = site.join("untracked.html");
+        let out = p
+            .transform_html("<html><head></head></html>", &path, &ctx)
+            .unwrap();
+        assert_eq!(out, "<html><head></head></html>");
+    }
+
+    #[test]
+    fn transform_html_page_missing_from_matrix_returns_unchanged() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/index.html", "EN");
+        write_html(site, "fr/index.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        // Path under a known locale dir but not present in either matrix
+        // (we never wrote `en/missing.html`).
+        let path = site.join("en/missing.html");
+        let out = p
+            .transform_html("<html><head></head></html>", &path, &ctx)
+            .unwrap();
+        assert_eq!(out, "<html><head></head></html>");
+    }
+
+    #[test]
+    fn transform_html_injects_hreflang_for_shared_page() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/index.html", "EN");
+        write_html(site, "fr/index.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        let path = site.join("en/index.html");
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let out = p.transform_html(html, &path, &ctx).unwrap();
+        assert!(out.contains(HREFLANG_MARKER), "missing hreflang: {out}");
+        assert!(out.contains("hreflang=\"x-default\""));
+        // SubPath strategy default base_url.
+        assert!(out.contains("https://example.com/en/index.html"));
+    }
+
+    #[test]
+    fn transform_html_single_locale_page_returns_unchanged() {
+        // Page exists in only one locale even though two locale dirs are
+        // present on disk — `page_locales.len() < 2` early-out.
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/only.html", "EN");
+        write_html(site, "fr/other.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        let path = site.join("en/only.html");
+        let html = "<html><head></head></html>";
+        let out = p.transform_html(html, &path, &ctx).unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn transform_html_no_head_close_returns_unchanged() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path();
+        write_html(site, "en/index.html", "EN");
+        write_html(site, "fr/index.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        let ctx = make_ctx(site);
+        let path = site.join("en/index.html");
+        // No </head> tag at all — inject_before_head_close returns None.
+        let html = "<html><body>no head close</body></html>";
+        let out = p.transform_html(html, &path, &ctx).unwrap();
+        assert_eq!(out, html);
+    }
+
+    // ── resolve_locale_and_rel direct unit tests ────────────────────
+
+    #[test]
+    fn resolve_locale_and_rel_extracts_locale_and_rel() {
+        let site = PathBuf::from("/site");
+        let path = PathBuf::from("/site/en/about/index.html");
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        let res = resolve_locale_and_rel(&path, &site, &locales).unwrap();
+        assert_eq!(res.0, "en");
+        assert_eq!(res.1, "about/index.html");
+    }
+
+    #[test]
+    fn resolve_locale_and_rel_returns_none_when_not_under_site_dir() {
+        let site = PathBuf::from("/site");
+        let path = PathBuf::from("/somewhere-else/en/index.html");
+        let locales = vec!["en".to_string()];
+        assert!(resolve_locale_and_rel(&path, &site, &locales).is_none());
+    }
+
+    #[test]
+    fn resolve_locale_and_rel_returns_none_for_unknown_locale_segment() {
+        let site = PathBuf::from("/site");
+        let path = PathBuf::from("/site/de/page.html");
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        assert!(resolve_locale_and_rel(&path, &site, &locales).is_none());
+    }
+
+    #[test]
+    fn resolve_locale_and_rel_returns_none_for_bare_locale_dir() {
+        // `/site/en` with no further path segment.
+        let site = PathBuf::from("/site");
+        let path = PathBuf::from("/site/en");
+        let locales = vec!["en".to_string()];
+        assert!(resolve_locale_and_rel(&path, &site, &locales).is_none());
+    }
+
+    // ── inject_lang_switcher (replace marker path) ──────────────────
+
+    #[test]
+    fn inject_lang_switcher_replaces_marker_when_present() {
+        let html = "<html><body><!-- ssg:lang-switcher --></body></html>";
+        let out = inject_lang_switcher(
+            html,
+            "en",
+            "index.html",
+            &["en".to_string(), "fr".to_string()],
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+        );
+        assert!(!out.contains("<!-- ssg:lang-switcher -->"));
+        assert!(out.contains("lang-switcher"));
+        assert!(out.contains("lang=\"fr\""));
+    }
+
+    #[test]
+    fn inject_lang_switcher_without_marker_returns_unchanged() {
+        let html = "<html><body>nothing here</body></html>";
+        let out = inject_lang_switcher(
+            html,
+            "en",
+            "index.html",
+            &["en".to_string()],
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+        );
+        assert_eq!(out, html);
+    }
+
+    // ── rewrite_ap_lang_items edge cases ────────────────────────────
+
+    #[test]
+    fn rewrite_ap_lang_items_returns_unchanged_when_marker_absent() {
+        let html = "<a href=\"/whatever\">link</a>";
+        let mut locales = HashSet::new();
+        let _ = locales.insert("en".to_string());
+        let out = rewrite_ap_lang_items(
+            html,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "page.html",
+        );
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_skips_unknown_lang() {
+        // The data-lang attribute references a locale not in the page
+        // matrix — link should be left alone.
+        let input =
+            "<a class=\"ap-lang-item\" href=\"/de/\" data-lang=\"de\">DE</a>";
+        let mut locales = HashSet::new();
+        let _ = locales.insert("en".to_string());
+        let _ = locales.insert("fr".to_string());
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "page.html",
+        );
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_handles_unterminated_anchor() {
+        // Anchor open `<a ` with no closing `>` — must not panic, must
+        // return early.
+        let input = "<a class=\"ap-lang-item\" data-lang=\"fr\"";
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "page.html",
+        );
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_with_subdomain_strategy_strips_host() {
+        let input =
+            "<a class=\"ap-lang-item\" href=\"/fr/\" data-lang=\"fr\">F</a>";
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubDomain,
+            "page.html",
+        );
+        // SubDomain produces https://fr.example.com/page.html, so href
+        // becomes the path part only.
+        assert!(out.contains("href=\"/page.html\""), "out={out}");
+    }
+
+    // ── parse_accept_language edge cases ────────────────────────────
+
+    #[test]
+    fn parse_accept_language_skips_empty_parts() {
+        // Trailing comma / double comma produce empty parts after split.
+        let out = parse_accept_language("en,,fr,");
+        assert_eq!(out, vec!["en", "fr"]);
+    }
+
+    #[test]
+    fn parse_accept_language_skips_empty_locale_with_quality() {
+        // A part that's just `;q=0.5` (no locale) must be filtered out.
+        let out = parse_accept_language(";q=0.5, en");
+        assert_eq!(out, vec!["en"]);
+    }
+
+    #[test]
+    fn parse_accept_language_quality_zero_sorts_last() {
+        let out = parse_accept_language("fr;q=0.0, en;q=0.5, de;q=1.0");
+        assert_eq!(out, vec!["de", "en", "fr"]);
+    }
+
+    #[test]
+    fn parse_accept_language_unparseable_quality_defaults_to_one() {
+        let out = parse_accept_language("en;q=foo, fr;q=0.5");
+        // `en` has invalid q, defaults to 1.0 → sorts ahead of fr.
+        assert_eq!(out, vec!["en", "fr"]);
+    }
+
+    // ── ensure_matrix cache short-circuit ───────────────────────────
+
+    #[test]
+    fn ensure_matrix_short_circuits_when_site_dir_unchanged() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        p.ensure_matrix(tmp.path()).unwrap();
+        // Second call against the same dir hits the cache fast-path.
+        p.ensure_matrix(tmp.path()).unwrap();
+        let cache = p.matrix.lock().unwrap();
+        assert_eq!(cache.present_locales, vec!["en", "fr"]);
+    }
+
+    // ── ensure_matrix re-entry on different site_dir ────────────────
+
+    #[test]
+    fn ensure_matrix_rebuilds_when_site_dir_changes() {
+        let tmp1 = tempdir().unwrap();
+        let tmp2 = tempdir().unwrap();
+        write_html(tmp1.path(), "en/index.html", "EN1");
+        write_html(tmp1.path(), "fr/index.html", "FR1");
+        write_html(tmp2.path(), "en/about.html", "EN2");
+        write_html(tmp2.path(), "fr/about.html", "FR2");
+
+        let cfg = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let p = I18nPlugin::new(cfg);
+        // Populate cache against tmp1.
+        p.ensure_matrix(tmp1.path()).unwrap();
+        // Then re-populate against tmp2 — must NOT short-circuit.
+        p.ensure_matrix(tmp2.path()).unwrap();
+        let cache = p.matrix.lock().unwrap();
+        assert_eq!(cache.site_dir.as_deref(), Some(tmp2.path()));
+        assert!(cache.pages.contains_key("about.html"));
     }
 }

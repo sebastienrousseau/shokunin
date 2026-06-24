@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.42"                      # The version of the library
+version = "0.0.43"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -172,7 +172,7 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.42" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.43" }
 thiserror = "2"
 staticdatagen = "0.0.9"
 toml = "1.1.2"
@@ -192,6 +192,12 @@ base64 = "0.22"
 # OpenSSL link, no tokio runtime — fits ssg's tokio-free Rayon-only
 # architecture.
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
+
+# Cloudflare's streaming HTML rewriter (issue #525). Pure Rust, zero-copy,
+# CSS-selector driven — replaces the fragile `str::find` / `str::rfind`
+# rewriting that previously lived in the image, search, CSP, and html-fix
+# plugins. BSD-3-Clause (already allowed in deny.toml). No C deps.
+lol_html = "3.0.0"
 
 
 # Optional dependencies (feature-gated)

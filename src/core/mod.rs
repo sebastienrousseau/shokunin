@@ -6,6 +6,7 @@ pub mod collections;
 pub mod content;
 pub mod depgraph;
 pub mod deploy;
+pub mod deploy_adapter;
 pub mod frontmatter;
 pub mod fs_ops;
 pub mod logging;

@@ -796,6 +796,86 @@ fn multilingual_example_per_locale_artifacts() {
         root_html.to_ascii_lowercase().contains("hreflang"),
         "root /index.html missing hreflang declarations"
     );
+
+    // ── Hreflang block assertions (issue #522 ACs) ────────────────────
+    //
+    // For every locale that shares /<locale>/index.html with at least
+    // one other locale, the emitted page MUST carry:
+    //   - one <link rel="alternate" hreflang="<locale>" href="…"> per
+    //     locale that publishes the same canonical slug (AC1)
+    //   - a self-referential entry for its own locale code (AC3)
+    //   - an <link rel="alternate" hreflang="x-default" href="…"> tag
+    //     pointing at the default locale (AC2)
+    //   - BCP-47 codes preserved case-sensitively, e.g. `zh-tw` not
+    //     normalised (AC5)
+    //   - NO hreflang entry for a locale that does not actually publish
+    //     the page on disk (AC4)
+    let default_locale = "en";
+    let expected_locales: std::collections::HashSet<&str> =
+        locales.iter().copied().collect();
+    for loc in locales {
+        let page = public.join(loc).join("index.html");
+        let html = read_html(&page);
+
+        // Collect every hreflang attribute value emitted on this page.
+        let mut emitted: std::collections::HashSet<String> =
+            std::collections::HashSet::new();
+        for fragment in html.split("hreflang=\"").skip(1) {
+            if let Some(end) = fragment.find('"') {
+                let _ = emitted.insert(fragment[..end].to_string());
+            }
+        }
+
+        // AC2: x-default must be present.
+        assert!(
+            emitted.contains("x-default"),
+            "/{loc}/index.html missing hreflang=\"x-default\""
+        );
+
+        // AC3: self-referential hreflang for the page's own locale.
+        assert!(
+            emitted.contains(loc),
+            "/{loc}/index.html missing self-referential hreflang=\"{loc}\""
+        );
+
+        // AC2: the x-default href must point at the default locale's page.
+        let expected_default_href =
+            format!("hreflang=\"x-default\" href=\"https://example.com/{default_locale}/index.html\"");
+        assert!(
+            html.contains(&expected_default_href),
+            "/{loc}/index.html x-default does not point at the default locale: expected `{expected_default_href}`"
+        );
+
+        // AC4: every emitted locale must be one we actually publish — no
+        // stray entries that would 404.
+        for code in &emitted {
+            if code == "x-default" {
+                continue;
+            }
+            assert!(
+                expected_locales.contains(code.as_str()),
+                "/{loc}/index.html emitted hreflang=\"{code}\" for a locale not present in the matrix"
+            );
+        }
+
+        // AC1: every locale that publishes /<l>/index.html must appear in
+        // the emitted block (one entry per locale).
+        for other in locales {
+            assert!(
+                emitted.contains(other),
+                "/{loc}/index.html missing hreflang=\"{other}\" (every locale should appear once)"
+            );
+        }
+
+        // AC5: BCP-47 codes are preserved case-sensitively — `zh-tw` is
+        // configured as `zh-tw` and must be emitted that way (the
+        // assertion above already covers exact case, but make it
+        // explicit for the canonical mixed-case example).
+        assert!(
+            emitted.contains("zh-tw"),
+            "/{loc}/index.html should preserve BCP-47 case (`zh-tw`)"
+        );
+    }
 }
 
 // ── Negative tests: prove the validators actually catch things ──────

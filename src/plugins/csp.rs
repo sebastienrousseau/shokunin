@@ -217,6 +217,62 @@ fn remove_unsafe_inline_from_csp(html: &str) -> String {
     html.replace("'unsafe-inline'", "").replace("  ;", " ;")
 }
 
+/// Inserts a `<meta http-equiv="Content-Security-Policy" content="...">`
+/// tag immediately after the `<head>` opening tag.
+///
+/// Uses `lol_html` so the insertion point is the correct one regardless
+/// of whitespace, comments, or `<title>` placement inside the head
+/// (issue #525 AC7). If the document already contains a CSP meta tag
+/// (either matching `policy` exactly or any other CSP policy), the
+/// input is returned unchanged so successive calls are idempotent.
+/// If no `<head>` element exists in the input, the function returns
+/// the input verbatim — this matches the convention used by the
+/// rest of the SSG HTML post-processors (no implicit head injection).
+///
+/// # Errors
+///
+/// Returns the input unchanged when the underlying `lol_html` rewrite
+/// fails; in practice the only failure mode is allocation exhaustion.
+#[must_use]
+pub fn inject_csp_meta(html: &str, policy: &str) -> String {
+    use crate::util::html_rewriter::rewrite_html;
+    use lol_html::element;
+    use lol_html::html_content::ContentType;
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    // Idempotency: if a CSP meta already exists anywhere in the
+    // document, do nothing. lol_html visits comments-aware so this
+    // false-positive-free.
+    let already_present = Rc::new(Cell::new(false));
+    let already_present_cb = Rc::clone(&already_present);
+    let detect = element!(
+        "meta[http-equiv=\"Content-Security-Policy\" i]",
+        move |_el| {
+            already_present_cb.set(true);
+            Ok(())
+        }
+    );
+    let _ = rewrite_html(html, vec![detect]);
+    if already_present.get() {
+        return html.to_string();
+    }
+
+    let policy = policy.to_string();
+    let injected = Rc::new(Cell::new(false));
+    let injected_cb = Rc::clone(&injected);
+    let head_handler = element!("head", move |el| {
+        let meta = format!(
+            "<meta http-equiv=\"Content-Security-Policy\" content=\"{policy}\">"
+        );
+        el.prepend(&meta, ContentType::Html);
+        injected_cb.set(true);
+        Ok(())
+    });
+
+    rewrite_html(html, vec![head_handler]).unwrap_or_else(|_| html.to_string())
+}
+
 /// FNV-1a 64-bit hash.
 fn fnv_hash(data: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
@@ -383,5 +439,57 @@ mod tests {
     fn compute_sri_format() {
         let sri = compute_sri(b"test");
         assert!(sri.starts_with("sha256-"));
+    }
+
+    // ── CspPlugin::new + inject_csp_meta coverage ───────────────────
+
+    #[test]
+    fn csp_plugin_new_constructs_unit_struct() {
+        let p = CspPlugin::new();
+        assert_eq!(p.name(), "csp");
+        assert!(p.has_transform());
+    }
+
+    #[test]
+    fn inject_csp_meta_adds_meta_when_absent() {
+        let html = "<html><head><title>T</title></head><body></body></html>";
+        let out = inject_csp_meta(html, "default-src 'self'");
+        assert!(out.contains("http-equiv=\"Content-Security-Policy\""));
+        assert!(out.contains("default-src 'self'"));
+    }
+
+    #[test]
+    fn inject_csp_meta_is_idempotent_when_meta_already_present() {
+        let html = r#"<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'"></head></html>"#;
+        let out = inject_csp_meta(html, "script-src 'self'");
+        // Should not duplicate.
+        let count = out
+            .matches("http-equiv=\"Content-Security-Policy\"")
+            .count();
+        assert_eq!(count, 1, "must not duplicate CSP meta tag");
+        // And must not insert the new policy.
+        assert!(!out.contains("script-src 'self'"));
+    }
+
+    #[test]
+    fn inject_csp_meta_handles_no_head_gracefully() {
+        let html = "<html><body>no head</body></html>";
+        let out = inject_csp_meta(html, "default-src 'self'");
+        // Without a <head>, lol_html returns the input unchanged.
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn csp_plugin_transform_html_no_inline_blocks_returns_unchanged() {
+        let html =
+            "<html><head><title>X</title></head><body><p>hi</p></body></html>";
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let out = CspPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
     }
 }
