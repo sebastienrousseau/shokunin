@@ -138,7 +138,7 @@ graph TD
 | Metric | Value |
 | :--- | :--- |
 | **Source** | 39,103 lines across 38 modules |
-| **Test suite** | 1,640 unit tests + 14 integration test suites |
+| **Test suite** | 1,890 unit tests + 14 integration test suites |
 | **Coverage** | 95% region, 95% line, 95% function |
 | **Plugin pipeline** | 33 plugins, Rayon-parallelised |
 | **Examples** | 8 branded examples |
