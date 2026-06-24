@@ -440,4 +440,56 @@ mod tests {
         let sri = compute_sri(b"test");
         assert!(sri.starts_with("sha256-"));
     }
+
+    // ── CspPlugin::new + inject_csp_meta coverage ───────────────────
+
+    #[test]
+    fn csp_plugin_new_constructs_unit_struct() {
+        let p = CspPlugin::new();
+        assert_eq!(p.name(), "csp");
+        assert!(p.has_transform());
+    }
+
+    #[test]
+    fn inject_csp_meta_adds_meta_when_absent() {
+        let html = "<html><head><title>T</title></head><body></body></html>";
+        let out = inject_csp_meta(html, "default-src 'self'");
+        assert!(out.contains("http-equiv=\"Content-Security-Policy\""));
+        assert!(out.contains("default-src 'self'"));
+    }
+
+    #[test]
+    fn inject_csp_meta_is_idempotent_when_meta_already_present() {
+        let html = r#"<html><head><meta http-equiv="Content-Security-Policy" content="default-src 'self'"></head></html>"#;
+        let out = inject_csp_meta(html, "script-src 'self'");
+        // Should not duplicate.
+        let count = out
+            .matches("http-equiv=\"Content-Security-Policy\"")
+            .count();
+        assert_eq!(count, 1, "must not duplicate CSP meta tag");
+        // And must not insert the new policy.
+        assert!(!out.contains("script-src 'self'"));
+    }
+
+    #[test]
+    fn inject_csp_meta_handles_no_head_gracefully() {
+        let html = "<html><body>no head</body></html>";
+        let out = inject_csp_meta(html, "default-src 'self'");
+        // Without a <head>, lol_html returns the input unchanged.
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn csp_plugin_transform_html_no_inline_blocks_returns_unchanged() {
+        let html =
+            "<html><head><title>X</title></head><body><p>hi</p></body></html>";
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let out = CspPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
 }

@@ -553,4 +553,136 @@ language = "en-GB"
         assert_eq!(config.site_title, "Test Title");
         assert_eq!(config.base_url, "http://test.example.com");
     }
+
+    // -----------------------------------------------------------------
+    // SsgConfigBuilder::i18n / cdn_prefix
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn builder_sets_i18n() {
+        let i18n_cfg = crate::i18n::I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: crate::i18n::UrlPrefixStrategy::SubPath,
+        };
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("http://example.com".to_string())
+            .i18n(Some(i18n_cfg.clone()))
+            .build()
+            .unwrap();
+        assert!(cfg.i18n.is_some());
+        assert_eq!(cfg.i18n.as_ref().unwrap().default_locale, "en");
+    }
+
+    #[test]
+    fn builder_sets_cdn_prefix() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("http://example.com".to_string())
+            .cdn_prefix(Some("https://cdn.example.com".into()))
+            .build()
+            .unwrap();
+        assert_eq!(cfg.cdn_prefix.as_deref(), Some("https://cdn.example.com"));
+    }
+
+    #[test]
+    fn builder_cdn_prefix_none_is_default() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("http://example.com".to_string())
+            .cdn_prefix(None)
+            .build()
+            .unwrap();
+        assert!(cfg.cdn_prefix.is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // SsgConfig::from_subcommand_matches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn from_subcommand_matches_returns_defaults_when_no_overrides() {
+        let (_inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "build"]).unwrap();
+        let sub = matches.subcommand_matches("build").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        // Defaults preserved.
+        assert_eq!(cfg.content_dir, PathBuf::from("content"));
+        assert_eq!(cfg.output_dir, PathBuf::from("public"));
+        assert_eq!(cfg.template_dir, PathBuf::from("templates"));
+        assert!(cfg.serve_dir.is_none());
+    }
+
+    #[test]
+    fn from_subcommand_matches_applies_content_output_template_overrides() {
+        let (_inv, matches) = Cli::parse_and_dispatch([
+            "ssg",
+            "build",
+            "--content",
+            "/c",
+            "--output",
+            "/o",
+            "--template",
+            "/t",
+        ])
+        .unwrap();
+        let sub = matches.subcommand_matches("build").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        assert_eq!(cfg.content_dir, PathBuf::from("/c"));
+        assert_eq!(cfg.output_dir, PathBuf::from("/o"));
+        assert_eq!(cfg.template_dir, PathBuf::from("/t"));
+    }
+
+    #[test]
+    fn from_subcommand_matches_picks_up_serve_for_dev_subcommand() {
+        let (_inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "dev", "--serve", "/srv"]).unwrap();
+        let sub = matches.subcommand_matches("dev").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        assert_eq!(cfg.serve_dir, Some(PathBuf::from("/srv")));
+    }
+
+    #[test]
+    fn from_subcommand_matches_check_subcommand_has_no_serve() {
+        // `check` doesn't expose `--serve` — code path goes through
+        // try_contains_id == false branch.
+        let (_inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "check"]).unwrap();
+        let sub = matches.subcommand_matches("check").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        assert!(cfg.serve_dir.is_none());
+    }
+
+    #[test]
+    fn from_subcommand_matches_loads_config_file_when_present() {
+        let dir = tempdir().unwrap();
+        let cfg_path = dir.path().join("c.toml");
+        fs::write(
+            &cfg_path,
+            r#"
+site_name = "FromSub"
+content_dir = "./examples/content"
+output_dir = "./examples/public"
+template_dir = "./examples/templates"
+base_url = "http://sub.example.com"
+site_title = "Sub Title"
+site_description = "Sub Desc"
+language = "en-GB"
+"#,
+        )
+        .unwrap();
+
+        let (_inv, matches) = Cli::parse_and_dispatch([
+            "ssg",
+            "build",
+            "--config",
+            cfg_path.to_str().unwrap(),
+        ])
+        .unwrap();
+        let sub = matches.subcommand_matches("build").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        assert_eq!(cfg.site_name, "FromSub");
+        assert_eq!(cfg.base_url, "http://sub.example.com");
+    }
 }

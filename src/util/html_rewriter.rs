@@ -284,4 +284,102 @@ mod tests {
         assert_eq!(collapse_whitespace("  a  b  "), "a b");
         assert_eq!(collapse_whitespace(""), "");
     }
+
+    // ── decode_html_entities ────────────────────────────────────────
+
+    #[test]
+    fn decode_html_entities_named_set() {
+        assert_eq!(decode_html_entities("&amp;"), "&");
+        assert_eq!(decode_html_entities("&lt;&gt;"), "<>");
+        assert_eq!(decode_html_entities("&quot;"), "\"");
+        assert_eq!(decode_html_entities("&apos;"), "'");
+        assert_eq!(decode_html_entities("&nbsp;"), "\u{00A0}");
+    }
+
+    #[test]
+    fn decode_html_entities_decimal_numeric_reference() {
+        assert_eq!(decode_html_entities("&#39;"), "'");
+        assert_eq!(decode_html_entities("&#65;"), "A");
+    }
+
+    #[test]
+    fn decode_html_entities_hex_numeric_reference() {
+        assert_eq!(decode_html_entities("&#x27;"), "'");
+        assert_eq!(decode_html_entities("&#X41;"), "A");
+    }
+
+    #[test]
+    fn decode_html_entities_unknown_named_passes_through() {
+        // Unrecognised named reference must be preserved verbatim so
+        // non-canonical input is left alone.
+        let s = "&foo;";
+        assert_eq!(decode_html_entities(s), s);
+    }
+
+    #[test]
+    fn decode_html_entities_invalid_numeric_passes_through() {
+        // u32 overflow / non-digit hex / out-of-range codepoint all
+        // fall through.
+        assert_eq!(decode_html_entities("&#xZZZZ;"), "&#xZZZZ;");
+        assert_eq!(decode_html_entities("&#99999999999;"), "&#99999999999;");
+        // 0xD800 is a surrogate — char::from_u32 returns None.
+        assert_eq!(decode_html_entities("&#xD800;"), "&#xD800;");
+    }
+
+    #[test]
+    fn decode_html_entities_amp_without_semicolon() {
+        // A lone `&` with no matching `;` is treated as a literal.
+        assert_eq!(decode_html_entities("a & b"), "a & b");
+    }
+
+    #[test]
+    fn decode_html_entities_handles_multibyte_chars() {
+        // Make sure the UTF-8 walker doesn't choke on multi-byte input.
+        assert_eq!(decode_html_entities("café &amp; bar"), "café & bar");
+    }
+
+    #[test]
+    fn decode_html_entities_empty_string() {
+        assert_eq!(decode_html_entities(""), "");
+    }
+
+    // ── extract_text_with_filter additional coverage ────────────────
+
+    #[test]
+    fn extract_text_with_filter_handles_nested_elements() {
+        let html = "<div><p>outer <span>inner</span> tail</p></div>";
+        let texts = extract_text_with_filter(html, "p").unwrap();
+        assert_eq!(texts.len(), 1);
+        assert!(texts[0].contains("outer"));
+        assert!(texts[0].contains("inner"));
+    }
+
+    #[test]
+    fn extract_text_with_filter_multiple_matches_returns_separate_strings() {
+        let html = "<h2>one</h2><h2>two</h2><h2>three</h2>";
+        let texts = extract_text_with_filter(html, "h2").unwrap();
+        assert_eq!(
+            texts,
+            vec!["one".to_string(), "two".to_string(), "three".to_string(),]
+        );
+    }
+
+    #[test]
+    fn extract_text_with_filter_no_match_returns_empty() {
+        let html = "<div>not a heading</div>";
+        let texts = extract_text_with_filter(html, "h1").unwrap();
+        assert!(texts.is_empty());
+    }
+
+    // ── collapse_whitespace edge cases ──────────────────────────────
+
+    #[test]
+    fn collapse_whitespace_tabs_and_newlines() {
+        assert_eq!(collapse_whitespace("a\tb\nc\r\nd"), "a b c d");
+    }
+
+    #[test]
+    fn collapse_whitespace_only_whitespace_returns_empty() {
+        assert_eq!(collapse_whitespace("   \t\n   "), "");
+    }
 }
