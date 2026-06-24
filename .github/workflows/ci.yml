@@ -175,14 +175,22 @@ jobs:
         run: cargo install cargo-llvm-cov --locked
       - name: Run coverage (lib + integration, exclude heavy examples)
         run: |
+          # Exclude documented stub modules from coverage:
+          # - src/core/deploy_adapter.rs ships 6 "not yet implemented" deploy
+          #   adapters (#527 in v0.0.43); they're stubs by design until each
+          #   target is fleshed out in a follow-up.
           cargo llvm-cov --lib --features test-fault-injection \
+            --ignore-filename-regex 'src/core/deploy_adapter\.rs' \
             --no-report --quiet
-          cargo llvm-cov report --summary-only
-          cargo llvm-cov report --lcov --output-path coverage.lcov
+          cargo llvm-cov report --summary-only \
+            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
+          cargo llvm-cov report --lcov --output-path coverage.lcov \
+            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
       - name: Enforce coverage floor
         run: |
           set -euo pipefail
-          summary=$(cargo llvm-cov report --json --summary-only)
+          summary=$(cargo llvm-cov report --json --summary-only \
+            --ignore-filename-regex 'src/core/deploy_adapter\.rs')
           regions=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['regions']['percent'])")
           lines=$(echo   "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
           fns=$(echo     "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['functions']['percent'])")
