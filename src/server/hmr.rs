@@ -161,10 +161,7 @@ pub struct HmrBroadcaster {
 impl std::fmt::Debug for HmrBroadcaster {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HmrBroadcaster")
-            .field(
-                "subscribers",
-                &self.sinks.lock().map_or(0, |v| v.len()),
-            )
+            .field("subscribers", &self.sinks.lock().map_or(0, |v| v.len()))
             .finish()
     }
 }

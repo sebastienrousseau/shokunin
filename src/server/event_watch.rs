@@ -228,10 +228,7 @@ impl EventWatcher {
     /// * [`RecvOutcome::Timeout`] — no batch within `timeout`.
     /// * [`RecvOutcome::Closed`] — the watcher was dropped or the
     ///   debounce thread exited.
-    pub fn recv_timeout(
-        &self,
-        timeout: Duration,
-    ) -> RecvOutcome {
+    pub fn recv_timeout(&self, timeout: Duration) -> RecvOutcome {
         match self.rx.recv_timeout(timeout) {
             Ok(b) => RecvOutcome::Batch(b),
             Err(RecvTimeoutError::Timeout) => RecvOutcome::Timeout,
