@@ -40,6 +40,44 @@ jobs:
       - name: Test ssg-wasm (headless Chrome)
         run: wasm-pack test --headless --chrome crates/ssg-wasm
 
+      # ---------------------------------------------------------------
+      # Issue #546 AC10 — gzipped WASM payload must stay ≤ 2 MB.
+      # ---------------------------------------------------------------
+      - name: Install binaryen for wasm-opt
+        run: |
+          set -euo pipefail
+          BIN_VERSION="version_121"
+          curl -sSL -o /tmp/binaryen.tar.gz \
+            "https://github.com/WebAssembly/binaryen/releases/download/${BIN_VERSION}/binaryen-${BIN_VERSION}-x86_64-linux.tar.gz"
+          mkdir -p /tmp/binaryen
+          tar -xzf /tmp/binaryen.tar.gz -C /tmp/binaryen --strip-components=1
+          sudo cp /tmp/binaryen/bin/wasm-opt /usr/local/bin/
+
+      - name: Optimise WASM with wasm-opt -Oz
+        run: |
+          set -euo pipefail
+          WASM_IN=pkg/ssg_wasm_bg.wasm
+          WASM_OUT=pkg/ssg_wasm_bg.opt.wasm
+          if [ ! -f "$WASM_IN" ]; then
+            echo "::error::expected $WASM_IN to exist after wasm-pack build"
+            exit 1
+          fi
+          wasm-opt -Oz --strip-debug --vacuum -o "$WASM_OUT" "$WASM_IN"
+          mv "$WASM_OUT" "$WASM_IN"
+
+      - name: Enforce ≤ 2 MB gzipped WASM payload (#546 AC10)
+        run: |
+          set -euo pipefail
+          WASM=pkg/ssg_wasm_bg.wasm
+          BUDGET=2097152
+          ACTUAL=$(gzip --best -c "$WASM" | wc -c | tr -d ' ')
+          echo "wasm gzipped size: ${ACTUAL} bytes (budget ${BUDGET})"
+          if [ "$ACTUAL" -gt "$BUDGET" ]; then
+            echo "::error::Edge WASM payload exceeds 2 MB gzipped budget: ${ACTUAL} > ${BUDGET}"
+            exit 1
+          fi
+          echo "wasm_size_bytes=${ACTUAL}" >> "$GITHUB_ENV"
+
       - name: Upload WASM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
