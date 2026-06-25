@@ -121,6 +121,9 @@ pub struct RunOptions {
     /// Preview AI fixes without writing files.
     #[allow(dead_code)]
     pub ai_fix_dry_run: bool,
+    /// Use the cached dependency graph to skip work on unchanged
+    /// sources (`ssg build --incremental`, issue #524).
+    pub incremental: bool,
 }
 
 impl RunOptions {
@@ -135,6 +138,10 @@ impl RunOptions {
             max_memory_mb: matches.get_one::<usize>("max-memory").copied(),
             ai_fix: matches.get_flag("ai-fix"),
             ai_fix_dry_run: matches.get_flag("ai-fix-dry-run"),
+            incremental: matches
+                .try_contains_id("incremental")
+                .unwrap_or(false)
+                && matches.get_flag("incremental"),
         }
     }
 
@@ -175,6 +182,7 @@ impl RunOptions {
             max_memory_mb: opt_one("max-memory"),
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: opt_flag("incremental"),
         }
     }
 }
@@ -260,14 +268,93 @@ pub fn execute_build_pipeline(
     template_dir: &Path,
     quiet: bool,
 ) -> Result<(), SsgError> {
+    execute_build_pipeline_with(
+        plugins,
+        ctx,
+        build_dir,
+        content_dir,
+        site_dir,
+        template_dir,
+        quiet,
+        false,
+    )
+}
+
+/// Variant of [`execute_build_pipeline`] that accepts the
+/// `--incremental` flag.
+///
+/// When `incremental` is `true` and the persisted dependency graph at
+/// `<cache_root>/depgraph.json` shows no source-side changes, the
+/// full compile + transform passes are skipped — the site on disk
+/// from the previous build is the authoritative output. When sources
+/// did change, the full compile runs but the resulting graph is
+/// persisted with fresh sha256 freshness keys so the next incremental
+/// invocation can short-circuit.
+///
+/// The cache root is `<build_dir>/../target/ssg-cache/` when
+/// `build_dir` is a sibling of `target/`; otherwise it lives directly
+/// under `<site_dir>/.ssg-cache/`. The chosen path is logged.
+#[cfg_attr(
+    feature = "otel",
+    tracing::instrument(skip(plugins, ctx), fields(
+        content_dir = %content_dir.display(),
+        site_dir = %site_dir.display(),
+        quiet,
+        incremental,
+    ))
+)]
+pub fn execute_build_pipeline_with(
+    plugins: &plugin::PluginManager,
+    ctx: &plugin::PluginContext,
+    build_dir: &Path,
+    content_dir: &Path,
+    site_dir: &Path,
+    template_dir: &Path,
+    quiet: bool,
+    incremental: bool,
+) -> Result<(), SsgError> {
     let start = std::time::Instant::now();
 
-    // Load plugin cache for incremental builds
-    let cache = plugin::PluginCache::load(site_dir);
-    let dep_graph = crate::depgraph::DepGraph::load(site_dir);
+    let cache_root = depgraph_cache_root(site_dir);
+
+    // Load plugin cache + dep graph from the canonical cache root.
+    let plugin_cache = plugin::PluginCache::load(site_dir);
+    let prev_graph = crate::depgraph::DepGraph::load(&cache_root);
+
     let mut ctx = ctx.clone();
-    ctx.cache = Some(cache);
-    ctx.dep_graph = Some(dep_graph);
+    ctx.cache = Some(plugin_cache);
+    ctx.dep_graph = Some(prev_graph.clone());
+
+    // ----- Incremental fast path ---------------------------------
+    // Compute current hashes and diff against the cached graph. If
+    // nothing changed and the previous output still exists on disk,
+    // we can skip the entire compile + after_compile + transform
+    // chain. This is the warm-cache <200ms target (AC4).
+    if incremental {
+        let current =
+            crate::depgraph::current_hashes(content_dir, template_dir)?;
+        let diff = prev_graph.diff(&current);
+        if diff.is_empty() && prev_graph.page_count() > 0 && site_dir.exists() {
+            let elapsed = start.elapsed();
+            if !quiet {
+                println!(
+                    "Site cached ({} pages, no changes) in {:.2}ms",
+                    prev_graph.page_count(),
+                    elapsed.as_secs_f64() * 1000.0,
+                );
+            }
+            return Ok(());
+        }
+
+        // Handle deletes: remove stale outputs and drop the deleted
+        // entries from the persisted graph (AC5).
+        if !diff.deleted.is_empty() {
+            let stale_outputs = prev_graph.invalidated_outputs(&diff.deleted);
+            for out in &stale_outputs {
+                let _ = std::fs::remove_file(out);
+            }
+        }
+    }
 
     plugins.run_before_compile(&ctx)?;
 
@@ -304,7 +391,23 @@ pub fn execute_build_pipeline(
     // transform plugins → write once. Eliminates redundant I/O.
     plugins.run_fused_transforms(&ctx)?;
 
-    // Rebuild and save cache: snapshot all HTML files in site_dir
+    // Rebuild the dep graph from scratch on a successful compile so
+    // the next `--incremental` invocation sees a consistent snapshot.
+    let mut new_graph = crate::depgraph::DepGraph::new();
+    if let Err(e) = crate::depgraph::populate(
+        &mut new_graph,
+        content_dir,
+        template_dir,
+        site_dir,
+    ) {
+        log::warn!("Failed to populate dependency graph: {e}");
+    }
+
+    if let Err(e) = new_graph.save(&cache_root) {
+        log::warn!("Failed to save dependency graph: {e}");
+    }
+
+    // Rebuild and save the plugin content-hash cache.
     if let Some(ref mut cache) = ctx.cache {
         if let Ok(files) = walk::walk_files(site_dir, "html") {
             for file in &files {
@@ -313,13 +416,6 @@ pub fn execute_build_pipeline(
         }
         if let Err(e) = cache.save(site_dir) {
             log::warn!("Failed to save plugin cache: {e}");
-        }
-    }
-
-    // Persist the dependency graph for next incremental build
-    if let Some(ref dg) = ctx.dep_graph {
-        if let Err(e) = dg.save(site_dir) {
-            log::warn!("Failed to save dependency graph: {e}");
         }
     }
 
@@ -332,6 +428,21 @@ pub fn execute_build_pipeline(
         );
     }
     Ok(())
+}
+
+/// Resolves the on-disk cache root for the persisted dependency graph.
+///
+/// Issue #524 specifies `target/ssg-cache/`; when no `target/`
+/// directory is available (e.g. tests or sites built outside cargo),
+/// the cache lives at `<site_dir>/.ssg-cache/`.
+#[must_use]
+pub fn depgraph_cache_root(site_dir: &Path) -> PathBuf {
+    let target = Path::new("target");
+    if target.is_dir() {
+        target.join(crate::depgraph::CACHE_DIRNAME)
+    } else {
+        site_dir.join(".ssg-cache")
+    }
 }
 
 /// Compiles the static site from source directories.
@@ -858,6 +969,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =

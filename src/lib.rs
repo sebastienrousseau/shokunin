@@ -482,7 +482,7 @@ fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
     let (plugins, ctx, build_dir, site_dir) =
         pipeline::build_pipeline(&config, &opts);
 
-    execute_build_pipeline(
+    pipeline::execute_build_pipeline_with(
         &plugins,
         &ctx,
         &build_dir,
@@ -490,6 +490,7 @@ fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
         &site_dir,
         &config.template_dir,
         opts.quiet,
+        opts.incremental,
     )?;
 
     // Legacy contract: `--serve` boots the dev server.
@@ -529,7 +530,7 @@ fn run_subcommand(
     let (plugins, ctx, build_dir, site_dir) =
         pipeline::build_pipeline(&config, &opts);
 
-    execute_build_pipeline(
+    pipeline::execute_build_pipeline_with(
         &plugins,
         &ctx,
         &build_dir,
@@ -537,6 +538,7 @@ fn run_subcommand(
         &site_dir,
         &config.template_dir,
         opts.quiet,
+        opts.incremental,
     )?;
 
     if start_server {
@@ -2221,6 +2223,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2248,6 +2251,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2260,6 +2264,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2282,6 +2287,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2305,6 +2311,7 @@ mod tests {
                 max_memory_mb: None,
                 ai_fix: false,
                 ai_fix_dry_run: false,
+                incremental: false,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2510,6 +2517,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2559,6 +2567,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2607,6 +2616,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2642,6 +2652,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2675,6 +2686,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));
@@ -3029,6 +3041,7 @@ mod tests {
             max_memory_mb: Some(128),
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3057,6 +3070,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3088,6 +3102,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3109,6 +3124,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3130,6 +3146,7 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));

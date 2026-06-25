@@ -272,6 +272,15 @@ name = "avif_vs_webp"
 harness = false
 required-features = ["image-optimization"]
 
+# Issue #524 acceptance bench: ssg build --incremental warm-cache
+# rebuild ≤ 200ms on a 1000-page fixture. Standalone target so the AC
+# command (`cargo bench --bench incremental_1000_pages`) routes to a
+# single criterion_main without dragging in the unrelated suites.
+[[bench]]
+name = "incremental_1000_pages"
+harness = false
+required-features = ["benchmark"]
+
 # -----------------------------------------------------------------------------
 # Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
 # Each binary's `main.rs` declares the per-module submodules under it; see

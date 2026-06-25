@@ -206,6 +206,12 @@ impl Cli {
                     .long("ai-fix-dry-run")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("incremental")
+                    .help("Rebuild only the pages affected by source changes (issue #524)")
+                    .long("incremental")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Builds the subcommand-style `clap::Command` (issue #527).
@@ -309,6 +315,12 @@ impl Cli {
                             .long("max-memory")
                             .value_name("MB")
                             .value_parser(clap::value_parser!(usize)),
+                    )
+                    .arg(
+                        Arg::new("incremental")
+                            .help("Rebuild only the pages affected by source changes (issue #524)")
+                            .long("incremental")
+                            .action(ArgAction::SetTrue),
                     ),
             )
             .subcommand(

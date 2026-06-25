@@ -3,228 +3,1001 @@
 
 //! Page dependency graph for incremental rebuilds.
 //!
-//! Tracks which pages depend on which templates, shortcodes, and data
-//! files. When a dependency changes, only the pages that use it are
-//! invalidated and recompiled.
+//! `DepGraph` tracks four things:
+//!
+//! 1. **Edges** — `consumer → set<dependency>`. A page declares a
+//!    dependency on every template, partial, and data file the
+//!    compiler will read while rendering it. Edges are reflexive (a
+//!    page depends on itself).
+//! 2. **Outputs** — `source → set<output>`. The compiler may emit
+//!    several artefacts per source (`foo.md → public/foo/index.html`,
+//!    plus a sitemap entry, an RSS entry, an SBOM entry). The output
+//!    set drives the AC5 delete sweep.
+//! 3. **Hashes** — `path → sha256`. The freshness key. A source is
+//!    "changed" iff its current SHA-256 differs from the cached value
+//!    (or no cached value exists, i.e. it's new).
+//! 4. **Schema version** — bumped when the on-disk JSON layout
+//!    changes. Loading a graph with a stale version triggers a
+//!    poisoning-resistant fallback to a full rebuild (AC6).
+//!
+//! Transitive edges are resolved on demand by [`DepGraph::invalidated`]
+//! via BFS over the reverse edge map. Persistence is atomic — the
+//! graph is written to `.tmp` then renamed (POSIX guarantee).
 
-use anyhow::Result;
+use crate::error::SsgError;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const DEP_GRAPH_FILE: &str = ".ssg-deps.json";
+/// Filename used for the persisted graph under
+/// `target/ssg-cache/`. Issue #524 spec.
+pub const DEP_GRAPH_FILE: &str = "depgraph.json";
 
-/// Dependency graph mapping pages to their dependencies.
+/// Subdirectory of the cache root where the graph lives.
+///
+/// The cache root itself defaults to `target/ssg-cache/` (issue
+/// #524 spec) but the helpers accept any path so tests stay
+/// hermetic.
+pub const CACHE_DIRNAME: &str = "ssg-cache";
+
+/// Bumped whenever the persisted JSON layout changes in a way that
+/// can't be loaded by the prior parser. A version mismatch is treated
+/// exactly like a parse error: warn + full rebuild (AC6).
+const SCHEMA_VERSION: u32 = 2;
+
+/// Dependency graph mapping consumers to their dependencies.
+///
+/// Persisted to `target/ssg-cache/depgraph.json`. Loaders are
+/// poisoning-resistant: a missing, truncated, or version-mismatched
+/// file yields an empty graph — caller falls back to a full rebuild
+/// without crashing or producing stale output (AC6).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DepGraph {
-    /// page relative path → set of dependency relative paths
+    /// On-disk layout version. Mismatches force a full rebuild.
+    #[serde(default = "default_version")]
+    version: u32,
+    /// `consumer → set<dependency>` (forward edges).
     deps: HashMap<PathBuf, HashSet<PathBuf>>,
+    /// `source → set<output>`. Used by [`DepGraph::stale_outputs`] to
+    /// sweep orphaned output files when a source is deleted (AC5).
+    #[serde(default)]
+    outputs: HashMap<PathBuf, HashSet<PathBuf>>,
+    /// `path → sha256(content)`. The freshness key.
+    #[serde(default)]
+    hashes: HashMap<PathBuf, String>,
+}
+
+const fn default_version() -> u32 {
+    // A graph without a version field is from before v2 — treated as
+    // unusable and replaced by the empty default on load.
+    0
 }
 
 impl DepGraph {
-    /// Creates an empty dependency graph.
+    /// Creates an empty dependency graph at the current schema version.
     #[must_use]
     pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Loads from `.ssg-deps.json` in the site directory.
-    /// Returns an empty graph if the file is missing or corrupt.
-    #[must_use]
-    pub fn load(site_dir: &Path) -> Self {
-        let path = site_dir.join(DEP_GRAPH_FILE);
-        match fs::read_to_string(&path) {
-            Ok(json) => serde_json::from_str(&json).unwrap_or_default(),
-            Err(_) => Self::default(),
+        Self {
+            version: SCHEMA_VERSION,
+            deps: HashMap::new(),
+            outputs: HashMap::new(),
+            hashes: HashMap::new(),
         }
     }
 
-    /// Persists the graph to `.ssg-deps.json`.
-    pub fn save(&self, site_dir: &Path) -> Result<()> {
-        let path = site_dir.join(DEP_GRAPH_FILE);
-        let json = serde_json::to_string_pretty(self)?;
-        fs::write(&path, json)?;
+    /// Loads the graph from `<cache_root>/depgraph.json`.
+    ///
+    /// Returns an empty graph if the file is missing, unreadable,
+    /// malformed, or written by an incompatible schema version. The
+    /// poisoning-resistant return matches AC6.
+    #[must_use]
+    pub fn load(cache_root: &Path) -> Self {
+        let path = cache_root.join(DEP_GRAPH_FILE);
+        let Ok(json) = fs::read_to_string(&path) else {
+            return Self::new();
+        };
+        match serde_json::from_str::<Self>(&json) {
+            Ok(g) if g.version == SCHEMA_VERSION => g,
+            Ok(_) => {
+                log::warn!(
+                    "depgraph at {} has incompatible schema; falling back to full rebuild",
+                    path.display()
+                );
+                Self::new()
+            }
+            Err(e) => {
+                log::warn!(
+                    "depgraph at {} is corrupt ({e}); falling back to full rebuild",
+                    path.display()
+                );
+                Self::new()
+            }
+        }
+    }
+
+    /// Persists the graph atomically: writes `<file>.tmp` then renames.
+    /// POSIX rename is atomic on the same filesystem.
+    ///
+    /// # Errors
+    /// Returns the underlying I/O failure if the cache root can't be
+    /// created or the temp file can't be written / renamed.
+    pub fn save(&self, cache_root: &Path) -> Result<(), SsgError> {
+        fs::create_dir_all(cache_root).map_err(|e| SsgError::Io {
+            path: cache_root.to_path_buf(),
+            source: e,
+        })?;
+        let final_path = cache_root.join(DEP_GRAPH_FILE);
+        let tmp_path = cache_root.join(format!("{DEP_GRAPH_FILE}.tmp"));
+        let json = serde_json::to_string(self).map_err(|e| SsgError::Io {
+            path: final_path.clone(),
+            source: std::io::Error::other(e),
+        })?;
+        fs::write(&tmp_path, json).map_err(|e| SsgError::Io {
+            path: tmp_path.clone(),
+            source: e,
+        })?;
+        fs::rename(&tmp_path, &final_path).map_err(|e| SsgError::Io {
+            path: final_path,
+            source: e,
+        })?;
         Ok(())
     }
 
-    /// Records that `page` depends on `dep`.
-    pub fn add_dep(&mut self, page: &Path, dep: &Path) {
+    /// Records that `consumer` depends on `dep`.
+    pub fn add_dep(&mut self, consumer: &Path, dep: &Path) {
         let _ = self
             .deps
-            .entry(page.to_path_buf())
+            .entry(consumer.to_path_buf())
             .or_default()
             .insert(dep.to_path_buf());
     }
 
-    /// Returns the dependencies for a given page.
-    #[must_use]
-    pub fn deps_for(&self, page: &Path) -> Option<&HashSet<PathBuf>> {
-        self.deps.get(page)
+    /// Records that `source` produces `output`. Used by the AC5
+    /// delete-sweep to remove orphaned outputs when a source is
+    /// removed.
+    pub fn add_output(&mut self, source: &Path, output: &Path) {
+        let _ = self
+            .outputs
+            .entry(source.to_path_buf())
+            .or_default()
+            .insert(output.to_path_buf());
     }
 
-    /// Given a list of changed files, returns all pages that need
-    /// rebuilding — either because they changed directly, or because
-    /// one of their dependencies changed.
-    #[must_use]
-    pub fn invalidated_pages(&self, changed: &[PathBuf]) -> Vec<PathBuf> {
-        let changed_set: HashSet<&PathBuf> = changed.iter().collect();
-        let mut invalidated: HashSet<PathBuf> = HashSet::new();
-
-        // Pages whose own content changed
-        for path in changed {
-            let _ = invalidated.insert(path.clone());
-        }
-
-        // Pages whose dependencies changed
-        for (page, deps) in &self.deps {
-            if deps.iter().any(|d| changed_set.contains(d)) {
-                let _ = invalidated.insert(page.clone());
-            }
-        }
-
-        let mut result: Vec<PathBuf> = invalidated.into_iter().collect();
-        result.sort();
-        result
+    /// Records the SHA-256 freshness key for `path` from a byte slice.
+    pub fn record_hash(&mut self, path: &Path, content: &[u8]) {
+        let _ = self
+            .hashes
+            .insert(path.to_path_buf(), Self::sha256_hex(content));
     }
 
-    /// Returns the total number of tracked pages.
+    /// Records the SHA-256 of `path` by reading it from disk.
+    /// Silently ignores missing files (the caller will catch the
+    /// absence elsewhere — typically a delete that we want to record).
+    pub fn record_hash_from_disk(&mut self, path: &Path) {
+        if let Ok(bytes) = fs::read(path) {
+            self.record_hash(path, &bytes);
+        }
+    }
+
+    /// Returns the SHA-256 hex string for `bytes`. Exposed so the
+    /// `populate` helpers can hash files exactly once.
+    #[must_use]
+    pub fn sha256_hex(bytes: &[u8]) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(bytes);
+        let digest = hasher.finalize();
+        let mut out = String::with_capacity(64);
+        for b in digest {
+            use std::fmt::Write as _;
+            let _ = write!(out, "{b:02x}");
+        }
+        out
+    }
+
+    /// Returns the direct dependencies recorded for `consumer`.
+    #[must_use]
+    pub fn deps_for(&self, consumer: &Path) -> Option<&HashSet<PathBuf>> {
+        self.deps.get(consumer)
+    }
+
+    /// Returns the recorded outputs for `source`.
+    #[must_use]
+    pub fn outputs_for(&self, source: &Path) -> Option<&HashSet<PathBuf>> {
+        self.outputs.get(source)
+    }
+
+    /// Returns every tracked source path (the keys of the output map).
+    #[must_use]
+    pub fn tracked_sources(&self) -> Vec<PathBuf> {
+        let mut v: Vec<PathBuf> = self.outputs.keys().cloned().collect();
+        v.sort();
+        v
+    }
+
+    /// Returns the count of edge consumers (pages + intermediate deps).
     #[must_use]
     pub fn page_count(&self) -> usize {
         self.deps.len()
     }
 
-    /// Clears all dependency entries.
+    /// Removes every entry that references `path` as either a consumer
+    /// or a dependency. Called by [`Self::diff`] when a source is
+    /// deleted.
+    pub fn forget(&mut self, path: &Path) {
+        let _ = self.deps.remove(path);
+        let _ = self.outputs.remove(path);
+        let _ = self.hashes.remove(path);
+        for set in self.deps.values_mut() {
+            let _ = set.remove(path);
+        }
+    }
+
+    /// Clears the entire graph.
     pub fn clear(&mut self) {
         self.deps.clear();
+        self.outputs.clear();
+        self.hashes.clear();
+    }
+
+    /// Returns every consumer reachable from any of `changed` via the
+    /// reverse edge map (transitive closure, AC3). Sources whose own
+    /// content changed are always included.
+    #[must_use]
+    pub fn invalidated(&self, changed: &[PathBuf]) -> Vec<PathBuf> {
+        let reverse = self.reverse_edges();
+        let mut seen: HashSet<PathBuf> = HashSet::new();
+        let mut queue: VecDeque<PathBuf> = changed.iter().cloned().collect();
+        while let Some(p) = queue.pop_front() {
+            if !seen.insert(p.clone()) {
+                continue;
+            }
+            if let Some(parents) = reverse.get(&p) {
+                for parent in parents {
+                    if !seen.contains(parent) {
+                        queue.push_back(parent.clone());
+                    }
+                }
+            }
+        }
+        let mut result: Vec<PathBuf> = seen.into_iter().collect();
+        result.sort();
+        result
+    }
+
+    /// Returns the union of output paths for every invalidated source.
+    /// Sources that don't appear in the output map (templates,
+    /// partials, data files) contribute nothing.
+    #[must_use]
+    pub fn invalidated_outputs(&self, changed: &[PathBuf]) -> Vec<PathBuf> {
+        let mut out: HashSet<PathBuf> = HashSet::new();
+        for p in self.invalidated(changed) {
+            if let Some(outs) = self.outputs.get(&p) {
+                for o in outs {
+                    let _ = out.insert(o.clone());
+                }
+            }
+        }
+        let mut v: Vec<PathBuf> = out.into_iter().collect();
+        v.sort();
+        v
+    }
+
+    /// Inverts the forward edge map so the BFS can walk
+    /// `dependency → set<consumer>`.
+    fn reverse_edges(&self) -> HashMap<PathBuf, HashSet<PathBuf>> {
+        let mut rev: HashMap<PathBuf, HashSet<PathBuf>> = HashMap::new();
+        for (consumer, deps) in &self.deps {
+            for dep in deps {
+                let _ = rev
+                    .entry(dep.clone())
+                    .or_default()
+                    .insert(consumer.clone());
+            }
+        }
+        rev
+    }
+
+    /// Compares `current` (path → sha256) against the cached hashes
+    /// and returns `(changed, deleted)`.
+    ///
+    /// * `changed` — paths whose current hash differs from cache, or
+    ///   paths that weren't in the cache (new files).
+    /// * `deleted` — paths the cache knew about that are absent from
+    ///   `current`.
+    #[must_use]
+    pub fn diff(&self, current: &HashMap<PathBuf, String>) -> Diff {
+        let mut changed = Vec::new();
+        let mut deleted = Vec::new();
+        for (path, hash) in current {
+            match self.hashes.get(path) {
+                Some(prev) if prev == hash => {}
+                _ => changed.push(path.clone()),
+            }
+        }
+        for path in self.hashes.keys() {
+            if !current.contains_key(path) {
+                deleted.push(path.clone());
+            }
+        }
+        changed.sort();
+        deleted.sort();
+        Diff { changed, deleted }
     }
 }
 
+/// Result of [`DepGraph::diff`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Diff {
+    /// Sources whose SHA-256 changed since the cached graph, or new
+    /// sources without a cached hash.
+    pub changed: Vec<PathBuf>,
+    /// Sources tracked by the cached graph that no longer exist on
+    /// disk.
+    pub deleted: Vec<PathBuf>,
+}
+
+impl Diff {
+    /// Returns `true` when nothing changed and nothing was deleted —
+    /// the warm-cache zero-work fast path.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.changed.is_empty() && self.deleted.is_empty()
+    }
+}
+
+// ---------------------------------------------------------------------
+// Populate helpers: scan content + templates to build the edge set.
+// ---------------------------------------------------------------------
+
+/// Reads every `.md` file under `content_dir` and every `.html` file
+/// under `template_dir`, recording:
+///
+/// * a content → template edge for each `layout:` frontmatter value
+///   (`layout: "post"` resolves to `<template_dir>/<locale>/post.html`
+///   when a localised copy exists, otherwise `<template_dir>/post.html`);
+/// * a template → template edge for each `{{#extends "name"}}` and
+///   `{{->partial}}` reference inside the template;
+/// * the canonical output path `<build_dir>/<stem>/index.html`
+///   (or `<build_dir>/index.html` for `index.md`);
+/// * the SHA-256 freshness key for every source touched.
+///
+/// Self-edges (`page → page`) are always recorded so deleting a page
+/// invalidates its own output. Missing template files don't fault —
+/// the build will fail later with a friendlier message.
+pub fn populate(
+    graph: &mut DepGraph,
+    content_dir: &Path,
+    template_dir: &Path,
+    build_dir: &Path,
+) -> Result<(), SsgError> {
+    let md_files = crate::walk::walk_files_bounded_depth(
+        content_dir,
+        "md",
+        crate::MAX_DIR_DEPTH,
+    )?;
+
+    for md in &md_files {
+        let bytes = fs::read(md).map_err(|e| SsgError::Io {
+            path: md.clone(),
+            source: e,
+        })?;
+        graph.record_hash(md, &bytes);
+
+        let layout = extract_layout(&bytes);
+        let outputs = output_paths_for(md, content_dir, build_dir);
+        for o in &outputs {
+            graph.add_output(md, o);
+            // self-edge so deletes propagate via invalidated()
+            graph.add_dep(md, md);
+            if let Some(ref layout_name) = layout {
+                if let Some(tpl) =
+                    resolve_template(template_dir, md, content_dir, layout_name)
+                {
+                    graph.add_dep(md, &tpl);
+                }
+            }
+        }
+    }
+
+    let tpl_files = crate::walk::walk_files_bounded_depth(
+        template_dir,
+        "html",
+        crate::MAX_DIR_DEPTH,
+    )?;
+    for tpl in &tpl_files {
+        let bytes = fs::read(tpl).map_err(|e| SsgError::Io {
+            path: tpl.clone(),
+            source: e,
+        })?;
+        graph.record_hash(tpl, &bytes);
+        let text = String::from_utf8_lossy(&bytes);
+        for parent in scan_template_refs(&text) {
+            let resolved = template_dir.join(format!("{parent}.html"));
+            // Edge: tpl depends on parent (extends / include).
+            graph.add_dep(tpl, &resolved);
+        }
+    }
+
+    Ok(())
+}
+
+/// Walks every tracked source on disk and returns
+/// `path → sha256(content)`. Used by [`DepGraph::diff`] on the
+/// incremental hot path. Sources that disappear silently drop out.
+pub fn current_hashes(
+    content_dir: &Path,
+    template_dir: &Path,
+) -> Result<HashMap<PathBuf, String>, SsgError> {
+    let mut out = HashMap::new();
+    let mut push = |paths: Vec<PathBuf>| -> Result<(), SsgError> {
+        for p in paths {
+            if let Ok(bytes) = fs::read(&p) {
+                let _ = out.insert(p, DepGraph::sha256_hex(&bytes));
+            }
+        }
+        Ok(())
+    };
+    push(crate::walk::walk_files_bounded_depth(
+        content_dir,
+        "md",
+        crate::MAX_DIR_DEPTH,
+    )?)?;
+    push(crate::walk::walk_files_bounded_depth(
+        template_dir,
+        "html",
+        crate::MAX_DIR_DEPTH,
+    )?)?;
+    Ok(out)
+}
+
+/// Extracts the `layout:` field from a YAML frontmatter header. Returns
+/// `None` if the file lacks frontmatter or doesn't declare a layout.
+fn extract_layout(bytes: &[u8]) -> Option<String> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    let trimmed = text.trim_start();
+    let body = trimmed.strip_prefix("---")?;
+    let end = body.find("\n---")?;
+    let fm = &body[..end];
+    for line in fm.lines() {
+        let l = line.trim();
+        if let Some(rest) = l.strip_prefix("layout:") {
+            return Some(
+                rest.trim()
+                    .trim_matches(|c| c == '"' || c == '\'')
+                    .split_whitespace()
+                    .next()?
+                    .trim_matches(|c| c == '"' || c == '\'')
+                    .to_string(),
+            );
+        }
+    }
+    None
+}
+
+/// Computes the canonical output paths the compiler will emit for a
+/// given content file. Mirrors `staticdatagen`'s naming convention:
+///
+///   `<content_dir>/index.md`             → `<build_dir>/index.html`
+///   `<content_dir>/<stem>.md`            → `<build_dir>/<stem>/index.html`
+///   `<content_dir>/<sub>/<stem>.md`      → `<build_dir>/<sub>/<stem>/index.html`
+///   `<content_dir>/<sub>/index.md`       → `<build_dir>/<sub>/index.html`
+fn output_paths_for(
+    md: &Path,
+    content_dir: &Path,
+    build_dir: &Path,
+) -> Vec<PathBuf> {
+    let rel = match md.strip_prefix(content_dir) {
+        Ok(r) => r.to_path_buf(),
+        Err(_) => return Vec::new(),
+    };
+    let parent = rel.parent().map(Path::to_path_buf).unwrap_or_default();
+    let stem = rel.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let out = if stem == "index" {
+        build_dir.join(&parent).join("index.html")
+    } else {
+        build_dir.join(&parent).join(stem).join("index.html")
+    };
+    vec![out]
+}
+
+/// Resolves a `layout: "post"` frontmatter value to the on-disk
+/// template path. Prefers a locale-aware sibling
+/// (`<template_dir>/<locale>/post.html`) inferred from the leading
+/// directory component of the content file's relative path; falls back
+/// to `<template_dir>/post.html`. Returns `None` if neither exists —
+/// the consumer is free to record no edge or surface the error later.
+fn resolve_template(
+    template_dir: &Path,
+    md: &Path,
+    content_dir: &Path,
+    layout: &str,
+) -> Option<PathBuf> {
+    if let Ok(rel) = md.strip_prefix(content_dir) {
+        if let Some(first) = rel.components().next() {
+            let candidate = template_dir
+                .join(first.as_os_str())
+                .join(format!("{layout}.html"));
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+    }
+    let fallback = template_dir.join(format!("{layout}.html"));
+    if fallback.exists() {
+        Some(fallback)
+    } else {
+        None
+    }
+}
+
+/// Scans a template body for `{{#extends "name"}}` and `{{->name}}`
+/// references and returns each `name` once. Order-preserving but
+/// de-duplicated.
+fn scan_template_refs(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut rest = text;
+    while let Some(start) = rest.find("{{") {
+        rest = &rest[start + 2..];
+        let Some(end) = rest.find("}}") else {
+            break;
+        };
+        let inner = rest[..end].trim();
+        rest = &rest[end + 2..];
+        let name_opt = if let Some(after) = inner.strip_prefix("#extends") {
+            Some(parse_name(after.trim()))
+        } else {
+            inner
+                .strip_prefix("->")
+                .map(|after| parse_name(after.trim()))
+        };
+        if let Some(name) = name_opt {
+            if !name.is_empty() && seen.insert(name.clone()) {
+                out.push(name);
+            }
+        }
+    }
+    out
+}
+
+/// Parses a bareword or quoted template name from an `extends` /
+/// `partial` invocation. Strips a trailing parameter list (the partial
+/// invocation `header title="foo"` parses to `header`).
+fn parse_name(s: &str) -> String {
+    let s = s.trim().trim_matches(|c| c == '"' || c == '\'');
+    s.split(|c: char| c.is_whitespace() || c == '"' || c == '\'')
+        .next()
+        .unwrap_or("")
+        .to_string()
+}
+
 #[cfg(test)]
-#[allow(clippy::expect_used)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
 
+    fn write(p: &Path, body: &str) {
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(p, body).unwrap();
+    }
+
     #[test]
-    fn empty_graph() {
+    fn empty_graph_only_reports_changed_inputs() {
         let graph = DepGraph::new();
         let changed = vec![PathBuf::from("content/index.md")];
-        let result = graph.invalidated_pages(&changed);
+        let result = graph.invalidated(&changed);
         assert_eq!(result, vec![PathBuf::from("content/index.md")]);
     }
 
     #[test]
-    fn direct_change() {
+    fn direct_change_invalidates_only_the_page() {
         let mut graph = DepGraph::new();
         let page = PathBuf::from("content/about.md");
         let tmpl = PathBuf::from("templates/base.html");
         graph.add_dep(&page, &tmpl);
 
         let changed = vec![page.clone()];
-        let result = graph.invalidated_pages(&changed);
-        assert_eq!(result, vec![page]);
+        let result = graph.invalidated(&changed);
+        assert!(result.contains(&page));
+        assert_eq!(result.len(), 1, "no other consumers should fire");
     }
 
     #[test]
-    fn dependency_change() {
+    fn dependency_change_invalidates_all_consumers() {
         let mut graph = DepGraph::new();
-        let page_a = PathBuf::from("content/index.md");
-        let page_b = PathBuf::from("content/about.md");
+        let a = PathBuf::from("content/index.md");
+        let b = PathBuf::from("content/about.md");
         let tmpl = PathBuf::from("templates/base.html");
-        graph.add_dep(&page_a, &tmpl);
-        graph.add_dep(&page_b, &tmpl);
+        graph.add_dep(&a, &tmpl);
+        graph.add_dep(&b, &tmpl);
 
-        let changed = vec![tmpl];
-        let result = graph.invalidated_pages(&changed);
-        // Both pages depend on the template, plus the template itself
-        assert!(result.contains(&page_a));
-        assert!(result.contains(&page_b));
-        assert_eq!(result.len(), 3); // page_a, page_b, tmpl
+        let result = graph.invalidated(std::slice::from_ref(&tmpl));
+        assert!(result.contains(&a));
+        assert!(result.contains(&b));
+        assert!(result.contains(&tmpl));
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
-    fn transitive_not_tracked() {
-        // Only direct dependencies matter; transitive closure is not computed.
+    fn transitive_edges_are_tracked_via_bfs() {
+        // AC3: page → partial → base. Changing `base` must invalidate
+        // `page` as well. This flips the prior `transitive_not_tracked`
+        // assertion.
         let mut graph = DepGraph::new();
         let page = PathBuf::from("content/index.md");
         let partial = PathBuf::from("templates/partial.html");
         let base = PathBuf::from("templates/base.html");
-        // page → partial, partial → base (but we only track direct deps)
         graph.add_dep(&page, &partial);
         graph.add_dep(&partial, &base);
 
-        // Changing base should NOT invalidate page (no direct dep)
-        let changed = vec![base.clone()];
-        let result = graph.invalidated_pages(&changed);
+        let result = graph.invalidated(std::slice::from_ref(&base));
         assert!(result.contains(&base));
-        assert!(result.contains(&partial)); // partial depends on base
-        assert!(!result.contains(&page)); // page does NOT depend on base
+        assert!(result.contains(&partial));
+        assert!(
+            result.contains(&page),
+            "transitive consumer must be invalidated"
+        );
     }
 
     #[test]
-    fn save_and_load_round_trip() {
-        let dir = tempdir().expect("test invariant");
+    fn invalidated_outputs_unions_outputs_of_every_consumer() {
+        let mut graph = DepGraph::new();
+        let page = PathBuf::from("content/about.md");
+        let out = PathBuf::from("public/about/index.html");
+        let tmpl = PathBuf::from("templates/page.html");
+        graph.add_dep(&page, &tmpl);
+        graph.add_output(&page, &out);
+
+        let result = graph.invalidated_outputs(&[tmpl]);
+        assert_eq!(result, vec![out]);
+    }
+
+    #[test]
+    fn diff_reports_changed_new_and_deleted() {
+        let mut graph = DepGraph::new();
+        graph.record_hash(Path::new("a.md"), b"alpha");
+        graph.record_hash(Path::new("b.md"), b"beta");
+        graph.record_hash(Path::new("c.md"), b"gamma");
+
+        let mut current = HashMap::new();
+        let _ = current
+            .insert(PathBuf::from("a.md"), DepGraph::sha256_hex(b"alpha"));
+        // b.md changed
+        let _ = current
+            .insert(PathBuf::from("b.md"), DepGraph::sha256_hex(b"beta-prime"));
+        // c.md deleted
+        // d.md new
+        let _ = current
+            .insert(PathBuf::from("d.md"), DepGraph::sha256_hex(b"delta"));
+
+        let diff = graph.diff(&current);
+        assert_eq!(
+            diff.changed,
+            vec![PathBuf::from("b.md"), PathBuf::from("d.md")]
+        );
+        assert_eq!(diff.deleted, vec![PathBuf::from("c.md")]);
+        assert!(!diff.is_empty());
+    }
+
+    #[test]
+    fn diff_no_changes_is_empty() {
+        let mut graph = DepGraph::new();
+        graph.record_hash(Path::new("a.md"), b"alpha");
+        let mut current = HashMap::new();
+        let _ = current
+            .insert(PathBuf::from("a.md"), DepGraph::sha256_hex(b"alpha"));
+        let diff = graph.diff(&current);
+        assert!(diff.is_empty());
+    }
+
+    #[test]
+    fn save_and_load_round_trip_preserves_edges_and_hashes() {
+        let dir = tempdir().unwrap();
         let mut graph = DepGraph::new();
         let page = PathBuf::from("content/index.md");
         let tmpl = PathBuf::from("templates/base.html");
+        let out = PathBuf::from("public/index.html");
         graph.add_dep(&page, &tmpl);
+        graph.add_output(&page, &out);
+        graph.record_hash(&page, b"hello");
 
-        graph.save(dir.path()).expect("test invariant");
+        graph.save(dir.path()).unwrap();
         let loaded = DepGraph::load(dir.path());
 
-        assert_eq!(loaded.page_count(), 1);
-        let deps = loaded.deps_for(&page).expect("test invariant");
-        assert!(deps.contains(&tmpl));
+        assert_eq!(loaded.deps_for(&page).unwrap().len(), 1);
+        assert!(loaded.outputs_for(&page).unwrap().contains(&out));
+        let mut current = HashMap::new();
+        let _ = current.insert(page, DepGraph::sha256_hex(b"hello"));
+        assert!(loaded.diff(&current).is_empty());
     }
 
     #[test]
-    fn load_missing_file() {
-        let dir = tempdir().expect("test invariant");
+    fn load_missing_file_yields_empty_graph() {
+        let dir = tempdir().unwrap();
+        let graph = DepGraph::load(dir.path());
+        assert_eq!(graph.page_count(), 0);
+        assert_eq!(graph.version, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn load_corrupt_json_falls_back_to_empty_ac6() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(DEP_GRAPH_FILE), "{{ not json").unwrap();
         let graph = DepGraph::load(dir.path());
         assert_eq!(graph.page_count(), 0);
     }
 
     #[test]
-    fn load_corrupt_json() {
-        let dir = tempdir().expect("test invariant");
-        let path = dir.path().join(".ssg-deps.json");
-        fs::write(&path, "not valid json {{{{").expect("test invariant");
+    fn load_wrong_schema_version_falls_back_to_empty_ac6() {
+        let dir = tempdir().unwrap();
+        let body =
+            r#"{"version":0,"deps":{},"outputs":{},"hashes":{}}"#.to_string();
+        fs::write(dir.path().join(DEP_GRAPH_FILE), body).unwrap();
         let graph = DepGraph::load(dir.path());
         assert_eq!(graph.page_count(), 0);
     }
 
     #[test]
-    fn add_multiple_deps() {
+    fn forget_removes_all_traces_of_a_path() {
         let mut graph = DepGraph::new();
-        let page = PathBuf::from("content/post.md");
-        let dep_a = PathBuf::from("templates/post.html");
-        let dep_b = PathBuf::from("shortcodes/gallery.html");
-        let dep_c = PathBuf::from("data/authors.json");
-        graph.add_dep(&page, &dep_a);
-        graph.add_dep(&page, &dep_b);
-        graph.add_dep(&page, &dep_c);
-
-        // Change only one dependency
-        let changed = vec![dep_b.clone()];
-        let result = graph.invalidated_pages(&changed);
-        assert!(result.contains(&page));
-        assert!(result.contains(&dep_b));
-        assert_eq!(result.len(), 2);
-    }
-
-    #[test]
-    fn no_false_positives() {
-        let mut graph = DepGraph::new();
-        let page = PathBuf::from("content/index.md");
-        let tmpl = PathBuf::from("templates/base.html");
+        let page = PathBuf::from("content/about.md");
+        let other = PathBuf::from("content/index.md");
+        let tmpl = PathBuf::from("templates/page.html");
         graph.add_dep(&page, &tmpl);
+        graph.add_dep(&other, &tmpl);
+        graph.add_dep(&other, &page); // sibling reference
+        graph.add_output(&page, Path::new("public/about/index.html"));
+        graph.record_hash(&page, b"x");
 
-        // Change an unrelated file
-        let unrelated = PathBuf::from("static/logo.png");
-        let changed = vec![unrelated.clone()];
-        let result = graph.invalidated_pages(&changed);
-        // Only the changed file itself, not the page
-        assert_eq!(result, vec![unrelated]);
+        graph.forget(&page);
+
+        assert!(graph.deps_for(&page).is_none());
+        assert!(graph.outputs_for(&page).is_none());
+        let other_deps = graph.deps_for(&other).unwrap();
+        assert!(!other_deps.contains(&page));
+        assert!(other_deps.contains(&tmpl));
+    }
+
+    #[test]
+    fn clear_empties_everything() {
+        let mut graph = DepGraph::new();
+        graph.add_dep(Path::new("a"), Path::new("b"));
+        graph.add_output(Path::new("a"), Path::new("o"));
+        graph.record_hash(Path::new("a"), b"x");
+        graph.clear();
+        assert_eq!(graph.page_count(), 0);
+        assert!(graph.tracked_sources().is_empty());
+    }
+
+    #[test]
+    fn sha256_hex_is_deterministic_64_chars() {
+        let h = DepGraph::sha256_hex(b"hello");
+        assert_eq!(h.len(), 64);
+        assert_eq!(h, DepGraph::sha256_hex(b"hello"));
+    }
+
+    #[test]
+    fn sha256_hex_distinguishes_inputs() {
+        assert_ne!(DepGraph::sha256_hex(b"a"), DepGraph::sha256_hex(b"b"));
+    }
+
+    #[test]
+    fn populate_walks_real_directories_and_records_edges() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&template).unwrap();
+
+        write(
+            &content.join("index.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(
+            &content.join("about.md"),
+            "---\nlayout: \"page\"\n---\nbody",
+        );
+        write(&template.join("page.html"), "<html>{{title}}</html>");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        // Edges recorded
+        let index = content.join("index.md");
+        let about = content.join("about.md");
+        let page_tpl = template.join("page.html");
+        assert!(graph.deps_for(&index).unwrap().contains(&page_tpl));
+        assert!(graph.deps_for(&about).unwrap().contains(&page_tpl));
+
+        // Outputs recorded correctly
+        let outs_index = graph.outputs_for(&index).unwrap();
+        assert!(outs_index.contains(&build.join("index.html")));
+        let outs_about = graph.outputs_for(&about).unwrap();
+        assert!(outs_about.contains(&build.join("about").join("index.html")));
+
+        // Hashes recorded
+        assert!(!graph.hashes.is_empty());
+    }
+
+    #[test]
+    fn populate_records_template_to_template_edges() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&template).unwrap();
+
+        write(&content.join("index.md"), "---\nlayout: \"page\"\n---\n");
+        write(
+            &template.join("page.html"),
+            "{{#extends \"base\"}}\n<p>x</p>",
+        );
+        write(&template.join("base.html"), "<html>{{body}}</html>");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        let page_tpl = template.join("page.html");
+        let base_tpl = template.join("base.html");
+        assert!(
+            graph.deps_for(&page_tpl).unwrap().contains(&base_tpl),
+            "template→template edge must be recorded"
+        );
+
+        // Transitive: changing base.html must invalidate the content page.
+        let invalidated = graph.invalidated(&[base_tpl]);
+        assert!(invalidated.contains(&content.join("index.md")));
+    }
+
+    #[test]
+    fn populate_records_partial_references() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let template = dir.path().join("templates");
+        let build = dir.path().join("public");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&template).unwrap();
+
+        write(&content.join("index.md"), "---\nlayout: \"page\"\n---\n");
+        write(
+            &template.join("page.html"),
+            "<div>{{->header title=\"x\"}}</div>",
+        );
+        write(&template.join("header.html"), "<h1>{{title}}</h1>");
+
+        let mut graph = DepGraph::new();
+        populate(&mut graph, &content, &template, &build).unwrap();
+
+        let page_tpl = template.join("page.html");
+        let header_tpl = template.join("header.html");
+        assert!(graph.deps_for(&page_tpl).unwrap().contains(&header_tpl));
+    }
+
+    #[test]
+    fn output_paths_for_root_index_emits_root_index_html() {
+        let outs = output_paths_for(
+            Path::new("/c/index.md"),
+            Path::new("/c"),
+            Path::new("/b"),
+        );
+        assert_eq!(outs, vec![PathBuf::from("/b/index.html")]);
+    }
+
+    #[test]
+    fn output_paths_for_nested_post_emits_subdir_index() {
+        let outs = output_paths_for(
+            Path::new("/c/blog/foo.md"),
+            Path::new("/c"),
+            Path::new("/b"),
+        );
+        assert_eq!(outs, vec![PathBuf::from("/b/blog/foo/index.html")]);
+    }
+
+    #[test]
+    fn output_paths_for_nested_index_emits_subdir_index_html() {
+        let outs = output_paths_for(
+            Path::new("/c/blog/index.md"),
+            Path::new("/c"),
+            Path::new("/b"),
+        );
+        assert_eq!(outs, vec![PathBuf::from("/b/blog/index.html")]);
+    }
+
+    #[test]
+    fn extract_layout_reads_yaml_frontmatter() {
+        let text = "---\ntitle: foo\nlayout: \"post\"\n---\nbody";
+        assert_eq!(extract_layout(text.as_bytes()), Some("post".to_string()));
+    }
+
+    #[test]
+    fn extract_layout_bareword() {
+        let text = "---\nlayout: post\n---\nbody";
+        assert_eq!(extract_layout(text.as_bytes()), Some("post".to_string()));
+    }
+
+    #[test]
+    fn extract_layout_missing_returns_none() {
+        let text = "---\ntitle: foo\n---\nbody";
+        assert!(extract_layout(text.as_bytes()).is_none());
+    }
+
+    #[test]
+    fn extract_layout_no_frontmatter_returns_none() {
+        let text = "# just a heading";
+        assert!(extract_layout(text.as_bytes()).is_none());
+    }
+
+    #[test]
+    fn scan_template_refs_handles_extends_and_partial() {
+        let body =
+            "{{#extends \"base\"}}\n{{->header title=\"x\"}}\n{{->footer}}";
+        let refs = scan_template_refs(body);
+        assert_eq!(
+            refs,
+            vec![
+                "base".to_string(),
+                "header".to_string(),
+                "footer".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn scan_template_refs_deduplicates() {
+        let body = "{{->header}} {{->header}} {{->header title=\"a\"}}";
+        let refs = scan_template_refs(body);
+        assert_eq!(refs, vec!["header".to_string()]);
+    }
+
+    #[test]
+    fn scan_template_refs_ignores_plain_variables() {
+        let body = "<p>{{title}}</p>{{!raw_html}}";
+        assert!(scan_template_refs(body).is_empty());
+    }
+
+    #[test]
+    fn current_hashes_picks_up_md_and_html() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("c");
+        let template = dir.path().join("t");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&template).unwrap();
+        write(&content.join("a.md"), "---\nlayout: page\n---");
+        write(&template.join("page.html"), "<h1></h1>");
+
+        let hashes = current_hashes(&content, &template).unwrap();
+        assert!(hashes.contains_key(&content.join("a.md")));
+        assert!(hashes.contains_key(&template.join("page.html")));
+    }
+
+    #[test]
+    fn record_hash_from_disk_silently_skips_missing() {
+        let mut graph = DepGraph::new();
+        graph.record_hash_from_disk(Path::new("/nonexistent/x.md"));
+        assert!(graph.hashes.is_empty());
+    }
+
+    #[test]
+    fn diff_is_empty_helper_round_trips() {
+        let d = Diff::default();
+        assert!(d.is_empty());
+    }
+
+    #[test]
+    fn tracked_sources_returns_sorted_unique_outputs() {
+        let mut graph = DepGraph::new();
+        graph.add_output(Path::new("b.md"), Path::new("b.html"));
+        graph.add_output(Path::new("a.md"), Path::new("a.html"));
+        assert_eq!(
+            graph.tracked_sources(),
+            vec![PathBuf::from("a.md"), PathBuf::from("b.md")]
+        );
     }
 }
