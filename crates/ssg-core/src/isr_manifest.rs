@@ -210,10 +210,8 @@ pub fn hash_sources(sources: &[&[u8]]) -> String {
     let digest = hasher.finalize();
     let mut out = String::with_capacity(digest.len() * 2);
     for byte in digest {
-        let _ = std::fmt::Write::write_fmt(
-            &mut out,
-            format_args!("{byte:02x}"),
-        );
+        let _ =
+            std::fmt::Write::write_fmt(&mut out, format_args!("{byte:02x}"));
     }
     out
 }
@@ -362,10 +360,7 @@ mod tests {
         let mut m = Manifest::new("b");
         assert!(m.is_empty());
         assert_eq!(m.len(), 0);
-        m.insert(
-            "/a.html",
-            build_entry(vec!["a".into()], &[b"a"], None),
-        );
+        m.insert("/a.html", build_entry(vec!["a".into()], &[b"a"], None));
         assert!(!m.is_empty());
         assert_eq!(m.len(), 1);
     }
@@ -413,10 +408,7 @@ mod tests {
     #[test]
     fn entry_cache_skipped_when_none() {
         let mut m = Manifest::default();
-        m.insert(
-            "/a.html",
-            build_entry(vec!["a.md".into()], &[b"a"], None),
-        );
+        m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
         let json = m.to_pretty_json().unwrap();
         // entry has no "cache" key when None
         assert!(!json.contains("\"cache\""));

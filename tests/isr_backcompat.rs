@@ -19,7 +19,9 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 use ssg::cmd::SsgConfig;
-use ssg::isr_manifest::{IsrManifestPlugin, CONTENT_RELATIVE_DIR, MANIFEST_RELATIVE_PATH};
+use ssg::isr_manifest::{
+    IsrManifestPlugin, CONTENT_RELATIVE_DIR, MANIFEST_RELATIVE_PATH,
+};
 use ssg::pipeline::register_default_plugins;
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
 
@@ -157,7 +159,9 @@ fn ac9_isr_plugin_is_purely_additive() {
     //    in A byte-for-byte (this is the AC9 guarantee).
     for (rel, hash) in &after_a {
         let other = after_b.get(rel).unwrap_or_else(|| {
-            panic!("file {rel} present in non-ISR build but missing in ISR build")
+            panic!(
+                "file {rel} present in non-ISR build but missing in ISR build"
+            )
         });
         assert_eq!(other, hash, "byte drift for {rel}");
     }

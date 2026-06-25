@@ -17,7 +17,9 @@
 
 use std::fs;
 
-use ssg::isr_manifest::{IsrManifestPlugin, CONTENT_RELATIVE_DIR, MANIFEST_RELATIVE_PATH};
+use ssg::isr_manifest::{
+    IsrManifestPlugin, CONTENT_RELATIVE_DIR, MANIFEST_RELATIVE_PATH,
+};
 use ssg::plugin::{Plugin, PluginContext};
 use ssg_core::{ContentProvider, FsContentProvider, Manifest};
 use ssg_wasm::render_page_isr_impl;
@@ -70,9 +72,10 @@ fn make_fixture() -> tempfile::TempDir {
 fn ac6_default_swr_cache_control() {
     let tmp = make_fixture();
     let site = tmp.path().join("public");
-    let manifest: Manifest =
-        serde_json::from_str(&fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap())
-            .unwrap();
+    let manifest: Manifest = serde_json::from_str(
+        &fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap(),
+    )
+    .unwrap();
 
     // Index has no isr.* override → use default.
     let entry = manifest.get("/index.html").unwrap();
@@ -85,9 +88,10 @@ fn ac6_default_swr_cache_control() {
 fn ac7_per_route_frontmatter_cache_control() {
     let tmp = make_fixture();
     let site = tmp.path().join("public");
-    let manifest: Manifest =
-        serde_json::from_str(&fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap())
-            .unwrap();
+    let manifest: Manifest = serde_json::from_str(
+        &fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap(),
+    )
+    .unwrap();
 
     // /posts/alpha had isr.s_maxage=600 + isr.swr=3600 in frontmatter.
     let entry = manifest.get("/posts/alpha/index.html").unwrap();
@@ -110,9 +114,10 @@ fn ac4_ac5_end_to_end_render_from_kv_payload() {
     let tmp = make_fixture();
     let site = tmp.path().join("public");
     let content_root = site.join(CONTENT_RELATIVE_DIR);
-    let manifest: Manifest =
-        serde_json::from_str(&fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap())
-            .unwrap();
+    let manifest: Manifest = serde_json::from_str(
+        &fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap(),
+    )
+    .unwrap();
 
     // ContentProvider rooted at the staged tree — same surface the
     // KV-backed and Edge-Config-backed adapters present.
@@ -148,9 +153,10 @@ fn ac4_ac5_end_to_end_render_from_kv_payload() {
 fn ac8_webhook_finds_affected_urls() {
     let tmp = make_fixture();
     let site = tmp.path().join("public");
-    let manifest: Manifest =
-        serde_json::from_str(&fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap())
-            .unwrap();
+    let manifest: Manifest = serde_json::from_str(
+        &fs::read_to_string(site.join(MANIFEST_RELATIVE_PATH)).unwrap(),
+    )
+    .unwrap();
 
     // Editing alpha.md must invalidate exactly its own URL (no tags
     // / archives in this minimal fixture).

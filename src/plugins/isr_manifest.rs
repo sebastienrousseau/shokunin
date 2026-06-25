@@ -63,11 +63,8 @@ impl Plugin for IsrManifestPlugin {
             return Ok(());
         }
 
-        let manifest = build_manifest(
-            &ctx.content_dir,
-            &ctx.template_dir,
-            &ctx.site_dir,
-        )?;
+        let manifest =
+            build_manifest(&ctx.content_dir, &ctx.template_dir, &ctx.site_dir)?;
 
         write_manifest(&manifest, &ctx.site_dir)?;
         copy_sources(
@@ -382,12 +379,11 @@ fn copy_sources(
                 source: e,
             })?;
         }
-        let _bytes_copied = fs::copy(&src_path, &dst_path).map_err(|e| {
-            SsgError::Io {
+        let _bytes_copied =
+            fs::copy(&src_path, &dst_path).map_err(|e| SsgError::Io {
                 path: dst_path.clone(),
                 source: e,
-            }
-        })?;
+            })?;
     }
 
     Ok(())
@@ -420,15 +416,13 @@ mod tests {
 
     #[test]
     fn derive_url_nested() {
-        assert_eq!(
-            derive_url("a/b/c.md"),
-            "/a/b/c/index.html"
-        );
+        assert_eq!(derive_url("a/b/c.md"), "/a/b/c/index.html");
     }
 
     #[test]
     fn extract_isr_cache_yaml() {
-        let text = "---\ntitle: Foo\nisr:\n  s_maxage: 600\n  swr: 3600\n---\n# Body";
+        let text =
+            "---\ntitle: Foo\nisr:\n  s_maxage: 600\n  swr: 3600\n---\n# Body";
         let c = extract_isr_cache(text).unwrap();
         assert_eq!(c.s_maxage, 600);
         assert_eq!(c.swr, 3600);
@@ -563,11 +557,13 @@ mod tests {
         let manifest_path = site_dir.join(MANIFEST_RELATIVE_PATH);
         assert!(manifest_path.exists());
 
-        let content_dst = site_dir.join(CONTENT_RELATIVE_DIR).join("content/a.md");
+        let content_dst =
+            site_dir.join(CONTENT_RELATIVE_DIR).join("content/a.md");
         assert!(content_dst.exists(), "raw markdown should be staged");
 
-        let template_dst =
-            site_dir.join(CONTENT_RELATIVE_DIR).join("templates/index.html");
+        let template_dst = site_dir
+            .join(CONTENT_RELATIVE_DIR)
+            .join("templates/index.html");
         assert!(template_dst.exists(), "template should be staged");
     }
 

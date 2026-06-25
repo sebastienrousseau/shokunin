@@ -101,8 +101,7 @@ pub fn render_page_isr_impl(
         .map_or_else(|| url.to_string(), ToOwned::to_owned);
 
     // 4. Substitute slots. Allocate once with a sensible upper bound.
-    let mut out =
-        String::with_capacity(layout.len() + body_html.len() + 256);
+    let mut out = String::with_capacity(layout.len() + body_html.len() + 256);
     let mut cursor = 0usize;
     while cursor < layout.len() {
         // Find the next {{ ... }} window.
@@ -205,12 +204,9 @@ mod tests {
 
     #[test]
     fn empty_context_json_is_allowed() {
-        let out = render_page_isr_impl(
-            "# Hi",
-            "<body>{{ content }}</body>",
-            "",
-        )
-        .unwrap();
+        let out =
+            render_page_isr_impl("# Hi", "<body>{{ content }}</body>", "")
+                .unwrap();
         assert!(out.contains("<h1>Hi</h1>"));
     }
 
@@ -226,12 +222,9 @@ mod tests {
     fn html_escape_runs_on_title_and_site_name() {
         let md = "---\ntitle: \"<evil>&\"\n---\n# Body";
         let layout = "{{ title }} | {{ site_name }} | {{ content }}";
-        let out = render_page_isr_impl(
-            md,
-            layout,
-            "{\"site_name\": \"A & B\"}",
-        )
-        .unwrap();
+        let out =
+            render_page_isr_impl(md, layout, "{\"site_name\": \"A & B\"}")
+                .unwrap();
         assert!(out.contains("&lt;evil&gt;&amp;") || out.contains("&amp;"));
         assert!(out.contains("A &amp; B"));
     }

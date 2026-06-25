@@ -20,7 +20,9 @@ use ssg::isr_manifest::{
 use ssg::plugin::{Plugin, PluginContext};
 use ssg_core::Manifest;
 
-fn fixture_site(root: &Path) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
+fn fixture_site(
+    root: &Path,
+) -> (std::path::PathBuf, std::path::PathBuf, std::path::PathBuf) {
     let content = root.join("content");
     let templates = root.join("templates");
     let site = root.join("public");
@@ -28,7 +30,8 @@ fn fixture_site(root: &Path) -> (std::path::PathBuf, std::path::PathBuf, std::pa
     fs::create_dir_all(&templates).unwrap();
     fs::create_dir_all(&site).unwrap();
 
-    fs::write(content.join("index.md"), "---\ntitle: Home\n---\n# Home").unwrap();
+    fs::write(content.join("index.md"), "---\ntitle: Home\n---\n# Home")
+        .unwrap();
     fs::create_dir_all(content.join("posts")).unwrap();
     fs::write(
         content.join("posts/alpha.md"),
@@ -41,8 +44,16 @@ fn fixture_site(root: &Path) -> (std::path::PathBuf, std::path::PathBuf, std::pa
     )
     .unwrap();
 
-    fs::write(templates.join("index.html"), "<html><body>{{ content }}</body></html>").unwrap();
-    fs::write(templates.join("page.html"), "<html><body>{{ content }}</body></html>").unwrap();
+    fs::write(
+        templates.join("index.html"),
+        "<html><body>{{ content }}</body></html>",
+    )
+    .unwrap();
+    fs::write(
+        templates.join("page.html"),
+        "<html><body>{{ content }}</body></html>",
+    )
+    .unwrap();
 
     (content, templates, site)
 }
@@ -69,7 +80,10 @@ fn ac1_manifest_emitted_when_isr_enabled() {
 
     // 1. manifest.json exists.
     let mf_path = site.join(MANIFEST_RELATIVE_PATH);
-    assert!(mf_path.exists(), "manifest.json must be written when ISR enabled");
+    assert!(
+        mf_path.exists(),
+        "manifest.json must be written when ISR enabled"
+    );
 
     let json = fs::read_to_string(&mf_path).unwrap();
     let parsed: Manifest = serde_json::from_str(&json).unwrap();
@@ -107,10 +121,12 @@ fn ac1_manifest_emitted_when_isr_enabled() {
     let staged_md = site
         .join(CONTENT_RELATIVE_DIR)
         .join("content/posts/alpha.md");
-    assert!(staged_md.exists(), "alpha markdown should be staged for KV upload");
-    let staged_tpl = site
-        .join(CONTENT_RELATIVE_DIR)
-        .join("templates/index.html");
+    assert!(
+        staged_md.exists(),
+        "alpha markdown should be staged for KV upload"
+    );
+    let staged_tpl =
+        site.join(CONTENT_RELATIVE_DIR).join("templates/index.html");
     assert!(staged_tpl.exists(), "templates must be staged");
 }
 
@@ -119,8 +135,8 @@ fn ac9_no_manifest_when_isr_disabled() {
     // The IsrManifestPlugin is the ONLY thing that writes
     // dist/.ssg/manifest.json. When register_isr_plugins is not
     // called, the file must not appear.
-    use ssg::pipeline::{build_pipeline, RunOptions};
     use ssg::cmd::SsgConfig;
+    use ssg::pipeline::{build_pipeline, RunOptions};
 
     let tmp = tempfile::tempdir().unwrap();
     let (content, templates, site) = fixture_site(tmp.path());
@@ -151,8 +167,8 @@ fn ac9_no_manifest_when_isr_disabled() {
 
 #[test]
 fn ac9_manifest_present_when_isr_enabled() {
-    use ssg::pipeline::{build_pipeline, RunOptions};
     use ssg::cmd::SsgConfig;
+    use ssg::pipeline::{build_pipeline, RunOptions};
 
     let tmp = tempfile::tempdir().unwrap();
     let (content, templates, site) = fixture_site(tmp.path());
