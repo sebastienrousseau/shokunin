@@ -48,10 +48,16 @@ if [ ! -f "$WASM" ]; then
   exit 1
 fi
 
-# Optional wasm-opt pass.
+# Optional wasm-opt pass. Must allow bulk-memory + reference-types
+# because LLVM's wasm32 backend emits memory.copy ops for slice
+# operations by default since 2024, and modern Edge runtimes
+# (Cloudflare, Vercel, Deno Deploy) all support both proposals.
 if command -v wasm-opt >/dev/null 2>&1; then
   echo "running wasm-opt -Oz..."
-  wasm-opt -Oz --strip-debug --vacuum -o "$WASM.opt" "$WASM"
+  wasm-opt -Oz --strip-debug --vacuum \
+    --enable-bulk-memory --enable-bulk-memory-opt \
+    --enable-reference-types --enable-mutable-globals \
+    -o "$WASM.opt" "$WASM"
   mv "$WASM.opt" "$WASM"
 else
   echo "wasm-opt not installed — skipping optimiser pass"
