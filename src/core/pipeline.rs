@@ -98,7 +98,7 @@ fn extract_file_from_error(msg: &str) -> Option<String> {
 /// `pub(crate)` here. See
 /// [API stability audit](../../docs/architecture/api-stability-audit.md)
 /// (Tier C) for context.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct RunOptions {
     /// Suppress banner and timing print-outs.
@@ -131,6 +131,10 @@ pub struct RunOptions {
     /// (CLI helpers, integration tests, plugin re-entrants) sees a
     /// consistent setting.
     pub no_llm_cache: bool,
+    /// Emit ISR build manifest + raw KV payloads under `dist/.ssg/`
+    /// (issue #546). Off by default — when false the build is
+    /// byte-identical to v0.0.43 (AC9).
+    pub isr: bool,
 }
 
 impl RunOptions {
@@ -153,6 +157,8 @@ impl RunOptions {
                 .try_contains_id("no-llm-cache")
                 .unwrap_or(false)
                 && matches.get_flag("no-llm-cache"),
+            isr: matches.try_contains_id("isr").unwrap_or(false)
+                && matches.get_flag("isr"),
         }
     }
 
@@ -195,6 +201,7 @@ impl RunOptions {
             ai_fix_dry_run: false,
             incremental: opt_flag("incremental"),
             no_llm_cache: opt_flag("no-llm-cache"),
+            isr: opt_flag("isr"),
         }
     }
 }
@@ -265,8 +272,21 @@ pub fn build_pipeline(
         opts.include_drafts,
         opts.deploy_target.as_deref(),
     );
+    if opts.isr {
+        register_isr_plugins(&mut plugins);
+    }
 
     (plugins, ctx, build_dir, site_dir)
+}
+
+/// Appends ISR-specific plugins (currently just [`IsrManifestPlugin`]).
+///
+/// Pulled out of [`register_default_plugins`] so the default plugin
+/// graph stays byte-identical when `--isr` is not passed (AC9 of
+/// issue #546). Anything registered here MUST be a strict superset
+/// of the v0.0.43 output; failing AC9 fails the entire epic.
+pub fn register_isr_plugins(plugins: &mut plugin::PluginManager) {
+    plugins.register(crate::isr_manifest::IsrManifestPlugin::new());
 }
 
 /// Runs the build half of the pipeline: `before_compile` → compile →
@@ -1005,6 +1025,7 @@ mod tests {
             ai_fix_dry_run: false,
             incremental: false,
             no_llm_cache: false,
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =

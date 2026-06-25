@@ -222,6 +222,12 @@ impl Cli {
                     .long("no-llm-cache")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("isr")
+                    .help("Emit ISR manifest + raw KV payloads under dist/.ssg/ (opt-in, issue #546)")
+                    .long("isr")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Builds the subcommand-style `clap::Command` (issue #527).
@@ -334,6 +340,12 @@ impl Cli {
                         Arg::new("incremental")
                             .help("Rebuild only the pages affected by source changes (issue #524)")
                             .long("incremental")
+                            .action(ArgAction::SetTrue),
+                    )
+                    .arg(
+                        Arg::new("isr")
+                            .help("Emit ISR manifest + raw KV payloads under dist/.ssg/ (opt-in, issue #546)")
+                            .long("isr")
                             .action(ArgAction::SetTrue),
                     ),
             )

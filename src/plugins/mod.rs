@@ -11,6 +11,7 @@ pub mod i18n;
 #[cfg(feature = "image-optimization")]
 pub mod image_plugin;
 pub mod islands;
+pub mod isr_manifest;
 pub mod llm;
 pub mod llm_cache;
 pub mod markdown_ext;
