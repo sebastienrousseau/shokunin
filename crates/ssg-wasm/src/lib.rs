@@ -21,6 +21,10 @@
 //! console.log(result); // { frontmatter: { title: "Test" }, html: "<h1>Body</h1>" }
 //! ```
 
+pub mod isr;
+
+pub use isr::{render_page_isr, render_page_isr_impl};
+
 use wasm_bindgen::prelude::*;
 
 /// Compile Markdown to HTML.
