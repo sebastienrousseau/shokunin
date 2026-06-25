@@ -64,6 +64,7 @@ fn config_with_language(root: &Path, language: &str) -> SsgConfig {
         image: ImageConfig::default(),
         edge_headers: ssg::cmd::EdgeHeadersConfig::default(),
         agents: None,
+        transitions: false,
     }
 }
 

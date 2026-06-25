@@ -138,6 +138,18 @@ pub struct SsgConfig {
     pub agents: Option<
         crate::plugins_group::postprocess::agentic_discovery::AgentsConfig,
     >,
+    /// Opt-in View Transitions + lazy-nav client (issue #547).
+    ///
+    /// When `true`, the build emits `_transitions/ssg-transitions.js`
+    /// and injects a small `<script>` + `<style>` block into every
+    /// page so same-origin navigations animate via the View
+    /// Transitions API (Chromium/Safari) or fall back to a plain
+    /// reload in non-supporting browsers (Firefox stable as of
+    /// 2026-06). Persistent `<header>` / `<footer>` roots get
+    /// `view-transition-name` so they don't animate across boundaries.
+    /// Defaults to `false` to keep zero-JS sites zero-JS.
+    #[serde(default)]
+    pub transitions: bool,
 }
 
 impl Default for SsgConfig {
@@ -409,6 +421,12 @@ impl SsgConfigBuilder {
     #[must_use]
     pub fn edge_headers(mut self, edge: EdgeHeadersConfig) -> Self {
         self.config.edge_headers = edge;
+        self
+    }
+    /// Enables the View Transitions + lazy-nav client (issue #547).
+    #[must_use]
+    pub const fn transitions(mut self, enabled: bool) -> Self {
+        self.config.transitions = enabled;
         self
     }
     /// Builds the final `SsgConfig` instance.

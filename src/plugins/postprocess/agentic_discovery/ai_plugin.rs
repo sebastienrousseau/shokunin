@@ -215,6 +215,7 @@ mod tests {
             image: ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
+            transitions: false,
         }
     }
 

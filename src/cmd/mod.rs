@@ -110,6 +110,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             image: ImageConfig::default(),
             edge_headers: EdgeHeadersConfig::default(),
             agents: None,
+            transitions: false,
         })
     })
 }

@@ -28,3 +28,4 @@ pub mod shortcodes;
 pub mod taxonomy;
 #[cfg(feature = "templates")]
 pub mod template_plugin;
+pub mod view_transitions;

@@ -585,6 +585,13 @@ pub fn register_default_plugins(
     // Interactive islands (Web Components)
     plugins.register(islands::IslandPlugin);
 
+    // View Transitions API + lazy-nav client (issue #547, opt-in).
+    // Registered after islands so the transitions client can call the
+    // `<ssg-island>` `detach()` hook on the outgoing page.
+    if crate::view_transitions::ViewTransitionsPlugin::enabled(config) {
+        plugins.register(crate::view_transitions::ViewTransitionsPlugin::new());
+    }
+
     // CSP hardening: extract inline styles/scripts to external files with SRI
     plugins.register(csp::CspPlugin);
 

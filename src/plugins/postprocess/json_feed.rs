@@ -399,6 +399,7 @@ mod tests {
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
+            transitions: false,
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -695,6 +696,7 @@ mod tests {
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
+            transitions: false,
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),
@@ -788,6 +790,7 @@ mod tests {
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
+            transitions: false,
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),

@@ -200,7 +200,14 @@ fn livereload_script(port: u16) -> String {
       var ws=new WebSocket(url);
       ws.onopen=function(){{delay=1000;hideIndicator();}};
       ws.onmessage=function(e){{
-        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}location.reload();}}
+        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}
+          var doReload=function(){{location.reload();}};
+          // Issue #547: when the transitions client is active, wrap the
+          // reload in a view transition so structural HMR frames cross-fade.
+          if(typeof window.__ssgTransitionsReload==='function'){{
+            try{{window.__ssgTransitionsReload(doReload);}}catch(_){{doReload();}}
+          }}else{{doReload();}}
+        }}
         try{{var msg=JSON.parse(e.data);
         if(msg.type==='error'){{showOverlay(msg);}}
         else if(msg.type==='clear-error'){{hideOverlay();}}
@@ -602,6 +609,22 @@ mod tests {
         assert!(
             script.contains("css-reload"),
             "script must contain css-reload handler"
+        );
+    }
+
+    #[test]
+    fn test_script_coordinates_with_view_transitions() {
+        // AC7: when the transitions client is loaded (issue #547),
+        // the reload handler must defer to its wrapper so structural
+        // HMR frames go through startViewTransition().
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("__ssgTransitionsReload"),
+            "reload path must consult window.__ssgTransitionsReload"
+        );
+        assert!(
+            script.contains("location.reload()"),
+            "reload path must still call location.reload() as the fallback"
         );
     }
 
