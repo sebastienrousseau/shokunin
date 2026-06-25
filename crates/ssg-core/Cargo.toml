@@ -15,6 +15,13 @@ log = "0.4"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Pure-Rust YAML parser for frontmatter (issue #537). The previous
+# hand-rolled split-on-colon parser stored every value as a string
+# and silently dropped lists, flow lists, and nested maps —
+# `tags:\n  - welcome` became the literal string "" under the key
+# "tags". `serde_yaml_ng` is the maintained fork of `serde_yaml`,
+# pure Rust, no C deps, and clean on `wasm32-unknown-unknown`.
+serde_yaml_ng = "0.10"
 toml = "1"
 
 [lints]

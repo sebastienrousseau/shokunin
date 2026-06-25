@@ -126,18 +126,22 @@ pub fn parse_frontmatter(
     // YAML frontmatter: ---...---
     if let Some(after) = trimmed.strip_prefix("---") {
         if let Some(end) = after.find("---") {
-            let fm_str = &after[..end].trim();
+            let fm_str = &after[..end];
             let body = &after[end + 3..];
-            // Simple key: value parser for common YAML frontmatter
-            let mut map = HashMap::new();
-            for line in fm_str.lines() {
-                if let Some((key, val)) = line.split_once(':') {
-                    let key = key.trim().to_string();
-                    let val = val.trim().to_string();
-                    let _ = map.insert(key, serde_json::Value::String(val));
+            match serde_yaml_ng::from_str::<serde_json::Value>(fm_str) {
+                Ok(serde_json::Value::Object(map)) => {
+                    return (map.into_iter().collect(), body.to_string());
+                }
+                Ok(_) => {
+                    // Top-level non-mapping (e.g. a bare list or scalar)
+                    // — preserve the body but emit no globals.
+                    return (HashMap::new(), body.to_string());
+                }
+                Err(e) => {
+                    log::warn!("YAML frontmatter parse error: {e}");
+                    return (HashMap::new(), body.to_string());
                 }
             }
-            return (map, body.to_string());
         }
     }
 

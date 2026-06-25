@@ -4654,6 +4654,7 @@ dependencies = [
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "serde_yaml_ng",
  "toml 1.1.2+spec-1.1.0",
 ]
 
