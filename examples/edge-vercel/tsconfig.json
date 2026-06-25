@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "WebWorker"],
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["api/**/*.ts", "lib/**/*.ts"]
+}

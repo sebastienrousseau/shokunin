@@ -152,6 +152,9 @@ uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
+# Edge-contract test (#546) drives the WASM render pipeline natively
+# so we can assert AC4/AC5/AC6/AC7 without spinning up wrangler.
+ssg-wasm = { path = "crates/ssg-wasm" }
 # Captures `tracing` events emitted inside test bodies so the
 # `llm_no_shellout` integration test (issue #520) can assert no
 # subprocess-spawn span ever fires after the curl shellout was

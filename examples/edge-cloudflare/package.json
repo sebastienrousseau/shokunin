@@ -1,0 +1,19 @@
+{
+  "name": "ssg-edge-cloudflare",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Workers ISR adapter for SSG (issue #546)",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "deploy": "wrangler deploy",
+    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && wasm-opt -Oz -o pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm",
+    "kv:upload": "node ./scripts/upload-kv.js",
+    "smoke": "node ./scripts/smoke.js"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260101.0",
+    "typescript": "^5.3.0",
+    "wrangler": "^3.0.0"
+  }
+}

@@ -4965,6 +4965,7 @@ dependencies = [
  "sha2",
  "ssg-core",
  "ssg-search",
+ "ssg-wasm",
  "staticdatagen",
  "tempfile",
  "thiserror 2.0.18",

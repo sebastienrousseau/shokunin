@@ -1,0 +1,46 @@
+# Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Cloudflare Workers ISR adapter — wrangler config (issue #546 AC4).
+#
+# To use:
+#   1. wrangler kv namespace create SSG_CONTENT
+#      → paste the returned id into [[kv_namespaces]] below.
+#   2. wrangler secret put SSG_WEBHOOK_TOKEN
+#   3. (Optional) wrangler secret put CF_API_TOKEN
+#   4. wrangler deploy
+
+name = "ssg-isr-worker"
+main = "worker.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Edge CPU budget: 50ms is Cloudflare's free-tier p99 ceiling. The
+# ISR renderer comfortably fits inside that — we're typically <5ms.
+[limits]
+cpu_ms = 50
+
+# WASM module — uploaded with the Worker. Built by:
+#   cd crates/ssg-wasm && wasm-pack build --target web --release
+#   wasm-opt -Oz -o examples/edge-cloudflare/pkg/ssg_wasm_bg.wasm \
+#     crates/ssg-wasm/pkg/ssg_wasm_bg.wasm
+[[rules]]
+type = "CompiledWasm"
+globs = ["pkg/*.wasm"]
+fallthrough = false
+
+# KV namespace — manifest + raw source bytes.
+# Replace `id` with the value returned by `wrangler kv namespace create`.
+[[kv_namespaces]]
+binding = "SSG_CONTENT"
+id = "REPLACE_WITH_WRANGLER_KV_NAMESPACE_ID"
+
+# Build hook — auto-rebuild the WASM if it's stale before each deploy.
+[build]
+command = """
+cd ../../crates/ssg-wasm && \
+wasm-pack build --target web --release && \
+wasm-opt -Oz -o ../../examples/edge-cloudflare/pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm && \
+cp pkg/ssg_wasm.js ../../examples/edge-cloudflare/pkg/ssg_wasm.js
+"""
+watch_dir = "../../crates/ssg-wasm/src"
