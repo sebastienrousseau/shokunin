@@ -15,6 +15,7 @@ build/
 !/docs/architecture/
 !/docs/compare/
 !/docs/perf/
+!/docs/security/
 /examples/public/
 /examples/build/
 /mysite/
