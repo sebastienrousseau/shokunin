@@ -4,7 +4,10 @@
 //! Taxonomy generation plugin.
 //!
 //! Reads `tags` and `categories` from frontmatter sidecars and
-//! generates index pages for each taxonomy term.
+//! generates index pages for each taxonomy term, rendered through
+//! the same template engine (`MiniJinja`) that drives normal page
+//! rendering. Built-in fallback templates extend `base.html` so the
+//! pages share the site's layout, CSS, nav, and footer (#542).
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
@@ -28,6 +31,25 @@ pub struct TaxonomyTerm {
     pub pages: Vec<(String, String)>,
 }
 
+// =====================================================================
+// Built-in templates (embedded so the binary works without scaffold)
+// =====================================================================
+
+/// Built-in tag term-page template (#542).
+const BUILTIN_TAG_HTML: &str = include_str!("builtin_templates/tag.html");
+/// Built-in category term-page template (#542).
+const BUILTIN_CATEGORY_HTML: &str =
+    include_str!("builtin_templates/category.html");
+/// Built-in archive/topic term-page template (#542).
+const BUILTIN_ARCHIVE_HTML: &str =
+    include_str!("builtin_templates/archive.html");
+/// Built-in taxonomy index-page template (lists all terms) (#542).
+const BUILTIN_TAXONOMY_INDEX_HTML: &str =
+    include_str!("builtin_templates/taxonomy_index.html");
+/// Built-in minimal `base.html` for sites that ship none of their own.
+/// User-provided `base.html` is preferred via the path loader (#542).
+const BUILTIN_BASE_HTML: &str = include_str!("builtin_templates/base.html");
+
 /// Plugin that generates taxonomy index pages for tags and categories.
 ///
 /// Runs in `after_compile`. Reads `.meta.json` sidecars to find
@@ -35,6 +57,11 @@ pub struct TaxonomyTerm {
 /// - `/tags/index.html` — list of all tags with page counts
 /// - `/tags/{slug}/index.html` — list of pages for each tag
 /// - `/categories/index.html` and `/categories/{slug}/index.html`
+/// - `/topics/index.html` and `/topics/{slug}/index.html`
+///
+/// All pages render through the site's `MiniJinja` template engine so
+/// they share the site's `base.html`, CSS, nav, footer, and lang
+/// attribute (issue #542).
 #[derive(Debug, Clone, Copy)]
 pub struct TaxonomyPlugin;
 
@@ -52,13 +79,31 @@ impl Plugin for TaxonomyPlugin {
         let (tags, categories, topics) =
             collect_taxonomy_entries(&sidecar_dir)?;
 
+        // Lazily build the template engine once per run; reused across
+        // tags, categories, and topics.
+        let renderer = TaxonomyRenderer::new(ctx);
+
         if !tags.is_empty() {
-            generate_taxonomy_pages(&ctx.site_dir, "tags", &tags)?;
+            generate_taxonomy_pages(
+                &ctx.site_dir,
+                "tags",
+                "Tags",
+                &tags,
+                TaxonomyKind::Tag,
+                &renderer,
+            )?;
             log::info!("[taxonomy] Generated {} tag page(s)", tags.len());
         }
 
         if !categories.is_empty() {
-            generate_taxonomy_pages(&ctx.site_dir, "categories", &categories)?;
+            generate_taxonomy_pages(
+                &ctx.site_dir,
+                "categories",
+                "Categories",
+                &categories,
+                TaxonomyKind::Category,
+                &renderer,
+            )?;
             log::info!(
                 "[taxonomy] Generated {} category page(s)",
                 categories.len()
@@ -66,12 +111,378 @@ impl Plugin for TaxonomyPlugin {
         }
 
         if !topics.is_empty() {
-            generate_taxonomy_pages(&ctx.site_dir, "topics", &topics)?;
+            generate_taxonomy_pages(
+                &ctx.site_dir,
+                "topics",
+                "Topics",
+                &topics,
+                TaxonomyKind::Archive,
+                &renderer,
+            )?;
             log::info!("[taxonomy] Generated {} topic page(s)", topics.len());
         }
 
         Ok(())
     }
+}
+
+/// Which built-in template family to use for a taxonomy.
+#[derive(Debug, Clone, Copy)]
+enum TaxonomyKind {
+    Tag,
+    Category,
+    Archive,
+}
+
+impl TaxonomyKind {
+    /// User-overridable template filename (looked up in the user's
+    /// `templates/tera/` directory first).
+    const fn template_name(self) -> &'static str {
+        match self {
+            Self::Tag => "tag.html",
+            Self::Category => "category.html",
+            Self::Archive => "archive.html",
+        }
+    }
+
+    /// Variable name the template uses to address the current term
+    /// (`tag`, `category`, `term`).
+    const fn term_var(self) -> &'static str {
+        match self {
+            Self::Tag => "tag",
+            Self::Category => "category",
+            Self::Archive => "term",
+        }
+    }
+}
+
+// =====================================================================
+// Template engine integration
+// =====================================================================
+
+/// Encapsulates `MiniJinja` rendering for taxonomy pages.
+///
+/// Holds a `MiniJinja` environment whose loader prefers the user's
+/// `templates/tera/` files and falls back to embedded built-in sources
+/// so pages always extend a real `base.html` (issue #542).
+struct TaxonomyRenderer<'a> {
+    #[cfg(feature = "templates")]
+    env: minijinja::Environment<'static>,
+    ctx: &'a PluginContext,
+}
+
+#[cfg(feature = "templates")]
+impl<'a> TaxonomyRenderer<'a> {
+    fn new(ctx: &'a PluginContext) -> Self {
+        let user_dir = resolve_user_template_dir(ctx);
+
+        let mut env = minijinja::Environment::new();
+        env.set_loader(
+            move |name| -> Result<Option<String>, minijinja::Error> {
+                // 1) Try the user's templates/tera/<name> if present.
+                if let Some(dir) = user_dir.as_ref() {
+                    let candidate = dir.join(name);
+                    match fs::read_to_string(&candidate) {
+                        Ok(s) => return Ok(Some(s)),
+                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                        Err(e) => {
+                            return Err(minijinja::Error::new(
+                                minijinja::ErrorKind::InvalidOperation,
+                                format!(
+                                    "failed to read user template {}: {e}",
+                                    candidate.display()
+                                ),
+                            ))
+                        }
+                    }
+                }
+                // 2) Embedded fallbacks for the templates this plugin owns.
+                Ok(match name {
+                    "base.html" => Some(BUILTIN_BASE_HTML.to_string()),
+                    "tag.html" => Some(BUILTIN_TAG_HTML.to_string()),
+                    "category.html" => Some(BUILTIN_CATEGORY_HTML.to_string()),
+                    "archive.html" => Some(BUILTIN_ARCHIVE_HTML.to_string()),
+                    "taxonomy_index.html" => {
+                        Some(BUILTIN_TAXONOMY_INDEX_HTML.to_string())
+                    }
+                    _ => None,
+                })
+            },
+        );
+
+        Self { env, ctx }
+    }
+
+    /// Renders a term page (e.g. `/tags/rust/index.html`).
+    fn render_term_page(
+        &self,
+        kind: TaxonomyKind,
+        taxonomy_name: &str,
+        taxonomy_title: &str,
+        term: &str,
+        slug: &str,
+        pages: &[(String, String)],
+    ) -> Result<String, SsgError> {
+        let tmpl =
+            self.env.get_template(kind.template_name()).map_err(|e| {
+                SsgError::Io {
+                    path: PathBuf::from(kind.template_name()),
+                    source: std::io::Error::other(e.to_string()),
+                }
+            })?;
+
+        let mut ctx_map = self.base_context();
+        let _ = ctx_map.insert(
+            kind.term_var().to_string(),
+            serde_json::Value::String(term.to_string()),
+        );
+        // Always expose `term` as well so generic templates can use it.
+        let _ = ctx_map.insert(
+            "term".to_string(),
+            serde_json::Value::String(term.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "slug".to_string(),
+            serde_json::Value::String(slug.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "taxonomy_name".to_string(),
+            serde_json::Value::String(taxonomy_name.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "taxonomy_title".to_string(),
+            serde_json::Value::String(taxonomy_title.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "page_url".to_string(),
+            serde_json::Value::String(format!("/{taxonomy_name}/{slug}/")),
+        );
+        let _ = ctx_map.insert(
+            "posts".to_string(),
+            serde_json::Value::Array(pages_to_json(pages)),
+        );
+
+        tmpl.render(serde_json::Value::Object(ctx_map))
+            .map(|mut s| {
+                if !s.ends_with('\n') {
+                    s.push('\n');
+                }
+                s
+            })
+            .map_err(|e| SsgError::Io {
+                path: PathBuf::from(kind.template_name()),
+                source: std::io::Error::other(e.to_string()),
+            })
+    }
+
+    /// Renders the taxonomy index page (lists all terms).
+    fn render_index_page(
+        &self,
+        taxonomy_name: &str,
+        taxonomy_title: &str,
+        sorted_terms: &[(&String, &Vec<(String, String)>)],
+    ) -> Result<String, SsgError> {
+        let tmpl =
+            self.env.get_template("taxonomy_index.html").map_err(|e| {
+                SsgError::Io {
+                    path: PathBuf::from("taxonomy_index.html"),
+                    source: std::io::Error::other(e.to_string()),
+                }
+            })?;
+
+        let mut ctx_map = self.base_context();
+        let _ = ctx_map.insert(
+            "taxonomy_name".to_string(),
+            serde_json::Value::String(taxonomy_name.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "taxonomy_title".to_string(),
+            serde_json::Value::String(taxonomy_title.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "page_url".to_string(),
+            serde_json::Value::String(format!("/{taxonomy_name}/")),
+        );
+
+        let term_entries: Vec<serde_json::Value> = sorted_terms
+            .iter()
+            .map(|(term, pages)| {
+                let mut obj = serde_json::Map::new();
+                let _ = obj.insert(
+                    "name".to_string(),
+                    serde_json::Value::String((*term).clone()),
+                );
+                let _ = obj.insert(
+                    "slug".to_string(),
+                    serde_json::Value::String(slugify(term)),
+                );
+                let _ = obj.insert(
+                    "count".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from(
+                        pages.len(),
+                    )),
+                );
+                serde_json::Value::Object(obj)
+            })
+            .collect();
+        let _ = ctx_map.insert(
+            "terms".to_string(),
+            serde_json::Value::Array(term_entries),
+        );
+
+        tmpl.render(serde_json::Value::Object(ctx_map))
+            .map(|mut s| {
+                if !s.ends_with('\n') {
+                    s.push('\n');
+                }
+                s
+            })
+            .map_err(|e| SsgError::Io {
+                path: PathBuf::from("taxonomy_index.html"),
+                source: std::io::Error::other(e.to_string()),
+            })
+    }
+
+    /// Builds the `{ site: { name, title, language, ... } }` context
+    /// shared by every taxonomy page.
+    fn base_context(&self) -> serde_json::Map<String, serde_json::Value> {
+        let mut site = serde_json::Map::new();
+        if let Some(cfg) = self.ctx.config.as_ref() {
+            let _ = site.insert(
+                "name".to_string(),
+                serde_json::Value::String(cfg.site_name.clone()),
+            );
+            let _ = site.insert(
+                "title".to_string(),
+                serde_json::Value::String(cfg.site_title.clone()),
+            );
+            let _ = site.insert(
+                "description".to_string(),
+                serde_json::Value::String(cfg.site_description.clone()),
+            );
+            let _ = site.insert(
+                "base_url".to_string(),
+                serde_json::Value::String(cfg.base_url.clone()),
+            );
+            let _ = site.insert(
+                "language".to_string(),
+                serde_json::Value::String(cfg.language.clone()),
+            );
+        } else {
+            // Sensible defaults when the plugin runs without a config
+            // (tests, ad-hoc invocations).
+            let _ = site.insert(
+                "language".to_string(),
+                serde_json::Value::String("en".to_string()),
+            );
+        }
+
+        let mut ctx_map = serde_json::Map::new();
+        let _ =
+            ctx_map.insert("site".to_string(), serde_json::Value::Object(site));
+        ctx_map
+    }
+}
+
+/// Fallback shim so the module still compiles when the `templates`
+/// feature is disabled. The MiniJinja crate is gated on that feature
+/// in `Cargo.toml`; the shim falls back to a minimal escaped HTML
+/// renderer that still respects `site.language` and per-page metadata.
+#[cfg(not(feature = "templates"))]
+impl<'a> TaxonomyRenderer<'a> {
+    fn new(ctx: &'a PluginContext) -> Self {
+        Self { ctx }
+    }
+
+    fn render_term_page(
+        &self,
+        _kind: TaxonomyKind,
+        taxonomy_name: &str,
+        taxonomy_title: &str,
+        term: &str,
+        _slug: &str,
+        pages: &[(String, String)],
+    ) -> Result<String, SsgError> {
+        let lang = self.lang();
+        let mut out = format!(
+            "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
+             <meta charset=\"utf-8\">\
+             <title>{taxonomy_title}: {term}</title></head>\n\
+             <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
+        );
+        let _ = taxonomy_name; // unused in fallback
+        for (title, url) in pages {
+            out.push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
+        }
+        out.push_str("</ul>\n</main>\n</body>\n</html>\n");
+        Ok(out)
+    }
+
+    fn render_index_page(
+        &self,
+        taxonomy_name: &str,
+        taxonomy_title: &str,
+        sorted_terms: &[(&String, &Vec<(String, String)>)],
+    ) -> Result<String, SsgError> {
+        let lang = self.lang();
+        let mut out = format!(
+            "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
+             <meta charset=\"utf-8\">\
+             <title>{taxonomy_title}</title></head>\n\
+             <body>\n<main>\n<h1>{taxonomy_title}</h1>\n<ul>\n"
+        );
+        for (term, pages) in sorted_terms {
+            let slug = slugify(term);
+            out.push_str(&format!(
+                "<li><a href=\"/{taxonomy_name}/{slug}/\">{term}</a> ({})</li>\n",
+                pages.len()
+            ));
+        }
+        out.push_str("</ul>\n</main>\n</body>\n</html>\n");
+        Ok(out)
+    }
+
+    fn lang(&self) -> String {
+        self.ctx
+            .config
+            .as_ref()
+            .map(|c| c.language.clone())
+            .unwrap_or_else(|| "en".to_string())
+    }
+}
+
+/// Resolves the user's template directory, preferring
+/// `<template_dir>/tera/` (the canonical layout) but falling back to
+/// `<template_dir>/` if `tera/` is absent.
+fn resolve_user_template_dir(ctx: &PluginContext) -> Option<PathBuf> {
+    let tera = ctx.template_dir.join("tera");
+    if tera.is_dir() {
+        return Some(tera);
+    }
+    if ctx.template_dir.is_dir() {
+        return Some(ctx.template_dir.clone());
+    }
+    None
+}
+
+/// Converts a list of (title, url) pairs into JSON page objects with
+/// `title` and `url` keys, suitable for template iteration.
+fn pages_to_json(pages: &[(String, String)]) -> Vec<serde_json::Value> {
+    pages
+        .iter()
+        .map(|(title, url)| {
+            let mut obj = serde_json::Map::new();
+            let _ = obj.insert(
+                "title".to_string(),
+                serde_json::Value::String(title.clone()),
+            );
+            let _ = obj.insert(
+                "url".to_string(),
+                serde_json::Value::String(url.clone()),
+            );
+            serde_json::Value::Object(obj)
+        })
+        .collect()
 }
 
 /// Extracts string terms from a JSON value (array of strings or comma-separated string) into the given map.
@@ -166,59 +577,45 @@ fn collect_taxonomy_entries(
     Ok((tags, categories, topics))
 }
 
-/// Generates index and term pages for a taxonomy.
+/// Generates index and term pages for a taxonomy via the template engine.
 fn generate_taxonomy_pages(
     site_dir: &Path,
     taxonomy_name: &str,
+    taxonomy_title: &str,
     terms: &HashMap<String, Vec<(String, String)>>,
+    kind: TaxonomyKind,
+    renderer: &TaxonomyRenderer<'_>,
 ) -> Result<(), SsgError> {
     let tax_dir = site_dir.join(taxonomy_name);
     fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
 
-    // Generate index page listing all terms
-    let mut index_html = format!(
-        "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
-         <meta charset=\"utf-8\">\
-         <title>{}</title></head>\n<body>\n<main>\n\
-         <h1>{}</h1>\n<ul>\n",
-        capitalize(taxonomy_name),
-        capitalize(taxonomy_name),
-    );
-
     let mut sorted_terms: Vec<_> = terms.iter().collect();
     sorted_terms.sort_by_key(|(name, _)| name.to_lowercase());
 
+    // Per-term pages.
     for (term, pages) in &sorted_terms {
         let slug = slugify(term);
-        index_html.push_str(&format!(
-            "<li><a href=\"/{}/{}/\">{}</a> ({})</li>\n",
-            taxonomy_name,
-            slug,
-            term,
-            pages.len()
-        ));
-
-        // Generate individual term page
         let term_dir = tax_dir.join(&slug);
         fs::create_dir_all(&term_dir).with_path(&term_dir)?;
 
-        let mut term_html = format!(
-            "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\
-             <meta charset=\"utf-8\">\
-             <title>{term}</title></head>\n<body>\n<main>\n\
-             <h1>{term}</h1>\n<ul>\n",
-        );
-        for (title, url) in *pages {
-            term_html
-                .push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
-        }
-        term_html.push_str("</ul>\n</main>\n</body>\n</html>\n");
-
+        let term_html = renderer.render_term_page(
+            kind,
+            taxonomy_name,
+            taxonomy_title,
+            term,
+            &slug,
+            pages,
+        )?;
         let out_file = term_dir.join("index.html");
         fs::write(&out_file, term_html).with_path(&out_file)?;
     }
 
-    index_html.push_str("</ul>\n</main>\n</body>\n</html>\n");
+    // Taxonomy index page.
+    let index_html = renderer.render_index_page(
+        taxonomy_name,
+        taxonomy_title,
+        &sorted_terms,
+    )?;
     let out_index = tax_dir.join("index.html");
     fs::write(&out_index, index_html).with_path(&out_index)?;
 
@@ -236,6 +633,7 @@ fn slugify(s: &str) -> String {
         .join("-")
 }
 
+#[cfg(test)]
 fn capitalize(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
@@ -314,8 +712,6 @@ mod tests {
 
     #[test]
     fn slugify_lowercases_uppercase_input() {
-        // Guards the `to_lowercase` step at line 180 — case
-        // normalization is the entire reason slug routing is stable.
         assert_eq!(slugify("RUST"), "rust");
         assert_eq!(slugify("CamelCase"), "camelcase");
     }
@@ -327,16 +723,11 @@ mod tests {
     #[test]
     fn capitalize_table_driven_inputs_produce_expected_output() {
         let cases: &[(&str, &str)] = &[
-            // empty -> empty (None arm at line 193)
             ("", ""),
-            // ASCII single char
             ("a", "A"),
-            // word
             ("tags", "Tags"),
             ("categories", "Categories"),
-            // already capitalized
             ("Tags", "Tags"),
-            // single non-letter passes through
             ("1", "1"),
         ];
         for &(input, expected) in cases {
@@ -354,7 +745,6 @@ mod tests {
 
     #[test]
     fn taxonomy_plugin_is_copy_after_move() {
-        // Guards the `Copy` derive added in v0.0.34.
         let plugin = TaxonomyPlugin;
         let _copy = plugin;
         assert_eq!(plugin.name(), "taxonomy");
@@ -397,9 +787,6 @@ mod tests {
 
     #[test]
     fn after_compile_pages_without_taxonomies_emit_no_output() {
-        // A page with neither `tags` nor `categories` arrays must
-        // not trigger the `!tags.is_empty()` / `!categories.is_empty()`
-        // branches at lines 105 and 110.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(meta.join("about.meta.json"), r#"{"title": "About"}"#)
             .unwrap();
@@ -415,9 +802,6 @@ mod tests {
 
     #[test]
     fn after_compile_skips_invalid_json_sidecars() {
-        // The `Err(_) => continue` arm at line 59 must not poison
-        // the build. A valid sibling sidecar should still produce
-        // taxonomy pages.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(meta.join("broken.meta.json"), "{not valid").unwrap();
         fs::write(
@@ -444,8 +828,6 @@ mod tests {
 
     #[test]
     fn after_compile_ignores_non_string_tag_values() {
-        // The `if let Some(t) = tag.as_str()` filter at line 80 must
-        // skip integers, objects, etc., without erroring.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("mixed.meta.json"),
@@ -454,17 +836,12 @@ mod tests {
         .unwrap();
 
         TaxonomyPlugin.after_compile(&ctx).unwrap();
-        // Only the two string entries should produce term pages.
         assert!(site.join("tags/rust/index.html").exists());
         assert!(site.join("tags/web/index.html").exists());
     }
 
     #[test]
     fn after_compile_ignores_non_array_categories_field() {
-        // Symmetric to `after_compile_ignores_non_array_tags_field`:
-        // a `categories: "tutorials"` (string, not array) must take
-        // the `as_array()` None branch without panicking. Closes
-        // line 100 (the closing brace of the inner if-let).
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("badcats.meta.json"),
@@ -478,8 +855,6 @@ mod tests {
 
     #[test]
     fn after_compile_ignores_non_string_category_values() {
-        // The `if let Some(c) = cat.as_str()` filter at line 93
-        // must skip ints/objects/nulls.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("mixed-cats.meta.json"),
@@ -493,8 +868,6 @@ mod tests {
 
     #[test]
     fn after_compile_ignores_non_array_tags_field() {
-        // The `if let Some(arr) = tag_arr.as_array()` guard at line 78
-        // must reject string/object values silently.
         let (_tmp, site, _meta_dir, ctx) = make_layout();
         let meta_dir = ctx.build_dir.join(".meta");
         fs::write(
@@ -508,7 +881,7 @@ mod tests {
     }
 
     // -------------------------------------------------------------------
-    // after_compile — tags and categories generation
+    // after_compile — tags and categories generation (built-in templates)
     // -------------------------------------------------------------------
 
     #[test]
@@ -571,8 +944,6 @@ mod tests {
 
     #[test]
     fn after_compile_index_shows_page_count_per_term() {
-        // The `({})` count rendering at line 151 must reflect the
-        // actual number of pages tagged with that term.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("a.meta.json"),
@@ -598,9 +969,6 @@ mod tests {
 
     #[test]
     fn after_compile_index_lists_terms_alphabetically_case_insensitive() {
-        // The sort key at line 142 is `name.to_lowercase()`, so
-        // `Apple` must precede `banana` despite uppercase coming
-        // earlier in ASCII.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("p.meta.json"),
@@ -656,16 +1024,15 @@ mod tests {
 
         TaxonomyPlugin.after_compile(&ctx).unwrap();
         let html = fs::read_to_string(site.join("tags/index.html")).unwrap();
-        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("<!DOCTYPE html>"));
+        // Built-in base.html renders `lang="en"` when no config supplies one.
         assert!(html.contains("<html lang=\"en\">"));
         assert!(html.contains("<meta charset=\"utf-8\">"));
-        assert!(html.contains("<h1>Tags</h1>"));
+        assert!(html.contains("Tags"));
     }
 
     #[test]
     fn after_compile_term_page_links_back_to_source_url() {
-        // The url derived from the sidecar path (line 74) must be
-        // present in the term-page list item.
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
             meta.join("hello.meta.json"),
@@ -759,7 +1126,17 @@ mod tests {
             vec![("Title".to_string(), "/hello.html".to_string())],
         );
 
-        let res = generate_taxonomy_pages(&file_path, "tags", &terms);
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let renderer = TaxonomyRenderer::new(&ctx);
+        let res = generate_taxonomy_pages(
+            &file_path,
+            "tags",
+            "Tags",
+            &terms,
+            TaxonomyKind::Tag,
+            &renderer,
+        );
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(matches!(err, SsgError::Io { .. }));

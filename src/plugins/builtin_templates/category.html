@@ -1,0 +1,18 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+{% extends "base.html" %}
+
+{% block title %}Category: {{ category }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}
+
+{% block content %}
+<article class="taxonomy-page taxonomy-category">
+  <header>
+    <h1>Category: <span class="category-name">{{ category }}</span></h1>
+    <p class="taxonomy-meta">{{ posts | length }} page{% if posts | length != 1 %}s{% endif %} in <em>{{ category }}</em>.</p>
+  </header>
+  <ul class="taxonomy-page-list">
+    {% for post in posts %}
+    <li><a href="{{ post.url | safe }}">{{ post.title }}</a></li>
+    {% endfor %}
+  </ul>
+</article>
+{% endblock %}
