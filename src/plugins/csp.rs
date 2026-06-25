@@ -118,7 +118,9 @@ fn extract_inline_blocks(
     }
 
     // Extract <script>…</script> blocks (skip JSON-LD and livereload)
-    while let Some((before, content, after)) = find_inline_script(&result) {
+    while let Some((before, opening_tag, content, after)) =
+        find_inline_script(&result)
+    {
         let hash = fnv_hash(content.as_bytes());
         let filename = format!("{hash:016x}.js");
         let file_path = csp_dir.join(&filename);
@@ -133,16 +135,77 @@ fn extract_inline_blocks(
             .to_string_lossy()
             .replace('\\', "/");
 
-        let script_tag = format!(
-            "<script src=\"/{}\" integrity=\"{}\" crossorigin=\"anonymous\"></script>",
-            rel_path, sri
+        // Preserve original attributes (e.g. type=module, async, defer,
+        // data-*), but override src/integrity/crossorigin since we are
+        // extracting the body to a new file and computing fresh SRI.
+        let preserved = preserve_script_attrs(
+            &opening_tag,
+            &["src", "integrity", "crossorigin"],
         );
+        let script_tag = if preserved.is_empty() {
+            format!(
+                "<script src=\"/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
+            )
+        } else {
+            format!(
+                "<script {preserved} src=\"/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
+            )
+        };
 
         result = format!("{before}{script_tag}{after}");
         count += 1;
     }
 
     Ok((result, count))
+}
+
+/// Parses attributes out of an opening `<script …>` tag and returns a
+/// space-separated, normalised attribute string with `drop` attributes
+/// removed. Boolean attributes (no `=`) are emitted unchanged.
+///
+/// Uses `lol_html` so quoting, whitespace, and case-folding all match
+/// the HTML5 parser exactly — this is what the rest of the SSG
+/// pipeline relies on for tag rewriting.
+fn preserve_script_attrs(opening_tag: &str, drop: &[&str]) -> String {
+    use crate::util::html_rewriter::rewrite_html;
+    use lol_html::element;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    // lol_html needs a closed element to fire the handler; wrap the
+    // opening tag with an explicit close.
+    let fragment = format!("{opening_tag}</script>");
+    let collected: Rc<RefCell<Vec<(String, String)>>> =
+        Rc::new(RefCell::new(Vec::new()));
+    let collected_cb = Rc::clone(&collected);
+
+    let _ = rewrite_html(
+        &fragment,
+        vec![element!("script", move |el| {
+            for attr in el.attributes() {
+                collected_cb.borrow_mut().push((attr.name(), attr.value()));
+            }
+            Ok(())
+        })],
+    );
+
+    let drop_lower: Vec<String> =
+        drop.iter().map(|d| d.to_ascii_lowercase()).collect();
+
+    let parts: Vec<String> = collected
+        .borrow()
+        .iter()
+        .filter(|(name, _)| !drop_lower.contains(&name.to_ascii_lowercase()))
+        .map(|(name, value)| {
+            if value.is_empty() {
+                name.clone()
+            } else {
+                let escaped = value.replace('"', "&quot;");
+                format!("{name}=\"{escaped}\"")
+            }
+        })
+        .collect();
+    parts.join(" ")
 }
 
 /// Finds the first inline `<style>…</style>` block and returns
@@ -171,7 +234,12 @@ fn find_inline_block<'a>(
 /// - `<script type="application/ld+json">` (structured data)
 /// - `<script data-ssg-livereload>` (dev-only)
 /// - `<script src="...">` (already external)
-fn find_inline_script(html: &str) -> Option<(String, String, String)> {
+///
+/// Returns `(before, opening_tag, content, after)` where `opening_tag`
+/// is the full `<script …>` including angle brackets — the caller uses
+/// it to preserve attributes such as `type=module`, `async`, `defer`,
+/// and `data-*` when rewriting the tag.
+fn find_inline_script(html: &str) -> Option<(String, String, String, String)> {
     let mut search_from = 0;
 
     loop {
@@ -206,6 +274,7 @@ fn find_inline_script(html: &str) -> Option<(String, String, String)> {
 
         return Some((
             html[..abs_start].to_string(),
+            opening_tag.to_string(),
             content.to_string(),
             html[end..].to_string(),
         ));
@@ -477,6 +546,66 @@ mod tests {
         let out = inject_csp_meta(html, "default-src 'self'");
         // Without a <head>, lol_html returns the input unchanged.
         assert_eq!(out, html);
+    }
+
+    #[test]
+    fn preserve_script_attrs_keeps_type_module() {
+        let out = preserve_script_attrs(
+            r#"<script type="module">"#,
+            &["src", "integrity", "crossorigin"],
+        );
+        assert!(out.contains(r#"type="module""#), "got: {out}");
+    }
+
+    #[test]
+    fn preserve_script_attrs_keeps_boolean_async_defer() {
+        let out = preserve_script_attrs(
+            "<script async defer>",
+            &["src", "integrity", "crossorigin"],
+        );
+        assert!(out.contains("async"), "got: {out}");
+        assert!(out.contains("defer"), "got: {out}");
+    }
+
+    #[test]
+    fn preserve_script_attrs_drops_listed_attrs() {
+        let out = preserve_script_attrs(
+            r#"<script src="/x.js" integrity="sha384-foo" crossorigin="anonymous" data-id="9">"#,
+            &["src", "integrity", "crossorigin"],
+        );
+        assert!(!out.contains("src="), "got: {out}");
+        assert!(!out.contains("integrity="), "got: {out}");
+        assert!(!out.contains("crossorigin="), "got: {out}");
+        assert!(out.contains(r#"data-id="9""#), "got: {out}");
+    }
+
+    #[test]
+    fn preserve_script_attrs_empty_when_no_attrs() {
+        let out = preserve_script_attrs("<script>", &["src"]);
+        assert_eq!(out, "");
+    }
+
+    #[test]
+    fn extract_inline_script_preserves_type_module() {
+        let html = r#"<html><body><script type="module">import x from '/m.js';</script></body></html>"#;
+        let dir = tempdir().unwrap();
+        let csp_dir = dir.path().join("_csp");
+        let (out, count) =
+            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        assert_eq!(count, 1);
+        assert!(out.contains(r#"type="module""#), "got: {out}");
+        assert!(out.contains("integrity="), "got: {out}");
+    }
+
+    #[test]
+    fn extract_inline_script_preserves_data_attrs() {
+        let html = r#"<html><body><script data-domain="example.com">window.x=1;</script></body></html>"#;
+        let dir = tempdir().unwrap();
+        let csp_dir = dir.path().join("_csp");
+        let (out, count) =
+            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        assert_eq!(count, 1);
+        assert!(out.contains(r#"data-domain="example.com""#), "got: {out}");
     }
 
     #[test]
