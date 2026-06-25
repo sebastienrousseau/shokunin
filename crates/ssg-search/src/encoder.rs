@@ -220,7 +220,7 @@ impl Encoder for ProjectionEncoder {
         // L2-normalise so similarity == dot product at runtime (AC5).
         let mut sumsq = 0.0_f32;
         for &x in &v {
-            sumsq += x * x;
+            sumsq = x.mul_add(x, sumsq);
         }
         if sumsq > 0.0 {
             let inv_norm = 1.0_f32 / sumsq.sqrt();

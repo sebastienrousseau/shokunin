@@ -4995,6 +4995,7 @@ dependencies = [
 name = "ssg-search"
 version = "0.0.44"
 dependencies = [
+ "getrandom 0.3.4",
  "js-sys",
  "model2vec-rs",
  "proptest",

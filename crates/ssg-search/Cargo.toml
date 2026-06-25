@@ -65,6 +65,10 @@ proptest = "1"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
+# getrandom 0.3 hard-errors on wasm32-unknown-unknown unless the `wasm_js`
+# feature is enabled. proptest (dev-dep) pulls it transitively via rand
+# → rand_core, so we surface it here just to enable the feature.
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 # Latency bench (issue #545 AC3 — p99 < 100 ms on 1000-doc corpus).
 # Plain `#[no_harness]` binary so we can run an assertion-style check
