@@ -147,6 +147,9 @@ pub use crate::plugins_group::taxonomy;
 pub use crate::plugins_group::template_plugin;
 
 // Re-export server modules
+pub use crate::server_group::dev_server;
+pub use crate::server_group::event_watch;
+pub use crate::server_group::hmr;
 pub use crate::server_group::livereload;
 pub use crate::server_group::server;
 pub use crate::server_group::watch;

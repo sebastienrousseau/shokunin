@@ -199,6 +199,22 @@ ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 # plugins. BSD-3-Clause (already allowed in deny.toml). No C deps.
 lol_html = "3.0.0"
 
+# Event-driven filesystem watcher for `ssg dev` (issue #526). Replaces the
+# polling FileWatcher in src/server/watch.rs with OS-native FSEvents /
+# inotify / ReadDirectoryChangesW so idle CPU is ~0% and edit-to-rebuild
+# latency drops from the 1-2s polling interval to <50ms. CC0-1.0 (already
+# allowed in deny.toml for tiny-keccak / const-random). Pulls only the
+# default macOS fsevent backend on Darwin, inotify on Linux,
+# ReadDirectoryChangesW on Windows — no tokio, no async runtime.
+notify = "8"
+
+# Sync WebSocket implementation for the HMR broadcaster (issue #526).
+# Used by `HmrBroadcaster` to push hmr-html / hmr-css / reload frames
+# to every connected dev-browser tab. No tokio — the broadcaster fans
+# out from a std::thread::spawn loop reading from a std::sync::mpsc
+# channel, matching ssg's tokio-free Rayon architecture.
+tungstenite = "0.29"
+
 
 # Optional dependencies (feature-gated)
 fail = { version = "0.5", optional = true }
