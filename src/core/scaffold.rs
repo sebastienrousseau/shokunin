@@ -871,4 +871,40 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn scaffold_project_at_errors_when_root_already_exists() {
+        // Pre-create the project dir so the `if root.exists()` arm fires.
+        let dir = tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("dupe")).unwrap();
+        let res = scaffold_project_at("dupe", dir.path());
+        assert!(res.is_err());
+        let msg = format!("{:?}", res.unwrap_err());
+        assert!(msg.contains("already exists"));
+    }
+
+    #[test]
+    fn write_scaffold_file_errors_propagate_via_with_context() {
+        // Both generic instantiations: &str and String. Pointing at a
+        // path whose parent doesn't exist makes fs::write fail and
+        // exercises the with_context closure for that monomorphisation.
+        let dir = tempdir().unwrap();
+        let missing_parent = dir.path().join("nope/nope/file.txt");
+
+        // &[u8]-as-AsRef::<[u8]> from &str:
+        let res_str = write_scaffold_file(&missing_parent, "body", "label-str");
+        assert!(res_str.is_err());
+        let msg_str = format!("{:?}", res_str.unwrap_err());
+        assert!(msg_str.contains("label-str"));
+
+        // String instantiation:
+        let res_string = write_scaffold_file(
+            &missing_parent,
+            String::from("body"),
+            "label-string",
+        );
+        assert!(res_string.is_err());
+        let msg_string = format!("{:?}", res_string.unwrap_err());
+        assert!(msg_string.contains("label-string"));
+    }
 }

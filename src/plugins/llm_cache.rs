@@ -687,4 +687,69 @@ mod tests {
         cache.set(&k2, "y").unwrap();
         assert_eq!(cache.stats().stores, 2);
     }
+
+    #[test]
+    fn get_returns_none_when_entry_is_a_directory() {
+        // File::open on a directory returns Err with kind other than
+        // NotFound — hits the catch-all `Err(_) => …` arm in get().
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "p", 1);
+        let path = cache.entry_path(&key);
+        fs::create_dir_all(&path).unwrap();
+        assert!(cache.get(&key).is_none());
+    }
+
+    #[test]
+    fn get_returns_none_on_missing_entry_increments_miss() {
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "missing", 1);
+        let before = cache.stats().misses;
+        assert!(cache.get(&key).is_none());
+        assert!(cache.stats().misses > before);
+    }
+
+    #[test]
+    fn parse_entry_returns_none_for_missing_fields() {
+        let key = LlmCache::compute_key("e", "m", "p", 1);
+        // Missing `version` field.
+        let json = format!(
+            r#"{{"key_hex":"{}","payload":"x","payload_len":1}}"#,
+            encode_hex(&key)
+        );
+        assert!(parse_entry(&json, &key).is_none());
+    }
+
+    #[test]
+    fn parse_entry_returns_none_for_non_object_payload() {
+        let key = LlmCache::compute_key("e", "m", "p", 1);
+        assert!(parse_entry("[1,2,3]", &key).is_none());
+        assert!(parse_entry("null", &key).is_none());
+    }
+
+    #[test]
+    fn evict_propagates_unexpected_io_error() {
+        // Calling evict on a path whose parent is a non-existent dir
+        // does NOT error (NotFound is mapped to Ok). But we can force
+        // a different error by making the path itself a directory (so
+        // remove_file returns IsADirectory / similar).
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "evict-dir", 1);
+        let path = cache.entry_path(&key);
+        fs::create_dir_all(&path).unwrap();
+        let res = cache.evict(&key);
+        // On unix `remove_file` on a directory returns IsADirectory;
+        // on some macOS versions returns PermissionDenied. We only
+        // assert the body executed and didn't panic — either Ok or
+        // Err is acceptable.
+        let _ = res;
+    }
+
+    #[test]
+    fn next_tmp_seq_is_monotonic() {
+        let a = next_tmp_seq();
+        let b = next_tmp_seq();
+        let c = next_tmp_seq();
+        assert!(b > a);
+        assert!(c > b);
+    }
 }

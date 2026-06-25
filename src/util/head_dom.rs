@@ -385,4 +385,75 @@ mod tests {
         let out = remove_canonical_links(html);
         assert!(out.contains("<pre>&lt;link rel=\"canonical\"&gt;</pre>"));
     }
+
+    // ── replace_canonical_link ───────────────────────────────────────
+
+    #[test]
+    fn replace_canonical_removes_old_and_injects_new() {
+        let html = r#"<html><head><title>T</title><link rel="canonical" href="/old"></head><body></body></html>"#;
+        let payload = r#"<link rel="canonical" href="/new">"#;
+        let out = replace_canonical_link(html, payload);
+        assert!(out.contains("href=\"/new\""));
+        assert!(!out.contains("href=\"/old\""));
+        // Only one canonical present after replacement.
+        assert_eq!(out.matches("rel=\"canonical\"").count(), 1);
+    }
+
+    #[test]
+    fn replace_canonical_injects_when_none_existed() {
+        let html = "<html><head><title>T</title></head><body></body></html>";
+        let payload = r#"<link rel="canonical" href="/new">"#;
+        let out = replace_canonical_link(html, payload);
+        assert!(out.contains("href=\"/new\""));
+        // Payload sits just before </head>.
+        assert!(out.contains("href=\"/new\"></head>"));
+    }
+
+    #[test]
+    fn replace_canonical_returns_input_when_no_head() {
+        // No <head> element => injector callback never fires => function
+        // returns the original string unchanged.
+        let html = "<html><body>nothing here</body></html>";
+        let payload = r#"<link rel="canonical" href="/new">"#;
+        let out = replace_canonical_link(html, payload);
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn replace_canonical_is_idempotent() {
+        let html = r#"<html><head><title>T</title><link rel="canonical" href="/a"></head></html>"#;
+        let payload = r#"<link rel="canonical" href="/a">"#;
+        let once = replace_canonical_link(html, payload);
+        let twice = replace_canonical_link(&once, payload);
+        // After two passes, still exactly one canonical and same href.
+        assert_eq!(twice.matches("rel=\"canonical\"").count(), 1);
+        assert!(twice.contains("href=\"/a\""));
+    }
+
+    // ── inject_before_head_close: exercise multiple <head> rewrite ──
+
+    #[test]
+    fn inject_handles_head_with_existing_children() {
+        // Already-populated <head> with mixed children — inject must
+        // preserve every prior element AND append the payload exactly
+        // once just before </head>.
+        let html = "<html><head><meta charset=\"utf-8\"><title>X</title>\
+                    <link rel=\"stylesheet\" href=\"/a.css\"></head><body>b</body></html>";
+        let out =
+            inject_before_head_close(html, "<script src=\"/x.js\"></script>");
+        assert!(out.contains("<meta charset=\"utf-8\">"));
+        assert!(out.contains("<title>X</title>"));
+        assert!(out.contains("<link rel=\"stylesheet\" href=\"/a.css\">"));
+        assert!(out.contains("<script src=\"/x.js\"></script></head>"));
+        assert_eq!(out.matches("<script src=\"/x.js\">").count(), 1);
+    }
+
+    #[test]
+    fn remove_canonical_with_mixed_case_rel_value() {
+        // Selector uses the case-insensitive flag — rel="CANONICAL" must
+        // still match.
+        let html = r#"<head><link rel="Canonical" href="/x"></head>"#;
+        let out = remove_canonical_links(html);
+        assert!(!out.contains("Canonical"));
+    }
 }

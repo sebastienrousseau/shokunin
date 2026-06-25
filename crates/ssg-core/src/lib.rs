@@ -352,4 +352,98 @@ mod tests {
         assert_eq!(slugify("Hello World!"), "hello-world");
         assert_eq!(slugify("Rust & Web"), "rust-web");
     }
+
+    #[test]
+    fn error_display_frontmatter_parse_variant() {
+        let e = Error::FrontmatterParse {
+            syntax: "yaml mismatch".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Frontmatter parse error"));
+        assert!(s.contains("yaml mismatch"));
+    }
+
+    #[test]
+    fn error_display_markdown_compile_variant() {
+        let e = Error::MarkdownCompile {
+            source: "broken markdown".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Markdown compilation error"));
+        assert!(s.contains("broken markdown"));
+    }
+
+    #[test]
+    fn error_display_invalid_slug_variant() {
+        let e = Error::InvalidSlug {
+            input: "@@@".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Invalid slug input"));
+        assert!(s.contains("@@@"));
+    }
+
+    #[test]
+    fn error_is_std_error_trait_object() {
+        // Smoke-tests the `impl std::error::Error for Error {}` block.
+        let e: Box<dyn std::error::Error> = Box::new(Error::InvalidSlug {
+            input: "x".to_string(),
+        });
+        assert!(!e.to_string().is_empty());
+        // No source by default.
+        assert!(std::error::Error::source(&*e).is_none());
+    }
+
+    #[test]
+    fn error_debug_impl_executes_for_each_variant() {
+        let e1 = Error::FrontmatterParse {
+            syntax: "a".to_string(),
+        };
+        let e2 = Error::MarkdownCompile {
+            source: "b".to_string(),
+        };
+        let e3 = Error::InvalidSlug {
+            input: "c".to_string(),
+        };
+        for e in [&e1, &e2, &e3] {
+            let s = format!("{e:?}");
+            assert!(!s.is_empty());
+        }
+    }
+
+    #[test]
+    fn search_entry_serialization_roundtrip() {
+        let e = SearchEntry {
+            title: "T".to_string(),
+            url: "/u".to_string(),
+            content: "C".to_string(),
+        };
+        let json = serde_json::to_string(&e).unwrap();
+        assert!(json.contains("\"title\":\"T\""));
+        let back: SearchEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.url, "/u");
+        assert_eq!(back.content, "C");
+        // Debug + Clone are derived; exercise them.
+        let _ = format!("{back:?}");
+        let _ = back.clone();
+    }
+
+    #[test]
+    fn compile_page_yields_empty_frontmatter_when_absent() {
+        let (fm, html) = compile_page("# Heading\n\nBody").unwrap();
+        assert!(fm.is_empty());
+        assert!(html.contains("<h1>Heading</h1>"));
+    }
+
+    #[test]
+    fn slugify_collapses_consecutive_separators() {
+        assert_eq!(slugify("foo!!!bar"), "foo-bar");
+        assert_eq!(slugify("--leading--"), "leading");
+    }
+
+    #[test]
+    fn slugify_empty_input_yields_empty() {
+        assert_eq!(slugify(""), "");
+        assert_eq!(slugify("???"), "");
+    }
 }

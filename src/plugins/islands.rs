@@ -376,4 +376,37 @@ mod tests {
         assert!(result.contains("component=\"counter\""));
         assert!(result.contains("hydrate=\"visible\""));
     }
+
+    #[test]
+    #[allow(clippy::default_constructed_unit_structs)]
+    fn island_plugin_new_and_default_yield_same_unit() {
+        // Plugin is a unit struct — Default and new() are
+        // interchangeable. Exercise both so the function-coverage
+        // counter records them (this is the point of the test).
+        let a = IslandPlugin::new();
+        let b = IslandPlugin::default();
+        assert_eq!(a.name(), b.name());
+        assert!(a.has_transform());
+        assert!(b.has_transform());
+    }
+
+    #[test]
+    fn island_after_compile_with_html_file_but_zero_island_refs_returns_early()
+    {
+        // Site dir exists, contains an HTML file with no <ssg-island>,
+        // so the components set is empty and the early-return arm fires
+        // (the closure that maps over the empty set).
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(
+            site.join("page.html"),
+            "<html><body><p>nothing</p></body></html>",
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        IslandPlugin.after_compile(&ctx).unwrap();
+        assert!(!site.join("_islands").exists());
+    }
 }

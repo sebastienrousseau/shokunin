@@ -504,4 +504,14 @@ mod tests {
             handle_server(&mut log_file, "2026-06-06", &paths, &serve_dir);
         assert!(res.is_err());
     }
+
+    #[test]
+    fn http_transport_start_returns_ok_even_when_bind_fails() {
+        // start() swallows the error from server.start() via `let _ =`,
+        // so even an invalid bind address must return Ok(()) — exercises
+        // the body of HttpTransport::start without binding a real port.
+        let t = HttpTransport;
+        let res = t.start("not-a-valid-address:zzz", "/tmp");
+        assert!(res.is_ok());
+    }
 }

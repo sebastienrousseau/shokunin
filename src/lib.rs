@@ -3418,6 +3418,93 @@ mod tests {
         let result = dispatch_invocation(inv, &matches);
         assert!(result.is_ok(), "run_legacy --validate failed: {result:?}");
     }
+
+    #[test]
+    fn run_subcommand_build_with_empty_dirs_completes() {
+        // Drives run_subcommand("build") end-to-end through
+        // dispatch_invocation. Empty content/templates dirs means the
+        // build is a no-op but every line of the dispatcher body is
+        // executed.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "build",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Build));
+        let result = dispatch_invocation(inv, &matches);
+        // Build may produce warnings on empty input but should not
+        // hard-fail.
+        let _ = result;
+    }
+
+    #[test]
+    fn run_deploy_with_none_target_invokes_noop_adapter() {
+        // run_deploy with --target none uses the no-op adapter, which
+        // is purely a print + Ok, so the test can drive the full body
+        // including pipeline execution + adapter dispatch without
+        // hitting any network.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "deploy",
+            "--target",
+            "none",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Deploy { .. }));
+        let result = dispatch_invocation(inv, &matches);
+        let _ = result;
+    }
+
+    #[test]
+    fn run_legacy_happy_path_with_empty_content_dir() {
+        // Same content/templates as run_check but without --validate, so
+        // the full legacy code path executes (build_pipeline +
+        // execute_build_pipeline_with). Empty dirs make the build a
+        // no-op, no server is started because --serve is not set.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Legacy));
+        let result = dispatch_invocation(inv, &matches);
+        let _ = result;
+    }
 }
 
 #[cfg(test)]

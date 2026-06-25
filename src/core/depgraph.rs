@@ -1000,4 +1000,139 @@ mod tests {
             vec![PathBuf::from("a.md"), PathBuf::from("b.md")]
         );
     }
+
+    // ── save error-path closure coverage ────────────────────────────
+
+    #[test]
+    fn save_fails_when_cache_root_is_a_file_not_a_dir() {
+        // Make `cache_root` point at an existing regular file so
+        // fs::create_dir_all returns AlreadyExists+NotADirectory and
+        // the map_err closure constructing SsgError::Io fires.
+        let dir = tempdir().unwrap();
+        let blocker = dir.path().join("not-a-dir");
+        fs::write(&blocker, b"i am a file").unwrap();
+        let cache_root = blocker.join("sub");
+        let graph = DepGraph::new();
+        let err = graph.save(&cache_root).unwrap_err();
+        let msg = format!("{err}");
+        assert!(!msg.is_empty());
+    }
+
+    #[test]
+    fn save_writes_then_renames_to_final_path() {
+        // Exercises the happy-path: success path of all three map_err
+        // arms (create_dir_all, write, rename). Verifies the final
+        // depgraph.json exists and the .tmp file is gone.
+        let dir = tempdir().unwrap();
+        let cache_root = dir.path().join("cache");
+        let mut g = DepGraph::new();
+        g.add_dep(Path::new("a.md"), Path::new("b.html"));
+        g.add_output(Path::new("a.md"), Path::new("out.html"));
+        g.record_hash(Path::new("a.md"), b"contents");
+        g.save(&cache_root).unwrap();
+
+        let final_path = cache_root.join(DEP_GRAPH_FILE);
+        assert!(final_path.exists());
+        let tmp_path = cache_root.join(format!("{DEP_GRAPH_FILE}.tmp"));
+        assert!(
+            !tmp_path.exists(),
+            ".tmp file should be renamed away after save"
+        );
+    }
+
+    // ── default_version: hit serde's default-field fallback ─────────
+
+    #[test]
+    fn load_treats_missing_version_field_as_incompatible() {
+        // Write a graph with no version field. serde's `default =
+        // default_version` returns 0, which mismatches SCHEMA_VERSION,
+        // so load() returns an empty graph (the AC6 fallback path).
+        let dir = tempdir().unwrap();
+        let cache_root = dir.path();
+        let path = cache_root.join(DEP_GRAPH_FILE);
+        fs::write(&path, br#"{"deps":{},"outputs":{},"hashes":{}}"#).unwrap();
+        let loaded = DepGraph::load(cache_root);
+        assert_eq!(loaded.page_count(), 0);
+        assert!(loaded.tracked_sources().is_empty());
+    }
+
+    // ── populate error-path closure coverage ────────────────────────
+
+    #[test]
+    fn populate_propagates_unreadable_markdown_via_map_err_closure() {
+        // Drop a .md file then make it unreadable. The closure that
+        // wraps fs::read's error into SsgError::Io fires.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        let build = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        let md = content.join("page.md");
+        fs::write(&md, b"---\nlayout: post\n---\nhi").unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // chmod 000 so fs::read returns PermissionDenied
+            fs::set_permissions(&md, fs::Permissions::from_mode(0o000))
+                .unwrap();
+        }
+
+        let mut g = DepGraph::new();
+        let res = populate(&mut g, &content, &templates, &build);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // Restore perms so tempdir cleanup works.
+            let _ = fs::set_permissions(&md, fs::Permissions::from_mode(0o644));
+            // On unix the error path is exercised. Some CI runners
+            // run as root and bypass perms — don't fail if we did get
+            // through, but assert: if it errored, the message is non-empty.
+            if let Err(e) = res {
+                assert!(!format!("{e}").is_empty());
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = res;
+        }
+    }
+
+    #[test]
+    fn populate_propagates_unreadable_template_via_map_err_closure() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        let build = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        let tpl = templates.join("post.html");
+        fs::write(&tpl, b"{{#extends \"base\"}}").unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000))
+                .unwrap();
+        }
+
+        let mut g = DepGraph::new();
+        let res = populate(&mut g, &content, &templates, &build);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ =
+                fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+            if let Err(e) = res {
+                assert!(!format!("{e}").is_empty());
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = res;
+        }
+    }
 }

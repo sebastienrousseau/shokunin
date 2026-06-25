@@ -532,6 +532,64 @@ mod tests {
         );
     }
 
+    // ── load/save error-path closures ───────────────────────────────
+
+    // 19. load() — read_to_string failure triggers the with_context closure.
+    // We make `cache_path` a directory so File::open succeeds existence
+    // check but read_to_string fails ("Is a directory").
+    #[test]
+    fn load_read_failure_fires_with_context_closure() {
+        let tmp = TempDir::new().ok().unwrap();
+        let cache_path = tmp.path().join("cache-as-dir");
+        fs::create_dir_all(&cache_path).ok();
+        let err = BuildCache::load(&cache_path).unwrap_err();
+        let msg = format!("{:?}", err);
+        assert!(
+            msg.contains("failed to read cache file"),
+            "error chain should contain load read context: {msg}"
+        );
+    }
+
+    // 20. load() — parse failure triggers the parse with_context closure.
+    // Distinct from `build_cache_load_corrupted_json` — that test only
+    // asserts is_err; here we assert the closure-generated message
+    // (lines 96-98) made it into the error chain.
+    #[test]
+    fn load_parse_failure_message_contains_path() {
+        let tmp = TempDir::new().ok().unwrap();
+        let cache_path = tmp.path().join("bad.json");
+        fs::write(&cache_path, b"{ this is not json").ok();
+        let err = BuildCache::load(&cache_path).unwrap_err();
+        let msg = format!("{:?}", err);
+        assert!(
+            msg.contains("failed to parse cache file"),
+            "error chain should contain parse context: {msg}"
+        );
+        assert!(
+            msg.contains("bad.json"),
+            "error chain should contain file path: {msg}"
+        );
+    }
+
+    // 21. save() — write failure triggers the write with_context closure.
+    // We point cache_path at a directory we never create, then create
+    // an intermediate file (not dir) at the parent so fs::write fails
+    // (parent is a file, not a directory).
+    #[test]
+    fn save_write_failure_fires_with_context_closure() {
+        let tmp = TempDir::new().ok().unwrap();
+        let parent_as_file = tmp.path().join("not-a-dir");
+        fs::write(&parent_as_file, b"i am a file").ok();
+        let cache_path = parent_as_file.join("cache.json");
+        let cache = BuildCache::new(&cache_path);
+        let err = cache.save().unwrap_err();
+        let msg = format!("{:?}", err);
+        assert!(
+            msg.contains("failed to write cache file"),
+            "error chain should contain save write context: {msg}"
+        );
+    }
+
     // 16. Unchanged files do not appear in the changed list.
     #[test]
     fn build_cache_unchanged_files_not_reported() {
