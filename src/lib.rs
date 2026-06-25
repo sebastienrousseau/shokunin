@@ -87,6 +87,7 @@ const fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
+pub mod audit;
 pub mod cmd;
 #[path = "core/mod.rs"]
 pub(crate) mod core_group;
@@ -456,8 +457,24 @@ fn dispatch_invocation(
         CliInvocation::Build => run_subcommand(matches, "build", false),
         CliInvocation::Dev => run_subcommand(matches, "dev", true),
         CliInvocation::Check => run_check(matches),
+        CliInvocation::Audit => run_audit(matches),
         CliInvocation::Deploy { target } => run_deploy(matches, &target),
     }
+}
+
+/// Run handler for the `ssg audit` subcommand (issue #549).
+///
+/// Delegates to [`crate::cmd::audit::run_and_dispatch`], which handles
+/// gate selection, output formatting (text / JSON / `JUnit` XML), and
+/// the `--fail-on` exit-code contract.
+fn run_audit(matches: &clap::ArgMatches) -> Result<(), SsgError> {
+    let sub_m = matches.subcommand_matches("audit").ok_or_else(|| {
+        SsgError::Validation {
+            field: "subcommand".to_string(),
+            message: "missing matches for `audit`".to_string(),
+        }
+    })?;
+    cmd::audit::run_and_dispatch(sub_m, false)
 }
 
 /// Legacy code path: behaves exactly like 0.0.42 `ssg` did.

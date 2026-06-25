@@ -21,7 +21,8 @@ use std::path::PathBuf;
 /// Subcommand names recognised by the unified CLI. Used to discriminate
 /// between subcommand-style invocations (`ssg dev`, `ssg build …`) and
 /// the legacy flag-only form (`ssg -s public`).
-pub const SUBCOMMANDS: &[&str] = &["build", "dev", "check", "deploy", "help"];
+pub const SUBCOMMANDS: &[&str] =
+    &["build", "dev", "check", "deploy", "audit", "help"];
 
 /// Deployment targets accepted by `ssg deploy --target …`.
 ///
@@ -63,6 +64,9 @@ pub enum CliInvocation {
         /// The selected deploy target (`netlify`, `vercel`, …).
         target: String,
     },
+    /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
+    /// run the 14 native CI gates against the built site (issue #549).
+    Audit,
     /// Legacy flag-only invocation (`ssg -s public -w`). Behaves like
     /// `Dev` if `--serve` is present, otherwise like `Build`. Emits a
     /// deprecation warning on stderr before dispatch.
@@ -368,6 +372,7 @@ impl Cli {
                     )
                     .args(shared()),
             )
+            .subcommand(super::audit::build_subcommand())
             .subcommand(
                 Command::new("deploy")
                     .about("Build the site and ship to a pluggable target")
@@ -445,6 +450,7 @@ impl Cli {
                 Some(("build", _)) => CliInvocation::Build,
                 Some(("dev", _)) => CliInvocation::Dev,
                 Some(("check", _)) => CliInvocation::Check,
+                Some(("audit", _)) => CliInvocation::Audit,
                 Some(("deploy", sub_m)) => {
                     let target = sub_m
                         .get_one::<String>("target")

@@ -31,6 +31,7 @@
 //! }
 //! ```
 
+pub mod audit;
 mod cli;
 mod config;
 mod error;

@@ -1,0 +1,200 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! Post-quantum-crypto TLS readiness gate (depends on E6 — issue #550).
+//!
+//! Inspects the deploy adapter output for `_headers` (Cloudflare /
+//! Netlify) or `wrangler.toml` and asserts the TLS+HSTS posture
+//! required for PQC roll-forward:
+//! - TLS 1.3 declared (`min-version`, `tls-1.3` etc.).
+//! - HSTS header present with `max-age >= 31536000` (one year).
+//!
+//! When neither file exists (the common case before E6 merges) the
+//! gate emits a single *info* finding noting the skip rather than
+//! failing — exactly as the issue body specifies.
+
+use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
+use std::fs;
+
+const NAME: &str = "pqc_tls";
+const HSTS_MIN_AGE: u64 = 31_536_000; // 1 year
+
+/// PQC TLS readiness gate.
+#[derive(Debug, Clone, Copy)]
+pub struct PqcTlsGate;
+
+impl AuditGate for PqcTlsGate {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+
+    fn explain(&self) -> &'static str {
+        "Inspects _headers / wrangler.toml emitted by the deploy \
+         adapter (E6) for TLS 1.3 + HSTS posture: max-age must be \
+         >= 31536000 (one year). When neither file exists, the gate \
+         emits an info note and skips — it upgrades to enforcement \
+         once issue #550 (E6) merges and the files appear."
+    }
+
+    fn run(&self, site: &Site, _opts: &AuditOptions) -> Vec<Finding> {
+        let mut findings = Vec::new();
+
+        let headers_path = site.root.join("_headers");
+        let wrangler_path = site.root.join("wrangler.toml");
+        let parent_wrangler =
+            site.root.parent().map(|p| p.join("wrangler.toml"));
+
+        let has_headers = headers_path.exists();
+        let has_wrangler = wrangler_path.exists()
+            || parent_wrangler.as_ref().is_some_and(|p| p.exists());
+
+        if !has_headers && !has_wrangler {
+            findings.push(
+                Finding::new(
+                    NAME,
+                    Severity::Info,
+                    "No _headers or wrangler.toml found; gate skipped (depends on E6 — issue #550)",
+                )
+                .with_code("PQC-INPUT-MISSING"),
+            );
+            return findings;
+        }
+
+        if let Ok(text) = fs::read_to_string(&headers_path) {
+            check_text(&text, "_headers", &mut findings);
+        }
+        if let Ok(text) = fs::read_to_string(&wrangler_path) {
+            check_text(&text, "wrangler.toml", &mut findings);
+        } else if let Some(pw) = parent_wrangler {
+            if let Ok(text) = fs::read_to_string(&pw) {
+                check_text(&text, "wrangler.toml", &mut findings);
+            }
+        }
+
+        findings
+    }
+}
+
+fn check_text(text: &str, source: &str, findings: &mut Vec<Finding>) {
+    let lower = text.to_lowercase();
+
+    // HSTS presence + max-age threshold
+    if !lower.contains("strict-transport-security") {
+        findings.push(
+            Finding::new(
+                NAME,
+                Severity::Error,
+                format!(
+                    "{source} declares no Strict-Transport-Security header"
+                ),
+            )
+            .with_code("PQC-HSTS-MISSING")
+            .with_path(source.to_string()),
+        );
+    } else if let Some(age) = extract_max_age(&lower) {
+        if age < HSTS_MIN_AGE {
+            findings.push(
+                Finding::new(
+                    NAME,
+                    Severity::Error,
+                    format!(
+                        "{source} HSTS max-age={age} below the 1-year (31536000) PQC-roll-forward threshold"
+                    ),
+                )
+                .with_code("PQC-HSTS-SHORT")
+                .with_path(source.to_string()),
+            );
+        }
+    } else {
+        findings.push(
+            Finding::new(
+                NAME,
+                Severity::Warn,
+                format!("{source} HSTS header present but max-age could not be parsed"),
+            )
+            .with_code("PQC-HSTS-UNPARSEABLE")
+            .with_path(source.to_string()),
+        );
+    }
+
+    // TLS 1.3 declared anywhere
+    let mentions_tls13 = lower.contains("tls-1.3")
+        || lower.contains("tlsv1.3")
+        || lower.contains("tls13")
+        || lower.contains("\"1.3\"")
+        || lower.contains("min_version = \"tlsv1.3\"");
+    if !mentions_tls13 {
+        findings.push(
+            Finding::new(
+                NAME,
+                Severity::Warn,
+                format!(
+                    "{source} does not declare TLS 1.3 (required for PQC kex)"
+                ),
+            )
+            .with_code("PQC-TLS13-MISSING")
+            .with_path(source.to_string()),
+        );
+    }
+}
+
+fn extract_max_age(lower: &str) -> Option<u64> {
+    let key = "max-age=";
+    let idx = lower.find(key)?;
+    let after = &lower[idx + key.len()..];
+    let digits: String =
+        after.chars().take_while(|c| c.is_ascii_digit()).collect();
+    digits.parse().ok()
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn site_with_file(name: &str, content: &str) -> Site {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join(name), content).unwrap();
+        let root = tmp.path().to_path_buf();
+        std::mem::forget(tmp);
+        Site {
+            root,
+            html_files: Vec::new(),
+        }
+    }
+
+    fn empty_site() -> Site {
+        Site {
+            root: PathBuf::from("/nonexistent"),
+            html_files: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn absent_inputs_emit_info_skip() {
+        let f = PqcTlsGate.run(&empty_site(), &AuditOptions::default());
+        assert_eq!(f.len(), 1);
+        assert!(matches!(f[0].severity, Severity::Info));
+        assert_eq!(f[0].code.as_deref(), Some("PQC-INPUT-MISSING"));
+    }
+
+    #[test]
+    fn good_headers_file_passes() {
+        let content = "/*\n  Strict-Transport-Security: max-age=31536000; includeSubDomains\n  TLS: TLSv1.3\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn short_hsts_max_age_flags_error() {
+        let content =
+            "/*\n  Strict-Transport-Security: max-age=3600\n  TLS: TLSv1.3\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("PQC-HSTS-SHORT")));
+    }
+}

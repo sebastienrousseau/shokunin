@@ -1,0 +1,784 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! Native CI audit gates (issue #549).
+//!
+//! Exposes 14 [`AuditGate`] implementations that run locally and in CI
+//! to catch violations of WCAG, schema.org, hreflang reciprocity, CSP +
+//! SRI, PQC TLS readiness, HTML5 structure, broken links, OG metadata,
+//! markdown style, performance budgets, AI discovery files, RSS/Atom
+//! feeds, image optimisation, and the localised semantic search index.
+//!
+//! ## Surface
+//!
+//! ```rust,no_run
+//! use ssg::audit::{AuditRunner, AuditConfig, Site};
+//! use std::path::Path;
+//!
+//! let site = Site::load(Path::new("./public"))?;
+//! let cfg  = AuditConfig::default();
+//! let report = AuditRunner::new(cfg).run(&site);
+//! report.print_text();
+//! # Ok::<(), ssg::SsgError>(())
+//! ```
+//!
+//! Each gate ships with `name()`, `explain()`, and a `run(&Site)` that
+//! returns a `Vec<Finding>`. Findings carry a [`Severity`] so callers
+//! can filter or fail based on the configured `--fail-on` threshold.
+//!
+//! Some gates depend on other v0.0.44 epics (PQC on E6, AI discovery on
+//! E8, semantic search on E1). Those gates emit an *info* finding when
+//! their input files are absent rather than failing — they upgrade to
+//! enforcement once the producing epic merges.
+
+pub mod gates;
+pub mod output;
+
+use crate::error::{PathErrorExt, SsgError};
+use crate::walk::walk_files;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
+use std::fs;
+use std::path::{Path, PathBuf};
+
+// ---------------------------------------------------------------------
+// Severity
+// ---------------------------------------------------------------------
+
+/// Severity of an audit [`Finding`].
+///
+/// Comparison order is `Info < Warn < Error`, so `>=` filters work
+/// against a configured `--fail-on` threshold.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum Severity {
+    /// Informational note; does not affect exit code.
+    Info,
+    /// Soft violation; fails when `--fail-on warn` is set.
+    Warn,
+    /// Hard violation; fails by default.
+    Error,
+}
+
+impl Severity {
+    /// Returns the canonical lowercase name (`"info"`, `"warn"`, `"error"`).
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
+
+    /// Parses a severity from its lowercase textual form. Accepts both
+    /// `"warn"` and `"warning"` for ergonomics.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "info" => Some(Self::Info),
+            "warn" | "warning" => Some(Self::Warn),
+            "error" | "err" => Some(Self::Error),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Severity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+// ---------------------------------------------------------------------
+// Finding
+// ---------------------------------------------------------------------
+
+/// A single audit finding produced by a gate.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Finding {
+    /// Identifier of the gate that produced the finding
+    /// (e.g. `"wcag"`, `"hreflang"`).
+    pub gate: String,
+    /// Severity of the finding.
+    pub severity: Severity,
+    /// Optional rule code (`"WCAG-1.1.1"`, `"OG-MISSING"`, …) for
+    /// downstream tooling to group by.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+    /// Human-readable message.
+    pub message: String,
+    /// Path the finding was raised against, relative to the site root.
+    /// `None` for site-wide findings (e.g. a missing manifest file).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+impl Finding {
+    /// Convenience constructor for a path-scoped finding.
+    pub fn new(
+        gate: impl Into<String>,
+        severity: Severity,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            gate: gate.into(),
+            severity,
+            code: None,
+            message: message.into(),
+            path: None,
+        }
+    }
+
+    /// Builder: attaches a rule code.
+    #[must_use]
+    pub fn with_code(mut self, code: impl Into<String>) -> Self {
+        self.code = Some(code.into());
+        self
+    }
+
+    /// Builder: attaches a path.
+    #[must_use]
+    pub fn with_path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+}
+
+// ---------------------------------------------------------------------
+// Site
+// ---------------------------------------------------------------------
+
+/// A loaded view of a built site for audit gates to consume.
+///
+/// Walks the site directory once at construction time so each gate
+/// avoids redundant filesystem scans (the 14 gates would otherwise
+/// stat-walk the same tree 14 times).
+#[derive(Debug, Clone)]
+pub struct Site {
+    /// Root directory of the built site (the `public/` output dir).
+    pub root: PathBuf,
+    /// All `.html` files under the root, in directory-walk order.
+    pub html_files: Vec<PathBuf>,
+}
+
+impl Site {
+    /// Loads a site from `root`, walking it for HTML files.
+    ///
+    /// # Errors
+    /// Returns [`SsgError::Io`] if the directory walk fails.
+    pub fn load(root: &Path) -> Result<Self, SsgError> {
+        let html_files = if root.exists() {
+            walk_files(root, "html").unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        Ok(Self {
+            root: root.to_path_buf(),
+            html_files,
+        })
+    }
+
+    /// Returns a relative path string for `path` against the site root.
+    /// Falls back to the absolute path if the strip fails.
+    #[must_use]
+    pub fn rel(&self, path: &Path) -> String {
+        path.strip_prefix(&self.root)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .into_owned()
+    }
+
+    /// Reads the contents of `path` as UTF-8.
+    ///
+    /// # Errors
+    /// Returns [`SsgError::Io`] if reading fails.
+    pub fn read(&self, path: &Path) -> Result<String, SsgError> {
+        fs::read_to_string(path).with_path(path)
+    }
+}
+
+// ---------------------------------------------------------------------
+// AuditGate trait
+// ---------------------------------------------------------------------
+
+/// Trait implemented by every audit gate.
+///
+/// Each gate is stateless and side-effect-free — it must not write
+/// anything to disk and must not hit the network unless explicitly
+/// asked to (see [`AuditOptions::skip_network`]).
+pub trait AuditGate: Sync + Send {
+    /// Short identifier (`snake_case`, used on `--gate <name>`).
+    fn name(&self) -> &'static str;
+
+    /// Long-form explainer printed by `ssg audit --explain --gate <name>`.
+    fn explain(&self) -> &'static str;
+
+    /// Runs the gate against `site` and returns its findings.
+    fn run(&self, site: &Site, opts: &AuditOptions) -> Vec<Finding>;
+}
+
+// ---------------------------------------------------------------------
+// AuditOptions / AuditConfig
+// ---------------------------------------------------------------------
+
+/// Runtime options passed to every gate at execution time.
+#[derive(Debug, Clone, Copy)]
+pub struct AuditOptions {
+    /// When `true`, gates that would otherwise issue HTTP requests
+    /// (only the broken-link gate today) must skip the network and
+    /// emit an info finding noting the skip.
+    pub skip_network: bool,
+    /// Page-weight budget (HTML + critical CSS) in bytes for the
+    /// performance gate.
+    pub page_weight_budget: usize,
+    /// Total JS budget in bytes for the performance gate.
+    pub js_budget: usize,
+    /// Image file-size budget in bytes for the image gate.
+    pub image_budget: usize,
+}
+
+impl Default for AuditOptions {
+    fn default() -> Self {
+        Self {
+            skip_network: true,
+            page_weight_budget: 100 * 1024,
+            js_budget: 50 * 1024,
+            image_budget: 250 * 1024,
+        }
+    }
+}
+
+/// User-facing configuration for an [`AuditRunner`].
+#[derive(Debug, Clone)]
+pub struct AuditConfig {
+    /// Gate identifiers to skip. Names not matching any registered
+    /// gate are silently ignored (so a deprecated gate name in
+    /// `ssg.toml` doesn't break the build).
+    pub disabled: BTreeSet<String>,
+    /// If `Some`, only the named gate runs (`--gate <name>`).
+    pub only: Option<String>,
+    /// Minimum severity to include in the report.
+    pub severity_floor: Severity,
+    /// Severity that triggers a non-zero exit code.
+    pub fail_on: Severity,
+    /// Runtime knobs forwarded to gates.
+    pub options: AuditOptions,
+}
+
+impl AuditConfig {
+    /// Sensible defaults: include everything, fail on `Error`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            disabled: BTreeSet::new(),
+            only: None,
+            severity_floor: Severity::Info,
+            fail_on: Severity::Error,
+            options: AuditOptions::default(),
+        }
+    }
+}
+
+impl Default for AuditConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ---------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------
+
+/// Per-gate result block.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GateResult {
+    /// Gate identifier (matches [`AuditGate::name`]).
+    pub name: String,
+    /// `true` when the gate was disabled via config or `--gate` filter.
+    pub skipped: bool,
+    /// Reason for being skipped (only set when `skipped == true`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_reason: Option<String>,
+    /// Severity counts for findings produced by the gate.
+    pub severity_counts: SeverityCounts,
+    /// Individual findings produced by the gate.
+    pub findings: Vec<Finding>,
+}
+
+/// Tally of severities for a gate result.
+#[derive(
+    Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq,
+)]
+pub struct SeverityCounts {
+    /// Number of `info` findings.
+    pub info: usize,
+    /// Number of `warn` findings.
+    pub warn: usize,
+    /// Number of `error` findings.
+    pub error: usize,
+}
+
+impl SeverityCounts {
+    /// Bumps the counter for `sev`.
+    pub const fn add(&mut self, sev: Severity) {
+        match sev {
+            Severity::Info => self.info += 1,
+            Severity::Warn => self.warn += 1,
+            Severity::Error => self.error += 1,
+        }
+    }
+
+    /// Total findings across severities.
+    #[must_use]
+    pub const fn total(&self) -> usize {
+        self.info + self.warn + self.error
+    }
+}
+
+/// Aggregate audit report.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditReport {
+    /// Per-gate results in registration order.
+    pub gates: Vec<GateResult>,
+}
+
+impl AuditReport {
+    /// Returns the highest severity present across all gates, or `None`
+    /// if no findings were produced.
+    #[must_use]
+    pub fn max_severity(&self) -> Option<Severity> {
+        let mut max: Option<Severity> = None;
+        for g in &self.gates {
+            if g.severity_counts.error > 0 {
+                return Some(Severity::Error);
+            }
+            if g.severity_counts.warn > 0 {
+                max =
+                    Some(max.map_or(Severity::Warn, |m| m.max(Severity::Warn)));
+            } else if g.severity_counts.info > 0 {
+                max =
+                    Some(max.map_or(Severity::Info, |m| m.max(Severity::Info)));
+            }
+        }
+        max
+    }
+
+    /// Returns `true` when the report contains at least one finding at
+    /// `fail_on` or higher.
+    #[must_use]
+    pub fn should_fail(&self, fail_on: Severity) -> bool {
+        self.max_severity().is_some_and(|sev| sev >= fail_on)
+    }
+
+    /// Total number of registered gates (skipped or not).
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.gates.len()
+    }
+
+    /// `true` when no gates ran.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.gates.is_empty()
+    }
+
+    /// Convenience: prints the rich text formatter to stdout.
+    pub fn print_text(&self) {
+        let mut out = String::new();
+        output::text::format(self, &mut out);
+        print!("{out}");
+    }
+
+    /// Convenience: prints the JSON formatter to stdout.
+    pub fn print_json(&self) -> Result<(), SsgError> {
+        let s = output::json::format(self)?;
+        println!("{s}");
+        Ok(())
+    }
+
+    /// Convenience: prints the `JUnit` XML formatter to stdout.
+    pub fn print_junit(&self) {
+        let s = output::junit::format(self);
+        println!("{s}");
+    }
+}
+
+// ---------------------------------------------------------------------
+// AuditRunner
+// ---------------------------------------------------------------------
+
+/// Orchestrates dispatch across the 14 registered gates.
+pub struct AuditRunner {
+    config: AuditConfig,
+    gates: Vec<Box<dyn AuditGate>>,
+}
+
+impl std::fmt::Debug for AuditRunner {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuditRunner")
+            .field("config", &self.config)
+            .field(
+                "gates",
+                &self.gates.iter().map(|g| g.name()).collect::<Vec<_>>(),
+            )
+            .finish()
+    }
+}
+
+impl AuditRunner {
+    /// Constructs a runner with the 14 built-in gates registered.
+    #[must_use]
+    pub fn new(config: AuditConfig) -> Self {
+        Self {
+            config,
+            gates: gates::all(),
+        }
+    }
+
+    /// Constructs a runner with a user-supplied gate list (for tests).
+    #[must_use]
+    pub fn with_gates(
+        config: AuditConfig,
+        gates: Vec<Box<dyn AuditGate>>,
+    ) -> Self {
+        Self { config, gates }
+    }
+
+    /// Returns the names of every gate registered with the runner.
+    #[must_use]
+    pub fn gate_names(&self) -> Vec<&'static str> {
+        self.gates.iter().map(|g| g.name()).collect()
+    }
+
+    /// Runs every (enabled) gate sequentially and collects the result.
+    #[must_use]
+    pub fn run(&self, site: &Site) -> AuditReport {
+        let mut results = Vec::with_capacity(self.gates.len());
+        for gate in &self.gates {
+            let name = gate.name();
+
+            // Single-gate filter (`--gate <name>`).
+            if let Some(ref only) = self.config.only {
+                if only != name {
+                    results.push(GateResult {
+                        name: name.to_string(),
+                        skipped: true,
+                        skip_reason: Some(format!(
+                            "not selected (--gate {only})"
+                        )),
+                        severity_counts: SeverityCounts::default(),
+                        findings: Vec::new(),
+                    });
+                    continue;
+                }
+            }
+
+            // Disabled in config.
+            if self.config.disabled.contains(name) {
+                results.push(GateResult {
+                    name: name.to_string(),
+                    skipped: true,
+                    skip_reason: Some(
+                        "disabled by ssg.toml [audit.disabled]".to_string(),
+                    ),
+                    severity_counts: SeverityCounts::default(),
+                    findings: Vec::new(),
+                });
+                continue;
+            }
+
+            // Run.
+            let findings = gate.run(site, &self.config.options);
+
+            // Apply severity floor.
+            let filtered: Vec<Finding> = findings
+                .into_iter()
+                .filter(|f| f.severity >= self.config.severity_floor)
+                .collect();
+
+            let mut counts = SeverityCounts::default();
+            for f in &filtered {
+                counts.add(f.severity);
+            }
+
+            results.push(GateResult {
+                name: name.to_string(),
+                skipped: false,
+                skip_reason: None,
+                severity_counts: counts,
+                findings: filtered,
+            });
+        }
+        AuditReport { gates: results }
+    }
+
+    /// Returns the configured `fail_on` threshold.
+    #[must_use]
+    pub const fn fail_on(&self) -> Severity {
+        self.config.fail_on
+    }
+}
+
+// ---------------------------------------------------------------------
+// Audit config (ssg.toml [audit] section)
+// ---------------------------------------------------------------------
+
+/// Schema for the `[audit]` table in `ssg.toml`.
+///
+/// All fields are optional and absent fields fall back to
+/// [`AuditConfig::new`] defaults.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuditTomlConfig {
+    /// Gate identifiers to skip. Mirrors
+    /// `[audit.disabled] gates = ["markdownlint"]` in `ssg.toml`.
+    #[serde(default)]
+    pub disabled: AuditDisabledSection,
+    /// Performance budgets.
+    #[serde(default)]
+    pub budgets: AuditBudgets,
+}
+
+/// `[audit.disabled]` subsection.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AuditDisabledSection {
+    /// Names of gates to skip at audit time.
+    #[serde(default)]
+    pub gates: Vec<String>,
+}
+
+/// `[audit.budgets]` subsection.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct AuditBudgets {
+    /// HTML + critical CSS budget (bytes).
+    #[serde(default = "default_page_weight_budget")]
+    pub page_weight_bytes: usize,
+    /// Total JS budget (bytes).
+    #[serde(default = "default_js_budget")]
+    pub js_bytes: usize,
+    /// Per-image size budget (bytes).
+    #[serde(default = "default_image_budget")]
+    pub image_bytes: usize,
+}
+
+impl Default for AuditBudgets {
+    fn default() -> Self {
+        Self {
+            page_weight_bytes: default_page_weight_budget(),
+            js_bytes: default_js_budget(),
+            image_bytes: default_image_budget(),
+        }
+    }
+}
+
+const fn default_page_weight_budget() -> usize {
+    100 * 1024
+}
+
+const fn default_js_budget() -> usize {
+    50 * 1024
+}
+
+const fn default_image_budget() -> usize {
+    250 * 1024
+}
+
+impl AuditTomlConfig {
+    /// Merges the TOML config into a default [`AuditConfig`] and
+    /// returns the result.
+    #[must_use]
+    pub fn into_audit_config(self) -> AuditConfig {
+        let mut cfg = AuditConfig::new();
+        cfg.disabled.extend(self.disabled.gates);
+        cfg.options.page_weight_budget = self.budgets.page_weight_bytes;
+        cfg.options.js_budget = self.budgets.js_bytes;
+        cfg.options.image_budget = self.budgets.image_bytes;
+        cfg
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn severity_ordering_is_info_warn_error() {
+        assert!(Severity::Info < Severity::Warn);
+        assert!(Severity::Warn < Severity::Error);
+    }
+
+    #[test]
+    fn severity_parse_round_trip() {
+        for sev in [Severity::Info, Severity::Warn, Severity::Error] {
+            assert_eq!(Severity::parse(sev.as_str()), Some(sev));
+        }
+        assert_eq!(Severity::parse("warning"), Some(Severity::Warn));
+        assert_eq!(Severity::parse("err"), Some(Severity::Error));
+        assert_eq!(Severity::parse("nope"), None);
+    }
+
+    #[test]
+    fn severity_display_matches_as_str() {
+        assert_eq!(format!("{}", Severity::Info), "info");
+        assert_eq!(format!("{}", Severity::Warn), "warn");
+        assert_eq!(format!("{}", Severity::Error), "error");
+    }
+
+    #[test]
+    fn finding_builders_attach_optional_fields() {
+        let f = Finding::new("g", Severity::Warn, "msg")
+            .with_code("CODE")
+            .with_path("a/b.html");
+        assert_eq!(f.code.as_deref(), Some("CODE"));
+        assert_eq!(f.path.as_deref(), Some("a/b.html"));
+    }
+
+    #[test]
+    fn severity_counts_total_and_add() {
+        let mut c = SeverityCounts::default();
+        c.add(Severity::Info);
+        c.add(Severity::Warn);
+        c.add(Severity::Warn);
+        c.add(Severity::Error);
+        assert_eq!(c.total(), 4);
+        assert_eq!(c.info, 1);
+        assert_eq!(c.warn, 2);
+        assert_eq!(c.error, 1);
+    }
+
+    #[test]
+    fn audit_runner_registers_fourteen_gates() {
+        let r = AuditRunner::new(AuditConfig::new());
+        assert_eq!(r.gate_names().len(), 14, "must register exactly 14 gates");
+    }
+
+    #[test]
+    fn audit_runner_gate_filter_skips_others() {
+        let r = AuditRunner::new(AuditConfig {
+            only: Some("hreflang".to_string()),
+            ..AuditConfig::new()
+        });
+        let site = Site {
+            root: PathBuf::from("/nonexistent"),
+            html_files: Vec::new(),
+        };
+        let report = r.run(&site);
+        let executed: Vec<_> =
+            report.gates.iter().filter(|g| !g.skipped).collect();
+        assert_eq!(executed.len(), 1);
+        assert_eq!(executed[0].name, "hreflang");
+    }
+
+    #[test]
+    fn audit_runner_disabled_gate_records_skip_reason() {
+        let mut cfg = AuditConfig::new();
+        let _ = cfg.disabled.insert("markdownlint".to_string());
+        let r = AuditRunner::new(cfg);
+        let site = Site {
+            root: PathBuf::from("/nonexistent"),
+            html_files: Vec::new(),
+        };
+        let report = r.run(&site);
+        let md = report
+            .gates
+            .iter()
+            .find(|g| g.name == "markdownlint")
+            .expect("markdownlint gate registered");
+        assert!(md.skipped);
+        assert!(md
+            .skip_reason
+            .as_deref()
+            .unwrap_or_default()
+            .contains("disabled"));
+    }
+
+    #[test]
+    fn audit_toml_config_parses_disabled_and_budgets() {
+        let toml_src = r#"
+            [disabled]
+            gates = ["markdownlint", "links"]
+            [budgets]
+            page_weight_bytes = 200000
+            js_bytes = 20000
+            image_bytes = 100000
+        "#;
+        let parsed: AuditTomlConfig = toml::from_str(toml_src).unwrap();
+        let cfg = parsed.into_audit_config();
+        assert!(cfg.disabled.contains("markdownlint"));
+        assert!(cfg.disabled.contains("links"));
+        assert_eq!(cfg.options.page_weight_budget, 200_000);
+        assert_eq!(cfg.options.js_budget, 20_000);
+        assert_eq!(cfg.options.image_budget, 100_000);
+    }
+
+    #[test]
+    fn audit_toml_config_uses_defaults_when_empty() {
+        let cfg: AuditTomlConfig = toml::from_str("").unwrap();
+        let merged = cfg.into_audit_config();
+        assert!(merged.disabled.is_empty());
+        assert_eq!(merged.options.page_weight_budget, 100 * 1024);
+        assert_eq!(merged.options.js_budget, 50 * 1024);
+        assert_eq!(merged.options.image_budget, 250 * 1024);
+    }
+
+    #[test]
+    fn report_should_fail_compares_against_fail_on() {
+        let report = AuditReport {
+            gates: vec![GateResult {
+                name: "x".to_string(),
+                skipped: false,
+                skip_reason: None,
+                severity_counts: SeverityCounts {
+                    info: 0,
+                    warn: 1,
+                    error: 0,
+                },
+                findings: vec![Finding::new("x", Severity::Warn, "m")],
+            }],
+        };
+        assert!(report.should_fail(Severity::Warn));
+        assert!(!report.should_fail(Severity::Error));
+    }
+
+    #[test]
+    fn report_max_severity_returns_highest() {
+        let report = AuditReport {
+            gates: vec![
+                GateResult {
+                    name: "a".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 2,
+                        warn: 0,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+                GateResult {
+                    name: "b".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 0,
+                        warn: 0,
+                        error: 1,
+                    },
+                    findings: vec![],
+                },
+            ],
+        };
+        assert_eq!(report.max_severity(), Some(Severity::Error));
+    }
+}

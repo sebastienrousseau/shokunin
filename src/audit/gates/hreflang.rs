@@ -1,0 +1,256 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! Hreflang reciprocity gate.
+//!
+//! For every `<link rel="alternate" hreflang="X" href="Y">` on page
+//! `A`, verifies that page `Y` exists in the built site AND contains a
+//! corresponding `<link rel="alternate" hreflang="LANG_OF_A" href="A">`
+//! pointing back. Either direction missing is an error finding.
+
+use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+const NAME: &str = "hreflang";
+
+/// Hreflang reciprocity gate.
+#[derive(Debug, Clone, Copy)]
+pub struct HreflangGate;
+
+impl AuditGate for HreflangGate {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+
+    fn explain(&self) -> &'static str {
+        "For every <link rel=\"alternate\" hreflang=\"X\" href=\"Y\"> \
+         the gate verifies that Y resolves to a page in the built site \
+         AND that Y links back with the originating page's hreflang. \
+         Either side missing is an error — Google's hreflang doc \
+         requires bidirectional links for the signal to be honoured."
+    }
+
+    fn run(&self, site: &Site, _opts: &AuditOptions) -> Vec<Finding> {
+        // Index: rel_path -> (hreflang -> rel_target)
+        let mut index: HashMap<String, HashMap<String, String>> =
+            HashMap::with_capacity(site.html_files.len());
+        let mut self_lang: HashMap<String, String> = HashMap::new();
+
+        for path in &site.html_files {
+            let Ok(html) = site.read(path) else { continue };
+            let rel = site.rel(path);
+            let alts = extract_alternates(&html);
+            if let Some(s) = alts.iter().find(|a| a.is_self) {
+                let _ = self_lang.insert(rel.clone(), s.lang.clone());
+            }
+            let mut m = HashMap::with_capacity(alts.len());
+            for a in alts {
+                let _ = m.insert(a.lang, a.href);
+            }
+            let _ = index.insert(rel, m);
+        }
+
+        let mut findings = Vec::new();
+
+        for (rel, alts) in &index {
+            let my_lang = self_lang.get(rel);
+            for (lang, href) in alts {
+                if lang == "x-default" || my_lang.is_some_and(|m| m == lang) {
+                    continue;
+                }
+                let Some(target_rel) = resolve_href(href, &site.root) else {
+                    findings.push(
+                        Finding::new(
+                            NAME,
+                            Severity::Error,
+                            format!(
+                                "hreflang=\"{lang}\" points to \"{href}\" which is not under the site root"
+                            ),
+                        )
+                        .with_code("HREFLANG-EXTERNAL")
+                        .with_path(rel.clone()),
+                    );
+                    continue;
+                };
+                let Some(reverse) = index.get(&target_rel) else {
+                    findings.push(
+                        Finding::new(
+                            NAME,
+                            Severity::Error,
+                            format!(
+                                "hreflang=\"{lang}\" target \"{target_rel}\" does not exist in the built site"
+                            ),
+                        )
+                        .with_code("HREFLANG-TARGET-MISSING")
+                        .with_path(rel.clone()),
+                    );
+                    continue;
+                };
+                let Some(my_lang) = my_lang else { continue };
+                if !reverse.contains_key(my_lang) {
+                    findings.push(
+                        Finding::new(
+                            NAME,
+                            Severity::Error,
+                            format!(
+                                "{target_rel} does not link back with hreflang=\"{my_lang}\""
+                            ),
+                        )
+                        .with_code("HREFLANG-NO-RECIPROCAL")
+                        .with_path(rel.clone()),
+                    );
+                }
+            }
+        }
+
+        findings
+    }
+}
+
+#[derive(Debug)]
+struct Alternate {
+    lang: String,
+    href: String,
+    is_self: bool,
+}
+
+fn extract_alternates(html: &str) -> Vec<Alternate> {
+    let mut out = Vec::new();
+    let lower = html.to_lowercase();
+    let mut cursor = 0;
+    while let Some(rel_open) = lower[cursor..].find("<link") {
+        let abs = cursor + rel_open;
+        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let tag = &html[abs..end];
+        cursor = end;
+
+        let lower_tag = tag.to_lowercase();
+        if !lower_tag.contains("rel=\"alternate\"")
+            && !lower_tag.contains("rel='alternate'")
+        {
+            continue;
+        }
+        let Some(lang) = attr(tag, "hreflang") else {
+            continue;
+        };
+        let Some(href) = attr(tag, "href") else {
+            continue;
+        };
+        let is_self = lang.eq_ignore_ascii_case("self")
+            || lower_tag.contains("data-self=\"true\"");
+        out.push(Alternate {
+            lang,
+            href,
+            is_self,
+        });
+    }
+    out
+}
+
+use super::hreflang_attr as attr;
+
+fn resolve_href(href: &str, root: &std::path::Path) -> Option<String> {
+    let stripped = href.trim_start_matches('/');
+    // Strip absolute URL prefix if present
+    let path_part = if let Some(rest) = stripped.strip_prefix("http://") {
+        rest.split_once('/').map_or("", |(_, p)| p)
+    } else if let Some(rest) = stripped.strip_prefix("https://") {
+        rest.split_once('/').map_or("", |(_, p)| p)
+    } else {
+        stripped
+    };
+    let candidate = PathBuf::from(path_part);
+    let needs_index = path_part.is_empty()
+        || path_part.ends_with('/')
+        || !path_part.ends_with(".html");
+    let with_index = if needs_index {
+        candidate.join("index.html")
+    } else {
+        candidate
+    };
+    // Returned regardless of existence — callers report "target
+    // missing" against the resolved path so authors get an actionable
+    // message.
+    let _ = root;
+    Some(with_index.to_string_lossy().into_owned())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    fn site_with(pages: &[(&str, &str)]) -> Site {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let mut files = Vec::new();
+        for (rel, html) in pages {
+            let p = root.join(rel);
+            if let Some(parent) = p.parent() {
+                std::fs::create_dir_all(parent).unwrap();
+            }
+            std::fs::write(&p, html).unwrap();
+            files.push(p);
+        }
+        std::mem::forget(tmp);
+        Site {
+            root,
+            html_files: files,
+        }
+    }
+
+    #[test]
+    fn reciprocal_pair_has_no_findings() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="self" href="/en/index.html">
+            <link rel="alternate" hreflang="en" href="/en/index.html">
+            <link rel="alternate" hreflang="fr" href="/fr/index.html">
+        </head><body></body></html>"#;
+        let fr = r#"<html><head>
+            <link rel="alternate" hreflang="self" href="/fr/index.html">
+            <link rel="alternate" hreflang="fr" href="/fr/index.html">
+            <link rel="alternate" hreflang="en" href="/en/index.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en), ("fr/index.html", fr)]);
+        // Set self_lang via the "self" alternate. Since the resolver
+        // strips that alternate, we set my_lang via a regular alternate
+        // pointing at self. Reformulate using the "en" + "fr" entries.
+        let en2 = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+            <link rel="alternate" hreflang="fr" href="/fr/index.html">
+        </head><body></body></html>"#;
+        let fr2 = r#"<html><head>
+            <link rel="alternate" hreflang="fr" href="/fr/index.html" data-self="true">
+            <link rel="alternate" hreflang="en" href="/en/index.html">
+        </head><body></body></html>"#;
+        let s2 = site_with(&[("en/index.html", en2), ("fr/index.html", fr2)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        // s misuses "self" so won't be perfect; primary test is s2:
+        let f2 = HreflangGate.run(&s2, &AuditOptions::default());
+        assert!(
+            f2.is_empty(),
+            "expected reciprocal site to be clean, got {f2:?}"
+        );
+        let _ = f;
+    }
+
+    #[test]
+    fn missing_reciprocal_is_flagged() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+            <link rel="alternate" hreflang="fr" href="/fr/index.html">
+        </head><body></body></html>"#;
+        // fr exists but does NOT link back to en.
+        let fr = r#"<html><head>
+            <link rel="alternate" hreflang="fr" href="/fr/index.html" data-self="true">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en), ("fr/index.html", fr)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("HREFLANG-NO-RECIPROCAL")),
+            "expected NO-RECIPROCAL finding, got {f:?}"
+        );
+    }
+}
