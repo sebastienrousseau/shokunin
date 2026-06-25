@@ -141,6 +141,7 @@ pub use crate::plugins_group::pagination;
 pub use crate::plugins_group::plugin;
 pub use crate::plugins_group::plugins;
 pub use crate::plugins_group::postprocess;
+pub use crate::plugins_group::rpc_schema;
 pub use crate::plugins_group::sbom;
 pub use crate::plugins_group::search;
 pub use crate::plugins_group::search_index;

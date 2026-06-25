@@ -20,6 +20,7 @@ import init, { render_page_isr } from "./pkg/ssg_wasm.js";
 import wasmModule from "./pkg/ssg_wasm_bg.wasm";
 
 import { handleInvalidate } from "./webhook";
+import { handleRpc, RPC_PREFIX } from "./rpc";
 
 /** Bindings declared in wrangler.toml. */
 export interface Env {
@@ -155,6 +156,14 @@ const worker: ExportedHandler<Env> = {
     // Webhook route — separate code path, no caching.
     if (pathname === "/__ssg/invalidate" && request.method === "POST") {
       return handleInvalidate(request, env);
+    }
+
+    // RPC route (issue #548) — JSON-over-POST dispatcher. Lives
+    // alongside the ISR cache layer but bypasses it entirely;
+    // POST responses are never cached at the Edge.
+    if (pathname.startsWith(RPC_PREFIX)) {
+      await ensureWasm();
+      return handleRpc(request, pathname);
     }
 
     const url = normaliseUrl(pathname);

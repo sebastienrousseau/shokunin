@@ -287,6 +287,12 @@ pub fn build_pipeline(
 /// of the v0.0.43 output; failing AC9 fails the entire epic.
 pub fn register_isr_plugins(plugins: &mut plugin::PluginManager) {
     plugins.register(crate::isr_manifest::IsrManifestPlugin::new());
+    // Edge RPC schema emitter (issue #548). Registered alongside ISR
+    // because both target the same `dist/.ssg/` artefact directory
+    // and both are no-ops without the matching opt-in. When zero
+    // `#[ssg_rpc]` functions are linked, the plugin writes nothing,
+    // preserving the v0.0.43 byte-identical promise.
+    plugins.register(crate::rpc_schema::RpcSchemaPlugin::new());
 }
 
 /// Runs the build half of the pipeline: `before_compile` → compile →

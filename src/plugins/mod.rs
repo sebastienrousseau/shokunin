@@ -20,6 +20,7 @@ pub mod pagination;
 pub mod plugin;
 pub mod plugins;
 pub mod postprocess;
+pub mod rpc_schema;
 pub mod sbom;
 pub mod search;
 pub mod search_index;
