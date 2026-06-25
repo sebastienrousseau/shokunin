@@ -124,6 +124,13 @@ pub struct RunOptions {
     /// Use the cached dependency graph to skip work on unchanged
     /// sources (`ssg build --incremental`, issue #524).
     pub incremental: bool,
+    /// Disable the deterministic LLM inference cache (issue #528).
+    /// Surfaces as `--no-llm-cache` on the CLI and is exported to
+    /// `LlmConfig::default` via the `SSG_NO_LLM_CACHE` env var so
+    /// any code path constructing an `LlmConfig` from defaults
+    /// (CLI helpers, integration tests, plugin re-entrants) sees a
+    /// consistent setting.
+    pub no_llm_cache: bool,
 }
 
 impl RunOptions {
@@ -142,6 +149,10 @@ impl RunOptions {
                 .try_contains_id("incremental")
                 .unwrap_or(false)
                 && matches.get_flag("incremental"),
+            no_llm_cache: matches
+                .try_contains_id("no-llm-cache")
+                .unwrap_or(false)
+                && matches.get_flag("no-llm-cache"),
         }
     }
 
@@ -183,6 +194,7 @@ impl RunOptions {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: opt_flag("incremental"),
+            no_llm_cache: opt_flag("no-llm-cache"),
         }
     }
 }
@@ -221,6 +233,17 @@ pub fn build_pipeline(
     PathBuf,
 ) {
     let (build_dir, site_dir) = resolve_build_and_site_dirs(config);
+
+    // Issue #528 — propagate `--no-llm-cache` to every `LlmConfig`
+    // constructed downstream by exporting `SSG_NO_LLM_CACHE=1` once
+    // here. The env-var approach avoids threading a new parameter
+    // through `register_default_plugins` and through every direct
+    // `LlmConfig::default()` call site (CLI helpers, tests,
+    // integration entry points). The plugin reads the env var inside
+    // its `Default` impl.
+    if opts.no_llm_cache {
+        std::env::set_var("SSG_NO_LLM_CACHE", "1");
+    }
 
     let mut ctx = plugin::PluginContext::with_config(
         &config.content_dir,
@@ -970,6 +993,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =

@@ -132,6 +132,7 @@ pub use crate::plugins_group::i18n;
 pub use crate::plugins_group::image_plugin;
 pub use crate::plugins_group::islands;
 pub use crate::plugins_group::llm;
+pub use crate::plugins_group::llm_cache;
 pub use crate::plugins_group::markdown_ext;
 pub use crate::plugins_group::og_image;
 pub use crate::plugins_group::pagination;
@@ -2227,6 +2228,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2255,6 +2257,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2268,6 +2271,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2291,6 +2295,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2315,6 +2320,7 @@ mod tests {
                 ai_fix: false,
                 ai_fix_dry_run: false,
                 incremental: false,
+                no_llm_cache: false,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2521,6 +2527,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2571,6 +2578,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2620,6 +2628,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2656,6 +2665,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2690,6 +2700,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));
@@ -3045,6 +3056,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3074,6 +3086,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3106,6 +3119,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3128,6 +3142,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3150,6 +3165,7 @@ mod tests {
             ai_fix: false,
             ai_fix_dry_run: false,
             incremental: false,
+            no_llm_cache: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));

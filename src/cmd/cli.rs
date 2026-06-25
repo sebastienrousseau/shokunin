@@ -212,6 +212,12 @@ impl Cli {
                     .long("incremental")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("no-llm-cache")
+                    .help("Disable the deterministic LLM inference cache")
+                    .long("no-llm-cache")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Builds the subcommand-style `clap::Command` (issue #527).
@@ -279,6 +285,10 @@ impl Cli {
                     .short('j')
                     .value_name("N")
                     .value_parser(clap::value_parser!(usize)),
+                Arg::new("no-llm-cache")
+                    .help("Disable the deterministic LLM inference cache")
+                    .long("no-llm-cache")
+                    .action(ArgAction::SetTrue),
             ]
         };
 

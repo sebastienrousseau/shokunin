@@ -17,11 +17,16 @@
 //!
 //! Graceful fallback: if no LLM is reachable, logs a warning and skips.
 
+use super::llm_cache::LlmCache;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
 use anyhow::Result;
-use std::{fs, path::Path, time::Duration};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 /// Default per-call timeout for the local LLM HTTP roundtrip.
 ///
@@ -58,10 +63,32 @@ pub struct LlmConfig {
     /// no zombie subprocess is left behind because the call goes
     /// through `ureq`, not `curl` (issue #520).
     pub timeout_secs: u64,
+    /// When `true`, skip the deterministic content-hash cache and
+    /// always perform a live inference (issue #528). Driven by the
+    /// `--no-llm-cache` CLI flag and the `SSG_NO_LLM_CACHE` env var
+    /// so users debugging non-determinism can rule the cache out
+    /// without nuking it on disk.
+    pub cache_disabled: bool,
+    /// Optional override for the on-disk cache root. `None` resolves
+    /// to [`LlmCache::default_cache_dir`] at call time — the
+    /// platform-correct path (XDG / Library / `%LOCALAPPDATA%`)
+    /// chosen by [`LlmCache`]. Tests and operators wanting a
+    /// project-local cache override this directly.
+    pub cache_dir: Option<PathBuf>,
 }
 
 impl Default for LlmConfig {
     fn default() -> Self {
+        // `SSG_NO_LLM_CACHE` (any non-empty value other than `0`,
+        // `false`, `off`) disables the deterministic cache. The
+        // pipeline sets this when `--no-llm-cache` is passed; users
+        // can also export it ad-hoc to debug a cache pathology.
+        let cache_disabled = std::env::var("SSG_NO_LLM_CACHE")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .is_some_and(|v| {
+                !matches!(v.as_str(), "0" | "false" | "off" | "FALSE" | "OFF")
+            });
         Self {
             model: "llama3".to_string(),
             endpoint: "http://localhost:11434".to_string(),
@@ -69,6 +96,8 @@ impl Default for LlmConfig {
             target_grade: 8.0,
             max_refinement_attempts: 1,
             timeout_secs: DEFAULT_LLM_TIMEOUT_SECS,
+            cache_disabled,
+            cache_dir: None,
         }
     }
 }
@@ -1237,6 +1266,36 @@ impl LlmPlugin {
     ///
     /// See [`query_ollama`] for the exact variants.
     pub fn query(&self, prompt: &str) -> Result<String, SsgError> {
+        // Issue #528 — deterministic content-hash cache. A hit skips
+        // the HTTP roundtrip entirely (AC1) and a miss writes the
+        // response back for the next call. The cache is intentionally
+        // best-effort: any filesystem error falls through to a live
+        // call so a busted cache directory never wedges the build.
+        if !self.config.cache_disabled {
+            let root = self
+                .config
+                .cache_dir
+                .clone()
+                .unwrap_or_else(LlmCache::default_cache_dir);
+            let cache = LlmCache::new(root);
+            let key = LlmCache::compute_key(
+                &self.config.endpoint,
+                &self.config.model,
+                prompt,
+                self.config.timeout_secs,
+            );
+            if let Some(cached) = cache.get(&key) {
+                return Ok(cached);
+            }
+            let response = query_ollama(
+                &self.config.endpoint,
+                &self.config.model,
+                prompt,
+                self.config.timeout_secs,
+            )?;
+            let _ = cache.set(&key, &response);
+            return Ok(response);
+        }
         query_ollama(
             &self.config.endpoint,
             &self.config.model,
