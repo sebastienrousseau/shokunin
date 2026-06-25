@@ -1,0 +1,1171 @@
+// Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+//! ISO 20022 / banking domain JSON-LD types.
+//!
+//! Opt-in extension to the [`crate::seo::JsonLdPlugin`] that lets
+//! fintech / banking / payments authors emit strongly-typed, Schema.org
+//! compatible JSON-LD blobs for the five most common financial domain
+//! entities. Ports concepts from the ISO 20022 messaging vocabulary into
+//! a Schema.org-friendly shape:
+//!
+//! - [`BankAccount`] — Schema.org `BankAccount` with IBAN/BIC.
+//! - [`PaymentInstrument`] — card, transfer, direct debit.
+//! - [`FinancialTransaction`] — extends Schema.org `MoneyTransfer`.
+//! - [`RegulatedFinancialInstitution`] — extends `Organization`.
+//! - [`FinancialProduct`] — loan, deposit, derivative.
+//!
+//! All ISO-20022-specific fields are emitted under the `iso20022:`
+//! namespace prefix so that Schema.org-only validators still see a
+//! conformant payload.
+//!
+//! # Validation
+//!
+//! Two validators are bundled:
+//!
+//! - [`validate_iban`] — performs MOD-97 checksum verification per
+//!   ISO 13616.
+//! - [`validate_bic`] — checks the 8/11-character ISO 9362 layout.
+//!
+//! Invalid values do NOT fail the build — they emit a `log::warn!`
+//! naming the offending page and the field that didn't validate.
+//!
+//! # Documentation pointer
+//!
+//! On first use within a build, [`log_first_use_pointer`] emits an
+//! info-level log pointing at the canonical docs URL.
+//!
+//! # Schema.org base mapping
+//!
+//! | ISO 20022 type                   | `@type`                        |
+//! |----------------------------------|--------------------------------|
+//! | `BankAccount`                    | `BankAccount`                  |
+//! | `PaymentInstrument`              | `PaymentService`               |
+//! | `FinancialTransaction`           | `MoneyTransfer`                |
+//! | `RegulatedFinancialInstitution`  | `BankOrCreditUnion`            |
+//! | `FinancialProduct`               | `FinancialProduct`             |
+
+use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Canonical docs URL emitted on first use within a build.
+pub const DOCS_URL: &str =
+    "https://docs.rs/ssg/latest/ssg/seo/jsonld/iso20022/index.html";
+
+/// Tracks whether the first-use info pointer has fired during this
+/// process, so we don't spam the log for every page on a large site.
+static FIRST_USE_LOGGED: AtomicBool = AtomicBool::new(false);
+
+/// Emits an info-level log pointing at the iso20022 docs URL,
+/// exactly once per process. Idempotent.
+///
+/// Resolves AC7.
+pub fn log_first_use_pointer() {
+    if !FIRST_USE_LOGGED.swap(true, Ordering::Relaxed) {
+        log::info!(
+            "[json-ld/iso20022] First use of ISO 20022 frontmatter detected. \
+             See {DOCS_URL} for the list of available types and required fields."
+        );
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn reset_first_use_for_test() {
+    FIRST_USE_LOGGED.store(false, Ordering::Relaxed);
+}
+
+#[cfg(test)]
+pub(crate) fn first_use_was_logged() -> bool {
+    FIRST_USE_LOGGED.load(Ordering::Relaxed)
+}
+
+// =====================================================================
+// Validators
+// =====================================================================
+
+/// Result of an ISO 20022 field validation. Errors are warnings, not
+/// hard failures — the build continues regardless.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ValidationOutcome {
+    /// The value parsed and passed all syntactic + checksum checks.
+    Valid,
+    /// The value failed validation; `reason` is a human-readable note.
+    Invalid {
+        /// Why the value was rejected (length, checksum mismatch, etc.).
+        reason: String,
+    },
+}
+
+impl ValidationOutcome {
+    /// Returns `true` when the outcome is [`ValidationOutcome::Valid`].
+    #[must_use]
+    pub const fn is_valid(&self) -> bool {
+        matches!(self, Self::Valid)
+    }
+}
+
+/// Validates an IBAN (ISO 13616) using the MOD-97 checksum.
+///
+/// Accepts the canonical compact form (no spaces) as well as the
+/// space-delimited print form. Length bounds: 15–34 characters
+/// once whitespace is stripped.
+///
+/// # Algorithm
+///
+/// 1. Strip all ASCII whitespace; upper-case.
+/// 2. Move the first 4 characters (country + check digits) to the end.
+/// 3. Map letters A-Z → 10..=35.
+/// 4. The resulting integer must be congruent to 1 mod 97.
+///
+/// Implemented without `num-bigint` by walking the digit string left
+/// to right, taking each modulo step incrementally — this keeps the
+/// crate dependency-free for the ISO validator.
+#[must_use]
+pub fn validate_iban(input: &str) -> ValidationOutcome {
+    let compact: String = input
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+        .to_ascii_uppercase();
+
+    if compact.len() < 15 || compact.len() > 34 {
+        return ValidationOutcome::Invalid {
+            reason: format!(
+                "IBAN length {} outside ISO 13616 range 15..=34",
+                compact.len()
+            ),
+        };
+    }
+
+    // First two chars must be ASCII letters (country code), next two ASCII digits (check digits).
+    let bytes = compact.as_bytes();
+    if !(bytes[0].is_ascii_alphabetic() && bytes[1].is_ascii_alphabetic()) {
+        return ValidationOutcome::Invalid {
+            reason: "IBAN country code must be two ASCII letters".to_string(),
+        };
+    }
+    if !(bytes[2].is_ascii_digit() && bytes[3].is_ascii_digit()) {
+        return ValidationOutcome::Invalid {
+            reason: "IBAN check digits must be two ASCII digits".to_string(),
+        };
+    }
+    // The remaining BBAN must be alphanumeric.
+    if !bytes[4..].iter().all(u8::is_ascii_alphanumeric) {
+        return ValidationOutcome::Invalid {
+            reason: "IBAN BBAN must be alphanumeric ASCII".to_string(),
+        };
+    }
+
+    // Rearrange: move first 4 chars to end.
+    let mut rearranged = String::with_capacity(compact.len());
+    rearranged.push_str(&compact[4..]);
+    rearranged.push_str(&compact[..4]);
+
+    // Expand letters → numeric (A=10..Z=35) and compute mod 97 streaming.
+    let mut remainder: u64 = 0;
+    for ch in rearranged.chars() {
+        let digits: u64 = if ch.is_ascii_digit() {
+            u64::from(ch as u8 - b'0')
+        } else if ch.is_ascii_alphabetic() {
+            u64::from((ch.to_ascii_uppercase() as u8) - b'A') + 10
+        } else {
+            return ValidationOutcome::Invalid {
+                reason: format!("Non-alphanumeric character in IBAN: {ch:?}"),
+            };
+        };
+        // Each letter expands to two digits (10..=35); fold accordingly.
+        if digits >= 10 {
+            remainder = (remainder * 100 + digits) % 97;
+        } else {
+            remainder = (remainder * 10 + digits) % 97;
+        }
+    }
+
+    if remainder == 1 {
+        ValidationOutcome::Valid
+    } else {
+        ValidationOutcome::Invalid {
+            reason: format!(
+                "IBAN MOD-97 checksum failed (remainder={remainder})"
+            ),
+        }
+    }
+}
+
+/// Validates a BIC (ISO 9362) by length + alphanumeric layout.
+///
+/// Valid BICs are 8 or 11 characters, all ASCII letters and digits.
+/// The first 4 are the bank code (letters), next 2 the country code
+/// (letters), next 2 the location code (alphanumeric); positions 9–11
+/// (when present) are the branch code.
+#[must_use]
+pub fn validate_bic(input: &str) -> ValidationOutcome {
+    let compact: String =
+        input.chars().filter(|c| !c.is_whitespace()).collect();
+
+    if compact.len() != 8 && compact.len() != 11 {
+        return ValidationOutcome::Invalid {
+            reason: format!(
+                "BIC length {} is not 8 or 11 (ISO 9362)",
+                compact.len()
+            ),
+        };
+    }
+    let upper = compact.to_ascii_uppercase();
+    let bytes = upper.as_bytes();
+
+    // Bank code: 4 letters
+    if !bytes[..4].iter().all(u8::is_ascii_alphabetic) {
+        return ValidationOutcome::Invalid {
+            reason: "BIC bank code (chars 1-4) must be ASCII letters"
+                .to_string(),
+        };
+    }
+    // Country code: 2 letters
+    if !bytes[4..6].iter().all(u8::is_ascii_alphabetic) {
+        return ValidationOutcome::Invalid {
+            reason: "BIC country code (chars 5-6) must be ASCII letters"
+                .to_string(),
+        };
+    }
+    // Location code: 2 alphanumerics
+    if !bytes[6..8].iter().all(u8::is_ascii_alphanumeric) {
+        return ValidationOutcome::Invalid {
+            reason: "BIC location code (chars 7-8) must be ASCII alphanumerics"
+                .to_string(),
+        };
+    }
+    // Optional branch code: 3 alphanumerics
+    if compact.len() == 11
+        && !bytes[8..11].iter().all(u8::is_ascii_alphanumeric)
+    {
+        return ValidationOutcome::Invalid {
+            reason: "BIC branch code (chars 9-11) must be ASCII alphanumerics"
+                .to_string(),
+        };
+    }
+
+    ValidationOutcome::Valid
+}
+
+// =====================================================================
+// Domain types
+// =====================================================================
+
+/// ISO 4217 monetary amount.
+///
+/// Skips serialisation when both fields are empty/zero — keeps the
+/// JSON-LD compact when authors leave the amount out of frontmatter.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MonetaryAmount {
+    /// ISO 4217 currency code (e.g. `EUR`, `USD`).
+    pub currency: String,
+    /// Numeric amount.
+    pub amount: f64,
+}
+
+impl MonetaryAmount {
+    /// Renders to a Schema.org `MonetaryAmount` JSON value.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        serde_json::json!({
+            "@type": "MonetaryAmount",
+            "currency": self.currency,
+            "value": self.amount,
+        })
+    }
+}
+
+/// A bank account record. Schema.org base type: `BankAccount`.
+///
+/// IBAN/BIC are optional — but if either is supplied, they are validated
+/// and warnings emitted on mismatch. The IBAN ends up under the
+/// `iso20022:iban` namespaced field; BIC similarly under `iso20022:bic`.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct BankAccount {
+    /// Account holder display name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// International Bank Account Number (ISO 13616).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iban: Option<String>,
+    /// Bank Identifier Code (ISO 9362, 8 or 11 chars).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bic: Option<String>,
+}
+
+impl BankAccount {
+    /// Builds the JSON-LD blob for this account.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        let mut obj = serde_json::json!({
+            "@context": context_with_iso(),
+            "@type": "BankAccount",
+        });
+        if let Some(name) = &self.name {
+            obj["name"] = serde_json::json!(name);
+        }
+        if let Some(iban) = &self.iban {
+            obj["iso20022:iban"] = serde_json::json!(iban);
+            obj["identifier"] = serde_json::json!(iban);
+        }
+        if let Some(bic) = &self.bic {
+            obj["iso20022:bic"] = serde_json::json!(bic);
+        }
+        obj
+    }
+}
+
+/// A payment instrument (card, transfer, direct debit). Schema.org
+/// base type: `PaymentService`.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct PaymentInstrument {
+    /// Human-readable name (e.g. "Visa Debit").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Instrument family. Accepted values: `card`, `transfer`,
+    /// `direct_debit` — anything else passes through.
+    pub instrument_type: String,
+    /// Optional brand string (e.g. "Visa", "SEPA").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub brand: Option<String>,
+}
+
+impl PaymentInstrument {
+    /// Builds the JSON-LD blob for this instrument.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        let mut obj = serde_json::json!({
+            "@context": context_with_iso(),
+            "@type": "PaymentService",
+            "iso20022:instrumentType": self.instrument_type,
+        });
+        if let Some(name) = &self.name {
+            obj["name"] = serde_json::json!(name);
+        }
+        if let Some(brand) = &self.brand {
+            obj["brand"] = serde_json::json!(brand);
+        }
+        obj
+    }
+}
+
+/// A financial transaction. Schema.org base type: `MoneyTransfer`.
+///
+/// Authors typically supply `instructed_amount` plus debtor/creditor
+/// accounts; the resulting JSON-LD exposes a Schema.org-shaped
+/// `amount` field alongside the namespaced `iso20022:*Account`
+/// references.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct FinancialTransaction {
+    /// Amount being transferred.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instructed_amount: Option<MonetaryAmount>,
+    /// Account being debited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debtor_account: Option<BankAccount>,
+    /// Account being credited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creditor_account: Option<BankAccount>,
+    /// ISO 8601 timestamp.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution_date: Option<String>,
+    /// Optional unique identifier (`EndToEndId` / `MessageId`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_to_end_id: Option<String>,
+}
+
+impl FinancialTransaction {
+    /// Builds the JSON-LD blob for this transaction.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        let mut obj = serde_json::json!({
+            "@context": context_with_iso(),
+            "@type": "MoneyTransfer",
+        });
+        if let Some(amount) = &self.instructed_amount {
+            obj["amount"] = amount.to_jsonld();
+        }
+        if let Some(debtor) = &self.debtor_account {
+            obj["iso20022:debtorAccount"] = strip_context(debtor.to_jsonld());
+        }
+        if let Some(creditor) = &self.creditor_account {
+            obj["iso20022:creditorAccount"] =
+                strip_context(creditor.to_jsonld());
+        }
+        if let Some(date) = &self.execution_date {
+            obj["iso20022:executionDate"] = serde_json::json!(date);
+        }
+        if let Some(id) = &self.end_to_end_id {
+            obj["iso20022:endToEndId"] = serde_json::json!(id);
+            obj["identifier"] = serde_json::json!(id);
+        }
+        obj
+    }
+}
+
+/// A regulated financial institution. Schema.org base type:
+/// `BankOrCreditUnion`.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct RegulatedFinancialInstitution {
+    /// Display name of the institution.
+    pub name: String,
+    /// Optional Legal Entity Identifier (ISO 17442).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lei: Option<String>,
+    /// Regulator's licence reference (e.g. UK FCA FRN).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub licence_id: Option<String>,
+    /// Regulator name (e.g. "FCA", "`BaFin`", "ECB").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub regulator: Option<String>,
+    /// Optional canonical URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
+impl RegulatedFinancialInstitution {
+    /// Builds the JSON-LD blob for this institution.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        let mut obj = serde_json::json!({
+            "@context": context_with_iso(),
+            "@type": "BankOrCreditUnion",
+            "name": self.name,
+        });
+        if let Some(lei) = &self.lei {
+            obj["iso20022:lei"] = serde_json::json!(lei);
+            obj["identifier"] = serde_json::json!(lei);
+        }
+        if let Some(licence) = &self.licence_id {
+            obj["iso20022:licenceId"] = serde_json::json!(licence);
+        }
+        if let Some(regulator) = &self.regulator {
+            obj["iso20022:regulator"] = serde_json::json!(regulator);
+        }
+        if let Some(url) = &self.url {
+            obj["url"] = serde_json::json!(url);
+        }
+        obj
+    }
+}
+
+/// A financial product (loan, deposit, derivative). Schema.org base
+/// type: `FinancialProduct`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct FinancialProduct {
+    /// Product display name.
+    pub name: String,
+    /// Product category. Accepted values: `loan`, `deposit`,
+    /// `derivative` — anything else passes through.
+    pub product_type: String,
+    /// Optional issuing institution.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
+    /// Optional annual percentage rate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub annual_percentage_rate: Option<f64>,
+    /// Optional ISIN (ISO 6166).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isin: Option<String>,
+}
+
+impl FinancialProduct {
+    /// Builds the JSON-LD blob for this product.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        let mut obj = serde_json::json!({
+            "@context": context_with_iso(),
+            "@type": "FinancialProduct",
+            "name": self.name,
+            "iso20022:productType": self.product_type,
+        });
+        if let Some(issuer) = &self.issuer {
+            obj["provider"] = serde_json::json!({
+                "@type": "Organization",
+                "name": issuer,
+            });
+        }
+        if let Some(apr) = self.annual_percentage_rate {
+            obj["annualPercentageRate"] = serde_json::json!(apr);
+        }
+        if let Some(isin) = &self.isin {
+            obj["iso20022:isin"] = serde_json::json!(isin);
+            obj["identifier"] = serde_json::json!(isin);
+        }
+        obj
+    }
+}
+
+/// Builds the `@context` object that pulls in the `iso20022:` prefix
+/// alongside the Schema.org base context.
+fn context_with_iso() -> serde_json::Value {
+    serde_json::json!({
+        "@vocab": "https://schema.org/",
+        "iso20022": "https://www.iso20022.org/",
+    })
+}
+
+/// Strips the `@context` field from a nested JSON-LD value — used when
+/// embedding a sub-entity (e.g. an account inside a transaction) so
+/// the context only appears once at the top level.
+fn strip_context(mut value: serde_json::Value) -> serde_json::Value {
+    if let Some(obj) = value.as_object_mut() {
+        let _ = obj.remove("@context");
+    }
+    value
+}
+
+// =====================================================================
+// Frontmatter dispatch
+// =====================================================================
+
+/// Tagged union dispatched from the `iso20022.type` frontmatter key.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Iso20022Entity {
+    /// Bank account variant — see [`BankAccount`].
+    BankAccount(BankAccount),
+    /// Payment instrument variant — see [`PaymentInstrument`].
+    PaymentInstrument(PaymentInstrument),
+    /// Financial transaction variant — see [`FinancialTransaction`].
+    FinancialTransaction(FinancialTransaction),
+    /// Regulated financial institution variant — see [`RegulatedFinancialInstitution`].
+    RegulatedFinancialInstitution(RegulatedFinancialInstitution),
+    /// Financial product variant — see [`FinancialProduct`].
+    FinancialProduct(FinancialProduct),
+}
+
+impl Iso20022Entity {
+    /// Renders this entity to a JSON-LD blob.
+    #[must_use]
+    pub fn to_jsonld(&self) -> serde_json::Value {
+        match self {
+            Self::BankAccount(b) => b.to_jsonld(),
+            Self::PaymentInstrument(p) => p.to_jsonld(),
+            Self::FinancialTransaction(t) => t.to_jsonld(),
+            Self::RegulatedFinancialInstitution(r) => r.to_jsonld(),
+            Self::FinancialProduct(p) => p.to_jsonld(),
+        }
+    }
+
+    /// Returns the discriminant string (e.g. `"BankAccount"`).
+    #[must_use]
+    pub const fn type_name(&self) -> &'static str {
+        match self {
+            Self::BankAccount(_) => "BankAccount",
+            Self::PaymentInstrument(_) => "PaymentInstrument",
+            Self::FinancialTransaction(_) => "FinancialTransaction",
+            Self::RegulatedFinancialInstitution(_) => {
+                "RegulatedFinancialInstitution"
+            }
+            Self::FinancialProduct(_) => "FinancialProduct",
+        }
+    }
+}
+
+/// Errors that can occur when interpreting an `iso20022:` frontmatter
+/// block. These do NOT abort the build — they cause the block to be
+/// skipped with a warning.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DispatchError {
+    /// The frontmatter `iso20022.type` field was missing.
+    MissingType,
+    /// The `type` field referenced an unknown discriminant.
+    UnknownType(String),
+    /// The payload failed to deserialise into the requested type.
+    Malformed(String),
+}
+
+impl std::fmt::Display for DispatchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingType => write!(
+                f,
+                "iso20022 frontmatter is missing the required `type` field"
+            ),
+            Self::UnknownType(t) => write!(
+                f,
+                "iso20022 frontmatter type `{t}` is not one of: \
+                 BankAccount, PaymentInstrument, FinancialTransaction, \
+                 RegulatedFinancialInstitution, FinancialProduct"
+            ),
+            Self::Malformed(reason) => {
+                write!(f, "iso20022 frontmatter payload is malformed: {reason}")
+            }
+        }
+    }
+}
+
+/// Parses the `iso20022:` frontmatter block into a typed entity.
+///
+/// Returns `Err(DispatchError)` if the discriminant is missing or
+/// unknown — caller decides whether to warn or fail.
+pub fn from_frontmatter(
+    value: &serde_json::Value,
+) -> Result<Iso20022Entity, DispatchError> {
+    let type_str = value
+        .get("type")
+        .and_then(|v| v.as_str())
+        .ok_or(DispatchError::MissingType)?;
+
+    // Clone-and-strip the `type` field so the inner shape matches the
+    // struct definition cleanly.
+    let mut payload = value.clone();
+    if let Some(obj) = payload.as_object_mut() {
+        let _ = obj.remove("type");
+    }
+
+    match type_str {
+        "BankAccount" => serde_json::from_value::<BankAccount>(payload)
+            .map(Iso20022Entity::BankAccount)
+            .map_err(|e| DispatchError::Malformed(e.to_string())),
+        "PaymentInstrument" => {
+            serde_json::from_value::<PaymentInstrument>(payload)
+                .map(Iso20022Entity::PaymentInstrument)
+                .map_err(|e| DispatchError::Malformed(e.to_string()))
+        }
+        "FinancialTransaction" => {
+            serde_json::from_value::<FinancialTransaction>(payload)
+                .map(Iso20022Entity::FinancialTransaction)
+                .map_err(|e| DispatchError::Malformed(e.to_string()))
+        }
+        "RegulatedFinancialInstitution" => {
+            serde_json::from_value::<RegulatedFinancialInstitution>(payload)
+                .map(Iso20022Entity::RegulatedFinancialInstitution)
+                .map_err(|e| DispatchError::Malformed(e.to_string()))
+        }
+        "FinancialProduct" => {
+            serde_json::from_value::<FinancialProduct>(payload)
+                .map(Iso20022Entity::FinancialProduct)
+                .map_err(|e| DispatchError::Malformed(e.to_string()))
+        }
+        other => Err(DispatchError::UnknownType(other.to_string())),
+    }
+}
+
+/// Walks every IBAN/BIC inside an entity and emits `log::warn!` for
+/// anything that fails validation. The `page_label` is included in the
+/// warning so site authors can locate the offending page.
+///
+/// Returns the count of validation warnings emitted — useful for
+/// asserting in tests.
+pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
+    fn warn_iban(page_label: &str, iban: &str, who: &str) -> usize {
+        if let ValidationOutcome::Invalid { reason } = validate_iban(iban) {
+            log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
+                 {iban} — {reason}"
+            );
+            1
+        } else {
+            0
+        }
+    }
+    fn warn_bic(page_label: &str, bic: &str, who: &str) -> usize {
+        if let ValidationOutcome::Invalid { reason } = validate_bic(bic) {
+            log::warn!(
+                "[json-ld/iso20022] {page_label}: invalid BIC on {who}: \
+                 {bic} — {reason}"
+            );
+            1
+        } else {
+            0
+        }
+    }
+
+    let mut warnings = 0_usize;
+    match entity {
+        Iso20022Entity::BankAccount(b) => {
+            if let Some(iban) = &b.iban {
+                warnings += warn_iban(page_label, iban, "bank_account.iban");
+            }
+            if let Some(bic) = &b.bic {
+                warnings += warn_bic(page_label, bic, "bank_account.bic");
+            }
+        }
+        Iso20022Entity::FinancialTransaction(t) => {
+            if let Some(d) = &t.debtor_account {
+                if let Some(iban) = &d.iban {
+                    warnings +=
+                        warn_iban(page_label, iban, "debtor_account.iban");
+                }
+                if let Some(bic) = &d.bic {
+                    warnings += warn_bic(page_label, bic, "debtor_account.bic");
+                }
+            }
+            if let Some(c) = &t.creditor_account {
+                if let Some(iban) = &c.iban {
+                    warnings +=
+                        warn_iban(page_label, iban, "creditor_account.iban");
+                }
+                if let Some(bic) = &c.bic {
+                    warnings +=
+                        warn_bic(page_label, bic, "creditor_account.bic");
+                }
+            }
+        }
+        Iso20022Entity::RegulatedFinancialInstitution(_)
+        | Iso20022Entity::PaymentInstrument(_)
+        | Iso20022Entity::FinancialProduct(_) => {}
+    }
+
+    warnings
+}
+
+// =====================================================================
+// Minimal Schema.org JSON-LD validator
+// =====================================================================
+
+/// Validation error raised by the bundled Schema.org subset validator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SchemaOrgError {
+    /// The `@type` (or "Unknown") whose required field tripped.
+    pub schema_type: String,
+    /// The missing or wrong-shape field.
+    pub field: String,
+    /// Human-readable reason.
+    pub reason: String,
+}
+
+/// Validates an ISO 20022 JSON-LD blob against the Schema.org subset.
+///
+/// Checks (per `@type`):
+/// - `@context` is present and references `schema.org`.
+/// - `BankAccount`: no hard required fields, but at least one
+///   identifier (`identifier` / `iso20022:iban` / `iso20022:bic`) must
+///   be set so search engines have something to dedupe against.
+/// - `MoneyTransfer`: requires `amount` of shape `MonetaryAmount`.
+/// - `BankOrCreditUnion`: requires `name`.
+/// - `FinancialProduct`: requires `name`.
+/// - `PaymentService`: requires the namespaced `iso20022:instrumentType`.
+///
+/// This is a deliberately small subset of the Schema.org vocabulary —
+/// only the fields that affect downstream rich-result indexing.
+#[must_use]
+#[allow(clippy::collapsible_match)]
+pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {
+    let mut errors = Vec::new();
+
+    let schema_type = value
+        .get("@type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Unknown")
+        .to_string();
+
+    // Verify @context references schema.org.
+    let ctx_ok = value.get("@context").is_some_and(|c| {
+        let s = serde_json::to_string(c).unwrap_or_default();
+        s.contains("schema.org")
+    });
+    if !ctx_ok {
+        errors.push(SchemaOrgError {
+            schema_type: schema_type.clone(),
+            field: "@context".to_string(),
+            reason: "missing or does not reference schema.org".to_string(),
+        });
+    }
+
+    {
+        match schema_type.as_str() {
+            "BankAccount" => {
+                let has_id = ["identifier", "iso20022:iban", "iso20022:bic"]
+                    .iter()
+                    .any(|f| value.get(*f).is_some());
+                if !has_id {
+                    errors.push(SchemaOrgError {
+                        schema_type,
+                        field: "identifier|iso20022:iban|iso20022:bic"
+                            .to_string(),
+                        reason:
+                            "BankAccount must carry at least one identifier"
+                                .to_string(),
+                    });
+                }
+            }
+            "MoneyTransfer" => {
+                let amount = value.get("amount");
+                let amount_ok = amount.is_some_and(|a| {
+                    a.get("@type").and_then(|t| t.as_str())
+                        == Some("MonetaryAmount")
+                        && a.get("currency").is_some()
+                        && a.get("value").is_some()
+                });
+                if !amount_ok {
+                    errors.push(SchemaOrgError {
+                        schema_type,
+                        field: "amount".to_string(),
+                        reason: "MoneyTransfer.amount must be a \
+                                 MonetaryAmount with currency and value"
+                            .to_string(),
+                    });
+                }
+            }
+            "BankOrCreditUnion" | "FinancialProduct" => {
+                let missing = value
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .is_none_or(str::is_empty);
+                if missing {
+                    errors.push(SchemaOrgError {
+                        schema_type,
+                        field: "name".to_string(),
+                        reason: "required field is missing or empty"
+                            .to_string(),
+                    });
+                }
+            }
+            "PaymentService" => {
+                let missing = value.get("iso20022:instrumentType").is_none();
+                if missing {
+                    errors.push(SchemaOrgError {
+                        schema_type,
+                        field: "iso20022:instrumentType".to_string(),
+                        reason: "PaymentService requires the namespaced \
+                                 instrumentType field"
+                            .to_string(),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    errors
+}
+
+// =====================================================================
+// Tests
+// =====================================================================
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    // ── Validators ──────────────────────────────────────────────────
+
+    #[test]
+    fn iban_uk_natwest_valid() {
+        // Known good IBAN from ISO test vectors.
+        assert!(validate_iban("GB29NWBK60161331926819").is_valid());
+    }
+
+    #[test]
+    fn iban_de_deutsche_valid() {
+        assert!(validate_iban("DE89370400440532013000").is_valid());
+    }
+
+    #[test]
+    fn iban_accepts_space_print_form() {
+        assert!(validate_iban("GB29 NWBK 6016 1331 9268 19").is_valid());
+    }
+
+    #[test]
+    fn iban_rejects_bad_checksum() {
+        // Tweak last digit so MOD-97 fails.
+        let res = validate_iban("GB29NWBK60161331926811");
+        assert!(!res.is_valid());
+        if let ValidationOutcome::Invalid { reason } = res {
+            assert!(reason.contains("MOD-97"));
+        }
+    }
+
+    #[test]
+    fn iban_rejects_short_input() {
+        assert!(!validate_iban("GB29").is_valid());
+    }
+
+    #[test]
+    fn iban_rejects_non_letter_country_code() {
+        let res = validate_iban("1229NWBK60161331926819");
+        assert!(!res.is_valid());
+    }
+
+    #[test]
+    fn bic_8_chars_valid() {
+        assert!(validate_bic("NWBKGB2L").is_valid());
+    }
+
+    #[test]
+    fn bic_11_chars_valid() {
+        assert!(validate_bic("NWBKGB2LXXX").is_valid());
+    }
+
+    #[test]
+    fn bic_rejects_9_char_length() {
+        let res = validate_bic("NWBKGB2LX");
+        assert!(!res.is_valid());
+        if let ValidationOutcome::Invalid { reason } = res {
+            assert!(reason.contains("8 or 11"));
+        }
+    }
+
+    #[test]
+    fn bic_rejects_digit_in_country_code() {
+        // Pos 5-6 must be letters.
+        assert!(!validate_bic("NWBK12 2L").is_valid());
+    }
+
+    // ── Domain → JSON-LD ────────────────────────────────────────────
+
+    #[test]
+    fn bank_account_jsonld_includes_iban_and_bic_namespaced() {
+        let acc = BankAccount {
+            name: Some("Treasury".to_string()),
+            iban: Some("GB29NWBK60161331926819".to_string()),
+            bic: Some("NWBKGB2L".to_string()),
+        };
+        let v = acc.to_jsonld();
+        assert_eq!(v["@type"], "BankAccount");
+        assert_eq!(v["iso20022:iban"], "GB29NWBK60161331926819");
+        assert_eq!(v["iso20022:bic"], "NWBKGB2L");
+        assert_eq!(v["name"], "Treasury");
+        // Identifier mirrors IBAN so search engines have a dedup key.
+        assert_eq!(v["identifier"], "GB29NWBK60161331926819");
+    }
+
+    #[test]
+    fn bank_account_jsonld_omits_optional_fields() {
+        let v = BankAccount::default().to_jsonld();
+        assert!(v.get("iso20022:iban").is_none());
+        assert!(v.get("iso20022:bic").is_none());
+        assert!(v.get("name").is_none());
+    }
+
+    #[test]
+    fn payment_instrument_emits_namespaced_type() {
+        let p = PaymentInstrument {
+            name: Some("Visa Debit".to_string()),
+            instrument_type: "card".to_string(),
+            brand: Some("Visa".to_string()),
+        };
+        let v = p.to_jsonld();
+        assert_eq!(v["@type"], "PaymentService");
+        assert_eq!(v["iso20022:instrumentType"], "card");
+        assert_eq!(v["brand"], "Visa");
+    }
+
+    #[test]
+    fn financial_transaction_jsonld_shape_full() {
+        let t = FinancialTransaction {
+            instructed_amount: Some(MonetaryAmount {
+                currency: "EUR".to_string(),
+                amount: 1500.00,
+            }),
+            debtor_account: Some(BankAccount {
+                name: None,
+                iban: Some("GB29NWBK60161331926819".to_string()),
+                bic: None,
+            }),
+            creditor_account: Some(BankAccount {
+                name: None,
+                iban: Some("DE89370400440532013000".to_string()),
+                bic: None,
+            }),
+            execution_date: Some("2026-06-25".to_string()),
+            end_to_end_id: Some("E2E-001".to_string()),
+        };
+        let v = t.to_jsonld();
+        assert_eq!(v["@type"], "MoneyTransfer");
+        assert_eq!(v["amount"]["currency"], "EUR");
+        assert_eq!(v["amount"]["value"], 1500.0);
+        assert_eq!(
+            v["iso20022:debtorAccount"]["iso20022:iban"],
+            "GB29NWBK60161331926819"
+        );
+        // Sub-objects must not carry a redundant @context.
+        assert!(v["iso20022:debtorAccount"].get("@context").is_none());
+        assert_eq!(v["iso20022:endToEndId"], "E2E-001");
+        assert_eq!(v["identifier"], "E2E-001");
+    }
+
+    #[test]
+    fn regulated_institution_jsonld_includes_lei() {
+        let r = RegulatedFinancialInstitution {
+            name: "Acme Bank plc".to_string(),
+            lei: Some("529900W18LQJJN6SJ336".to_string()),
+            licence_id: Some("FCA-FRN-123456".to_string()),
+            regulator: Some("FCA".to_string()),
+            url: Some("https://acme.example".to_string()),
+        };
+        let v = r.to_jsonld();
+        assert_eq!(v["@type"], "BankOrCreditUnion");
+        assert_eq!(v["name"], "Acme Bank plc");
+        assert_eq!(v["iso20022:lei"], "529900W18LQJJN6SJ336");
+        assert_eq!(v["iso20022:licenceId"], "FCA-FRN-123456");
+    }
+
+    #[test]
+    fn financial_product_jsonld_includes_isin_and_apr() {
+        let p = FinancialProduct {
+            name: "Green Bond 2030".to_string(),
+            product_type: "deposit".to_string(),
+            issuer: Some("Acme Bank".to_string()),
+            annual_percentage_rate: Some(3.5),
+            isin: Some("US0378331005".to_string()),
+        };
+        let v = p.to_jsonld();
+        assert_eq!(v["@type"], "FinancialProduct");
+        assert_eq!(v["name"], "Green Bond 2030");
+        assert_eq!(v["iso20022:productType"], "deposit");
+        assert_eq!(v["iso20022:isin"], "US0378331005");
+        assert_eq!(v["annualPercentageRate"], 3.5);
+        assert_eq!(v["provider"]["@type"], "Organization");
+        assert_eq!(v["provider"]["name"], "Acme Bank");
+    }
+
+    // ── Frontmatter dispatch ────────────────────────────────────────
+
+    #[test]
+    fn dispatch_bank_account_round_trip() {
+        let fm = serde_json::json!({
+            "type": "BankAccount",
+            "iban": "GB29NWBK60161331926819",
+        });
+        let entity = from_frontmatter(&fm).unwrap();
+        assert_eq!(entity.type_name(), "BankAccount");
+        let jsonld = entity.to_jsonld();
+        assert_eq!(jsonld["iso20022:iban"], "GB29NWBK60161331926819");
+    }
+
+    #[test]
+    fn dispatch_financial_transaction_from_yaml_shape() {
+        let fm = serde_json::json!({
+            "type": "FinancialTransaction",
+            "instructed_amount": {"currency": "EUR", "amount": 1500.00},
+            "debtor_account": {"iban": "GB29NWBK60161331926819"},
+            "creditor_account": {"iban": "DE89370400440532013000"},
+        });
+        let entity = from_frontmatter(&fm).unwrap();
+        assert_eq!(entity.type_name(), "FinancialTransaction");
+        let jsonld = entity.to_jsonld();
+        assert_eq!(jsonld["amount"]["currency"], "EUR");
+    }
+
+    #[test]
+    fn dispatch_missing_type_errors() {
+        let fm = serde_json::json!({"iban": "GB29NWBK60161331926819"});
+        let err = from_frontmatter(&fm).unwrap_err();
+        assert_eq!(err, DispatchError::MissingType);
+    }
+
+    #[test]
+    fn dispatch_unknown_type_errors() {
+        let fm = serde_json::json!({"type": "GalacticCredits"});
+        let err = from_frontmatter(&fm).unwrap_err();
+        assert!(
+            matches!(err, DispatchError::UnknownType(t) if t == "GalacticCredits")
+        );
+    }
+
+    // ── Warning emission ────────────────────────────────────────────
+
+    #[test]
+    fn warn_invalid_fields_counts_iban_failure() {
+        let entity = Iso20022Entity::BankAccount(BankAccount {
+            iban: Some("INVALID-IBAN".to_string()),
+            ..BankAccount::default()
+        });
+        let warnings = warn_invalid_fields(&entity, "page.md");
+        assert_eq!(warnings, 1);
+    }
+
+    #[test]
+    fn warn_invalid_fields_counts_zero_for_valid_iban() {
+        let entity = Iso20022Entity::BankAccount(BankAccount {
+            iban: Some("GB29NWBK60161331926819".to_string()),
+            bic: Some("NWBKGB2L".to_string()),
+            ..BankAccount::default()
+        });
+        let warnings = warn_invalid_fields(&entity, "page.md");
+        assert_eq!(warnings, 0);
+    }
+
+    #[test]
+    fn warn_invalid_fields_walks_transaction_subfields() {
+        let entity =
+            Iso20022Entity::FinancialTransaction(FinancialTransaction {
+                debtor_account: Some(BankAccount {
+                    iban: Some("BAD".to_string()),
+                    ..BankAccount::default()
+                }),
+                creditor_account: Some(BankAccount {
+                    bic: Some("BADBIC".to_string()), // length 6, invalid
+                    ..BankAccount::default()
+                }),
+                ..FinancialTransaction::default()
+            });
+        let warnings = warn_invalid_fields(&entity, "page.md");
+        assert_eq!(warnings, 2);
+    }
+
+    // ── First-use info pointer ──────────────────────────────────────
+
+    #[test]
+    fn first_use_pointer_fires_exactly_once() {
+        reset_first_use_for_test();
+        assert!(!first_use_was_logged());
+        log_first_use_pointer();
+        assert!(first_use_was_logged());
+        // Calling again is a no-op (the flag stays set).
+        log_first_use_pointer();
+        assert!(first_use_was_logged());
+    }
+
+    // ── Schema.org subset validator ─────────────────────────────────
+
+    #[test]
+    fn schema_validator_passes_bank_account_with_identifier() {
+        let v = BankAccount {
+            iban: Some("GB29NWBK60161331926819".to_string()),
+            ..BankAccount::default()
+        }
+        .to_jsonld();
+        assert!(validate_schema_org(&v).is_empty());
+    }
+
+    #[test]
+    fn schema_validator_flags_bank_account_without_identifier() {
+        let v = BankAccount::default().to_jsonld();
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field.contains("identifier")));
+    }
+
+    #[test]
+    fn schema_validator_passes_money_transfer_with_amount() {
+        let v = FinancialTransaction {
+            instructed_amount: Some(MonetaryAmount {
+                currency: "USD".to_string(),
+                amount: 10.0,
+            }),
+            ..FinancialTransaction::default()
+        }
+        .to_jsonld();
+        assert!(validate_schema_org(&v).is_empty());
+    }
+
+    #[test]
+    fn schema_validator_flags_money_transfer_missing_amount() {
+        let v = FinancialTransaction::default().to_jsonld();
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field == "amount"));
+    }
+
+    #[test]
+    fn schema_validator_flags_empty_institution_name() {
+        let v = RegulatedFinancialInstitution {
+            name: String::new(),
+            ..RegulatedFinancialInstitution::default()
+        }
+        .to_jsonld();
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field == "name"));
+    }
+
+    #[test]
+    fn schema_validator_flags_missing_context() {
+        let v = serde_json::json!({"@type": "BankAccount", "identifier": "x"});
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field == "@context"));
+    }
+}

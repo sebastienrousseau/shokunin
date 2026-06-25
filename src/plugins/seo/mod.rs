@@ -12,7 +12,7 @@
 
 mod canonical;
 pub mod helpers;
-mod jsonld;
+pub mod jsonld;
 mod robots;
 mod seo_plugin;
 
