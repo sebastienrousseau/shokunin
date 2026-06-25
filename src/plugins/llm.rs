@@ -19,6 +19,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use anyhow::Result;
 use std::{fs, path::Path, time::Duration};
 
@@ -671,14 +672,7 @@ fn inject_meta_description(html: &str, description: &str) -> String {
         .replace('"', "&quot;")
         .replace('<', "&lt;");
     let tag = format!("<meta name=\"description\" content=\"{escaped}\">\n");
-
-    if let Some(pos) = html.find("</head>") {
-        let mut result = html.to_string();
-        result.insert_str(pos, &tag);
-        result
-    } else {
-        html.to_string()
-    }
+    inject_before_head_close(html, &tag)
 }
 
 /// Generates alt text for images that are missing it.
@@ -1112,14 +1106,7 @@ fn inject_jsonld_description(html: &str, description: &str) -> String {
 
     let script =
         format!("<script type=\"application/ld+json\">{}</script>\n", jsonld);
-
-    if let Some(pos) = html.find("</head>") {
-        let mut result = html.to_string();
-        result.insert_str(pos, &script);
-        result
-    } else {
-        html.to_string()
-    }
+    inject_before_head_close(html, &script)
 }
 
 /// Calls the Ollama API to generate text.

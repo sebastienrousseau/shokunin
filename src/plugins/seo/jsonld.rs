@@ -9,6 +9,7 @@ use super::helpers::{
 };
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use std::path::Path;
 
 /// Configuration for the JSON-LD structured data plugin.
@@ -263,10 +264,6 @@ impl Plugin for JsonLdPlugin {
             return Ok(html.to_string());
         }
 
-        let Some(head_pos) = html.find("</head>") else {
-            return Ok(html.to_string());
-        };
-
         let base = self.config.base_url.trim_end_matches('/');
         let site_dir = &ctx.site_dir;
 
@@ -293,9 +290,7 @@ impl Plugin for JsonLdPlugin {
             ));
         }
 
-        let result =
-            format!("{}{}{}", &html[..head_pos], injection, &html[head_pos..]);
-        Ok(result)
+        Ok(inject_before_head_close(html, &injection))
     }
 
     fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {

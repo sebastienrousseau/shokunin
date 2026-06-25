@@ -6,6 +6,7 @@
 use super::helpers::rfc2822_to_iso8601;
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use anyhow::Result;
 use std::path::Path;
 
@@ -253,8 +254,11 @@ fn inject_modern_meta_into_head(html: &str, meta: &str) -> String {
     // Prefer inserting right before </head> so it lives in the head block
     // regardless of where the apple-meta string appeared.
     let lower = html.to_ascii_lowercase();
-    if let Some(pos) = lower.find("</head>") {
-        return format!("{}{meta}{}", &html[..pos], &html[pos..]);
+    if lower.contains("</head>") {
+        let injected = inject_before_head_close(html, meta);
+        if injected != html {
+            return injected;
+        }
     }
     if let Some(pos) = lower.find("<head>") {
         let insert_at = pos + "<head>".len();

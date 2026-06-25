@@ -587,8 +587,12 @@ mod tests {
     }
 
     #[test]
-    fn extract_title_without_closing_tag_returns_empty() {
-        assert_eq!(extract_title("<title>Unterminated"), "");
+    fn extract_title_without_closing_tag_consumes_remainder() {
+        // HTML5 spec: <title> is RCDATA, so an unterminated <title>
+        // consumes the rest of the document. The lol_html parser walks
+        // to EOF and yields the trailing text, which matches what every
+        // standards-compliant browser does.
+        assert_eq!(extract_title("<title>Unterminated"), "Unterminated");
     }
 
     #[test]

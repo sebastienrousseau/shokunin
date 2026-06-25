@@ -22,6 +22,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close as inject_head;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -670,14 +671,20 @@ fn build_url(
 }
 
 /// Insert `links` just before the first `</head>` tag, if present.
+///
+/// Thin shim over the shared [`inject_head`] helper that returns `None`
+/// when the document has no `<head>` — keeping the historical
+/// `Option<String>` signature for the test suite that asserts on it.
 fn inject_before_head_close(html: &str, links: &str) -> Option<String> {
-    let lower = html.to_ascii_lowercase();
-    let pos = lower.find("</head>")?;
-    let mut result = String::with_capacity(html.len() + links.len());
-    result.push_str(&html[..pos]);
-    result.push_str(links);
-    result.push_str(&html[pos..]);
-    Some(result)
+    if !html.to_ascii_lowercase().contains("</head>") {
+        return None;
+    }
+    let result = inject_head(html, links);
+    if result == html {
+        None
+    } else {
+        Some(result)
+    }
 }
 
 // ── Per-locale sitemaps ──────────────────────────────────────────────

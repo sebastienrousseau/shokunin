@@ -6,6 +6,7 @@
 use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars, xml_escape};
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use std::fs;
 use std::path::Path;
 
@@ -339,13 +340,11 @@ pub(super) fn inject_atom_link(
             continue;
         }
 
-        // Insert before </head>
-        if let Some(pos) = html.find("</head>") {
-            let link_tag = format!(
-                "  <link rel=\"alternate\" type=\"application/atom+xml\" title=\"Atom Feed\" href=\"{atom_url}\"/>\n"
-            );
-            let modified =
-                format!("{}{}{}", &html[..pos], link_tag, &html[pos..]);
+        let link_tag = format!(
+            "  <link rel=\"alternate\" type=\"application/atom+xml\" title=\"Atom Feed\" href=\"{atom_url}\"/>\n"
+        );
+        let modified = inject_before_head_close(&html, &link_tag);
+        if modified != html {
             fs::write(path, &modified).with_path(path)?;
         }
     }

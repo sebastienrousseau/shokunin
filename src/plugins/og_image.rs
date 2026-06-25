@@ -12,6 +12,7 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::seo::helpers::{extract_title, has_meta_tag};
+use crate::util::head_dom::inject_before_head_close;
 use std::{fs, path::Path};
 
 /// Plugin that auto-generates Open Graph social card images.
@@ -190,11 +191,12 @@ impl Plugin for OgImagePlugin {
                  <meta property=\"og:image:height\" content=\"630\">\n"
             );
 
-            if let Some(pos) = html.find("</head>") {
-                let mut modified = html.clone();
-                modified.insert_str(pos, &meta);
-                fs::write(path, &modified).with_path(path)?;
-                generated += 1;
+            if html.contains("</head>") {
+                let modified = inject_before_head_close(&html, &meta);
+                if modified != html {
+                    fs::write(path, &modified).with_path(path)?;
+                    generated += 1;
+                }
             }
         }
 

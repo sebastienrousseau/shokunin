@@ -9,6 +9,7 @@ use super::helpers::{
     has_meta_tag,
 };
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use anyhow::Result;
 use std::path::Path;
 
@@ -228,14 +229,8 @@ fn inject_seo_tags_html(html: &str) -> Result<String> {
         return Ok(html.to_string());
     }
 
-    let injection = tags.join("\n");
-    let result = if let Some(pos) = html.find("</head>") {
-        format!("{}{}\n{}", &html[..pos], injection, &html[pos..])
-    } else {
-        html.to_string()
-    };
-
-    Ok(result)
+    let injection = format!("{}\n", tags.join("\n"));
+    Ok(inject_before_head_close(html, &injection))
 }
 
 #[cfg(test)]
