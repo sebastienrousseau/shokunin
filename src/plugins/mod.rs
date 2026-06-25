@@ -21,6 +21,7 @@ pub mod plugins;
 pub mod postprocess;
 pub mod sbom;
 pub mod search;
+pub mod search_index;
 pub mod seo;
 pub mod shortcodes;
 pub mod taxonomy;

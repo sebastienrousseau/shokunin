@@ -141,6 +141,7 @@ pub use crate::plugins_group::plugins;
 pub use crate::plugins_group::postprocess;
 pub use crate::plugins_group::sbom;
 pub use crate::plugins_group::search;
+pub use crate::plugins_group::search_index;
 pub use crate::plugins_group::seo;
 pub use crate::plugins_group::shortcodes;
 pub use crate::plugins_group::taxonomy;
