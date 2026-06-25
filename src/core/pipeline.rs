@@ -523,6 +523,11 @@ pub fn register_default_plugins(
     plugins.register(postprocess::HtmlFixPlugin);
     plugins.register(postprocess::SbomPlugin);
 
+    // Agentic discovery (#552): agents.txt + .well-known/ai-plugin.json
+    // + .well-known/mcp.json. No-op when `[agents]` is absent from
+    // `ssg.toml`, so existing sites see no behavioural change.
+    plugins.register(postprocess::AgenticDiscoveryPlugin);
+
     // Syntax highlighting
     plugins.register(highlight::HighlightPlugin::default());
 

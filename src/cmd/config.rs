@@ -131,6 +131,13 @@ pub struct SsgConfig {
     /// empty `targets` disables the emitter.
     #[serde(default)]
     pub edge_headers: EdgeHeadersConfig,
+    /// Agentic-discovery emitters: `agents.txt`, `ai-plugin.json`, and
+    /// the MCP registry (issue #552). All three are opt-in per the
+    /// `[agents]` section of `ssg.toml`. Absent ⇒ no files written.
+    #[serde(default)]
+    pub agents: Option<
+        crate::plugins_group::postprocess::agentic_discovery::AgentsConfig,
+    >,
 }
 
 impl Default for SsgConfig {

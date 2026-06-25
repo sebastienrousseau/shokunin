@@ -108,6 +108,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             cdn_prefix: None,
             image: ImageConfig::default(),
             edge_headers: EdgeHeadersConfig::default(),
+            agents: None,
         })
     })
 }

@@ -26,6 +26,7 @@
 
 pub(crate) mod helpers;
 
+pub mod agentic_discovery;
 mod atom;
 pub mod edge_headers;
 mod html_fix;
@@ -36,6 +37,12 @@ mod rss;
 mod sbom;
 mod sitemap;
 
+pub use agentic_discovery::{
+    build_manifest, build_registry, collect_mcp_resources, render_agents_txt,
+    write_agents_txt, write_ai_plugin_json, write_mcp_registry, AgentRule,
+    AgenticDiscoveryPlugin, AgentsConfig, McpConfig, McpPromptDecl,
+    McpResource, McpToolDecl,
+};
 pub use atom::AtomFeedPlugin;
 pub use edge_headers::EdgeHeadersPlugin;
 pub use html_fix::HtmlFixPlugin;

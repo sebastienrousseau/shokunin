@@ -339,6 +339,7 @@ mod tests {
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
         }
     }
 
@@ -408,6 +409,7 @@ mod tests {
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
         };
 
         let content_dir = config.content_dir.clone();
