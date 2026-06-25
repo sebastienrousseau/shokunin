@@ -17,6 +17,18 @@
 //! - SEO metadata generation
 //! - Search index generation
 
+pub mod content_provider;
+pub mod isr_manifest;
+
+pub use content_provider::{
+    ContentProvider, FsContentProvider, MemoryContentProvider, ProviderError,
+    ProviderResult,
+};
+pub use isr_manifest::{
+    build_entry, hash_sources, CachePolicy, Manifest, ManifestEntry,
+    DEFAULT_SWR, DEFAULT_S_MAXAGE, MANIFEST_VERSION,
+};
+
 use std::collections::HashMap;
 use std::fmt;
 
