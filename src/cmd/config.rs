@@ -10,6 +10,7 @@ use clap::ArgMatches;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     str::FromStr,
@@ -51,6 +52,51 @@ impl Default for ImageConfig {
     }
 }
 
+/// Edge-runtime header emitter configuration (issue #550). Surfaces
+/// the `[edge_headers]` section of `ssg.toml`:
+///
+/// ```toml
+/// [edge_headers]
+/// targets = ["cloudflare", "netlify", "vercel"]
+///
+/// [edge_headers.overrides]
+/// permissions-policy = "geolocation=(self)"
+/// ```
+///
+/// When `targets` is empty (the default), the
+/// [`crate::postprocess::EdgeHeadersPlugin`] is a no-op: nothing is
+/// emitted into `dist/`. Listing one or more of `"cloudflare"`,
+/// `"netlify"`, or `"vercel"` opts in to per-platform header config
+/// generation; unknown target strings are logged and ignored.
+///
+/// `overrides` is a header-name → header-value map (case-insensitive
+/// on the platform side, but stored verbatim) that lets a site author
+/// replace any of the five baseline headers without recompiling.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EdgeHeadersConfig {
+    /// Edge platforms to emit configuration for. Recognised values:
+    /// `"cloudflare"`, `"netlify"`, `"vercel"`. Anything else is
+    /// logged and skipped. Empty (the default) disables the plugin.
+    #[serde(default)]
+    pub targets: Vec<String>,
+    /// Header-name → header-value overrides applied on top of the
+    /// baseline defaults. Names are matched case-insensitively when
+    /// the emitter merges overrides, so `"permissions-policy"`,
+    /// `"Permissions-Policy"`, and `"PERMISSIONS-POLICY"` all win.
+    #[serde(default)]
+    pub overrides: BTreeMap<String, String>,
+}
+
+impl EdgeHeadersConfig {
+    /// Returns `true` when at least one valid target is configured —
+    /// the registration site in `register_default_plugins` uses this to
+    /// decide whether to register the emitter.
+    #[must_use]
+    pub const fn is_enabled(&self) -> bool {
+        !self.targets.is_empty()
+    }
+}
+
 /// Core configuration for the static site generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SsgConfig {
@@ -81,6 +127,10 @@ pub struct SsgConfig {
     /// Optional image-pipeline tunables (issue #521).
     #[serde(default)]
     pub image: ImageConfig,
+    /// Edge-runtime header emitter config (issue #550). Absent /
+    /// empty `targets` disables the emitter.
+    #[serde(default)]
+    pub edge_headers: EdgeHeadersConfig,
 }
 
 impl Default for SsgConfig {
@@ -346,6 +396,12 @@ impl SsgConfigBuilder {
     #[must_use]
     pub fn cdn_prefix(mut self, prefix: Option<String>) -> Self {
         self.config.cdn_prefix = prefix;
+        self
+    }
+    /// Sets the edge-headers emitter configuration (issue #550).
+    #[must_use]
+    pub fn edge_headers(mut self, edge: EdgeHeadersConfig) -> Self {
+        self.config.edge_headers = edge;
         self
     }
     /// Builds the final `SsgConfig` instance.

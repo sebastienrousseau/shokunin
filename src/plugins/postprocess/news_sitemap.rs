@@ -176,6 +176,7 @@ mod tests {
             i18n: None,
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),

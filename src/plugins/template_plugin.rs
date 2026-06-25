@@ -338,6 +338,7 @@ mod tests {
             i18n: None,
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
         }
     }
 
@@ -406,6 +407,7 @@ mod tests {
             i18n: None,
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
         };
 
         let content_dir = config.content_dir.clone();

@@ -14,6 +14,36 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
+/// Canonical Content-Security-Policy string emitted by the CSP plugin.
+///
+/// Returned by [`computed_policy`] and consumed by downstream emitters
+/// (e.g. the `edge_headers` postprocess plugin) that need to forward
+/// the same policy as an HTTP header instead of a `<meta>` tag.
+///
+/// The string is intentionally `'unsafe-inline'`-free; this matches the
+/// post-extraction posture enforced by [`CspPlugin::transform_html`]
+/// and [`inject_csp_meta`] (which strip `'unsafe-inline'` from any
+/// preexisting `<meta>` policy on the way through).
+pub const DEFAULT_CSP_POLICY: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'";
+
+/// Returns the canonical Content-Security-Policy string that the CSP
+/// plugin's inline-extraction posture is designed to enforce.
+///
+/// This is the single source of truth for the CSP header value: every
+/// other emitter (deploy adapters, edge-headers postprocess plugin)
+/// reads from this function rather than recomputing or hardcoding the
+/// string, ensuring that platform-level HTTP headers and the
+/// `<meta http-equiv>` injection stay in lock-step.
+///
+/// Returns a borrowed reference to [`DEFAULT_CSP_POLICY`] today; the
+/// signature is intentionally a borrowed `&'static str` so callers can
+/// pass it directly into `format!` / `write!` without an extra
+/// allocation.
+#[must_use]
+pub const fn computed_policy() -> &'static str {
+    DEFAULT_CSP_POLICY
+}
+
 /// Plugin that extracts inline styles/scripts to external files with SRI.
 ///
 /// Runs in `after_compile` after all other content transforms but before
@@ -27,6 +57,14 @@ use std::{fs, path::Path};
 ///
 /// Blocks with `type="application/ld+json"` or `data-ssg-livereload`
 /// attributes are skipped (structured data / dev-only scripts).
+///
+/// # Computed policy
+///
+/// The single string the plugin posture enforces is exposed via
+/// [`computed_policy`]; downstream HTTP-header emitters (e.g. the
+/// `edge_headers` postprocess plugin) call that function rather than
+/// hardcoding a CSP string of their own, so the policy stays in
+/// lock-step across `<meta>` injection and platform HTTP headers.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CspPlugin;
 

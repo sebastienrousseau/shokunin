@@ -574,6 +574,12 @@ pub fn register_default_plugins(
     // Minification (must be last content transform)
     plugins.register(plugins_mod::MinifyPlugin);
 
+    // Edge-runtime header emitter (issue #550). Opt-in via the
+    // `[edge_headers] targets = [...]` section of ssg.toml; the
+    // plugin is a no-op when targets is empty so unconditional
+    // registration here is safe and keeps the wiring simple.
+    plugins.register(postprocess::EdgeHeadersPlugin);
+
     // Deployment config generation (opt-in via --deploy flag)
     if let Some(target) = deploy_target {
         let dt = match target {
