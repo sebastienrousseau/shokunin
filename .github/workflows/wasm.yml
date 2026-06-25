@@ -62,7 +62,10 @@ jobs:
             echo "::error::expected $WASM_IN to exist after wasm-pack build"
             exit 1
           fi
-          wasm-opt -Oz --strip-debug --vacuum -o "$WASM_OUT" "$WASM_IN"
+          wasm-opt -Oz --strip-debug --vacuum \
+            --enable-bulk-memory --enable-bulk-memory-opt \
+            --enable-reference-types --enable-mutable-globals \
+            -o "$WASM_OUT" "$WASM_IN"
           mv "$WASM_OUT" "$WASM_IN"
 
       - name: Enforce ≤ 2 MB gzipped WASM payload (#546 AC10)
@@ -122,7 +125,9 @@ jobs:
       - name: wasm-bindgen-test (headless Chrome)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
-        run: wasm-pack test --headless --chrome crates/ssg-search -- --features wasm
+        # `--features` goes to wasm-pack/cargo, NOT after `--`
+        # (which passes args to the wasm-bindgen-test runner binary).
+        run: wasm-pack test --headless --chrome crates/ssg-search --features wasm
 
       - name: Latency bench (assert p99 < 100ms)
         run: cargo bench -p ssg-search --bench search_latency
