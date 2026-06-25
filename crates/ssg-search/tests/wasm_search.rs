@@ -46,12 +46,8 @@ fn fixture_bytes() -> (Vec<u8>, Vec<u8>, Vec<u8>, u32) {
         },
     ];
     let arts = Artifacts::from_docs(&docs);
-    (
-        arts.model,
-        arts.tokenizer,
-        arts.embeddings,
-        arts.count() as u32,
-    )
+    let count = arts.count() as u32;
+    (arts.model, arts.tokenizer, arts.embeddings, count)
 }
 
 #[wasm_bindgen_test]
