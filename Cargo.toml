@@ -227,6 +227,15 @@ walkdir = { version = "2.5", optional = true }
 # Owned crate for frontmatter parsing
 frontmatter-gen = "0.0.6"
 
+# Pure-Rust YAML parser for data/*.{yml,yaml} files loaded into
+# template globals (issue #536). The previous implementation parsed
+# YAML through `serde_json`, which silently dropped any non-JSON
+# YAML — indented lists, flow lists, nested maps. `serde_yaml_ng` is
+# the maintained fork of the unmaintained `serde_yaml`, has no C
+# deps, and is the same crate the workspace pulls in transitively
+# via `noyalib` / `frontmatter-gen`.
+serde_yaml_ng = "0.10"
+
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`
 # feature is enabled. The `dep:` references in the [features]
