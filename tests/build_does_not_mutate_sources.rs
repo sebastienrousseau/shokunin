@@ -45,15 +45,13 @@ fn hash_tree(root: &Path) -> BTreeMap<PathBuf, String> {
 }
 
 fn walk(root: &Path, dir: &Path, out: &mut BTreeMap<PathBuf, String>) {
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return,
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
-        let ft = match entry.file_type() {
-            Ok(t) => t,
-            Err(_) => continue,
+        let Ok(ft) = entry.file_type() else {
+            continue;
         };
         if ft.is_dir() {
             walk(root, &path, out);
@@ -174,7 +172,7 @@ fn build_leaves_source_tree_unchanged() {
 
     // Specifically guard against the historical sentinel ever
     // reappearing in any source file.
-    for (rel, _) in &after {
+    for rel in after.keys() {
         let abs = content.join(rel);
         if let Ok(text) = fs::read_to_string(&abs) {
             assert!(

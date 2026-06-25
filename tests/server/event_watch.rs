@@ -98,13 +98,10 @@ fn default_debounce_constant_is_one_hundred_millis() {
     assert_eq!(DEFAULT_DEBOUNCE, Duration::from_millis(100));
 }
 
-#[test]
-fn max_batch_paths_is_reasonable_bound() {
-    // Sanity: cap should be much larger than a typical project but
-    // small enough that we don't allocate gigabytes of paths.
-    assert!(MAX_BATCH_PATHS >= 1_000);
-    assert!(MAX_BATCH_PATHS <= 1_000_000);
-}
+// Cap should be much larger than a typical project but small enough
+// that we don't allocate gigabytes of paths. Evaluated at compile time.
+const _: () = assert!(MAX_BATCH_PATHS >= 1_000);
+const _: () = assert!(MAX_BATCH_PATHS <= 1_000_000);
 
 // ---------------------------------------------------------------------------
 // Live notify-backed suite — touches the filesystem, may flake on very
@@ -121,7 +118,7 @@ fn wait_for_batch(
     while Instant::now() < deadline {
         match watcher.recv_timeout(Duration::from_millis(200)) {
             RecvOutcome::Batch(b) if !b.is_empty() => return Some(b),
-            RecvOutcome::Batch(_) | RecvOutcome::Timeout => continue,
+            RecvOutcome::Batch(_) | RecvOutcome::Timeout => {}
             RecvOutcome::Closed => return None,
         }
     }

@@ -155,10 +155,11 @@ fn ac5_corrupt_entry_falls_through_to_network() {
     // Seed, then overwrite with garbage.
     seed(dir.path(), "http://127.0.0.1:1", "llama3", "p", 1, "v1");
     let key = LlmCache::compute_key("http://127.0.0.1:1", "llama3", "p", 1);
-    let hex = format!(
-        "{}",
-        key.iter().map(|b| format!("{b:02x}")).collect::<String>()
-    );
+    let hex = key.iter().fold(String::new(), |mut acc, b| {
+        use std::fmt::Write;
+        write!(acc, "{b:02x}").unwrap();
+        acc
+    });
     let (shard, rest) = hex.split_at(2);
     let path = dir.path().join(shard).join(format!("{rest}.json"));
     std::fs::write(&path, "{ not valid json").unwrap();
