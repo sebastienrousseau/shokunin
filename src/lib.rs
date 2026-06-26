@@ -1008,6 +1008,52 @@ mod tests {
     }
 
     #[test]
+    fn test_create_directories_rejects_traversal_in_build() {
+        // Covers create_directories' line ~508-511 — PathTraversal
+        // bubble for the build dir.
+        let tmp = tempdir().unwrap();
+        let bad = tmp.path().join("..").join("escape-build");
+        let paths = Paths {
+            content: tmp.path().join("content"),
+            build:   bad,
+            site:    tmp.path().join("site"),
+            template: tmp.path().join("template"),
+        };
+        let err = create_directories(&paths).unwrap_err();
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn test_create_directories_rejects_traversal_in_site() {
+        // Covers lines ~513-516.
+        let tmp = tempdir().unwrap();
+        let bad = tmp.path().join("..").join("escape-site");
+        let paths = Paths {
+            content: tmp.path().join("content"),
+            build:   tmp.path().join("build"),
+            site:    bad,
+            template: tmp.path().join("template"),
+        };
+        let err = create_directories(&paths).unwrap_err();
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn test_create_directories_rejects_traversal_in_template() {
+        // Covers lines ~518-521.
+        let tmp = tempdir().unwrap();
+        let bad = tmp.path().join("..").join("escape-template");
+        let paths = Paths {
+            content: tmp.path().join("content"),
+            build:   tmp.path().join("build"),
+            site:    tmp.path().join("site"),
+            template: bad,
+        };
+        let err = create_directories(&paths).unwrap_err();
+        assert!(matches!(err, SsgError::PathTraversal { .. }));
+    }
+
+    #[test]
     fn test_copy_dir_all_nested() -> Result<()> {
         let src_dir = tempdir()?;
         let dst_dir = tempdir()?;

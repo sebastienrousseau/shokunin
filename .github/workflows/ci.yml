@@ -235,22 +235,28 @@ jobs:
         run: cargo install cargo-llvm-cov --locked
       - name: Run coverage (lib + integration, exclude heavy examples)
         run: |
-          # Exclude documented stub modules from coverage:
+          # Exclude documented untestable modules from coverage:
           # - src/core/deploy_adapter.rs ships 6 "not yet implemented" deploy
           #   adapters (#527 in v0.0.43); they're stubs by design until each
           #   target is fleshed out in a follow-up.
-          cargo llvm-cov --lib --features test-fault-injection \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs' \
+          # - src/main.rs is the binary entry point — exercised by
+          #   running the binary, never by `cargo test`. The library code
+          #   that main.rs delegates to (lib.rs::run + dispatch_invocation)
+          #   is what the gate cares about.
+          IGNORE='src/core/deploy_adapter\.rs|src/main\.rs'
+          cargo llvm-cov --tests --features test-fault-injection \
+            --ignore-filename-regex "$IGNORE" \
             --no-report --quiet
           cargo llvm-cov report --summary-only \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
+            --ignore-filename-regex "$IGNORE"
           cargo llvm-cov report --lcov --output-path coverage.lcov \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
+            --ignore-filename-regex "$IGNORE"
       - name: Enforce coverage floor
         run: |
           set -euo pipefail
+          IGNORE='src/core/deploy_adapter\.rs|src/main\.rs'
           summary=$(cargo llvm-cov report --json --summary-only \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs')
+            --ignore-filename-regex "$IGNORE")
           regions=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['regions']['percent'])")
           lines=$(echo   "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
           fns=$(echo     "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['functions']['percent'])")

@@ -38,13 +38,14 @@ bench: ## Run performance benchmarks (Criterion).
 	@cargo bench --bench bench
 
 # Run llvm-cov with profraw files pinned under target/coverage/ so they
-# never leak into the working tree. Mirrors the ci.yml coverage job.
+# never leak into the working tree. Mirrors the ci.yml coverage job
+# exactly so local + CI numbers match.
 .PHONY: coverage
 coverage: ## Run cargo llvm-cov; profraw output stays under target/coverage/.
 	@mkdir -p target/coverage
 	@LLVM_PROFILE_FILE="$$PWD/target/coverage/%m-%p.profraw" \
-	  cargo llvm-cov --lib --features test-fault-injection \
-	    --ignore-filename-regex 'src/core/deploy_adapter\.rs' \
+	  cargo llvm-cov --tests --features test-fault-injection \
+	    --ignore-filename-regex 'src/core/deploy_adapter\.rs|src/main\.rs' \
 	    --summary-only
 
 # Enforce the WASM gzipped-size budget (#546 AC10) — Edge payload ≤ 2 MB.
