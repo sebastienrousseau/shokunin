@@ -100,6 +100,11 @@ jobs:
             -A clippy::unwrap_used \
             -A clippy::expect_used
 
+      - name: no shellout regression (#558)
+        # Refuses Command::new("<shell-binary>") in src/ or crates/.
+        # Regression guard for v0.0.44 LlmPlugin port from curl to ureq (#520).
+        run: ./tools/lint-no-shellout.sh
+
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
     name: test · ${{ matrix.os }}

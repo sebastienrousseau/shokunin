@@ -62,6 +62,7 @@ Out of scope:
 | HSTS | `Strict-Transport-Security: max-age=31536000` in deploy configs | `DeployPlugin` |
 | Dependency advisories | `cargo deny check` runs on every CI build; allow-list is documented in `deny.toml` with rationale | `deny.toml` |
 | Action pinning | All GitHub Actions pinned by 40-char commit SHA, not tag/branch | workflow files |
+| Shell-out guard | `tools/lint-no-shellout.sh` (CI gate) refuses `Command::new("<shell-binary>")` in `src/` or `crates/`. Regression guard for the v0.0.44 port of `LlmPlugin` from `curl` to `ureq` (#520) | `tools/lint-no-shellout.sh` |
 
 ## Reproducible Builds
 
