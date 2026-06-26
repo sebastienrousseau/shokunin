@@ -110,6 +110,16 @@ jobs:
         # Every cited ADR must resolve to a file in docs/adrs/.
         run: ./tools/lint-adr.sh
 
+      - name: feature powerset check (#584)
+        # cargo-hack runs `cargo check` across every reachable subset
+        # of the feature flags (45 combinations at v0.0.45). Catches
+        # cfg-gating gaps where helper items become dead under
+        # --no-default-features. `--depth 2` keeps the runner cost
+        # bounded; full powerset (`--depth N`) is exponential.
+        run: |
+          cargo install --locked cargo-hack
+          cargo hack check --feature-powerset --depth 2 --no-dev-deps
+
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
     name: test · ${{ matrix.os }}
