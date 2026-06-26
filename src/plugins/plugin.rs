@@ -64,6 +64,16 @@ pub struct PluginCache {
 
 impl PluginCache {
     /// Creates an empty cache.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginCache;
+    /// use std::path::Path;
+    ///
+    /// let c = PluginCache::new();
+    /// assert!(c.has_changed(Path::new("any.path")));
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -75,6 +85,17 @@ impl PluginCache {
     ///
     /// Returns an empty cache if the file does not exist or cannot be
     /// parsed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginCache;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// // Missing cache file ⇒ empty cache, no error.
+    /// let _c = PluginCache::load(dir.path());
+    /// ```
     #[must_use]
     pub fn load(site_dir: &Path) -> Self {
         let path = site_dir.join(CACHE_FILENAME);
@@ -97,6 +118,17 @@ impl PluginCache {
     }
 
     /// Persists the cache to `site_dir/.ssg-plugin-cache.json`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginCache;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// PluginCache::new().save(dir.path()).unwrap();
+    /// assert!(dir.path().join(".ssg-plugin-cache.json").exists());
+    /// ```
     pub fn save(&self, site_dir: &Path) -> Result<(), SsgError> {
         let path = site_dir.join(CACHE_FILENAME);
         let serialisable: HashMap<String, u64> = self
@@ -117,6 +149,23 @@ impl PluginCache {
 
     /// Returns `true` if the file at `path` has changed since the last
     /// time it was recorded, or if it has never been recorded.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginCache;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let f = dir.path().join("x.txt");
+    /// fs::write(&f, "a").unwrap();
+    /// let mut c = PluginCache::new();
+    /// // Never recorded ⇒ has_changed = true.
+    /// assert!(c.has_changed(&f));
+    /// c.update(&f);
+    /// assert!(!c.has_changed(&f));
+    /// ```
     pub fn has_changed(&self, path: &Path) -> bool {
         let Ok(content) = fs::read(path) else {
             return true;
@@ -129,6 +178,21 @@ impl PluginCache {
     }
 
     /// Records the current content hash for `path`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginCache;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let f = dir.path().join("x.txt");
+    /// fs::write(&f, "hi").unwrap();
+    /// let mut c = PluginCache::new();
+    /// c.update(&f);
+    /// assert!(!c.has_changed(&f));
+    /// ```
     pub fn update(&mut self, path: &Path) {
         if let Ok(content) = fs::read(path) {
             let hash = Self::hash_bytes(&content);
@@ -180,6 +244,19 @@ impl PluginContext {
     /// Populates the cached HTML file list by walking `site_dir` once.
     /// Call this before running `after_compile` plugins to eliminate
     /// redundant directory scans (8+ plugins read the same file list).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginContext;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let mut ctx = PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+    /// ctx.cache_html_files();
+    /// // Empty dir ⇒ empty cached list.
+    /// assert!(ctx.get_html_files().is_empty());
+    /// ```
     pub fn cache_html_files(&mut self) {
         if self.site_dir.exists() {
             let files = crate::walk::walk_files(&self.site_dir, "html")
@@ -190,6 +267,17 @@ impl PluginContext {
 
     /// Returns the cached HTML file list, or walks the directory if
     /// the cache hasn't been populated.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginContext;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let ctx = PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+    /// assert!(ctx.get_html_files().is_empty());
+    /// ```
     #[must_use]
     pub fn get_html_files(&self) -> Vec<PathBuf> {
         if let Some(ref cached) = self.html_files {
@@ -200,6 +288,19 @@ impl PluginContext {
     }
 
     /// Creates a new plugin context from directory paths.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginContext;
+    /// use std::path::Path;
+    ///
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"),    Path::new("templates"),
+    /// );
+    /// assert_eq!(ctx.content_dir, Path::new("content"));
+    /// ```
     #[must_use]
     pub fn new(
         content_dir: &Path,
@@ -222,6 +323,22 @@ impl PluginContext {
     }
 
     /// Creates a new plugin context with site configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use ssg::plugin::PluginContext;
+    /// use std::path::Path;
+    ///
+    /// let cfg = SsgConfig::default();
+    /// let ctx = PluginContext::with_config(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    ///     cfg,
+    /// );
+    /// assert!(ctx.config.is_some());
+    /// ```
     #[must_use]
     pub fn with_config(
         content_dir: &Path,
@@ -249,6 +366,19 @@ impl PluginContext {
     /// Used by the `ssg check` subcommand (issue #527) to signal to
     /// plugins that they should run their validation passes without
     /// writing to disk.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginContext;
+    /// use std::path::Path;
+    ///
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    /// ).with_dry_run(true);
+    /// assert!(ctx.dry_run);
+    /// ```
     #[must_use]
     pub const fn with_dry_run(mut self, dry_run: bool) -> Self {
         self.dry_run = dry_run;
@@ -390,6 +520,15 @@ pub struct PluginManager {
 
 impl PluginManager {
     /// Creates a new empty plugin manager.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// let pm = PluginManager::new();
+    /// assert!(pm.is_empty());
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -400,23 +539,62 @@ impl PluginManager {
     /// Registers a plugin.
     ///
     /// Plugins run in the order they are registered.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::drafts::DraftPlugin;
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// let mut pm = PluginManager::new();
+    /// pm.register(DraftPlugin::new(false));
+    /// assert_eq!(pm.len(), 1);
+    /// ```
     pub fn register<P: Plugin + 'static>(&mut self, plugin: P) {
         self.plugins.push(Box::new(plugin));
     }
 
     /// Returns the number of registered plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// let pm = PluginManager::new();
+    /// assert_eq!(pm.len(), 0);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.plugins.len()
     }
 
     /// Returns `true` if no plugins are registered.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// assert!(PluginManager::new().is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.plugins.is_empty()
     }
 
     /// Returns the names of all registered plugins.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::drafts::DraftPlugin;
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// let mut pm = PluginManager::new();
+    /// pm.register(DraftPlugin::new(false));
+    /// assert_eq!(pm.names(), vec!["drafts"]);
+    /// ```
     #[must_use]
     pub fn names(&self) -> Vec<&str> {
         self.plugins.iter().map(|p| p.name()).collect()
@@ -426,6 +604,20 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::{PluginContext, PluginManager};
+    /// use std::path::Path;
+    ///
+    /// let pm = PluginManager::new();
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    /// );
+    /// assert!(pm.run_before_compile(&ctx).is_ok());
+    /// ```
     pub fn run_before_compile(
         &self,
         ctx: &PluginContext,
@@ -440,6 +632,20 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::{PluginContext, PluginManager};
+    /// use std::path::Path;
+    ///
+    /// let pm = PluginManager::new();
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    /// );
+    /// assert!(pm.run_after_compile(&ctx).is_ok());
+    /// ```
     pub fn run_after_compile(
         &self,
         ctx: &PluginContext,
@@ -455,6 +661,21 @@ impl PluginManager {
     ///
     /// This eliminates N separate read/write cycles (where N = number of
     /// transform plugins) per HTML file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::{PluginContext, PluginManager};
+    /// use std::path::Path;
+    ///
+    /// let pm = PluginManager::new();
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    /// );
+    /// // No transform plugins ⇒ trivial Ok.
+    /// assert!(pm.run_fused_transforms(&ctx).is_ok());
+    /// ```
     pub fn run_fused_transforms(
         &self,
         ctx: &PluginContext,
@@ -503,6 +724,20 @@ impl PluginManager {
     ///
     /// Plugins execute in registration order. If any plugin returns
     /// an error, execution stops and the error is propagated.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::{PluginContext, PluginManager};
+    /// use std::path::Path;
+    ///
+    /// let pm = PluginManager::new();
+    /// let ctx = PluginContext::new(
+    ///     Path::new("content"), Path::new("build"),
+    ///     Path::new("site"), Path::new("templates"),
+    /// );
+    /// assert!(pm.run_on_serve(&ctx).is_ok());
+    /// ```
     pub fn run_on_serve(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         for plugin in &self.plugins {
             plugin.on_serve(ctx)?;

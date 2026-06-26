@@ -29,6 +29,16 @@ pub struct RobotsPlugin {
 
 impl RobotsPlugin {
     /// Creates a new `RobotsPlugin` with the given base URL.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::seo::RobotsPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = RobotsPlugin::new("https://example.com");
+    /// assert_eq!(p.name(), "robots");
+    /// ```
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into(),

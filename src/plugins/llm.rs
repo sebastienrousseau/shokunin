@@ -110,6 +110,16 @@ pub struct LlmPlugin {
 
 impl LlmPlugin {
     /// Creates a new `LlmPlugin` with the given configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::{LlmConfig, LlmPlugin};
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = LlmPlugin::new(LlmConfig::default());
+    /// assert_eq!(p.name(), "llm");
+    /// ```
     #[must_use]
     pub const fn new(config: LlmConfig) -> Self {
         Self { config }
@@ -184,6 +194,18 @@ impl LlmPlugin {
     /// content (Bengali, Hindi, Turkish, etc.) produces inflated scores.
     /// Use the `en/` subdirectory for accurate results on multilingual
     /// repos, or filter results by locale.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::LlmPlugin;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let report = LlmPlugin::audit_all(dir.path(), 8.0).unwrap();
+    /// // Empty dir ⇒ no files audited.
+    /// assert_eq!(report.total_files, 0);
+    /// ```
     pub fn audit_all(
         content_dir: &Path,
         target_grade: f64,
@@ -240,6 +262,21 @@ impl LlmPlugin {
     /// 4. If `dry_run`, prints the diff without writing
     ///
     /// Returns the number of files rewritten.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::{LlmConfig, LlmPlugin};
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// // No Ollama reachable ⇒ returns Ok(0) without writing anything.
+    /// let cfg = LlmConfig {
+    ///     endpoint: "http://127.0.0.1:1".into(),
+    ///     ..LlmConfig::default()
+    /// };
+    /// assert_eq!(LlmPlugin::audit_and_fix(dir.path(), &cfg).unwrap(), 0);
+    /// ```
     pub fn audit_and_fix(
         content_dir: &Path,
         config: &LlmConfig,
@@ -344,6 +381,21 @@ impl LlmPlugin {
     ///
     /// Like `audit_and_fix()` but returns a detailed JSON-serialisable
     /// report with before/after scores for each file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::{LlmConfig, LlmPlugin};
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = LlmConfig {
+    ///     endpoint: "http://127.0.0.1:1".into(),
+    ///     ..LlmConfig::default()
+    /// };
+    /// let report = LlmPlugin::audit_and_fix_with_report(dir.path(), &cfg).unwrap();
+    /// assert_eq!(report.total_fixed, 0);
+    /// ```
     pub fn audit_and_fix_with_report(
         content_dir: &Path,
         config: &LlmConfig,
@@ -823,6 +875,15 @@ impl ReadabilityFormula {
     ///
     /// Accepts BCP 47 codes (e.g., `"en"`, `"fr"`, `"de-AT"`).
     /// Returns `None` for unsupported languages.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::ReadabilityFormula;
+    ///
+    /// assert_eq!(ReadabilityFormula::from_lang("en"), Some(ReadabilityFormula::FleschKincaid));
+    /// assert_eq!(ReadabilityFormula::from_lang("xx"), None);
+    /// ```
     #[must_use]
     pub fn from_lang(lang: &str) -> Option<Self> {
         let primary = lang.split(['-', '_']).next().unwrap_or(lang);
@@ -851,6 +912,15 @@ pub struct ReadabilityAudit {
 
 impl ReadabilityAudit {
     /// Analyzes text and returns readability metrics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::ReadabilityAudit;
+    ///
+    /// let a = ReadabilityAudit::analyze("This is a simple sentence.");
+    /// assert!(a.avg_sentence_len > 0.0);
+    /// ```
     #[must_use]
     pub fn analyze(text: &str) -> Self {
         let words = count_words(text);
@@ -881,6 +951,15 @@ impl ReadabilityAudit {
     /// Analyzes text using the appropriate formula for the given language.
     ///
     /// Falls back to Flesch-Kincaid if the language is unsupported or empty.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::ReadabilityAudit;
+    ///
+    /// let a = ReadabilityAudit::analyze_with_lang("Bonjour le monde.", "fr");
+    /// assert!(a.avg_sentence_len > 0.0);
+    /// ```
     #[must_use]
     pub fn analyze_with_lang(text: &str, lang: &str) -> Self {
         let formula = if lang.is_empty() {
@@ -1165,6 +1244,17 @@ fn call_ollama(endpoint: &str, model: &str, prompt: &str) -> Option<String> {
 /// - [`SsgError::LlmInvalidResponse`] when the server returns a
 ///   non-2xx status, the body is not valid JSON, or the JSON does
 ///   not carry a non-empty `response` field.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::llm::query_ollama;
+/// use ssg::SsgError;
+///
+/// // No Ollama running on port 1 ⇒ deterministic transport failure.
+/// let err = query_ollama("http://127.0.0.1:1", "llama2", "hi", 1).unwrap_err();
+/// assert!(matches!(err, SsgError::LlmEndpointUnreachable { .. } | SsgError::LlmTimeout { .. }));
+/// ```
 pub fn query_ollama(
     endpoint: &str,
     model: &str,
@@ -1261,6 +1351,20 @@ impl LlmPlugin {
     /// [`SsgError`] variants so external callers (CLI commands,
     /// integration tests, custom pipelines) can react
     /// appropriately.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::llm::{LlmConfig, LlmPlugin};
+    ///
+    /// // No Ollama running ⇒ deterministic transport error.
+    /// let cfg = LlmConfig {
+    ///     endpoint: "http://127.0.0.1:1".into(),
+    ///     ..LlmConfig::default()
+    /// };
+    /// let plugin = LlmPlugin::new(cfg);
+    /// assert!(plugin.query("hi").is_err());
+    /// ```
     ///
     /// # Errors
     ///

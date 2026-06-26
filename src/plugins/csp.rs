@@ -39,6 +39,15 @@ pub const DEFAULT_CSP_POLICY: &str = "default-src 'self'; script-src 'self'; sty
 /// signature is intentionally a borrowed `&'static str` so callers can
 /// pass it directly into `format!` / `write!` without an extra
 /// allocation.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::computed_policy;
+///
+/// let policy = computed_policy();
+/// assert!(policy.contains("default-src"));
+/// ```
 #[must_use]
 pub const fn computed_policy() -> &'static str {
     DEFAULT_CSP_POLICY
@@ -70,6 +79,16 @@ pub struct CspPlugin;
 
 impl CspPlugin {
     /// Creates a new `CspPlugin`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::csp::CspPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = CspPlugin::new();
+    /// assert_eq!(p.name(), "csp");
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self
@@ -335,6 +354,16 @@ fn remove_unsafe_inline_from_csp(html: &str) -> String {
 /// If no `<head>` element exists in the input, the function returns
 /// the input verbatim — this matches the convention used by the
 /// rest of the SSG HTML post-processors (no implicit head injection).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::inject_csp_meta;
+///
+/// let html = "<html><head><title>t</title></head></html>";
+/// let out = inject_csp_meta(html, "default-src 'self'");
+/// assert!(out.contains("Content-Security-Policy"));
+/// ```
 ///
 /// # Errors
 ///

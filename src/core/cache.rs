@@ -70,6 +70,19 @@ impl BuildCache {
     /// If the file does not exist a fresh, empty cache is returned.
     /// Any other I/O or parse error is propagated.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cache_path = dir.path().join(".ssg-cache.json");
+    /// // Loading a missing path returns a fresh, empty cache.
+    /// let cache = BuildCache::load(&cache_path).unwrap();
+    /// assert!(cache.is_empty());
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns an error if the file exists but cannot be read or
@@ -102,6 +115,16 @@ impl BuildCache {
     }
 
     /// Create a new empty cache that will be written to `cache_path`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use std::path::Path;
+    ///
+    /// let cache = BuildCache::new(Path::new(".ssg-cache.json"));
+    /// assert_eq!(cache.len(), 0);
+    /// ```
     #[must_use]
     pub fn new(cache_path: &Path) -> Self {
         Self {
@@ -111,6 +134,18 @@ impl BuildCache {
     }
 
     /// Persist the current fingerprint map to the cache file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cache = BuildCache::new(&dir.path().join("cache.json"));
+    /// cache.save().unwrap();
+    /// assert!(dir.path().join("cache.json").exists());
+    /// ```
     ///
     /// # Errors
     ///
@@ -184,6 +219,23 @@ impl BuildCache {
     ///
     /// The returned paths are **absolute**.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let content = dir.path().join("content");
+    /// fs::create_dir(&content).unwrap();
+    /// fs::write(content.join("a.md"), "hello").unwrap();
+    /// let cache = BuildCache::new(&dir.path().join("cache.json"));
+    /// // Every file is "changed" against an empty cache.
+    /// let changed = cache.changed_files(&content).unwrap();
+    /// assert_eq!(changed.len(), 1);
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns an error if `content_dir` cannot be read or individual
@@ -215,6 +267,22 @@ impl BuildCache {
     /// Call this after a successful build so the next invocation of
     /// [`changed_files`](Self::changed_files) reflects the new state.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let content = dir.path().join("content");
+    /// fs::create_dir(&content).unwrap();
+    /// fs::write(content.join("a.md"), "hi").unwrap();
+    /// let mut cache = BuildCache::new(&dir.path().join("cache.json"));
+    /// cache.update(&content).unwrap();
+    /// assert_eq!(cache.len(), 1);
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns an error if files cannot be read.
@@ -233,12 +301,32 @@ impl BuildCache {
     }
 
     /// Return the number of entries currently in the fingerprint map.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use std::path::Path;
+    ///
+    /// let cache = BuildCache::new(Path::new("cache.json"));
+    /// assert_eq!(cache.len(), 0);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.fingerprints.len()
     }
 
     /// Return `true` if the fingerprint map is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    /// use std::path::Path;
+    ///
+    /// let cache = BuildCache::new(Path::new("cache.json"));
+    /// assert!(cache.is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.fingerprints.is_empty()
@@ -246,6 +334,14 @@ impl BuildCache {
 
     /// Return the path to the default cache file relative to the
     /// project root.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cache::BuildCache;
+    ///
+    /// assert_eq!(BuildCache::default_path(), ".ssg-cache.json");
+    /// ```
     #[must_use]
     pub const fn default_path() -> &'static str {
         DEFAULT_CACHE_FILE

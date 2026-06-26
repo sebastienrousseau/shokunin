@@ -28,6 +28,16 @@ impl DraftPlugin {
     /// Creates a new `DraftPlugin`.
     ///
     /// If `include_drafts` is true, draft files are left in place.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::drafts::DraftPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = DraftPlugin::new(false);
+    /// assert_eq!(p.name(), "drafts");
+    /// ```
     #[must_use]
     pub const fn new(include_drafts: bool) -> Self {
         Self { include_drafts }

@@ -33,6 +33,16 @@ impl Default for IslandPlugin {
 
 impl IslandPlugin {
     /// Creates a new `IslandPlugin`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::islands::IslandPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = IslandPlugin::new();
+    /// assert_eq!(p.name(), "islands");
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self

@@ -171,6 +171,17 @@ struct RawField {
 ///
 /// Returns an empty `Vec` if the file does not exist — schemas are
 /// opt-in.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::load_schemas;
+/// use std::path::Path;
+///
+/// // Missing file ⇒ empty Vec, never an error.
+/// let schemas = load_schemas(Path::new("./does-not-exist.toml")).unwrap();
+/// assert!(schemas.is_empty());
+/// ```
 pub fn load_schemas(path: &Path) -> Result<Vec<ContentSchema>> {
     if !path.exists() {
         return Ok(Vec::new());
@@ -184,6 +195,23 @@ pub fn load_schemas(path: &Path) -> Result<Vec<ContentSchema>> {
 }
 
 /// Parses the TOML text of a schema file into [`ContentSchema`] values.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::parse_schemas;
+///
+/// let toml = r#"
+/// [[schemas]]
+/// name = "post"
+/// fields = [
+///   { name = "title", type = "string", required = true },
+/// ]
+/// "#;
+/// let schemas = parse_schemas(toml).unwrap();
+/// assert_eq!(schemas.len(), 1);
+/// assert_eq!(schemas[0].name, "post");
+/// ```
 pub fn parse_schemas(toml_text: &str) -> Result<Vec<ContentSchema>> {
     let raw: SchemaFile = toml::from_str(toml_text)
         .context("failed to parse content.schema.toml")?;
@@ -244,6 +272,26 @@ impl fmt::Display for ValidationError {
 ///
 /// Returns a list of errors (empty on success). `file_path` and
 /// `fm_start_line` are used only for error reporting.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::{parse_schemas, validate_frontmatter};
+/// use std::collections::HashMap;
+/// use std::path::Path;
+///
+/// let schemas = parse_schemas(r#"
+/// [[schemas]]
+/// name = "post"
+/// fields = [
+///   { name = "title", type = "string", required = true },
+/// ]
+/// "#).unwrap();
+/// let mut fm = HashMap::new();
+/// fm.insert("title".to_string(), "Hello".to_string());
+/// let errs = validate_frontmatter(&fm, &schemas[0], Path::new("a.md"), 1);
+/// assert!(errs.is_empty());
+/// ```
 #[must_use]
 pub fn validate_frontmatter(
     fields: &HashMap<String, String>,
@@ -396,6 +444,18 @@ fn fm_value_to_string(value: &frontmatter_gen::Value) -> String {
 /// frontmatter. Files without the field are silently skipped.
 ///
 /// Returns all validation errors found across all files.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::validate_content_dir;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// // With no schemas to enforce, the result is always empty.
+/// let errs = validate_content_dir(dir.path(), &[]).unwrap();
+/// assert!(errs.is_empty());
+/// ```
 pub fn validate_content_dir(
     content_dir: &Path,
     schemas: &[ContentSchema],
@@ -505,6 +565,17 @@ impl Plugin for ContentValidationPlugin {
 ///
 /// Returns `Ok(())` when all files pass, or an error listing every
 /// validation failure.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::validate_only;
+/// use tempfile::tempdir;
+///
+/// // No schema file ⇒ trivial pass.
+/// let dir = tempdir().unwrap();
+/// assert!(validate_only(dir.path()).is_ok());
+/// ```
 pub fn validate_only(content_dir: &Path) -> Result<()> {
     let schema_path = content_dir.join("content.schema.toml");
     validate_with_schema(content_dir, &schema_path)
@@ -517,6 +588,17 @@ pub fn validate_only(content_dir: &Path) -> Result<()> {
 /// — for example, because `staticdatagen::compile` reads every file in
 /// `content_dir` and would fail to parse a non-Markdown schema file as
 /// content.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content::validate_with_schema;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// // Missing schema path is treated as "nothing to enforce".
+/// assert!(validate_with_schema(dir.path(), &dir.path().join("schema.toml")).is_ok());
+/// ```
 ///
 /// # Errors
 /// Returns `Err` if the schema can't be loaded or any content file fails

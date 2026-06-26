@@ -9,6 +9,17 @@ use std::fs;
 use std::path::Path;
 
 /// Returns `true` if `s` looks like a valid HTTP(S) URL.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::is_valid_url;
+///
+/// assert!(is_valid_url("https://example.com"));
+/// assert!(is_valid_url("http://example.com:8080/path"));
+/// assert!(!is_valid_url("ftp://example.com"));
+/// assert!(!is_valid_url("http://localhost"));
+/// ```
 pub fn is_valid_url(s: &str) -> bool {
     let rest = if let Some(r) = s.strip_prefix("https://") {
         r

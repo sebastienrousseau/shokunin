@@ -125,16 +125,16 @@ impl From<std::io::Error> for ProcessError {
 ///
 /// - Returns `ProcessError::MissingArgument` if the specified argument is not provided.
 ///
-/// # Example
+/// # Examples
 ///
-/// ```rust,no_run
-/// # use clap::{ArgMatches, Command};
-/// # use ssg::process::get_argument;
-/// let matches = Command::new("test")
-///     .arg(clap::arg!(--"config" <CONFIG> "Specifies the configuration file"))
-///     .get_matches_from(vec!["test", "--config", "path/to/config.toml"]);
-/// let config_path = get_argument(&matches, "config").expect("Argument not found");
-/// println!("Config path: {}", config_path);
+/// ```rust
+/// use clap::{Arg, Command};
+/// use ssg::process::get_argument;
+///
+/// let matches = Command::new("t")
+///     .arg(Arg::new("name").long("name"))
+///     .get_matches_from(vec!["t", "--name", "value"]);
+/// assert_eq!(get_argument(&matches, "name").unwrap(), "value");
 /// ```
 pub fn get_argument(
     matches: &ArgMatches,
@@ -161,13 +161,16 @@ pub fn get_argument(
 ///
 /// - Returns `ProcessError::DirectoryCreation` if the directory cannot be created due to permissions or other issues.
 ///
-/// # Example
+/// # Examples
 ///
-/// ```rust,no_run
-/// # use std::path::Path;
-/// # use ssg::process::ensure_directory;
-/// let path = Path::new("path/to/output");
-/// ensure_directory(path, "output").expect("Failed to ensure directory exists");
+/// ```rust
+/// use ssg::process::ensure_directory;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let new = dir.path().join("created");
+/// ensure_directory(&new, "output").unwrap();
+/// assert!(new.is_dir());
 /// ```
 pub fn ensure_directory(
     path: &Path,
@@ -249,6 +252,18 @@ fn internal_compile(
 /// - Returns `ProcessError::DirectoryCreation` if a directory cannot be created.
 /// - Returns `ProcessError::CompilationError` if the site fails to compile.
 ///
+/// # Examples
+///
+/// ```rust
+/// use clap::{Arg, Command};
+/// use ssg::process::args;
+///
+/// // Missing required arguments ⇒ `MissingArgument` error.
+/// let matches = Command::new("t")
+///     .arg(Arg::new("content").long("content"))
+///     .get_matches_from(vec!["t"]);
+/// assert!(args(&matches).is_err());
+/// ```
 pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     // Get required paths
     let content_dir = get_argument(matches, "content")?;

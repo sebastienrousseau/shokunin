@@ -51,12 +51,37 @@ pub struct JsonLdPlugin {
 
 impl JsonLdPlugin {
     /// Creates a new `JsonLdPlugin` with the given configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::seo::{JsonLdConfig, JsonLdPlugin};
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let cfg = JsonLdConfig {
+    ///     base_url: "https://example.com".into(),
+    ///     org_name: "Demo".into(),
+    ///     breadcrumbs: true,
+    /// };
+    /// let p = JsonLdPlugin::new(cfg);
+    /// assert_eq!(p.name(), "json-ld");
+    /// ```
     #[must_use]
     pub const fn new(config: JsonLdConfig) -> Self {
         Self { config }
     }
 
     /// Creates a `JsonLdPlugin` from site config values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::seo::JsonLdPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = JsonLdPlugin::from_site("https://example.com", "Demo");
+    /// assert_eq!(p.name(), "json-ld");
+    /// ```
     #[must_use]
     pub fn from_site(base_url: &str, site_name: &str) -> Self {
         Self {
@@ -451,6 +476,17 @@ impl std::fmt::Display for JsonLdValidationError {
 /// required-field check. Unknown `@type` values are treated as
 /// pass-through (no required fields enforced) so user-extended
 /// schemas don't trigger false negatives.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::seo::validate_jsonld;
+///
+/// let html = r#"<script type="application/ld+json">
+/// {"@type":"Article","headline":"x","datePublished":"2024","author":"y","image":"i"}
+/// </script>"#;
+/// assert!(validate_jsonld(html).is_empty());
+/// ```
 #[must_use]
 pub fn validate_jsonld(html: &str) -> Vec<JsonLdValidationError> {
     let mut errors = Vec::new();

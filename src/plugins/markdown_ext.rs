@@ -127,6 +127,16 @@ fn split_frontmatter(input: &str) -> (&str, &str) {
 
 /// Expands all GFM constructs in `input`, returning a new string.
 /// Also prefixes local images with a CDN URL if `cdn_prefix` is set.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::markdown_ext::expand_gfm;
+///
+/// // Without GFM-specific syntax the input is preserved verbatim.
+/// let out = expand_gfm("plain text\n", None);
+/// assert_eq!(out, "plain text\n");
+/// ```
 #[must_use]
 pub fn expand_gfm(input: &str, cdn_prefix: Option<&str>) -> String {
     let (frontmatter, body_raw) = split_frontmatter(input);

@@ -24,6 +24,22 @@ use crate::MAX_DIR_DEPTH;
 ///
 /// These sidecars are consumed by `TeraPlugin`, `JsonLdPlugin`, and
 /// other plugins that need parsed frontmatter after compilation.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::frontmatter::emit_sidecars;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let content = dir.path().join("content");
+/// let sidecar = dir.path().join("sidecar");
+/// fs::create_dir(&content).unwrap();
+/// fs::write(content.join("a.md"), "---\ntitle: Hi\n---\nBody").unwrap();
+/// let n = emit_sidecars(&content, &sidecar).unwrap();
+/// assert_eq!(n, 1);
+/// ```
 pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
     let md_files = collect_md_files(content_dir)?;
     let mut count = 0;
@@ -70,6 +86,18 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
 ///
 /// Looks for `<stem>.meta.json` alongside the HTML file.
 /// Returns `None` if the sidecar does not exist.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::frontmatter::read_sidecar;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let html = dir.path().join("page.html");
+/// // No sidecar present ⇒ Ok(None).
+/// assert!(read_sidecar(&html).unwrap().is_none());
+/// ```
 pub fn read_sidecar(
     html_path: &Path,
 ) -> Result<Option<HashMap<String, serde_json::Value>>> {
@@ -88,6 +116,20 @@ pub fn read_sidecar(
 
 /// Reads a `.meta.json` sidecar matching an HTML path in the site dir,
 /// looking up by the corresponding content-relative path.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::frontmatter::read_sidecar_for_html;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let site = dir.path().join("site");
+/// let sidecar = dir.path().join("sidecar");
+/// let html = site.join("page.html");
+/// // No sidecar dir or file ⇒ Ok(None).
+/// assert!(read_sidecar_for_html(&html, &site, &sidecar).unwrap().is_none());
+/// ```
 pub fn read_sidecar_for_html(
     html_path: &Path,
     site_dir: &Path,

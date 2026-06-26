@@ -37,6 +37,15 @@
 /// # Returns
 ///
 /// `true` if a subscriber was installed; `false` otherwise.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::otel::init_if_enabled;
+///
+/// // Disabled ⇒ always returns false, never installs a subscriber.
+/// assert!(!init_if_enabled(false));
+/// ```
 pub fn init_if_enabled(enabled: bool) -> bool {
     if !enabled {
         return false;

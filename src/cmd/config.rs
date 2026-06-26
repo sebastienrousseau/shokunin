@@ -91,6 +91,16 @@ impl EdgeHeadersConfig {
     /// Returns `true` when at least one valid target is configured —
     /// the registration site in `register_default_plugins` uses this to
     /// decide whether to register the emitter.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::EdgeHeadersConfig;
+    ///
+    /// let cfg = EdgeHeadersConfig::default();
+    /// // No targets configured by default.
+    /// assert!(!cfg.is_enabled());
+    /// ```
     #[must_use]
     pub const fn is_enabled(&self) -> bool {
         !self.targets.is_empty()
@@ -292,7 +302,21 @@ impl SsgConfig {
         Ok(config)
     }
 
-    /// Creates a new `SsgConfig` instance from a TOML file.
+    /// Validates the configuration's URLs and paths.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::default();
+    /// assert!(cfg.validate().is_ok());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CliError::ValidationError`] when `site_name` is empty,
+    /// or path/URL safety checks fail.
     pub fn validate(&self) -> Result<(), CliError> {
         debug!("Validating config: {self:?}");
 
@@ -318,7 +342,19 @@ impl SsgConfig {
         Ok(())
     }
 
-    /// Creates a new `SsgConfig` instance from a TOML file.
+    /// Returns a fresh [`SsgConfigBuilder`] for fluent construction.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .site_name("My Site".into())
+    ///     .build()
+    ///     .expect("valid config");
+    /// assert_eq!(cfg.site_name, "My Site");
+    /// ```
     #[must_use]
     pub fn builder() -> SsgConfigBuilder {
         SsgConfigBuilder::default()
@@ -352,84 +388,239 @@ pub struct SsgConfigBuilder {
 /// ```
 impl SsgConfigBuilder {
     /// Sets the site name for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().site_name("Hello".into()).build().unwrap();
+    /// assert_eq!(cfg.site_name, "Hello");
+    /// ```
     #[must_use]
     pub fn site_name(mut self, name: String) -> Self {
         self.config.site_name = name;
         self
     }
     /// Sets the base URL for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .base_url("https://example.com".into())
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.base_url, "https://example.com");
+    /// ```
     #[must_use]
     pub fn base_url(mut self, url: String) -> Self {
         self.config.base_url = url;
         self
     }
     /// Sets the content directory for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use std::path::PathBuf;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .content_dir(PathBuf::from("docs"))
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.content_dir, PathBuf::from("docs"));
+    /// ```
     #[must_use]
     pub fn content_dir(mut self, dir: PathBuf) -> Self {
         self.config.content_dir = dir;
         self
     }
     /// Sets the output directory for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use std::path::PathBuf;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .output_dir(PathBuf::from("dist"))
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.output_dir, PathBuf::from("dist"));
+    /// ```
     #[must_use]
     pub fn output_dir(mut self, dir: PathBuf) -> Self {
         self.config.output_dir = dir;
         self
     }
     /// Sets the template directory for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use std::path::PathBuf;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .template_dir(PathBuf::from("tpl"))
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.template_dir, PathBuf::from("tpl"));
+    /// ```
     #[must_use]
     pub fn template_dir(mut self, dir: PathBuf) -> Self {
         self.config.template_dir = dir;
         self
     }
     /// Sets the optional development server directory for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use std::path::PathBuf;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .serve_dir(Some(PathBuf::from("public")))
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.serve_dir, Some(PathBuf::from("public")));
+    /// ```
     #[must_use]
     pub fn serve_dir(mut self, dir: Option<PathBuf>) -> Self {
         self.config.serve_dir = dir;
         self
     }
     /// Sets the site title for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().site_title("Title".into()).build().unwrap();
+    /// assert_eq!(cfg.site_title, "Title");
+    /// ```
     #[must_use]
     pub fn site_title(mut self, title: String) -> Self {
         self.config.site_title = title;
         self
     }
     /// Sets the site description for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().site_description("Demo".into()).build().unwrap();
+    /// assert_eq!(cfg.site_description, "Demo");
+    /// ```
     #[must_use]
     pub fn site_description(mut self, desc: String) -> Self {
         self.config.site_description = desc;
         self
     }
     /// Sets the language code for the configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().language("fr-FR".into()).build().unwrap();
+    /// assert_eq!(cfg.language, "fr-FR");
+    /// ```
     #[must_use]
     pub fn language(mut self, lang: String) -> Self {
         self.config.language = lang;
         self
     }
     /// Sets the i18n configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().i18n(None).build().unwrap();
+    /// assert!(cfg.i18n.is_none());
+    /// ```
     #[must_use]
     pub fn i18n(mut self, i18n: Option<crate::i18n::I18nConfig>) -> Self {
         self.config.i18n = i18n;
         self
     }
     /// Sets the CDN prefix configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .cdn_prefix(Some("https://cdn.example.com".into()))
+    ///     .build()
+    ///     .unwrap();
+    /// assert!(cfg.cdn_prefix.is_some());
+    /// ```
     #[must_use]
     pub fn cdn_prefix(mut self, prefix: Option<String>) -> Self {
         self.config.cdn_prefix = prefix;
         self
     }
     /// Sets the edge-headers emitter configuration (issue #550).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::{EdgeHeadersConfig, SsgConfig};
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .edge_headers(EdgeHeadersConfig::default())
+    ///     .build()
+    ///     .unwrap();
+    /// assert!(!cfg.edge_headers.is_enabled());
+    /// ```
     #[must_use]
     pub fn edge_headers(mut self, edge: EdgeHeadersConfig) -> Self {
         self.config.edge_headers = edge;
         self
     }
     /// Enables the View Transitions + lazy-nav client (issue #547).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().transitions(true).build().unwrap();
+    /// assert!(cfg.transitions);
+    /// ```
     #[must_use]
     pub const fn transitions(mut self, enabled: bool) -> Self {
         self.config.transitions = enabled;
         self
     }
     /// Builds the final `SsgConfig` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder().build().expect("default is valid");
+    /// assert!(!cfg.site_name.is_empty());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CliError::ValidationError`] when [`SsgConfig::validate`] fails.
     pub fn build(self) -> Result<SsgConfig, CliError> {
         self.config.validate()?;
         Ok(self.config)

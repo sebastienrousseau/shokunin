@@ -113,6 +113,17 @@ pub struct I18nPlugin {
 
 impl I18nPlugin {
     /// Creates a new `I18nPlugin` with the given i18n configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::i18n::{I18nConfig, I18nPlugin};
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let cfg = I18nConfig::default();
+    /// let p = I18nPlugin::new(cfg);
+    /// assert_eq!(p.name(), "i18n");
+    /// ```
     #[must_use]
     pub fn new(config: I18nConfig) -> Self {
         Self {
@@ -758,6 +769,16 @@ fn generate_locale_sitemaps(
 ///
 /// Example: "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
 /// Returns: `["fr-CH", "fr", "en", "de", "*"]`
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::i18n::parse_accept_language;
+///
+/// let locales = parse_accept_language("fr;q=0.9, en");
+/// assert_eq!(locales[0], "en");
+/// assert_eq!(locales[1], "fr");
+/// ```
 #[must_use]
 pub fn parse_accept_language(header: &str) -> Vec<String> {
     if header.trim().is_empty() {
@@ -803,6 +824,16 @@ pub fn parse_accept_language(header: &str) -> Vec<String> {
 /// 1. Exact match (e.g., "fr-CH" matches "fr-CH")
 /// 2. Prefix match (e.g., "fr-CH" matches "fr")
 /// 3. Default locale fallback
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::i18n::negotiate_locale;
+///
+/// let pref = vec!["fr-CH".to_string(), "en".to_string()];
+/// let avail = vec!["en".to_string(), "fr".to_string()];
+/// assert_eq!(negotiate_locale(&pref, &avail, "en"), "fr");
+/// ```
 #[must_use]
 pub fn negotiate_locale(
     preferred: &[String],

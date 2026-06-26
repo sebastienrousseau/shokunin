@@ -31,6 +31,20 @@ use std::{
 ///
 /// Sorted output, no recursion (uses an explicit stack), no depth or
 /// count bounds. Returns `Ok(Vec::new())` if `dir` does not exist.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::walk::walk_files;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.md"), "").unwrap();
+/// fs::write(dir.path().join("b.txt"), "").unwrap();
+/// let mds = walk_files(dir.path(), "md").unwrap();
+/// assert_eq!(mds.len(), 1);
+/// ```
 pub fn walk_files(
     dir: &Path,
     extension: &str,
@@ -60,6 +74,20 @@ pub fn walk_files(
 /// Extension matching is **case-insensitive** so `IMG.JPG` and
 /// `img.jpg` are both collected when `extensions` contains `"jpg"`.
 /// Sorted output.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::walk::walk_files_multi;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.jpg"), "").unwrap();
+/// fs::write(dir.path().join("B.PNG"), "").unwrap();
+/// let imgs = walk_files_multi(dir.path(), &["jpg", "png"]).unwrap();
+/// assert_eq!(imgs.len(), 2);
+/// ```
 pub fn walk_files_multi(
     dir: &Path,
     extensions: &[&str],
@@ -92,6 +120,19 @@ pub fn walk_files_multi(
 /// Subdirectories beyond `max_depth` are silently skipped. Used by
 /// content walkers that respect [`crate::MAX_DIR_DEPTH`] as a guard
 /// against pathological symlink loops.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::walk::walk_files_bounded_depth;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.md"), "").unwrap();
+/// let v = walk_files_bounded_depth(dir.path(), "md", 4).unwrap();
+/// assert_eq!(v.len(), 1);
+/// ```
 pub fn walk_files_bounded_depth(
     dir: &Path,
     extension: &str,
@@ -123,6 +164,20 @@ pub fn walk_files_bounded_depth(
 ///
 /// Used by `livereload` (50 000 file cap) and similar fast-path
 /// walkers that need a bounded latency upper bound.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::walk::walk_files_bounded_count;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.md"), "").unwrap();
+/// fs::write(dir.path().join("b.md"), "").unwrap();
+/// let v = walk_files_bounded_count(dir.path(), "md", 1).unwrap();
+/// assert_eq!(v.len(), 1);
+/// ```
 pub fn walk_files_bounded_count(
     dir: &Path,
     extension: &str,

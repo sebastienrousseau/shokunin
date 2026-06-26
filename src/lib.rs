@@ -58,6 +58,18 @@ use crate::cmd::{Cli, CliInvocation, SsgConfig};
 use log::info;
 
 /// Returns the current time as an ISO 8601 UTC string.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::now_iso;
+///
+/// let stamp = now_iso();
+/// // Format is YYYY-MM-DDTHH:MM:SSZ — always 20 chars.
+/// assert_eq!(stamp.len(), 20);
+/// assert!(stamp.ends_with('Z'));
+/// assert_eq!(&stamp[4..5], "-");
+/// ```
 #[must_use]
 #[allow(clippy::many_single_char_names)]
 pub fn now_iso() -> String {
@@ -198,12 +210,39 @@ pub struct Paths {
 
 impl Paths {
     /// Creates a new builder for configuring Paths
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::Paths;
+    ///
+    /// let paths = Paths::builder()
+    ///     .site("out")
+    ///     .content("docs")
+    ///     .build_dir("tmp")
+    ///     .template("tpl")
+    ///     .build()
+    ///     .expect("valid paths");
+    /// assert_eq!(paths.site.to_str(), Some("out"));
+    /// ```
     #[must_use]
     pub fn builder() -> PathsBuilder {
         PathsBuilder::default()
     }
 
     /// Creates paths with default directories
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::Paths;
+    ///
+    /// let paths = Paths::default_paths();
+    /// assert_eq!(paths.site.to_str(), Some("public"));
+    /// assert_eq!(paths.content.to_str(), Some("content"));
+    /// assert_eq!(paths.build.to_str(), Some("build"));
+    /// assert_eq!(paths.template.to_str(), Some("templates"));
+    /// ```
     #[must_use]
     pub fn default_paths() -> Self {
         Self {
@@ -217,6 +256,30 @@ impl Paths {
 // Modify the validate method in Paths impl
 impl Paths {
     /// Validates all paths in the configuration
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::Paths;
+    /// use std::path::PathBuf;
+    ///
+    /// let good = Paths::default_paths();
+    /// assert!(good.validate().is_ok());
+    ///
+    /// let bad = Paths {
+    ///     site: PathBuf::from("../escape"),
+    ///     content: PathBuf::from("content"),
+    ///     build: PathBuf::from("build"),
+    ///     template: PathBuf::from("templates"),
+    /// };
+    /// assert!(bad.validate().is_err());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SsgError::PathTraversal`] if any path contains `..`,
+    /// [`SsgError::Validation`] for malformed paths, or
+    /// [`SsgError::SymlinkForbidden`] if a path points at a symlink.
     pub fn validate(&self) -> Result<(), SsgError> {
         // Check for path traversal and other security concerns
         for (name, path) in [
@@ -271,30 +334,79 @@ pub struct PathsBuilder {
 
 impl PathsBuilder {
     /// Sets the site output directory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let b = PathsBuilder::default().site("dist");
+    /// assert_eq!(b.site.as_deref().and_then(|p| p.to_str()), Some("dist"));
+    /// ```
     pub fn site<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.site = Some(path.into());
         self
     }
 
     /// Sets the content directory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let b = PathsBuilder::default().content("posts");
+    /// assert_eq!(b.content.as_deref().and_then(|p| p.to_str()), Some("posts"));
+    /// ```
     pub fn content<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.content = Some(path.into());
         self
     }
 
     /// Sets the build directory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let b = PathsBuilder::default().build_dir("work");
+    /// assert_eq!(b.build.as_deref().and_then(|p| p.to_str()), Some("work"));
+    /// ```
     pub fn build_dir<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.build = Some(path.into());
         self
     }
 
     /// Sets the template directory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let b = PathsBuilder::default().template("layouts");
+    /// assert_eq!(b.template.as_deref().and_then(|p| p.to_str()), Some("layouts"));
+    /// ```
     pub fn template<P: Into<PathBuf>>(mut self, path: P) -> Self {
         self.template = Some(path.into());
         self
     }
 
     /// Sets all paths relative to a base directory
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let paths = PathsBuilder::default()
+    ///     .relative_to("site")
+    ///     .build()
+    ///     .expect("valid");
+    /// assert!(paths.site.ends_with("public"));
+    /// assert!(paths.content.ends_with("content"));
+    /// ```
     pub fn relative_to<P: AsRef<Path>>(self, base: P) -> Self {
         let base = base.as_ref();
         self.site(base.join("public"))
@@ -308,6 +420,15 @@ impl PathsBuilder {
     /// # Returns
     ///
     /// * `Result<Paths>` - The configured paths if valid
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::PathsBuilder;
+    ///
+    /// let paths = PathsBuilder::default().build().expect("defaults valid");
+    /// assert_eq!(paths.site.to_str(), Some("public"));
+    /// ```
     ///
     /// # Errors
     ///
@@ -419,6 +540,16 @@ pub fn create_directories(paths: &Paths) -> Result<(), SsgError> {
 /// either a subcommand handler (issue #527) or the legacy flag-driven
 /// pipeline. This function blocks indefinitely while the dev server is
 /// running.
+///
+/// # Examples
+///
+/// ```no_run
+/// // `run()` reads from real argv and may start a dev server, so it's
+/// // only ever called from `main()`. The signature is `Result<(), _>`.
+/// fn main() -> Result<(), ssg::SsgError> {
+///     ssg::run()
+/// }
+/// ```
 pub fn run() -> Result<(), SsgError> {
     // Parse argv via the unified subcommand-aware dispatcher. clap
     // short-circuits `--help` / `--version` inside this call so the

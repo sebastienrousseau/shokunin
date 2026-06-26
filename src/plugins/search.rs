@@ -55,6 +55,18 @@ impl SearchIndex {
     ///
     /// Walks the directory recursively, extracts content from each
     /// `.html` file, and returns the populated index.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchIndex;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// // Empty dir ⇒ empty index, never an error.
+    /// let idx = SearchIndex::build(dir.path()).unwrap();
+    /// assert!(idx.is_empty());
+    /// ```
     pub fn build(site_dir: &Path) -> Result<Self, SsgError> {
         let html_files = collect_html_files(site_dir)?;
         let capped: Vec<_> =
@@ -88,6 +100,18 @@ impl SearchIndex {
     }
 
     /// Write the index to `search-index.json` in the given directory.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchIndex;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let idx = SearchIndex::build(dir.path()).unwrap();
+    /// idx.write(dir.path()).unwrap();
+    /// assert!(dir.path().join("search-index.json").exists());
+    /// ```
     pub fn write(&self, site_dir: &Path) -> Result<(), SsgError> {
         let json = serde_json::to_string(self).map_err(|e| SsgError::Io {
             path: site_dir.join("search-index.json"),
@@ -99,12 +123,34 @@ impl SearchIndex {
     }
 
     /// Number of indexed pages.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchIndex;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let idx = SearchIndex::build(dir.path()).unwrap();
+    /// assert_eq!(idx.len(), 0);
+    /// ```
     #[must_use]
     pub const fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Returns true if the index has no entries.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchIndex;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let idx = SearchIndex::build(dir.path()).unwrap();
+    /// assert!(idx.is_empty());
+    /// ```
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
@@ -185,12 +231,30 @@ const LOCALE_TABLE: &[(&str, LocaleEntry)] = &[
 
 impl SearchLabels {
     /// English (default) labels.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchLabels;
+    ///
+    /// let lbl = SearchLabels::english();
+    /// assert_eq!(lbl.button_text, "Search");
+    /// ```
     #[must_use]
     pub fn english() -> Self {
         Self::for_locale("en")
     }
 
     /// French labels.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchLabels;
+    ///
+    /// let lbl = SearchLabels::french();
+    /// assert_eq!(lbl.button_text, "Rechercher");
+    /// ```
     #[must_use]
     pub fn french() -> Self {
         Self::for_locale("fr")
@@ -200,6 +264,18 @@ impl SearchLabels {
     ///
     /// Lookup is case-insensitive. Falls back to English if the code is not
     /// in the bundled table.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::search::SearchLabels;
+    ///
+    /// let de = SearchLabels::for_locale("de");
+    /// assert_eq!(de.button_text, "Suchen");
+    /// // Unknown locale ⇒ English fallback.
+    /// let xx = SearchLabels::for_locale("xx");
+    /// assert_eq!(xx.button_text, "Search");
+    /// ```
     #[must_use]
     pub fn for_locale(code: &str) -> Self {
         let key = code.to_ascii_lowercase();
@@ -296,6 +372,16 @@ pub struct LocalizedSearchPlugin {
 
 impl LocalizedSearchPlugin {
     /// Create a new localized search plugin with the given labels.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::Plugin;
+    /// use ssg::search::{LocalizedSearchPlugin, SearchLabels};
+    ///
+    /// let p = LocalizedSearchPlugin::new(SearchLabels::english());
+    /// assert_eq!(p.name(), "search");
+    /// ```
     #[must_use]
     pub const fn new(labels: SearchLabels) -> Self {
         Self { labels }

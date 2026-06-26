@@ -77,6 +77,15 @@ const fn default_version() -> u32 {
 
 impl DepGraph {
     /// Creates an empty dependency graph at the current schema version.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    ///
+    /// let g = DepGraph::new();
+    /// assert_eq!(g.page_count(), 0);
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -92,6 +101,18 @@ impl DepGraph {
     /// Returns an empty graph if the file is missing, unreadable,
     /// malformed, or written by an incompatible schema version. The
     /// poisoning-resistant return matches AC6.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// // Missing cache file ⇒ empty graph (no panic, no error).
+    /// let g = DepGraph::load(dir.path());
+    /// assert_eq!(g.page_count(), 0);
+    /// ```
     #[must_use]
     pub fn load(cache_root: &Path) -> Self {
         let path = cache_root.join(DEP_GRAPH_FILE);
@@ -120,6 +141,18 @@ impl DepGraph {
     /// Persists the graph atomically: writes `<file>.tmp` then renames.
     /// POSIX rename is atomic on the same filesystem.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let g = DepGraph::new();
+    /// g.save(dir.path()).unwrap();
+    /// assert!(dir.path().join("depgraph.json").exists());
+    /// ```
+    ///
     /// # Errors
     /// Returns the underlying I/O failure if the cache root can't be
     /// created or the temp file can't be written / renamed.
@@ -146,6 +179,17 @@ impl DepGraph {
     }
 
     /// Records that `consumer` depends on `dep`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("page.md"), Path::new("layout.html"));
+    /// assert!(g.deps_for(Path::new("page.md")).is_some());
+    /// ```
     pub fn add_dep(&mut self, consumer: &Path, dep: &Path) {
         let _ = self
             .deps
@@ -157,6 +201,17 @@ impl DepGraph {
     /// Records that `source` produces `output`. Used by the AC5
     /// delete-sweep to remove orphaned outputs when a source is
     /// removed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_output(Path::new("a.md"), Path::new("a.html"));
+    /// assert!(g.outputs_for(Path::new("a.md")).is_some());
+    /// ```
     pub fn add_output(&mut self, source: &Path, output: &Path) {
         let _ = self
             .outputs
@@ -166,6 +221,21 @@ impl DepGraph {
     }
 
     /// Records the SHA-256 freshness key for `path` from a byte slice.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.record_hash(Path::new("a.md"), b"hello");
+    /// // Same content ⇒ no diff.
+    /// let mut current = HashMap::new();
+    /// current.insert(Path::new("a.md").to_path_buf(), DepGraph::sha256_hex(b"hello"));
+    /// assert!(g.diff(&current).is_empty());
+    /// ```
     pub fn record_hash(&mut self, path: &Path, content: &[u8]) {
         let _ = self
             .hashes
@@ -175,6 +245,22 @@ impl DepGraph {
     /// Records the SHA-256 of `path` by reading it from disk.
     /// Silently ignores missing files (the caller will catch the
     /// absence elsewhere — typically a delete that we want to record).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let p = dir.path().join("a.md");
+    /// fs::write(&p, "hi").unwrap();
+    /// let mut g = DepGraph::new();
+    /// g.record_hash_from_disk(&p);
+    /// // Missing files are silently ignored.
+    /// g.record_hash_from_disk(&dir.path().join("missing.md"));
+    /// ```
     pub fn record_hash_from_disk(&mut self, path: &Path) {
         if let Ok(bytes) = fs::read(path) {
             self.record_hash(path, &bytes);
@@ -183,6 +269,16 @@ impl DepGraph {
 
     /// Returns the SHA-256 hex string for `bytes`. Exposed so the
     /// `populate` helpers can hash files exactly once.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    ///
+    /// let hex = DepGraph::sha256_hex(b"");
+    /// // Empty string has a well-known SHA-256.
+    /// assert_eq!(hex, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    /// ```
     #[must_use]
     pub fn sha256_hex(bytes: &[u8]) -> String {
         let mut hasher = Sha256::new();
@@ -197,18 +293,52 @@ impl DepGraph {
     }
 
     /// Returns the direct dependencies recorded for `consumer`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("p.md"), Path::new("layout.html"));
+    /// assert_eq!(g.deps_for(Path::new("p.md")).map(|s| s.len()), Some(1));
+    /// assert!(g.deps_for(Path::new("none")).is_none());
+    /// ```
     #[must_use]
     pub fn deps_for(&self, consumer: &Path) -> Option<&HashSet<PathBuf>> {
         self.deps.get(consumer)
     }
 
     /// Returns the recorded outputs for `source`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_output(Path::new("a.md"), Path::new("a.html"));
+    /// assert_eq!(g.outputs_for(Path::new("a.md")).map(|s| s.len()), Some(1));
+    /// ```
     #[must_use]
     pub fn outputs_for(&self, source: &Path) -> Option<&HashSet<PathBuf>> {
         self.outputs.get(source)
     }
 
     /// Returns every tracked source path (the keys of the output map).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_output(Path::new("a.md"), Path::new("a.html"));
+    /// assert_eq!(g.tracked_sources(), vec![Path::new("a.md").to_path_buf()]);
+    /// ```
     #[must_use]
     pub fn tracked_sources(&self) -> Vec<PathBuf> {
         let mut v: Vec<PathBuf> = self.outputs.keys().cloned().collect();
@@ -217,6 +347,18 @@ impl DepGraph {
     }
 
     /// Returns the count of edge consumers (pages + intermediate deps).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// assert_eq!(g.page_count(), 0);
+    /// g.add_dep(Path::new("p.md"), Path::new("l.html"));
+    /// assert_eq!(g.page_count(), 1);
+    /// ```
     #[must_use]
     pub fn page_count(&self) -> usize {
         self.deps.len()
@@ -225,6 +367,18 @@ impl DepGraph {
     /// Removes every entry that references `path` as either a consumer
     /// or a dependency. Called by [`Self::diff`] when a source is
     /// deleted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("p.md"), Path::new("l.html"));
+    /// g.forget(Path::new("p.md"));
+    /// assert!(g.deps_for(Path::new("p.md")).is_none());
+    /// ```
     pub fn forget(&mut self, path: &Path) {
         let _ = self.deps.remove(path);
         let _ = self.outputs.remove(path);
@@ -235,6 +389,18 @@ impl DepGraph {
     }
 
     /// Clears the entire graph.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::Path;
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("p.md"), Path::new("l.html"));
+    /// g.clear();
+    /// assert_eq!(g.page_count(), 0);
+    /// ```
     pub fn clear(&mut self) {
         self.deps.clear();
         self.outputs.clear();
@@ -244,6 +410,19 @@ impl DepGraph {
     /// Returns every consumer reachable from any of `changed` via the
     /// reverse edge map (transitive closure, AC3). Sources whose own
     /// content changed are always included.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::{Path, PathBuf};
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("p.md"), Path::new("l.html"));
+    /// let changed = vec![PathBuf::from("l.html")];
+    /// // Changing the layout invalidates the page that consumes it.
+    /// assert!(g.invalidated(&changed).contains(&PathBuf::from("p.md")));
+    /// ```
     #[must_use]
     pub fn invalidated(&self, changed: &[PathBuf]) -> Vec<PathBuf> {
         let reverse = self.reverse_edges();
@@ -269,6 +448,19 @@ impl DepGraph {
     /// Returns the union of output paths for every invalidated source.
     /// Sources that don't appear in the output map (templates,
     /// partials, data files) contribute nothing.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::path::{Path, PathBuf};
+    ///
+    /// let mut g = DepGraph::new();
+    /// g.add_dep(Path::new("p.md"), Path::new("l.html"));
+    /// g.add_output(Path::new("p.md"), Path::new("p.html"));
+    /// let outs = g.invalidated_outputs(&[PathBuf::from("l.html")]);
+    /// assert_eq!(outs, vec![PathBuf::from("p.html")]);
+    /// ```
     #[must_use]
     pub fn invalidated_outputs(&self, changed: &[PathBuf]) -> Vec<PathBuf> {
         let mut out: HashSet<PathBuf> = HashSet::new();
@@ -306,6 +498,22 @@ impl DepGraph {
     ///   paths that weren't in the cache (new files).
     /// * `deleted` — paths the cache knew about that are absent from
     ///   `current`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::DepGraph;
+    /// use std::collections::HashMap;
+    /// use std::path::PathBuf;
+    ///
+    /// let g = DepGraph::new();
+    /// let mut current = HashMap::new();
+    /// current.insert(PathBuf::from("a.md"), DepGraph::sha256_hex(b"x"));
+    /// // Empty graph ⇒ everything in `current` looks new.
+    /// let d = g.diff(&current);
+    /// assert_eq!(d.changed, vec![PathBuf::from("a.md")]);
+    /// assert!(d.deleted.is_empty());
+    /// ```
     #[must_use]
     pub fn diff(&self, current: &HashMap<PathBuf, String>) -> Diff {
         let mut changed = Vec::new();
@@ -341,6 +549,15 @@ pub struct Diff {
 impl Diff {
     /// Returns `true` when nothing changed and nothing was deleted —
     /// the warm-cache zero-work fast path.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::depgraph::Diff;
+    ///
+    /// let d = Diff::default();
+    /// assert!(d.is_empty());
+    /// ```
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.changed.is_empty() && self.deleted.is_empty()
@@ -366,6 +583,25 @@ impl Diff {
 /// Self-edges (`page → page`) are always recorded so deleting a page
 /// invalidates its own output. Missing template files don't fault —
 /// the build will fail later with a friendlier message.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::depgraph::{DepGraph, populate};
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let content = dir.path().join("content");
+/// let templates = dir.path().join("templates");
+/// let build = dir.path().join("build");
+/// fs::create_dir(&content).unwrap();
+/// fs::create_dir(&templates).unwrap();
+/// let mut g = DepGraph::new();
+/// // Walking empty trees is a no-op.
+/// populate(&mut g, &content, &templates, &build).unwrap();
+/// assert_eq!(g.page_count(), 0);
+/// ```
 pub fn populate(
     graph: &mut DepGraph,
     content_dir: &Path,
@@ -426,6 +662,22 @@ pub fn populate(
 /// Walks every tracked source on disk and returns
 /// `path → sha256(content)`. Used by [`DepGraph::diff`] on the
 /// incremental hot path. Sources that disappear silently drop out.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::depgraph::current_hashes;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let content = dir.path().join("content");
+/// let templates = dir.path().join("templates");
+/// fs::create_dir(&content).unwrap();
+/// fs::create_dir(&templates).unwrap();
+/// let map = current_hashes(&content, &templates).unwrap();
+/// assert!(map.is_empty());
+/// ```
 pub fn current_hashes(
     content_dir: &Path,
     template_dir: &Path,

@@ -32,20 +32,18 @@ pub(crate) const PARALLEL_THRESHOLD: usize = 16;
 /// * Files exceed size limits (default: 10MB)
 /// * Destination cannot be created or written to
 ///
-/// # Example
+/// # Examples
 ///
-/// ```rust,no_run
-/// use std::path::Path;
+/// ```rust
 /// use ssg::verify_and_copy_files;
+/// use tempfile::tempdir;
+/// use std::fs;
 ///
-/// fn main() -> Result<(), ssg::error::SsgError> {
-///     let source = Path::new("source_directory");
-///     let destination = Path::new("destination_directory");
-///
-///     verify_and_copy_files(source, destination)?;
-///     println!("Files copied successfully");
-///     Ok(())
-/// }
+/// let src_dir = tempdir().unwrap();
+/// let dst_dir = tempdir().unwrap();
+/// fs::write(src_dir.path().join("a.txt"), "data").unwrap();
+/// verify_and_copy_files(src_dir.path(), dst_dir.path()).unwrap();
+/// assert!(dst_dir.path().join("a.txt").exists());
 /// ```
 ///
 /// # Security
@@ -90,6 +88,20 @@ pub fn verify_and_copy_files(src: &Path, dst: &Path) -> Result<(), SsgError> {
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::verify_and_copy_files_async;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let src = tempdir().unwrap();
+/// let dst = tempdir().unwrap();
+/// fs::write(src.path().join("x.txt"), "hi").unwrap();
+/// verify_and_copy_files_async(src.path(), dst.path()).unwrap();
+/// assert!(dst.path().join("x.txt").is_file());
+/// ```
 pub fn verify_and_copy_files_async(
     src: &Path,
     dst: &Path,
@@ -158,6 +170,20 @@ fn copy_entry(
 ///
 /// Uses iterative traversal with an explicit stack to avoid unbounded recursion.
 /// Traversal depth is bounded by [`MAX_DIR_DEPTH`].
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::copy_dir_with_progress;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let src = tempdir().unwrap();
+/// let dst = tempdir().unwrap();
+/// fs::write(src.path().join("a.txt"), "x").unwrap();
+/// copy_dir_with_progress(src.path(), dst.path()).unwrap();
+/// assert!(dst.path().join("a.txt").exists());
+/// ```
 pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
     if !src.exists() {
         return Err(SsgError::Validation {
@@ -233,6 +259,15 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
 /// * Checking for parent directory references (`..`)
 /// * Validating path components
 ///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::is_safe_path;
+/// use std::path::Path;
+///
+/// assert!(is_safe_path(Path::new("safe/path")).unwrap());
+/// assert!(!is_safe_path(Path::new("../escape")).unwrap());
+/// ```
 pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
     // Check for traversal patterns in non-existent paths
     if !path.exists() {
@@ -432,6 +467,20 @@ pub fn collect_files_recursive(
 /// * Verifies file safety before copying
 /// * Maintains original file permissions
 /// * Handles circular references
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::copy_dir_all;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let src = tempdir().unwrap();
+/// let dst = tempdir().unwrap();
+/// fs::write(src.path().join("z.txt"), "z").unwrap();
+/// copy_dir_all(src.path(), dst.path()).unwrap();
+/// assert!(dst.path().join("z.txt").exists());
+/// ```
 pub fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), SsgError> {
     fs::create_dir_all(dst).with_path(dst)?;
 
@@ -529,6 +578,20 @@ fn copy_files_maybe_parallel(
 ///
 /// * `std::io::Error`: If an error occurs during directory creation, file copying, or permission issues.
 /// * `anyhow::Error`: If a file safety check fails.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::copy_dir_all_async;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let src = tempdir().unwrap();
+/// let dst = tempdir().unwrap();
+/// fs::write(src.path().join("z.txt"), "z").unwrap();
+/// copy_dir_all_async(src.path(), dst.path()).unwrap();
+/// assert!(dst.path().join("z.txt").exists());
+/// ```
 pub fn copy_dir_all_async(src: &Path, dst: &Path) -> Result<(), SsgError> {
     internal_copy_dir_async(src, dst)
 }

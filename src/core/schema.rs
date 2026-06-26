@@ -17,6 +17,16 @@ use std::path::Path;
 /// The returned schema follows the JSON Schema Draft-07 specification
 /// and includes type information, descriptions, and default values for
 /// every configuration field.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::schema::generate_schema;
+///
+/// let schema = generate_schema();
+/// assert_eq!(schema["title"], "SsgConfig");
+/// assert_eq!(schema["type"], "object");
+/// ```
 #[must_use]
 pub fn generate_schema() -> Value {
     json!({
@@ -100,6 +110,18 @@ pub fn generate_schema() -> Value {
 /// and objects — no `f32`/`f64` NaNs — which `to_string_pretty` cannot
 /// fail to serialize. The `expect` exists only to satisfy the type
 /// system without forcing callers to handle an unreachable `Err`.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::schema::write_schema;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let p = dir.path().join("schema.json");
+/// write_schema(&p).unwrap();
+/// assert!(p.is_file());
+/// ```
 pub fn write_schema(path: &Path) -> io::Result<()> {
     let schema = generate_schema();
     // The hand-authored Schema contains only strings/arrays/objects (no

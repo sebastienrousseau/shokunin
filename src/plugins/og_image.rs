@@ -28,6 +28,16 @@ pub struct OgImagePlugin {
 
 impl OgImagePlugin {
     /// Creates a new `OgImagePlugin` with default branding.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::og_image::OgImagePlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = OgImagePlugin::new("https://example.com");
+    /// assert_eq!(p.name(), "og-image");
+    /// ```
     #[must_use]
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
@@ -38,6 +48,16 @@ impl OgImagePlugin {
     }
 
     /// Creates a plugin with custom brand colours.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::og_image::OgImagePlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = OgImagePlugin::with_colors("https://example.com", "#000", "#fff");
+    /// assert_eq!(p.name(), "og-image");
+    /// ```
     #[must_use]
     pub fn with_colors(
         base_url: impl Into<String>,
@@ -55,6 +75,16 @@ impl OgImagePlugin {
 /// Generates an SVG social card with the given title and site name.
 ///
 /// The card is 1200x630 pixels (standard OG image dimensions).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::og_image::generate_og_svg;
+///
+/// let svg = generate_og_svg("Hello", "My Site", "#000", "#fff");
+/// assert!(svg.starts_with("<svg"));
+/// assert!(svg.contains("Hello"));
+/// ```
 #[must_use]
 pub fn generate_og_svg(
     title: &str,
