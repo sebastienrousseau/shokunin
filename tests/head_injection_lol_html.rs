@@ -84,7 +84,8 @@ fn ac4_no_remaining_replace_calls_in_production_code() {
         "src/plugins/postprocess/html_fix.rs",
         "src/plugins/seo/canonical.rs",
         "src/plugins/seo/seo_plugin.rs",
-        "src/plugins/seo/jsonld.rs",
+        "src/plugins/seo/jsonld/mod.rs",
+        "src/plugins/seo/jsonld/iso20022.rs",
     ];
     for rel in candidates {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(rel);

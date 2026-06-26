@@ -200,4 +200,110 @@ mod tests {
         assert!(codes.contains(&"RSS-LINK"));
         assert!(codes.contains(&"RSS-DESCRIPTION"));
     }
+
+    #[test]
+    fn rss_missing_channel_short_circuits() {
+        let body = r#"<?xml version="1.0"?><rss version="2.0"></rss>"#;
+        let s = site_with_files(&[("rss.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        let codes: Vec<_> =
+            f.iter().filter_map(|x| x.code.as_deref()).collect();
+        assert_eq!(codes, vec!["RSS-CHANNEL"]);
+    }
+
+    #[test]
+    fn rss_empty_item_warns() {
+        let body = r#"<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <title>x</title><link>https://x</link><description>d</description>
+</channel></rss>"#;
+        let s = site_with_files(&[("rss.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        let codes: Vec<_> =
+            f.iter().filter_map(|x| x.code.as_deref()).collect();
+        assert!(codes.contains(&"RSS-EMPTY"));
+        assert!(
+            f.iter().any(|x| matches!(x.severity, Severity::Warn)),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn valid_atom_passes() {
+        let body = r#"<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>x</title><id>urn:x</id><updated>2026-01-01</updated>
+  <entry><title>e</title></entry>
+</feed>"#;
+        let s = site_with_files(&[("atom.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn atom_missing_fields_flagged() {
+        let body = r#"<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"></feed>"#;
+        let s = site_with_files(&[("atom.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        let codes: Vec<_> =
+            f.iter().filter_map(|x| x.code.as_deref()).collect();
+        assert!(codes.contains(&"ATOM-TITLE"));
+        assert!(codes.contains(&"ATOM-ID"));
+        assert!(codes.contains(&"ATOM-UPDATED"));
+        assert!(codes.contains(&"ATOM-EMPTY"));
+    }
+
+    #[test]
+    fn sitemap_xml_ignored() {
+        let body = r#"<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://x</loc></url>
+</urlset>"#;
+        let s = site_with_files(&[("sitemap.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn unknown_xml_ignored() {
+        let body = r#"<?xml version="1.0"?><opml version="2.0"></opml>"#;
+        let s = site_with_files(&[("opml.xml", body)]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn no_xml_files_returns_empty() {
+        let s = site_with_files(&[("index.html", "<html></html>")]);
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn unreadable_xml_skipped() {
+        // Create a directory with .xml extension so read_to_string errors.
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::create_dir_all(root.join("malformed.xml")).unwrap();
+        let s = Site {
+            root: root.clone(),
+            html_files: Vec::new(),
+        };
+        // Should not panic — the gate `continue`s on read error.
+        let _ = FeedsGate.run(&s, &AuditOptions::default());
+        std::mem::forget(tmp);
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = FeedsGate;
+        assert_eq!(g.name(), "feeds");
+        assert!(g.explain().contains("RSS"));
+        // Debug + Clone + Copy traits
+        let _: FeedsGate = g;
+        let _clone = g;
+        let dbg = format!("{g:?}");
+        assert!(dbg.contains("FeedsGate"));
+    }
 }
