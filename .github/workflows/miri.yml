@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Miri — undefined-behaviour, data-race, and uninit-memory detector.
+# Runs on every push to main + every PR + workflow_dispatch. First
+# 30 days advisory (continue-on-error: true); flip required once the
+# .miri-skip allowlist stabilises (see #560).
+
+name: Miri
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: miri-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  miri:
+    name: cargo miri test --lib
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Advisory window: first 30 days after #560 lands. Drop this once
+    # the `.miri-skip` allowlist stabilises and Miri is reliably green.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install nightly + miri component
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: miri
+
+      - name: cargo miri setup
+        run: cargo miri setup
+
+      - name: Run Miri on lib tests
+        # Honour the skip-list in `.miri-skip`. Each entry is a test
+        # path (e.g. `plugin::cache::persists_across_runs`); the script
+        # transforms them into a `--skip` argument list.
+        run: |
+          set -euo pipefail
+          skip_args=""
+          if [ -f .miri-skip ]; then
+            while IFS= read -r line; do
+              # Strip comments + blank lines.
+              entry="${line%%#*}"
+              entry="${entry## }"
+              entry="${entry%% }"
+              [ -n "$entry" ] || continue
+              skip_args="$skip_args --skip $entry"
+            done < .miri-skip
+          fi
+          echo "Skip list: $skip_args"
+          # MIRIFLAGS:
+          #   -Zmiri-disable-isolation: allow tests that read $CARGO_HOME etc.
+          #   -Zmiri-permissive-provenance: ureq + smol both rely on
+          #     int-to-ptr casts that strict provenance flags trip on;
+          #     the operations are sound under permissive provenance.
+          export MIRIFLAGS="-Zmiri-disable-isolation -Zmiri-permissive-provenance"
+          cargo miri test --lib --features test-fault-injection -- $skip_args
