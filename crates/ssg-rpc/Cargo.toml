@@ -8,6 +8,7 @@ description = "Edge RPC layer for SSG — JSON-over-POST dispatcher + #[ssg_rpc]
 repository = "https://github.com/sebastienrousseau/static-site-generator"
 keywords = ["ssg", "rpc", "wasm", "edge", "typescript"]
 categories = ["web-programming", "wasm"]
+readme = "README.md"
 
 [dependencies]
 # Dispatch registry uses `inventory` for distributed, link-time

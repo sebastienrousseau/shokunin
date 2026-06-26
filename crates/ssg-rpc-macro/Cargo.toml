@@ -8,6 +8,7 @@ description = "Proc-macro backing the `#[ssg_rpc]` attribute (split out so ssg-r
 repository = "https://github.com/sebastienrousseau/static-site-generator"
 keywords = ["ssg", "rpc", "proc-macro", "edge"]
 categories = ["web-programming", "development-tools::procedural-macro-helpers"]
+readme = "README.md"
 
 [lib]
 proc-macro = true
