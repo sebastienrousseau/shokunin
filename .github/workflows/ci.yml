@@ -85,6 +85,11 @@ jobs:
         with:
           shared-key: lint
 
+      - name: Install ripgrep (#558, #557, #584)
+        # Required by tools/lint-no-shellout.sh and tools/lint-adr.sh.
+        # ubuntu-latest doesn't preinstall rg — adding ~1s for apt.
+        run: sudo apt-get install -y ripgrep
+
       - name: cargo fmt
         run: cargo fmt --all -- --check
 

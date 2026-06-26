@@ -1,22 +1,30 @@
 # Tests excluded from `cargo miri test`. Each entry must carry a
-# one-line justification. Format: `<module-path>::<test-name>  # reason`
+# one-line justification. Format: `<substring>  # reason`
 # Blank lines and lines starting with `#` are ignored.
 #
-# Categories Miri cannot model and which therefore must be skipped:
-#   - real filesystem semantics (metadata, mtime, symlinks, mmap)
-#   - foreign-function calls into libc beyond the modelled core surface
-#   - cargo-llvm-cov instrumentation (Miri runs unoptimised, no llvm-tools)
+# Path note: the project re-exports `src/core/` as `core_group` via
+# `#[path = "core/mod.rs"] pub(crate) mod core_group;` in lib.rs, so
+# Miri sees test names with the `core_group::` prefix, not `core::`.
+# Same for `plugins_group::` and `server_group::`.
 #
 # Allow-list intent: stay under 20 entries. Each entry should be
 # revisited when Miri ships new model coverage.
 
-# Filesystem semantics — Miri's shim does not implement create_dir_all
-# atomically and the dirstamp-driven cache test reads st_mtime from the
-# host kernel, which Miri's emulation reports as constant.
-core::cache::tests::dirstamp_changes_invalidate_cache
+# Whole core_group::fs_ops::tests module — std::fs::copy uses
+# copy_file_range on Linux, which Miri does not shim. The
+# verify/walk siblings are also FS-touching and not modelled.
+core_group::fs_ops::tests
+
+# st_mtime emulation: Miri reports a constant mtime, breaking the
+# dirstamp-invalidation contract.
+core_group::cache::tests::dirstamp
+
+# Atomic create_dir_all + atomic write semantics that Miri doesn't
+# model.
 plugin::cache::persists_across_runs
+plugins_group::plugin::cache::persists_across_runs
 
 # fail-rs failpoint registration uses TLS in a way Miri can't model
-# under -Zmiri-track-stacked-borrows; we exercise these paths in the
-# native test job (`test` matrix in ci.yml).
+# under -Zmiri-track-stacked-borrows; exercised in the native test
+# matrix instead.
 fault_injection_failpoint_smoke
