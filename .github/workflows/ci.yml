@@ -29,9 +29,13 @@ env:
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   RUST_BACKTRACE: short
-  COVERAGE_REGIONS_FLOOR: "95.0"
-  COVERAGE_LINES_FLOOR: "95.0"
-  COVERAGE_FUNCTIONS_FLOOR: "95.0"
+  # Floors raised v0.0.45 (#583) after switching the gate to --tests
+  # and adding ~50 tests across rpc_schema, cmd::audit, edge_headers,
+  # mcp, isr_manifest, dev_server, lib.rs, search, audit::output::json,
+  # iso20022. Continuing march toward ≥98% under v0.0.46 follow-ups.
+  COVERAGE_REGIONS_FLOOR: "95.5"
+  COVERAGE_LINES_FLOOR: "97.0"
+  COVERAGE_FUNCTIONS_FLOOR: "96.0"
 
 jobs:
   # ── Phase 0: repo hygiene (issue #556) ──────────────────────────────
