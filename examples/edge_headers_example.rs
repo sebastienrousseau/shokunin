@@ -5,7 +5,7 @@
 //! # Edge Headers Example — PQC-aware platform configs (v0.0.44, issue #550)
 //!
 //! Demonstrates the `EdgeHeadersPlugin` by running it against a temp
-//! site_dir with all three platforms enabled (Cloudflare, Netlify,
+//! `site_dir` with all three platforms enabled (Cloudflare, Netlify,
 //! Vercel) and dumping each emitted file to stdout. Useful for seeing
 //! the exact `_headers` / `wrangler-headers.toml` /
 //! `vercel-headers.json` payload your deploy step would upload.

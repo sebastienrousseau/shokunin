@@ -181,12 +181,12 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Supply Chain** | Automated `CycloneDX` 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
 | **WebAssembly** | `ssg-core` + `ssg-wasm` + `ssg-search` compile to `wasm32-unknown-unknown` with wasm-bindgen; `ssg-wasm` ships ISR + RPC entry points for Edge runtimes (CI-enforced ≤ 2 MB gzipped) |
-| **Vector search** | `ssg-search` — browser-native int8-quantised hashed-n-gram (or opt-in `model2vec-rs`) embeddings, Float32Array boundary, no division / sqrt at runtime, p99 < 100 ms on 1000-doc corpus (CI-gated) |
+| **Vector search** | `ssg-search` — browser-native int8-quantised hashed-n-gram (or opt-in `model2vec-rs`) embeddings, `Float32Array` boundary, no division / sqrt at runtime, p99 < 100 ms on 1000-doc corpus (CI-gated) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge adapters with KV / Edge Config content provider, SHA-256-keyed ISR manifest, invalidation webhook, optional View Transitions client (`transitions = true`) |
 | **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
 | **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC TLS guidance (X25519+ML-KEM-768 hybrid notes) |
-| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / JUnit / text outputs |
-| **Agentic discovery** | Opt-in `/agents.txt` (robots-style AI agent allow/deny), `/.well-known/ai-plugin.json` (OpenAI plugin manifest), `/.well-known/mcp.json` (Model Context Protocol registry with auto-populated resources) |
+| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / text outputs |
+| **Agentic discovery** | Opt-in `/agents.txt` (robots-style AI agent allow/deny), `/.well-known/ai-plugin.json` (`OpenAI` plugin manifest), `/.well-known/mcp.json` (Model Context Protocol registry with auto-populated resources) |
 | **ISO 20022 JSON-LD** | Schema.org descriptors for regulated financial sites: `BankAccount`, `FinancialProduct`, `MonetaryAmount`, `PaymentInstrument`, `RegulatedFinancialInstitution`. Built-in IBAN + BIC validators |
 | **View Transitions** | Opt-in (`transitions = true`) View Transitions API client + lazy hydration; persistent `<header>` / `<footer>` get `view-transition-name` so they don't animate across boundaries; falls back to plain reload in non-supporting browsers |
 | **Islands** | Web Components with lazy hydration (visible, idle, interaction) |
@@ -370,20 +370,33 @@ std::fs::write("og-card.svg", svg).unwrap();
 <summary><b>Vector search index (issue #545)</b></summary>
 
 ```rust,no_run
-use ssg_search::{ArtifactsBuilder, VectorEngine};
+use ssg_search::artifacts::{Artifacts, InputDoc};
+use ssg_search::VectorEngine;
 
 // Build side: turn a doc corpus into the 4-file artifact blob.
-let arts = ArtifactsBuilder::new()
-    .add_doc("/post-1", "Rust WebAssembly", "rust compiles to wasm")
-    .add_doc("/post-2", "Sourdough", "starter flour water salt")
-    .build();
+let docs = vec![
+    InputDoc {
+        url: "/post-1".into(),
+        title: "Rust WebAssembly".into(),
+        body: "rust compiles to wasm".into(),
+        excerpt: "rust wasm".into(),
+    },
+    InputDoc {
+        url: "/post-2".into(),
+        title: "Sourdough".into(),
+        body: "starter flour water salt".into(),
+        excerpt: "bread".into(),
+    },
+];
+let arts = Artifacts::from_docs(&docs);
 std::fs::write("site/search/embeddings.bin", &arts.embeddings).unwrap();
 std::fs::write("site/search/model.bin", &arts.model).unwrap();
 std::fs::write("site/search/tokenizer.bin", &arts.tokenizer).unwrap();
 
 // Runtime (native or WASM): load and query.
-let engine = VectorEngine::from_bytes(&arts.model, &arts.tokenizer, &arts.embeddings, arts.count())
-    .unwrap();
+let engine = VectorEngine::new(
+    &arts.model, &arts.tokenizer, &arts.embeddings, arts.count(),
+).unwrap();
 let top = engine.search("rust webassembly", 3);
 println!("{:?}", top);
 ```
@@ -578,7 +591,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `postprocess::edge_headers` | Per-host header emitters (Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json`) with PQC TLS guidance — issue #550 |
 | `postprocess::agentic_discovery` | `/agents.txt` + `/.well-known/{ai-plugin.json,mcp.json}` emitters — issue #552 |
 | `seo::jsonld::iso20022` | ISO 20022 schema.org descriptors for regulated financial sites (IBAN/BIC validators) — issue #553 |
-| `audit` | 14-gate audit runner (`ssg audit`) with JSON / JUnit / text output — issue #551 |
+| `audit` | 14-gate audit runner (`ssg audit`) with JSON / `JUnit` / text output — issue #551 |
 | `head_dom` | Single-walk `lol_html`-based head metadata extractor + `</head>` injector — issue #538-540 |
 
 </details>
