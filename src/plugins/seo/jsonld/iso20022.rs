@@ -1084,6 +1084,65 @@ mod tests {
         assert!(!validate_bic("NWBK12 2L").is_valid());
     }
 
+    #[test]
+    fn iban_rejects_non_alphanumeric_bban() {
+        // Covers lines 180-182: BBAN char not alphanumeric.
+        let res = validate_iban("GB29NWBK60161331926*1");
+        assert!(!res.is_valid());
+        if let ValidationOutcome::Invalid { reason } = res {
+            assert!(reason.contains("BBAN"));
+        }
+    }
+
+    #[test]
+    fn iban_rejects_bad_check_digits() {
+        // Pos 3-4 must be digits — letter there is a 173-176 hit.
+        let res = validate_iban("GBABNWBK60161331926819");
+        assert!(!res.is_valid());
+    }
+
+    #[test]
+    fn bic_rejects_digit_in_bank_code() {
+        // Covers lines 254-257: chars 1-4 must be letters.
+        let res = validate_bic("1WBKGB2L");
+        assert!(!res.is_valid());
+        if let ValidationOutcome::Invalid { reason } = res {
+            assert!(reason.contains("bank code"));
+        }
+    }
+
+    #[test]
+    fn bic_rejects_letter_in_location_code() {
+        // Covers lines 267-271: chars 7-8 must be alphanumeric.
+        // (Using a non-ASCII or punctuation char triggers the
+        //  alphanumeric rule; we rely on length checks first then
+        //  alphabet rules.) A space-stripped non-ascii will be
+        //  filtered out though; so use a punctuation symbol that
+        //  isn't whitespace.
+        let res = validate_bic("NWBKGB!!");
+        assert!(!res.is_valid());
+    }
+
+    #[test]
+    fn bic_rejects_non_alphanumeric_branch_code() {
+        // Covers lines 277-280: 11-char BIC with bad branch code.
+        let res = validate_bic("NWBKGB2L!!!");
+        assert!(!res.is_valid());
+    }
+
+    #[test]
+    fn entity_type_name_covers_all_variants() {
+        // Covers the RegulatedFinancialInstitution + FinancialProduct
+        // match arms at lines 695-698.
+        let rfi = Iso20022Entity::RegulatedFinancialInstitution(
+            RegulatedFinancialInstitution::default(),
+        );
+        assert_eq!(rfi.type_name(), "RegulatedFinancialInstitution");
+
+        let fp = Iso20022Entity::FinancialProduct(FinancialProduct::default());
+        assert_eq!(fp.type_name(), "FinancialProduct");
+    }
+
     // ── Domain → JSON-LD ────────────────────────────────────────────
 
     #[test]
