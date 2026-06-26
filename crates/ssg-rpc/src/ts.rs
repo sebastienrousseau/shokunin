@@ -163,8 +163,8 @@ pub fn emit_typescript_for(
     // First pass — every named definition (one Input + one Output per
     // RPC) collected so we can resolve refs.
     for s in schemas {
-        let input_name = type_name(s.name, "Input");
-        let output_name = type_name(s.name, "Output");
+        let input_name = type_name_for(&s.input, s.name, "Input");
+        let output_name = type_name_for(&s.output, s.name, "Output");
         emit_named_type(&input_name, &s.input, &mut out);
         emit_named_type(&output_name, &s.output, &mut out);
     }
@@ -172,8 +172,8 @@ pub fn emit_typescript_for(
     if opts.emit_rpc_index {
         out.push_str("export interface Rpc {\n");
         for s in schemas {
-            let input_name = type_name(s.name, "Input");
-            let output_name = type_name(s.name, "Output");
+            let input_name = type_name_for(&s.input, s.name, "Input");
+            let output_name = type_name_for(&s.output, s.name, "Output");
             let _ = writeln!(
                 out,
                 "  {fn_name}(input: {input_name}): Promise<{output_name}>;",
@@ -184,6 +184,28 @@ pub fn emit_typescript_for(
     }
 
     out
+}
+
+/// Pick the TS interface name for a schema, preferring the schema's
+/// own `title` field when present. This keeps the `.d.ts` interfaces
+/// aligned with the schemars-emitted JSON Schema titles (which match
+/// the Rust struct names), so site authors don't see `LikeInput` in
+/// the schema and `LikePostInput` in the generated `.d.ts`.
+fn type_name_for(schema: &Value, fn_name: &str, suffix: &str) -> String {
+    schema
+        .get("title")
+        .and_then(Value::as_str)
+        .filter(|t| !t.is_empty() && is_valid_ts_identifier(t))
+        .map_or_else(|| type_name(fn_name, suffix), String::from)
+}
+
+fn is_valid_ts_identifier(s: &str) -> bool {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' || c == '$' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
 }
 
 fn type_name(fn_name: &str, suffix: &str) -> String {

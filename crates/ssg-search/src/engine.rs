@@ -353,7 +353,12 @@ impl VectorEngine {
             for r in chunks * 4..self.dim {
                 acc += row[r] * query_vec[r];
             }
-            scores.push((i, acc));
+            // Clip negative cosine to 0. For L2-normalised vectors the
+            // dot product is cosine similarity ∈ [-1, 1]; negative
+            // values mean "anti-related" and are treated as "no match"
+            // by every production search engine. Preserving them in
+            // the top-K output is just noise.
+            scores.push((i, acc.max(0.0)));
         }
 
         // Partial sort to top-K. For typical N (≤ a few thousand) the

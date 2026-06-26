@@ -155,13 +155,19 @@ pub fn build_manifest(cfg: &SsgConfig) -> Value {
 /// directive than the human-facing one (agents perform better when
 /// the description tells them *when* to invoke the plugin).
 fn description_for_model(human_name: &str, cfg: &SsgConfig) -> String {
-    let base = if cfg.site_description.is_empty() {
-        format!("Plugin for accessing content from {human_name}")
-    } else {
-        cfg.site_description.clone()
-    };
+    // Site author supplied their own description? Trust it. Appending a
+    // stock "Use this plugin to ..." sentence to an already-good
+    // description reads like an auto-generated mash-up to LLM agents
+    // (and to humans browsing the registry).
+    if !cfg.site_description.is_empty() {
+        return cfg.site_description.clone();
+    }
+    // No description configured — synthesise a model-friendly one with
+    // an invocation hint.
     format!(
-        "{base} Use this plugin to search and retrieve content from {human_name}."
+        "Plugin for accessing content from {human_name}. \
+         Use this plugin to search and retrieve content from \
+         {human_name}."
     )
 }
 
@@ -336,14 +342,32 @@ mod tests {
     }
 
     #[test]
-    fn description_for_model_appends_invocation_hint() {
-        // The model-facing description should hint at *when* to use
-        // the plugin — verify the appended sentence is present.
+    fn description_for_model_returns_site_description_verbatim_when_present() {
+        // When the site author supplied a description, we trust it —
+        // no stock "Use this plugin to ..." suffix that turns their
+        // copy into an obvious auto-generated mash-up.
         let m = build_manifest(&cfg());
+        let desc = m["description_for_model"].as_str().unwrap();
+        assert_eq!(desc, "A demo");
+    }
+
+    #[test]
+    fn description_for_model_synthesises_invocation_hint_when_empty() {
+        // No description configured? Synthesise one with an explicit
+        // invocation hint — that's what agents need to know when to
+        // invoke the plugin.
+        let mut c = cfg();
+        c.site_description = String::new();
+        let m = build_manifest(&c);
         let desc = m["description_for_model"].as_str().unwrap();
         assert!(
             desc.contains("Use this plugin"),
-            "description_for_model should hint at when to invoke, got {desc:?}"
+            "synthesised description should hint at when to invoke, got {desc:?}"
+        );
+        assert!(
+            desc.contains(c.site_title.as_str())
+                || desc.contains(c.site_name.as_str()),
+            "synthesised description should mention the site, got {desc:?}"
         );
     }
 

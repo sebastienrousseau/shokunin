@@ -365,8 +365,12 @@ impl BankAccount {
             obj["name"] = serde_json::json!(name);
         }
         if let Some(iban) = &self.iban {
+            // The IBAN is already the typed identifier via the
+            // `iso20022:iban` namespace; duplicating it into the
+            // generic schema.org `identifier` field would publish the
+            // same string twice and trip downstream consumers that
+            // expect distinct values across fields.
             obj["iso20022:iban"] = serde_json::json!(iban);
-            obj["identifier"] = serde_json::json!(iban);
         }
         if let Some(bic) = &self.bic {
             obj["iso20022:bic"] = serde_json::json!(bic);
@@ -1094,8 +1098,12 @@ mod tests {
         assert_eq!(v["iso20022:iban"], "GB29NWBK60161331926819");
         assert_eq!(v["iso20022:bic"], "NWBKGB2L");
         assert_eq!(v["name"], "Treasury");
-        // Identifier mirrors IBAN so search engines have a dedup key.
-        assert_eq!(v["identifier"], "GB29NWBK60161331926819");
+        // No generic `identifier` field — the IBAN is already the
+        // typed identifier via the `iso20022:iban` namespace.
+        // Duplicating the same string under `identifier` was
+        // confusing for downstream consumers (and lit up in
+        // examples/iso20022_example.rs output).
+        assert!(v.get("identifier").is_none());
     }
 
     #[test]
