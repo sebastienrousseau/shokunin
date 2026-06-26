@@ -20,6 +20,9 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
+  # rust-toolchain.toml pins stable; override per-job for Miri which
+  # requires nightly. RUSTUP_TOOLCHAIN beats the toml file.
+  RUSTUP_TOOLCHAIN: nightly
 
 jobs:
   miri:
