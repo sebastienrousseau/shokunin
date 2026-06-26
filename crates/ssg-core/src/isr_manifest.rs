@@ -58,6 +58,18 @@ pub const DEFAULT_SWR: u32 = 86_400;
 ///
 /// Both fields are seconds, both optional at the entry level — when
 /// absent we fall back to the manifest-wide [`Manifest::default_cache`].
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::CachePolicy;
+///
+/// let policy = CachePolicy { s_maxage: 60, swr: 86_400 };
+/// assert_eq!(
+///     policy.to_cache_control(),
+///     "s-maxage=60, stale-while-revalidate=86400",
+/// );
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CachePolicy {
     /// `s-maxage` — how long the CDN may serve the cached response
@@ -80,6 +92,18 @@ impl Default for CachePolicy {
 
 impl CachePolicy {
     /// Renders the policy as a `Cache-Control` header value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::CachePolicy;
+    ///
+    /// let policy = CachePolicy { s_maxage: 120, swr: 600 };
+    /// assert_eq!(
+    ///     policy.to_cache_control(),
+    ///     "s-maxage=120, stale-while-revalidate=600",
+    /// );
+    /// ```
     #[must_use]
     pub fn to_cache_control(&self) -> String {
         format!(
@@ -90,6 +114,18 @@ impl CachePolicy {
 }
 
 /// One entry in the ISR manifest — describes how one URL renders.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::{build_entry, ManifestEntry};
+///
+/// let entry: ManifestEntry =
+///     build_entry(vec!["a.md".into()], &[b"# A"], None);
+/// assert_eq!(entry.sources, vec!["a.md"]);
+/// assert_eq!(entry.hash.len(), 64);
+/// assert!(entry.cache.is_none());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ManifestEntry {
     /// Source dependency keys, in deterministic order. Each entry is
@@ -105,6 +141,17 @@ pub struct ManifestEntry {
 }
 
 /// Complete ISR build manifest — emitted as `dist/.ssg/manifest.json`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::{build_entry, Manifest};
+///
+/// let mut m = Manifest::new("build-1");
+/// m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
+/// assert_eq!(m.len(), 1);
+/// assert!(m.get("/a.html").is_some());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Manifest {
     /// Schema version (currently always [`MANIFEST_VERSION`]).
@@ -127,6 +174,17 @@ impl Default for Manifest {
 
 impl Manifest {
     /// Constructs an empty manifest stamped with `build_id`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{Manifest, MANIFEST_VERSION};
+    ///
+    /// let m = Manifest::new("build-42");
+    /// assert_eq!(m.version, MANIFEST_VERSION);
+    /// assert_eq!(m.generated_at, "build-42");
+    /// assert!(m.is_empty());
+    /// ```
     #[must_use]
     pub fn new(build_id: impl Into<String>) -> Self {
         Self {
@@ -138,23 +196,66 @@ impl Manifest {
     }
 
     /// Inserts (or replaces) an entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{build_entry, Manifest};
+    ///
+    /// let mut m = Manifest::new("b");
+    /// m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
+    /// assert_eq!(m.len(), 1);
+    /// ```
     pub fn insert(&mut self, url: impl Into<String>, entry: ManifestEntry) {
         let _ = self.entries.insert(url.into(), entry);
     }
 
     /// Returns the entry for `url`, if any.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{build_entry, Manifest};
+    ///
+    /// let mut m = Manifest::new("b");
+    /// m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
+    /// assert!(m.get("/a.html").is_some());
+    /// assert!(m.get("/missing").is_none());
+    /// ```
     #[must_use]
     pub fn get(&self, url: &str) -> Option<&ManifestEntry> {
         self.entries.get(url)
     }
 
     /// Returns the number of entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{build_entry, Manifest};
+    ///
+    /// let mut m = Manifest::new("b");
+    /// assert_eq!(m.len(), 0);
+    /// m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
+    /// assert_eq!(m.len(), 1);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Reports whether the manifest holds no entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{build_entry, Manifest};
+    ///
+    /// let mut m = Manifest::new("b");
+    /// assert!(m.is_empty());
+    /// m.insert("/a.html", build_entry(vec!["a.md".into()], &[b"a"], None));
+    /// assert!(!m.is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
@@ -167,6 +268,17 @@ impl Manifest {
     /// Returns the underlying `serde_json::Error` if any entry is not
     /// representable (in practice this is unreachable — every field
     /// is a primitive or a `String`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::Manifest;
+    ///
+    /// let m = Manifest::new("build-1");
+    /// let json = m.to_pretty_json().unwrap();
+    /// assert!(json.contains("\"version\""));
+    /// assert!(json.contains("\"generated_at\": \"build-1\""));
+    /// ```
     pub fn to_pretty_json(&self) -> serde_json::Result<String> {
         serde_json::to_string_pretty(self)
     }
@@ -177,6 +289,24 @@ impl Manifest {
     /// `content/posts/foo.md`, find every URL whose manifest entry
     /// lists it as a source — typically the post itself plus any
     /// tag/archive index that includes it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{build_entry, Manifest};
+    ///
+    /// let mut m = Manifest::new("b");
+    /// m.insert(
+    ///     "/a.html",
+    ///     build_entry(vec!["c/a.md".into()], &[b"A"], None),
+    /// );
+    /// m.insert(
+    ///     "/b.html",
+    ///     build_entry(vec!["c/b.md".into()], &[b"B"], None),
+    /// );
+    /// let deps = m.urls_for_source("c/a.md");
+    /// assert_eq!(deps, vec!["/a.html"]);
+    /// ```
     #[must_use]
     pub fn urls_for_source(&self, source_key: &str) -> Vec<String> {
         self.entries
@@ -198,6 +328,17 @@ impl Manifest {
 /// appear in `sources`, with a `0x00` separator between sources so
 /// `["ab", "c"]` and `["a", "bc"]` produce distinct hashes. Sources
 /// are NOT sorted — callers must hand them in deterministic order.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::hash_sources;
+///
+/// let a = hash_sources(&[b"hello", b"world"]);
+/// let b = hash_sources(&[b"world", b"hello"]);
+/// assert_eq!(a.len(), 64);
+/// assert_ne!(a, b, "hash is order-sensitive");
+/// ```
 #[must_use]
 pub fn hash_sources(sources: &[&[u8]]) -> String {
     let mut hasher = Sha256::new();
@@ -223,6 +364,20 @@ pub fn hash_sources(sources: &[&[u8]]) -> String {
 ///
 /// # Panics
 /// Panics in debug builds if the slice lengths disagree.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::build_entry;
+///
+/// let entry = build_entry(
+///     vec!["a".into(), "b".into()],
+///     &[b"alpha", b"beta"],
+///     None,
+/// );
+/// assert_eq!(entry.sources, vec!["a", "b"]);
+/// assert_eq!(entry.hash.len(), 64);
+/// ```
 #[must_use]
 pub fn build_entry(
     sources: Vec<String>,

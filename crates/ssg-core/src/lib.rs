@@ -33,6 +33,15 @@ use std::collections::HashMap;
 use std::fmt;
 
 /// The error type for ssg-core operations.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::Error;
+///
+/// let err = Error::InvalidSlug { input: "@@@".to_string() };
+/// assert!(err.to_string().contains("Invalid slug input"));
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// TOML/YAML/JSON parsing failures.
@@ -193,6 +202,20 @@ pub fn parse_frontmatter(
 /// Compile a complete page: parse frontmatter, render Markdown to HTML.
 ///
 /// Returns `(frontmatter, html_body)`.
+///
+/// # Errors
+/// Currently infallible — returns `Ok` for every input. The `Result`
+/// signature is preserved so that future stricter validation can
+/// surface failures without a breaking API change.
+///
+/// # Examples
+///
+/// ```
+/// let input = "---\ntitle: Test\n---\n# Heading";
+/// let (fm, html) = ssg_core::compile_page(input).unwrap();
+/// assert_eq!(fm.get("title").and_then(|v| v.as_str()), Some("Test"));
+/// assert!(html.contains("<h1>Heading</h1>"));
+/// ```
 pub fn compile_page(
     input: &str,
 ) -> Result<(HashMap<String, serde_json::Value>, String)> {
@@ -202,6 +225,18 @@ pub fn compile_page(
 }
 
 /// Generate a search index entry from HTML content.
+///
+/// # Examples
+///
+/// ```
+/// let entry = ssg_core::SearchEntry {
+///     title: "Hi".to_string(),
+///     url: "/".to_string(),
+///     content: "hello".to_string(),
+/// };
+/// let json = serde_json::to_string(&entry).unwrap();
+/// assert!(json.contains("\"title\":\"Hi\""));
+/// ```
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SearchEntry {
     /// Page title.
@@ -213,6 +248,13 @@ pub struct SearchEntry {
 }
 
 /// Strip HTML tags from a string (simple implementation).
+///
+/// # Examples
+///
+/// ```
+/// let plain = ssg_core::strip_html_tags("<p>Hello <b>world</b></p>");
+/// assert_eq!(plain, "Hello world");
+/// ```
 #[must_use]
 pub fn strip_html_tags(html: &str) -> String {
     let mut result = String::with_capacity(html.len());
@@ -231,6 +273,19 @@ pub fn strip_html_tags(html: &str) -> String {
 }
 
 /// Build a search index entry from HTML content and metadata.
+///
+/// # Examples
+///
+/// ```
+/// let entry = ssg_core::build_search_entry(
+///     "Welcome",
+///     "/index.html",
+///     "<p>Hello <b>world</b></p>",
+/// );
+/// assert_eq!(entry.title, "Welcome");
+/// assert_eq!(entry.url, "/index.html");
+/// assert_eq!(entry.content, "Hello world");
+/// ```
 #[must_use]
 pub fn build_search_entry(title: &str, url: &str, html: &str) -> SearchEntry {
     let content = strip_html_tags(html);
@@ -247,12 +302,31 @@ pub fn build_search_entry(title: &str, url: &str, html: &str) -> SearchEntry {
 /// Estimates reading time in minutes from text content.
 ///
 /// Uses 200 words-per-minute average, with a minimum of 1 minute.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(ssg_core::reading_time("a short article"), 1);
+/// let long = "word ".repeat(600);
+/// assert_eq!(ssg_core::reading_time(&long), 3);
+/// ```
 #[must_use]
 pub fn reading_time(text: &str) -> usize {
     (text.split_whitespace().count() / 200).max(1)
 }
 
 /// Converts a string to a URL-safe slug.
+///
+/// Lowercases ASCII letters, replaces non-alphanumeric runs with a
+/// single `-`, and trims leading/trailing separators.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(ssg_core::slugify("Hello World!"), "hello-world");
+/// assert_eq!(ssg_core::slugify("Rust & Web"), "rust-web");
+/// assert_eq!(ssg_core::slugify("--leading--"), "leading");
+/// ```
 #[must_use]
 pub fn slugify(input: &str) -> String {
     input

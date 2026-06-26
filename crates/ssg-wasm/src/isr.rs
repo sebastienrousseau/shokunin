@@ -55,6 +55,22 @@ use wasm_bindgen::prelude::*;
 /// # Errors
 /// Returns a JS-side string error if the markdown fails to compile or
 /// the context is not valid JSON.
+///
+/// # Examples
+///
+/// `render_page_isr` is the wasm-bindgen entrypoint and returns a
+/// `JsValue` error type — call it from JavaScript, or call
+/// [`render_page_isr_impl`] from Rust.
+///
+/// ```no_run
+/// let out = ssg_wasm::render_page_isr(
+///     "# Hi",
+///     "<body>{{ content }}</body>",
+///     "{}",
+/// )
+/// .unwrap();
+/// assert!(out.contains("<h1>Hi</h1>"));
+/// ```
 #[wasm_bindgen]
 pub fn render_page_isr(
     markdown: &str,
@@ -68,6 +84,23 @@ pub fn render_page_isr(
 /// Pure-Rust implementation, separated for unit testing without
 /// `wasm-bindgen-test`. Callers in non-WASM contexts can use this
 /// directly.
+///
+/// # Errors
+/// Returns an `Err(String)` if the markdown fails to compile or if
+/// `context_json` is non-empty and not valid JSON.
+///
+/// # Examples
+///
+/// ```
+/// let out = ssg_wasm::render_page_isr_impl(
+///     "---\ntitle: Hello\n---\n# Body",
+///     "<title>{{ title }}</title>{{ content }}",
+///     "{\"site_name\": \"Example\"}",
+/// )
+/// .unwrap();
+/// assert!(out.contains("<title>Hello</title>"));
+/// assert!(out.contains("<h1>Body</h1>"));
+/// ```
 pub fn render_page_isr_impl(
     markdown: &str,
     layout: &str,

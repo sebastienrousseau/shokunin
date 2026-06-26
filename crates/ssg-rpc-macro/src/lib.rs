@@ -18,6 +18,29 @@
 //! and `Output` are both `serde::Serialize + serde::Deserialize +
 //! schemars::JsonSchema`. Anything else is rejected at compile time
 //! with a pointed error message.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use ssg_rpc::{ssg_rpc, RpcError};
+//! use serde::{Deserialize, Serialize};
+//! use schemars::JsonSchema;
+//!
+//! #[derive(Serialize, Deserialize, JsonSchema)]
+//! pub struct EchoIn { pub msg: String }
+//!
+//! #[derive(Serialize, Deserialize, JsonSchema)]
+//! pub struct EchoOut { pub msg: String }
+//!
+//! #[ssg_rpc]
+//! pub fn echo(input: EchoIn) -> Result<EchoOut, RpcError> {
+//!     Ok(EchoOut { msg: input.msg })
+//! }
+//!
+//! // The dispatcher registry now resolves "echo" to this function.
+//! let body = ssg_rpc::dispatch("echo", r#"{"msg":"hi"}"#).unwrap();
+//! assert!(body.contains("\"msg\":\"hi\""));
+//! ```
 
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::unwrap_used, clippy::expect_used)]

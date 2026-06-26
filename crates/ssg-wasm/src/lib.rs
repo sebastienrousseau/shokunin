@@ -32,6 +32,13 @@ use wasm_bindgen::prelude::*;
 /// Compile Markdown to HTML.
 ///
 /// Supports GitHub Flavored Markdown: tables, strikethrough, task lists.
+///
+/// # Examples
+///
+/// ```
+/// let html = ssg_wasm::compile_markdown("# Hi");
+/// assert!(html.contains("<h1>Hi</h1>"));
+/// ```
 #[wasm_bindgen]
 pub fn compile_markdown(input: &str) -> String {
     ssg_core::compile_markdown(input)
@@ -40,6 +47,23 @@ pub fn compile_markdown(input: &str) -> String {
 /// Parse frontmatter and compile a complete page.
 ///
 /// Returns a JSON object: `{ "frontmatter": {...}, "html": "..." }`
+///
+/// # Errors
+/// Returns a JS error string if the markdown frontmatter cannot be
+/// parsed.
+///
+/// # Examples
+///
+/// `compile_page` round-trips through `JsValue` and so cannot be
+/// invoked in a native doctest. Use [`ssg_core::compile_page`] for the
+/// native API; this entry point is wired up for JavaScript callers:
+///
+/// ```no_run
+/// # use wasm_bindgen::JsValue;
+/// let result: Result<JsValue, JsValue> =
+///     ssg_wasm::compile_page("---\ntitle: Hi\n---\n# Body");
+/// assert!(result.is_ok());
+/// ```
 #[wasm_bindgen]
 pub fn compile_page(input: &str) -> Result<JsValue, JsValue> {
     let (frontmatter, html) = ssg_core::compile_page(input)
@@ -55,6 +79,13 @@ pub fn compile_page(input: &str) -> Result<JsValue, JsValue> {
 }
 
 /// Strip HTML tags from a string.
+///
+/// # Examples
+///
+/// ```
+/// let text = ssg_wasm::strip_html("<p>Hello <b>world</b></p>");
+/// assert_eq!(text, "Hello world");
+/// ```
 #[wasm_bindgen]
 pub fn strip_html(input: &str) -> String {
     ssg_core::strip_html_tags(input)
