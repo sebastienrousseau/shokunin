@@ -156,7 +156,7 @@ fn check_atom1(text: &str, rel: &str, findings: &mut Vec<Finding>) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::needless_collect)]
 mod tests {
     use super::*;
 

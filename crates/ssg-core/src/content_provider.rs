@@ -352,4 +352,87 @@ mod tests {
         let cloned = fs.clone();
         assert_eq!(cloned.root(), fs.root());
     }
+
+    #[test]
+    fn fs_provider_fetch_string_decodes_utf8() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.md"), "héllo").unwrap();
+        let fs = FsContentProvider::new(dir.path());
+        assert_eq!(fs.fetch_string("a.md").unwrap(), "héllo");
+    }
+
+    #[test]
+    fn fs_provider_fetch_string_rejects_invalid_utf8() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("bad.md"), [0xffu8, 0xfe, 0xfd])
+            .unwrap();
+        let fs = FsContentProvider::new(dir.path());
+        match fs.fetch_string("bad.md") {
+            Err(ProviderError::Backend { detail }) => {
+                assert!(detail.contains("invalid utf-8"));
+            }
+            other => panic!("expected Backend, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn fs_provider_contains_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.md"), "x").unwrap();
+        let fs = FsContentProvider::new(dir.path());
+        assert!(fs.contains("a.md"));
+    }
+
+    #[test]
+    fn fs_provider_nested_traversal_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let fs = FsContentProvider::new(dir.path());
+        match fs.fetch("a/../../b") {
+            Err(ProviderError::Backend { detail }) => {
+                assert!(detail.contains("traversal"));
+            }
+            other => panic!("expected traversal rejection, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn memory_provider_insert_returns_previous_value() {
+        let mut mem = MemoryContentProvider::new();
+        assert!(mem.insert("k", b"v1".to_vec()).is_none());
+        let prev = mem.insert("k", b"v2".to_vec());
+        assert_eq!(prev.as_deref(), Some(&b"v1"[..]));
+        assert_eq!(mem.fetch("k").unwrap(), b"v2");
+    }
+
+    #[test]
+    fn memory_provider_default_equivalent_to_new() {
+        let a = MemoryContentProvider::default();
+        let b = MemoryContentProvider::new();
+        assert_eq!(a.len(), b.len());
+        assert!(a.is_empty());
+    }
+
+    #[test]
+    fn provider_error_display_messages() {
+        let nf = ProviderError::NotFound { key: "x".into() };
+        assert_eq!(format!("{nf}"), "ContentProvider: key not found: x");
+        let be = ProviderError::Backend { detail: "y".into() };
+        assert_eq!(format!("{be}"), "ContentProvider: backend error: y");
+    }
+
+    #[test]
+    fn provider_error_is_std_error() {
+        let err: Box<dyn std::error::Error> =
+            Box::new(ProviderError::NotFound { key: "k".into() });
+        assert!(err.to_string().contains("not found"));
+    }
+
+    #[test]
+    fn memory_provider_contains_via_trait_object() {
+        let mut mem = MemoryContentProvider::new();
+        let _ = mem.insert("a", b"1".to_vec());
+        let provider: &dyn ContentProvider = &mem;
+        assert!(provider.contains("a"));
+        assert!(!provider.contains("missing"));
+    }
 }

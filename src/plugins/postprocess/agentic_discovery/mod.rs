@@ -384,4 +384,145 @@ mod tests {
         assert!(cfg.rules.is_empty());
         assert!(cfg.default_rule.is_none());
     }
+
+    fn ctx_with_config(dir: &Path, agents: AgentsConfig) -> PluginContext {
+        let mut cfg = crate::cmd::SsgConfig::default();
+        cfg.base_url = "https://example.test".to_string();
+        cfg.site_name = "Example".to_string();
+        cfg.site_title = "Example".to_string();
+        cfg.site_description = "A demo".to_string();
+        cfg.agents = Some(agents);
+        PluginContext::with_config(dir, dir, dir, dir, cfg)
+    }
+
+    #[test]
+    fn agents_txt_enabled_writes_file() {
+        let dir = tempdir().unwrap();
+        let agents = AgentsConfig {
+            agents_txt: true,
+            ..AgentsConfig::default()
+        };
+        let ctx = ctx_with_config(dir.path(), agents);
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        let body =
+            std::fs::read_to_string(dir.path().join("agents.txt")).unwrap();
+        assert!(body.contains("User-agent: *"));
+        assert!(!dir.path().join(".well-known/ai-plugin.json").exists());
+        assert!(!dir.path().join(".well-known/mcp.json").exists());
+    }
+
+    #[test]
+    fn ai_plugin_enabled_writes_file() {
+        let dir = tempdir().unwrap();
+        let agents = AgentsConfig {
+            ai_plugin: true,
+            ..AgentsConfig::default()
+        };
+        let ctx = ctx_with_config(dir.path(), agents);
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        let path = dir.path().join(".well-known/ai-plugin.json");
+        assert!(path.exists());
+        let body = std::fs::read_to_string(&path).unwrap();
+        assert!(body.contains("\"schema_version\""));
+        assert!(!dir.path().join("agents.txt").exists());
+    }
+
+    #[test]
+    fn mcp_enabled_writes_file() {
+        let dir = tempdir().unwrap();
+        let mut agents = AgentsConfig::default();
+        agents.mcp.enabled = true;
+        let ctx = ctx_with_config(dir.path(), agents);
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        let path = dir.path().join(".well-known/mcp.json");
+        assert!(path.exists());
+        let body = std::fs::read_to_string(&path).unwrap();
+        assert!(body.contains("\"protocolVersion\""));
+    }
+
+    #[test]
+    fn all_three_emitters_enabled_writes_all_files() {
+        let dir = tempdir().unwrap();
+        let mut agents = AgentsConfig {
+            agents_txt: true,
+            ai_plugin: true,
+            ..AgentsConfig::default()
+        };
+        agents.mcp.enabled = true;
+        let ctx = ctx_with_config(dir.path(), agents);
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        assert!(dir.path().join("agents.txt").exists());
+        assert!(dir.path().join(".well-known/ai-plugin.json").exists());
+        assert!(dir.path().join(".well-known/mcp.json").exists());
+    }
+
+    #[test]
+    fn config_present_but_agents_none_is_no_op() {
+        let dir = tempdir().unwrap();
+        let cfg = crate::cmd::SsgConfig::default();
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            cfg,
+        );
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        assert!(!dir.path().join("agents.txt").exists());
+    }
+
+    #[test]
+    fn all_flags_off_is_no_op_even_with_rules() {
+        let dir = tempdir().unwrap();
+        let mut agents = AgentsConfig::default();
+        let _ = agents.rules.insert(
+            "gptbot".to_string(),
+            AgentRule {
+                allow: vec!["/blog/*".to_string()],
+                disallow: vec![],
+            },
+        );
+        assert!(!agents.any_enabled());
+        let ctx = ctx_with_config(dir.path(), agents);
+        AgenticDiscoveryPlugin.after_compile(&ctx).unwrap();
+        assert!(!dir.path().join("agents.txt").exists());
+    }
+
+    #[test]
+    fn mcp_config_serde_round_trip() {
+        let mcp = McpConfig {
+            enabled: true,
+            transport: "http".to_string(),
+            url: Some("https://api.example/mcp".to_string()),
+            protocol_version: "2025-03-26".to_string(),
+            auto_resources: true,
+            tools: vec![McpToolDecl {
+                name: "search".to_string(),
+                description: "Search the site".to_string(),
+                input_schema: Some(serde_json::json!({"type":"object"})),
+            }],
+            prompts: vec![McpPromptDecl {
+                name: "summary".to_string(),
+                description: "Summarise".to_string(),
+                arguments: None,
+            }],
+        };
+        let json = serde_json::to_string(&mcp).unwrap();
+        let back: McpConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.transport, "http");
+        assert_eq!(back.tools.len(), 1);
+        assert_eq!(back.tools[0].name, "search");
+        assert_eq!(back.prompts[0].name, "summary");
+    }
+
+    #[test]
+    fn plugin_default_and_copy_traits() {
+        let a = AgenticDiscoveryPlugin;
+        let b: AgenticDiscoveryPlugin = a;
+        let _c = a;
+        assert_eq!(a.name(), b.name());
+        let default_plugin = <AgenticDiscoveryPlugin as Default>::default();
+        assert_eq!(default_plugin.name(), "agentic-discovery");
+        assert!(format!("{a:?}").contains("AgenticDiscoveryPlugin"));
+    }
 }
