@@ -17,6 +17,18 @@ use serde::{Deserialize, Serialize};
 
 /// A schemars draft-2020-12 JSON Schema, stored as a JSON value so
 /// callers can serialise / hash / diff it without re-parsing.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::schema::{schema_for, SchemaValue};
+///
+/// // `SchemaValue` is just a type alias for `serde_json::Value`, so
+/// // ordinary `serde_json` helpers apply.
+/// let s: SchemaValue = schema_for::<String>();
+/// assert!(s.is_object());
+/// assert!(s.get("type").is_some());
+/// ```
 pub type SchemaValue = serde_json::Value;
 
 /// Schema bundle for a single registered RPC.
@@ -24,6 +36,23 @@ pub type SchemaValue = serde_json::Value;
 /// `input` is the schema of the function's argument type. `output`
 /// is the schema of the success branch of its return type
 /// (`Result<T, RpcError>` is unwrapped to `T`).
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::schema::{schema_for, RpcSchema};
+///
+/// let s = RpcSchema {
+///     name: "greet",
+///     input: schema_for::<String>(),
+///     output: schema_for::<String>(),
+/// };
+/// assert_eq!(s.name, "greet");
+///
+/// // Field-wise `PartialEq` falls out of the JSON-backed schemas.
+/// let s2 = s.clone();
+/// assert_eq!(s, s2);
+/// ```
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RpcSchema {
     /// Registered name of the RPC.
@@ -46,6 +75,25 @@ impl PartialEq for RpcSchema {
 ///
 /// Returned as a `serde_json::Value` for the reasons spelled out in
 /// the module docs.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::schema::schema_for;
+///
+/// let schema = schema_for::<String>();
+/// // schemars renders `String` with a `"type"` keyword of `"string"`
+/// // (sometimes wrapped in a single-entry array).
+/// let t = schema.get("type").expect("type key present");
+/// let is_string = match t {
+///     serde_json::Value::String(s) => s == "string",
+///     serde_json::Value::Array(arr) => {
+///         arr.iter().any(|v| v.as_str() == Some("string"))
+///     }
+///     _ => false,
+/// };
+/// assert!(is_string, "expected string type, got {schema}");
+/// ```
 #[must_use]
 pub fn schema_for<T: schemars::JsonSchema>() -> SchemaValue {
     let generator = schemars::SchemaGenerator::default();
@@ -64,6 +112,18 @@ pub fn schema_for<T: schemars::JsonSchema>() -> SchemaValue {
 /// * For everything else, we fall back to that type's own schema —
 ///   which lets us write integration tests that pass non-Result
 ///   return types.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::schema::{schema_for, schema_for_result};
+/// use ssg_rpc::RpcError;
+///
+/// // The Ok-branch schema of `Result<String, RpcError>` equals the
+/// // schema of plain `String`.
+/// let unwrapped = schema_for_result::<Result<String, RpcError>>();
+/// assert_eq!(unwrapped, schema_for::<String>());
+/// ```
 #[must_use]
 pub fn schema_for_result<T: ResultLikeSchema>() -> SchemaValue {
     T::success_schema()
@@ -71,8 +131,32 @@ pub fn schema_for_result<T: ResultLikeSchema>() -> SchemaValue {
 
 /// Trait that lets us produce the "success" schema for any type the
 /// proc-macro might see in a return position.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::schema::{schema_for, ResultLikeSchema};
+/// use ssg_rpc::RpcError;
+///
+/// // The blanket impl for `Result<T, E>` returns T's schema.
+/// let s = <Result<String, RpcError> as ResultLikeSchema>::success_schema();
+/// assert_eq!(s, schema_for::<String>());
+/// ```
 pub trait ResultLikeSchema {
     /// Returns the schema of the success arm.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rpc::schema::{schema_for, ResultLikeSchema};
+    /// use ssg_rpc::RpcError;
+    ///
+    /// let s = <Result<u32, RpcError>>::success_schema();
+    /// // `u32` is a numeric (integer) type — schemars emits some
+    /// // `"type"` value, never null.
+    /// assert!(!s.is_null());
+    /// assert!(s.get("type").is_some());
+    /// ```
     fn success_schema() -> SchemaValue;
 }
 

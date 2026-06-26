@@ -68,6 +68,16 @@ use thiserror::Error;
 /// The variant names are deliberately stable — the JSON dispatcher
 /// uses them to choose an HTTP status code, so renaming would be a
 /// wire-protocol break.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_rpc::RpcError;
+///
+/// let err = RpcError::BadRequest("missing field".into());
+/// assert_eq!(err.to_string(), "bad request: missing field");
+/// assert_eq!(err.status_code(), 400);
+/// ```
 #[derive(Debug, Error)]
 pub enum RpcError {
     /// Malformed input payload (HTTP 400). Includes the parser error
@@ -97,6 +107,17 @@ impl RpcError {
     /// return. The choice of integer (vs `http::StatusCode`) keeps
     /// this crate dependency-free for WASM targets that can't link
     /// the `http` crate at runtime.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rpc::RpcError;
+    ///
+    /// assert_eq!(RpcError::BadRequest("x".into()).status_code(), 400);
+    /// assert_eq!(RpcError::Unauthorized.status_code(), 401);
+    /// assert_eq!(RpcError::NotFound.status_code(), 404);
+    /// assert_eq!(RpcError::Internal("boom".into()).status_code(), 500);
+    /// ```
     #[must_use]
     pub const fn status_code(&self) -> u16 {
         match self {
@@ -109,6 +130,22 @@ impl RpcError {
 
     /// Serialises to the standard `{"error": "..."}` wire body that
     /// the JS client knows how to surface.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_rpc::RpcError;
+    ///
+    /// let body = RpcError::NotFound.to_wire_body();
+    /// assert_eq!(body, r#"{"error":"not found"}"#);
+    ///
+    /// // Quotes and backslashes in the message are escaped so the
+    /// // output is always valid JSON.
+    /// let tricky = RpcError::BadRequest(r#"oops "x" \n"#.into());
+    /// let v: serde_json::Value =
+    ///     serde_json::from_str(&tricky.to_wire_body()).unwrap();
+    /// assert_eq!(v["error"], r#"bad request: oops "x" \n"#);
+    /// ```
     #[must_use]
     pub fn to_wire_body(&self) -> String {
         // Hand-rolled to avoid pulling a full `serde_json::to_string`
