@@ -29,6 +29,14 @@ use std::path::Path;
 const NAME: &str = "markdownlint";
 
 /// Markdown linting + formatting gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::markdownlint::MarkdownlintGate;
+/// assert_eq!(MarkdownlintGate.name(), "markdownlint");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct MarkdownlintGate;
 

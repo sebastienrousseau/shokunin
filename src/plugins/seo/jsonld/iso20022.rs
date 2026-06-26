@@ -60,6 +60,15 @@ static FIRST_USE_LOGGED: AtomicBool = AtomicBool::new(false);
 /// exactly once per process. Idempotent.
 ///
 /// Resolves AC7.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::log_first_use_pointer;
+/// // Idempotent — second call is a no-op.
+/// log_first_use_pointer();
+/// log_first_use_pointer();
+/// ```
 pub fn log_first_use_pointer() {
     if !FIRST_USE_LOGGED.swap(true, Ordering::Relaxed) {
         log::info!(
@@ -98,6 +107,15 @@ pub enum ValidationOutcome {
 
 impl ValidationOutcome {
     /// Returns `true` when the outcome is [`ValidationOutcome::Valid`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::ValidationOutcome;
+    /// assert!(ValidationOutcome::Valid.is_valid());
+    /// let bad = ValidationOutcome::Invalid { reason: "x".into() };
+    /// assert!(!bad.is_valid());
+    /// ```
     #[must_use]
     pub const fn is_valid(&self) -> bool {
         matches!(self, Self::Valid)
@@ -120,6 +138,14 @@ impl ValidationOutcome {
 /// Implemented without `num-bigint` by walking the digit string left
 /// to right, taking each modulo step incrementally — this keeps the
 /// crate dependency-free for the ISO validator.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::validate_iban;
+/// assert!(validate_iban("GB29NWBK60161331926819").is_valid());
+/// assert!(!validate_iban("GB29").is_valid());
+/// ```
 #[must_use]
 pub fn validate_iban(input: &str) -> ValidationOutcome {
     let compact: String = input
@@ -198,6 +224,15 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
 /// The first 4 are the bank code (letters), next 2 the country code
 /// (letters), next 2 the location code (alphanumeric); positions 9–11
 /// (when present) are the branch code.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::validate_bic;
+/// assert!(validate_bic("NWBKGB2L").is_valid());
+/// assert!(validate_bic("NWBKGB2LXXX").is_valid());
+/// assert!(!validate_bic("NWBKGB").is_valid());
+/// ```
 #[must_use]
 pub fn validate_bic(input: &str) -> ValidationOutcome {
     let compact: String =
@@ -266,6 +301,16 @@ pub struct MonetaryAmount {
 
 impl MonetaryAmount {
     /// Renders to a Schema.org `MonetaryAmount` JSON value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::MonetaryAmount;
+    /// let m = MonetaryAmount { currency: "EUR".into(), amount: 100.0 };
+    /// let v = m.to_jsonld();
+    /// assert_eq!(v["currency"], "EUR");
+    /// assert_eq!(v["value"], 100.0);
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         serde_json::json!({
@@ -296,6 +341,20 @@ pub struct BankAccount {
 
 impl BankAccount {
     /// Builds the JSON-LD blob for this account.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::BankAccount;
+    /// let acc = BankAccount {
+    ///     name: Some("Treasury".into()),
+    ///     iban: Some("GB29NWBK60161331926819".into()),
+    ///     bic: None,
+    /// };
+    /// let v = acc.to_jsonld();
+    /// assert_eq!(v["@type"], "BankAccount");
+    /// assert_eq!(v["iso20022:iban"], "GB29NWBK60161331926819");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         let mut obj = serde_json::json!({
@@ -333,6 +392,20 @@ pub struct PaymentInstrument {
 
 impl PaymentInstrument {
     /// Builds the JSON-LD blob for this instrument.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::PaymentInstrument;
+    /// let p = PaymentInstrument {
+    ///     name: Some("Visa Debit".into()),
+    ///     instrument_type: "card".into(),
+    ///     brand: Some("Visa".into()),
+    /// };
+    /// let v = p.to_jsonld();
+    /// assert_eq!(v["@type"], "PaymentService");
+    /// assert_eq!(v["iso20022:instrumentType"], "card");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         let mut obj = serde_json::json!({
@@ -377,6 +450,22 @@ pub struct FinancialTransaction {
 
 impl FinancialTransaction {
     /// Builds the JSON-LD blob for this transaction.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::{FinancialTransaction, MonetaryAmount};
+    /// let tx = FinancialTransaction {
+    ///     instructed_amount: Some(MonetaryAmount {
+    ///         currency: "EUR".into(),
+    ///         amount: 50.0,
+    ///     }),
+    ///     ..FinancialTransaction::default()
+    /// };
+    /// let v = tx.to_jsonld();
+    /// assert_eq!(v["@type"], "MoneyTransfer");
+    /// assert_eq!(v["amount"]["currency"], "EUR");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         let mut obj = serde_json::json!({
@@ -426,6 +515,19 @@ pub struct RegulatedFinancialInstitution {
 
 impl RegulatedFinancialInstitution {
     /// Builds the JSON-LD blob for this institution.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::RegulatedFinancialInstitution;
+    /// let r = RegulatedFinancialInstitution {
+    ///     name: "Acme Bank".into(),
+    ///     ..RegulatedFinancialInstitution::default()
+    /// };
+    /// let v = r.to_jsonld();
+    /// assert_eq!(v["@type"], "BankOrCreditUnion");
+    /// assert_eq!(v["name"], "Acme Bank");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         let mut obj = serde_json::json!({
@@ -472,6 +574,20 @@ pub struct FinancialProduct {
 
 impl FinancialProduct {
     /// Builds the JSON-LD blob for this product.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::FinancialProduct;
+    /// let p = FinancialProduct {
+    ///     name: "Green Bond".into(),
+    ///     product_type: "deposit".into(),
+    ///     ..FinancialProduct::default()
+    /// };
+    /// let v = p.to_jsonld();
+    /// assert_eq!(v["@type"], "FinancialProduct");
+    /// assert_eq!(v["iso20022:productType"], "deposit");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         let mut obj = serde_json::json!({
@@ -537,6 +653,15 @@ pub enum Iso20022Entity {
 
 impl Iso20022Entity {
     /// Renders this entity to a JSON-LD blob.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::{BankAccount, Iso20022Entity};
+    /// let e = Iso20022Entity::BankAccount(BankAccount::default());
+    /// let v = e.to_jsonld();
+    /// assert_eq!(v["@type"], "BankAccount");
+    /// ```
     #[must_use]
     pub fn to_jsonld(&self) -> serde_json::Value {
         match self {
@@ -549,6 +674,14 @@ impl Iso20022Entity {
     }
 
     /// Returns the discriminant string (e.g. `"BankAccount"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::seo::jsonld::iso20022::{BankAccount, Iso20022Entity};
+    /// let e = Iso20022Entity::BankAccount(BankAccount::default());
+    /// assert_eq!(e.type_name(), "BankAccount");
+    /// ```
     #[must_use]
     pub const fn type_name(&self) -> &'static str {
         match self {
@@ -600,6 +733,25 @@ impl std::fmt::Display for DispatchError {
 ///
 /// Returns `Err(DispatchError)` if the discriminant is missing or
 /// unknown — caller decides whether to warn or fail.
+///
+/// # Errors
+///
+/// Returns [`DispatchError::MissingType`] when no `type` discriminant
+/// is present, [`DispatchError::UnknownType`] when the discriminant
+/// is unrecognised, or [`DispatchError::Malformed`] when the payload
+/// fails to deserialise.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::from_frontmatter;
+/// let fm = serde_json::json!({
+///     "type": "BankAccount",
+///     "iban": "GB29NWBK60161331926819",
+/// });
+/// let entity = from_frontmatter(&fm).unwrap();
+/// assert_eq!(entity.type_name(), "BankAccount");
+/// ```
 pub fn from_frontmatter(
     value: &serde_json::Value,
 ) -> Result<Iso20022Entity, DispatchError> {
@@ -649,6 +801,17 @@ pub fn from_frontmatter(
 ///
 /// Returns the count of validation warnings emitted — useful for
 /// asserting in tests.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::{BankAccount, Iso20022Entity, warn_invalid_fields};
+/// let e = Iso20022Entity::BankAccount(BankAccount {
+///     iban: Some("INVALID".into()),
+///     ..BankAccount::default()
+/// });
+/// assert_eq!(warn_invalid_fields(&e, "page.md"), 1);
+/// ```
 pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
     fn warn_iban(page_label: &str, iban: &str, who: &str) -> usize {
         if let ValidationOutcome::Invalid { reason } = validate_iban(iban) {
@@ -741,6 +904,17 @@ pub struct SchemaOrgError {
 ///
 /// This is a deliberately small subset of the Schema.org vocabulary —
 /// only the fields that affect downstream rich-result indexing.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::{BankAccount, validate_schema_org};
+/// let v = BankAccount {
+///     iban: Some("GB29NWBK60161331926819".into()),
+///     ..BankAccount::default()
+/// }.to_jsonld();
+/// assert!(validate_schema_org(&v).is_empty());
+/// ```
 #[must_use]
 #[allow(clippy::collapsible_match)]
 pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {

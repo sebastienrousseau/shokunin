@@ -32,6 +32,19 @@ use std::fs;
 ///
 /// Returns [`SsgError::Io`] if `agents.txt` cannot be written (e.g.
 /// the site directory is read-only or full).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::PluginContext;
+/// use ssg::postprocess::agentic_discovery::{AgentsConfig, write_agents_txt};
+/// let tmp = tempfile::tempdir().unwrap();
+/// let ctx = PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+/// let cfg = AgentsConfig::default();
+/// write_agents_txt(&ctx, &cfg).unwrap();
+/// let body = std::fs::read_to_string(tmp.path().join("agents.txt")).unwrap();
+/// assert!(body.contains("User-agent: *"));
+/// ```
 pub fn write_agents_txt(
     ctx: &PluginContext,
     agents: &AgentsConfig,
@@ -50,6 +63,16 @@ pub fn write_agents_txt(
 
 /// Pure-function renderer kept separate from I/O so unit tests can
 /// assert the exact byte layout without touching the filesystem.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::postprocess::agentic_discovery::{AgentsConfig, render_agents_txt};
+/// let cfg = AgentsConfig::default();
+/// let body = render_agents_txt(&cfg, "https://example.com");
+/// assert!(body.contains("User-agent: *"));
+/// assert!(body.contains("Sitemap: https://example.com/sitemap.xml"));
+/// ```
 #[must_use]
 pub fn render_agents_txt(agents: &AgentsConfig, base_url: &str) -> String {
     let mut out = String::new();

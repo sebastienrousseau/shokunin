@@ -15,6 +15,14 @@ use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
 const NAME: &str = "html5";
 
 /// HTML5 structural validation gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::html5::Html5Gate;
+/// assert_eq!(Html5Gate.name(), "html5");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct Html5Gate;
 

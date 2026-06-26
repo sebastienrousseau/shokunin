@@ -69,17 +69,45 @@ const MAX_SCRIPT_BYTES: usize = 5 * 1024;
 ///
 /// Opt-in via [`SsgConfig::transitions`]; when `false` the plugin is
 /// never registered (see `core::pipeline::register_default_plugins`).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::view_transitions::ViewTransitionsPlugin;
+/// assert_eq!(ViewTransitionsPlugin::new().name(), "view-transitions");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ViewTransitionsPlugin;
 
 impl ViewTransitionsPlugin {
     /// Creates a new instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::view_transitions::ViewTransitionsPlugin;
+    /// let _plugin = ViewTransitionsPlugin::new();
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self
     }
 
     /// Returns whether `cfg` opts in to transitions.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::cmd::SsgConfig;
+    /// use ssg::view_transitions::ViewTransitionsPlugin;
+    /// let cfg = SsgConfig::builder()
+    ///     .site_name("t".into())
+    ///     .base_url("http://example.com".into())
+    ///     .build()
+    ///     .unwrap();
+    /// assert!(!ViewTransitionsPlugin::enabled(&cfg));
+    /// ```
     #[must_use]
     pub const fn enabled(cfg: &SsgConfig) -> bool {
         cfg.transitions

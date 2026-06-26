@@ -32,6 +32,15 @@ pub mod wcag;
 ///
 /// Order is part of the public contract: the JSON output, `JUnit` XML
 /// output, and CI dashboard tooling all rely on it being stable.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::gates::all;
+/// let gates = all();
+/// assert_eq!(gates.len(), 14);
+/// assert_eq!(gates[0].name(), "wcag");
+/// ```
 #[must_use]
 pub fn all() -> Vec<Box<dyn AuditGate>> {
     vec![

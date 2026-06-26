@@ -14,6 +14,14 @@ use super::hreflang_attr;
 const NAME: &str = "performance";
 
 /// Performance budget gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::performance::PerformanceGate;
+/// assert_eq!(PerformanceGate.name(), "performance");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct PerformanceGate;
 

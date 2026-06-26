@@ -60,6 +60,15 @@ pub struct HeadMeta {
 ///
 /// Idempotency is the **caller's** responsibility — this helper inserts
 /// unconditionally and will append a second payload on a second call.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::head_dom::inject_before_head_close;
+/// let html = "<html><head><title>T</title></head><body></body></html>";
+/// let out = inject_before_head_close(html, "<meta name=\"x\">");
+/// assert!(out.contains("<meta name=\"x\"></head>"));
+/// ```
 #[must_use]
 pub fn inject_before_head_close(html: &str, payload: &str) -> String {
     if payload.is_empty() {
@@ -107,6 +116,16 @@ pub fn inject_before_head_close(html: &str, payload: &str) -> String {
 ///   space-separated token set so `rel="canonical other-token"` is
 ///   detected, while quoting style is irrelevant (the parser normalises
 ///   it).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::head_dom::extract_head_meta;
+/// let html = r#"<html lang="en"><head><title>Hi</title></head></html>"#;
+/// let meta = extract_head_meta(html);
+/// assert_eq!(meta.title, "Hi");
+/// assert_eq!(meta.lang, "en");
+/// ```
 #[must_use]
 pub fn extract_head_meta(html: &str) -> HeadMeta {
     let title_buf: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
@@ -169,6 +188,15 @@ pub fn extract_head_meta(html: &str) -> HeadMeta {
 /// `<link rel="canonical">` text embedded inside a `<pre>` / `<code>`
 /// block or an HTML comment is left untouched because `lol_html` only
 /// dispatches on real elements.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::head_dom::remove_canonical_links;
+/// let html = r#"<head><link rel="canonical" href="/old"></head>"#;
+/// let out = remove_canonical_links(html);
+/// assert!(!out.contains("canonical"));
+/// ```
 #[must_use]
 pub fn remove_canonical_links(html: &str) -> String {
     let handler = element!("link[rel~=\"canonical\" i]", |el| {
@@ -187,6 +215,16 @@ pub fn remove_canonical_links(html: &str) -> String {
 /// same time as the new link is inserted — keeping the canonical
 /// plugin's `transform_html` byte-stable across repeated invocations
 /// (idempotency requirement).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::util::head_dom::replace_canonical_link;
+/// let html = r#"<html><head><link rel="canonical" href="/old"></head></html>"#;
+/// let out = replace_canonical_link(html, r#"<link rel="canonical" href="/new">"#);
+/// assert!(out.contains("href=\"/new\""));
+/// assert!(!out.contains("href=\"/old\""));
+/// ```
 #[must_use]
 pub fn replace_canonical_link(html: &str, payload: &str) -> String {
     let payload_owned = payload.to_string();

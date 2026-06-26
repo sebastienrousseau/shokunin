@@ -20,6 +20,14 @@ use std::collections::HashSet;
 const NAME: &str = "csp_sri";
 
 /// CSP + SRI hash validation gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::csp_sri::CspSriGate;
+/// assert_eq!(CspSriGate.name(), "csp_sri");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct CspSriGate;
 

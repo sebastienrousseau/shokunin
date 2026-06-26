@@ -73,6 +73,15 @@ pub enum Severity {
 
 impl Severity {
     /// Returns the canonical lowercase name (`"info"`, `"warn"`, `"error"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::Severity;
+    /// assert_eq!(Severity::Info.as_str(), "info");
+    /// assert_eq!(Severity::Warn.as_str(), "warn");
+    /// assert_eq!(Severity::Error.as_str(), "error");
+    /// ```
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -84,6 +93,16 @@ impl Severity {
 
     /// Parses a severity from its lowercase textual form. Accepts both
     /// `"warn"` and `"warning"` for ergonomics.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::Severity;
+    /// assert_eq!(Severity::parse("info"), Some(Severity::Info));
+    /// assert_eq!(Severity::parse("warning"), Some(Severity::Warn));
+    /// assert_eq!(Severity::parse("err"), Some(Severity::Error));
+    /// assert_eq!(Severity::parse("nope"), None);
+    /// ```
     pub fn parse(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
             "info" => Some(Self::Info),
@@ -126,6 +145,17 @@ pub struct Finding {
 
 impl Finding {
     /// Convenience constructor for a path-scoped finding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{Finding, Severity};
+    /// let f = Finding::new("wcag", Severity::Warn, "missing alt text");
+    /// assert_eq!(f.gate, "wcag");
+    /// assert_eq!(f.severity, Severity::Warn);
+    /// assert_eq!(f.message, "missing alt text");
+    /// assert!(f.code.is_none());
+    /// ```
     pub fn new(
         gate: impl Into<String>,
         severity: Severity,
@@ -141,6 +171,14 @@ impl Finding {
     }
 
     /// Builder: attaches a rule code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{Finding, Severity};
+    /// let f = Finding::new("wcag", Severity::Warn, "missing alt").with_code("WCAG-1.1.1");
+    /// assert_eq!(f.code.as_deref(), Some("WCAG-1.1.1"));
+    /// ```
     #[must_use]
     pub fn with_code(mut self, code: impl Into<String>) -> Self {
         self.code = Some(code.into());
@@ -148,6 +186,14 @@ impl Finding {
     }
 
     /// Builder: attaches a path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{Finding, Severity};
+    /// let f = Finding::new("links", Severity::Error, "broken").with_path("blog/foo.html");
+    /// assert_eq!(f.path.as_deref(), Some("blog/foo.html"));
+    /// ```
     #[must_use]
     pub fn with_path(mut self, path: impl Into<String>) -> Self {
         self.path = Some(path.into());
@@ -177,6 +223,16 @@ impl Site {
     ///
     /// # Errors
     /// Returns [`SsgError::Io`] if the directory walk fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::Site;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let site = Site::load(tmp.path()).unwrap();
+    /// assert_eq!(site.root, tmp.path());
+    /// assert!(site.html_files.is_empty());
+    /// ```
     pub fn load(root: &Path) -> Result<Self, SsgError> {
         let html_files = if root.exists() {
             walk_files(root, "html").unwrap_or_default()
@@ -191,6 +247,15 @@ impl Site {
 
     /// Returns a relative path string for `path` against the site root.
     /// Falls back to the absolute path if the strip fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::{Path, PathBuf};
+    /// use ssg::audit::Site;
+    /// let site = Site { root: PathBuf::from("/site"), html_files: Vec::new() };
+    /// assert_eq!(site.rel(Path::new("/site/blog/a.html")), "blog/a.html");
+    /// ```
     #[must_use]
     pub fn rel(&self, path: &Path) -> String {
         path.strip_prefix(&self.root)
@@ -203,6 +268,18 @@ impl Site {
     ///
     /// # Errors
     /// Returns [`SsgError::Io`] if reading fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// use ssg::audit::Site;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let p = tmp.path().join("a.html");
+    /// std::fs::write(&p, "<html></html>").unwrap();
+    /// let site = Site { root: tmp.path().to_path_buf(), html_files: vec![p.clone()] };
+    /// assert_eq!(site.read(&p).unwrap(), "<html></html>");
+    /// ```
     pub fn read(&self, path: &Path) -> Result<String, SsgError> {
         fs::read_to_string(path).with_path(path)
     }
@@ -278,6 +355,16 @@ pub struct AuditConfig {
 
 impl AuditConfig {
     /// Sensible defaults: include everything, fail on `Error`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditConfig, Severity};
+    /// let cfg = AuditConfig::new();
+    /// assert_eq!(cfg.fail_on, Severity::Error);
+    /// assert!(cfg.disabled.is_empty());
+    /// assert!(cfg.only.is_none());
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -331,6 +418,16 @@ pub struct SeverityCounts {
 
 impl SeverityCounts {
     /// Bumps the counter for `sev`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{Severity, SeverityCounts};
+    /// let mut c = SeverityCounts::default();
+    /// c.add(Severity::Warn);
+    /// c.add(Severity::Warn);
+    /// assert_eq!(c.warn, 2);
+    /// ```
     pub const fn add(&mut self, sev: Severity) {
         match sev {
             Severity::Info => self.info += 1,
@@ -340,6 +437,16 @@ impl SeverityCounts {
     }
 
     /// Total findings across severities.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{Severity, SeverityCounts};
+    /// let mut c = SeverityCounts::default();
+    /// c.add(Severity::Info);
+    /// c.add(Severity::Error);
+    /// assert_eq!(c.total(), 2);
+    /// ```
     #[must_use]
     pub const fn total(&self) -> usize {
         self.info + self.warn + self.error
@@ -356,6 +463,14 @@ pub struct AuditReport {
 impl AuditReport {
     /// Returns the highest severity present across all gates, or `None`
     /// if no findings were produced.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// assert!(r.max_severity().is_none());
+    /// ```
     #[must_use]
     pub fn max_severity(&self) -> Option<Severity> {
         let mut max: Option<Severity> = None;
@@ -376,24 +491,56 @@ impl AuditReport {
 
     /// Returns `true` when the report contains at least one finding at
     /// `fail_on` or higher.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditReport, Severity};
+    /// let r = AuditReport { gates: vec![] };
+    /// assert!(!r.should_fail(Severity::Error));
+    /// ```
     #[must_use]
     pub fn should_fail(&self, fail_on: Severity) -> bool {
         self.max_severity().is_some_and(|sev| sev >= fail_on)
     }
 
     /// Total number of registered gates (skipped or not).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// assert_eq!(r.len(), 0);
+    /// ```
     #[must_use]
     pub const fn len(&self) -> usize {
         self.gates.len()
     }
 
     /// `true` when no gates ran.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// assert!(r.is_empty());
+    /// ```
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.gates.is_empty()
     }
 
     /// Convenience: prints the rich text formatter to stdout.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// r.print_text(); // emits nothing for an empty report
+    /// ```
     pub fn print_text(&self) {
         let mut out = String::new();
         output::text::format(self, &mut out);
@@ -401,6 +548,18 @@ impl AuditReport {
     }
 
     /// Convenience: prints the JSON formatter to stdout.
+    ///
+    /// # Errors
+    /// Propagates any JSON serialisation error from
+    /// [`crate::audit::output::json::format`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// r.print_json().unwrap();
+    /// ```
     pub fn print_json(&self) -> Result<(), SsgError> {
         let s = output::json::format(self)?;
         println!("{s}");
@@ -408,6 +567,14 @@ impl AuditReport {
     }
 
     /// Convenience: prints the `JUnit` XML formatter to stdout.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// r.print_junit();
+    /// ```
     pub fn print_junit(&self) {
         let s = output::junit::format(self);
         println!("{s}");
@@ -438,6 +605,14 @@ impl std::fmt::Debug for AuditRunner {
 
 impl AuditRunner {
     /// Constructs a runner with the 14 built-in gates registered.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditConfig, AuditRunner};
+    /// let r = AuditRunner::new(AuditConfig::new());
+    /// assert_eq!(r.gate_names().len(), 14);
+    /// ```
     #[must_use]
     pub fn new(config: AuditConfig) -> Self {
         Self {
@@ -447,6 +622,14 @@ impl AuditRunner {
     }
 
     /// Constructs a runner with a user-supplied gate list (for tests).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditConfig, AuditRunner};
+    /// let r = AuditRunner::with_gates(AuditConfig::new(), Vec::new());
+    /// assert!(r.gate_names().is_empty());
+    /// ```
     #[must_use]
     pub fn with_gates(
         config: AuditConfig,
@@ -456,12 +639,31 @@ impl AuditRunner {
     }
 
     /// Returns the names of every gate registered with the runner.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditConfig, AuditRunner};
+    /// let r = AuditRunner::new(AuditConfig::new());
+    /// assert!(r.gate_names().contains(&"wcag"));
+    /// ```
     #[must_use]
     pub fn gate_names(&self) -> Vec<&'static str> {
         self.gates.iter().map(|g| g.name()).collect()
     }
 
     /// Runs every (enabled) gate sequentially and collects the result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// use ssg::audit::{AuditConfig, AuditRunner, Site};
+    /// let runner = AuditRunner::new(AuditConfig::new());
+    /// let site = Site { root: PathBuf::from("/nonexistent"), html_files: Vec::new() };
+    /// let report = runner.run(&site);
+    /// assert_eq!(report.len(), 14);
+    /// ```
     #[must_use]
     pub fn run(&self, site: &Site) -> AuditReport {
         let mut results = Vec::with_capacity(self.gates.len());
@@ -524,6 +726,14 @@ impl AuditRunner {
     }
 
     /// Returns the configured `fail_on` threshold.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::{AuditConfig, AuditRunner, Severity};
+    /// let r = AuditRunner::new(AuditConfig::new());
+    /// assert_eq!(r.fail_on(), Severity::Error);
+    /// ```
     #[must_use]
     pub const fn fail_on(&self) -> Severity {
         self.config.fail_on
@@ -596,6 +806,15 @@ const fn default_image_budget() -> usize {
 impl AuditTomlConfig {
     /// Merges the TOML config into a default [`AuditConfig`] and
     /// returns the result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditTomlConfig;
+    /// let toml_cfg = AuditTomlConfig::default();
+    /// let cfg = toml_cfg.into_audit_config();
+    /// assert!(cfg.disabled.is_empty());
+    /// ```
     #[must_use]
     pub fn into_audit_config(self) -> AuditConfig {
         let mut cfg = AuditConfig::new();

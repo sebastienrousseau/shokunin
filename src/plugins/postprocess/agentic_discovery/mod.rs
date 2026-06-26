@@ -96,6 +96,16 @@ pub struct AgentsConfig {
 impl AgentsConfig {
     /// Returns `true` when at least one emitter is enabled. When this
     /// is `false`, the coordinator plugin is a complete no-op.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::postprocess::agentic_discovery::AgentsConfig;
+    /// let mut cfg = AgentsConfig::default();
+    /// assert!(!cfg.any_enabled());
+    /// cfg.agents_txt = true;
+    /// assert!(cfg.any_enabled());
+    /// ```
     #[must_use]
     pub const fn any_enabled(&self) -> bool {
         self.agents_txt || self.ai_plugin || self.mcp.enabled
@@ -226,6 +236,14 @@ pub struct McpPromptDecl {
 /// `false`, the plugin is a no-op — none of the three files are
 /// written. This means existing sites upgrading to v0.0.44 see no
 /// behavioural change until they opt in.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::postprocess::agentic_discovery::AgenticDiscoveryPlugin;
+/// assert_eq!(AgenticDiscoveryPlugin.name(), "agentic-discovery");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AgenticDiscoveryPlugin;
 

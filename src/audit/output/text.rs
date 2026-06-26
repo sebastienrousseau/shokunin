@@ -11,6 +11,17 @@ use crate::audit::{AuditReport, Severity};
 use std::fmt::Write;
 
 /// Renders `report` into `out` using a grouped-by-gate layout.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditReport;
+/// use ssg::audit::output::text::format;
+/// let report = AuditReport { gates: vec![] };
+/// let mut out = String::new();
+/// format(&report, &mut out);
+/// assert!(out.is_empty());
+/// ```
 pub fn format(report: &AuditReport, out: &mut String) {
     for gate in &report.gates {
         if gate.skipped {

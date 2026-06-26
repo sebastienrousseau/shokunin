@@ -49,6 +49,19 @@ use std::fs;
 /// One MCP `resource` entry. Public so integration tests can construct
 /// instances directly and so consumers of the library can fan their
 /// own resources in via post-emit hooks.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::postprocess::agentic_discovery::McpResource;
+/// let r = McpResource {
+///     uri: "https://example.com/blog/a/".into(),
+///     name: "Hello".into(),
+///     description: "Greeting".into(),
+///     mime_type: "text/markdown".into(),
+/// };
+/// assert_eq!(r.mime_type, "text/markdown");
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct McpResource {
     /// URI exposed to MCP clients — typically `{base}/{slug}/`.
@@ -78,6 +91,25 @@ impl McpResource {
 ///
 /// Returns [`SsgError::Io`] if the `.well-known` directory cannot be
 /// created or the registry file cannot be written.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::SsgConfig;
+/// use ssg::plugin::PluginContext;
+/// use ssg::postprocess::agentic_discovery::{AgentsConfig, write_mcp_registry};
+/// let tmp = tempfile::tempdir().unwrap();
+/// let cfg = SsgConfig::builder()
+///     .site_name("Example".into())
+///     .base_url("https://example.com".into())
+///     .build()
+///     .unwrap();
+/// let mut agents = AgentsConfig::default();
+/// agents.mcp.enabled = true;
+/// let ctx = PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+/// write_mcp_registry(&ctx, &cfg, &agents).unwrap();
+/// assert!(tmp.path().join(".well-known/mcp.json").exists());
+/// ```
 pub fn write_mcp_registry(
     ctx: &PluginContext,
     cfg: &SsgConfig,
@@ -102,6 +134,22 @@ pub fn write_mcp_registry(
 }
 
 /// Pure-function registry builder, callable from tests without I/O.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::SsgConfig;
+/// use ssg::postprocess::agentic_discovery::{AgentsConfig, build_registry};
+/// let cfg = SsgConfig::builder()
+///     .site_name("Example".into())
+///     .base_url("https://example.com".into())
+///     .build()
+///     .unwrap();
+/// let agents = AgentsConfig::default();
+/// let reg = build_registry(&cfg, &agents, &[]);
+/// assert!(reg["resources"].is_array());
+/// assert_eq!(reg["transport"]["type"], "http");
+/// ```
 #[must_use]
 pub fn build_registry(
     cfg: &SsgConfig,
@@ -192,6 +240,23 @@ pub fn build_registry(
 ///
 /// Public = `published != "false"` AND `draft != "true"` AND `agents.disallow`
 /// doesn't contain `"*"` or `"mcp"`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::SsgConfig;
+/// use ssg::plugin::PluginContext;
+/// use ssg::postprocess::agentic_discovery::collect_mcp_resources;
+/// let tmp = tempfile::tempdir().unwrap();
+/// let cfg = SsgConfig::builder()
+///     .site_name("Example".into())
+///     .base_url("https://example.com".into())
+///     .build()
+///     .unwrap();
+/// let ctx = PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+/// // Empty dir, no sidecars -> empty result.
+/// assert!(collect_mcp_resources(&ctx, &cfg).is_empty());
+/// ```
 #[must_use]
 pub fn collect_mcp_resources(
     ctx: &PluginContext,

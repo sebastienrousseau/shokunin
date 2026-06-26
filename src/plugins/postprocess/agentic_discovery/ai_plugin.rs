@@ -39,6 +39,23 @@ use std::fs;
 ///
 /// Returns [`SsgError::Io`] if the `.well-known` directory cannot be
 /// created or the manifest cannot be written.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::SsgConfig;
+/// use ssg::plugin::PluginContext;
+/// use ssg::postprocess::agentic_discovery::write_ai_plugin_json;
+/// let tmp = tempfile::tempdir().unwrap();
+/// let cfg = SsgConfig::builder()
+///     .site_name("Example".into())
+///     .base_url("https://example.com".into())
+///     .build()
+///     .unwrap();
+/// let ctx = PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+/// write_ai_plugin_json(&ctx, &cfg).unwrap();
+/// assert!(tmp.path().join(".well-known/ai-plugin.json").exists());
+/// ```
 pub fn write_ai_plugin_json(
     ctx: &PluginContext,
     cfg: &SsgConfig,
@@ -56,6 +73,21 @@ pub fn write_ai_plugin_json(
 /// Pure-function manifest builder — split from `write_ai_plugin_json`
 /// so unit tests can assert the JSON shape without touching the
 /// filesystem.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::SsgConfig;
+/// use ssg::postprocess::agentic_discovery::build_manifest;
+/// let cfg = SsgConfig::builder()
+///     .site_name("Example".into())
+///     .base_url("https://example.com".into())
+///     .build()
+///     .unwrap();
+/// let m = build_manifest(&cfg);
+/// assert_eq!(m["schema_version"], "v1");
+/// assert_eq!(m["auth"]["type"], "none");
+/// ```
 #[must_use]
 pub fn build_manifest(cfg: &SsgConfig) -> Value {
     let base_url = cfg.base_url.trim_end_matches('/').to_string();

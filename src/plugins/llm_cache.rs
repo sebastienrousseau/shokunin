@@ -119,6 +119,15 @@ impl LlmCache {
     ///
     /// The directory is created lazily on the first write; calling
     /// this on a path that does not yet exist is fine.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// assert_eq!(cache.root(), tmp.path());
+    /// ```
     #[must_use]
     pub const fn new(root: PathBuf) -> Self {
         Self::with_ttl(root, DEFAULT_TTL)
@@ -126,6 +135,16 @@ impl LlmCache {
 
     /// Constructs a cache rooted at `root` with a custom TTL. Used by
     /// the AC4 expiry tests so they don't have to wait 90 days.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::with_ttl(tmp.path().to_path_buf(), Duration::from_secs(60));
+    /// assert_eq!(cache.stats().hits, 0);
+    /// ```
     #[must_use]
     pub const fn with_ttl(root: PathBuf, ttl: Duration) -> Self {
         Self {
@@ -151,6 +170,14 @@ impl LlmCache {
     /// 6. `./.ssg-llm-cache` — last-resort relative path so the cache
     ///    is still usable in sandboxes where neither `$HOME` nor
     ///    `%LOCALAPPDATA%` is set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let dir = LlmCache::default_cache_dir();
+    /// assert!(!dir.as_os_str().is_empty());
+    /// ```
     #[must_use]
     pub fn default_cache_dir() -> PathBuf {
         if let Ok(explicit) = std::env::var("SSG_LLM_CACHE_DIR") {
@@ -202,6 +229,17 @@ impl LlmCache {
     /// with a versioned prefix so a future change to the key
     /// composition can be rolled out without colliding with stored
     /// entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let a = LlmCache::compute_key("http://x", "llama", "hi", 30);
+    /// let b = LlmCache::compute_key("http://x", "llama", "hi", 30);
+    /// assert_eq!(a, b);
+    /// let c = LlmCache::compute_key("http://x", "llama", "bye", 30);
+    /// assert_ne!(a, c);
+    /// ```
     #[must_use]
     pub fn compute_key(
         endpoint: &str,
@@ -231,6 +269,18 @@ impl LlmCache {
     /// mismatch) is evicted in-place and reported as a miss so the
     /// caller does a fresh inference (AC5). A TTL-expired entry is
     /// handled the same way (AC4).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// let key = LlmCache::compute_key("e", "m", "p", 1);
+    /// assert!(cache.get(&key).is_none());
+    /// cache.set(&key, "answer").unwrap();
+    /// assert_eq!(cache.get(&key).as_deref(), Some("answer"));
+    /// ```
     pub fn get(&self, key: &[u8; 32]) -> Option<String> {
         let path = self.entry_path(key);
         let mut file = match fs::File::open(&path) {
@@ -286,6 +336,22 @@ impl LlmCache {
     /// silently falls through (counter is not bumped) so a transient
     /// disk failure never breaks the build — the next invocation
     /// will just be another miss + recompute.
+    ///
+    /// # Errors
+    ///
+    /// Returns the underlying [`io::Error`] when the cache file cannot
+    /// be created or renamed into place.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// let key = LlmCache::compute_key("e", "m", "p", 1);
+    /// cache.set(&key, "stored").unwrap();
+    /// assert_eq!(cache.stats().stores, 1);
+    /// ```
     pub fn set(&self, key: &[u8; 32], payload: &str) -> io::Result<()> {
         let path = self.entry_path(key);
         if let Some(parent) = path.parent() {
@@ -323,6 +389,23 @@ impl LlmCache {
 
     /// Removes the entry for `key` if present. Used by the
     /// `ssg cache --clear` command and by the unit tests.
+    ///
+    /// # Errors
+    ///
+    /// Returns the underlying [`io::Error`] when the entry exists but
+    /// cannot be removed. A missing entry is treated as success.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// let key = LlmCache::compute_key("e", "m", "p", 1);
+    /// cache.set(&key, "x").unwrap();
+    /// cache.evict(&key).unwrap();
+    /// assert!(cache.get(&key).is_none());
+    /// ```
     pub fn evict(&self, key: &[u8; 32]) -> io::Result<()> {
         let path = self.entry_path(key);
         match fs::remove_file(&path) {
@@ -336,6 +419,17 @@ impl LlmCache {
     }
 
     /// Returns the running session counters.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// let stats = cache.stats();
+    /// assert_eq!(stats.hits, 0);
+    /// assert_eq!(stats.stores, 0);
+    /// ```
     #[must_use]
     pub fn stats(&self) -> CacheStats {
         CacheStats {
@@ -347,6 +441,15 @@ impl LlmCache {
     }
 
     /// Returns the cache root.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::llm_cache::LlmCache;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let cache = LlmCache::new(tmp.path().to_path_buf());
+    /// assert_eq!(cache.root(), tmp.path());
+    /// ```
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root

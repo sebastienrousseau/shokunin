@@ -36,11 +36,26 @@ pub const CONTENT_RELATIVE_DIR: &str = ".ssg/content";
 
 /// `after_compile` plugin that emits the ISR manifest + raw KV
 /// payloads. Off by default; enabled by the `--isr` flag.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::isr_manifest::IsrManifestPlugin;
+/// assert_eq!(IsrManifestPlugin::new().name(), "isr-manifest");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct IsrManifestPlugin;
 
 impl IsrManifestPlugin {
     /// Constructs a new instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::isr_manifest::IsrManifestPlugin;
+    /// let _plugin = IsrManifestPlugin::new();
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self
@@ -89,6 +104,26 @@ impl Plugin for IsrManifestPlugin {
 /// do — `templates/index.html` and `templates/page.html` cover the
 /// 95% case. A page can override the cache policy via
 /// `isr.s_maxage` / `isr.swr` in frontmatter.
+///
+/// # Errors
+///
+/// Returns [`SsgError::Io`] when the content/template directories cannot
+/// be walked or read.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::isr_manifest::build_manifest;
+/// let tmp = tempfile::tempdir().unwrap();
+/// let content = tmp.path().join("content");
+/// let templates = tmp.path().join("templates");
+/// let site = tmp.path().join("site");
+/// std::fs::create_dir_all(&content).unwrap();
+/// std::fs::create_dir_all(&templates).unwrap();
+/// std::fs::create_dir_all(&site).unwrap();
+/// let m = build_manifest(&content, &templates, &site).unwrap();
+/// assert_eq!(m.len(), 0);
+/// ```
 pub fn build_manifest(
     content_dir: &Path,
     template_dir: &Path,

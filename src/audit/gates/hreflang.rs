@@ -15,6 +15,14 @@ use std::path::PathBuf;
 const NAME: &str = "hreflang";
 
 /// Hreflang reciprocity gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::hreflang::HreflangGate;
+/// assert_eq!(HreflangGate.name(), "hreflang");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct HreflangGate;
 

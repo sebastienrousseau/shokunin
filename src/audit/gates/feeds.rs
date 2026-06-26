@@ -21,6 +21,14 @@ use crate::walk::walk_files;
 const NAME: &str = "feeds";
 
 /// RSS/Atom feed structural validation gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::feeds::FeedsGate;
+/// assert_eq!(FeedsGate.name(), "feeds");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct FeedsGate;
 

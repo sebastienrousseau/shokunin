@@ -13,6 +13,14 @@ use crate::seo::validate_jsonld;
 const NAME: &str = "jsonld";
 
 /// JSON-LD Schema.org gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::jsonld::JsonLdGate;
+/// assert_eq!(JsonLdGate.name(), "jsonld");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct JsonLdGate;
 

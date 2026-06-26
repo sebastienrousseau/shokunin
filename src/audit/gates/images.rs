@@ -17,6 +17,14 @@ use super::hreflang_attr;
 const NAME: &str = "images";
 
 /// Image optimisation + alt-text gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::images::ImagesGate;
+/// assert_eq!(ImagesGate.name(), "images");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct ImagesGate;
 
