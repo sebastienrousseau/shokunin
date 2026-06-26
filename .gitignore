@@ -10,6 +10,7 @@ build/
 # Generated output
 /docs/*
 !/docs/README.md
+!/docs/adrs/
 !/docs/guide/
 !/docs/whitepaper/
 !/docs/architecture/

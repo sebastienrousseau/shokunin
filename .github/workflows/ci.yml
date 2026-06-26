@@ -105,6 +105,11 @@ jobs:
         # Regression guard for v0.0.44 LlmPlugin port from curl to ureq (#520).
         run: ./tools/lint-no-shellout.sh
 
+      - name: ADR citation graph (#557)
+        # Refuses dangling `adr: ADR-NNNN` citations in tracked source.
+        # Every cited ADR must resolve to a file in docs/adrs/.
+        run: ./tools/lint-adr.sh
+
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
     name: test · ${{ matrix.os }}
