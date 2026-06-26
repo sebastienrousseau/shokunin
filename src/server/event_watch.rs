@@ -70,12 +70,29 @@ pub struct ChangeBatch {
 
 impl ChangeBatch {
     /// Returns `true` if the batch carries no paths.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::event_watch::ChangeBatch;
+    /// let b = ChangeBatch { paths: vec![] };
+    /// assert!(b.is_empty());
+    /// ```
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.paths.is_empty()
     }
 
     /// Returns the number of unique paths in the batch.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// use ssg::event_watch::ChangeBatch;
+    /// let b = ChangeBatch { paths: vec![PathBuf::from("a"), PathBuf::from("b")] };
+    /// assert_eq!(b.len(), 2);
+    /// ```
     #[must_use]
     pub const fn len(&self) -> usize {
         self.paths.len()
@@ -96,6 +113,16 @@ pub enum RecvOutcome {
 
 impl RecvOutcome {
     /// Returns the wrapped batch, if any.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::event_watch::{ChangeBatch, RecvOutcome};
+    /// let b = ChangeBatch { paths: vec![] };
+    /// let out = RecvOutcome::Batch(b.clone());
+    /// assert_eq!(out.batch(), Some(b));
+    /// assert!(RecvOutcome::Timeout.batch().is_none());
+    /// ```
     #[must_use]
     pub fn batch(self) -> Option<ChangeBatch> {
         match self {
@@ -105,6 +132,14 @@ impl RecvOutcome {
     }
 
     /// Returns true if the channel is closed (no more batches).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::event_watch::RecvOutcome;
+    /// assert!(RecvOutcome::Closed.is_closed());
+    /// assert!(!RecvOutcome::Timeout.is_closed());
+    /// ```
     #[must_use]
     pub const fn is_closed(&self) -> bool {
         matches!(self, Self::Closed)
@@ -147,6 +182,15 @@ impl EventWatcher {
     /// Returns [`SsgError::Io`] wrapping the underlying `notify::Error`
     /// when the backend cannot subscribe (missing directory, permission
     /// denied, kernel resource exhaustion).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::event_watch::{EventWatcher, DEFAULT_DEBOUNCE};
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let w = EventWatcher::new(tmp.path()).unwrap();
+    /// assert_eq!(w.debounce(), DEFAULT_DEBOUNCE);
+    /// ```
     pub fn new(dir: &Path) -> Result<Self, SsgError> {
         Self::with_debounce(dir, DEFAULT_DEBOUNCE)
     }
@@ -157,6 +201,16 @@ impl EventWatcher {
     /// # Errors
     ///
     /// See [`Self::new`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    /// use ssg::event_watch::EventWatcher;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let w = EventWatcher::with_debounce(tmp.path(), Duration::from_millis(50)).unwrap();
+    /// assert_eq!(w.debounce(), Duration::from_millis(50));
+    /// ```
     pub fn with_debounce(
         dir: &Path,
         debounce: Duration,
@@ -216,6 +270,18 @@ impl EventWatcher {
     /// Blocks until the next debounced batch is available.
     ///
     /// Returns `None` if the watcher is being torn down.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use ssg::event_watch::EventWatcher;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let w = EventWatcher::new(tmp.path()).unwrap();
+    /// // Blocks until a change arrives — would hang in a doctest sandbox.
+    /// if let Some(batch) = w.recv() {
+    ///     assert!(!batch.paths.is_empty());
+    /// }
+    /// ```
     #[must_use]
     pub fn recv(&self) -> Option<ChangeBatch> {
         self.rx.recv().ok()
@@ -228,6 +294,17 @@ impl EventWatcher {
     /// * [`RecvOutcome::Timeout`] — no batch within `timeout`.
     /// * [`RecvOutcome::Closed`] — the watcher was dropped or the
     ///   debounce thread exited.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    /// use ssg::event_watch::{EventWatcher, RecvOutcome};
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let w = EventWatcher::with_debounce(tmp.path(), Duration::from_millis(20)).unwrap();
+    /// let out = w.recv_timeout(Duration::from_millis(30));
+    /// assert!(!out.is_closed());
+    /// ```
     pub fn recv_timeout(&self, timeout: Duration) -> RecvOutcome {
         match self.rx.recv_timeout(timeout) {
             Ok(b) => RecvOutcome::Batch(b),
@@ -237,6 +314,16 @@ impl EventWatcher {
     }
 
     /// Debounce window in effect for this watcher.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::Duration;
+    /// use ssg::event_watch::EventWatcher;
+    /// let tmp = tempfile::tempdir().unwrap();
+    /// let w = EventWatcher::with_debounce(tmp.path(), Duration::from_millis(75)).unwrap();
+    /// assert_eq!(w.debounce(), Duration::from_millis(75));
+    /// ```
     #[must_use]
     pub const fn debounce(&self) -> Duration {
         self.debounce
@@ -268,6 +355,15 @@ impl Drop for EventWatcher {
 /// We deliberately ignore [`EventKind::Access`] and [`EventKind::Other`]
 /// (mount/unmount on macOS, access-time bumps on Linux); those don't
 /// change file content and rebuilding for them is wasted work.
+///
+/// # Examples
+///
+/// ```
+/// use notify::{EventKind, event::ModifyKind};
+/// use ssg::event_watch::event_should_propagate;
+/// assert!(event_should_propagate(&EventKind::Modify(ModifyKind::Any)));
+/// assert!(!event_should_propagate(&EventKind::Other));
+/// ```
 #[must_use]
 pub const fn event_should_propagate(kind: &EventKind) -> bool {
     matches!(
@@ -334,6 +430,22 @@ fn debounce_loop(
 /// Pure helper: collapse a stream of `(path, instant)` events into a
 /// list of debounced batches. Used by tests so the debouncer logic can
 /// be verified without spawning threads.
+///
+/// # Examples
+///
+/// ```
+/// use std::path::PathBuf;
+/// use std::time::{Duration, Instant};
+/// use ssg::event_watch::debounce_paths;
+/// let t0 = Instant::now();
+/// let events = vec![
+///     (PathBuf::from("a.md"), t0),
+///     (PathBuf::from("a.md"), t0 + Duration::from_millis(20)),
+/// ];
+/// let out = debounce_paths(&events, Duration::from_millis(100));
+/// assert_eq!(out.len(), 1);
+/// assert_eq!(out[0].len(), 1);
+/// ```
 #[must_use]
 pub fn debounce_paths(
     events: &[(PathBuf, Instant)],

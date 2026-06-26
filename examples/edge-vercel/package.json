@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vercel dev --listen 3000",
     "deploy": "vercel deploy --prod",
-    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && wasm-opt -Oz -o pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm",
+    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && mkdir -p ../../examples/edge-vercel/wasm && wasm-opt -Oz -o ../../examples/edge-vercel/wasm/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm && cp pkg/ssg_wasm.js ../../examples/edge-vercel/wasm/ssg_wasm.js",
     "config:upload": "node ./scripts/upload-edge-config.js"
   },
   "dependencies": {

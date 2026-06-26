@@ -67,6 +67,18 @@ pub enum ChangeKind {
 }
 
 /// Classifies a changed file path for selective reload.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::watch::{classify_change, ChangeKind};
+/// use std::path::Path;
+///
+/// assert_eq!(classify_change(Path::new("a.css")), ChangeKind::Css);
+/// assert_eq!(classify_change(Path::new("post.md")), ChangeKind::Content);
+/// assert_eq!(classify_change(Path::new("layout.html")), ChangeKind::Template);
+/// assert_eq!(classify_change(Path::new("data.json")), ChangeKind::Other);
+/// ```
 #[must_use]
 pub fn classify_change(path: &Path) -> ChangeKind {
     match path.extension().and_then(|e| e.to_str()) {
@@ -97,6 +109,17 @@ impl WatchConfig {
     ///
     /// * `directory`     — Path to the directory to watch.
     /// * `poll_interval` — Duration between successive polls.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::WatchConfig;
+    /// use std::path::PathBuf;
+    /// use std::time::Duration;
+    ///
+    /// let cfg = WatchConfig::new(PathBuf::from("content"), Duration::from_secs(1));
+    /// assert_eq!(cfg.poll_interval(), Duration::from_secs(1));
+    /// ```
     #[must_use]
     pub const fn new(directory: PathBuf, poll_interval: Duration) -> Self {
         Self {
@@ -106,12 +129,34 @@ impl WatchConfig {
     }
 
     /// Returns a reference to the watched directory.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::WatchConfig;
+    /// use std::path::{Path, PathBuf};
+    /// use std::time::Duration;
+    ///
+    /// let cfg = WatchConfig::new(PathBuf::from("docs"), Duration::from_secs(2));
+    /// assert_eq!(cfg.directory(), Path::new("docs"));
+    /// ```
     #[must_use]
     pub fn directory(&self) -> &Path {
         &self.directory
     }
 
     /// Returns the configured poll interval.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::WatchConfig;
+    /// use std::path::PathBuf;
+    /// use std::time::Duration;
+    ///
+    /// let cfg = WatchConfig::new(PathBuf::from("d"), Duration::from_millis(500));
+    /// assert_eq!(cfg.poll_interval(), Duration::from_millis(500));
+    /// ```
     #[must_use]
     pub const fn poll_interval(&self) -> Duration {
         self.poll_interval
@@ -140,12 +185,38 @@ impl FileWatcher {
     /// watched directory.
     ///
     /// Returns an error if the directory does not exist or is unreadable.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::{FileWatcher, WatchConfig};
+    /// use std::time::Duration;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = WatchConfig::new(dir.path().to_path_buf(), Duration::from_secs(1));
+    /// let watcher = FileWatcher::new(cfg).unwrap();
+    /// assert_eq!(watcher.tracked_file_count(), 0);
+    /// ```
     pub fn new(config: WatchConfig) -> io::Result<Self> {
         let snapshots = Self::scan_directory(&config.directory)?;
         Ok(Self { config, snapshots })
     }
 
     /// Returns a reference to the watcher's configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::{FileWatcher, WatchConfig};
+    /// use std::time::Duration;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = WatchConfig::new(dir.path().to_path_buf(), Duration::from_secs(1));
+    /// let watcher = FileWatcher::new(cfg).unwrap();
+    /// assert_eq!(watcher.config().poll_interval(), Duration::from_secs(1));
+    /// ```
     #[must_use]
     pub const fn config(&self) -> &WatchConfig {
         &self.config
@@ -159,6 +230,22 @@ impl FileWatcher {
     ///
     /// The internal snapshot is updated to reflect the current state of the
     /// filesystem after each call.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::{FileWatcher, WatchConfig};
+    /// use std::time::Duration;
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = WatchConfig::new(dir.path().to_path_buf(), Duration::from_secs(1));
+    /// let mut watcher = FileWatcher::new(cfg).unwrap();
+    /// fs::write(dir.path().join("a.md"), "hi").unwrap();
+    /// let changes = watcher.check_for_changes().unwrap();
+    /// assert_eq!(changes.len(), 1);
+    /// ```
     pub fn check_for_changes(&mut self) -> io::Result<Vec<PathBuf>> {
         let current = Self::scan_directory(&self.config.directory)?;
         let mut changed: Vec<PathBuf> = Vec::new();
@@ -183,6 +270,19 @@ impl FileWatcher {
     }
 
     /// Returns the number of files currently tracked in the snapshot.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::watch::{FileWatcher, WatchConfig};
+    /// use std::time::Duration;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = WatchConfig::new(dir.path().to_path_buf(), Duration::from_secs(1));
+    /// let watcher = FileWatcher::new(cfg).unwrap();
+    /// assert_eq!(watcher.tracked_file_count(), 0);
+    /// ```
     #[must_use]
     pub fn tracked_file_count(&self) -> usize {
         self.snapshots.len()
@@ -266,6 +366,21 @@ pub const MAX_WATCH_ITERATIONS: usize = 1_000_000;
 /// The loop is bounded by [`MAX_WATCH_ITERATIONS`] to prevent runaway
 /// execution. Returns when the callback returns `false` or the
 /// iteration limit is reached.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::watch::{FileWatcher, WatchConfig, watch_blocking};
+/// use std::time::Duration;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let cfg = WatchConfig::new(dir.path().to_path_buf(), Duration::from_millis(1));
+/// let mut watcher = FileWatcher::new(cfg).unwrap();
+/// // Stop on the first callback invocation so the doctest terminates.
+/// std::fs::write(dir.path().join("a.md"), "hi").unwrap();
+/// watch_blocking(&mut watcher, |_changes| false);
+/// ```
 pub fn watch_blocking<F>(watcher: &mut FileWatcher, mut callback: F)
 where
     F: FnMut(&[PathBuf]) -> bool,

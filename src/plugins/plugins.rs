@@ -197,6 +197,15 @@ fn collect_minifiable_files(
 /// * Without the feature: falls back to a whitespace-collapsing pass
 ///   that short-circuits when any `<pre` substring is present so
 ///   user-visible whitespace in code blocks is preserved.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::plugins::minify_html;
+///
+/// let out = minify_html("<html>   <body>hi</body>  </html>");
+/// assert!(out.len() <= "<html>   <body>hi</body>  </html>".len());
+/// ```
 #[cfg(feature = "minify")]
 pub fn minify_html(html: &str) -> String {
     let cfg = minify_html::Cfg {
@@ -216,6 +225,16 @@ pub fn minify_html(html: &str) -> String {
 
 /// Fallback HTML minifier (whitespace collapse) — see the
 /// feature-gated overload above for the production minifier.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::plugins::minify_html;
+///
+/// // `<pre>` short-circuits both implementations to preserve whitespace.
+/// let html = "<pre>  spaced  </pre>";
+/// assert_eq!(minify_html(html), html);
+/// ```
 #[cfg(not(feature = "minify"))]
 pub fn minify_html(html: &str) -> String {
     // Fast path: any `<pre` anywhere disables minification entirely.
@@ -244,6 +263,15 @@ pub fn minify_html(html: &str) -> String {
 /// Returns `None` if the input fails to parse — callers fall back to
 /// the original content so a malformed asset can't sink an entire
 /// build.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::plugins::minify_css;
+///
+/// let mini = minify_css("body { color: red; }").unwrap();
+/// assert!(mini.len() < "body { color: red; }".len());
+/// ```
 #[cfg(feature = "minify")]
 pub fn minify_css(css: &str) -> Option<String> {
     use lightningcss::printer::PrinterOptions;
@@ -263,6 +291,15 @@ pub fn minify_css(css: &str) -> Option<String> {
 ///
 /// Returns `None` if the input is not parseable as a script or module
 /// — callers fall back to the original content.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::plugins::minify_js;
+///
+/// let mini = minify_js("var x = 1; var y = 2;").unwrap();
+/// assert!(mini.len() < "var x = 1; var y = 2;".len());
+/// ```
 #[cfg(feature = "minify")]
 pub fn minify_js(js: &str) -> Option<String> {
     use oxc_allocator::Allocator;
@@ -359,6 +396,16 @@ pub struct DeployPlugin {
 
 impl DeployPlugin {
     /// Creates a new deployment plugin for the given target environment.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugins::DeployPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = DeployPlugin::new("production");
+    /// assert_eq!(p.name(), "deploy");
+    /// ```
     #[must_use]
     pub fn new(target: &str) -> Self {
         Self {

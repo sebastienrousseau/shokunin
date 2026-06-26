@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "wrangler dev --local --port 8787",
     "deploy": "wrangler deploy",
-    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && wasm-opt -Oz -o pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm",
+    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && mkdir -p ../../examples/edge-cloudflare/pkg && wasm-opt -Oz -o ../../examples/edge-cloudflare/pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm && cp pkg/ssg_wasm.js ../../examples/edge-cloudflare/pkg/ssg_wasm.js",
     "kv:upload": "node ./scripts/upload-kv.js",
     "smoke": "node ./scripts/smoke.js"
   },

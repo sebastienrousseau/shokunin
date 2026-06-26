@@ -19,6 +19,14 @@ use sha2::{Digest, Sha256};
 const NAME: &str = "search_index";
 
 /// Semantic vector search index integrity gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::search_index::SearchIndexGate;
+/// assert_eq!(SearchIndexGate.name(), "search_index");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct SearchIndexGate;
 

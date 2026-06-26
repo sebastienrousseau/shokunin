@@ -108,6 +108,24 @@ pub struct Entry<T> {
 /// Output is sorted by `Entry::slug` (lexicographic). Callers that
 /// hash collections for golden tests or fingerprinting benefit
 /// directly.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde::Deserialize;
+/// use ssg::collections::get_collection;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// #[derive(Debug, Deserialize)]
+/// struct Post { title: String }
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.md"), "---\ntitle: Hi\n---\nBody").unwrap();
+/// let posts: Vec<_> = get_collection::<Post>(dir.path()).unwrap();
+/// assert_eq!(posts.len(), 1);
+/// assert_eq!(posts[0].data.title, "Hi");
+/// ```
 pub fn get_collection<T: DeserializeOwned>(
     dir: impl AsRef<Path>,
 ) -> Result<Vec<Entry<T>>> {
@@ -133,6 +151,24 @@ pub fn get_collection<T: DeserializeOwned>(
 /// Returns `Ok(None)` when no Markdown file with that slug exists.
 /// Use [`get_collection`] when you need every entry or when you
 /// don't know the slug ahead of time.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde::Deserialize;
+/// use ssg::collections::get_entry;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// #[derive(Debug, Deserialize)]
+/// struct Post { title: String }
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("hello.md"), "---\ntitle: Hello\n---\nBody").unwrap();
+/// let entry = get_entry::<Post>(dir.path(), "hello").unwrap();
+/// assert!(entry.is_some());
+/// assert!(get_entry::<Post>(dir.path(), "missing").unwrap().is_none());
+/// ```
 ///
 /// # Errors
 ///

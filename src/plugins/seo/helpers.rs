@@ -13,6 +13,15 @@ use std::path::{Path, PathBuf};
 /// `<!-- <title>…</title> -->` no longer fools the extractor and quoting
 /// / attribute-order variants on `<title>` (extremely rare but legal)
 /// are handled by the parser.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::seo::helpers::extract_title;
+///
+/// let html = "<html><head><title>Hello</title></head></html>";
+/// assert_eq!(extract_title(html), "Hello");
+/// ```
 pub fn extract_title(html: &str) -> String {
     extract_head_meta(html).title
 }
@@ -147,6 +156,16 @@ pub(super) fn escape_attr(s: &str) -> String {
 /// <!-- # End Open Graph / Facebook Meta Tags -->
 /// ```
 /// These should NOT count as "tag present" — only real `<meta` tags do.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::seo::helpers::has_meta_tag;
+///
+/// let html = r#"<meta property="og:title" content="x">"#;
+/// assert!(has_meta_tag(html, "og:title"));
+/// assert!(!has_meta_tag("<!-- og:image -->", "og:image"));
+/// ```
 pub fn has_meta_tag(html: &str, attr: &str) -> bool {
     html.contains(&format!("<meta property=\"{attr}\""))
         || html.contains(&format!("<meta property='{attr}'"))

@@ -63,6 +63,15 @@ use std::fs;
 /// 3. `X-Content-Type-Options`    — `nosniff`
 /// 4. `Referrer-Policy`           — `strict-origin-when-cross-origin`
 /// 5. `Permissions-Policy`        — camera/geolocation/microphone off
+///
+/// # Examples
+///
+/// ```
+/// use ssg::postprocess::edge_headers::baseline_headers;
+/// let baseline = baseline_headers();
+/// assert_eq!(baseline.len(), 5);
+/// assert_eq!(baseline[0].0, "Strict-Transport-Security");
+/// ```
 #[must_use]
 pub fn baseline_headers() -> [(&'static str, String); 5] {
     [
@@ -94,6 +103,16 @@ pub fn baseline_headers() -> [(&'static str, String); 5] {
 /// Overrides referencing a header name **not** present in the baseline
 /// are appended after the baseline so site authors can add e.g.
 /// `Cross-Origin-Opener-Policy` without us hardcoding it.
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::BTreeMap;
+/// use ssg::postprocess::edge_headers::merged_headers;
+/// let merged = merged_headers(&BTreeMap::new());
+/// assert_eq!(merged.len(), 5);
+/// assert_eq!(merged[0].0, "Strict-Transport-Security");
+/// ```
 #[must_use]
 pub fn merged_headers(
     overrides: &BTreeMap<String, String>,
@@ -147,11 +166,27 @@ pub(crate) const PQC_NOTE_LINES: &[&str] = &[
 /// `targets`, invokes the corresponding emitter. The plugin is a
 /// no-op when `targets` is empty, when `config` is `None`, or when
 /// `site_dir` does not yet exist.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::postprocess::edge_headers::EdgeHeadersPlugin;
+/// assert_eq!(EdgeHeadersPlugin::new().name(), "edge-headers");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct EdgeHeadersPlugin;
 
 impl EdgeHeadersPlugin {
     /// Creates a new `EdgeHeadersPlugin`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::postprocess::edge_headers::EdgeHeadersPlugin;
+    /// let plugin = EdgeHeadersPlugin::new();
+    /// let _copy: EdgeHeadersPlugin = plugin;
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self

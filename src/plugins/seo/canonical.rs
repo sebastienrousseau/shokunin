@@ -37,6 +37,16 @@ pub struct CanonicalPlugin {
 
 impl CanonicalPlugin {
     /// Creates a new `CanonicalPlugin` with the given base URL.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::seo::CanonicalPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = CanonicalPlugin::new("https://example.com");
+    /// assert_eq!(p.name(), "canonical");
+    /// ```
     #[must_use]
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {

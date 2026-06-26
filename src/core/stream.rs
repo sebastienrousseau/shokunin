@@ -55,6 +55,21 @@ pub struct BatchResult {
 /// constant regardless of file size — a 1 KB file and a 1 GB file
 /// use the same buffer.
 ///
+/// # Examples
+///
+/// ```rust
+/// use ssg::stream::stream_copy;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let src = dir.path().join("src.txt");
+/// let dst = dir.path().join("dst.txt");
+/// fs::write(&src, "hello").unwrap();
+/// let bytes = stream_copy(&src, &dst).unwrap();
+/// assert_eq!(bytes, 5);
+/// ```
+///
 /// # Errors
 ///
 /// Returns an error if the source cannot be read or the destination
@@ -97,6 +112,20 @@ pub fn stream_copy(src: &Path, dst: &Path) -> Result<u64> {
 /// `DefaultHasher`. Never loads the entire file into memory.
 ///
 /// Returns a 16-character hex fingerprint.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::stream::stream_hash;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let p = dir.path().join("h.txt");
+/// fs::write(&p, "hello").unwrap();
+/// let h = stream_hash(&p).unwrap();
+/// assert_eq!(h.len(), 16);
+/// ```
 pub fn stream_hash(path: &Path) -> Result<String> {
     use std::hash::{DefaultHasher, Hasher};
 
@@ -129,6 +158,22 @@ pub fn stream_hash(path: &Path) -> Result<String> {
 ///
 /// Returns an error if any file cannot be read, processed, or written.
 /// Processing stops at the first error.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::stream::{process_batch, stream_copy};
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let src = dir.path().join("src");
+/// let dst = dir.path().join("dst");
+/// fs::create_dir(&src).unwrap();
+/// fs::write(src.join("f.txt"), "x").unwrap();
+/// let res = process_batch(&src, &dst, stream_copy).unwrap();
+/// assert_eq!(res.files_processed, 1);
+/// ```
 pub fn process_batch<F>(
     src_dir: &Path,
     dst_dir: &Path,
@@ -232,6 +277,22 @@ fn collect_files_bounded_with_limit(
 /// Calls `line_fn` for each line. The line buffer is reused across
 /// iterations — memory does not grow with file length.
 ///
+/// # Examples
+///
+/// ```rust
+/// use ssg::stream::stream_lines;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// let p = dir.path().join("f.txt");
+/// fs::write(&p, "a\nb\nc").unwrap();
+/// let mut seen = Vec::new();
+/// let n = stream_lines(&p, |_, line| { seen.push(line.to_string()); Ok(()) }).unwrap();
+/// assert_eq!(n, 3);
+/// assert_eq!(seen[0], "a");
+/// ```
+///
 /// # Errors
 ///
 /// Returns an error if the file cannot be read.
@@ -260,6 +321,18 @@ where
 ///
 /// Creates `n` temporary files and streams them through `stream_copy`.
 /// Returns the measured throughput in files/second.
+///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(test)]
+/// # fn doctest() {
+/// use ssg::stream::benchmark_throughput;
+///
+/// let result = benchmark_throughput(5).unwrap();
+/// assert_eq!(result.files_processed, 5);
+/// # }
+/// ```
 #[cfg(any(test, feature = "benchmark"))]
 pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
     let tmp = tempfile::tempdir().context("cannot create temp dir")?;

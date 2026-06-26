@@ -21,6 +21,20 @@ use crate::engine::{EngineError, VectorEngine};
 use wasm_bindgen::prelude::*;
 
 /// JS-visible vector engine. Wraps the pure-Rust [`VectorEngine`].
+///
+/// # Examples
+///
+/// JS-side construction once the WASM module is loaded:
+///
+/// ```ignore
+/// // (JS) — for reference; the doctest is `ignore` because
+/// // `WasmVectorEngine` lives behind the wasm-bindgen boundary and is
+/// // only callable from JavaScript.
+/// import init, { WasmVectorEngine } from "./pkg/ssg_search.js";
+/// await init();
+/// const engine = new WasmVectorEngine(model, tokenizer, embeddings, count);
+/// const top = engine.search("rust wasm", 10);
+/// ```
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct WasmVectorEngine {
@@ -34,6 +48,19 @@ impl WasmVectorEngine {
     /// `count` is passed explicitly (rather than derived from
     /// `embeddings.len() / dim / 4`) so a malformed bundle fails fast
     /// with a clear error rather than silently truncating.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — called as a constructor across the wasm-bindgen
+    /// // boundary; not invocable from native Rust.
+    /// const engine = new WasmVectorEngine(model, tokenizer, embeddings, count);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a `JsError` wrapping an [`EngineError`] when the
+    /// artifact bytes are malformed or inconsistent.
     #[wasm_bindgen(constructor)]
     pub fn new(
         model: &[u8],
@@ -48,6 +75,13 @@ impl WasmVectorEngine {
     }
 
     /// Number of indexed documents.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — read as a property of the JS-side instance.
+    /// const n = engine.count;
+    /// ```
     #[allow(clippy::missing_const_for_fn)] // #[wasm_bindgen] forbids const fn
     #[wasm_bindgen(getter)]
     pub fn count(&self) -> u32 {
@@ -55,6 +89,13 @@ impl WasmVectorEngine {
     }
 
     /// Vector dimensionality.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — read as a property of the JS-side instance.
+    /// const d = engine.dim; // 256 with the default encoder
+    /// ```
     #[allow(clippy::missing_const_for_fn)] // #[wasm_bindgen] forbids const fn
     #[wasm_bindgen(getter)]
     pub fn dim(&self) -> u32 {
@@ -65,6 +106,15 @@ impl WasmVectorEngine {
     ///
     /// Returned as `Float32Array` — never as a JS array of numbers
     /// (AC4).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — caller receives a Float32Array, length === engine.dim.
+    /// const q = engine.embed("rust wasm");
+    /// console.assert(q instanceof Float32Array);
+    /// console.assert(q.length === engine.dim);
+    /// ```
     #[wasm_bindgen]
     pub fn embed(&self, query: &str) -> js_sys::Float32Array {
         profile_boundary("embed");
@@ -74,6 +124,16 @@ impl WasmVectorEngine {
 
     /// Run the full embed → search pipeline and return the top-K
     /// `[idx, score, idx, score, …]` interleaved as a `Float32Array`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — single boundary crossing for full search.
+    /// const out = engine.search("rust wasm", 10);
+    /// // 10 results × 2 floats per result = 20.
+    /// console.assert(out.length === 20);
+    /// const [idx0, score0] = [out[0], out[1]];
+    /// ```
     #[wasm_bindgen]
     pub fn search(&self, query: &str, top_k: u32) -> js_sys::Float32Array {
         profile_boundary("search");
@@ -84,6 +144,15 @@ impl WasmVectorEngine {
     /// Skip the embed step — caller supplies the query vector
     /// directly (useful when re-running the same query against
     /// multiple engines).
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // (JS) — embed once, search many.
+    /// const q = engine.embed("rust");
+    /// const a = engineA.search_vec(q, 10);
+    /// const b = engineB.search_vec(q, 10);
+    /// ```
     #[wasm_bindgen]
     pub fn search_vec(
         &self,
@@ -126,6 +195,15 @@ fn profile_boundary(_op: &'static str) {
 ///
 /// Always exposed (returning 0 when `wasm-profiling` is off) so the
 /// JS bundle has a stable API surface across builds.
+///
+/// # Examples
+///
+/// ```ignore
+/// // (JS) — exposed even without the `wasm-profiling` feature, in
+/// // which case it always returns 0.
+/// import { boundary_crossings } from "./pkg/ssg_search.js";
+/// console.assert(typeof boundary_crossings() === "number");
+/// ```
 #[wasm_bindgen]
 pub fn boundary_crossings() -> u32 {
     #[cfg(feature = "wasm-profiling")]

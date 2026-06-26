@@ -20,6 +20,14 @@ const NAME: &str = "pqc_tls";
 const HSTS_MIN_AGE: u64 = 31_536_000; // 1 year
 
 /// PQC TLS readiness gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::pqc_tls::PqcTlsGate;
+/// assert_eq!(PqcTlsGate.name(), "pqc_tls");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct PqcTlsGate;
 

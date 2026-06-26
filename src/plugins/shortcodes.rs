@@ -63,6 +63,15 @@ impl Plugin for ShortcodePlugin {
 }
 
 /// Expands all shortcodes in a string.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::shortcodes::expand_shortcodes;
+///
+/// let out = expand_shortcodes("{{< warning >}}heads up{{< /warning >}}");
+/// assert!(out.contains("admonition"));
+/// ```
 #[must_use]
 pub fn expand_shortcodes(input: &str) -> String {
     let mut result = input.to_string();

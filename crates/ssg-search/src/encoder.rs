@@ -28,40 +28,135 @@ use serde::{Deserialize, Serialize};
 /// Chosen as a multiple of 4 so SIMD f32x4 dot-products fit cleanly,
 /// and small enough that a 1000-doc corpus is well under 1 MB
 /// (`1000 × 256 × 4` = 1.0 MB).
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{Encoder, ProjectionEncoder, EMBEDDING_DIM};
+///
+/// assert_eq!(EMBEDDING_DIM, 256);
+/// // The default encoder always produces vectors of this length.
+/// let enc = ProjectionEncoder::default();
+/// assert_eq!(enc.embed("hello").len(), EMBEDDING_DIM);
+/// ```
 pub const EMBEDDING_DIM: usize = 256;
 
 /// Deterministic seed baked into the projection matrix. Bumping it
 /// invalidates every existing build — keep stable across releases
 /// unless you intend to break compatibility.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{ProjectionEncoder, PROJECTION_SEED};
+///
+/// // The seed spells "SSGSEARC" in ASCII (little-endian).
+/// assert_eq!(PROJECTION_SEED, 0x5353_4753_4541_5243);
+/// // It's the default encoder's seed.
+/// assert_eq!(ProjectionEncoder::default().seed(), PROJECTION_SEED);
+/// ```
 pub const PROJECTION_SEED: u64 = 0x5353_4753_4541_5243; // "SSGSEARC"
 
 /// Trait every encoder implements. The build-side and WASM-side share
 /// the same instance type — so the runtime query embedding is
 /// guaranteed to be in the same vector space as the corpus embeddings.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{Encoder, ProjectionEncoder, EMBEDDING_DIM};
+///
+/// // Generic helper that works against any Encoder impl.
+/// fn embed_len<E: Encoder>(enc: &E, text: &str) -> usize {
+///     enc.embed(text).len()
+/// }
+///
+/// let enc = ProjectionEncoder::default();
+/// assert_eq!(embed_len(&enc, "hello"), EMBEDDING_DIM);
+/// ```
 pub trait Encoder {
     /// Returns the output dimensionality.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{Encoder, ProjectionEncoder, EMBEDDING_DIM};
+    ///
+    /// let enc = ProjectionEncoder::default();
+    /// assert_eq!(<ProjectionEncoder as Encoder>::dim(&enc), EMBEDDING_DIM);
+    /// ```
     fn dim(&self) -> usize;
 
     /// Encodes a UTF-8 string into an L2-normalised vector.
     ///
     /// The output `Vec<f32>` always has length [`Encoder::dim`]. Its
     /// L2 norm is in `[0.999, 1.001]` (verified by AC5).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{Encoder, ProjectionEncoder};
+    ///
+    /// let enc = ProjectionEncoder::default();
+    /// let v = enc.embed("the quick brown fox");
+    /// assert_eq!(v.len(), enc.dim());
+    ///
+    /// // L2 norm is ~1.0 (or 0.0 for empty input).
+    /// let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+    /// assert!((0.999..=1.001).contains(&norm));
+    /// ```
     fn embed(&self, text: &str) -> Vec<f32>;
 
     /// Serialises encoder weights / config to the byte layout written
     /// into `model.bin`. The format is encoder-specific but always
     /// starts with the four-byte [`crate::ARTIFACT_MAGIC`] and a u32
     /// [`crate::ARTIFACT_FORMAT_VERSION`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{Encoder, ProjectionEncoder};
+    /// use ssg_search::{ARTIFACT_MAGIC, ARTIFACT_FORMAT_VERSION};
+    ///
+    /// let bytes = ProjectionEncoder::default().serialize_model();
+    /// assert_eq!(&bytes[0..4], &ARTIFACT_MAGIC);
+    /// let v = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+    /// assert_eq!(v, ARTIFACT_FORMAT_VERSION);
+    /// ```
     fn serialize_model(&self) -> Vec<u8>;
 
     /// Serialises tokenizer config to the byte layout written into
     /// `tokenizer.bin`. Same header layout as `serialize_model`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{Encoder, ProjectionEncoder};
+    /// use ssg_search::ARTIFACT_MAGIC;
+    ///
+    /// let bytes = ProjectionEncoder::default().serialize_tokenizer();
+    /// assert!(bytes.len() > 12);
+    /// assert_eq!(&bytes[0..4], &ARTIFACT_MAGIC);
+    /// ```
     fn serialize_tokenizer(&self) -> Vec<u8>;
 }
 
 /// On-disk representation of the projection encoder — small enough
 /// (`< 100 B`) that the deserialiser can construct the full
 /// `ProjectionEncoder` lazily from this struct.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{ProjectionConfig, EMBEDDING_DIM, PROJECTION_SEED};
+///
+/// // Defaults are tuned for the standard 256-dim encoder.
+/// let cfg = ProjectionConfig::default();
+/// assert_eq!(cfg.dim, EMBEDDING_DIM as u32);
+/// assert_eq!(cfg.seed, PROJECTION_SEED);
+/// assert_eq!(cfg.ngram_min, 3);
+/// assert_eq!(cfg.ngram_max, 5);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectionConfig {
     /// Output dimensionality.
@@ -87,6 +182,20 @@ impl Default for ProjectionConfig {
 
 /// Deterministic hashed-n-gram projection encoder. Tiny, model-free,
 /// reproducible byte-for-byte across platforms.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{Encoder, ProjectionEncoder, EMBEDDING_DIM};
+///
+/// let enc = ProjectionEncoder::default();
+///
+/// // Same input always produces the same vector — bit-for-bit reproducible.
+/// let a = enc.embed("static site generator");
+/// let b = enc.embed("static site generator");
+/// assert_eq!(a, b);
+/// assert_eq!(a.len(), EMBEDDING_DIM);
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectionEncoder {
     cfg: ProjectionConfig,
@@ -100,18 +209,48 @@ impl Default for ProjectionEncoder {
 
 impl ProjectionEncoder {
     /// Constructs a new encoder from a [`ProjectionConfig`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{Encoder, ProjectionConfig, ProjectionEncoder};
+    ///
+    /// // Build a smaller-than-default encoder for tests.
+    /// let cfg = ProjectionConfig { dim: 64, ..ProjectionConfig::default() };
+    /// let enc = ProjectionEncoder::new(cfg);
+    /// assert_eq!(enc.dim(), 64);
+    /// assert_eq!(enc.embed("hello").len(), 64);
+    /// ```
     #[must_use]
     pub const fn new(cfg: ProjectionConfig) -> Self {
         Self { cfg }
     }
 
     /// Returns the [`ProjectionConfig`] for this encoder.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{ProjectionConfig, ProjectionEncoder};
+    ///
+    /// let enc = ProjectionEncoder::default();
+    /// assert_eq!(enc.config(), ProjectionConfig::default());
+    /// ```
     #[must_use]
     pub const fn config(&self) -> ProjectionConfig {
         self.cfg
     }
 
     /// Returns the seed used to derive the projection matrix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::encoder::{ProjectionEncoder, PROJECTION_SEED};
+    ///
+    /// let enc = ProjectionEncoder::default();
+    /// assert_eq!(enc.seed(), PROJECTION_SEED);
+    /// ```
     #[must_use]
     pub const fn seed(&self) -> u64 {
         self.cfg.seed
@@ -280,6 +419,25 @@ impl Encoder for ProjectionEncoder {
 /// Deserialise a [`ProjectionEncoder`] from the bytes produced by
 /// [`ProjectionEncoder::serialize_model`]. Returns `None` if the magic
 /// header doesn't match or the version is unsupported.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::encoder::{
+///     deserialize_projection_encoder, Encoder, ProjectionEncoder,
+/// };
+///
+/// let enc = ProjectionEncoder::default();
+/// let bytes = enc.serialize_model();
+///
+/// // Round-trips losslessly.
+/// let restored = deserialize_projection_encoder(&bytes).unwrap();
+/// assert_eq!(restored.config(), enc.config());
+///
+/// // Garbage / too-short input fails cleanly.
+/// assert!(deserialize_projection_encoder(&[]).is_none());
+/// assert!(deserialize_projection_encoder(&[0u8; 8]).is_none());
+/// ```
 #[must_use]
 pub fn deserialize_projection_encoder(
     bytes: &[u8],

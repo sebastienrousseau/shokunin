@@ -20,6 +20,16 @@ use crate::error::SsgError;
 /// Returns [`SsgError::Io`] when `serde_json` cannot serialise the
 /// report — only possible if a finding's strings contain invalid
 /// UTF-8, which the type-system prevents in safe Rust.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditReport;
+/// use ssg::audit::output::json::format;
+/// let report = AuditReport { gates: vec![] };
+/// let s = format(&report).unwrap();
+/// assert!(s.contains("\"gates\""));
+/// ```
 pub fn format(report: &AuditReport) -> Result<String, SsgError> {
     serde_json::to_string_pretty(report).map_err(|e| SsgError::Io {
         path: std::path::PathBuf::from("<audit-report>"),

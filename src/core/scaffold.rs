@@ -19,12 +19,32 @@ fn write_scaffold_file(
 }
 
 /// Generates a new project with the given name in the current directory.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::scaffold::scaffold_project;
+///
+/// // Writes into $CWD — gated `no_run` so doctests don't pollute the workspace.
+/// scaffold_project("my-blog").unwrap();
+/// ```
 pub fn scaffold_project(name: &str) -> Result<()> {
     let cwd = std::env::current_dir()?;
     scaffold_project_at(name, &cwd)
 }
 
 /// Generates a new project at the given base directory.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::scaffold::scaffold_project_at;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// scaffold_project_at("demo", dir.path()).unwrap();
+/// assert!(dir.path().join("demo").join("content").is_dir());
+/// ```
 pub fn scaffold_project_at(name: &str, base: &Path) -> Result<()> {
     let root = base.join(name);
     if root.exists() {

@@ -36,6 +36,16 @@ pub struct MemoryBudget {
 
 impl MemoryBudget {
     /// Creates a memory budget from a megabyte limit.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::streaming::MemoryBudget;
+    ///
+    /// let b = MemoryBudget::from_mb(64);
+    /// assert_eq!(b.max_bytes, 64 * 1024 * 1024);
+    /// assert!(b.batch_size >= 10);
+    /// ```
     #[must_use]
     pub fn from_mb(mb: usize) -> Self {
         let max_bytes = mb * 1024 * 1024;
@@ -47,6 +57,15 @@ impl MemoryBudget {
     }
 
     /// Creates the default 512 MB budget.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::streaming::MemoryBudget;
+    ///
+    /// let b = MemoryBudget::default_budget();
+    /// assert_eq!(b.max_bytes, 512 * 1024 * 1024);
+    /// ```
     #[must_use]
     pub fn default_budget() -> Self {
         Self::from_mb(DEFAULT_MEMORY_BUDGET_MB)
@@ -56,6 +75,20 @@ impl MemoryBudget {
 /// Collects content files and returns them as batches.
 ///
 /// Each batch contains at most `budget.batch_size` files.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::streaming::{batched_content_files, MemoryBudget};
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let dir = tempdir().unwrap();
+/// fs::write(dir.path().join("a.md"), "x").unwrap();
+/// let budget = MemoryBudget { max_bytes: 0, batch_size: 10 };
+/// let batches = batched_content_files(dir.path(), &budget).unwrap();
+/// assert_eq!(batches.len(), 1);
+/// ```
 pub fn batched_content_files(
     content_dir: &Path,
     budget: &MemoryBudget,
@@ -87,6 +120,17 @@ pub fn batched_content_files(
 /// Creates a temporary content directory containing only the batch files,
 /// runs `staticdatagen::compile` on it, then merges the output into the
 /// final site directory.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::streaming::compile_batch;
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// // Empty batch is a no-op: returns Ok immediately.
+/// assert!(compile_batch(&[], dir.path(), dir.path(), dir.path(), dir.path(), 0).is_ok());
+/// ```
 pub fn compile_batch(
     batch: &[PathBuf],
     content_dir: &Path,
@@ -170,6 +214,18 @@ fn merge_dir(src: &Path, dst: &Path) -> Result<(), SsgError> {
 ///
 /// Returns `true` if the content directory has more files than a single
 /// batch can hold, or if `--max-memory` was explicitly set.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::streaming::{should_stream, MemoryBudget};
+/// use tempfile::tempdir;
+///
+/// let dir = tempdir().unwrap();
+/// let budget = MemoryBudget::default_budget();
+/// // Explicitly set ⇒ always stream.
+/// assert!(should_stream(dir.path(), &budget, true));
+/// ```
 #[must_use]
 pub fn should_stream(
     content_dir: &Path,

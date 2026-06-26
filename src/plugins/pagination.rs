@@ -45,6 +45,16 @@ impl Default for PaginationPlugin {
 
 impl PaginationPlugin {
     /// Creates a pagination plugin with a custom page size.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::pagination::PaginationPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = PaginationPlugin::with_per_page(25);
+    /// assert_eq!(p.name(), "pagination");
+    /// ```
     #[must_use]
     pub fn with_per_page(per_page: usize) -> Self {
         Self {

@@ -335,6 +335,20 @@ fn process_image(
 /// [`AVIF_SPEED`] (4 — "balanced"). Alpha channels use the same quality
 /// as colour.
 ///
+/// # Examples
+///
+/// ```rust
+/// # #[cfg(feature = "image-optimization")]
+/// # fn example() {
+/// use ssg::image_plugin::encode_avif;
+/// use image::{DynamicImage, RgbaImage};
+///
+/// let img = DynamicImage::ImageRgba8(RgbaImage::new(8, 8));
+/// let bytes = encode_avif(&img, 60).unwrap();
+/// assert!(!bytes.is_empty());
+/// # }
+/// ```
+///
 /// # Errors
 /// Returns [`SsgError::Other`] wrapping the underlying `ravif::Error`
 /// if rav1e fails to encode (effectively a bug in ravif/rav1e — the

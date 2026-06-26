@@ -93,6 +93,19 @@ pub enum SsgError {
 
 impl SsgError {
     /// Converts a generic error and path context into an `SsgError::Io` variant.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::SsgError;
+    /// use std::io;
+    /// use std::path::PathBuf;
+    ///
+    /// let io_err = io::Error::other("oops");
+    /// let err = SsgError::io(io_err, "data/file.txt");
+    /// assert!(matches!(err, SsgError::Io { .. }));
+    /// assert!(format!("{err}").contains("data/file.txt"));
+    /// ```
     pub fn io(err: impl Into<anyhow::Error>, path: impl Into<PathBuf>) -> Self {
         let anyhow_err = err.into();
         let io_err = anyhow_err
@@ -106,8 +119,29 @@ impl SsgError {
 }
 
 /// Context extension trait for mapping `std::io::Error` contexts with path info.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::{PathErrorExt, SsgError};
+/// use std::io;
+///
+/// let res: io::Result<()> = Err(io::Error::other("denied"));
+/// let mapped = res.with_path("restricted.txt");
+/// assert!(matches!(mapped, Err(SsgError::Io { .. })));
+/// ```
 pub trait PathErrorExt<T> {
     /// Converts a `std::io::Result` into an `SsgError` mapping the path context.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::{PathErrorExt, SsgError};
+    /// use std::io;
+    ///
+    /// let ok: io::Result<u32> = Ok(7);
+    /// assert_eq!(ok.with_path("any").unwrap(), 7);
+    /// ```
     fn with_path(self, path: impl Into<PathBuf>) -> Result<T, SsgError>;
 }
 

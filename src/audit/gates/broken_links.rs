@@ -16,6 +16,15 @@ use std::path::PathBuf;
 const NAME: &str = "links";
 
 /// Broken internal/external link gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::broken_links::BrokenLinksGate;
+/// assert_eq!(BrokenLinksGate.name(), "links");
+/// assert!(BrokenLinksGate.explain().contains("href"));
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct BrokenLinksGate;
 

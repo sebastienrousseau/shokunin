@@ -13,6 +13,14 @@ use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
 const NAME: &str = "wcag";
 
 /// WCAG 2.2 AAA accessibility gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::wcag::WcagGate;
+/// assert_eq!(WcagGate.name(), "wcag");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct WcagGate;
 

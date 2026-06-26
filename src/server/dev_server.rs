@@ -50,6 +50,19 @@ pub struct BatchOutcome {
 /// * **Mixed CSS + content** → `reload` to keep the protocol simple.
 /// * **All other** (data, fonts, images that aren't fingerprinted) →
 ///   `reload` so the user always sees the latest build.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::dev_server::process_batch;
+/// use ssg::depgraph::DepGraph;
+/// use ssg::event_watch::ChangeBatch;
+/// use std::path::Path;
+///
+/// let batch = ChangeBatch { paths: vec![] };
+/// let outcome = process_batch(&batch, &DepGraph::new(), Path::new("build"));
+/// assert!(outcome.frame.is_none());
+/// ```
 #[must_use]
 pub fn process_batch(
     batch: &ChangeBatch,
@@ -115,6 +128,16 @@ pub fn process_batch(
 ///
 /// Strips the `output_dir` prefix and the trailing `index.html` so
 /// directory-style URLs match the path the browser is sitting at.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::dev_server::output_to_url;
+/// use std::path::Path;
+///
+/// let url = output_to_url(Path::new("build/blog/foo/index.html"), Path::new("build"));
+/// assert_eq!(url, "/blog/foo/");
+/// ```
 #[must_use]
 pub fn output_to_url(output: &Path, output_dir: &Path) -> String {
     let rel = output.strip_prefix(output_dir).unwrap_or(output);
@@ -139,6 +162,15 @@ pub fn output_to_url(output: &Path, output_dir: &Path) -> String {
 ///
 /// Returns the number of batches processed before the watcher closed,
 /// which is useful for tests that inject a finite event stream.
+///
+/// # Examples
+///
+/// ```ignore
+/// // Requires a real EventWatcher + HmrBroadcaster bound to a port,
+/// // which a doctest sandbox can't safely set up. See the `dev` binary
+/// // (`src/bin/dev.rs`) for a runnable wiring.
+/// use ssg::dev_server::run_dev_loop;
+/// ```
 pub fn run_dev_loop<F: FnMut(&[PathBuf])>(
     watcher: &EventWatcher,
     graph: &DepGraph,

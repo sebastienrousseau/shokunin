@@ -54,18 +54,45 @@ pub struct LiveReloadPlugin {
 
 impl LiveReloadPlugin {
     /// Creates a new `LiveReloadPlugin` with the default port (35729).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::livereload::{LiveReloadPlugin, DEFAULT_PORT};
+    ///
+    /// let p = LiveReloadPlugin::new();
+    /// assert_eq!(p.port(), DEFAULT_PORT);
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self { port: DEFAULT_PORT }
     }
 
     /// Creates a new `LiveReloadPlugin` with a custom WebSocket port.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::livereload::LiveReloadPlugin;
+    ///
+    /// let p = LiveReloadPlugin::with_port(8765);
+    /// assert_eq!(p.port(), 8765);
+    /// ```
     #[must_use]
     pub const fn with_port(port: u16) -> Self {
         Self { port }
     }
 
     /// Returns the configured port.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::livereload::LiveReloadPlugin;
+    ///
+    /// let p = LiveReloadPlugin::with_port(8080);
+    /// assert_eq!(p.port(), 8080);
+    /// ```
     #[must_use]
     pub const fn port(&self) -> u16 {
         self.port

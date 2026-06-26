@@ -40,6 +40,14 @@ use std::fs;
 const EXCERPT_CHARS: usize = 160;
 
 /// Plugin that builds the `<site>/search/` vector bundle.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::search_index::VectorSearchPlugin;
+/// assert_eq!(VectorSearchPlugin.name(), "vector-search");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct VectorSearchPlugin;
 

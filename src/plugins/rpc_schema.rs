@@ -37,11 +37,26 @@ pub const RPC_DTS_RELATIVE_PATH: &str = ".ssg/rpc.d.ts";
 /// Skips silently when the dispatch inventory is empty so the
 /// behaviour is byte-identical to v0.0.43 for users who don't opt
 /// into Edge RPC.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::plugin::Plugin;
+/// use ssg::rpc_schema::RpcSchemaPlugin;
+/// assert_eq!(RpcSchemaPlugin::new().name(), "rpc-schema");
+/// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RpcSchemaPlugin;
 
 impl RpcSchemaPlugin {
     /// Constructs a new instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::rpc_schema::RpcSchemaPlugin;
+    /// let _plugin = RpcSchemaPlugin::new();
+    /// ```
     #[must_use]
     pub const fn new() -> Self {
         Self

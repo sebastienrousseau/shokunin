@@ -37,6 +37,16 @@ pub struct DeployPlugin {
 
 impl DeployPlugin {
     /// Creates a new `DeployPlugin` for the given target.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::deploy::{DeployPlugin, DeployTarget};
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = DeployPlugin::new(DeployTarget::Netlify);
+    /// assert_eq!(p.name(), "deploy");
+    /// ```
     #[must_use]
     pub const fn new(target: DeployTarget) -> Self {
         Self { target }

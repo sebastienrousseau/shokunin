@@ -16,6 +16,16 @@ use crate::audit::{AuditReport, Severity};
 use std::fmt::Write;
 
 /// Renders `report` as `JUnit` XML.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditReport;
+/// use ssg::audit::output::junit::format;
+/// let report = AuditReport { gates: vec![] };
+/// let xml = format(&report);
+/// assert!(xml.contains("<testsuites>"));
+/// ```
 #[must_use]
 pub fn format(report: &AuditReport) -> String {
     let mut out = String::with_capacity(2048);

@@ -21,6 +21,22 @@
 //! the int8 rounding noise (≈ 0.4% RMSE at dim=256).
 
 /// Result of quantising a single vector: scale + i8 payload.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::quantize::{QuantizedVector, dequantize_int8};
+///
+/// // Manually construct a quantised vector representing [1.0, -1.0, 0.0].
+/// let q = QuantizedVector {
+///     scale: 1.0 / 127.0,
+///     data: vec![127, -127, 0],
+/// };
+/// let back = dequantize_int8(&q);
+/// assert!((back[0] - 1.0).abs() < 1e-6);
+/// assert!((back[1] + 1.0).abs() < 1e-6);
+/// assert_eq!(back[2], 0.0);
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct QuantizedVector {
     /// Scale factor — multiply each `i8` component by this to recover
@@ -35,6 +51,26 @@ pub struct QuantizedVector {
 /// Returns a zero-scale, zero-payload result for an empty input, and a
 /// zero-scale result for an all-zero vector — the decoder treats both
 /// as the zero vector.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::quantize::quantize_int8;
+///
+/// // Symmetric: max-abs element maps to +/-127.
+/// let q = quantize_int8(&[1.0, 0.5, -0.25]);
+/// assert_eq!(q.data[0], 127);
+/// assert!((q.scale - 1.0 / 127.0).abs() < 1e-7);
+///
+/// // All-zero input → zero scale, zero payload.
+/// let zero = quantize_int8(&[0.0, 0.0, 0.0]);
+/// assert_eq!(zero.scale, 0.0);
+/// assert_eq!(zero.data, vec![0i8; 3]);
+///
+/// // Empty input → empty result.
+/// let empty = quantize_int8(&[]);
+/// assert!(empty.data.is_empty());
+/// ```
 #[must_use]
 pub fn quantize_int8(vec: &[f32]) -> QuantizedVector {
     if vec.is_empty() {
@@ -71,6 +107,21 @@ pub fn quantize_int8(vec: &[f32]) -> QuantizedVector {
 
 /// Inverse of [`quantize_int8`]. Reconstructs the f32 vector up to
 /// the symmetric-int8 rounding error.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::quantize::{quantize_int8, dequantize_int8};
+///
+/// // Round-trip preserves values within int8 rounding error.
+/// let original = vec![0.7_f32, -0.3, 0.1, 1.0, -1.0];
+/// let q = quantize_int8(&original);
+/// let back = dequantize_int8(&q);
+/// assert_eq!(back.len(), original.len());
+/// for (a, b) in original.iter().zip(&back) {
+///     assert!((a - b).abs() <= q.scale / 2.0 + 1e-6);
+/// }
+/// ```
 #[must_use]
 pub fn dequantize_int8(q: &QuantizedVector) -> Vec<f32> {
     q.data.iter().map(|&b| f32::from(b) * q.scale).collect()

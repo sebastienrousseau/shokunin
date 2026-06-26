@@ -11,6 +11,14 @@
 /// Returns the absolute end index (one past the closing `>`) of the
 /// HTML tag that starts at `tag_start`. Skips `>` characters inside
 /// quoted attribute values (single and double quotes).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::gates::find_tag_end;
+/// let html = "<br>x";
+/// assert_eq!(find_tag_end(html, 0), 4);
+/// ```
 #[allow(dead_code)]
 pub fn find_tag_end(html: &str, tag_start: usize) -> usize {
     let bytes = html.as_bytes();
@@ -39,6 +47,15 @@ pub fn find_tag_end(html: &str, tag_start: usize) -> usize {
 /// The slightly odd name (`hreflang_attr`) is historical — this used
 /// to live in the hreflang gate; promoted to a shared helper when the
 /// CSP gate needed the same parser.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::gates::hreflang_attr;
+/// let tag = r#"<link rel="alternate" hreflang="en" href="/en/">"#;
+/// assert_eq!(hreflang_attr(tag, "hreflang"), Some("en".to_string()));
+/// assert_eq!(hreflang_attr(tag, "href"), Some("/en/".to_string()));
+/// ```
 pub fn hreflang_attr(tag: &str, name: &str) -> Option<String> {
     let lower = tag.to_lowercase();
     let pat = format!("{name}=");

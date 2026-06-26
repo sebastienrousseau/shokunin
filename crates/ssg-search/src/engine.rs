@@ -27,6 +27,21 @@ use crate::DEFAULT_TOP_K;
 /// Cheap to clone (`encoder` is `Copy`, the corpus is held by `Arc` in
 /// the higher-level wrapper — but here we keep it owned for the
 /// simplest engine API).
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::artifacts::{Artifacts, InputDoc};
+/// use ssg_search::engine::VectorEngine;
+///
+/// let docs = vec![
+///     InputDoc { url: "/a".into(), title: "A".into(), body: "rust wasm".into(), excerpt: "".into() },
+///     InputDoc { url: "/b".into(), title: "B".into(), body: "cooking pasta".into(), excerpt: "".into() },
+/// ];
+/// let arts = Artifacts::from_docs(&docs);
+/// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, arts.count()).unwrap();
+/// assert_eq!(engine.count(), 2);
+/// ```
 #[derive(Debug)]
 pub struct VectorEngine {
     encoder: ProjectionEncoder,
@@ -41,6 +56,16 @@ pub struct VectorEngine {
 /// Errors the engine raises on construction. Kept simple (string +
 /// kind) so wasm-bindgen can flatten to `JsError` without dragging in
 /// `thiserror`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::engine::{EngineError, VectorEngine};
+///
+/// // A header that's not the SSGS magic → BadModel.
+/// let err = VectorEngine::new(&[0u8; 24], &[], &[], 0).unwrap_err();
+/// assert_eq!(err, EngineError::BadModel);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EngineError {
     /// `model.bin` was unrecognised or version-mismatched.
@@ -95,6 +120,31 @@ impl VectorEngine {
     /// `embeddings_bytes`   — contents of `embeddings.bin` (little-endian f32,
     ///                        `count × dim × 4` bytes).
     /// `count`              — number of vectors in the corpus.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::engine::{EngineError, VectorEngine};
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "hello".into(), excerpt: "".into(),
+    /// }]);
+    /// let engine = VectorEngine::new(
+    ///     &arts.model, &arts.tokenizer, &arts.embeddings, arts.count(),
+    /// ).unwrap();
+    /// assert_eq!(engine.count(), 1);
+    ///
+    /// // Mismatched embedding byte-length is rejected.
+    /// let bad = VectorEngine::new(&arts.model, &arts.tokenizer, &[0u8; 7], 1);
+    /// assert!(matches!(bad, Err(EngineError::BadEmbeddings { .. })));
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EngineError::BadModel`] when `model_bytes` is not a
+    /// valid `model.bin`, and [`EngineError::BadEmbeddings`] when
+    /// `embeddings_bytes.len() != count * dim * 4`.
     pub fn new(
         model_bytes: &[u8],
         _tokenizer_bytes: &[u8],
@@ -134,18 +184,60 @@ impl VectorEngine {
     }
 
     /// Returns the encoder used by this engine.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::encoder::{Encoder, EMBEDDING_DIM};
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// }]);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, 1).unwrap();
+    /// assert_eq!(engine.encoder().dim(), EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub const fn encoder(&self) -> &ProjectionEncoder {
         &self.encoder
     }
 
     /// Returns the corpus dimensionality.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::encoder::EMBEDDING_DIM;
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// }]);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, 1).unwrap();
+    /// assert_eq!(engine.dim(), EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub const fn dim(&self) -> usize {
         self.dim
     }
 
     /// Returns the number of indexed documents.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let docs: Vec<InputDoc> = (0..3).map(|i| InputDoc {
+    ///     url: format!("/{i}"), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// }).collect();
+    /// let arts = Artifacts::from_docs(&docs);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, arts.count()).unwrap();
+    /// assert_eq!(engine.count(), 3);
+    /// ```
     #[must_use]
     pub const fn count(&self) -> usize {
         self.count
@@ -154,6 +246,21 @@ impl VectorEngine {
     /// Returns the raw corpus matrix (row-major, L2-normalised).
     /// Exposed for tests and for callers that want to inspect the
     /// underlying buffer; the WASM binding never exposes this to JS.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::encoder::EMBEDDING_DIM;
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "hello".into(), excerpt: "".into(),
+    /// }]);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, 1).unwrap();
+    /// // count * dim f32 values, row-major.
+    /// assert_eq!(engine.corpus().len(), 1 * EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub fn corpus(&self) -> &[f32] {
         &self.corpus
@@ -161,6 +268,23 @@ impl VectorEngine {
 
     /// Embeds the query string using the same encoder used at build
     /// time. Pure delegation — the engine doesn't transform the result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "rust wasm".into(), excerpt: "".into(),
+    /// }]);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, 1).unwrap();
+    /// let q = engine.embed_query("rust");
+    /// assert_eq!(q.len(), engine.dim());
+    /// // L2 norm should be ~1.0 for non-empty input.
+    /// let norm: f32 = q.iter().map(|x| x * x).sum::<f32>().sqrt();
+    /// assert!((0.999..=1.001).contains(&norm));
+    /// ```
     #[must_use]
     pub fn embed_query(&self, query: &str) -> Vec<f32> {
         self.encoder.embed(query)
@@ -173,6 +297,30 @@ impl VectorEngine {
     /// **No division, no `sqrt`** — every vector is pre-normalised, so
     /// cosine similarity collapses to a pure dot product. This is the
     /// AC5 short-circuit (verified by `wasm-profiling`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::engine::VectorEngine;
+    ///
+    /// let docs = vec![
+    ///     InputDoc { url: "/a".into(), title: "".into(), body: "rust simd".into(), excerpt: "".into() },
+    ///     InputDoc { url: "/b".into(), title: "".into(), body: "pasta sauce".into(), excerpt: "".into() },
+    /// ];
+    /// let arts = Artifacts::from_docs(&docs);
+    /// let engine = VectorEngine::new(&arts.model, &arts.tokenizer, &arts.embeddings, 2).unwrap();
+    ///
+    /// // Pre-embedded query goes straight to scoring.
+    /// let q = engine.embed_query("rust");
+    /// let out = engine.search_vec(&q, 2);
+    /// assert_eq!(out.len(), 4); // 2 (idx, score) pairs
+    /// // Results pre-sorted descending by score.
+    /// assert!(out[1] >= out[3]);
+    ///
+    /// // Wrong-dimensional input → empty result (no panic).
+    /// assert!(engine.search_vec(&[0.0_f32; 5], 1).is_empty());
+    /// ```
     #[allow(clippy::suboptimal_flops)] // mul_add slower on wasm32 (no FMA)
     pub fn search_vec(&self, query_vec: &[f32], top_k: usize) -> Vec<f32> {
         let top_k = if top_k == 0 { DEFAULT_TOP_K } else { top_k };
@@ -205,7 +353,12 @@ impl VectorEngine {
             for r in chunks * 4..self.dim {
                 acc += row[r] * query_vec[r];
             }
-            scores.push((i, acc));
+            // Clip negative cosine to 0. For L2-normalised vectors the
+            // dot product is cosine similarity ∈ [-1, 1]; negative
+            // values mean "anti-related" and are treated as "no match"
+            // by every production search engine. Preserving them in
+            // the top-K output is just noise.
+            scores.push((i, acc.max(0.0)));
         }
 
         // Partial sort to top-K. For typical N (≤ a few thousand) the
@@ -228,6 +381,27 @@ impl VectorEngine {
     }
 
     /// Convenience: embed `query` then call [`Self::search_vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::engine::VectorEngine;
+    /// use ssg_search::DEFAULT_TOP_K;
+    ///
+    /// let docs: Vec<InputDoc> = (0..15).map(|i| InputDoc {
+    ///     url: format!("/{i}"), title: "".into(),
+    ///     body: format!("doc number {i}"), excerpt: "".into(),
+    /// }).collect();
+    /// let arts = Artifacts::from_docs(&docs);
+    /// let engine = VectorEngine::new(
+    ///     &arts.model, &arts.tokenizer, &arts.embeddings, arts.count(),
+    /// ).unwrap();
+    ///
+    /// // top_k = 0 means "use the default".
+    /// let out = engine.search("number", 0);
+    /// assert_eq!(out.len(), 2 * DEFAULT_TOP_K);
+    /// ```
     pub fn search(&self, query: &str, top_k: usize) -> Vec<f32> {
         let q = self.embed_query(query);
         self.search_vec(&q, top_k)

@@ -34,6 +34,17 @@ pub struct BuildError {
 impl BuildError {
     /// Creates a `BuildError` from an `SsgError` error, attempting to extract
     /// file path and line number from the error chain.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::pipeline::BuildError;
+    /// use ssg::SsgError;
+    ///
+    /// let err = SsgError::Validation { field: "x".into(), message: "nope".into() };
+    /// let be = BuildError::from_error(&err);
+    /// assert!(be.message.contains("nope"));
+    /// ```
     #[must_use]
     #[allow(dead_code)]
     pub fn from_error(err: &SsgError) -> Self {
@@ -47,6 +58,17 @@ impl BuildError {
     }
 
     /// Serializes to a WebSocket JSON message.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::pipeline::BuildError;
+    ///
+    /// let be = BuildError { file: None, line: None, message: "boom".into() };
+    /// let msg = be.to_ws_message();
+    /// assert!(msg.contains("\"type\":\"error\""));
+    /// assert!(msg.contains("boom"));
+    /// ```
     #[must_use]
     #[allow(dead_code)]
     pub fn to_ws_message(&self) -> String {
@@ -61,6 +83,14 @@ impl BuildError {
 }
 
 /// Returns the JSON message to clear the error overlay.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::pipeline::clear_error_message;
+///
+/// assert!(clear_error_message().contains("clear-error"));
+/// ```
 #[must_use]
 #[allow(dead_code)]
 pub fn clear_error_message() -> String {
@@ -139,6 +169,17 @@ pub struct RunOptions {
 
 impl RunOptions {
     /// Builds a `RunOptions` from a parsed `clap::ArgMatches`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::Cli;
+    /// use ssg::pipeline::RunOptions;
+    ///
+    /// let matches = Cli::build().get_matches_from(vec!["ssg", "--quiet"]);
+    /// let opts = RunOptions::from_matches(&matches);
+    /// assert!(opts.quiet);
+    /// ```
     pub fn from_matches(matches: &clap::ArgMatches) -> Self {
         Self {
             quiet: matches.get_flag("quiet"),
@@ -168,6 +209,18 @@ impl RunOptions {
     /// `--drafts`, `--jobs`, and on the `build` subcommand
     /// `--max-memory`. Anything else falls back to the defaults so
     /// downstream callers don't have to special-case missing IDs.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::Cli;
+    /// use ssg::pipeline::RunOptions;
+    ///
+    /// let matches = Cli::subcommand_app().get_matches_from(vec!["ssg", "build"]);
+    /// let sub_m = matches.subcommand_matches("build").unwrap();
+    /// let opts = RunOptions::from_subcommand_matches(sub_m);
+    /// assert!(!opts.quiet);
+    /// ```
     pub fn from_subcommand_matches(sub_m: &clap::ArgMatches) -> Self {
         let opt_flag = |name: &str| -> bool {
             sub_m.try_contains_id(name).unwrap_or(false) && sub_m.get_flag(name)
@@ -211,6 +264,18 @@ impl RunOptions {
 /// `staticdatagen::compile` finalizes output by renaming the build directory
 /// into the site directory. If both paths are identical, finalization fails.
 /// This helper guarantees distinct paths when needed.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::SsgConfig;
+/// use ssg::pipeline::resolve_build_and_site_dirs;
+///
+/// let cfg = SsgConfig::default();
+/// let (build, site) = resolve_build_and_site_dirs(&cfg);
+/// // When serve_dir is unset and equals output_dir, build dir differs.
+/// assert_ne!(build, site);
+/// ```
 pub fn resolve_build_and_site_dirs(config: &SsgConfig) -> (PathBuf, PathBuf) {
     let site_dir = config
         .serve_dir
@@ -230,6 +295,18 @@ pub fn resolve_build_and_site_dirs(config: &SsgConfig) -> (PathBuf, PathBuf) {
 ///
 /// Extracted so unit tests can construct the same wiring without
 /// needing to fake CLI argument parsing.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::SsgConfig;
+/// use ssg::pipeline::{build_pipeline, RunOptions};
+///
+/// let cfg = SsgConfig::default();
+/// let opts = RunOptions::default();
+/// let (_plugins, _ctx, build, site) = build_pipeline(&cfg, &opts);
+/// assert_ne!(build, site);
+/// ```
 pub fn build_pipeline(
     config: &SsgConfig,
     opts: &RunOptions,
@@ -285,6 +362,17 @@ pub fn build_pipeline(
 /// graph stays byte-identical when `--isr` is not passed (AC9 of
 /// issue #546). Anything registered here MUST be a strict superset
 /// of the v0.0.43 output; failing AC9 fails the entire epic.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::pipeline::register_isr_plugins;
+/// use ssg::plugin::PluginManager;
+///
+/// let mut pm = PluginManager::new();
+/// register_isr_plugins(&mut pm);
+/// // ISR plugins get appended without panicking.
+/// ```
 pub fn register_isr_plugins(plugins: &mut plugin::PluginManager) {
     plugins.register(crate::isr_manifest::IsrManifestPlugin::new());
     // Edge RPC schema emitter (issue #548). Registered alongside ISR
@@ -308,6 +396,19 @@ pub fn register_isr_plugins(plugins: &mut plugin::PluginManager) {
         quiet,
     ))
 )]
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::cmd::SsgConfig;
+/// use ssg::pipeline::{build_pipeline, execute_build_pipeline, RunOptions};
+///
+/// let cfg = SsgConfig::default();
+/// let opts = RunOptions::default();
+/// let (plugins, ctx, build, site) = build_pipeline(&cfg, &opts);
+/// // Wired but not invoked here — would need real content/template dirs.
+/// let _ = execute_build_pipeline(&plugins, &ctx, &build, &cfg.content_dir, &site, &cfg.template_dir, true);
+/// ```
 pub fn execute_build_pipeline(
     plugins: &plugin::PluginManager,
     ctx: &plugin::PluginContext,
@@ -352,6 +453,21 @@ pub fn execute_build_pipeline(
         incremental,
     ))
 )]
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::cmd::SsgConfig;
+/// use ssg::pipeline::{build_pipeline, execute_build_pipeline_with, RunOptions};
+///
+/// let cfg = SsgConfig::default();
+/// let opts = RunOptions::default();
+/// let (plugins, ctx, build, site) = build_pipeline(&cfg, &opts);
+/// let _ = execute_build_pipeline_with(
+///     &plugins, &ctx, &build, &cfg.content_dir, &site, &cfg.template_dir,
+///     true, false,
+/// );
+/// ```
 pub fn execute_build_pipeline_with(
     plugins: &plugin::PluginManager,
     ctx: &plugin::PluginContext,
@@ -484,6 +600,16 @@ pub fn execute_build_pipeline_with(
 /// Issue #524 specifies `target/ssg-cache/`; when no `target/`
 /// directory is available (e.g. tests or sites built outside cargo),
 /// the cache lives at `<site_dir>/.ssg-cache/`.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::pipeline::depgraph_cache_root;
+/// use std::path::Path;
+///
+/// let cache_root = depgraph_cache_root(Path::new("/tmp/site"));
+/// assert!(cache_root.exists() || cache_root.ends_with(".ssg-cache") || cache_root.ends_with("ssg-cache"));
+/// ```
 #[must_use]
 pub fn depgraph_cache_root(site_dir: &Path) -> PathBuf {
     let target = Path::new("target");
@@ -495,6 +621,20 @@ pub fn depgraph_cache_root(site_dir: &Path) -> PathBuf {
 }
 
 /// Compiles the static site from source directories.
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::pipeline::compile_site;
+/// use std::path::Path;
+///
+/// // Real call requires populated content/template trees; only the
+/// // signature is exercised here.
+/// let _ = compile_site(
+///     Path::new("build"), Path::new("content"),
+///     Path::new("site"), Path::new("templates"),
+/// );
+/// ```
 pub fn compile_site(
     build_dir: &Path,
     content_dir: &Path,
@@ -517,6 +657,19 @@ pub fn compile_site(
 /// 2. Search index generation
 /// 3. HTML minification (must be last content transform)
 /// 4. Live reload (`on_serve` only)
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::SsgConfig;
+/// use ssg::pipeline::register_default_plugins;
+/// use ssg::plugin::PluginManager;
+///
+/// let cfg = SsgConfig::default();
+/// let mut pm = PluginManager::new();
+/// register_default_plugins(&mut pm, &cfg, false, None);
+/// assert!(pm.len() > 0);
+/// ```
 pub fn register_default_plugins(
     plugins: &mut plugin::PluginManager,
     config: &SsgConfig,

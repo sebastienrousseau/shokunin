@@ -32,6 +32,16 @@ impl Default for HighlightPlugin {
 
 impl HighlightPlugin {
     /// Creates a new `HighlightPlugin` with the given theme.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::highlight::HighlightPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = HighlightPlugin::new("monokai");
+    /// assert_eq!(p.name(), "highlight");
+    /// ```
     #[must_use]
     pub fn new(theme: impl Into<String>) -> Self {
         Self {
@@ -40,6 +50,16 @@ impl HighlightPlugin {
     }
 
     /// Creates a highlight plugin with the given theme name.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::highlight::HighlightPlugin;
+    /// use ssg::plugin::Plugin;
+    ///
+    /// let p = HighlightPlugin::with_theme("solarized");
+    /// assert_eq!(p.name(), "highlight");
+    /// ```
     #[must_use]
     pub fn with_theme(theme: impl Into<String>) -> Self {
         Self {

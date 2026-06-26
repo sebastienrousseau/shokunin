@@ -62,6 +62,14 @@ pub struct SbomPlugin;
 
 impl SbomPlugin {
     /// Returns the relative path of the SBOM file under `site_dir`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::sbom::SbomPlugin;
+    ///
+    /// assert_eq!(SbomPlugin::sbom_path(), "sbom.cdx.json");
+    /// ```
     pub const fn sbom_path() -> &'static str {
         "sbom.cdx.json"
     }

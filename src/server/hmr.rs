@@ -63,6 +63,14 @@ pub enum HmrType {
 
 impl HmrType {
     /// The wire string the JS client matches on (`msg.type`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrType;
+    /// assert_eq!(HmrType::HmrCss.wire(), "hmr-css");
+    /// assert_eq!(HmrType::Reload.wire(), "reload");
+    /// ```
     #[must_use]
     pub const fn wire(self) -> &'static str {
         match self {
@@ -89,6 +97,15 @@ pub struct HmrMessage {
 
 impl HmrMessage {
     /// Build a CSS-swap frame for one or more stylesheet paths.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::{HmrMessage, HmrType};
+    /// let m = HmrMessage::css(vec!["x.css".into()]);
+    /// assert_eq!(m.kind, HmrType::HmrCss);
+    /// assert_eq!(m.paths, vec!["x.css"]);
+    /// ```
     #[must_use]
     pub const fn css(paths: Vec<String>) -> Self {
         Self {
@@ -99,6 +116,14 @@ impl HmrMessage {
     }
 
     /// Build an HTML-partial frame for one or more page URLs.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::{HmrMessage, HmrType};
+    /// let m = HmrMessage::html(vec!["/a/".into()]);
+    /// assert_eq!(m.kind, HmrType::HmrHtml);
+    /// ```
     #[must_use]
     pub const fn html(paths: Vec<String>) -> Self {
         Self {
@@ -109,6 +134,15 @@ impl HmrMessage {
     }
 
     /// Build a full-page-reload frame.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::{HmrMessage, HmrType};
+    /// let m = HmrMessage::reload();
+    /// assert_eq!(m.kind, HmrType::Reload);
+    /// assert!(m.paths.is_empty());
+    /// ```
     #[must_use]
     pub const fn reload() -> Self {
         Self {
@@ -119,6 +153,14 @@ impl HmrMessage {
     }
 
     /// Attach a content hash for client-side de-duplication.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrMessage;
+    /// let m = HmrMessage::reload().with_sha("abc123");
+    /// assert_eq!(m.sha, "abc123");
+    /// ```
     #[must_use]
     pub fn with_sha(mut self, sha: impl Into<String>) -> Self {
         self.sha = sha.into();
@@ -132,6 +174,15 @@ impl HmrMessage {
     ///
     /// Only if `serde_json` cannot serialise a primitive `Vec<String>`,
     /// which is impossible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrMessage;
+    /// let m = HmrMessage::css(vec!["a.css".into()]);
+    /// let json = m.to_json();
+    /// assert!(json.contains("\"type\":\"hmr-css\""));
+    /// ```
     #[must_use]
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_else(|_| {
@@ -168,6 +219,14 @@ impl std::fmt::Debug for HmrBroadcaster {
 
 impl HmrBroadcaster {
     /// Construct an empty broadcaster.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrBroadcaster;
+    /// let b = HmrBroadcaster::new();
+    /// assert_eq!(b.subscriber_count(), 0);
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -177,6 +236,15 @@ impl HmrBroadcaster {
 
     /// Register a new tab. The sink is invoked on every subsequent
     /// [`Self::broadcast`] until it returns `Err(())`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrBroadcaster;
+    /// let b = HmrBroadcaster::new();
+    /// b.subscribe(Box::new(|_| Ok(())));
+    /// assert_eq!(b.subscriber_count(), 1);
+    /// ```
     pub fn subscribe(&self, sink: HmrSink) {
         if let Ok(mut g) = self.sinks.lock() {
             g.push(sink);
@@ -185,6 +253,14 @@ impl HmrBroadcaster {
 
     /// Returns the current number of subscribed tabs. Useful for tests
     /// and the dev-server status banner.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::HmrBroadcaster;
+    /// let b = HmrBroadcaster::new();
+    /// assert_eq!(b.subscriber_count(), 0);
+    /// ```
     #[must_use]
     pub fn subscriber_count(&self) -> usize {
         self.sinks.lock().map_or(0, |g| g.len())
@@ -194,6 +270,15 @@ impl HmrBroadcaster {
     /// evicted in-place.
     ///
     /// Returns the number of tabs that successfully received the frame.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::hmr::{HmrBroadcaster, HmrMessage};
+    /// let b = HmrBroadcaster::new();
+    /// b.subscribe(Box::new(|_| Ok(())));
+    /// assert_eq!(b.broadcast(&HmrMessage::reload()), 1);
+    /// ```
     pub fn broadcast(&self, msg: &HmrMessage) -> usize {
         let payload = msg.to_json();
         let Ok(mut sinks) = self.sinks.lock() else {

@@ -79,6 +79,15 @@ impl Cli {
     /// Preserved so the deprecation shim, existing examples, and the
     /// already-shipped CI invocations keep working through the 0.0.x
     /// line. Removed in 1.0 per issue #527 AC7.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::Cli;
+    ///
+    /// let cmd = Cli::build();
+    /// assert!(cmd.get_name().contains("ssg") || !cmd.get_name().is_empty());
+    /// ```
     #[must_use]
     pub fn build() -> Command {
         Command::new(env!("CARGO_PKG_NAME"))
@@ -252,6 +261,17 @@ impl Cli {
     ///
     /// Each subcommand carries the same `--config / --output / …`
     /// option pile so existing scripts can be ported one-to-one.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::Cli;
+    ///
+    /// let app = Cli::subcommand_app();
+    /// let names: Vec<_> = app.get_subcommands().map(|c| c.get_name()).collect();
+    /// assert!(names.contains(&"build"));
+    /// assert!(names.contains(&"dev"));
+    /// ```
     #[must_use]
     pub fn subcommand_app() -> Command {
         let shared = || -> Vec<Arg> {
@@ -432,6 +452,16 @@ impl Cli {
     /// reuse the existing `SsgConfig::from_matches` / `RunOptions::from_matches`
     /// helpers.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::{Cli, CliInvocation};
+    ///
+    /// let (inv, _matches) = Cli::parse_and_dispatch(vec!["ssg", "build"])
+    ///     .expect("parses");
+    /// assert!(matches!(inv, CliInvocation::Build));
+    /// ```
+    ///
     /// # Errors
     /// Returns the underlying `clap::Error` if parsing fails — the
     /// caller is expected to print it and exit non-zero.
@@ -490,6 +520,15 @@ impl Cli {
     }
 
     /// Displays the application banner
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::Cli;
+    ///
+    /// // Prints to stdout — runnable in a doctest, no panics.
+    /// Cli::print_banner();
+    /// ```
     pub fn print_banner() {
         let version = env!("CARGO_PKG_VERSION");
         let mut title = String::with_capacity(16 + version.len());

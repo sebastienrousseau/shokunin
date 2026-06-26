@@ -38,6 +38,16 @@ use std::borrow::Cow;
 /// `<lol_html>` path so callers don't have to deal with `lol_html`'s
 /// error types directly.
 ///
+/// # Examples
+///
+/// ```rust
+/// use ssg::util::html_rewriter::rewrite_html;
+///
+/// // With no handlers the output is byte-identical to the input.
+/// let out = rewrite_html("<p>hi</p>", Vec::new()).unwrap();
+/// assert_eq!(out, "<p>hi</p>");
+/// ```
+///
 /// # Errors
 ///
 /// Returns [`SsgError::Io`] if `lol_html` rejects any selector or
@@ -65,6 +75,16 @@ pub fn rewrite_html<'h>(
 /// `<`, and so on — matching the on-screen rendering rather than the
 /// raw HTML bytes. This is the right behaviour for search-index
 /// extraction (issue #525 AC4).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::util::html_rewriter::extract_text_with_filter;
+///
+/// let html = "<h1>Hello</h1><h1>World</h1>";
+/// let texts = extract_text_with_filter(html, "h1").unwrap();
+/// assert_eq!(texts, vec!["Hello".to_string(), "World".to_string()]);
+/// ```
 ///
 /// # Errors
 ///
@@ -145,6 +165,16 @@ pub fn extract_text_with_filter(
 /// body text only ever contain these forms in practice, and a full
 /// HTML5-spec named-reference table would balloon binary size for no
 /// observable benefit.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::util::html_rewriter::decode_html_entities;
+///
+/// assert_eq!(decode_html_entities("a &amp; b"), "a & b");
+/// assert_eq!(decode_html_entities("&#65;"), "A");
+/// assert_eq!(decode_html_entities("&unknown;"), "&unknown;");
+/// ```
 #[must_use]
 pub fn decode_html_entities(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -204,6 +234,15 @@ fn decode_one_entity(entity: &str) -> Option<String> {
 /// Matches the historical `strip_tags` behaviour in
 /// `src/plugins/search.rs` so the search index stays byte-identical
 /// across the port.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::util::html_rewriter::collapse_whitespace;
+///
+/// assert_eq!(collapse_whitespace("  hello  world  "), "hello world");
+/// assert_eq!(collapse_whitespace("a\tb\nc"), "a b c");
+/// ```
 #[must_use]
 pub fn collapse_whitespace(s: &str) -> String {
     let mut out = String::with_capacity(s.len());

@@ -40,6 +40,17 @@ pub struct TemplatePlugin {
 #[cfg(feature = "templates")]
 impl TemplatePlugin {
     /// Creates a new `TemplatePlugin` with the given configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::Plugin;
+    /// use ssg::template_engine::TemplateConfig;
+    /// use ssg::template_plugin::TemplatePlugin;
+    ///
+    /// let p = TemplatePlugin::new(TemplateConfig::default());
+    /// assert_eq!(p.name(), "templates");
+    /// ```
     #[must_use]
     pub const fn new(config: TemplateConfig) -> Self {
         Self { config }
@@ -47,6 +58,17 @@ impl TemplatePlugin {
 
     /// Creates a `TemplatePlugin` that looks for templates in the standard
     /// `templates/tera/` subdirectory of the template dir.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::plugin::Plugin;
+    /// use ssg::template_plugin::TemplatePlugin;
+    /// use std::path::Path;
+    ///
+    /// let p = TemplatePlugin::from_template_dir(Path::new("templates"));
+    /// assert_eq!(p.name(), "templates");
+    /// ```
     #[must_use]
     pub fn from_template_dir(template_dir: &Path) -> Self {
         Self {

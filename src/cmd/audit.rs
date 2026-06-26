@@ -16,6 +16,13 @@ use std::path::PathBuf;
 
 /// Outcome of running [`run`] — the caller turns this into a process
 /// exit code (0 == [`Outcome::Pass`]; 1 == [`Outcome::Fail`]).
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::audit::Outcome;
+/// assert_ne!(Outcome::Pass, Outcome::Fail);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Outcome {
     /// No finding exceeded the configured `--fail-on` threshold.
@@ -30,6 +37,21 @@ pub enum Outcome {
 /// Returns [`SsgError`] when the site cannot be loaded or rendering
 /// fails. Findings themselves never produce an `Err` — they're folded
 /// into the returned [`Outcome`].
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::audit::{build_subcommand, run, Outcome};
+/// let tmp = tempfile::tempdir().unwrap();
+/// let site = tmp.path().join("public");
+/// std::fs::create_dir_all(&site).unwrap();
+/// let cmd = build_subcommand();
+/// let matches = cmd
+///     .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
+///     .unwrap();
+/// let outcome = run(&matches).unwrap();
+/// assert_eq!(outcome, Outcome::Pass);
+/// ```
 pub fn run(sub_m: &ArgMatches) -> Result<Outcome, SsgError> {
     let output_dir = sub_m
         .get_one::<PathBuf>("output")
@@ -136,6 +158,14 @@ fn explain_gate(name: Option<&str>) -> Result<(), SsgError> {
 
 /// Builds the clap `Command` for the `audit` subcommand. Re-used by
 /// `cli.rs::subcommand_app` so the surface is wired in one place.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::audit::build_subcommand;
+/// let cmd = build_subcommand();
+/// assert_eq!(cmd.get_name(), "audit");
+/// ```
 #[must_use]
 pub fn build_subcommand() -> clap::Command {
     use clap::{Arg, ArgAction};
@@ -221,6 +251,20 @@ pub fn build_subcommand() -> clap::Command {
 ///
 /// # Errors
 /// Propagates [`SsgError`] from [`run`].
+///
+/// # Examples
+///
+/// ```
+/// use ssg::cmd::audit::{build_subcommand, run_and_dispatch};
+/// let tmp = tempfile::tempdir().unwrap();
+/// let site = tmp.path().join("public");
+/// std::fs::create_dir_all(&site).unwrap();
+/// let cmd = build_subcommand();
+/// let matches = cmd
+///     .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
+///     .unwrap();
+/// run_and_dispatch(&matches, true).unwrap();
+/// ```
 pub fn run_and_dispatch(
     matches: &ArgMatches,
     quiet: bool,

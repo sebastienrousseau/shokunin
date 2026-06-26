@@ -35,6 +35,16 @@ use std::path::{Path, PathBuf};
 /// Kept distinct from `Result<Option<…>>` because adapters frequently
 /// want to distinguish a hard error (KV unreachable) from a benign
 /// miss (key not in store).
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::ProviderError;
+///
+/// let err = ProviderError::NotFound { key: "foo.md".into() };
+/// assert!(err.to_string().contains("not found"));
+/// assert!(err.to_string().contains("foo.md"));
+/// ```
 #[derive(Debug)]
 pub enum ProviderError {
     /// Key was not present in the underlying store.
@@ -89,6 +99,17 @@ pub trait ContentProvider {
     /// # Errors
     /// - [`ProviderError::NotFound`] if `key` is not present.
     /// - [`ProviderError::Backend`] for any other failure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{ContentProvider, MemoryContentProvider};
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// mem.insert("page.md", b"# Hello".to_vec());
+    /// let bytes = mem.fetch("page.md").unwrap();
+    /// assert_eq!(bytes, b"# Hello");
+    /// ```
     fn fetch(&self, key: &str) -> ProviderResult<Vec<u8>>;
 
     /// Convenience: fetches `key` and decodes as UTF-8.
@@ -100,6 +121,16 @@ pub trait ContentProvider {
     /// # Errors
     /// - Any error returned by [`Self::fetch`].
     /// - [`ProviderError::Backend`] if the bytes are not valid UTF-8.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{ContentProvider, MemoryContentProvider};
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// mem.insert("a.md", b"hello".to_vec());
+    /// assert_eq!(mem.fetch_string("a.md").unwrap(), "hello");
+    /// ```
     fn fetch_string(&self, key: &str) -> ProviderResult<String> {
         let bytes = self.fetch(key)?;
         String::from_utf8(bytes).map_err(|e| ProviderError::Backend {
@@ -112,6 +143,17 @@ pub trait ContentProvider {
     /// Default impl delegates to [`Self::fetch`] and discards the
     /// payload. Adapters with a cheaper HEAD-style probe (CDN cache,
     /// KV metadata) SHOULD override.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::{ContentProvider, MemoryContentProvider};
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// mem.insert("k", b"v".to_vec());
+    /// assert!(mem.contains("k"));
+    /// assert!(!mem.contains("missing"));
+    /// ```
     fn contains(&self, key: &str) -> bool {
         self.fetch(key).is_ok()
     }
@@ -127,6 +169,17 @@ pub trait ContentProvider {
 /// default adapter used by `ssg build` and is intentionally a thin
 /// wrapper around `std::fs::read` so the existing batch pipeline keeps
 /// its byte-identical behaviour (AC9).
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::{ContentProvider, FsContentProvider};
+///
+/// let dir = tempfile::tempdir().unwrap();
+/// std::fs::write(dir.path().join("a.md"), b"# A").unwrap();
+/// let fs = FsContentProvider::new(dir.path());
+/// assert_eq!(fs.fetch("a.md").unwrap(), b"# A");
+/// ```
 #[derive(Debug, Clone)]
 pub struct FsContentProvider {
     root: PathBuf,
@@ -137,12 +190,32 @@ impl FsContentProvider {
     ///
     /// `root` is typically the site directory — every fetched key is
     /// resolved as `root.join(key)`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::FsContentProvider;
+    ///
+    /// let dir = tempfile::tempdir().unwrap();
+    /// let fs = FsContentProvider::new(dir.path());
+    /// assert_eq!(fs.root(), dir.path());
+    /// ```
     #[must_use]
     pub fn new<P: Into<PathBuf>>(root: P) -> Self {
         Self { root: root.into() }
     }
 
     /// Returns the configured root directory.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::FsContentProvider;
+    /// use std::path::Path;
+    ///
+    /// let fs = FsContentProvider::new("/tmp/site");
+    /// assert_eq!(fs.root(), Path::new("/tmp/site"));
+    /// ```
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
@@ -191,6 +264,17 @@ impl ContentProvider for FsContentProvider {
 /// Suited to unit tests (no tempdir setup) and to the WASM Edge
 /// runtime where the JS host pre-loads a small set of source files
 /// before calling `render_page_isr`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_core::{ContentProvider, MemoryContentProvider};
+///
+/// let mut mem = MemoryContentProvider::new();
+/// mem.insert("a", b"1".to_vec());
+/// assert!(mem.contains("a"));
+/// assert_eq!(mem.fetch("a").unwrap(), b"1");
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct MemoryContentProvider {
     map: BTreeMap<String, Vec<u8>>,
@@ -198,12 +282,32 @@ pub struct MemoryContentProvider {
 
 impl MemoryContentProvider {
     /// Constructs an empty `MemoryContentProvider`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::MemoryContentProvider;
+    ///
+    /// let mem = MemoryContentProvider::new();
+    /// assert!(mem.is_empty());
+    /// ```
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Inserts a key/value pair, returning the previous value (if any).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::MemoryContentProvider;
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// assert!(mem.insert("k", b"v1".to_vec()).is_none());
+    /// let prev = mem.insert("k", b"v2".to_vec());
+    /// assert_eq!(prev.as_deref(), Some(&b"v1"[..]));
+    /// ```
     pub fn insert<K: Into<String>, V: Into<Vec<u8>>>(
         &mut self,
         key: K,
@@ -213,12 +317,35 @@ impl MemoryContentProvider {
     }
 
     /// Returns the number of keys currently stored.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::MemoryContentProvider;
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// assert_eq!(mem.len(), 0);
+    /// mem.insert("a", b"x".to_vec());
+    /// mem.insert("b", b"y".to_vec());
+    /// assert_eq!(mem.len(), 2);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.map.len()
     }
 
     /// Reports whether the provider holds no entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_core::MemoryContentProvider;
+    ///
+    /// let mut mem = MemoryContentProvider::new();
+    /// assert!(mem.is_empty());
+    /// mem.insert("k", b"v".to_vec());
+    /// assert!(!mem.is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()

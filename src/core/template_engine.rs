@@ -50,6 +50,21 @@ impl TemplateEngine {
     /// Uses a path-based loader for lazy template resolution.
     /// Returns `Ok(None)` if the template directory does not exist
     /// (graceful fallback for projects without templates).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::template_engine::{TemplateConfig, TemplateEngine};
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = TemplateConfig {
+    ///     template_dir: dir.path().join("missing"),
+    ///     ..TemplateConfig::default()
+    /// };
+    /// // Missing dir ⇒ Ok(None), never an error.
+    /// assert!(TemplateEngine::init(cfg).unwrap().is_none());
+    /// ```
     pub fn init(config: TemplateConfig) -> Result<Option<Self>> {
         if !config.template_dir.exists() {
             return Ok(None);
@@ -76,6 +91,25 @@ impl TemplateEngine {
     /// * `page_content` — compiled HTML content from staticdatagen
     /// * `frontmatter` — parsed frontmatter as JSON key-value pairs
     /// * `site_globals` — site-level variables (name, `base_url`, etc.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::template_engine::{TemplateConfig, TemplateEngine};
+    /// use tempfile::tempdir;
+    /// use std::collections::HashMap;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// let cfg = TemplateConfig {
+    ///     template_dir: dir.path().to_path_buf(),
+    ///     ..TemplateConfig::default()
+    /// };
+    /// // No matching template ⇒ returns the content unchanged.
+    /// let engine = TemplateEngine::init(cfg).unwrap().unwrap();
+    /// let html = engine.render_page("p.html", "<p>hi</p>", &HashMap::new(), &HashMap::new()).unwrap();
+    /// assert!(html.contains("hi"));
+    /// ```
     pub fn render_page(
         &self,
         template_name: &str,
@@ -130,6 +164,18 @@ impl TemplateEngine {
     }
 
     /// Builds site-level globals from an `SsgConfig`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    /// use ssg::template_engine::TemplateEngine;
+    ///
+    /// let cfg = SsgConfig::default();
+    /// let globals = TemplateEngine::site_globals_from_config(&cfg);
+    /// assert!(globals.contains_key("name"));
+    /// assert!(globals.contains_key("base_url"));
+    /// ```
     #[must_use]
     pub fn site_globals_from_config(
         config: &crate::cmd::SsgConfig,
@@ -164,6 +210,18 @@ impl TemplateEngine {
     /// Files are accessible as `{{ data.filename }}` in templates.
     ///
     /// Example: `data/nav.toml` → `{{ data.nav.links }}`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::template_engine::TemplateEngine;
+    /// use tempfile::tempdir;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// // Returns empty map when no sibling `data/` dir exists.
+    /// let data = TemplateEngine::load_data_files(dir.path());
+    /// assert!(data.is_empty());
+    /// ```
     #[must_use]
     pub fn load_data_files(
         content_dir: &std::path::Path,

@@ -61,6 +61,16 @@ pub const DEFAULT_HOST: &str = "127.0.0.1";
 ///
 /// Returns the value of the `SSG_HOST` environment variable if set and
 /// non-empty; otherwise returns the compiled-in default.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::{resolve_host, DEFAULT_HOST};
+///
+/// // With no env override the compiled-in default is returned.
+/// std::env::remove_var("SSG_HOST");
+/// assert_eq!(resolve_host(), DEFAULT_HOST);
+/// ```
 #[must_use]
 pub fn resolve_host() -> String {
     std::env::var("SSG_HOST")
@@ -70,6 +80,15 @@ pub fn resolve_host() -> String {
 }
 
 /// Resolve the dev-server port, preferring `$SSG_PORT` over [`DEFAULT_PORT`].
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::{resolve_port, DEFAULT_PORT};
+///
+/// std::env::remove_var("SSG_PORT");
+/// assert_eq!(resolve_port(), DEFAULT_PORT);
+/// ```
 #[must_use]
 pub fn resolve_port() -> u16 {
     std::env::var("SSG_PORT")
@@ -93,6 +112,15 @@ pub const DEFAULT_SITE_TITLE: &str = "My SSG Site";
 pub static DEFAULT_CONFIG: OnceLock<Arc<SsgConfig>> = OnceLock::new();
 
 /// Returns a reference to the lazily-initialised default configuration.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::{default_config, DEFAULT_SITE_NAME};
+///
+/// let cfg = default_config();
+/// assert_eq!(cfg.site_name, DEFAULT_SITE_NAME);
+/// ```
 pub fn default_config() -> &'static Arc<SsgConfig> {
     DEFAULT_CONFIG.get_or_init(|| {
         Arc::new(SsgConfig {

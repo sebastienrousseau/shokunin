@@ -27,6 +27,14 @@ use ssg_rpc::dispatch;
 /// ```
 ///
 /// On error, `body` is the standard `{"error": "..."}` JSON.
+///
+/// # Examples
+///
+/// ```
+/// let resp = ssg_wasm::rpc_dispatch_impl("__missing__", "{}");
+/// assert_eq!(resp.status, 404);
+/// assert!(resp.body.contains("not found"));
+/// ```
 #[derive(Debug)]
 pub struct RpcResponse {
     /// HTTP status code the Worker should respond with.
@@ -41,6 +49,16 @@ pub struct RpcResponse {
 /// Maps a registered RPC name + JSON payload to an HTTP-shaped
 /// response. Always returns a body — even on `Err`, the body is the
 /// canonical `{"error": "..."}` document.
+///
+/// # Examples
+///
+/// ```
+/// let resp = ssg_wasm::rpc_dispatch_impl("__nope__", "{}");
+/// assert_eq!(resp.status, 404);
+/// let v: serde_json::Value =
+///     serde_json::from_str(&resp.body).unwrap();
+/// assert_eq!(v["error"], "not found");
+/// ```
 #[must_use]
 pub fn rpc_dispatch_impl(name: &str, payload: &str) -> RpcResponse {
     match dispatch(name, payload) {
@@ -55,6 +73,18 @@ pub fn rpc_dispatch_impl(name: &str, payload: &str) -> RpcResponse {
 /// JS-facing entrypoint. Returns a JSON string of the form
 /// `{"status": <int>, "body": "<json>"}` which the Worker parses
 /// to choose the HTTP status + Content-Type.
+///
+/// # Examples
+///
+/// ```
+/// let raw = ssg_wasm::rpc_dispatch("__nope__", "{}");
+/// let env: serde_json::Value = serde_json::from_str(&raw).unwrap();
+/// assert_eq!(env["status"], 404);
+/// let body_str = env["body"].as_str().unwrap();
+/// let body: serde_json::Value =
+///     serde_json::from_str(body_str).unwrap();
+/// assert_eq!(body["error"], "not found");
+/// ```
 #[wasm_bindgen]
 pub fn rpc_dispatch(name: &str, payload: &str) -> String {
     let resp = rpc_dispatch_impl(name, payload);
@@ -98,6 +128,14 @@ fn json_string_literal(s: &str) -> String {
 /// check in TypeScript, but exposing the canonical body here keeps
 /// the wire format identical across all error paths
 /// (400/401/404/405/500).
+///
+/// # Examples
+///
+/// ```
+/// let body = ssg_wasm::rpc::method_not_allowed_body();
+/// let v: serde_json::Value = serde_json::from_str(body).unwrap();
+/// assert_eq!(v["error"], "method not allowed");
+/// ```
 #[must_use]
 pub const fn method_not_allowed_body() -> &'static str {
     "{\"error\":\"method not allowed\"}"

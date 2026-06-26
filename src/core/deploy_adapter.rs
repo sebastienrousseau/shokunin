@@ -52,6 +52,15 @@ impl Target {
     /// but we treat an unknown input as a defensive validation error
     /// rather than panic.
     ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::deploy_adapter::Target;
+    ///
+    /// assert_eq!(Target::from_cli("netlify").unwrap(), Target::Netlify);
+    /// assert!(Target::from_cli("not-a-target").is_err());
+    /// ```
+    ///
     /// # Errors
     /// Returns [`SsgError::Validation`] if `name` is not one of the
     /// six supported targets.
@@ -71,6 +80,15 @@ impl Target {
     }
 
     /// Returns the canonical CLI name for this target.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::deploy_adapter::Target;
+    ///
+    /// assert_eq!(Target::Netlify.as_str(), "netlify");
+    /// assert_eq!(Target::None.as_str(), "none");
+    /// ```
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -111,6 +129,15 @@ pub trait DeployAdapter: Send + Sync {
 }
 
 /// Returns the adapter implementation for a given [`Target`].
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::deploy_adapter::{adapter_for, Target};
+///
+/// let a = adapter_for(Target::None);
+/// assert_eq!(a.name(), "none");
+/// ```
 #[must_use]
 pub fn adapter_for(target: Target) -> Box<dyn DeployAdapter> {
     match target {

@@ -5029,6 +5029,7 @@ dependencies = [
  "ravif",
  "rayon",
  "rgb",
+ "schemars",
  "serde",
  "serde_json",
  "serde_yaml_ng",

@@ -17,6 +17,15 @@ use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
 const NAME: &str = "ai_discovery";
 
 /// AI-discovery protocol gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::ai_discovery::AiDiscoveryGate;
+/// assert_eq!(AiDiscoveryGate.name(), "ai_discovery");
+/// assert!(!AiDiscoveryGate.explain().is_empty());
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct AiDiscoveryGate;
 

@@ -15,6 +15,14 @@ use super::hreflang_attr;
 const NAME: &str = "metadata";
 
 /// Metadata + Open Graph + Twitter card gate.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::audit::AuditGate;
+/// use ssg::audit::gates::metadata::MetadataGate;
+/// assert_eq!(MetadataGate.name(), "metadata");
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct MetadataGate;
 
