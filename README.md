@@ -137,12 +137,14 @@ graph TD
 
 | Metric | Value |
 | :--- | :--- |
-| **Source** | 39,103 lines across 38 modules |
-| **Test suite** | 2,250 unit tests + 14 integration test suites |
-| **Coverage** | 95% region, 95% line, 95% function |
-| **Plugin pipeline** | 33 plugins, Rayon-parallelised |
-| **Examples** | 8 branded examples |
-| **Dependencies** | 15 runtime |
+| **Source** | 71,000+ lines across 6 workspace crates (`ssg`, `ssg-core`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
+| **Test suite** | 2,418 unit tests + 36 integration test suites |
+| **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
+| **Plugin pipeline** | 38 plugins, Rayon-parallelised |
+| **Audit gates** | 14 (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
+| **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
+| **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
+| **Search** | Browser-native int8 vector embeddings via `ssg-search` (WASM, ≤2 MB gzipped budget) |
 | **MSRV** | Rust 1.88.0 |
 
 ### Build performance
@@ -178,7 +180,15 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Minification** | Native HTML / JS / CSS minification (opt-in `minify` feature) via [`minify-html`](https://crates.io/crates/minify-html/0.15.0) `0.15` (HTML, `<pre>` preserved), [`oxc_minifier`](https://crates.io/crates/oxc_minifier/0.95.0) `0.95` (JS, mangle + DCE), and [`lightningcss`](https://crates.io/crates/lightningcss/1.0.0-alpha.71) `1.0.0-alpha.71` (CSS). Recursive walk processes every `.html`, `.css`, and `.js` file under `site_dir` regardless of depth. |
 | **Supply Chain** | Automated `CycloneDX` 1.5 SBOM (`sbom.cdx.json`) generated on every build via `SbomPlugin`, listing compiler version, dependency tree, and license metadata |
 | **DX** | CSS hot reload, browser error overlay via WebSocket, file watching with change classification |
-| **WebAssembly** | ssg-core + ssg-wasm compile to `wasm32-unknown-unknown` with wasm-bindgen |
+| **WebAssembly** | `ssg-core` + `ssg-wasm` + `ssg-search` compile to `wasm32-unknown-unknown` with wasm-bindgen; `ssg-wasm` ships ISR + RPC entry points for Edge runtimes (CI-enforced ≤ 2 MB gzipped) |
+| **Vector search** | `ssg-search` — browser-native int8-quantised hashed-n-gram (or opt-in `model2vec-rs`) embeddings, Float32Array boundary, no division / sqrt at runtime, p99 < 100 ms on 1000-doc corpus (CI-gated) |
+| **Edge runtimes** | Cloudflare Workers + Vercel Edge adapters with KV / Edge Config content provider, SHA-256-keyed ISR manifest, invalidation webhook, optional View Transitions client (`transitions = true`) |
+| **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
+| **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC TLS guidance (X25519+ML-KEM-768 hybrid notes) |
+| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / JUnit / text outputs |
+| **Agentic discovery** | Opt-in `/agents.txt` (robots-style AI agent allow/deny), `/.well-known/ai-plugin.json` (OpenAI plugin manifest), `/.well-known/mcp.json` (Model Context Protocol registry with auto-populated resources) |
+| **ISO 20022 JSON-LD** | Schema.org descriptors for regulated financial sites: `BankAccount`, `FinancialProduct`, `MonetaryAmount`, `PaymentInstrument`, `RegulatedFinancialInstitution`. Built-in IBAN + BIC validators |
+| **View Transitions** | Opt-in (`transitions = true`) View Transitions API client + lazy hydration; persistent `<header>` / `<footer>` get `view-transition-name` so they don't animate across boundaries; falls back to plain reload in non-supporting browsers |
 | **Islands** | Web Components with lazy hydration (visible, idle, interaction) |
 
 ### Why SSG?
@@ -199,16 +209,39 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 
 ## The CLI
 
-```text
-Usage: ssg [OPTIONS]
+`ssg` ships with both a unified subcommand surface (introduced in v0.0.43) and the legacy bare-flag pipeline (preserved with a deprecation warning, removal in 1.0).
 
-Options:
+### Subcommands (recommended)
+
+```text
+Usage: ssg <COMMAND> [OPTIONS]
+
+Commands:
+  dev        Start the development server with HMR + WebSocket reload
+  build      One-shot site build (supports --incremental, --isr, --no-llm-cache)
+  check      Validate content schemas without writing
+  audit      Run 14 audit gates against an already-built site (--out json|junit|text)
+  deploy     Generate deployment config for netlify | vercel | cloudflare | github
+  help       Print this message or the help of the given subcommand(s)
+```
+
+### Build flags (v0.0.44)
+
+```text
+      --incremental        Skip recompile when DepGraph diff is empty (issue #524)
+      --isr                Emit an SHA-256-keyed ISR manifest for Edge adapters (issue #549)
+      --no-llm-cache       Bypass the deterministic LLM inference cache (issue #528)
+```
+
+### Legacy flags (still supported)
+
+```text
   -f, --config <FILE>      Configuration file path
   -n, --new <NAME>         Create new project
   -c, --content <DIR>      Content directory
   -o, --output <DIR>       Output directory
   -t, --template <DIR>     Template directory
-  -s, --serve <DIR>        Start development server
+  -s, --serve <DIR>        Start development server (HMR + livereload)
   -w, --watch              Watch for changes and rebuild
   -j, --jobs <N>           Rayon thread count (default: num_cpus)
       --max-memory <MB>    Peak memory budget for streaming (default: 512)
@@ -333,6 +366,67 @@ std::fs::write("og-card.svg", svg).unwrap();
 
 </details>
 
+<details>
+<summary><b>Vector search index (issue #545)</b></summary>
+
+```rust,no_run
+use ssg_search::{ArtifactsBuilder, VectorEngine};
+
+// Build side: turn a doc corpus into the 4-file artifact blob.
+let arts = ArtifactsBuilder::new()
+    .add_doc("/post-1", "Rust WebAssembly", "rust compiles to wasm")
+    .add_doc("/post-2", "Sourdough", "starter flour water salt")
+    .build();
+std::fs::write("site/search/embeddings.bin", &arts.embeddings).unwrap();
+std::fs::write("site/search/model.bin", &arts.model).unwrap();
+std::fs::write("site/search/tokenizer.bin", &arts.tokenizer).unwrap();
+
+// Runtime (native or WASM): load and query.
+let engine = VectorEngine::from_bytes(&arts.model, &arts.tokenizer, &arts.embeddings, arts.count())
+    .unwrap();
+let top = engine.search("rust webassembly", 3);
+println!("{:?}", top);
+```
+
+</details>
+
+<details>
+<summary><b>Edge RPC method (issue #548)</b></summary>
+
+```rust,ignore
+use ssg_rpc::ssg_rpc;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, JsonSchema)]
+struct EchoIn { msg: String }
+
+#[derive(Serialize, JsonSchema)]
+struct EchoOut { msg: String }
+
+#[ssg_rpc]
+fn echo(input: EchoIn) -> Result<EchoOut, ssg_rpc::DispatchError> {
+    Ok(EchoOut { msg: input.msg })
+}
+
+// The build emits `site/rpc.d.ts` automatically; clients call:
+//   const r = await ssgRpc("echo", { msg: "hi" });
+```
+
+</details>
+
+<details>
+<summary><b>Audit a built site (issue #551)</b></summary>
+
+```bash
+ssg audit site/ --out junit > audit.xml
+# 14 gates run: WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS,
+# HTML5, broken links, OG, markdown lint, perf budget, AI discovery,
+# RSS/Atom, image opt, search index integrity.
+```
+
+</details>
+
 ---
 
 ## Examples
@@ -354,6 +448,29 @@ cargo run --example blog
 | `docs` | Documentation portal with schema validation and syntax highlighting |
 | `landing` | Zero-JS landing page with CSP hardening |
 | `portfolio` | Developer portfolio with JSON-LD and Atom feed |
+
+### Edge-runtime adapters (v0.0.44)
+
+`examples/edge-cloudflare/` and `examples/edge-vercel/` are runnable
+reference implementations of the ISR + RPC pipeline for the two target
+edge runtimes. Each contains a `wrangler.toml` / `vercel.json`, the
+TypeScript glue (`worker.ts`, `api/[...path].ts`), an upload script
+for content provisioning (KV / Edge Config), and a smoke-test
+harness.
+
+```bash
+# Cloudflare Workers
+cd examples/edge-cloudflare
+npm install
+npm run upload:kv          # uploads site/ to KV namespace
+npx wrangler deploy
+
+# Vercel Edge
+cd examples/edge-vercel
+npm install
+npm run upload:edge-config # uploads site/ to Edge Config
+vercel deploy
+```
 
 ---
 
@@ -451,8 +568,31 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `template_plugin` | `MiniJinja` template rendering plugin |
 | `walk` | Shared bounded directory walkers |
 | `watch` | Polling-based file watcher with change classification |
+| `event_watch` | Event-driven file watcher (`notify::recommended_watcher`, 100 ms debounce) — issue #526 |
+| `hmr` | Component-level Hot Module Replacement over sync WebSocket (`tungstenite`) with discriminated `hmr-css` / `hmr-html` / `reload` frames — issue #526 |
+| `llm_cache` | Deterministic content-hash-keyed LLM inference cache at `target/ssg-cache/llm/` (atomic writes, `--no-llm-cache` to bypass) — issue #528 |
+| `isr_manifest` | Per-page SHA-256 manifest for Edge ISR adapters (`--isr` flag) — issue #549 |
+| `view_transitions` | Opt-in View Transitions API client + lazy-hydration emitter (`transitions = true`) — issue #547 |
+| `rpc_schema` | `#[ssg_rpc]` JSON-Schema → TypeScript `.d.ts` emitter — issue #548 |
+| `search_index` | Build-side emitter for `ssg-search` artifacts (`embeddings.bin`, `model.bin`, `tokenizer.bin`, `manifest.json`) — issue #545 |
+| `postprocess::edge_headers` | Per-host header emitters (Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json`) with PQC TLS guidance — issue #550 |
+| `postprocess::agentic_discovery` | `/agents.txt` + `/.well-known/{ai-plugin.json,mcp.json}` emitters — issue #552 |
+| `seo::jsonld::iso20022` | ISO 20022 schema.org descriptors for regulated financial sites (IBAN/BIC validators) — issue #553 |
+| `audit` | 14-gate audit runner (`ssg audit`) with JSON / JUnit / text output — issue #551 |
+| `head_dom` | Single-walk `lol_html`-based head metadata extractor + `</head>` injector — issue #538-540 |
 
 </details>
+
+### Workspace crates
+
+| Crate | Published | Purpose |
+| :--- | :--- | :--- |
+| [`ssg`](https://crates.io/crates/ssg) | ✓ crates.io | Main library + binary. Imports the other crates. |
+| [`ssg-core`](https://crates.io/crates/ssg-core) | ✓ crates.io | WASM-compatible core: markdown compile, frontmatter parse, `ContentProvider` trait, ISR manifest types. Shared by build + Edge runtimes. |
+| `ssg-wasm` | Internal | `wasm32-unknown-unknown` entry points for Cloudflare Workers + Vercel Edge (ISR + RPC dispatch). Built via `wasm-pack`. |
+| `ssg-search` | Internal | Browser-native vector semantic search. Int8-quantised hashed-n-gram embedder by default (model-free, deterministic); opt-in real `model2vec-rs` encoder. |
+| `ssg-rpc` | Internal | JSON-over-POST RPC dispatch + schemars 1.2 + custom TS emitter. Paired with `#[ssg_rpc]` proc-macro for zero-config method registration. |
+| `ssg-rpc-macro` | Internal | Proc-macro for `#[ssg_rpc]` attribute. Registered into a global inventory at compile time. |
 
 ---
 
