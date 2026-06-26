@@ -528,6 +528,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for signed commits and PR guidelines.
 - File size limits and directory depth bounds
 - `cargo audit` with zero advisories
 - `cargo deny` -- license, advisory, ban, and source checks
+- `cargo vet` -- per-crate audit attestation; imports Mozilla Firefox, Bytecode Alliance, and Google trust sets. See [`supply-chain/README.md`](supply-chain/README.md)
 - `CycloneDX` SBOM generated as release artifact with Sigstore attestation
 - SPDX license headers on all source files
 - Signed commits enforced via SSH ED25519

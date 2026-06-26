@@ -285,3 +285,28 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check
         run: cargo deny check
+
+  # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
+  # cargo-vet complements cargo-deny (license + CVE) with per-crate
+  # attestation: every transitive dep must be audited by us, vouched
+  # by an imported trust set, or explicitly exempted. See
+  # supply-chain/README.md for the exemption reduction policy.
+  vet:
+    name: cargo-vet
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: vet
+      - name: Install cargo-vet
+        run: cargo install cargo-vet --locked
+      - name: Run cargo-vet
+        # `--locked` matches our cargo-deny convention and refuses
+        # unexpected lock-file drift on PRs.
+        run: cargo vet --locked
