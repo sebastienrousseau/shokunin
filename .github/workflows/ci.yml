@@ -34,6 +34,41 @@ env:
   COVERAGE_FUNCTIONS_FLOOR: "95.0"
 
 jobs:
+  # ── Phase 0: repo hygiene (issue #556) ──────────────────────────────
+  # Fast gate (~5 s, no toolchain) that fails if coverage detritus or
+  # other build artefacts leak into the working tree. Runs in parallel
+  # with `lint` so it can't be skipped by a clippy failure.
+  repo-hygiene:
+    name: repo hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: No stray *.profraw outside target/
+        run: |
+          set -euo pipefail
+          # Mirror .gitignore exclusions so local-pre-commit reuse is sane.
+          stray=$(find . -name '*.profraw' \
+              -not -path './target/*' \
+              -not -path './.git/*' \
+              -not -path './.claude/*' || true)
+          if [ -n "$stray" ]; then
+            echo "::error::stray *.profraw outside target/ — run 'make coverage' (sets LLVM_PROFILE_FILE) and re-run:"
+            echo "$stray"
+            exit 1
+          fi
+      - name: No tracked *.profraw
+        run: |
+          set -euo pipefail
+          tracked=$(git ls-files '*.profraw' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::*.profraw tracked by git (must be ignored, never committed):"
+            echo "$tracked"
+            exit 1
+          fi
+
   # ── Phase 1: lint (blocks downstream) ───────────────────────────────
   lint:
     name: fmt + clippy
