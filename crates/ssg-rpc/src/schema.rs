@@ -86,7 +86,7 @@ where
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use schemars::JsonSchema;
@@ -133,5 +133,96 @@ mod tests {
         };
         let txt = serde_json::to_string(&s).unwrap();
         assert!(txt.contains("\"name\":\"x\""));
+    }
+
+    #[test]
+    fn rpc_schema_equality_distinguishes_name() {
+        let a = RpcSchema {
+            name: "a",
+            input: schema_for::<Greet>(),
+            output: schema_for::<Greet>(),
+        };
+        let b = RpcSchema {
+            name: "b",
+            input: schema_for::<Greet>(),
+            output: schema_for::<Greet>(),
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn rpc_schema_equality_distinguishes_input() {
+        let a = RpcSchema {
+            name: "x",
+            input: schema_for::<Greet>(),
+            output: schema_for::<String>(),
+        };
+        let b = RpcSchema {
+            name: "x",
+            input: schema_for::<String>(),
+            output: schema_for::<String>(),
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn rpc_schema_clone_preserves_fields() {
+        let a = RpcSchema {
+            name: "clone_me",
+            input: serde_json::json!({"type": "string"}),
+            output: serde_json::json!({"type": "integer"}),
+        };
+        let cloned = a.clone();
+        assert_eq!(cloned.name, "clone_me");
+        assert_eq!(cloned.input, serde_json::json!({"type": "string"}));
+        assert_eq!(cloned.output, serde_json::json!({"type": "integer"}));
+    }
+
+    #[test]
+    fn schema_for_primitive_string_emits_type_string() {
+        let schema = schema_for::<String>();
+        // schemars emits `"type": "string"` (possibly inside a
+        // single-entry array) for `String`.
+        let t = schema.get("type").expect("type key present");
+        let matches = match t {
+            serde_json::Value::String(s) => s == "string",
+            serde_json::Value::Array(arr) => {
+                arr.iter().any(|v| v.as_str() == Some("string"))
+            }
+            _ => false,
+        };
+        assert!(matches, "expected string type, got {schema}");
+    }
+
+    #[test]
+    fn schema_for_result_with_primitive_ok() {
+        let schema = schema_for_result::<Result<u32, crate::RpcError>>();
+        // schemars emits an integer type, possibly with constraints
+        // like `format` or `minimum` — just verify it isn't null.
+        assert!(!schema.is_null());
+    }
+
+    #[test]
+    fn schema_serialises_name_field_exactly() {
+        // Round-trip via Deserialize requires `'static` borrow lifetime
+        // because the `name` field is `&'static str` — so we only
+        // assert the serialised JSON shape here.
+        let original = RpcSchema {
+            name: "rt",
+            input: schema_for::<Greet>(),
+            output: schema_for::<Greet>(),
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        assert!(json.contains("\"name\":\"rt\""));
+        assert!(json.contains("\"input\""));
+        assert!(json.contains("\"output\""));
+    }
+
+    #[test]
+    fn result_like_schema_unwraps_via_trait() {
+        // Direct trait call path (the public `schema_for_result`
+        // delegates here).
+        let s = <Result<Greet, crate::RpcError> as ResultLikeSchema>::success_schema();
+        assert!(s.get("properties").is_some());
     }
 }

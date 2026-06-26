@@ -151,4 +151,102 @@ mod tests {
             assert_eq!(dequantize_int8(&q).len(), n);
         }
     }
+
+    #[test]
+    fn quantize_with_single_negative_max_yields_neg_127() {
+        // Single element with abs max negative — should produce -127.
+        let q = quantize_int8(&[-3.5_f32]);
+        assert_eq!(q.data, vec![-127]);
+        assert!(q.scale > 0.0);
+    }
+
+    #[test]
+    fn quantize_scale_is_max_abs_over_127() {
+        let input = vec![0.5_f32, -2.0, 1.0];
+        let q = quantize_int8(&input);
+        let expected_scale = 2.0_f32 / 127.0;
+        assert!((q.scale - expected_scale).abs() < 1e-7);
+    }
+
+    #[test]
+    fn quantize_vector_clone_and_eq() {
+        let q = quantize_int8(&[1.0, -1.0, 0.5]);
+        let cloned = q.clone();
+        assert_eq!(q, cloned);
+    }
+
+    #[test]
+    fn quantize_vector_eq_distinguishes_scale() {
+        let q1 = QuantizedVector {
+            scale: 1.0,
+            data: vec![1, 2, 3],
+        };
+        let q2 = QuantizedVector {
+            scale: 2.0,
+            data: vec![1, 2, 3],
+        };
+        assert_ne!(q1, q2);
+    }
+
+    #[test]
+    fn dequantize_zero_scale_produces_zeros() {
+        let q = QuantizedVector {
+            scale: 0.0,
+            data: vec![10, -20, 30],
+        };
+        let back = dequantize_int8(&q);
+        assert_eq!(back, vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn dequantize_recovers_known_payload() {
+        let q = QuantizedVector {
+            scale: 0.1,
+            data: vec![10, -10, 0, 50],
+        };
+        let back = dequantize_int8(&q);
+        assert!((back[0] - 1.0).abs() < 1e-6);
+        assert!((back[1] + 1.0).abs() < 1e-6);
+        assert_eq!(back[2], 0.0);
+        assert!((back[3] - 5.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn dequantize_empty_vector() {
+        let q = QuantizedVector {
+            scale: 0.5,
+            data: vec![],
+        };
+        assert!(dequantize_int8(&q).is_empty());
+    }
+
+    #[test]
+    fn quantize_single_zero_returns_zero_scale() {
+        let q = quantize_int8(&[0.0_f32]);
+        assert_eq!(q.scale, 0.0);
+        assert_eq!(q.data, vec![0]);
+    }
+
+    #[test]
+    fn quantize_extreme_values_clamp_to_range() {
+        // Even with tiny non-max values, every output must stay in
+        // [-127, 127].
+        let input = vec![f32::MIN_POSITIVE, -1e30, 1e30];
+        let q = quantize_int8(&input);
+        for &v in &q.data {
+            assert!(v >= -127);
+            assert!(v <= 127);
+        }
+    }
+
+    #[test]
+    fn dequantize_then_requantize_is_stable_at_boundary() {
+        // After one round-trip the data lands on grid points, so a
+        // second round-trip should reproduce the same i8 payload.
+        let input = vec![0.7_f32, -0.3, 0.1, 1.0, -1.0];
+        let q1 = quantize_int8(&input);
+        let back = dequantize_int8(&q1);
+        let q2 = quantize_int8(&back);
+        assert_eq!(q1.data, q2.data);
+    }
 }

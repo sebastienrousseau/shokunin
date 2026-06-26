@@ -532,4 +532,199 @@ mod tests {
         let out = emit_typescript_for(&[s], &opts);
         assert!(out.starts_with("// header line"), "{out}");
     }
+
+    #[test]
+    fn default_options_contain_auto_generated_marker() {
+        let opts = EmitOptions::default();
+        assert!(opts.header.contains("AUTO-GENERATED"));
+        assert!(opts.emit_rpc_index);
+    }
+
+    #[test]
+    fn one_of_emits_union() {
+        let s = schema(
+            "o",
+            json!({"oneOf": [{"type": "integer"}, {"type": "boolean"}]}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("number | boolean"), "{out}");
+    }
+
+    #[test]
+    fn array_without_items_falls_back_to_unknown() {
+        let s =
+            schema("a", json!({"type": "array"}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("unknown[]"), "{out}");
+    }
+
+    #[test]
+    fn integer_type_maps_to_number() {
+        let s =
+            schema("n", json!({"type": "integer"}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("export type NInput = number;"), "{out}");
+    }
+
+    #[test]
+    fn null_type_maps_to_null() {
+        let s = schema("z", json!({"type": "null"}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("export type ZInput = null;"), "{out}");
+    }
+
+    #[test]
+    fn object_without_properties_maps_to_record() {
+        let s =
+            schema("r", json!({"type": "object"}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("Record<string, unknown>"), "{out}");
+    }
+
+    #[test]
+    fn object_with_inline_properties_emits_interface() {
+        // No explicit `type` keyword — schemars often omits it.
+        let s = schema(
+            "i",
+            json!({
+                "properties": {
+                    "k": {"type": "string"}
+                },
+                "required": ["k"]
+            }),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("export interface IInput"), "{out}");
+        assert!(out.contains("k: string"), "{out}");
+    }
+
+    #[test]
+    fn enum_with_number_literals_emits_union() {
+        let s =
+            schema("e", json!({"enum": [1, 2, 3]}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("1 | 2 | 3"), "{out}");
+    }
+
+    #[test]
+    fn enum_with_bool_and_null_emits_union() {
+        let s = schema(
+            "e",
+            json!({"enum": [true, false, null]}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("true | false | null"), "{out}");
+    }
+
+    #[test]
+    fn enum_with_strings_escapes_special_chars() {
+        let s = schema(
+            "e",
+            json!({"enum": ["a\\b", "c\"d"]}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains(r#""a\\b""#), "{out}");
+        assert!(out.contains(r#""c\"d""#), "{out}");
+    }
+
+    #[test]
+    fn ref_without_matching_def_falls_back() {
+        // Dangling $ref — emitter should not panic.
+        let s = schema(
+            "r",
+            json!({"$ref": "#/$defs/Missing"}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("export type RInput"), "{out}");
+    }
+
+    #[test]
+    fn nested_array_of_objects() {
+        let s = schema(
+            "n",
+            json!({
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": { "a": {"type": "integer"} },
+                    "required": ["a"]
+                }
+            }),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        // Inline object literal inside array brackets.
+        assert!(out.contains("a: number"), "{out}");
+        assert!(out.contains("[]"), "{out}");
+    }
+
+    #[test]
+    fn rpc_index_lists_every_function() {
+        let s1 =
+            schema("alpha", json!({"type":"string"}), json!({"type":"string"}));
+        let s2 =
+            schema("beta", json!({"type":"string"}), json!({"type":"string"}));
+        let out = emit_typescript_for(&[s1, s2], &opts());
+        assert!(
+            out.contains("alpha(input: AlphaInput): Promise<AlphaOutput>;"),
+            "{out}"
+        );
+        assert!(
+            out.contains("beta(input: BetaInput): Promise<BetaOutput>;"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn emit_typescript_from_inventory_returns_non_empty() {
+        // Uses the global inventory (the `echo` descriptor lives in
+        // dispatch.rs tests but is also registered into the live
+        // inventory).
+        let out = emit_typescript(&opts());
+        assert!(!out.is_empty());
+    }
+
+    #[test]
+    fn options_clone_works() {
+        let a = EmitOptions::default();
+        let b = a.clone();
+        assert_eq!(a.header, b.header);
+        assert_eq!(a.emit_rpc_index, b.emit_rpc_index);
+    }
+
+    #[test]
+    fn empty_enum_array_falls_through_to_type_keyword() {
+        // An empty `enum` should NOT short-circuit — emitter should
+        // continue to the `type` branch.
+        let s = schema(
+            "e",
+            json!({"enum": [], "type": "string"}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("EInput = string"), "{out}");
+    }
+
+    #[test]
+    fn empty_any_of_falls_through() {
+        let s = schema(
+            "u",
+            json!({"anyOf": [], "type": "string"}),
+            json!({"type": "string"}),
+        );
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("UInput = string"), "{out}");
+    }
+
+    #[test]
+    fn type_array_with_only_unknown_strings_falls_back_to_unknown() {
+        let s = schema("u", json!({"type": []}), json!({"type": "string"}));
+        let out = emit_typescript_for(&[s], &opts());
+        assert!(out.contains("UInput = unknown"), "{out}");
+    }
 }

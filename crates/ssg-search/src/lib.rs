@@ -73,3 +73,82 @@ pub const ARTIFACT_MAGIC: [u8; 4] = *b"SSGS";
 /// Default top-K returned by [`VectorEngine::search`] when the caller
 /// passes `0`.
 pub const DEFAULT_TOP_K: usize = 10;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn artifact_magic_is_ssgs_ascii() {
+        assert_eq!(&ARTIFACT_MAGIC, b"SSGS");
+        assert_eq!(ARTIFACT_MAGIC.len(), 4);
+        // Every byte must be printable ASCII for hex dump readability.
+        for &b in &ARTIFACT_MAGIC {
+            assert!(b.is_ascii_uppercase());
+        }
+    }
+
+    #[test]
+    fn artifact_format_version_is_one() {
+        assert_eq!(ARTIFACT_FORMAT_VERSION, 1);
+    }
+
+    #[test]
+    fn default_top_k_is_ten() {
+        assert_eq!(DEFAULT_TOP_K, 10);
+    }
+
+    #[test]
+    fn paths_constants_have_expected_filenames() {
+        assert_eq!(paths::EMBEDDINGS_FILE, "embeddings.bin");
+        assert_eq!(paths::MANIFEST_FILE, "manifest.json");
+        assert_eq!(paths::MODEL_FILE, "model.bin");
+        assert_eq!(paths::TOKENIZER_FILE, "tokenizer.bin");
+    }
+
+    #[test]
+    fn paths_constants_are_unique() {
+        let all = [
+            paths::EMBEDDINGS_FILE,
+            paths::MANIFEST_FILE,
+            paths::MODEL_FILE,
+            paths::TOKENIZER_FILE,
+        ];
+        let mut sorted = all.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), all.len());
+    }
+
+    #[test]
+    fn re_exported_manifest_constructs() {
+        // Exercises the `pub use manifest::{Manifest, ManifestEntry}`
+        // path — if the re-export name changed this would not compile.
+        let m = Manifest::new(8, "abc".into(), vec![]);
+        assert_eq!(m.format_version, ARTIFACT_FORMAT_VERSION);
+        let e = ManifestEntry {
+            url: "/u".into(),
+            title: "t".into(),
+            excerpt: "x".into(),
+        };
+        assert_eq!(e.url, "/u");
+    }
+
+    #[test]
+    fn re_exported_quantize_round_trips() {
+        let q = quantize_int8(&[0.5, -0.5, 1.0]);
+        let back = dequantize_int8(&q);
+        assert_eq!(back.len(), 3);
+    }
+
+    #[test]
+    fn re_exported_encoder_constructs_with_dim() {
+        // Exercises the `pub use encoder::{Encoder, ProjectionEncoder,
+        // EMBEDDING_DIM}` path by constructing an encoder and verifying
+        // the embedding dimension matches the re-exported constant.
+        let enc = ProjectionEncoder::default();
+        let v = <ProjectionEncoder as Encoder>::embed(&enc, "hello world");
+        assert_eq!(v.len(), EMBEDDING_DIM);
+        assert_eq!(<ProjectionEncoder as Encoder>::dim(&enc), EMBEDDING_DIM);
+    }
+}

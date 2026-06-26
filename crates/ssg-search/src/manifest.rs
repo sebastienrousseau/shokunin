@@ -151,4 +151,97 @@ mod tests {
         let back: ManifestEntry = serde_json::from_str(&s).unwrap();
         assert_eq!(e, back);
     }
+
+    #[test]
+    fn manifest_entry_clone_is_independent() {
+        let e = ManifestEntry {
+            url: "/x".to_string(),
+            title: "T".to_string(),
+            excerpt: "E".to_string(),
+        };
+        let cloned = e.clone();
+        assert_eq!(e, cloned);
+        // Equality should hold even though strings are owned copies.
+        assert_ne!(e.url.as_ptr(), cloned.url.as_ptr());
+    }
+
+    #[test]
+    fn manifest_clone_is_value_equal() {
+        let m = sample();
+        let cloned = m.clone();
+        assert_eq!(m, cloned);
+    }
+
+    #[test]
+    fn manifest_debug_contains_entry_count() {
+        let m = sample();
+        let d = format!("{m:?}");
+        assert!(d.contains("count"));
+        assert!(d.contains("entries"));
+    }
+
+    #[test]
+    fn manifest_json_has_expected_fields() {
+        let m = sample();
+        let json = serde_json::to_string(&m).unwrap();
+        assert!(json.contains("\"dim\":256"));
+        assert!(json.contains("\"count\":2"));
+        assert!(json.contains("\"model_hash\":\"deadbeef\""));
+        assert!(json.contains("\"format_version\":1"));
+        assert!(json.contains("\"entries\""));
+    }
+
+    #[test]
+    fn manifest_new_with_empty_entries_has_zero_count() {
+        let m = Manifest::new(16, "h".to_string(), vec![]);
+        assert_eq!(m.count, 0);
+        assert!(!m.is_valid());
+    }
+
+    #[test]
+    fn manifest_with_single_entry_is_valid() {
+        let m = Manifest::new(
+            8,
+            "model".to_string(),
+            vec![ManifestEntry {
+                url: "/only".into(),
+                title: "Only".into(),
+                excerpt: "ex".into(),
+            }],
+        );
+        assert!(m.is_valid());
+        assert_eq!(m.count, 1);
+    }
+
+    #[test]
+    fn manifest_invalid_when_count_smaller_than_entries() {
+        let mut m = sample();
+        m.count = 1; // entries.len() == 2
+        assert!(!m.is_valid());
+    }
+
+    #[test]
+    fn manifest_entry_eq_distinguishes_url() {
+        let a = ManifestEntry {
+            url: "/a".into(),
+            title: "T".into(),
+            excerpt: "E".into(),
+        };
+        let b = ManifestEntry {
+            url: "/b".into(),
+            title: "T".into(),
+            excerpt: "E".into(),
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn manifest_eq_distinguishes_model_hash() {
+        let mut a = sample();
+        let mut b = sample();
+        assert_eq!(a, b);
+        a.model_hash = "x".into();
+        b.model_hash = "y".into();
+        assert_ne!(a, b);
+    }
 }

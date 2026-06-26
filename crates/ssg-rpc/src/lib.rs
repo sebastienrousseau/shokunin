@@ -150,4 +150,49 @@ mod tests {
         let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(parsed["error"], "internal error: boom");
     }
+
+    #[test]
+    fn error_display_messages_are_stable() {
+        // Display strings are part of the on-the-wire body — renaming
+        // would silently break JS clients that pattern-match them.
+        assert_eq!(
+            RpcError::BadRequest("nope".into()).to_string(),
+            "bad request: nope"
+        );
+        assert_eq!(RpcError::Unauthorized.to_string(), "unauthorized");
+        assert_eq!(RpcError::NotFound.to_string(), "not found");
+        assert_eq!(
+            RpcError::Internal("boom".into()).to_string(),
+            "internal error: boom"
+        );
+    }
+
+    #[test]
+    fn wire_body_for_unauthorized_is_valid_json() {
+        let body = RpcError::Unauthorized.to_wire_body();
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["error"], "unauthorized");
+    }
+
+    #[test]
+    fn wire_body_for_not_found_is_valid_json() {
+        let body = RpcError::NotFound.to_wire_body();
+        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(v["error"], "not found");
+    }
+
+    #[test]
+    fn wire_body_handles_no_special_chars() {
+        let err = RpcError::Internal("simple".into());
+        let body = err.to_wire_body();
+        assert_eq!(body, r#"{"error":"internal error: simple"}"#);
+    }
+
+    #[test]
+    fn status_code_is_const_callable() {
+        // Compile-time evidence the method is `const fn` — if it
+        // weren't, this binding would not type-check.
+        const CODE: u16 = RpcError::Unauthorized.status_code();
+        assert_eq!(CODE, 401);
+    }
 }
