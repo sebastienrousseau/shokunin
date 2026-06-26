@@ -279,10 +279,6 @@ serde_yaml_ng = "0.10"
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
 
-# Platform-specific dependency for Unix with OpenSSL
-[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.79", features = ["vendored"] }
-
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
 # -----------------------------------------------------------------------------
