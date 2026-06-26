@@ -169,4 +169,99 @@ mod tests {
         assert!(codes.contains(&"HTML5-CHARSET"));
         assert!(codes.contains(&"HTML5-TITLE-MISSING"));
     }
+
+    #[test]
+    fn multiple_h1_warns() {
+        let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>x</title></head><body><main><h1>a</h1><h1>b</h1><h1>c</h1></main></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("HTML5-H1-MULTIPLE")));
+        assert!(f.iter().any(|x| matches!(x.severity, Severity::Warn)));
+    }
+
+    #[test]
+    fn missing_main_warns() {
+        let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>x</title></head><body><h1>x</h1></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("HTML5-MAIN-MISSING")),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn empty_title_flagged() {
+        let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>   </title></head><body><main><h1>x</h1></main></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("HTML5-TITLE-EMPTY")),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn unclosed_title_flagged() {
+        let html = "<!doctype html><html><head><meta charset=\"utf-8\"><title>oops</head><body><main><h1>x</h1></main></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("HTML5-TITLE-UNCLOSED")),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn doctype_case_insensitive() {
+        let html = "<!DOCTYPE HTML><html><head><meta charset=\"utf-8\"><title>x</title></head><body><main><h1>x</h1></main></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = Html5Gate;
+        assert_eq!(g.name(), "html5");
+        assert!(g.explain().to_lowercase().contains("doctype"));
+        let _copy: Html5Gate = g;
+        let _clone = g;
+        let dbg = format!("{g:?}");
+        assert!(dbg.contains("Html5Gate"));
+    }
+
+    #[test]
+    fn empty_site_returns_no_findings() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: Vec::new(),
+        };
+        let f = Html5Gate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn unreadable_html_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let dir_as_file = root.join("page.html");
+        std::fs::create_dir_all(&dir_as_file).unwrap();
+        let s = Site {
+            root,
+            html_files: vec![dir_as_file],
+        };
+        let _ = Html5Gate.run(&s, &AuditOptions::default());
+        std::mem::forget(tmp);
+    }
+
+    #[test]
+    fn leading_whitespace_before_doctype_ok() {
+        let html = "   \n  <!doctype html><html><head><meta charset=\"utf-8\"><title>x</title></head><body><main><h1>x</h1></main></body></html>";
+        let f = Html5Gate.run(&site(html), &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
 }

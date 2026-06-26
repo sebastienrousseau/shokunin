@@ -92,4 +92,71 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn gate_names_are_unique() {
+        let gates = all();
+        let mut names: Vec<&str> = gates.iter().map(|g| g.name()).collect();
+        names.sort_unstable();
+        let original_len = names.len();
+        names.dedup();
+        assert_eq!(names.len(), original_len, "duplicate gate name detected");
+    }
+
+    #[test]
+    fn gate_names_are_snake_case_no_whitespace() {
+        for g in all() {
+            let name = g.name();
+            assert!(!name.is_empty(), "empty name");
+            assert!(
+                name.chars().all(|c| c.is_ascii_lowercase()
+                    || c.is_ascii_digit()
+                    || c == '_'),
+                "gate `{name}` is not snake_case"
+            );
+            assert!(!name.contains(' '), "gate `{name}` contains whitespace");
+        }
+    }
+
+    #[test]
+    fn explainers_are_reasonably_long() {
+        for g in all() {
+            assert!(
+                g.explain().len() >= 40,
+                "gate `{}` explainer is too short ({} chars)",
+                g.name(),
+                g.explain().len()
+            );
+        }
+    }
+
+    #[test]
+    fn first_gate_is_wcag() {
+        let gates = all();
+        assert_eq!(gates.first().map(|g| g.name()), Some("wcag"));
+    }
+
+    #[test]
+    fn last_gate_is_search_index() {
+        let gates = all();
+        assert_eq!(gates.last().map(|g| g.name()), Some("search_index"));
+    }
+
+    #[test]
+    fn util_re_exports_compile() {
+        let tag = r#"<a href="x">"#;
+        assert_eq!(hreflang_attr(tag, "href"), Some("x".to_string()));
+        let end = find_tag_end(tag, 0);
+        assert_eq!(end, tag.len());
+    }
+
+    #[test]
+    fn all_returns_fresh_boxes_each_call() {
+        let a = all();
+        let b = all();
+        assert_eq!(a.len(), b.len());
+        for (x, y) in a.iter().zip(b.iter()) {
+            assert_eq!(x.name(), y.name());
+        }
+    }
 }

@@ -193,4 +193,118 @@ mod tests {
         assert!(codes.contains(&"OG-IMAGE"));
         assert!(codes.contains(&"META-DESCRIPTION"));
     }
+
+    #[test]
+    fn missing_title_flagged() {
+        let html = r#"<html><head></head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("META-TITLE")));
+    }
+
+    #[test]
+    fn unclosed_title_flagged() {
+        let html = r#"<html><head><title>oops</head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("META-TITLE")),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn empty_title_flagged() {
+        let html =
+            r#"<html><head><title>   </title></head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("META-TITLE")));
+    }
+
+    #[test]
+    fn missing_twitter_card_warns() {
+        let html = r#"<html><head>
+            <title>x</title>
+            <meta name="description" content="d">
+            <meta property="og:title" content="x">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="/a.png">
+        </head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("TWITTER-CARD")),
+            "got {f:?}"
+        );
+        assert!(f.iter().any(|x| matches!(x.severity, Severity::Warn)));
+    }
+
+    #[test]
+    fn empty_description_content_flagged() {
+        let html = r#"<html><head>
+            <title>x</title>
+            <meta name="description" content="">
+            <meta property="og:title" content="x">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="/a.png">
+            <meta name="twitter:card" content="summary">
+        </head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("META-DESCRIPTION")),
+            "got {f:?}"
+        );
+    }
+
+    #[test]
+    fn meta_missing_content_attr_flagged() {
+        let html = r#"<html><head>
+            <title>x</title>
+            <meta name="description">
+            <meta property="og:title" content="x">
+            <meta property="og:type" content="website">
+            <meta property="og:image" content="/a.png">
+            <meta name="twitter:card" content="summary">
+        </head><body></body></html>"#;
+        let f = MetadataGate.run(&site(html), &AuditOptions::default());
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("META-DESCRIPTION")));
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = MetadataGate;
+        assert_eq!(g.name(), "metadata");
+        assert!(g.explain().to_lowercase().contains("open graph"));
+        let _copy: MetadataGate = g;
+        let _clone = g;
+        let dbg = format!("{g:?}");
+        assert!(dbg.contains("MetadataGate"));
+    }
+
+    #[test]
+    fn unreadable_html_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let dir_as_file = root.join("page.html");
+        std::fs::create_dir_all(&dir_as_file).unwrap();
+        let s = Site {
+            root,
+            html_files: vec![dir_as_file],
+        };
+        let _ = MetadataGate.run(&s, &AuditOptions::default());
+        std::mem::forget(tmp);
+    }
+
+    #[test]
+    fn empty_site_returns_no_findings() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: Vec::new(),
+        };
+        let f = MetadataGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
 }

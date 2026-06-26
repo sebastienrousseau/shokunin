@@ -237,4 +237,160 @@ mod tests {
             .iter()
             .any(|x| x.code.as_deref() == Some("LINK-EXTERNAL-SKIPPED")));
     }
+
+    #[test]
+    fn ignorable_schemes_are_silent() {
+        let pages = &[(
+            "index.html",
+            r##"<html><body>
+                <a href="#anchor">a</a>
+                <a href="mailto:x@y.z">m</a>
+                <a href="tel:+1">t</a>
+                <a href="javascript:void(0)">j</a>
+                <a href="data:image/png;base64,xx">d</a>
+                <a href="">e</a>
+            </body></html>"##,
+        )];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
+            "ignorable schemes flagged: {f:?}"
+        );
+    }
+
+    #[test]
+    fn protocol_relative_link_treated_as_external() {
+        let pages = &[(
+            "index.html",
+            r#"<html><body><a href="//cdn.example/x">x</a></body></html>"#,
+        )];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("LINK-EXTERNAL-SKIPPED")));
+    }
+
+    #[test]
+    fn img_src_links_are_checked() {
+        let pages = &[(
+            "index.html",
+            r#"<html><body><img src="/missing.png" alt="x"></body></html>"#,
+        )];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("LINK-INTERNAL-MISSING")));
+    }
+
+    #[test]
+    fn relative_link_with_query_and_fragment_strips_correctly() {
+        let pages = &[
+            (
+                "index.html",
+                r#"<html><body><a href="about.html?x=1#sec">a</a></body></html>"#,
+            ),
+            ("about.html", "<html></html>"),
+        ];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
+            "query/fragment must strip: {f:?}"
+        );
+    }
+
+    #[test]
+    fn extensionless_internal_link_resolves_via_html_extension() {
+        let pages = &[
+            (
+                "index.html",
+                r#"<html><body><a href="/about">a</a></body></html>"#,
+            ),
+            ("about.html", "<html></html>"),
+        ];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
+            "extensionless resolution failed: {f:?}"
+        );
+    }
+
+    #[test]
+    fn no_skip_network_does_not_emit_external_skip_finding() {
+        let pages = &[(
+            "index.html",
+            r#"<html><body><a href="https://example.com">x</a></body></html>"#,
+        )];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: false,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(f
+            .iter()
+            .all(|x| x.code.as_deref() != Some("LINK-EXTERNAL-SKIPPED")));
+    }
+
+    #[test]
+    fn unreadable_html_skipped_no_panic() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bogus = tmp.path().join("ghost.html");
+        let s = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: vec![bogus],
+        };
+        std::mem::forget(tmp);
+        let f = BrokenLinksGate.run(
+            &s,
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = BrokenLinksGate;
+        assert_eq!(g.name(), "links");
+        assert!(g.explain().contains("Internal"));
+        let _copy: BrokenLinksGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("BrokenLinksGate"));
+    }
 }

@@ -253,4 +253,137 @@ mod tests {
             "expected NO-RECIPROCAL finding, got {f:?}"
         );
     }
+
+    #[test]
+    fn missing_target_is_flagged() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+            <link rel="alternate" hreflang="de" href="/de/index.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter()
+                .any(|x| x.code.as_deref() == Some("HREFLANG-TARGET-MISSING")),
+            "expected TARGET-MISSING, got {f:?}"
+        );
+    }
+
+    #[test]
+    fn x_default_skipped() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+            <link rel="alternate" hreflang="x-default" href="/de/missing.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "x-default should be skipped, got {f:?}");
+    }
+
+    #[test]
+    fn self_alternate_lang_skipped() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "self lang should be skipped, got {f:?}");
+    }
+
+    #[test]
+    fn single_quoted_alternate_recognised() {
+        let en = r#"<html><head>
+            <link rel='alternate' hreflang='en' href='/en/index.html' data-self="true">
+            <link rel='alternate' hreflang='fr' href='/fr/index.html'>
+        </head><body></body></html>"#;
+        let fr = r#"<html><head>
+            <link rel='alternate' hreflang='fr' href='/fr/index.html' data-self="true">
+            <link rel='alternate' hreflang='en' href='/en/index.html'>
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en), ("fr/index.html", fr)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.is_empty(),
+            "single-quoted alternates should be clean, got {f:?}"
+        );
+    }
+
+    #[test]
+    fn non_alternate_link_ignored() {
+        let html = r#"<html><head>
+            <link rel="stylesheet" href="/main.css" hreflang="en">
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", html)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "stylesheet link should be ignored, got {f:?}");
+    }
+
+    #[test]
+    fn link_without_hreflang_skipped() {
+        let html = r#"<html><head>
+            <link rel="alternate" href="/en/index.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", html)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "no hreflang attr → ignored, got {f:?}");
+    }
+
+    #[test]
+    fn link_without_href_skipped() {
+        let html = r#"<html><head>
+            <link rel="alternate" hreflang="en">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", html)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "no href attr → ignored, got {f:?}");
+    }
+
+    #[test]
+    fn absolute_url_resolves_to_path() {
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html" data-self="true">
+            <link rel="alternate" hreflang="fr" href="https://example.com/fr/index.html">
+        </head><body></body></html>"#;
+        let fr = r#"<html><head>
+            <link rel="alternate" hreflang="fr" href="/fr/index.html" data-self="true">
+            <link rel="alternate" hreflang="en" href="/en/index.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en), ("fr/index.html", fr)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "absolute URLs should resolve, got {f:?}");
+    }
+
+    #[test]
+    fn unreadable_html_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let dir_as_file = root.join("page.html");
+        std::fs::create_dir_all(&dir_as_file).unwrap();
+        let s = Site {
+            root,
+            html_files: vec![dir_as_file],
+        };
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+        std::mem::forget(tmp);
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = HreflangGate;
+        assert_eq!(g.name(), "hreflang");
+        assert!(g.explain().to_lowercase().contains("hreflang"));
+        let _copy: HreflangGate = g;
+        let _clone = g;
+        let dbg = format!("{g:?}");
+        assert!(dbg.contains("HreflangGate"));
+    }
+
+    #[test]
+    fn empty_site_returns_no_findings() {
+        let s = site_with(&[]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
 }

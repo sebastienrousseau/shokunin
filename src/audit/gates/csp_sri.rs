@@ -233,4 +233,145 @@ mod tests {
         assert!(f.iter().any(|x| x.code.as_deref() == Some("CSP-MISSING")));
         assert!(f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")));
     }
+
+    #[test]
+    fn site_headers_csp_satisfies_requirement() {
+        let html = r#"<html><head>
+            <script src="https://cdn.example/x.js" integrity="sha256-z"></script>
+        </head><body></body></html>"#;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(
+            root.join("_headers"),
+            "/*\n  Content-Security-Policy: default-src 'self'\n",
+        )
+        .unwrap();
+        let p = root.join("index.html");
+        std::fs::write(&p, html).unwrap();
+        let s = Site {
+            root,
+            html_files: vec![p],
+        };
+        std::mem::forget(tmp);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn protocol_relative_stylesheet_needs_integrity() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <link rel="stylesheet" href="//cdn.example/styles.css">
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")));
+    }
+
+    #[test]
+    fn local_assets_dont_need_integrity() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <script src="/local.js"></script>
+            <link rel="stylesheet" href="/local.css">
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.is_empty(),
+            "local assets should not require SRI, got {f:?}"
+        );
+    }
+
+    #[test]
+    fn http_remote_script_needs_integrity() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <script src="http://cdn.example/x.js"></script>
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")));
+    }
+
+    #[test]
+    fn csp_drift_warns() {
+        let a = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+        </head><body></body></html>"#;
+        let b = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:">
+        </head><body></body></html>"#;
+        let s = site_with(&[("a.html", a), ("b.html", b)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("CSP-DRIFT")),
+            "expected CSP-DRIFT, got {f:?}"
+        );
+    }
+
+    #[test]
+    fn script_without_src_skipped() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <script>console.log('inline');</script>
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "inline script should not need SRI, got {f:?}");
+    }
+
+    #[test]
+    fn link_non_stylesheet_skipped() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <link rel="preconnect" href="https://cdn.example">
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "preconnect should not need SRI, got {f:?}");
+    }
+
+    #[test]
+    fn single_quoted_stylesheet_recognised() {
+        let html = r#"<html><head>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+            <link rel='stylesheet' href='https://cdn.example/s.css'>
+        </head><body></body></html>"#;
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")));
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = CspSriGate;
+        assert_eq!(g.name(), "csp_sri");
+        assert!(g.explain().contains("Content-Security-Policy"));
+        let _copy: CspSriGate = g;
+        let _clone = g;
+        let dbg = format!("{g:?}");
+        assert!(dbg.contains("CspSriGate"));
+    }
+
+    #[test]
+    fn empty_site_returns_no_findings() {
+        let s = site_with(&[]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn unreadable_html_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let dir_as_file = root.join("page.html");
+        std::fs::create_dir_all(&dir_as_file).unwrap();
+        let s = Site {
+            root,
+            html_files: vec![dir_as_file],
+        };
+        let _ = CspSriGate.run(&s, &AuditOptions::default());
+        std::mem::forget(tmp);
+    }
 }
