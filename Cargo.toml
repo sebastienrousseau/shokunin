@@ -152,6 +152,10 @@ uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
+# Used by `examples/rpc_example.rs` to derive JsonSchema on the input
+# / output types of an `#[ssg_rpc]` function. Pinned to the same 1.2
+# series as ssg-rpc to avoid duplicate copies in the lockfile.
+schemars = { version = "1.2", features = ["derive"] }
 # Edge-contract test (#546) drives the WASM render pipeline natively
 # so we can assert AC4/AC5/AC6/AC7 without spinning up wrangler.
 ssg-wasm = { path = "crates/ssg-wasm" }
@@ -302,6 +306,13 @@ name = "incremental_1000_pages"
 harness = false
 required-features = ["benchmark"]
 
+# Master harness covering every public function in the ssg workspace
+# (issue #533 follow-up). Smoke-runs with `cargo bench --bench
+# all_pub_api -- --test`; full criterion run with no `--test`.
+[[bench]]
+name = "all_pub_api"
+harness = false
+
 # -----------------------------------------------------------------------------
 # Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
 # Each binary's `main.rs` declares the per-module submodules under it; see
@@ -373,6 +384,48 @@ path = "examples/landing_example.rs"      # Path to the example file
 # Developer portfolio with JSON-LD and Atom feed.
 name = "portfolio"                        # Name of the example
 path = "examples/portfolio_example.rs"    # Path to the example file
+
+# --- v0.0.44 feature-area examples -------------------------------------------
+
+[[example]]
+# Browser-native vector semantic search (`ssg-search`).
+name = "search_example"
+path = "examples/search_example.rs"
+
+[[example]]
+# Edge RPC dispatcher + `#[ssg_rpc]` macro + TS schema emitter (#548).
+name = "rpc_example"
+path = "examples/rpc_example.rs"
+
+[[example]]
+# View Transitions API + lazy-nav client (#547).
+name = "view_transitions_example"
+path = "examples/view_transitions_example.rs"
+
+[[example]]
+# Incremental Static Regeneration manifest emitter (#546).
+name = "isr_example"
+path = "examples/isr_example.rs"
+
+[[example]]
+# PQC-aware Cloudflare / Netlify / Vercel header emitter (#550).
+name = "edge_headers_example"
+path = "examples/edge_headers_example.rs"
+
+[[example]]
+# Agentic-discovery: agents.txt + ai-plugin.json + mcp.json (#552).
+name = "agentic_discovery_example"
+path = "examples/agentic_discovery_example.rs"
+
+[[example]]
+# ISO 20022 fintech JSON-LD on the SEO plugin.
+name = "iso20022_example"
+path = "examples/iso20022_example.rs"
+
+[[example]]
+# 14-gate native CI audit runner (#549).
+name = "audit_example"
+path = "examples/audit_example.rs"
 
 # -----------------------------------------------------------------------------
 # Linting Configuration
