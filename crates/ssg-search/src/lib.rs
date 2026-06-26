@@ -51,27 +51,95 @@ pub use manifest::{Manifest, ManifestEntry};
 pub use quantize::{dequantize_int8, quantize_int8};
 
 /// File layout written under `<site>/search/` by the build step.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::paths;
+///
+/// // The four canonical filenames every build emits.
+/// assert_eq!(paths::EMBEDDINGS_FILE, "embeddings.bin");
+/// assert_eq!(paths::MANIFEST_FILE, "manifest.json");
+/// assert_eq!(paths::MODEL_FILE, "model.bin");
+/// assert_eq!(paths::TOKENIZER_FILE, "tokenizer.bin");
+/// ```
 pub mod paths {
     /// Pre-normalised f32 corpus vectors, little-endian, `N × D × 4` bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::paths::EMBEDDINGS_FILE;
+    /// assert_eq!(EMBEDDINGS_FILE, "embeddings.bin");
+    /// assert!(EMBEDDINGS_FILE.ends_with(".bin"));
+    /// ```
     pub const EMBEDDINGS_FILE: &str = "embeddings.bin";
     /// JSON map from row index to `{url, title, excerpt}`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::paths::MANIFEST_FILE;
+    /// assert_eq!(MANIFEST_FILE, "manifest.json");
+    /// assert!(MANIFEST_FILE.ends_with(".json"));
+    /// ```
     pub const MANIFEST_FILE: &str = "manifest.json";
     /// Encoder weights (projection matrix or model2vec int8 weights).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::paths::MODEL_FILE;
+    /// assert_eq!(MODEL_FILE, "model.bin");
+    /// ```
     pub const MODEL_FILE: &str = "model.bin";
     /// Tokeniser configuration (vocab / n-gram bounds / hash seed).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::paths::TOKENIZER_FILE;
+    /// assert_eq!(TOKENIZER_FILE, "tokenizer.bin");
+    /// ```
     pub const TOKENIZER_FILE: &str = "tokenizer.bin";
 }
 
 /// Version stamped into every emitted `model.bin` header. Bumping this
 /// invalidates older builds — the [`VectorEngine`] refuses to load
 /// mismatched headers rather than silently producing garbage.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::ARTIFACT_FORMAT_VERSION;
+///
+/// // Format v1 is the first stable release.
+/// assert_eq!(ARTIFACT_FORMAT_VERSION, 1);
+/// ```
 pub const ARTIFACT_FORMAT_VERSION: u32 = 1;
 
 /// The four-byte ASCII magic prefix on every artifact header.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::ARTIFACT_MAGIC;
+///
+/// assert_eq!(&ARTIFACT_MAGIC, b"SSGS");
+/// assert_eq!(ARTIFACT_MAGIC.len(), 4);
+/// ```
 pub const ARTIFACT_MAGIC: [u8; 4] = *b"SSGS";
 
 /// Default top-K returned by [`VectorEngine::search`] when the caller
 /// passes `0`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::DEFAULT_TOP_K;
+///
+/// assert_eq!(DEFAULT_TOP_K, 10);
+/// ```
 pub const DEFAULT_TOP_K: usize = 10;
 
 #[cfg(test)]

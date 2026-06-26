@@ -12,6 +12,24 @@ use serde::{Deserialize, Serialize};
 
 /// One entry in the manifest, indexed by its row position in
 /// `embeddings.bin`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::ManifestEntry;
+///
+/// let e = ManifestEntry {
+///     url: "/blog/post.html".into(),
+///     title: "Post".into(),
+///     excerpt: "Short summary".into(),
+/// };
+/// assert_eq!(e.url, "/blog/post.html");
+///
+/// // Clone is a deep value-copy.
+/// let cloned = e.clone();
+/// assert_eq!(e, cloned);
+/// assert_ne!(e.url.as_ptr(), cloned.url.as_ptr());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ManifestEntry {
     /// Relative URL to the document (e.g. `/blog/post.html`).
@@ -27,6 +45,24 @@ pub struct ManifestEntry {
 /// `entries[i]` corresponds to the i-th vector in `embeddings.bin`.
 /// The `dim`, `count`, and `model_hash` fields let the loader sanity
 /// check the bundle before allocating buffers.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::{Manifest, ManifestEntry};
+///
+/// let m = Manifest::new(
+///     16,
+///     "deadbeef".into(),
+///     vec![ManifestEntry {
+///         url: "/".into(),
+///         title: "Home".into(),
+///         excerpt: "".into(),
+///     }],
+/// );
+/// assert!(m.is_valid());
+/// assert_eq!(m.count as usize, m.entries.len());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Manifest {
     /// Embedding dimensionality. Must match every vector in
@@ -48,6 +84,25 @@ pub struct Manifest {
 impl Manifest {
     /// Constructs a new manifest. Asserts (debug-only) that `count`
     /// and `entries.len()` agree.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::{Manifest, ManifestEntry, ARTIFACT_FORMAT_VERSION};
+    ///
+    /// let entries = vec![ManifestEntry {
+    ///     url: "/post.html".into(),
+    ///     title: "Post".into(),
+    ///     excerpt: "A short excerpt".into(),
+    /// }];
+    /// let m = Manifest::new(256, "abc123".to_string(), entries);
+    ///
+    /// assert_eq!(m.dim, 256);
+    /// assert_eq!(m.count, 1);
+    /// assert_eq!(m.model_hash, "abc123");
+    /// assert_eq!(m.format_version, ARTIFACT_FORMAT_VERSION);
+    /// assert_eq!(m.entries.len(), 1);
+    /// ```
     #[must_use]
     #[allow(clippy::missing_const_for_fn)] // Vec::len is non-const on stable
     pub fn new(
@@ -66,6 +121,30 @@ impl Manifest {
     }
 
     /// Returns true if the manifest is internally consistent.
+    ///
+    /// A manifest is valid when `count == entries.len()`, `dim > 0`,
+    /// and `entries` is non-empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::{Manifest, ManifestEntry};
+    ///
+    /// let good = Manifest::new(
+    ///     32,
+    ///     "h".into(),
+    ///     vec![ManifestEntry {
+    ///         url: "/a".into(),
+    ///         title: "A".into(),
+    ///         excerpt: "x".into(),
+    ///     }],
+    /// );
+    /// assert!(good.is_valid());
+    ///
+    /// // Empty entries → invalid (no point loading a 0-document index).
+    /// let empty = Manifest::new(32, "h".into(), vec![]);
+    /// assert!(!empty.is_valid());
+    /// ```
     #[must_use]
     #[allow(clippy::missing_const_for_fn)] // Vec::is_empty is non-const on stable
     pub fn is_valid(&self) -> bool {

@@ -25,6 +25,21 @@ use crate::manifest::{Manifest, ManifestEntry};
 use crate::Manifest as _ManifestRe;
 
 /// One document fed into the embedder.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::artifacts::InputDoc;
+///
+/// let doc = InputDoc {
+///     url: "/blog/intro.html".into(),
+///     title: "Intro".into(),
+///     body: "Welcome to my blog.".into(),
+///     excerpt: "Welcome".into(),
+/// };
+/// assert_eq!(doc.url, "/blog/intro.html");
+/// assert_eq!(doc.title, "Intro");
+/// ```
 #[derive(Debug, Clone)]
 pub struct InputDoc {
     /// Relative URL of the page (e.g. `/blog/post.html`).
@@ -38,6 +53,24 @@ pub struct InputDoc {
 }
 
 /// All bytes the build needs to emit under `<site>/search/`.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::artifacts::{Artifacts, InputDoc};
+/// use ssg_search::encoder::EMBEDDING_DIM;
+///
+/// let docs = vec![InputDoc {
+///     url: "/".into(),
+///     title: "Home".into(),
+///     body: "Welcome.".into(),
+///     excerpt: "".into(),
+/// }];
+/// let arts = Artifacts::from_docs(&docs);
+/// // `embeddings` is exactly count * dim * 4 bytes (LE f32).
+/// assert_eq!(arts.embeddings.len(), 1 * EMBEDDING_DIM * 4);
+/// assert_eq!(arts.model_hash, arts.manifest.model_hash);
+/// ```
 #[derive(Debug, Clone)]
 pub struct Artifacts {
     /// `embeddings.bin` — little-endian f32, `count × dim × 4` bytes.
@@ -60,6 +93,21 @@ impl Artifacts {
     /// One-shot builder. Equivalent to constructing an
     /// [`ArtifactsBuilder`] with the default encoder and calling
     /// [`ArtifactsBuilder::build`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    ///
+    /// let docs = vec![
+    ///     InputDoc { url: "/a".into(), title: "A".into(), body: "alpha".into(), excerpt: "".into() },
+    ///     InputDoc { url: "/b".into(), title: "B".into(), body: "beta".into(),  excerpt: "".into() },
+    /// ];
+    /// let arts = Artifacts::from_docs(&docs);
+    /// assert_eq!(arts.count(), 2);
+    /// // Build is reproducible — same input → same bytes.
+    /// assert_eq!(arts.embeddings, Artifacts::from_docs(&docs).embeddings);
+    /// ```
     #[must_use]
     pub fn from_docs(docs: &[InputDoc]) -> Self {
         let mut b = ArtifactsBuilder::default();
@@ -70,12 +118,36 @@ impl Artifacts {
     }
 
     /// Returns the embedding dimensionality (read from the manifest).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    /// use ssg_search::encoder::EMBEDDING_DIM;
+    ///
+    /// let arts = Artifacts::from_docs(&[InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// }]);
+    /// assert_eq!(arts.dim(), EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub const fn dim(&self) -> usize {
         self.manifest.dim as usize
     }
 
     /// Returns the number of documents (read from the manifest).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{Artifacts, InputDoc};
+    ///
+    /// let docs: Vec<InputDoc> = (0..3).map(|i| InputDoc {
+    ///     url: format!("/{i}"), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// }).collect();
+    /// let arts = Artifacts::from_docs(&docs);
+    /// assert_eq!(arts.count(), 3);
+    /// ```
     #[must_use]
     pub const fn count(&self) -> usize {
         self.manifest.count as usize
@@ -84,6 +156,21 @@ impl Artifacts {
 
 /// Step-by-step builder used by the SSG plugin during the
 /// `before_compile` walk.
+///
+/// # Examples
+///
+/// ```
+/// use ssg_search::artifacts::{ArtifactsBuilder, InputDoc};
+///
+/// let mut b = ArtifactsBuilder::default();
+/// assert!(b.is_empty());
+/// b.add_doc(InputDoc {
+///     url: "/".into(), title: "Home".into(), body: "Welcome.".into(), excerpt: "".into(),
+/// });
+/// assert_eq!(b.len(), 1);
+/// let arts = b.build();
+/// assert_eq!(arts.count(), 1);
+/// ```
 #[derive(Debug)]
 pub struct ArtifactsBuilder {
     encoder: ProjectionEncoder,
@@ -98,6 +185,17 @@ impl Default for ArtifactsBuilder {
 
 impl ArtifactsBuilder {
     /// Constructs a new builder backed by `encoder`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::ArtifactsBuilder;
+    /// use ssg_search::encoder::{Encoder, ProjectionEncoder, EMBEDDING_DIM};
+    ///
+    /// let b = ArtifactsBuilder::new(ProjectionEncoder::default());
+    /// assert!(b.is_empty());
+    /// assert_eq!(b.encoder().dim(), EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub const fn new(encoder: ProjectionEncoder) -> Self {
         Self {
@@ -108,6 +206,20 @@ impl ArtifactsBuilder {
 
     /// Adds a document to the corpus. Returns the index that will
     /// correspond to this document in `embeddings.bin`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{ArtifactsBuilder, InputDoc};
+    ///
+    /// let mut b = ArtifactsBuilder::default();
+    /// let doc = |u: &str| InputDoc {
+    ///     url: u.into(), title: "".into(), body: "x".into(), excerpt: "".into(),
+    /// };
+    /// assert_eq!(b.add_doc(doc("/a")), 0);
+    /// assert_eq!(b.add_doc(doc("/b")), 1);
+    /// assert_eq!(b.len(), 2);
+    /// ```
     pub fn add_doc(&mut self, doc: InputDoc) -> usize {
         let idx = self.docs.len();
         self.docs.push(doc);
@@ -115,18 +227,54 @@ impl ArtifactsBuilder {
     }
 
     /// Returns the number of documents accumulated so far.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{ArtifactsBuilder, InputDoc};
+    ///
+    /// let mut b = ArtifactsBuilder::default();
+    /// assert_eq!(b.len(), 0);
+    /// b.add_doc(InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "".into(), excerpt: "".into(),
+    /// });
+    /// assert_eq!(b.len(), 1);
+    /// ```
     #[must_use]
     pub const fn len(&self) -> usize {
         self.docs.len()
     }
 
     /// Returns `true` if no documents have been added.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{ArtifactsBuilder, InputDoc};
+    ///
+    /// let mut b = ArtifactsBuilder::default();
+    /// assert!(b.is_empty());
+    /// b.add_doc(InputDoc {
+    ///     url: "/".into(), title: "".into(), body: "".into(), excerpt: "".into(),
+    /// });
+    /// assert!(!b.is_empty());
+    /// ```
     #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.docs.is_empty()
     }
 
     /// Returns the encoder this builder is using.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::ArtifactsBuilder;
+    /// use ssg_search::encoder::{Encoder, EMBEDDING_DIM};
+    ///
+    /// let b = ArtifactsBuilder::default();
+    /// assert_eq!(b.encoder().dim(), EMBEDDING_DIM);
+    /// ```
     #[must_use]
     pub const fn encoder(&self) -> &ProjectionEncoder {
         &self.encoder
@@ -141,6 +289,24 @@ impl ArtifactsBuilder {
     ///
     /// Then compute the model hash and assemble [`Manifest`] / `model.bin` /
     /// `tokenizer.bin` payloads.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg_search::artifacts::{ArtifactsBuilder, InputDoc};
+    /// use ssg_search::encoder::EMBEDDING_DIM;
+    ///
+    /// let mut b = ArtifactsBuilder::default();
+    /// b.add_doc(InputDoc {
+    ///     url: "/p".into(), title: "P".into(),
+    ///     body: "rust webassembly".into(), excerpt: "".into(),
+    /// });
+    /// let arts = b.build();
+    /// assert_eq!(arts.count(), 1);
+    /// assert_eq!(arts.embeddings.len(), EMBEDDING_DIM * 4);
+    /// // model.bin header starts with the artifact magic.
+    /// assert_eq!(&arts.model[..4], b"SSGS");
+    /// ```
     #[must_use]
     pub fn build(self) -> Artifacts {
         let dim = self.encoder.dim();
