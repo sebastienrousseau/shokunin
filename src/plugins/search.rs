@@ -1554,6 +1554,54 @@ mod tests {
     }
 
     #[test]
+    fn localized_search_plugin_has_transform_is_true() {
+        // Covers line ~396-398.
+        let p = LocalizedSearchPlugin::new(SearchLabels::default());
+        assert!(p.has_transform());
+    }
+
+    #[test]
+    fn search_plugin_has_transform_is_true() {
+        // Covers the sister SearchPlugin's has_transform impl.
+        assert!(SearchPlugin.has_transform());
+    }
+
+    #[test]
+    fn transform_search_html_skips_when_already_injected() {
+        // Covers line ~440 — early-return when widget marker is present.
+        let html =
+            "<html><body><div id=\"ssg-search-widget\"></div></body></html>";
+        let out =
+            transform_search_html(html, &SearchLabels::english()).unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn transform_search_html_appends_when_no_body_close_tag() {
+        // Covers line ~448 — fallback when </body> is absent.
+        let html = "<html><head></head>";
+        let out =
+            transform_search_html(html, &SearchLabels::english()).unwrap();
+        assert!(out.starts_with(html));
+        assert!(out.contains("ssg-search-widget"));
+    }
+
+    #[test]
+    fn extract_title_falls_back_to_h1_when_title_is_empty() {
+        // Covers line ~472 — title tag present but blank → h1 fallback.
+        let html =
+            "<html><head><title>   </title></head><body><h1>Fallback</h1></body></html>";
+        assert_eq!(extract_title(html), "Fallback");
+    }
+
+    #[test]
+    fn extract_title_returns_empty_when_no_title_or_h1() {
+        // Covers line ~477 — both title and h1 absent.
+        let html = "<html><body><p>no headings</p></body></html>";
+        assert_eq!(extract_title(html), "");
+    }
+
+    #[test]
     fn localized_search_plugin_writes_index_with_localized_labels() -> Result<()>
     {
         let dir = tempdir().unwrap();

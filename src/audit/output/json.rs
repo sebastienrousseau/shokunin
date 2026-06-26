@@ -31,10 +31,15 @@ use crate::error::SsgError;
 /// assert!(s.contains("\"gates\""));
 /// ```
 pub fn format(report: &AuditReport) -> Result<String, SsgError> {
-    serde_json::to_string_pretty(report).map_err(|e| SsgError::Io {
-        path: std::path::PathBuf::from("<audit-report>"),
-        source: std::io::Error::other(e),
-    })
+    // `serde_json::to_string_pretty` is infallible for an
+    // `AuditReport` whose fields are all `String`s and primitives —
+    // the `String` invariant guarantees valid UTF-8, and no field
+    // can fail to serialise. The `Result` signature is retained for
+    // API symmetry with the other formatters (`text::format` and
+    // `junit::format`, which can fail on real I/O paths) so callers
+    // don't have to branch on formatter type.
+    Ok(serde_json::to_string_pretty(report)
+        .expect("AuditReport serialisation is infallible — see comment"))
 }
 
 #[cfg(test)]
