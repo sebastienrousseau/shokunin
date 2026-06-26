@@ -8,7 +8,6 @@ description = "Browser-native vector semantic search for SSG — WASM-compiled, 
 repository = "https://github.com/sebastienrousseau/static-site-generator"
 keywords = ["search", "wasm", "embeddings", "ssg", "vector"]
 categories = ["wasm", "web-programming", "text-processing"]
-publish = false
 
 [lib]
 # `cdylib` is required for wasm-pack; `rlib` lets the build-side `ssg`
