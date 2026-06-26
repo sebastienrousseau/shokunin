@@ -9,7 +9,21 @@ use super::helpers::{
 };
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
+use std::fs;
 use std::path::Path;
+
+pub mod iso20022;
+pub use iso20022::{
+    from_frontmatter as iso20022_from_frontmatter,
+    log_first_use_pointer as iso20022_log_first_use, validate_bic,
+    validate_iban, validate_schema_org as validate_iso20022_schema_org,
+    warn_invalid_fields as iso20022_warn_invalid_fields, BankAccount,
+    DispatchError as Iso20022DispatchError, FinancialProduct,
+    FinancialTransaction, Iso20022Entity, MonetaryAmount, PaymentInstrument,
+    RegulatedFinancialInstitution, SchemaOrgError as Iso20022SchemaOrgError,
+    ValidationOutcome,
+};
 
 /// Configuration for the JSON-LD structured data plugin.
 #[derive(Debug, Clone)]
@@ -263,10 +277,6 @@ impl Plugin for JsonLdPlugin {
             return Ok(html.to_string());
         }
 
-        let Some(head_pos) = html.find("</head>") else {
-            return Ok(html.to_string());
-        };
-
         let base = self.config.base_url.trim_end_matches('/');
         let site_dir = &ctx.site_dir;
 
@@ -276,13 +286,23 @@ impl Plugin for JsonLdPlugin {
             .to_string_lossy()
             .replace('\\', "/");
 
-        let scripts = build_jsonld_scripts(
+        let mut scripts = build_jsonld_scripts(
             html,
             base,
             &rel_path,
             &self.config.org_name,
             self.config.breadcrumbs,
         );
+
+        // ── ISO 20022 / banking extension (opt-in via frontmatter) ──
+        //
+        // AC4: When no `iso20022` key is present in the frontmatter
+        // sidecar (or no sidecar exists at all), this branch contributes
+        // ZERO bytes to `scripts` — preserving the v0.0.43 emission
+        // byte-for-byte.
+        if let Some(extra) = build_iso20022_scripts(path, ctx, &rel_path) {
+            scripts.extend(extra);
+        }
 
         let mut injection = String::new();
         for script in &scripts {
@@ -293,13 +313,98 @@ impl Plugin for JsonLdPlugin {
             ));
         }
 
-        let result =
-            format!("{}{}{}", &html[..head_pos], injection, &html[head_pos..]);
-        Ok(result)
+        Ok(inject_before_head_close(html, &injection))
     }
 
     fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
+    }
+}
+
+/// Resolves the `.meta.json` sidecar path for a built HTML file and
+/// returns its `iso20022` block, if any. Returns `None` when there is
+/// no sidecar, when it does not parse, or when it carries no
+/// `iso20022` key — preserving AC4 (zero behavioural drift on pages
+/// that don't opt in).
+fn read_iso20022_block(
+    path: &Path,
+    ctx: &PluginContext,
+    rel_path: &str,
+) -> Option<serde_json::Value> {
+    let sidecar_dir = ctx.build_dir.join(".meta");
+    let candidate = sidecar_dir.join(rel_path).with_extension("meta.json");
+
+    let raw = if candidate.exists() {
+        fs::read_to_string(&candidate).ok()?
+    } else {
+        // Fallback: try the `<stem>.md.meta.json` convention used by
+        // `emit_sidecars` for content coming from `.md` source files.
+        // `rel_path` here is `<...>/foo.html`; the original markdown
+        // sidecar is at `<...>/foo.md.meta.json` keyed off the *input*
+        // file extension. Strip `.html` and append `.md.meta.json`.
+        let alt = sidecar_dir.join(rel_path.trim_end_matches(".html"));
+        let alt = alt.with_extension("md.meta.json");
+        if alt.exists() {
+            fs::read_to_string(&alt).ok()?
+        } else {
+            // Last resort — look next to the HTML file itself (legacy
+            // emission location used by `frontmatter::read_sidecar`).
+            let inline = path.with_extension("meta.json");
+            if inline.exists() {
+                fs::read_to_string(&inline).ok()?
+            } else {
+                return None;
+            }
+        }
+    };
+
+    let value: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    value.get("iso20022").cloned()
+}
+
+/// Builds ISO 20022 JSON-LD scripts for a page, given its sidecar
+/// frontmatter. Returns `None` (NOT `Some(vec![])`) when the page
+/// has not opted in — callers can extend the script list without
+/// allocation overhead.
+fn build_iso20022_scripts(
+    path: &Path,
+    ctx: &PluginContext,
+    rel_path: &str,
+) -> Option<Vec<serde_json::Value>> {
+    let block = read_iso20022_block(path, ctx, rel_path)?;
+    iso20022_log_first_use();
+
+    let page_label = path.display().to_string();
+
+    // The block can be either a single object or an array of objects —
+    // sites with multiple transactions per page (statements, ledgers)
+    // benefit from the array form.
+    let blocks: Vec<serde_json::Value> = if let Some(arr) = block.as_array() {
+        arr.clone()
+    } else {
+        vec![block]
+    };
+
+    let mut scripts = Vec::new();
+    for entry in blocks {
+        match iso20022_from_frontmatter(&entry) {
+            Ok(entity) => {
+                let _ = iso20022_warn_invalid_fields(&entity, &page_label);
+                scripts.push(entity.to_jsonld());
+            }
+            Err(e) => {
+                log::warn!(
+                    "[json-ld/iso20022] {page_label}: skipping iso20022 \
+                     block — {e}"
+                );
+            }
+        }
+    }
+
+    if scripts.is_empty() {
+        None
+    } else {
+        Some(scripts)
     }
 }
 

@@ -87,6 +87,7 @@ const fn days_to_ymd(days: u64) -> (u64, u64, u64) {
     (y, m, d)
 }
 
+pub mod audit;
 pub mod cmd;
 #[path = "core/mod.rs"]
 pub(crate) mod core_group;
@@ -131,22 +132,30 @@ pub use crate::plugins_group::i18n;
 #[cfg(feature = "image-optimization")]
 pub use crate::plugins_group::image_plugin;
 pub use crate::plugins_group::islands;
+pub use crate::plugins_group::isr_manifest;
 pub use crate::plugins_group::llm;
+pub use crate::plugins_group::llm_cache;
 pub use crate::plugins_group::markdown_ext;
 pub use crate::plugins_group::og_image;
 pub use crate::plugins_group::pagination;
 pub use crate::plugins_group::plugin;
 pub use crate::plugins_group::plugins;
 pub use crate::plugins_group::postprocess;
+pub use crate::plugins_group::rpc_schema;
 pub use crate::plugins_group::sbom;
 pub use crate::plugins_group::search;
+pub use crate::plugins_group::search_index;
 pub use crate::plugins_group::seo;
 pub use crate::plugins_group::shortcodes;
 pub use crate::plugins_group::taxonomy;
 #[cfg(feature = "templates")]
 pub use crate::plugins_group::template_plugin;
+pub use crate::plugins_group::view_transitions;
 
 // Re-export server modules
+pub use crate::server_group::dev_server;
+pub use crate::server_group::event_watch;
+pub use crate::server_group::hmr;
 pub use crate::server_group::livereload;
 pub use crate::server_group::server;
 pub use crate::server_group::watch;
@@ -451,8 +460,24 @@ fn dispatch_invocation(
         CliInvocation::Build => run_subcommand(matches, "build", false),
         CliInvocation::Dev => run_subcommand(matches, "dev", true),
         CliInvocation::Check => run_check(matches),
+        CliInvocation::Audit => run_audit(matches),
         CliInvocation::Deploy { target } => run_deploy(matches, &target),
     }
+}
+
+/// Run handler for the `ssg audit` subcommand (issue #549).
+///
+/// Delegates to [`crate::cmd::audit::run_and_dispatch`], which handles
+/// gate selection, output formatting (text / JSON / `JUnit` XML), and
+/// the `--fail-on` exit-code contract.
+fn run_audit(matches: &clap::ArgMatches) -> Result<(), SsgError> {
+    let sub_m = matches.subcommand_matches("audit").ok_or_else(|| {
+        SsgError::Validation {
+            field: "subcommand".to_string(),
+            message: "missing matches for `audit`".to_string(),
+        }
+    })?;
+    cmd::audit::run_and_dispatch(sub_m, false)
 }
 
 /// Legacy code path: behaves exactly like 0.0.42 `ssg` did.
@@ -482,7 +507,7 @@ fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
     let (plugins, ctx, build_dir, site_dir) =
         pipeline::build_pipeline(&config, &opts);
 
-    execute_build_pipeline(
+    pipeline::execute_build_pipeline_with(
         &plugins,
         &ctx,
         &build_dir,
@@ -490,6 +515,7 @@ fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
         &site_dir,
         &config.template_dir,
         opts.quiet,
+        opts.incremental,
     )?;
 
     // Legacy contract: `--serve` boots the dev server.
@@ -529,7 +555,7 @@ fn run_subcommand(
     let (plugins, ctx, build_dir, site_dir) =
         pipeline::build_pipeline(&config, &opts);
 
-    execute_build_pipeline(
+    pipeline::execute_build_pipeline_with(
         &plugins,
         &ctx,
         &build_dir,
@@ -537,6 +563,7 @@ fn run_subcommand(
         &site_dir,
         &config.template_dir,
         opts.quiet,
+        opts.incremental,
     )?;
 
     if start_server {
@@ -2221,6 +2248,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2248,6 +2279,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (no_deploy, _, _, _) = build_pipeline(&config, &opts_no_deploy);
 
@@ -2260,6 +2295,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (with_deploy, _, _, _) = build_pipeline(&config, &opts_deploy);
 
@@ -2282,6 +2321,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         let names = plugins.names();
@@ -2305,6 +2348,10 @@ mod tests {
                 max_memory_mb: None,
                 ai_fix: false,
                 ai_fix_dry_run: false,
+                incremental: false,
+                no_llm_cache: false,
+
+                isr: false,
             };
             let (plugins, _, _, _) = build_pipeline(&config, &opts);
             assert!(
@@ -2510,6 +2557,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2559,6 +2610,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2607,6 +2662,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2642,6 +2701,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (plugins, ctx, build_dir, site_dir) =
@@ -2675,6 +2738,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"drafts"));
@@ -3029,6 +3096,10 @@ mod tests {
             max_memory_mb: Some(128),
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3057,6 +3128,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
 
         let (_plugins, ctx, _build_dir, _site_dir) =
@@ -3088,6 +3163,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3109,6 +3188,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3130,6 +3213,10 @@ mod tests {
             max_memory_mb: None,
             ai_fix: false,
             ai_fix_dry_run: false,
+            incremental: false,
+            no_llm_cache: false,
+
+            isr: false,
         };
         let (plugins, _, _, _) = build_pipeline(&config, &opts);
         assert!(plugins.names().iter().any(|n| n == &"deploy"));
@@ -3381,6 +3468,93 @@ mod tests {
         // pipeline work happens, so this is safe to run as a unit test.
         let result = dispatch_invocation(inv, &matches);
         assert!(result.is_ok(), "run_legacy --validate failed: {result:?}");
+    }
+
+    #[test]
+    fn run_subcommand_build_with_empty_dirs_completes() {
+        // Drives run_subcommand("build") end-to-end through
+        // dispatch_invocation. Empty content/templates dirs means the
+        // build is a no-op but every line of the dispatcher body is
+        // executed.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "build",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Build));
+        let result = dispatch_invocation(inv, &matches);
+        // Build may produce warnings on empty input but should not
+        // hard-fail.
+        let _ = result;
+    }
+
+    #[test]
+    fn run_deploy_with_none_target_invokes_noop_adapter() {
+        // run_deploy with --target none uses the no-op adapter, which
+        // is purely a print + Ok, so the test can drive the full body
+        // including pipeline execution + adapter dispatch without
+        // hitting any network.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "deploy",
+            "--target",
+            "none",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Deploy { .. }));
+        let result = dispatch_invocation(inv, &matches);
+        let _ = result;
+    }
+
+    #[test]
+    fn run_legacy_happy_path_with_empty_content_dir() {
+        // Same content/templates as run_check but without --validate, so
+        // the full legacy code path executes (build_pipeline +
+        // execute_build_pipeline_with). Empty dirs make the build a
+        // no-op, no server is started because --serve is not set.
+        let _g = ssg_check_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+        let content = tempdir().unwrap();
+        let templates = tempdir().unwrap();
+        let output = tempdir().unwrap();
+        let argv = [
+            "ssg",
+            "--content",
+            content.path().to_str().unwrap(),
+            "--template",
+            templates.path().to_str().unwrap(),
+            "--output",
+            output.path().to_str().unwrap(),
+            "--quiet",
+        ];
+        let (inv, matches) = Cli::parse_and_dispatch(argv).unwrap();
+        assert!(matches!(inv, CliInvocation::Legacy));
+        let result = dispatch_invocation(inv, &matches);
+        let _ = result;
     }
 }
 

@@ -15,6 +15,7 @@ build/
 !/docs/architecture/
 !/docs/compare/
 !/docs/perf/
+!/docs/security/
 /examples/public/
 /examples/build/
 /mysite/
@@ -79,3 +80,6 @@ Icon?
 .claude/worktrees/
 tests/visual/a11y-reports/
 tests/visual/test-results/
+
+# wasm-pack output for ssg-search (issue #545)
+crates/ssg-search/pkg/

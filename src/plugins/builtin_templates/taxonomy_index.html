@@ -1,0 +1,17 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+{% extends "base.html" %}
+
+{% block title %}{{ taxonomy_title }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}
+
+{% block content %}
+<article class="taxonomy-index taxonomy-index-{{ taxonomy_name }}">
+  <header>
+    <h1>{{ taxonomy_title }}</h1>
+  </header>
+  <ul class="taxonomy-term-list">
+    {% for entry in terms %}
+    <li><a href="/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.name }}</a> ({{ entry.count }})</li>
+    {% endfor %}
+  </ul>
+</article>
+{% endblock %}

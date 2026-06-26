@@ -53,6 +53,27 @@
       "description": "Language code (e.g. en-GB)",
       "pattern": "^[a-z]{2}-[A-Z]{2}$",
       "default": "en-GB"
+    },
+    "edge_headers": {
+      "type": "object",
+      "description": "PQC-aware edge-runtime header emitter (issue #550). Emits per-platform header configs for Cloudflare Workers, Netlify, and Vercel.",
+      "properties": {
+        "targets": {
+          "type": "array",
+          "description": "Edge platforms to emit configuration for.",
+          "items": {
+            "type": "string",
+            "enum": ["cloudflare", "netlify", "vercel"]
+          },
+          "default": []
+        },
+        "overrides": {
+          "type": "object",
+          "description": "Header-name → header-value overrides applied on top of the five baseline headers. Case-insensitive matching against baseline; extra entries are appended.",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
+      }
     }
   },
   "required": [

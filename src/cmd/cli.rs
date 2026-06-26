@@ -21,7 +21,8 @@ use std::path::PathBuf;
 /// Subcommand names recognised by the unified CLI. Used to discriminate
 /// between subcommand-style invocations (`ssg dev`, `ssg build …`) and
 /// the legacy flag-only form (`ssg -s public`).
-pub const SUBCOMMANDS: &[&str] = &["build", "dev", "check", "deploy", "help"];
+pub const SUBCOMMANDS: &[&str] =
+    &["build", "dev", "check", "deploy", "audit", "help"];
 
 /// Deployment targets accepted by `ssg deploy --target …`.
 ///
@@ -63,6 +64,9 @@ pub enum CliInvocation {
         /// The selected deploy target (`netlify`, `vercel`, …).
         target: String,
     },
+    /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
+    /// run the 14 native CI gates against the built site (issue #549).
+    Audit,
     /// Legacy flag-only invocation (`ssg -s public -w`). Behaves like
     /// `Dev` if `--serve` is present, otherwise like `Build`. Emits a
     /// deprecation warning on stderr before dispatch.
@@ -206,6 +210,24 @@ impl Cli {
                     .long("ai-fix-dry-run")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("incremental")
+                    .help("Rebuild only the pages affected by source changes (issue #524)")
+                    .long("incremental")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("no-llm-cache")
+                    .help("Disable the deterministic LLM inference cache")
+                    .long("no-llm-cache")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("isr")
+                    .help("Emit ISR manifest + raw KV payloads under dist/.ssg/ (opt-in, issue #546)")
+                    .long("isr")
+                    .action(ArgAction::SetTrue),
+            )
     }
 
     /// Builds the subcommand-style `clap::Command` (issue #527).
@@ -273,6 +295,10 @@ impl Cli {
                     .short('j')
                     .value_name("N")
                     .value_parser(clap::value_parser!(usize)),
+                Arg::new("no-llm-cache")
+                    .help("Disable the deterministic LLM inference cache")
+                    .long("no-llm-cache")
+                    .action(ArgAction::SetTrue),
             ]
         };
 
@@ -309,6 +335,18 @@ impl Cli {
                             .long("max-memory")
                             .value_name("MB")
                             .value_parser(clap::value_parser!(usize)),
+                    )
+                    .arg(
+                        Arg::new("incremental")
+                            .help("Rebuild only the pages affected by source changes (issue #524)")
+                            .long("incremental")
+                            .action(ArgAction::SetTrue),
+                    )
+                    .arg(
+                        Arg::new("isr")
+                            .help("Emit ISR manifest + raw KV payloads under dist/.ssg/ (opt-in, issue #546)")
+                            .long("isr")
+                            .action(ArgAction::SetTrue),
                     ),
             )
             .subcommand(
@@ -346,6 +384,7 @@ impl Cli {
                     )
                     .args(shared()),
             )
+            .subcommand(super::audit::build_subcommand())
             .subcommand(
                 Command::new("deploy")
                     .about("Build the site and ship to a pluggable target")
@@ -423,6 +462,7 @@ impl Cli {
                 Some(("build", _)) => CliInvocation::Build,
                 Some(("dev", _)) => CliInvocation::Dev,
                 Some(("check", _)) => CliInvocation::Check,
+                Some(("audit", _)) => CliInvocation::Audit,
                 Some(("deploy", sub_m)) => {
                     let target = sub_m
                         .get_one::<String>("target")

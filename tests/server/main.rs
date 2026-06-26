@@ -3,6 +3,8 @@
 
 //! Integration tests for `src/server/` — one binary, one submodule per source file.
 
+mod event_watch;
+mod hmr;
 mod livereload;
 mod server;
 mod watch;

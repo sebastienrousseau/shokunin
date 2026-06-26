@@ -14,7 +14,7 @@ jobs:
     name: Build & test ssg-core (wasm32)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
@@ -40,9 +40,104 @@ jobs:
       - name: Test ssg-wasm (headless Chrome)
         run: wasm-pack test --headless --chrome crates/ssg-wasm
 
+      # ---------------------------------------------------------------
+      # Issue #546 AC10 — gzipped WASM payload must stay ≤ 2 MB.
+      # ---------------------------------------------------------------
+      - name: Install binaryen for wasm-opt
+        run: |
+          set -euo pipefail
+          BIN_VERSION="version_121"
+          curl -sSL -o /tmp/binaryen.tar.gz \
+            "https://github.com/WebAssembly/binaryen/releases/download/${BIN_VERSION}/binaryen-${BIN_VERSION}-x86_64-linux.tar.gz"
+          mkdir -p /tmp/binaryen
+          tar -xzf /tmp/binaryen.tar.gz -C /tmp/binaryen --strip-components=1
+          sudo cp /tmp/binaryen/bin/wasm-opt /usr/local/bin/
+
+      - name: Optimise WASM with wasm-opt -Oz
+        run: |
+          set -euo pipefail
+          WASM_IN=pkg/ssg_wasm_bg.wasm
+          WASM_OUT=pkg/ssg_wasm_bg.opt.wasm
+          if [ ! -f "$WASM_IN" ]; then
+            echo "::error::expected $WASM_IN to exist after wasm-pack build"
+            exit 1
+          fi
+          wasm-opt -Oz --strip-debug --vacuum \
+            --enable-bulk-memory --enable-bulk-memory-opt \
+            --enable-reference-types --enable-mutable-globals \
+            -o "$WASM_OUT" "$WASM_IN"
+          mv "$WASM_OUT" "$WASM_IN"
+
+      - name: Enforce ≤ 2 MB gzipped WASM payload (#546 AC10)
+        run: |
+          set -euo pipefail
+          WASM=pkg/ssg_wasm_bg.wasm
+          BUDGET=2097152
+          ACTUAL=$(gzip --best -c "$WASM" | wc -c | tr -d ' ')
+          echo "wasm gzipped size: ${ACTUAL} bytes (budget ${BUDGET})"
+          if [ "$ACTUAL" -gt "$BUDGET" ]; then
+            echo "::error::Edge WASM payload exceeds 2 MB gzipped budget: ${ACTUAL} > ${BUDGET}"
+            exit 1
+          fi
+          echo "wasm_size_bytes=${ACTUAL}" >> "$GITHUB_ENV"
+
       - name: Upload WASM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ssg-wasm
           path: pkg/
+          retention-days: 7
+
+  ssg-search-wasm:
+    name: Build & test ssg-search (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build ssg-search for wasm32 (default features)
+        run: cargo build -p ssg-search --target wasm32-unknown-unknown --release
+
+      - name: Build ssg-search for wasm32 with wasm binding
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: cargo build -p ssg-search --target wasm32-unknown-unknown --release --features wasm
+
+      - name: Native unit tests
+        run: cargo test -p ssg-search
+
+      - name: Build with wasm-pack (SIMD enabled)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        run: wasm-pack build crates/ssg-search --target web --release -- --features wasm
+
+      - name: Install Chrome for headless tests
+        uses: browser-actions/setup-chrome@latest
+        with:
+          chrome-version: stable
+
+      - name: wasm-bindgen-test (headless Chrome)
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+        # `--features` goes to wasm-pack/cargo, NOT after `--`
+        # (which passes args to the wasm-bindgen-test runner binary).
+        run: wasm-pack test --headless --chrome crates/ssg-search --features wasm
+
+      - name: Latency bench (assert p99 < 100ms)
+        run: cargo bench -p ssg-search --bench search_latency
+
+      - name: Build-side integrity tests
+        run: cargo test --test search_index_integrity
+
+      - name: Upload ssg-search WASM artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ssg-search-wasm
+          path: crates/ssg-search/pkg/
           retention-days: 7

@@ -200,16 +200,57 @@ fn livereload_script(port: u16) -> String {
       var ws=new WebSocket(url);
       ws.onopen=function(){{delay=1000;hideIndicator();}};
       ws.onmessage=function(e){{
-        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}location.reload();}}
+        if(e.data==='reload'){{hideOverlay();try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}
+          var doReload=function(){{location.reload();}};
+          // Issue #547: when the transitions client is active, wrap the
+          // reload in a view transition so structural HMR frames cross-fade.
+          if(typeof window.__ssgTransitionsReload==='function'){{
+            try{{window.__ssgTransitionsReload(doReload);}}catch(_){{doReload();}}
+          }}else{{doReload();}}
+        }}
         try{{var msg=JSON.parse(e.data);
         if(msg.type==='error'){{showOverlay(msg);}}
         else if(msg.type==='clear-error'){{hideOverlay();}}
-        else if(msg.type==='css-reload'){{
+        else if(msg.type==='css-reload'||msg.type==='hmr-css'){{
           var links=document.querySelectorAll('link[rel=stylesheet]');
           links.forEach(function(link){{
             var href=link.getAttribute('href');
             if(href){{link.setAttribute('href',href.split('?')[0]+'?v='+Date.now());}}
           }});
+        }}
+        else if(msg.type==='hmr-html'){{
+          // Partial HTML reload (AC3 / AC4) — fetch the current page
+          // fresh and swap the <main> body so scroll position and
+          // any form state outside <main> are preserved. If the URL
+          // is not in the broadcast paths list we still do nothing
+          // (other tabs handle their own pages). If <head> needs an
+          // update the server sends 'reload' instead.
+          var here=location.pathname;
+          var hit=Array.isArray(msg.paths)&&msg.paths.some(function(p){{
+            return p===here||p===here.replace(/\/$/,'')||p+'/'===here;
+          }});
+          if(!hit){{return;}}
+          hideOverlay();
+          fetch(location.href,{{cache:'no-store'}}).then(function(r){{
+            return r.text();
+          }}).then(function(html){{
+            var parser=new DOMParser();
+            var doc=parser.parseFromString(html,'text/html');
+            var freshMain=doc.querySelector('main');
+            var liveMain=document.querySelector('main');
+            if(freshMain&&liveMain){{
+              liveMain.replaceWith(freshMain);
+            }}else if(doc.body&&document.body){{
+              document.body.innerHTML=doc.body.innerHTML;
+            }}else{{
+              location.reload();
+            }}
+          }}).catch(function(){{location.reload();}});
+        }}
+        else if(msg.type==='reload'){{
+          hideOverlay();
+          try{{sessionStorage.setItem('ssg-scroll',JSON.stringify({{x:scrollX,y:scrollY}}));}}catch(se){{}}
+          location.reload();
         }}
         }}catch(x){{}}
       }};
@@ -568,6 +609,22 @@ mod tests {
         assert!(
             script.contains("css-reload"),
             "script must contain css-reload handler"
+        );
+    }
+
+    #[test]
+    fn test_script_coordinates_with_view_transitions() {
+        // AC7: when the transitions client is loaded (issue #547),
+        // the reload handler must defer to its wrapper so structural
+        // HMR frames go through startViewTransition().
+        let script = livereload_script(DEFAULT_PORT);
+        assert!(
+            script.contains("__ssgTransitionsReload"),
+            "reload path must consult window.__ssgTransitionsReload"
+        );
+        assert!(
+            script.contains("location.reload()"),
+            "reload path must still call location.reload() as the fallback"
         );
     }
 

@@ -1,0 +1,21 @@
+{
+  "name": "ssg-edge-vercel",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Vercel Edge ISR adapter for SSG (issue #546)",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "dev": "vercel dev --listen 3000",
+    "deploy": "vercel deploy --prod",
+    "build:wasm": "cd ../../crates/ssg-wasm && wasm-pack build --target web --release && wasm-opt -Oz -o pkg/ssg_wasm_bg.wasm pkg/ssg_wasm_bg.wasm",
+    "config:upload": "node ./scripts/upload-edge-config.js"
+  },
+  "dependencies": {
+    "@vercel/edge-config": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vercel": "^33.0.0"
+  }
+}

@@ -17,6 +17,18 @@
 //! - SEO metadata generation
 //! - Search index generation
 
+pub mod content_provider;
+pub mod isr_manifest;
+
+pub use content_provider::{
+    ContentProvider, FsContentProvider, MemoryContentProvider, ProviderError,
+    ProviderResult,
+};
+pub use isr_manifest::{
+    build_entry, hash_sources, CachePolicy, Manifest, ManifestEntry,
+    DEFAULT_SWR, DEFAULT_S_MAXAGE, MANIFEST_VERSION,
+};
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -126,18 +138,22 @@ pub fn parse_frontmatter(
     // YAML frontmatter: ---...---
     if let Some(after) = trimmed.strip_prefix("---") {
         if let Some(end) = after.find("---") {
-            let fm_str = &after[..end].trim();
+            let fm_str = &after[..end];
             let body = &after[end + 3..];
-            // Simple key: value parser for common YAML frontmatter
-            let mut map = HashMap::new();
-            for line in fm_str.lines() {
-                if let Some((key, val)) = line.split_once(':') {
-                    let key = key.trim().to_string();
-                    let val = val.trim().to_string();
-                    let _ = map.insert(key, serde_json::Value::String(val));
+            match serde_yaml_ng::from_str::<serde_json::Value>(fm_str) {
+                Ok(serde_json::Value::Object(map)) => {
+                    return (map.into_iter().collect(), body.to_string());
+                }
+                Ok(_) => {
+                    // Top-level non-mapping (e.g. a bare list or scalar)
+                    // — preserve the body but emit no globals.
+                    return (HashMap::new(), body.to_string());
+                }
+                Err(e) => {
+                    log::warn!("YAML frontmatter parse error: {e}");
+                    return (HashMap::new(), body.to_string());
                 }
             }
-            return (map, body.to_string());
         }
     }
 
@@ -347,5 +363,99 @@ mod tests {
     fn slugify_basic() {
         assert_eq!(slugify("Hello World!"), "hello-world");
         assert_eq!(slugify("Rust & Web"), "rust-web");
+    }
+
+    #[test]
+    fn error_display_frontmatter_parse_variant() {
+        let e = Error::FrontmatterParse {
+            syntax: "yaml mismatch".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Frontmatter parse error"));
+        assert!(s.contains("yaml mismatch"));
+    }
+
+    #[test]
+    fn error_display_markdown_compile_variant() {
+        let e = Error::MarkdownCompile {
+            source: "broken markdown".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Markdown compilation error"));
+        assert!(s.contains("broken markdown"));
+    }
+
+    #[test]
+    fn error_display_invalid_slug_variant() {
+        let e = Error::InvalidSlug {
+            input: "@@@".to_string(),
+        };
+        let s = format!("{e}");
+        assert!(s.contains("Invalid slug input"));
+        assert!(s.contains("@@@"));
+    }
+
+    #[test]
+    fn error_is_std_error_trait_object() {
+        // Smoke-tests the `impl std::error::Error for Error {}` block.
+        let e: Box<dyn std::error::Error> = Box::new(Error::InvalidSlug {
+            input: "x".to_string(),
+        });
+        assert!(!e.to_string().is_empty());
+        // No source by default.
+        assert!(std::error::Error::source(&*e).is_none());
+    }
+
+    #[test]
+    fn error_debug_impl_executes_for_each_variant() {
+        let e1 = Error::FrontmatterParse {
+            syntax: "a".to_string(),
+        };
+        let e2 = Error::MarkdownCompile {
+            source: "b".to_string(),
+        };
+        let e3 = Error::InvalidSlug {
+            input: "c".to_string(),
+        };
+        for e in [&e1, &e2, &e3] {
+            let s = format!("{e:?}");
+            assert!(!s.is_empty());
+        }
+    }
+
+    #[test]
+    fn search_entry_serialization_roundtrip() {
+        let e = SearchEntry {
+            title: "T".to_string(),
+            url: "/u".to_string(),
+            content: "C".to_string(),
+        };
+        let json = serde_json::to_string(&e).unwrap();
+        assert!(json.contains("\"title\":\"T\""));
+        let back: SearchEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.url, "/u");
+        assert_eq!(back.content, "C");
+        // Debug + Clone are derived; exercise them.
+        let _ = format!("{back:?}");
+        let _ = back.clone();
+    }
+
+    #[test]
+    fn compile_page_yields_empty_frontmatter_when_absent() {
+        let (fm, html) = compile_page("# Heading\n\nBody").unwrap();
+        assert!(fm.is_empty());
+        assert!(html.contains("<h1>Heading</h1>"));
+    }
+
+    #[test]
+    fn slugify_collapses_consecutive_separators() {
+        assert_eq!(slugify("foo!!!bar"), "foo-bar");
+        assert_eq!(slugify("--leading--"), "leading");
+    }
+
+    #[test]
+    fn slugify_empty_input_yields_empty() {
+        assert_eq!(slugify(""), "");
+        assert_eq!(slugify("???"), "");
     }
 }

@@ -12,6 +12,7 @@
 
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use anyhow::Result;
 use std::{
     collections::BTreeMap,
@@ -82,17 +83,11 @@ fn process_html_for_ai(
 
 /// Injects the max-snippet meta tag before `</head>` if not already present.
 fn inject_max_snippet(html: &str) -> String {
-    if html.contains("max-snippet") || !html.contains("</head>") {
+    if html.contains("max-snippet") {
         return html.to_string();
     }
     let tag = "<meta name=\"robots\" content=\"max-snippet:-1, max-image-preview:large, max-video-preview:-1\">\n";
-    if let Some(pos) = html.find("</head>") {
-        let mut modified = html.to_string();
-        modified.insert_str(pos, tag);
-        modified
-    } else {
-        html.to_string()
-    }
+    inject_before_head_close(html, tag)
 }
 
 /// Checks for missing alt text and logs a warning if found.

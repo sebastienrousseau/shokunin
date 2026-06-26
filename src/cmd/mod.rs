@@ -31,6 +31,7 @@
 //! }
 //! ```
 
+pub mod audit;
 mod cli;
 mod config;
 mod error;
@@ -39,7 +40,7 @@ mod validation;
 pub use cli::{
     Cli, CliInvocation, DEPLOY_TARGETS, LEGACY_DEPRECATION_WARNING, SUBCOMMANDS,
 };
-pub use config::{ImageConfig, SsgConfig, SsgConfigBuilder};
+pub use config::{EdgeHeadersConfig, ImageConfig, SsgConfig, SsgConfigBuilder};
 pub use error::{CliError, LanguageCode};
 pub use validation::{is_valid_url, validate_url};
 
@@ -107,6 +108,9 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             i18n: None,
             cdn_prefix: None,
             image: ImageConfig::default(),
+            edge_headers: EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
         })
     })
 }

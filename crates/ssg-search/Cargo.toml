@@ -1,0 +1,92 @@
+[package]
+name = "ssg-search"
+version = "0.0.44"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = "Browser-native vector semantic search for SSG — WASM-compiled, int8-quantised, Float32Array boundary."
+repository = "https://github.com/sebastienrousseau/static-site-generator"
+keywords = ["search", "wasm", "embeddings", "ssg", "vector"]
+categories = ["wasm", "web-programming", "text-processing"]
+publish = false
+
+[lib]
+# `cdylib` is required for wasm-pack; `rlib` lets the build-side `ssg`
+# crate link the same encoder/quantiser code natively without depending
+# on a published artifact.
+crate-type = ["cdylib", "rlib"]
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+# Default build is *deterministic, model-free* — a hashed-n-gram projection
+# embedder identical on every platform (build host, browser, edge). This
+# guarantees AC6 (reproducible builds) without pulling the `tokenizers`
+# crate (~3 MB on wasm). Opt in to the real model2vec-rs encoder with
+# `--features model2vec`; that path is gated because the upstream crate
+# still moves quickly and pulls a heavy dependency closure.
+#
+# All deps below MUST compile cleanly on `wasm32-unknown-unknown`.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# wasm-bindgen is the only WASM-specific runtime dep. Native (build-side)
+# builds skip it via the `cfg(target_arch = "wasm32")` gates in the
+# binding module.
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+# Real model2vec inference (opt-in). Pulls `tokenizers` + `safetensors`.
+# Enable with `--features model2vec`. We turn on the `fancy-regex`
+# tokenizer backend (pure-Rust, WASM-clean) rather than `onig`, which
+# would require a C dependency that fails on `wasm32-unknown-unknown`.
+model2vec-rs = { version = "0.2", optional = true, default-features = false, features = ["local-only", "fancy-regex"] }
+
+[features]
+default = []
+# Enables the wasm-bindgen JS binding layer. Required when building for
+# the browser; off by default so native unit tests don't try to link
+# `wasm-bindgen` (which is wasm-only at runtime but compiles on host
+# targets — keeping it opt-in keeps native test cycles fast).
+wasm = ["dep:wasm-bindgen", "dep:js-sys"]
+# Opt in to the real model2vec-rs encoder. When OFF (the default), the
+# crate ships a deterministic hashed-n-gram projection embedder that
+# satisfies the architectural contract (L2-normalised, dot-product
+# similarity, Float32Array boundary) without a heavy model.bin.
+model2vec = ["dep:model2vec-rs"]
+# Per-call boundary profiling that asserts every JS↔WASM crossing is a
+# scalar, string, or Float32Array view (AC4). Off by default — adds
+# instrumentation overhead.
+wasm-profiling = []
+
+# `proptest` pulls `wait-timeout`, which only compiles on Unix and breaks
+# wasm32 builds. Gate it to non-wasm targets so the WASM dev-dep graph
+# stays minimal.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+proptest = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+# getrandom 0.3 hard-errors on wasm32-unknown-unknown unless the `wasm_js`
+# feature is enabled. Surfacing it here just to enable the feature.
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
+# Latency bench (issue #545 AC3 — p99 < 100 ms on 1000-doc corpus).
+# Plain `#[no_harness]` binary so we can run an assertion-style check
+# with `cargo bench -p ssg-search --bench search_latency` without
+# pulling criterion into the wasm-clean dep graph.
+[[bench]]
+name = "search_latency"
+path = "benches/search_latency.rs"
+harness = false
+
+[package.metadata.wasm-pack.profile.release]
+# We compile with -C target-feature=+simd128 via RUSTFLAGS in CI;
+# wasm-opt is skipped because the optimiser strips SIMD intrinsics
+# unless built from a recent binaryen, and the size win is marginal
+# next to the int8-quantised model payload.
+wasm-opt = false
+
+[lints]
+workspace = true

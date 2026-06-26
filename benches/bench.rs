@@ -7,6 +7,8 @@
 #![allow(missing_docs)]
 use criterion::Criterion;
 
+/// Audit-runtime benchmark (issue #549).
+mod bench_audit;
 /// This is a module for benchmarking file operations.
 mod bench_file;
 /// Scalability benchmarks at 100, 1K, and 10K page counts.
@@ -27,6 +29,7 @@ criterion::criterion_group! {
         bench_file::bench_file,
         bench_utilities::bench_utilities,
         bench_site_generation::bench_site_generation,
+        bench_audit::bench_audit_scaffold,
 }
 
 // Run benchmarks

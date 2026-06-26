@@ -29,7 +29,7 @@ fn bench_invalidated_pages_1000(c: &mut Criterion) {
     let g = populated(1000, 4);
     let changed = vec![PathBuf::from("dep-0.html")];
     c.bench_function("depgraph::invalidated_pages_1000x4", |b| {
-        b.iter(|| g.invalidated_pages(&changed));
+        b.iter(|| g.invalidated(&changed));
     });
 }
 

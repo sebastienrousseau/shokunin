@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.43"                      # The version of the library
+version = "0.0.44"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -152,6 +152,9 @@ uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
 proptest = "1"
+# Edge-contract test (#546) drives the WASM render pipeline natively
+# so we can assert AC4/AC5/AC6/AC7 without spinning up wrangler.
+ssg-wasm = { path = "crates/ssg-wasm" }
 # Captures `tracing` events emitted inside test bodies so the
 # `llm_no_shellout` integration test (issue #520) can assert no
 # subprocess-spawn span ever fires after the curl shellout was
@@ -172,7 +175,9 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.43" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.44" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.44" }
+ssg-search = { path = "crates/ssg-search" }
 thiserror = "2"
 staticdatagen = "0.0.9"
 toml = "1.1.2"
@@ -198,6 +203,22 @@ ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 # rewriting that previously lived in the image, search, CSP, and html-fix
 # plugins. BSD-3-Clause (already allowed in deny.toml). No C deps.
 lol_html = "3.0.0"
+
+# Event-driven filesystem watcher for `ssg dev` (issue #526). Replaces the
+# polling FileWatcher in src/server/watch.rs with OS-native FSEvents /
+# inotify / ReadDirectoryChangesW so idle CPU is ~0% and edit-to-rebuild
+# latency drops from the 1-2s polling interval to <50ms. CC0-1.0 (already
+# allowed in deny.toml for tiny-keccak / const-random). Pulls only the
+# default macOS fsevent backend on Darwin, inotify on Linux,
+# ReadDirectoryChangesW on Windows — no tokio, no async runtime.
+notify = "8"
+
+# Sync WebSocket implementation for the HMR broadcaster (issue #526).
+# Used by `HmrBroadcaster` to push hmr-html / hmr-css / reload frames
+# to every connected dev-browser tab. No tokio — the broadcaster fans
+# out from a std::thread::spawn loop reading from a std::sync::mpsc
+# channel, matching ssg's tokio-free Rayon architecture.
+tungstenite = "0.29"
 
 
 # Optional dependencies (feature-gated)
@@ -226,6 +247,15 @@ walkdir = { version = "2.5", optional = true }
 
 # Owned crate for frontmatter parsing
 frontmatter-gen = "0.0.6"
+
+# Pure-Rust YAML parser for data/*.{yml,yaml} files loaded into
+# template globals (issue #536). The previous implementation parsed
+# YAML through `serde_json`, which silently dropped any non-JSON
+# YAML — indented lists, flow lists, nested maps. `serde_yaml_ng` is
+# the maintained fork of the unmaintained `serde_yaml`, has no C
+# deps, and is the same crate the workspace pulls in transitively
+# via `noyalib` / `frontmatter-gen`.
+serde_yaml_ng = "0.10"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`
@@ -262,6 +292,15 @@ harness = false
 name = "avif_vs_webp"
 harness = false
 required-features = ["image-optimization"]
+
+# Issue #524 acceptance bench: ssg build --incremental warm-cache
+# rebuild ≤ 200ms on a 1000-page fixture. Standalone target so the AC
+# command (`cargo bench --bench incremental_1000_pages`) routes to a
+# single criterion_main without dragging in the unrelated suites.
+[[bench]]
+name = "incremental_1000_pages"
+harness = false
+required-features = ["benchmark"]
 
 # -----------------------------------------------------------------------------
 # Module-mirror harnesses: one explicit entry per `src/<group>/` folder.
@@ -403,7 +442,14 @@ license      = false
 eula         = false
 
 [workspace]
-members = [".", "crates/ssg-core", "crates/ssg-wasm"]
+members = [
+    ".",
+    "crates/ssg-core",
+    "crates/ssg-rpc",
+    "crates/ssg-rpc-macro",
+    "crates/ssg-search",
+    "crates/ssg-wasm",
+]
 default-members = ["."]
 
 [workspace.lints.rust]

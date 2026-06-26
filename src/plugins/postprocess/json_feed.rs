@@ -13,6 +13,7 @@
 use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars};
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::fs;
@@ -349,14 +350,13 @@ pub(super) fn inject_json_feed_link(
         if html.contains("application/feed+json") {
             continue;
         }
-        let Some(pos) = html.find("</head>") else {
-            continue;
-        };
         let link_tag = format!(
             "  <link rel=\"alternate\" type=\"application/feed+json\" title=\"JSON Feed\" href=\"{feed_url}\"/>\n"
         );
-        let modified = format!("{}{}{}", &html[..pos], link_tag, &html[pos..]);
-        fs::write(path, &modified).with_path(path)?;
+        let modified = inject_before_head_close(&html, &link_tag);
+        if modified != html {
+            fs::write(path, &modified).with_path(path)?;
+        }
     }
     Ok(())
 }
@@ -397,6 +397,9 @@ mod tests {
             i18n: None,
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -691,6 +694,9 @@ mod tests {
             }),
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),
@@ -782,6 +788,9 @@ mod tests {
             i18n: None,
             cdn_prefix: None,
             image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),

@@ -20,6 +20,17 @@
     img { border: 1px solid CanvasText; }
     mark { background: Highlight; color: HighlightText; }
   }
+  /* View Transitions API persistent roots (#547).
+     Naming header/footer keeps them visually still across
+     same-origin navigations; ignored by non-supporting browsers. */
+  header[role="banner"] { view-transition-name: ssg-header; }
+  main { view-transition-name: ssg-main; }
+  footer[role="contentinfo"] { view-transition-name: ssg-footer; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) { animation: none !important; }
+  }
   </style>
   {% block head_extra %}{% endblock %}
 </head>

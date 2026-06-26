@@ -328,6 +328,20 @@ pub trait Plugin: fmt::Debug + Send + Sync {
         false
     }
 
+    /// Returns `true` if this plugin must always observe the full
+    /// `cache.html_files()` list — even during `--incremental`
+    /// rebuilds that only invalidated a handful of pages.
+    ///
+    /// SEO sitemap regeneration, SBOM emission, JSON-LD aggregation,
+    /// and search-index builders all need the complete view of the
+    /// site to produce correct output, so they opt in to `true`
+    /// (the default). Plugins that genuinely work per-file (and so
+    /// can be skipped for unaffected pages) override to `false`.
+    /// (Issue #524 AC7.)
+    fn needs_all_files(&self) -> bool {
+        true
+    }
+
     /// Called before the development server starts serving files.
     ///
     /// Use this hook to inject dev-mode scripts, set up live-reload,
@@ -974,6 +988,30 @@ mod tests {
         );
         assert!(ctx.config.is_some());
         assert_eq!(ctx.config.unwrap().site_name, "test");
+    }
+
+    #[test]
+    fn test_needs_all_files_defaults_to_true() {
+        // Issue #524 AC7: the default is conservative — every plugin
+        // sees the full file list unless it explicitly opts out.
+        let p = NoopPlugin;
+        assert!(p.needs_all_files());
+    }
+
+    #[derive(Debug)]
+    struct PerFilePlugin;
+    impl Plugin for PerFilePlugin {
+        fn name(&self) -> &'static str {
+            "per-file"
+        }
+        fn needs_all_files(&self) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn test_needs_all_files_can_be_overridden() {
+        assert!(!PerFilePlugin.needs_all_files());
     }
 
     #[test]

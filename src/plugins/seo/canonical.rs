@@ -6,6 +6,9 @@
 use super::helpers::escape_attr;
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
+#[cfg(test)]
+use crate::util::head_dom::remove_canonical_links;
+use crate::util::head_dom::replace_canonical_link;
 use anyhow::Result;
 use std::path::Path;
 
@@ -66,17 +69,7 @@ impl Plugin for CanonicalPlugin {
             .replace('\\', "/");
 
         let tag = build_canonical_tag(base, &rel_path);
-
-        let mut result = remove_existing_canonicals(html);
-
-        // Inject the correct canonical before </head>
-        result = if let Some(pos) = result.find("</head>") {
-            format!("{}{}\n{}", &result[..pos], tag, &result[pos..])
-        } else {
-            result
-        };
-
-        Ok(result)
+        Ok(replace_canonical_link(html, &tag))
     }
 
     fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
@@ -91,33 +84,6 @@ fn build_canonical_tag(base: &str, rel_path: &str) -> String {
         "<link rel=\"canonical\" href=\"{}\">",
         escape_attr(&canonical_url)
     )
-}
-
-/// Removes all existing canonical link tags from HTML.
-fn remove_existing_canonicals(html: &str) -> String {
-    let has_canonical = html.contains("rel=\"canonical\"")
-        || html.contains("rel='canonical'")
-        || html.contains("rel=canonical");
-    if !has_canonical {
-        return html.to_string();
-    }
-
-    let mut result = html.to_string();
-    for pat in &["rel=\"canonical\"", "rel='canonical'", "rel=canonical"] {
-        while let Some(pos) = result.find(pat) {
-            let start = result[..pos].rfind('<').unwrap_or(pos);
-            let end = result[pos..]
-                .find('>')
-                .map_or(result.len(), |i| pos + i + 1);
-            let end = if result.as_bytes().get(end) == Some(&b'\n') {
-                end + 1
-            } else {
-                end
-            };
-            result.replace_range(start..end, "");
-        }
-    }
-    result
 }
 
 #[cfg(test)]
@@ -178,13 +144,13 @@ mod tests {
     #[test]
     fn remove_existing_canonicals_no_op_when_none_present() {
         let html = "<head><title>x</title></head>";
-        assert_eq!(remove_existing_canonicals(html), html);
+        assert_eq!(remove_canonical_links(html), html);
     }
 
     #[test]
     fn remove_existing_canonicals_strips_double_quoted() {
         let html = r#"<head><link rel="canonical" href="/old"><title>x</title></head>"#;
-        let out = remove_existing_canonicals(html);
+        let out = remove_canonical_links(html);
         assert!(!out.contains("rel=\"canonical\""));
         assert!(out.contains("<title>x</title>"));
     }
@@ -192,15 +158,15 @@ mod tests {
     #[test]
     fn remove_existing_canonicals_strips_single_quoted() {
         let html = "<head><link rel='canonical' href='/old'></head>";
-        let out = remove_existing_canonicals(html);
-        assert!(!out.contains("rel='canonical'"));
+        let out = remove_canonical_links(html);
+        assert!(!out.contains("canonical"));
     }
 
     #[test]
     fn remove_existing_canonicals_strips_unquoted() {
         let html = "<head><link rel=canonical href=/old></head>";
-        let out = remove_existing_canonicals(html);
-        assert!(!out.contains("rel=canonical"));
+        let out = remove_canonical_links(html);
+        assert!(!out.contains("canonical"));
     }
 
     #[test]
@@ -209,7 +175,7 @@ mod tests {
             <link rel="canonical" href="/a">
             <link rel="canonical" href="/b">
         </head>"#;
-        let out = remove_existing_canonicals(html);
+        let out = remove_canonical_links(html);
         assert!(!out.contains("rel=\"canonical\""));
     }
 

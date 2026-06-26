@@ -37,6 +37,11 @@ bench: ## Run performance benchmarks (Criterion).
 	@echo "Running benchmarks..."
 	@cargo bench --bench bench
 
+# Enforce the WASM gzipped-size budget (#546 AC10) — Edge payload ≤ 2 MB.
+.PHONY: wasm-size
+wasm-size: ## Build crates/ssg-wasm and assert it stays ≤ 2 MB gzipped.
+	@scripts/wasm-size-gate.sh
+
 # Run automated accessibility checks against generated HTML.
 .PHONY: a11y
 a11y: build ## Run pa11y accessibility audit on example site.

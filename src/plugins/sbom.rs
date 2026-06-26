@@ -51,6 +51,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use std::fs;
 use std::path::Path;
 
@@ -101,19 +102,12 @@ impl Plugin for SbomPlugin {
         if html.contains("rel=\"sbom\"") || html.contains("rel='sbom'") {
             return Ok(html.to_string());
         }
-        let Some(head_close) = html.find("</head>") else {
-            return Ok(html.to_string());
-        };
         let link = format!(
             "<link rel=\"sbom\" type=\"application/vnd.cyclonedx+json\" \
              href=\"/{}\">\n",
             Self::sbom_path()
         );
-        let mut out = String::with_capacity(html.len() + link.len());
-        out.push_str(&html[..head_close]);
-        out.push_str(&link);
-        out.push_str(&html[head_close..]);
-        Ok(out)
+        Ok(inject_before_head_close(html, &link))
     }
 }
 

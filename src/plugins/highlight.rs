@@ -9,6 +9,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::head_dom::inject_before_head_close;
 use std::fs;
 use std::path::Path;
 
@@ -135,15 +136,10 @@ fn add_highlight_markup(html: &str) -> String {
 
 /// Injects a `<link>` to highlight.css before `</head>`.
 fn inject_css_link(html: &str) -> String {
-    if let Some(pos) = html.find("</head>") {
-        format!(
-            "{}<link rel=\"stylesheet\" href=\"/highlight.css\">\n{}",
-            &html[..pos],
-            &html[pos..]
-        )
-    } else {
-        html.to_string()
-    }
+    inject_before_head_close(
+        html,
+        "<link rel=\"stylesheet\" href=\"/highlight.css\">\n",
+    )
 }
 
 /// Generates a CSS theme for syntax highlighting.

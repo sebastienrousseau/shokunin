@@ -130,9 +130,16 @@ which produces:
 - Multi-platform binaries (Linux glibc + musl, macOS arm64 + x86_64,
   Windows MSVC) with SHA-256 checksums.
 - Detached GPG signatures (when `GPG_PRIVATE_KEY` secret is configured).
-- A SLSA build provenance attestation via
+- A GitHub-native build provenance attestation via
   `actions/attest-build-provenance` (signed via Sigstore).
-- A CycloneDX SBOM (`scheduled.yml` `sbom` job).
+- A **SLSA v1.1 Level 3** build provenance attestation via the
+  [`slsa-framework/slsa-github-generator`](https://github.com/slsa-framework/slsa-github-generator)
+  reusable workflow — emits `ssg-<tag>.intoto.jsonl` covering every
+  release artefact, with the runner identity attested by GitHub OIDC.
+  A `verify-provenance` job re-runs `slsa-verifier verify-artifact`
+  against the just-published release to catch silent breakage.
+- A CycloneDX 1.5 SBOM and an SPDX 2.3 SBOM
+  (`scheduled.yml` `sbom` job).
 
 To verify a release binary:
 
@@ -144,10 +151,20 @@ sha256sum -c ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256
 gpg --verify ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz.asc \
              ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz
 
-# Verify Sigstore provenance
+# Verify GitHub-native Sigstore attestation
 gh attestation verify ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
                       --owner sebastienrousseau
+
+# Verify SLSA v1.1 Level 3 provenance
+slsa-verifier verify-artifact ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
+  --provenance-path ssg-vX.Y.Z.intoto.jsonl \
+  --source-uri github.com/sebastienrousseau/static-site-generator \
+  --source-tag vX.Y.Z
 ```
+
+The full downstream verification guide — including the regulatory
+cross-reference to EO 14028, the EU CRA, and FedRAMP — lives at
+[`docs/security/sbom-provenance.md`](docs/security/sbom-provenance.md).
 
 ## SBOM (Software Bill of Materials)
 
@@ -185,18 +202,29 @@ cyclonedx validate --input-file sbom.cdx.json \
                    --input-format json
 ```
 
-### Release-artifact SBOM (CI, with transitive deps)
+### Release-artifact SBOMs (CI, with transitive deps)
 
-The `scheduled.yml` `sbom` job runs `cargo cyclonedx --format json`
-and uploads `*.cdx.json` as the `sbom-cyclonedx` build artifact.
-This covers every transitive Cargo dependency, attested by Sigstore
-via `actions/attest-build-provenance`.
+The `scheduled.yml` `sbom` job emits **two** SBOM formats covering
+every transitive Cargo dependency, both attested by Sigstore via
+`actions/attest-build-provenance`:
 
-To fetch the CI-generated SBOM for a specific release:
+- `cargo cyclonedx --format json --spec-version 1.5`
+  → uploaded as the `sbom-cyclonedx` build artefact (`*.cdx.json`).
+- `cargo sbom --output-format spdx_json_2_3`
+  → uploaded as the `sbom-spdx` build artefact (`ssg.spdx.json`).
+
+SPDX 2.3 is the format that NTIA "minimum elements" guidance,
+US EO 14028, and the EU Cyber Resilience Act all currently accept.
+SPDX 3.0 emission is pending upstream tool support; the rationale
+is documented in [`docs/security/sbom-provenance.md`](docs/security/sbom-provenance.md).
+
+To fetch the CI-generated SBOMs for a specific release:
 
 ```sh
 gh run download <run-id> --repo sebastienrousseau/static-site-generator \
                           --name sbom-cyclonedx
+gh run download <run-id> --repo sebastienrousseau/static-site-generator \
+                          --name sbom-spdx
 ```
 
 ### Verification of the per-page link

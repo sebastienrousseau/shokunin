@@ -74,25 +74,33 @@ impl Plugin for DeployPlugin {
 }
 
 /// Security headers shared across all platforms.
-const SECURITY_HEADERS: &[(&str, &str)] = &[
-    ("X-Content-Type-Options", "nosniff"),
-    ("X-Frame-Options", "DENY"),
-    ("X-XSS-Protection", "1; mode=block"),
-    ("Referrer-Policy", "strict-origin-when-cross-origin"),
-    (
-        "Permissions-Policy",
-        "camera=(), microphone=(), geolocation=()",
-    ),
-    (
-        "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'",
-    ),
-    ("Strict-Transport-Security", "max-age=31536000; includeSubDomains"),
-];
+///
+/// The `Content-Security-Policy` value is sourced from
+/// [`crate::csp::computed_policy`] so the deploy adapter and the
+/// `<meta>`-injecting CSP plugin stay in lock-step — and so the new
+/// `edge_headers` postprocess plugin (issue #550) has a single source
+/// of truth for the CSP string.
+const fn security_headers() -> [(&'static str, &'static str); 7] {
+    [
+        ("X-Content-Type-Options", "nosniff"),
+        ("X-Frame-Options", "DENY"),
+        ("X-XSS-Protection", "1; mode=block"),
+        ("Referrer-Policy", "strict-origin-when-cross-origin"),
+        (
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        ),
+        ("Content-Security-Policy", crate::csp::computed_policy()),
+        (
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        ),
+    ]
+}
 
 fn generate_netlify(site_dir: &std::path::Path) -> Result<()> {
     let mut headers = String::from("/*\n");
-    for (k, v) in SECURITY_HEADERS {
+    for (k, v) in security_headers() {
         headers.push_str(&format!("  {k} = {v}\n"));
     }
     // Content-addressable assets (CSS/JS/images/fonts) — see issue
@@ -145,7 +153,7 @@ fn generate_netlify(site_dir: &std::path::Path) -> Result<()> {
 
 fn generate_vercel(site_dir: &std::path::Path) -> Result<()> {
     let mut headers_arr = Vec::new();
-    for (k, v) in SECURITY_HEADERS {
+    for (k, v) in security_headers() {
         headers_arr.push(serde_json::json!({"key": k, "value": v}));
     }
 
@@ -180,7 +188,7 @@ fn generate_vercel(site_dir: &std::path::Path) -> Result<()> {
 
 fn generate_cloudflare(site_dir: &std::path::Path) -> Result<()> {
     let mut headers = String::from("/*\n");
-    for (k, v) in SECURITY_HEADERS {
+    for (k, v) in security_headers() {
         headers.push_str(&format!("  {k} : {v}\n"));
     }
     // Content-addressable assets (#468) — same set as Netlify.
@@ -243,9 +251,9 @@ mod tests {
     }
 
     /// Asserts that *every* security header documented in
-    /// `SECURITY_HEADERS` appears verbatim (key + value) inside `body`.
+    /// [`security_headers`] appears verbatim (key + value) inside `body`.
     fn assert_all_security_headers_present(body: &str) {
-        for (k, v) in SECURITY_HEADERS {
+        for (k, v) in security_headers() {
             assert!(
                 body.contains(k),
                 "missing header key `{k}` in body:\n{body}"

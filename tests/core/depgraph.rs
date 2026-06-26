@@ -36,8 +36,8 @@ fn invalidated_pages_finds_dependents_of_changed_file() {
     let mut g = DepGraph::new();
     g.add_dep(&PathBuf::from("a.md"), &PathBuf::from("shared.html"));
     g.add_dep(&PathBuf::from("b.md"), &PathBuf::from("shared.html"));
-    let invalidated = g.invalidated_pages(&[PathBuf::from("shared.html")]);
-    // invalidated_pages returns the union of {changed} ∪ {pages depending
+    let invalidated = g.invalidated(&[PathBuf::from("shared.html")]);
+    // invalidated returns the union of {changed} ∪ {consumers depending
     // on changed} — so we expect 3 entries: shared.html + a.md + b.md.
     assert_eq!(invalidated.len(), 3);
 }

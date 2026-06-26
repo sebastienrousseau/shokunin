@@ -11,12 +11,21 @@
 //!   them.
 //! - Create build and site directories on disk, ensuring distinct paths
 //!   so `staticdatagen::compile` can finalise output by renaming.
-//! - Pre-process front-matter for every page in the content tree before
-//!   the compiler is invoked.
 //!
 //! Most binaries should call [`crate::run`] rather than this module
 //! directly; the helpers here are exposed for tests and embedders that
 //! need a smaller building block than the full pipeline.
+//!
+//! # Source files are immutable
+//!
+//! As of issue #543, this module never writes back to any file under
+//! `content/`. An earlier `preprocess_content` helper used to rewrite
+//! markdown sources in place with a `<!--frontmatter-processed-->`
+//! sentinel; that path was destructive (it dirtied users' git working
+//! trees on every build and left source files partially transformed if
+//! the build crashed mid-pass), was not load-bearing for any active
+//! plugin, and has been removed. Front-matter parsing now happens in
+//! memory inside [`staticdatagen::compiler::service::compile`].
 
 use clap::ArgMatches;
 use std::{fs, path::Path};
@@ -219,47 +228,6 @@ fn internal_compile(
     .map_err(|e| e.to_string())
 }
 
-/// Preprocesses markdown files to properly handle frontmatter
-fn preprocess_content(content_path: &Path) -> Result<(), ProcessError> {
-    if !content_path.exists() {
-        return Ok(());
-    }
-
-    // Process all .md files in the content directory
-    for entry in fs::read_dir(content_path)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_file() && path.extension().is_some_and(|ext| ext == "md") {
-            let content = fs::read_to_string(&path)?;
-            let processed_content = process_frontmatter(&content)?;
-            fs::write(&path, processed_content)?;
-        }
-    }
-    Ok(())
-}
-
-/// Processes frontmatter in markdown content to ensure proper rendering
-fn process_frontmatter(content: &str) -> Result<String, ProcessError> {
-    const DELIMITER: &str = "---";
-
-    let parts: Vec<&str> = content.splitn(3, DELIMITER).collect();
-    match parts.len() {
-        3 => {
-            // Format: ---\nfrontmatter\n---\ncontent
-            let frontmatter = parts[1].trim();
-            let main_content = parts[2].trim();
-
-            // Add an HTML comment to preserve frontmatter for metadata processing
-            // while preventing it from appearing in the rendered output
-            Ok(format!(
-                "---\n{frontmatter}\n---\n<!--frontmatter-processed-->\n{main_content}"
-            ))
-        }
-        _ => Ok(content.to_string()), // Return unchanged if no frontmatter found
-    }
-}
-
 /// Processes CLI arguments and executes the corresponding site compilation workflow.
 ///
 /// This function performs the following steps:
@@ -300,10 +268,10 @@ pub fn args(matches: &ArgMatches) -> Result<(), ProcessError> {
     ensure_directory(site_path, "project")?;
     ensure_directory(template_path, "template")?;
 
-    // Preprocess content files to handle frontmatter
-    preprocess_content(content_path)?;
-
-    // Compile the site
+    // Compile the site. Note: front-matter is parsed in memory by
+    // `staticdatagen::compiler::service::compile`; we deliberately do
+    // NOT pre-process / rewrite source `.md` files here (see issue
+    // #543 — the previous in-place writer dirtied users' git trees).
     internal_compile(build_path, content_path, site_path, template_path)
         .map_err(ProcessError::CompilationError)?;
 
@@ -495,100 +463,11 @@ mod tests {
 
         Ok(())
     }
-    #[test]
-    fn test_process_frontmatter_with_valid_frontmatter(
-    ) -> Result<(), ProcessError> {
-        let content = "\
----
-title: Test Post
-date: 2024-01-01
----
-# Main Content
-This is the main content.";
-
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        assert!(processed.contains("title: Test Post"));
-        assert!(processed.contains("# Main Content"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_without_frontmatter() -> Result<(), ProcessError>
-    {
-        let content = "# Just Content\nNo frontmatter here.";
-        let processed = process_frontmatter(content)?;
-        assert_eq!(processed, content);
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_with_empty_frontmatter(
-    ) -> Result<(), ProcessError> {
-        let content = "---\n---\nContent after empty frontmatter";
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_preprocess_content_with_multiple_files() -> Result<(), ProcessError>
-    {
-        let temp_dir = tempdir()?;
-
-        // Create multiple markdown files
-        let file1_path = temp_dir.path().join("post1.md");
-        let file2_path = temp_dir.path().join("post2.md");
-        let non_md_path = temp_dir.path().join("other.txt");
-
-        fs::write(&file1_path, "---\ntitle: Post 1\n---\nContent 1")?;
-        fs::write(&file2_path, "---\ntitle: Post 2\n---\nContent 2")?;
-        fs::write(&non_md_path, "Not a markdown file")?;
-
-        preprocess_content(temp_dir.path())?;
-
-        // Verify markdown files were processed
-        let content1 = fs::read_to_string(&file1_path)?;
-        let content2 = fs::read_to_string(&file2_path)?;
-        let other = fs::read_to_string(&non_md_path)?;
-
-        assert!(content1.contains("<!--frontmatter-processed-->"));
-        assert!(content2.contains("<!--frontmatter-processed-->"));
-        assert_eq!(other, "Not a markdown file");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_preprocess_content_with_non_existent_directory(
-    ) -> Result<(), ProcessError> {
-        let non_existent = Path::new("non_existent_directory");
-        let result = preprocess_content(non_existent);
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn test_preprocess_content_with_invalid_permissions() {
-        use std::fs::Permissions;
-        use std::os::unix::fs::PermissionsExt;
-
-        let temp_dir = tempdir().unwrap();
-        let file_path = temp_dir.path().join("readonly.md");
-
-        // Create file with frontmatter
-        fs::write(&file_path, "---\ntitle: Test\n---\nContent").unwrap();
-
-        // Make file read-only
-        fs::set_permissions(&file_path, Permissions::from_mode(0o444)).unwrap();
-
-        let result = preprocess_content(temp_dir.path());
-        assert!(result.is_err());
-
-        // Reset permissions for cleanup
-        fs::set_permissions(&file_path, Permissions::from_mode(0o666)).unwrap();
-    }
+    // NOTE: Tests for the old `preprocess_content` / `process_frontmatter`
+    // helpers were removed in issue #543 along with the destructive in-place
+    // writer those helpers backed. Source files in `content/` are no longer
+    // rewritten during a build; see the new integration test at
+    // `tests/build_does_not_mutate_sources.rs` for the regression guard.
 
     #[test]
     fn test_internal_compile_error_handling() {
@@ -651,141 +530,6 @@ This is the main content.";
 
         // Should succeed because path exists and is a directory
         assert!(result.is_ok());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_preprocess_content_with_invalid_utf8() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("invalid.md");
-
-        // Write invalid UTF-8 bytes
-        let invalid_bytes = vec![0xFF, 0xFF];
-        fs::write(&file_path, invalid_bytes)?;
-
-        let result = preprocess_content(temp_dir.path());
-        assert!(result.is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_with_multiple_delimiters() -> Result<()> {
-        let content = "\
----
-title: First
----
----
-title: Second
----
-Content";
-
-        let processed = process_frontmatter(content)?;
-        // Should only process the first frontmatter section
-        assert!(processed.contains("title: First"));
-        assert!(processed.contains("---\ntitle: Second"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_with_malformed_delimiters(
-    ) -> Result<(), ProcessError> {
-        // Test case where there's only one delimiter
-        let content = "---\ntitle: Test\nContent";
-        let processed = process_frontmatter(content)?;
-        assert_eq!(processed, content); // Should remain unchanged with single delimiter
-
-        // Test case with extra spaces in delimiters (this should still be valid frontmatter)
-        let content = "---\ntitle: Test\n---\nContent";
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        assert!(processed.contains("title: Test"));
-        assert!(processed.contains("Content"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_with_whitespace() -> Result<(), ProcessError> {
-        // Test with whitespace before first delimiter
-        let content = "\n\n---\ntitle: Test\n---\nContent";
-        let processed = process_frontmatter(content)?;
-        // Should still process valid frontmatter even with leading whitespace
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        assert!(processed.contains("title: Test"));
-        assert!(processed.contains("Content"));
-
-        // Test with mixed whitespace in frontmatter
-        let content = "---\n  title: Test  \n  author: Someone  \n---\nContent";
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        assert!(processed.contains("title: Test"));
-        assert!(processed.contains("author: Someone"));
-        assert!(processed.contains("Content"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_with_invalid_format() -> Result<(), ProcessError>
-    {
-        // Missing second delimiter completely
-        let content = "---\ntitle: Test\nContent";
-        let processed = process_frontmatter(content)?;
-        assert_eq!(processed, content);
-
-        // Wrong delimiter character
-        let content = "===\ntitle: Test\n===\nContent";
-        let processed = process_frontmatter(content)?;
-        assert_eq!(processed, content);
-
-        // Empty content between delimiters
-        let content = "---\n\n---\nContent";
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_preprocess_content_with_nested_directories(
-    ) -> Result<(), ProcessError> {
-        let temp_dir = tempdir()?;
-        let nested_dir = temp_dir.path().join("nested");
-        fs::create_dir(&nested_dir)?;
-
-        // Create files in both root and nested directory
-        let root_file = temp_dir.path().join("root.md");
-        let nested_file = nested_dir.join("nested.md");
-
-        fs::write(&root_file, "---\ntitle: Root\n---\nRoot content")?;
-        fs::write(&nested_file, "---\ntitle: Nested\n---\nNested content")?;
-
-        preprocess_content(temp_dir.path())?;
-
-        // Verify only root file was processed (since we don't recurse into subdirectories)
-        let root_content = fs::read_to_string(&root_file)?;
-        assert!(root_content.contains("<!--frontmatter-processed-->"));
-
-        let nested_content = fs::read_to_string(&nested_file)?;
-        assert!(!nested_content.contains("<!--frontmatter-processed-->"));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_preprocess_content_with_empty_files() -> Result<(), ProcessError> {
-        let temp_dir = tempdir()?;
-        let empty_file = temp_dir.path().join("empty.md");
-
-        // Create empty markdown file
-        fs::write(&empty_file, "")?;
-
-        preprocess_content(temp_dir.path())?;
-
-        // Verify empty file remains unchanged
-        let content = fs::read_to_string(&empty_file)?;
-        assert!(content.is_empty());
 
         Ok(())
     }
@@ -864,22 +608,6 @@ Content";
         let error = ProcessError::MissingArgument("arg".to_string());
         let debug = format!("{error:?}");
         assert!(debug.contains("MissingArgument"));
-    }
-
-    #[test]
-    fn test_preprocess_content_empty_directory() -> Result<(), ProcessError> {
-        let temp_dir = tempdir()?;
-        // Empty directory should succeed without error
-        preprocess_content(temp_dir.path())?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_process_frontmatter_only_delimiters() -> Result<(), ProcessError> {
-        let content = "---\n---\n";
-        let processed = process_frontmatter(content)?;
-        assert!(processed.contains("<!--frontmatter-processed-->"));
-        Ok(())
     }
 
     #[test]

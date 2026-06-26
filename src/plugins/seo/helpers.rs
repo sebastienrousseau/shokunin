@@ -4,21 +4,17 @@
 //! Internal helper functions for SEO plugins.
 
 use crate::error::SsgError;
+use crate::util::head_dom::extract_head_meta;
 use std::path::{Path, PathBuf};
 
 /// Extract the page title from the `<title>` tag.
+///
+/// Backed by [`extract_head_meta`] so a comment containing
+/// `<!-- <title>…</title> -->` no longer fools the extractor and quoting
+/// / attribute-order variants on `<title>` (extremely rare but legal)
+/// are handled by the parser.
 pub fn extract_title(html: &str) -> String {
-    if let Some(start) = html.find("<title>") {
-        let after = &html[start + 7..];
-        if let Some(end) = after.find("</title>") {
-            let title = strip_tags(&after[..end]);
-            let trimmed = title.trim();
-            if !trimmed.is_empty() {
-                return trimmed.to_string();
-            }
-        }
-    }
-    String::new()
+    extract_head_meta(html).title
 }
 
 /// Extract plain text from the page content, strip tags, and truncate to
@@ -159,18 +155,12 @@ pub fn has_meta_tag(html: &str, attr: &str) -> bool {
 }
 
 /// Extract the canonical URL from a `<link rel="canonical">` tag.
+///
+/// Backed by [`extract_head_meta`] so the result no longer depends on
+/// attribute order or quoting, and `<pre>` content containing a literal
+/// canonical link does not leak into the result.
 pub(super) fn extract_canonical(html: &str) -> String {
-    if let Some(pos) = html.find("rel=\"canonical\"") {
-        let region_start = pos.saturating_sub(200);
-        let region = &html[region_start..html.len().min(pos + 200)];
-        if let Some(href_start) = region.find("href=\"") {
-            let after = &region[href_start + 6..];
-            if let Some(end) = after.find('"') {
-                return after[..end].to_string();
-            }
-        }
-    }
-    String::new()
+    extract_head_meta(html).canonical
 }
 
 /// Extract the content of a specific meta tag by name or property.
@@ -196,24 +186,11 @@ pub(super) fn extract_existing_meta(html: &str, attr: &str) -> String {
 }
 
 /// Extract the `lang` attribute from the `<html>` tag.
+///
+/// Backed by [`extract_head_meta`] so a `<pre>` block containing
+/// `<html lang="…">` markup no longer confuses the extractor.
 pub(super) fn extract_html_lang(html: &str) -> String {
-    if let Some(start) = html.find("<html") {
-        let tag_end = html[start..].find('>').unwrap_or(200);
-        let tag = &html[start..start + tag_end];
-        if let Some(lang_pos) = tag.find("lang=\"") {
-            let after = &tag[lang_pos + 6..];
-            if let Some(end) = after.find('"') {
-                return after[..end].to_string();
-            }
-        }
-        if let Some(lang_pos) = tag.find("lang='") {
-            let after = &tag[lang_pos + 6..];
-            if let Some(end) = after.find('\'') {
-                return after[..end].to_string();
-            }
-        }
-    }
-    String::new()
+    extract_head_meta(html).lang
 }
 
 /// Extract the first image URL from `<main>` or `<article>` content.

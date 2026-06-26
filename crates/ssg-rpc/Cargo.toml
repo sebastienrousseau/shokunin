@@ -1,0 +1,40 @@
+[package]
+name = "ssg-rpc"
+version = "0.0.44"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = "Edge RPC layer for SSG — JSON-over-POST dispatcher + #[ssg_rpc] macro + TypeScript schema emitter."
+repository = "https://github.com/sebastienrousseau/static-site-generator"
+keywords = ["ssg", "rpc", "wasm", "edge", "typescript"]
+categories = ["web-programming", "wasm"]
+publish = false
+
+[dependencies]
+# Dispatch registry uses `inventory` for distributed, link-time
+# function collection. Pure Rust, no allocator quirks on wasm32,
+# and the de facto standard for collect-on-link patterns. Disabling
+# `inventory` (off by default for `no_std` consumers) makes the
+# registration step a no-op so the host site can still build.
+inventory = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Schema generator. We deliberately use schemars instead of specta
+# (still 2.0.0-rc as of 2026-06) — schemars 1.x is stable, has no
+# C deps, and produces draft-2020-12 JSON Schemas we can translate
+# into TypeScript declarations with a small in-house emitter.
+schemars = { version = "1.2", default-features = false, features = ["derive", "std"] }
+thiserror = "2"
+
+# Re-export the proc-macro so users only depend on `ssg-rpc`.
+ssg-rpc-macro = { path = "../ssg-rpc-macro", version = "0.0.44" }
+
+[dev-dependencies]
+criterion = "0.8"
+
+[[bench]]
+name = "dispatch"
+harness = false
+
+[lints]
+workspace = true

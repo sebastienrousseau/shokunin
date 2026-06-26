@@ -201,9 +201,39 @@ impl TemplateEngine {
             };
 
             let value: Option<serde_json::Value> = match ext.as_str() {
-                "toml" => toml::from_str::<serde_json::Value>(&content).ok(),
-                "json" => serde_json::from_str(&content).ok(),
-                "yml" | "yaml" => serde_json::from_str(&content).ok(),
+                "toml" => match toml::from_str::<serde_json::Value>(&content) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        log::warn!(
+                            "Failed to parse data file {}: {e}",
+                            path.display()
+                        );
+                        None
+                    }
+                },
+                "json" => match serde_json::from_str(&content) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        log::warn!(
+                            "Failed to parse data file {}: {e}",
+                            path.display()
+                        );
+                        None
+                    }
+                },
+                "yml" | "yaml" => {
+                    match serde_yaml_ng::from_str::<serde_json::Value>(&content)
+                    {
+                        Ok(v) => Some(v),
+                        Err(e) => {
+                            log::warn!(
+                                "Failed to parse data file {}: {e}",
+                                path.display()
+                            );
+                            None
+                        }
+                    }
+                }
                 _ => None,
             };
 

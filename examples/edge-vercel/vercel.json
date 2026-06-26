@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "functions": {
+    "api/[...path].ts": {
+      "runtime": "edge",
+      "memory": 128
+    },
+    "api/__ssg/invalidate.ts": {
+      "runtime": "edge",
+      "memory": 128
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/__ssg/invalidate",
+      "destination": "/api/__ssg/invalidate"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
+}

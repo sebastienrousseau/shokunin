@@ -224,7 +224,7 @@ fn depgraph_10k_entries_under_50ms() {
         );
     }
     let changed = vec![std::path::PathBuf::from("templates/base.html")];
-    let invalidated = graph.invalidated_pages(&changed);
+    let invalidated = graph.invalidated(&changed);
     let elapsed = start.elapsed();
 
     assert!(
@@ -437,7 +437,7 @@ fn depgraph_save_load_roundtrip() {
     assert_eq!(loaded.page_count(), 2);
 
     let changed = vec![std::path::PathBuf::from("base.html")];
-    let inv = loaded.invalidated_pages(&changed);
+    let inv = loaded.invalidated(&changed);
     assert!(
         inv.len() >= 2,
         "Round-tripped graph must preserve deps, got {}",

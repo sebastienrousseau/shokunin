@@ -21,10 +21,14 @@
 //!   `.meta.json` sidecars.
 //! - `JsonFeedPlugin` -- Generates a JSON Feed 1.1 `feed.json` from
 //!   `.meta.json` sidecars (alongside the RSS/Atom feeds).
+//! - `EdgeHeadersPlugin` -- Emits PQC-aware platform header configs
+//!   for Cloudflare Workers, Netlify, and Vercel (issue #550).
 
 pub(crate) mod helpers;
 
+pub mod agentic_discovery;
 mod atom;
+pub mod edge_headers;
 mod html_fix;
 mod json_feed;
 mod manifest;
@@ -33,7 +37,14 @@ mod rss;
 mod sbom;
 mod sitemap;
 
+pub use agentic_discovery::{
+    build_manifest, build_registry, collect_mcp_resources, render_agents_txt,
+    write_agents_txt, write_ai_plugin_json, write_mcp_registry, AgentRule,
+    AgenticDiscoveryPlugin, AgentsConfig, McpConfig, McpPromptDecl,
+    McpResource, McpToolDecl,
+};
 pub use atom::AtomFeedPlugin;
+pub use edge_headers::EdgeHeadersPlugin;
 pub use html_fix::HtmlFixPlugin;
 pub use json_feed::JsonFeedPlugin;
 pub use manifest::ManifestFixPlugin;

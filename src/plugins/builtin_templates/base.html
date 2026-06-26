@@ -1,0 +1,28 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+<!DOCTYPE html>
+<html lang="{{ site.language | default('en') }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.title | default('Site') }}{% endblock %}</title>
+  {% if site.base_url %}<link rel="canonical" href="{{ site.base_url }}{{ page_url | default('/') }}">{% endif %}
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  {% block header %}
+  <header role="banner">
+    <nav aria-label="Main navigation">
+      <a href="/">{{ site.name | default('Home') }}</a>
+    </nav>
+  </header>
+  {% endblock %}
+  <main id="main-content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+  {% block footer %}
+  <footer role="contentinfo">
+    <p>&copy; {{ site.name | default('') }}</p>
+  </footer>
+  {% endblock %}
+</body>
+</html>
