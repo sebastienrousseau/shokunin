@@ -70,8 +70,8 @@ const AVIF_SPEED: u8 = 4;
 pub struct ImageOptimizationPlugin {
     /// WebP encoding quality (1–100). Defaults to 80.
     pub quality: u8,
-    /// AVIF encoding quality (1–100). Defaults to 70 — see
-    /// [`DEFAULT_AVIF_QUALITY`] for the rationale.
+    /// AVIF encoding quality (1–100). Defaults to 70 — see the
+    /// `DEFAULT_AVIF_QUALITY` private constant for the rationale.
     pub avif_quality: u8,
     /// Skip AVIF encoding for non-priority images (saves build time
     /// at the cost of bandwidth on modern browsers). Hero images
@@ -332,8 +332,8 @@ fn process_image(
 /// disk.
 ///
 /// `quality` is clamped to `1..=100`; the speed preset is fixed at
-/// [`AVIF_SPEED`] (4 — "balanced"). Alpha channels use the same quality
-/// as colour.
+/// `AVIF_SPEED` (4 — "balanced", private constant). Alpha channels
+/// use the same quality as colour.
 ///
 /// # Examples
 ///
@@ -350,7 +350,7 @@ fn process_image(
 /// ```
 ///
 /// # Errors
-/// Returns [`SsgError::Other`] wrapping the underlying `ravif::Error`
+/// Returns [`SsgError::Io`] wrapping the underlying `ravif::Error`
 /// if rav1e fails to encode (effectively a bug in ravif/rav1e — the
 /// inputs we feed are always valid).
 #[cfg(feature = "image-optimization")]

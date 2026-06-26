@@ -9,7 +9,7 @@
 //! Provides everything needed to ship a privacy-first, fully static
 //! semantic search experience for an SSG site:
 //!
-//! - A **build-side** API ([`build`]) that walks document text, runs the
+//! - A **build-side** API ([`Artifacts::from_docs`]) that walks document text, runs the
 //!   embedder, L2-normalises every vector, and serialises the corpus
 //!   into a flat little-endian `f32` blob (`embeddings.bin`) together
 //!   with a `manifest.json`, `model.bin`, and `tokenizer.bin`.

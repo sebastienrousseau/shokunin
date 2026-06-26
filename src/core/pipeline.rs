@@ -356,7 +356,8 @@ pub fn build_pipeline(
     (plugins, ctx, build_dir, site_dir)
 }
 
-/// Appends ISR-specific plugins (currently just [`IsrManifestPlugin`]).
+/// Appends ISR-specific plugins (currently just
+/// [`crate::isr_manifest::IsrManifestPlugin`]).
 ///
 /// Pulled out of [`register_default_plugins`] so the default plugin
 /// graph stays byte-identical when `--isr` is not passed (AC9 of
