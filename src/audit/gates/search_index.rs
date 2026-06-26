@@ -219,4 +219,148 @@ mod tests {
             .iter()
             .any(|x| x.code.as_deref() == Some("SEARCH-HASH-MISMATCH")));
     }
+
+    #[test]
+    fn dist_layout_is_discovered() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("dist").join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        let body: Vec<u8> = b"vectors".to_vec();
+        std::fs::write(search.join("embeddings.bin"), &body).unwrap();
+        let mut h = Sha256::new();
+        h.update(&body);
+        let hash = hex_encode(&h.finalize());
+        std::fs::write(
+            search.join("manifest.json"),
+            format!(r#"{{"embeddings_sha256":"{hash}"}}"#),
+        )
+        .unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn empty_bin_flagged() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        std::fs::write(search.join("embeddings.bin"), b"").unwrap();
+        let mut h = Sha256::new();
+        h.update(b"");
+        let hash = hex_encode(&h.finalize());
+        std::fs::write(
+            search.join("manifest.json"),
+            format!(r#"{{"embeddings_sha256":"{hash}"}}"#),
+        )
+        .unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("SEARCH-EMPTY")));
+    }
+
+    #[test]
+    fn missing_manifest_flags_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        std::fs::write(search.join("embeddings.bin"), b"data").unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("SEARCH-MANIFEST-MISSING")));
+    }
+
+    #[test]
+    fn invalid_manifest_json_flags_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        std::fs::write(search.join("embeddings.bin"), b"data").unwrap();
+        std::fs::write(search.join("manifest.json"), "{ this is not json")
+            .unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("SEARCH-MANIFEST-INVALID")));
+    }
+
+    #[test]
+    fn manifest_without_hash_field_warns() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        std::fs::write(search.join("embeddings.bin"), b"data").unwrap();
+        std::fs::write(search.join("manifest.json"), r#"{"version":1}"#)
+            .unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        let hm = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("SEARCH-HASH-MISSING"))
+            .expect("hash-missing finding");
+        assert!(matches!(hm.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn case_insensitive_hash_comparison() {
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(&search).unwrap();
+        let body: Vec<u8> = b"vectors".to_vec();
+        std::fs::write(search.join("embeddings.bin"), &body).unwrap();
+        let mut h = Sha256::new();
+        h.update(&body);
+        let hash = hex_encode(&h.finalize()).to_uppercase();
+        std::fs::write(
+            search.join("manifest.json"),
+            format!(r#"{{"embeddings_sha256":"{hash}"}}"#),
+        )
+        .unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert!(f.is_empty(), "uppercase hash should match: {f:?}");
+    }
+
+    #[test]
+    fn hex_encode_round_trip_is_lowercase_hex() {
+        let s = hex_encode(&[0x00, 0x0f, 0xab, 0xff]);
+        assert_eq!(s, "000fabff");
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = SearchIndexGate;
+        assert_eq!(g.name(), "search_index");
+        assert!(g.explain().contains("embeddings"));
+        let _copy: SearchIndexGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("SearchIndexGate"));
+    }
 }

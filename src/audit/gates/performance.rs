@@ -182,4 +182,127 @@ mod tests {
         let f = PerformanceGate.run(&site(&html), &opts);
         assert!(f.iter().any(|x| x.code.as_deref() == Some("PERF-JS-OVER")));
     }
+
+    #[test]
+    fn external_script_src_does_not_count_toward_js_budget() {
+        let html = r#"<html><body><script src="https://cdn.example/big.js"></script></body></html>"#;
+        let opts = AuditOptions {
+            js_budget: 50,
+            page_weight_budget: 1_000_000,
+            ..AuditOptions::default()
+        };
+        let f = PerformanceGate.run(&site(html), &opts);
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("PERF-JS-OVER")),
+            "external scripts must not count; got {f:?}"
+        );
+    }
+
+    #[test]
+    fn protocol_relative_script_src_is_external() {
+        let html = r#"<html><body><script src="//cdn.example/big.js"></script></body></html>"#;
+        let opts = AuditOptions {
+            js_budget: 1,
+            page_weight_budget: 1_000_000,
+            ..AuditOptions::default()
+        };
+        let f = PerformanceGate.run(&site(html), &opts);
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("PERF-JS-OVER")));
+    }
+
+    #[test]
+    fn referenced_root_relative_js_is_summed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(root.join("big.js"), vec![0u8; 5_000]).unwrap();
+        let html_path = root.join("page.html");
+        std::fs::write(
+            &html_path,
+            r#"<html><body><script src="/big.js"></script></body></html>"#,
+        )
+        .unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: vec![html_path],
+        };
+        let opts = AuditOptions {
+            js_budget: 100,
+            page_weight_budget: 1_000_000,
+            ..AuditOptions::default()
+        };
+        let f = PerformanceGate.run(&s, &opts);
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("PERF-JS-OVER")),
+            "expected JS-OVER from referenced file; got {f:?}"
+        );
+    }
+
+    #[test]
+    fn referenced_relative_js_uses_page_parent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let sub = root.join("sub");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(sub.join("local.js"), vec![0u8; 5_000]).unwrap();
+        let html_path = sub.join("page.html");
+        std::fs::write(
+            &html_path,
+            r#"<html><body><script src="local.js"></script></body></html>"#,
+        )
+        .unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: vec![html_path],
+        };
+        let opts = AuditOptions {
+            js_budget: 100,
+            page_weight_budget: 1_000_000,
+            ..AuditOptions::default()
+        };
+        let f = PerformanceGate.run(&s, &opts);
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("PERF-JS-OVER")),
+            "expected JS-OVER from page-relative ref; got {f:?}"
+        );
+    }
+
+    #[test]
+    fn unreadable_html_file_is_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bogus = tmp.path().join("ghost.html");
+        let s = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: vec![bogus],
+        };
+        std::mem::forget(tmp);
+        let f = PerformanceGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn inline_js_is_counted_when_no_src_attribute() {
+        let html = format!(
+            "<html><body><script>{}</script><script>nested</script></body></html>",
+            "y".repeat(200)
+        );
+        let opts = AuditOptions {
+            js_budget: 100,
+            page_weight_budget: 1_000_000,
+            ..AuditOptions::default()
+        };
+        let f = PerformanceGate.run(&site(&html), &opts);
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("PERF-JS-OVER")));
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = PerformanceGate;
+        assert_eq!(g.name(), "performance");
+        assert!(g.explain().contains("budget"));
+        let _copy: PerformanceGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("PerformanceGate"));
+    }
 }

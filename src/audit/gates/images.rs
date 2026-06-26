@@ -197,4 +197,115 @@ mod tests {
             .iter()
             .any(|x| x.code.as_deref() == Some("IMG-OVER-BUDGET")));
     }
+
+    #[test]
+    fn missing_width_height_warns_with_dims_code() {
+        let html = r#"<html><body><img src="a.jpg" alt="a"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        let dims = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("IMG-DIMS"))
+            .expect("dims finding");
+        assert!(matches!(dims.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn missing_only_height_still_flags_dims() {
+        let html =
+            r#"<html><body><img src="a.jpg" alt="a" width="10"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-DIMS")));
+    }
+
+    #[test]
+    fn no_modern_sibling_warns() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(root.join("plain.png"), vec![0u8; 10]).unwrap();
+        let html_path = root.join("page.html");
+        std::fs::write(
+            &html_path,
+            r#"<html><body><img src="plain.png" alt="p" width="1" height="1"></body></html>"#,
+        )
+        .unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: vec![html_path],
+        };
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn avif_sibling_suppresses_no_modern() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(root.join("hero.png"), vec![0u8; 10]).unwrap();
+        std::fs::write(root.join("hero.avif"), vec![0u8; 5]).unwrap();
+        let html_path = root.join("page.html");
+        std::fs::write(
+            &html_path,
+            r#"<html><body><img src="hero.png" alt="h" width="1" height="1"></body></html>"#,
+        )
+        .unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: vec![html_path],
+        };
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn external_image_src_is_skipped() {
+        let html = r#"<html><body><img src="https://cdn.example/a.jpg" alt="x" width="1" height="1"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("IMG-OVER-BUDGET")
+                    && x.code.as_deref() != Some("IMG-NO-MODERN")),
+            "external imgs should not be probed; got {f:?}"
+        );
+    }
+
+    #[test]
+    fn data_uri_image_src_is_skipped() {
+        let html = r#"<html><body><img src="data:image/png;base64,iVBOR" alt="x" width="1" height="1"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(f
+            .iter()
+            .all(|x| x.code.as_deref() != Some("IMG-OVER-BUDGET")));
+    }
+
+    #[test]
+    fn protocol_relative_image_src_is_skipped() {
+        let html = r#"<html><body><img src="//cdn.example/a.jpg" alt="x" width="1" height="1"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn unreadable_html_skipped_no_panic() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bogus = tmp.path().join("ghost.html");
+        let s = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: vec![bogus],
+        };
+        std::mem::forget(tmp);
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = ImagesGate;
+        assert_eq!(g.name(), "images");
+        assert!(g.explain().contains("alt"));
+        let _copy: ImagesGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("ImagesGate"));
+    }
 }

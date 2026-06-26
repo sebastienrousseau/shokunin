@@ -248,4 +248,93 @@ mod tests {
         let f = WcagGate.run(&empty_site(), &AuditOptions::default());
         assert!(f.is_empty());
     }
+
+    #[test]
+    fn missing_html_lang_flagged_3_1_1() {
+        let html = r#"<!doctype html><html><head><title>x</title></head><body><main><h1>x</h1></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-3.1.1")
+            && matches!(x.severity, Severity::Error)));
+    }
+
+    #[test]
+    fn banned_marquee_flagged_2_3_1() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><marquee>scroll</marquee></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-2.3.1")
+            && matches!(x.severity, Severity::Error)));
+    }
+
+    #[test]
+    fn banned_blink_flagged_2_3_1() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><blink>blink</blink></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-2.3.1")));
+    }
+
+    #[test]
+    fn heading_skip_warns_1_3_1() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>top</h1><h4>too deep</h4></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        let h = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("WCAG-1.3.1"))
+            .expect("heading-hierarchy finding");
+        assert!(matches!(h.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn empty_link_text_warns_2_4_4() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><a href="/x"></a></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-2.4.4")));
+    }
+
+    #[test]
+    fn link_with_aria_label_is_silent() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><a href="/x" aria-label="navigate"></a></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("WCAG-2.4.4")));
+    }
+
+    #[test]
+    fn missing_main_landmark_warns_aria() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><h1>no main</h1></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        let aria = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("WCAG-ARIA"))
+            .expect("ARIA finding");
+        assert!(matches!(aria.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn duplicate_main_landmarks_warn_aria() {
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>a</h1></main><main>b</main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-ARIA")));
+    }
+
+    #[test]
+    fn unreadable_html_skipped_no_panic() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bogus = tmp.path().join("ghost.html");
+        let s = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: vec![bogus],
+        };
+        std::mem::forget(tmp);
+        let f = WcagGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = WcagGate;
+        assert_eq!(g.name(), "wcag");
+        assert!(g.explain().contains("WCAG"));
+        let _copy: WcagGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("WcagGate"));
+    }
 }

@@ -129,4 +129,75 @@ mod tests {
             .unwrap();
         assert_eq!(v, "value with \"quotes\"");
     }
+
+    #[test]
+    fn render_with_empty_headers_emits_only_skeleton() {
+        let body = render(&[]);
+        assert!(body.contains("[[headers]]"));
+        assert!(body.contains("for = \"/*\""));
+        assert!(body.contains("[headers.values]"));
+        // Skeleton is still valid TOML.
+        let _: toml::Value = toml::from_str(&body).unwrap();
+    }
+
+    #[test]
+    fn render_includes_merge_instruction_comment() {
+        let body = render(&merged_headers(&BTreeMap::new()));
+        assert!(
+            body.contains("Merge this file into your project's wrangler.toml")
+        );
+    }
+
+    #[test]
+    fn render_emits_pqc_note_lines_as_comment_block() {
+        let body = render(&[]);
+        for line in PQC_NOTE_LINES {
+            let formatted = format!("# {line}");
+            assert!(body.contains(&formatted), "missing PQC line: {formatted}");
+        }
+    }
+
+    #[test]
+    fn render_preserves_input_header_order() {
+        let headers = vec![
+            ("Aaa".to_string(), "1".to_string()),
+            ("Bbb".to_string(), "2".to_string()),
+            ("Ccc".to_string(), "3".to_string()),
+        ];
+        let body = render(&headers);
+        let i_a = body.find("\"Aaa\"").unwrap();
+        let i_b = body.find("\"Bbb\"").unwrap();
+        let i_c = body.find("\"Ccc\"").unwrap();
+        assert!(i_a < i_b && i_b < i_c);
+    }
+
+    #[test]
+    fn render_round_trips_baseline_headers_through_toml() {
+        let baseline = merged_headers(&BTreeMap::new());
+        let body = render(&baseline);
+        let parsed: toml::Value = toml::from_str(&body).unwrap();
+        let values = parsed
+            .get("headers")
+            .and_then(|a| a.as_array())
+            .and_then(|a| a.first())
+            .and_then(|h| h.get("values"))
+            .and_then(|v| v.as_table())
+            .unwrap();
+        // Each of the 5 baseline keys must be present.
+        for (key, value) in &baseline {
+            let parsed_value =
+                values.get(key).and_then(|v| v.as_str()).unwrap_or_else(|| {
+                    panic!("missing baseline key {key} in TOML output")
+                });
+            assert_eq!(parsed_value, value);
+        }
+    }
+
+    #[test]
+    fn render_starts_with_module_header_comment() {
+        let body = render(&[]);
+        assert!(body.starts_with(
+            "# ssg edge-headers: Cloudflare Workers wrangler.toml snippet"
+        ));
+    }
 }

@@ -258,4 +258,94 @@ mod tests {
         assert_eq!(f.len(), 1);
         assert_eq!(f[0].code.as_deref(), Some("MD-INPUT-MISSING"));
     }
+
+    #[test]
+    fn multiple_h1_headings_trip_md025() {
+        let s =
+            site_with_content(&[("doc.md", "# first\n\n# second\n\nbody\n")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD025")));
+    }
+
+    #[test]
+    fn frontmatter_then_heading_is_clean() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: x\n---\n\n# Heading\n\nbody.\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "frontmatter wrapper should be clean: {f:?}");
+    }
+
+    #[test]
+    fn bare_url_inside_markdown_link_is_silent() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n[click](https://example.com)\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("MD034")));
+    }
+
+    #[test]
+    fn trailing_whitespace_outside_code_block_trips_md009() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\nline with trailing space \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD009")));
+    }
+
+    #[test]
+    fn code_block_contents_are_not_linted() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n```\n\ttab in code\nhttps://bare.in-code\n```\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        // Inside the fenced block: MD010 and MD034 should NOT fire.
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD010")
+                && x.code.as_deref() != Some("MD034")),
+            "code-block contents should be exempt: {f:?}"
+        );
+    }
+
+    #[test]
+    fn missing_top_heading_flagged_md041() {
+        let s = site_with_content(&[("doc.md", "Just a paragraph.\n")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD041")));
+    }
+
+    #[test]
+    fn empty_file_produces_no_md041() {
+        // first_heading_candidate returns None on a fully empty file.
+        let s = site_with_content(&[("empty.md", "")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().all(|x| x.code.as_deref() != Some("MD041")));
+    }
+
+    #[test]
+    fn sibling_content_dir_layout_is_discovered() {
+        // Use a `<root>/../content` layout, mimicking real ssg sites.
+        let s = site_with_content(&[("doc.md", "# ok\n")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("MD-INPUT-MISSING")),
+            "sibling content/ should be discovered: {f:?}"
+        );
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = MarkdownlintGate;
+        assert_eq!(g.name(), "markdownlint");
+        assert!(g.explain().contains("MD0"));
+        let _copy: MarkdownlintGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("MarkdownlintGate"));
+    }
 }

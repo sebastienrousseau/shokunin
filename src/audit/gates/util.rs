@@ -82,4 +82,62 @@ mod tests {
     fn hreflang_attr_missing_returns_none() {
         assert_eq!(hreflang_attr("<a>", "href"), None);
     }
+
+    #[test]
+    fn find_tag_end_returns_len_when_unterminated() {
+        let h = "<img src=\"x\" alt=\"y\"";
+        assert_eq!(find_tag_end(h, 0), h.len());
+    }
+
+    #[test]
+    fn find_tag_end_skips_gt_inside_single_quotes() {
+        let h = "<a href='data:>foo'>rest";
+        let end = find_tag_end(h, 0);
+        assert_eq!(&h[..end], "<a href='data:>foo'>");
+    }
+
+    #[test]
+    fn find_tag_end_simple_unquoted() {
+        let h = "<br>x";
+        assert_eq!(find_tag_end(h, 0), 4);
+    }
+
+    #[test]
+    fn hreflang_attr_handles_single_quotes() {
+        let tag = r#"<a href='single-quoted'>"#;
+        assert_eq!(
+            hreflang_attr(tag, "href"),
+            Some("single-quoted".to_string())
+        );
+    }
+
+    #[test]
+    fn hreflang_attr_unquoted_value_terminated_by_space() {
+        let tag = "<a href=/path other=1>";
+        assert_eq!(hreflang_attr(tag, "href"), Some("/path".to_string()));
+    }
+
+    #[test]
+    fn hreflang_attr_unquoted_value_terminated_by_gt() {
+        let tag = "<a href=/end>";
+        assert_eq!(hreflang_attr(tag, "href"), Some("/end".to_string()));
+    }
+
+    #[test]
+    fn hreflang_attr_case_insensitive_match() {
+        let tag = r#"<A HREF="upper">"#;
+        assert_eq!(hreflang_attr(tag, "href"), Some("upper".to_string()));
+    }
+
+    #[test]
+    fn hreflang_attr_unterminated_double_quote_returns_none() {
+        let tag = r#"<a href="never-closed"#;
+        assert_eq!(hreflang_attr(tag, "href"), None);
+    }
+
+    #[test]
+    fn hreflang_attr_unterminated_single_quote_returns_none() {
+        let tag = r#"<a href='never-closed"#;
+        assert_eq!(hreflang_attr(tag, "href"), None);
+    }
 }

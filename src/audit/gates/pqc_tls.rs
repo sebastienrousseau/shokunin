@@ -197,4 +197,81 @@ mod tests {
             .iter()
             .any(|x| x.code.as_deref() == Some("PQC-HSTS-SHORT")));
     }
+
+    #[test]
+    fn missing_hsts_header_flags_error() {
+        let content = "/*\n  TLS: TLSv1.3\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("PQC-HSTS-MISSING")
+                && matches!(x.severity, Severity::Error)));
+    }
+
+    #[test]
+    fn missing_tls_13_declaration_warns() {
+        let content = "/*\n  Strict-Transport-Security: max-age=63072000\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        let tls = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("PQC-TLS13-MISSING"))
+            .expect("TLS 1.3 finding");
+        assert!(matches!(tls.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn unparseable_max_age_warns() {
+        let content = "/*\n  Strict-Transport-Security: max-age=not-a-number\n  TLS: TLSv1.3\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f
+            .iter()
+            .any(|x| x.code.as_deref() == Some("PQC-HSTS-UNPARSEABLE")
+                && matches!(x.severity, Severity::Warn)));
+    }
+
+    #[test]
+    fn wrangler_toml_is_scanned() {
+        let content =
+            "[headers]\nstrict-transport-security = \"max-age=63072000\"\nmin_version = \"tlsv1.3\"\n";
+        let s = site_with_file("wrangler.toml", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn tls13_alt_spellings_accepted() {
+        for spelling in ["tlsv1.3", "tls13", "\"1.3\""] {
+            let content = format!(
+                "/*\n  Strict-Transport-Security: max-age=63072000\n  TLS: {spelling}\n"
+            );
+            let s = site_with_file("_headers", &content);
+            let f = PqcTlsGate.run(&s, &AuditOptions::default());
+            assert!(
+                f.iter()
+                    .all(|x| x.code.as_deref() != Some("PQC-TLS13-MISSING")),
+                "spelling `{spelling}` did not satisfy TLS 1.3 check: {f:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = PqcTlsGate;
+        assert_eq!(g.name(), "pqc_tls");
+        assert!(g.explain().contains("HSTS"));
+        let _copy: PqcTlsGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("PqcTlsGate"));
+    }
+
+    #[test]
+    fn hsts_accepts_trailing_directives() {
+        let content = "/*\n  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload\n  TLS: TLSv1.3\n";
+        let s = site_with_file("_headers", content);
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "should accept trailing directives: {f:?}");
+    }
 }

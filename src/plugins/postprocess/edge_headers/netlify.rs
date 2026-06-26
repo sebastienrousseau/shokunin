@@ -88,4 +88,65 @@ mod tests {
             .count();
         assert_eq!(csp_count, 1);
     }
+
+    #[test]
+    fn render_with_empty_headers_still_emits_route_group() {
+        let body = render(&[]);
+        assert!(body.contains("/*\n"));
+        assert!(body.starts_with("# ssg edge-headers: Netlify _headers"));
+    }
+
+    #[test]
+    fn render_preserves_input_header_order() {
+        let headers = vec![
+            ("First".to_string(), "1".to_string()),
+            ("Second".to_string(), "2".to_string()),
+            ("Third".to_string(), "3".to_string()),
+        ];
+        let body = render(&headers);
+        let i_first = body.find("First:").unwrap();
+        let i_second = body.find("Second:").unwrap();
+        let i_third = body.find("Third:").unwrap();
+        assert!(i_first < i_second && i_second < i_third);
+    }
+
+    #[test]
+    fn render_starts_with_docstring_then_blank_line_then_route() {
+        let body = render(&[]);
+        let lines: Vec<&str> = body.lines().collect();
+        // First line must be a comment.
+        assert!(lines[0].starts_with('#'));
+        // Find the first blank line — it must precede `/*`.
+        let blank_idx = lines
+            .iter()
+            .position(|l| l.is_empty())
+            .expect("expected a blank line between docstring and route");
+        assert_eq!(lines[blank_idx + 1], "/*");
+    }
+
+    #[test]
+    fn render_emits_pqc_note_lines_as_comment_block() {
+        let body = render(&[]);
+        for line in PQC_NOTE_LINES {
+            let formatted = format!("# {line}");
+            assert!(body.contains(&formatted), "missing PQC line: {formatted}");
+        }
+    }
+
+    #[test]
+    fn render_includes_link_to_netlify_docs() {
+        let body = render(&[]);
+        assert!(body.contains("docs.netlify.com"));
+    }
+
+    #[test]
+    fn render_with_override_value_appears_in_output() {
+        let mut overrides: BTreeMap<String, String> = BTreeMap::new();
+        let _ = overrides.insert(
+            "Permissions-Policy".to_string(),
+            "geolocation=(self)".to_string(),
+        );
+        let body = render(&merged_headers(&overrides));
+        assert!(body.contains("Permissions-Policy: geolocation=(self)"));
+    }
 }

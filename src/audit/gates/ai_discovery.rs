@@ -158,4 +158,75 @@ mod tests {
             .any(|x| x.code.as_deref() == Some("AI-PLUGIN-JSON-INVALID")
                 && matches!(x.severity, Severity::Error)));
     }
+
+    #[test]
+    fn missing_llms_txt_warns() {
+        let s = site_with_files(&[
+            ("agents.txt", "# agents\n"),
+            (".well-known/ai-plugin.json", r#"{"schema_version":"v1"}"#),
+        ]);
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        let llms = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("AI-LLMS-MISSING"))
+            .expect("missing llms.txt finding");
+        assert!(matches!(llms.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn empty_llms_txt_warns() {
+        let s = site_with_files(&[
+            ("llms.txt", "   \n   "),
+            ("agents.txt", "# agents\n"),
+            (".well-known/ai-plugin.json", r#"{"schema_version":"v1"}"#),
+        ]);
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        let empty = f
+            .iter()
+            .find(|x| x.code.as_deref() == Some("AI-LLMS-EMPTY"))
+            .expect("empty llms.txt finding");
+        assert!(matches!(empty.severity, Severity::Warn));
+    }
+
+    #[test]
+    fn all_three_missing_emits_warn_plus_two_infos() {
+        let s = site_with_files(&[("placeholder.txt", "noop")]);
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        let codes: Vec<_> =
+            f.iter().filter_map(|x| x.code.as_deref()).collect();
+        assert!(codes.contains(&"AI-LLMS-MISSING"));
+        assert!(codes.contains(&"AI-AGENTS-MISSING"));
+        assert!(codes.contains(&"AI-PLUGIN-JSON-MISSING"));
+        let warn_count = f
+            .iter()
+            .filter(|x| matches!(x.severity, Severity::Warn))
+            .count();
+        let info_count = f
+            .iter()
+            .filter(|x| matches!(x.severity, Severity::Info))
+            .count();
+        assert_eq!(warn_count, 1);
+        assert_eq!(info_count, 2);
+    }
+
+    #[test]
+    fn valid_ai_plugin_json_passes_silent() {
+        let s = site_with_files(&[
+            ("llms.txt", "# llms\n"),
+            ("agents.txt", "# agents\n"),
+            (".well-known/ai-plugin.json", r#"{"foo": [1, 2, 3]}"#),
+        ]);
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn metadata_methods_exposed() {
+        let g = AiDiscoveryGate;
+        assert_eq!(g.name(), "ai_discovery");
+        assert!(g.explain().contains("llms.txt"));
+        let _copy: AiDiscoveryGate = g;
+        let _clone = g;
+        assert!(format!("{g:?}").contains("AiDiscoveryGate"));
+    }
 }
