@@ -24,7 +24,7 @@
 //! to the browser separately and lazily — never inlined into HTML —
 //! and the worker fetches it the first time the user types. The
 //! existing `SearchPlugin` is on every page; this plugin is opt-in
-//! via [`PluginManager::register`].
+//! via [`crate::plugin::PluginManager::register`].
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};

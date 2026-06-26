@@ -8,8 +8,10 @@
 //! 1. Re-emits the original function untouched, so direct callers in
 //!    Rust keep working.
 //! 2. Generates a sibling `__SSG_RPC_<fn_name>` static of type
-//!    [`ssg_rpc::RpcDescriptor`] which carries the function name plus
-//!    a type-erased dispatcher trampoline.
+//!    `ssg_rpc::RpcDescriptor` which carries the function name plus
+//!    a type-erased dispatcher trampoline. (Plain code reference
+//!    rather than an intra-doc link — proc-macro crates can't
+//!    resolve symbols in their sibling runtime crate at doc time.)
 //! 3. Wires the static into the inventory-based dispatch registry so
 //!    `ssg_rpc::dispatch(name, json)` resolves it at runtime.
 //!
