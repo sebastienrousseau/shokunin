@@ -28,6 +28,7 @@ that supersedes the old one — never edit history.
 | [ADR-0004](0004-sync-tungstenite-for-hmr.md) | Sync `tungstenite` for HMR fan-out | Accepted (superseded planned in v0.0.48 — see #571) |
 | [ADR-0005](0005-ureq-for-llm.md) | `ureq` for the local-LLM HTTP path | Accepted |
 | [ADR-0006](0006-cyclonedx-over-spdx.md) | CycloneDX 1.5 as the primary SBOM format | Accepted |
+| [ADR-0007](0007-staticdatagen-staging-shim.md) | Content-staging shim for `staticdatagen` upstream regressions | Accepted (temporary — superseded once upstream lands; see [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585)) |
 
 ## Linking from code
 

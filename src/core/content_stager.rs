@@ -755,7 +755,8 @@ const REQUIRED_TEMPLATE_FILES: &[&str] = &["main.js", "sw.js"];
 
 /// Stages a copy of `template_dir` under
 /// `<build_dir>/.ssg-templates-staged/` and writes empty-stub files
-/// for any [`REQUIRED_TEMPLATE_FILES`] entry the user hasn't provided.
+/// for any required-template-files entry (`main.js`, `sw.js`) the
+/// user hasn't provided.
 ///
 /// This shields `staticdatagen`'s hardcoded auxiliary-file copy step
 /// from breaking the build on minimal template sets. The user's

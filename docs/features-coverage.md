@@ -58,6 +58,7 @@ name.
 | Streaming compilation (≥ 8K pages) | `src/core/streaming.rs` | (use `--max-memory` on bench corpus) | [`benches/bench_scalability.rs`](../benches/bench_scalability.rs) | [`tests/regression.rs`](../tests/regression.rs) |
 | Path-safety | `src/core/fs_ops.rs::is_safe_path` | n/a (defensive) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/build_does_not_mutate_sources.rs`](../tests/build_does_not_mutate_sources.rs), [`tests/chaos.rs`](../tests/chaos.rs) |
 | LLM HTTP client (`ureq`, no shellout) | `src/plugins/llm.rs` | [`examples/agentic_discovery`](../examples/agentic_discovery_example.rs) | n/a (network) | [`tests/llm_no_shellout.rs`](../tests/llm_no_shellout.rs) |
+| Content-staging shim (workaround for upstream regressions) | `src/core/content_stager.rs` | (every build) | n/a (pre-pass) | [`tests/regression_user_site.rs`](../tests/regression_user_site.rs) |
 | Fault-injection failpoints | `fail = "0.5"` | n/a | n/a | [`tests/fault_injection.rs`](../tests/fault_injection.rs) (×8 failpoints) |
 | Subcommand surface (`ssg dev`/`build`/`check`/`audit`/`deploy`) | `src/cmd/cli.rs` | each example wraps one subcommand | n/a | [`tests/cli_subcommands.rs`](../tests/cli_subcommands.rs) |
 
