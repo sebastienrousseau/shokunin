@@ -28,7 +28,10 @@ jobs:
   miri:
     name: cargo miri test --lib
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Miri's interpreter is ~50-100x slower than native test execution;
+    # the v0.0.45 lift pushed the lib suite to ~2500 tests, which runs
+    # well over the original 30-minute cap. Bumped to 90.
+    timeout-minutes: 90
     # Advisory window: first 30 days after #560 lands. Drop this once
     # the `.miri-skip` allowlist stabilises and Miri is reliably green.
     continue-on-error: true
