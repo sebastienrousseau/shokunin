@@ -301,14 +301,10 @@ mod tests {
         };
         let out = process_batch(&batch, &graph, Path::new("build"));
         let json = out.frame.unwrap().to_json();
-        assert!(
-            json.contains("hmr-html"),
-            "expected hmr-html, got: {json}"
-        );
+        assert!(json.contains("hmr-html"), "expected hmr-html, got: {json}");
         assert!(
             json.contains("/blog/foo/"),
             "expected URL list to carry the page, got: {json}"
         );
     }
-
 }

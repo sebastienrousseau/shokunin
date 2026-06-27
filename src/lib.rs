@@ -1015,8 +1015,8 @@ mod tests {
         let bad = tmp.path().join("..").join("escape-build");
         let paths = Paths {
             content: tmp.path().join("content"),
-            build:   bad,
-            site:    tmp.path().join("site"),
+            build: bad,
+            site: tmp.path().join("site"),
             template: tmp.path().join("template"),
         };
         let err = create_directories(&paths).unwrap_err();
@@ -1030,8 +1030,8 @@ mod tests {
         let bad = tmp.path().join("..").join("escape-site");
         let paths = Paths {
             content: tmp.path().join("content"),
-            build:   tmp.path().join("build"),
-            site:    bad,
+            build: tmp.path().join("build"),
+            site: bad,
             template: tmp.path().join("template"),
         };
         let err = create_directories(&paths).unwrap_err();
@@ -1045,8 +1045,8 @@ mod tests {
         let bad = tmp.path().join("..").join("escape-template");
         let paths = Paths {
             content: tmp.path().join("content"),
-            build:   tmp.path().join("build"),
-            site:    tmp.path().join("site"),
+            build: tmp.path().join("build"),
+            site: tmp.path().join("site"),
             template: bad,
         };
         let err = create_directories(&paths).unwrap_err();

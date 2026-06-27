@@ -733,8 +733,7 @@ mod tests {
     #[test]
     fn extract_isr_cache_ignores_unknown_keys_in_isr_block() {
         // Covers line 317 `_ => {}` for unknown keys inside isr block.
-        let text =
-            "---\nisr:\n  unknown_key: 5\n  s_maxage: 7\n---\n";
+        let text = "---\nisr:\n  unknown_key: 5\n  s_maxage: 7\n---\n";
         let p = extract_isr_cache(text).unwrap();
         assert_eq!(p.s_maxage, 7);
     }
@@ -742,8 +741,7 @@ mod tests {
     #[test]
     fn extract_isr_cache_isr_block_exits_on_non_indented_line() {
         // Covers line 320-321 (line not empty AND not indented → exit).
-        let text =
-            "---\nisr:\n  s_maxage: 5\ntitle: Hi\nswr: 8\n---\n";
+        let text = "---\nisr:\n  s_maxage: 5\ntitle: Hi\nswr: 8\n---\n";
         let p = extract_isr_cache(text).unwrap();
         // s_maxage in block was picked up; swr at top level was NOT.
         assert_eq!(p.s_maxage, 5);

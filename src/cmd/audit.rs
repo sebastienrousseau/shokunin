@@ -363,9 +363,7 @@ mod tests {
     fn explain_with_no_gate_prints_all() {
         // Covers explain_gate(None) loop.
         let cmd = build_subcommand();
-        let matches = cmd
-            .try_get_matches_from(["audit", "--explain"])
-            .unwrap();
+        let matches = cmd.try_get_matches_from(["audit", "--explain"]).unwrap();
         let outcome = run(&matches).unwrap();
         assert_eq!(outcome, Outcome::Pass);
     }
@@ -475,8 +473,9 @@ mod tests {
     fn load_audit_config_missing_file_returns_default() {
         // Covers the `Err` -> default branch at line 100-101 of
         // load_audit_config (path passed but file doesn't exist).
-        let cfg = load_audit_config(Some(&PathBuf::from("/nonexistent/x.toml")))
-            .unwrap();
+        let cfg =
+            load_audit_config(Some(&PathBuf::from("/nonexistent/x.toml")))
+                .unwrap();
         // Default config: severity_floor is `Warn`-or-similar by
         // default. Smoke-check that we got a usable value back.
         assert!(format!("{cfg:?}").contains("AuditConfig"));
@@ -519,11 +518,7 @@ fail_on = "error"
         std::fs::create_dir_all(&site).unwrap();
         let cmd = build_subcommand();
         let matches = cmd
-            .try_get_matches_from([
-                "audit",
-                "--output",
-                site.to_str().unwrap(),
-            ])
+            .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
             .unwrap();
         run_and_dispatch(&matches, true).unwrap();
     }
@@ -536,11 +531,7 @@ fail_on = "error"
         std::fs::create_dir_all(&site).unwrap();
         let cmd = build_subcommand();
         let matches = cmd
-            .try_get_matches_from([
-                "audit",
-                "--output",
-                site.to_str().unwrap(),
-            ])
+            .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
             .unwrap();
         run_and_dispatch(&matches, false).unwrap();
     }

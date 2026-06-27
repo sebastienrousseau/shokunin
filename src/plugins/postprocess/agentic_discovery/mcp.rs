@@ -613,9 +613,8 @@ mod tests {
         // Covers the `read_meta_sidecars` fallback branch at line ~267
         // when both site_dir and build_dir/.meta are absent.
         let dir = tempfile::tempdir().unwrap();
-        let ctx = PluginContext::new(
-            dir.path(), dir.path(), dir.path(), dir.path(),
-        );
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
         let r = collect_mcp_resources(&ctx, &cfg());
         assert!(r.is_empty());
     }
@@ -632,11 +631,7 @@ mod tests {
         fs::create_dir_all(&meta_dir).unwrap();
         // Write a sidecar discoverable by read_meta_sidecars.
         let sidecar = meta_dir.join("post.json");
-        fs::write(
-            &sidecar,
-            r#"{"title":"Hi","description":"D"}"#,
-        )
-        .unwrap();
+        fs::write(&sidecar, r#"{"title":"Hi","description":"D"}"#).unwrap();
         let ctx = PluginContext::new(dir.path(), &build, &site, dir.path());
         let r = collect_mcp_resources(&ctx, &cfg());
         // Behavioural assertion: the fallback path executed. We don't

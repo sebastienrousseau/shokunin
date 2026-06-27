@@ -442,7 +442,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["cloudflare"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         let written = site.join(".ssg/edge/wrangler-headers.toml");
@@ -458,7 +462,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["netlify"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         let written = site.join("_headers");
@@ -474,7 +482,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["vercel"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         let written = site.join(".ssg/edge/vercel-headers.json");
@@ -490,7 +502,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["unknown-cdn"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("_headers").exists());
@@ -504,7 +520,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["CloudFlare"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         assert!(site.join(".ssg/edge/wrangler-headers.toml").exists());
@@ -517,7 +537,11 @@ mod tests {
         fs::create_dir_all(&site).unwrap();
         let cfg = cfg_with_targets(vec!["cloudflare", "netlify", "vercel"]);
         let ctx = PluginContext::with_config(
-            dir.path(), dir.path(), &site, dir.path(), cfg,
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         assert!(site.join("_headers").exists());
