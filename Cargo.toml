@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.44"                      # The version of the library
+version = "0.0.45"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -181,9 +181,9 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.44" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.44" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.44" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.45" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.45" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.45" }
 thiserror = "2"
 staticdatagen = "0.0.9"
 toml = "1.1.2"
@@ -389,7 +389,7 @@ path = "examples/landing_example.rs"      # Path to the example file
 name = "portfolio"                        # Name of the example
 path = "examples/portfolio_example.rs"    # Path to the example file
 
-# --- v0.0.44 feature-area examples -------------------------------------------
+# --- v0.0.45 feature-area examples -------------------------------------------
 
 [[example]]
 # Browser-native vector semantic search (`ssg-search`).

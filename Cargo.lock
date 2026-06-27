@@ -4940,7 +4940,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4992,7 +4992,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "log",
  "pulldown-cmark",
@@ -5006,7 +5006,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "criterion",
  "inventory",
@@ -5019,7 +5019,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5028,7 +5028,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "getrandom 0.3.4",
  "js-sys",
@@ -5042,7 +5042,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.44"
+version = "0.0.45"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",

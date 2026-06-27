@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.44-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.45-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -27,7 +27,7 @@
 - [Overview](#overview) -- what SSG does
 - [Architecture](#architecture) -- build pipeline diagram
 - [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.44 capability matrix
+- [Features](#features) -- v0.0.45 capability matrix
 - [The CLI](#the-cli) -- flags and usage
 - [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
 - [Examples](#examples) -- 8 branded examples
@@ -41,7 +41,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.44"
+ssg = "0.0.45"
 ```
 
 ### Prebuilt binaries
@@ -57,7 +57,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu
-sudo dpkg -i ssg_0.0.44_amd64.deb
+sudo dpkg -i ssg_0.0.45_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -185,7 +185,11 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge adapters with KV / Edge Config content provider, SHA-256-keyed ISR manifest, invalidation webhook, optional View Transitions client (`transitions = true`) |
 | **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
 | **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC TLS guidance (X25519+ML-KEM-768 hybrid notes) |
-| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / text outputs |
+| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
+| **Architecture Decision Records** | Six baseline ADRs under [`docs/adrs/`](docs/adrs/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
+| **Supply-chain attestation** | `cargo-vet` (v0.0.45 #561) layers per-crate audit attestation over `cargo deny`'s license + CVE checks. Imports Mozilla Firefox, Bytecode Alliance, and Google trust sets; exemption-reduction policy in [`supply-chain/README.md`](supply-chain/README.md) |
+| **Concurrency proofs** | Miri job ([`.github/workflows/miri.yml`](.github/workflows/miri.yml), v0.0.45 #560) runs `cargo miri test --lib` on a nightly schedule + `run-miri`-labelled PRs. Loom + Kani follow in v0.0.46 (#564 / #565) |
+| **Feature-matrix CI** | `cargo hack check --feature-powerset --depth 2` (v0.0.45 #584) exercises every reachable subset of `{ai, benchmark, cli, image-optimization, minify, otel, templates, test-fault-injection}` on every PR — catches cfg-gating gaps before they merge |
 | **Agentic discovery** | Opt-in `/agents.txt` (robots-style AI agent allow/deny), `/.well-known/ai-plugin.json` (`OpenAI` plugin manifest), `/.well-known/mcp.json` (Model Context Protocol registry with auto-populated resources) |
 | **ISO 20022 JSON-LD** | Schema.org descriptors for regulated financial sites: `BankAccount`, `FinancialProduct`, `MonetaryAmount`, `PaymentInstrument`, `RegulatedFinancialInstitution`. Built-in IBAN + BIC validators |
 | **View Transitions** | Opt-in (`transitions = true`) View Transitions API client + lazy hydration; persistent `<header>` / `<footer>` get `view-transition-name` so they don't animate across boundaries; falls back to plain reload in non-supporting browsers |
@@ -225,7 +229,7 @@ Commands:
   help       Print this message or the help of the given subcommand(s)
 ```
 
-### Build flags (v0.0.44)
+### Build flags (v0.0.45)
 
 ```text
       --incremental        Skip recompile when DepGraph diff is empty (issue #524)
@@ -462,7 +466,7 @@ cargo run --example blog
 | `landing` | Zero-JS landing page with CSP hardening |
 | `portfolio` | Developer portfolio with JSON-LD and Atom feed |
 
-### Edge-runtime adapters (v0.0.44)
+### Edge-runtime adapters (v0.0.45)
 
 `examples/edge-cloudflare/` and `examples/edge-vercel/` are runnable
 reference implementations of the ISR + RPC pipeline for the two target
