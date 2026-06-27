@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn cli_error_source_io_returns_some() {
         // Covers line 103 — IoError arm of Error::source().
-        let io = std::io::Error::new(std::io::ErrorKind::Other, "x");
+        let io = std::io::Error::other("x");
         let err = CliError::IoError(io);
         use std::error::Error;
         assert!(err.source().is_some());
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn cli_error_from_io_error_via_from_impl() {
         // Covers the From<io::Error> conversion.
-        let io = std::io::Error::new(std::io::ErrorKind::Other, "x");
+        let io = std::io::Error::other("x");
         let err: CliError = io.into();
         assert!(matches!(err, CliError::IoError(_)));
     }
