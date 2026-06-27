@@ -14,19 +14,19 @@ url = "https://raw.githubusercontent.com/google/supply-chain/main/audits.toml"
 url = "https://raw.githubusercontent.com/mozilla-firefox/firefox/main/supply-chain/audits.toml"
 
 [policy.ssg]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.ssg-core]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.ssg-rpc]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.ssg-rpc-macro]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.ssg-search]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [[exemptions.ahash]]
 version = "0.7.8"

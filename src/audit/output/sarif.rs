@@ -156,19 +156,24 @@ fn result_for_finding(f: &Finding) -> serde_json::Value {
     let _ =
         obj.insert("message".into(), serde_json::json!({ "text": f.message }));
 
-    if let Some(path) = &f.path {
-        let _ = obj.insert(
-            "locations".into(),
-            serde_json::json!([{
-                "physicalLocation": {
-                    "artifactLocation": {
-                        "uri": path,
-                        "uriBaseId": "%SRCROOT%",
-                    }
+    // SARIF spec allows omitting `locations` for site-wide findings,
+    // but GitHub Code Scanning requires every result to carry at
+    // least one location. For findings without a specific path we
+    // emit a synthetic site-wide location pointing at the audit
+    // surface itself; downstream tooling can de-prioritise the
+    // "<site-wide>" URI if it wants per-file grouping only.
+    let uri = f.path.as_deref().unwrap_or("<site-wide>");
+    let _ = obj.insert(
+        "locations".into(),
+        serde_json::json!([{
+            "physicalLocation": {
+                "artifactLocation": {
+                    "uri": uri,
+                    "uriBaseId": "%SRCROOT%",
                 }
-            }]),
-        );
-    }
+            }
+        }]),
+    );
 
     // Custom properties block carrying gate context.
     let _ = obj.insert(
@@ -353,11 +358,16 @@ mod tests {
     }
 
     #[test]
-    fn site_wide_finding_omits_locations() {
+    fn site_wide_finding_emits_synthetic_location() {
+        // GitHub Code Scanning rejects results without locations[],
+        // so site-wide findings now carry a synthetic `<site-wide>`
+        // URI rather than omitting the field.
         let s = format(&report_with_two_findings());
         let v: serde_json::Value = serde_json::from_str(&s).unwrap();
         let r1 = &v["runs"][0]["results"][1];
-        assert!(r1.get("locations").is_none());
+        let loc = &r1["locations"][0]["physicalLocation"]["artifactLocation"];
+        assert_eq!(loc["uri"], "<site-wide>");
+        assert_eq!(loc["uriBaseId"], "%SRCROOT%");
     }
 
     #[test]
