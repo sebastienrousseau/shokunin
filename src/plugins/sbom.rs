@@ -86,11 +86,9 @@ impl Plugin for SbomPlugin {
         }
         let sbom = build_sbom();
         let path = ctx.site_dir.join(Self::sbom_path());
-        let json =
-            serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
-                path: path.clone(),
-                source: std::io::Error::other(e),
-            })?;
+        // Infallible: CycloneDX is a pure struct of strings/maps/vecs.
+        let json = serde_json::to_string_pretty(&sbom)
+            .expect("CycloneDX SBOM -> JSON is infallible");
         fs::write(&path, json).with_path(&path)?;
         log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
         Ok(())

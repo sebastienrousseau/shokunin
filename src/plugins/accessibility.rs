@@ -163,25 +163,20 @@ impl Plugin for AccessibilityPlugin {
             }
         }
 
-        // Write the per-page issue report.
+        // Write the per-page issue report. The struct is all strings,
+        // vecs, and numerics — JSON serialisation is infallible.
         let report_path = ctx.site_dir.join("accessibility-report.json");
-        let json = serde_json::to_string_pretty(&report).map_err(|e| {
-            SsgError::Io {
-                path: report_path.clone(),
-                source: std::io::Error::other(e),
-            }
-        })?;
+        let json = serde_json::to_string_pretty(&report)
+            .expect("AccessibilityReport -> JSON is infallible");
         fs::write(&report_path, json).with_path(&report_path)?;
 
-        // Write the WCAG 2.2 compliance matrix.
+        // Write the WCAG 2.2 compliance matrix. Same pure-struct
+        // story — JSON serialisation is infallible.
         let compliance =
             build_compliance_report(html_files.len(), &failed_criteria);
         let matrix_path = ctx.site_dir.join("wcag-compliance.json");
         let json_compliance = serde_json::to_string_pretty(&compliance)
-            .map_err(|e| SsgError::Io {
-                path: matrix_path.clone(),
-                source: std::io::Error::other(e),
-            })?;
+            .expect("WcagComplianceReport -> JSON is infallible");
         fs::write(&matrix_path, json_compliance).with_path(&matrix_path)?;
 
         if report.total_issues > 0 {
@@ -1461,5 +1456,22 @@ mod tests {
         assert_eq!(extract_attr_value("<img alt='unclosed>", "alt"), None);
         // Attribute not found
         assert_eq!(extract_attr_value("<img alt=\"hello\">", "width"), None);
+    }
+
+    #[test]
+    fn default_wcag_version_is_22() {
+        // Covers default_wcag_version fn body (lines 69-71). Used by
+        // serde when the wcag_version field is absent during deserialise.
+        assert_eq!(default_wcag_version(), "2.2");
+    }
+
+    #[test]
+    fn accessibility_report_deserialises_without_wcag_version() {
+        // Confirms the serde default integration: a JSON blob without
+        // wcag_version still parses and yields "2.2".
+        let json =
+            r#"{"pages_scanned":0,"total_issues":0,"pages":[]}"#;
+        let r: AccessibilityReport = serde_json::from_str(json).unwrap();
+        assert_eq!(r.wcag_version, "2.2");
     }
 }

@@ -136,13 +136,9 @@ impl PluginCache {
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
-        let json =
-            serde_json::to_string_pretty(&serialisable).map_err(|e| {
-                SsgError::Io {
-                    path: path.clone(),
-                    source: std::io::Error::other(e),
-                }
-            })?;
+        // Infallible: HashMap<String, u64> is always serialisable to JSON.
+        let json = serde_json::to_string_pretty(&serialisable)
+            .expect("HashMap<String, u64> -> JSON is infallible");
         fs::write(&path, json).with_path(&path)?;
         Ok(())
     }
