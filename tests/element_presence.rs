@@ -268,8 +268,8 @@ fn check_invariants(
 /// (basic, landing, plugins, blog taxonomy indexes) shipped without
 /// `<h1>`, `<meta name=viewport>`, or the full Open Graph chain;
 /// flipping the gate to always-on used to fail for those pages.
-/// Subsequent template-coverage work (v0.0.43 landing + view-
-/// transitions, v0.0.44 SEO lol_html port, the v0.0.45 example
+/// Subsequent template-coverage work (`v0.0.43` landing + view-
+/// transitions, `v0.0.44` SEO `lol_html` port, the `v0.0.45` example
 /// matrix sweep) closed those gaps. Every page under `examples/*/
 /// public/` that isn't in [`is_exempt`] now satisfies all 10
 /// invariants.
