@@ -116,6 +116,7 @@ pub use error::{PathErrorExt, SsgError};
 pub use crate::core_group::cache;
 pub use crate::core_group::collections;
 pub use crate::core_group::content;
+pub use crate::core_group::content_stager;
 pub use crate::core_group::depgraph;
 pub use crate::core_group::deploy;
 pub use crate::core_group::deploy_adapter;
