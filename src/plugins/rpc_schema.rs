@@ -167,6 +167,20 @@ mod tests {
     }
 
     #[test]
+    fn coverage_probe_dispatches_and_increments() {
+        // Drives the `_ssg_rpc_schema_coverage_probe` body via the
+        // dispatcher so its 5 lines (signature + return expression)
+        // are covered. Without this, the probe is registered into
+        // the inventory but never executed.
+        let out = ssg_rpc::dispatch::dispatch(
+            "_ssg_rpc_schema_coverage_probe",
+            r#"{"v":41}"#,
+        )
+        .expect("dispatch");
+        assert!(out.contains("\"out\":42"));
+    }
+
+    #[test]
     fn writes_typescript_when_inventory_nonempty() {
         // The `_ssg_rpc_schema_coverage_probe` above registers a
         // single descriptor, so iter_descriptors().next() returns

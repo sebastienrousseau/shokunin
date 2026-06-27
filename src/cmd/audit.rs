@@ -398,6 +398,27 @@ mod tests {
     }
 
     #[test]
+    fn sarif_output_branch() {
+        // Covers `report.print_sarif()` arm (line ~79) — the new
+        // --sarif flag routes here instead of falling through to
+        // print_text.
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--sarif",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
     fn junit_output_branch() {
         // Covers `report.print_junit()` arm (line ~77).
         let tmp = tempfile::tempdir().unwrap();

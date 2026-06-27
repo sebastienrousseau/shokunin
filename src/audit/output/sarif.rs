@@ -326,6 +326,36 @@ mod tests {
     }
 
     #[test]
+    fn warn_severity_maps_to_warning_level_and_warn_str() {
+        // Covers the `Severity::Warn` arm of both `level` (line 151)
+        // and `severity_str` (line 194) which are otherwise unhit by
+        // the Error+Info fixture above.
+        let report = AuditReport {
+            gates: vec![GateResult {
+                name: "links".to_string(),
+                skipped: false,
+                skip_reason: None,
+                severity_counts: SeverityCounts {
+                    info: 0,
+                    warn: 1,
+                    error: 0,
+                },
+                findings: vec![Finding::new(
+                    "links",
+                    Severity::Warn,
+                    "soft warning",
+                )
+                .with_path("blog/x.html")],
+            }],
+        };
+        let s = format(&report);
+        let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+        let r0 = &v["runs"][0]["results"][0];
+        assert_eq!(r0["level"], "warning");
+        assert_eq!(r0["properties"]["severity"], "warn");
+    }
+
+    #[test]
     fn rule_id_includes_code_when_present() {
         let s = format(&report_with_two_findings());
         let v: serde_json::Value = serde_json::from_str(&s).unwrap();

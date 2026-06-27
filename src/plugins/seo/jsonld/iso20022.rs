@@ -1088,10 +1088,10 @@ mod tests {
     fn iban_rejects_non_alphanumeric_bban() {
         // Covers lines 180-182: BBAN char not alphanumeric.
         let res = validate_iban("GB29NWBK60161331926*1");
-        assert!(!res.is_valid());
-        if let ValidationOutcome::Invalid { reason } = res {
-            assert!(reason.contains("BBAN"));
-        }
+        assert!(matches!(
+            &res,
+            ValidationOutcome::Invalid { reason } if reason.contains("BBAN")
+        ));
     }
 
     #[test]
@@ -1105,10 +1105,10 @@ mod tests {
     fn bic_rejects_digit_in_bank_code() {
         // Covers lines 254-257: chars 1-4 must be letters.
         let res = validate_bic("1WBKGB2L");
-        assert!(!res.is_valid());
-        if let ValidationOutcome::Invalid { reason } = res {
-            assert!(reason.contains("bank code"));
-        }
+        assert!(matches!(
+            &res,
+            ValidationOutcome::Invalid { reason } if reason.contains("bank code")
+        ));
     }
 
     #[test]

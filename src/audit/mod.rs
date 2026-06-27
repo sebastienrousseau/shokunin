@@ -1067,4 +1067,15 @@ mod tests {
         let runner = AuditRunner::with_gates(AuditConfig::new(), Vec::new());
         assert!(runner.gate_names().is_empty());
     }
+
+    #[test]
+    fn audit_report_print_sarif_emits_to_stdout() {
+        // Covers AuditReport::print_sarif body (lines 592-595).
+        // The doctest under #[doc] doesn't get credited toward
+        // `cargo llvm-cov --tests` coverage on stable; this unit
+        // test does. We don't assert on stdout content — just that
+        // the call runs to completion without panicking.
+        let r = AuditReport { gates: vec![] };
+        r.print_sarif();
+    }
 }
