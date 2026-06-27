@@ -1,0 +1,82 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
+# Features × Coverage Matrix
+
+Every user-facing feature in v0.0.45 is exercised by at least one
+**example**, one **benchmark**, and one **regression test**. The matrix
+below is the source of truth — and the
+`tests/docs_accuracy.rs::features_matrix_is_exhaustive` test fails the
+build if a new top-level plugin module ships without an entry here.
+
+Updating this file: when you add a new plugin under
+`src/plugins/<name>.rs`, add a row whose left-hand cell matches the
+module name. The test reads `src/plugins/*.rs` and the table below; a
+plugin missing from the table fires the assertion with the offending
+name.
+
+| Plugin / Feature | Module | Example | Benchmark | Integration test |
+|---|---|---|---|---|
+| Accessibility (WCAG 2.2 + EAA) | `accessibility` | [`examples/blog`](../examples/blog_example.rs), [`examples/landing`](../examples/landing_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs), [`tests/element_presence.rs`](../tests/element_presence.rs) |
+| AI metadata + alt-text | `ai` | [`examples/agentic_discovery`](../examples/agentic_discovery_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/agentic_discovery.rs`](../tests/agentic_discovery.rs) |
+| Asset fingerprinting + SRI | `assets` | [`examples/blog`](../examples/blog_example.rs) | [`benches/bench_concurrent_operations.rs`](../benches/bench_concurrent_operations.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| CSP build-time extraction | `csp` | [`examples/blog`](../examples/blog_example.rs), [`examples/landing`](../examples/landing_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/csp_preserve_attrs.rs`](../tests/csp_preserve_attrs.rs), [`tests/audit_gates.rs`](../tests/audit_gates.rs) |
+| Draft filtering | `drafts` | [`examples/blog`](../examples/blog_example.rs), [`examples/portfolio`](../examples/portfolio_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugins/drafts.rs`](../tests/plugins/drafts.rs) (via plugins/ submodule) |
+| Syntax highlighting | `highlight` | [`examples/basic`](../examples/basic_example.rs), [`examples/docs`](../examples/docs_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| Internationalisation | `i18n` | [`examples/multilingual`](../examples/multilingual_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| Responsive image pipeline | `image_plugin` | [`examples/blog`](../examples/blog_example.rs), [`examples/portfolio`](../examples/portfolio_example.rs) | [`benches/avif_vs_webp.rs`](../benches/avif_vs_webp.rs) | [`tests/plugins/image_plugin.rs`](../tests/plugins/image_plugin.rs) |
+| Web-Components islands | `islands` | [`examples/docs`](../examples/docs_example.rs), [`examples/landing`](../examples/landing_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| ISR manifest emission | `isr_manifest` | [`examples/isr`](../examples/isr_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/isr_manifest_shape.rs`](../tests/isr_manifest_shape.rs), [`tests/isr_edge_contract.rs`](../tests/isr_edge_contract.rs), [`tests/isr_backcompat.rs`](../tests/isr_backcompat.rs) |
+| Local-LLM content pipeline | `llm` | [`examples/agentic_discovery`](../examples/agentic_discovery_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/llm_no_shellout.rs`](../tests/llm_no_shellout.rs) |
+| LLM inference cache | `llm_cache` | (transitive via `llm`) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/llm_cache.rs`](../tests/llm_cache.rs) |
+| GFM Markdown extensions | `markdown_ext` | [`examples/blog`](../examples/blog_example.rs) | [`benches/bench_utilities.rs`](../benches/bench_utilities.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| OG social-card images | `og_image` | [`examples/blog`](../examples/blog_example.rs) | [`benches/plugins/`](../benches/plugins/) | [`tests/audit_gates.rs`](../tests/audit_gates.rs) |
+| Pagination | `pagination` | [`examples/blog`](../examples/blog_example.rs), [`examples/docs`](../examples/docs_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugin_contracts.rs`](../tests/plugin_contracts.rs) |
+| Plugin trait + lifecycle | `plugin` | [`examples/plugins`](../examples/plugins_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugin_contracts.rs`](../tests/plugin_contracts.rs) |
+| Plugin registry | `plugins` | [`examples/plugins`](../examples/plugins_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugin_contracts.rs`](../tests/plugin_contracts.rs) |
+| Post-process (RSS/Atom/Sitemap/Manifest/HTML-Fix) | `postprocess` | [`examples/blog`](../examples/blog_example.rs), [`examples/docs`](../examples/docs_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/json_feed_compliance.rs`](../tests/json_feed_compliance.rs), [`tests/regression.rs`](../tests/regression.rs) |
+| RPC schema emitter | `rpc_schema` | [`examples/rpc`](../examples/rpc_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| CycloneDX SBOM | `sbom` | (every build) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs) |
+| Search widget + index | `search` | [`examples/search`](../examples/search_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/search_index_integrity.rs`](../tests/search_index_integrity.rs) |
+| Search-index emitter | `search_index` | [`examples/search`](../examples/search_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/search_index_integrity.rs`](../tests/search_index_integrity.rs) |
+| SEO + JSON-LD + canonical + robots | `seo` | [`examples/portfolio`](../examples/portfolio_example.rs), [`examples/iso20022`](../examples/iso20022_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/seo_canonical_lol_html.rs`](../tests/seo_canonical_lol_html.rs), [`tests/seo_extractors_lol_html.rs`](../tests/seo_extractors_lol_html.rs), [`tests/jsonld_validation.rs`](../tests/jsonld_validation.rs), [`tests/jsonld_iso20022.rs`](../tests/jsonld_iso20022.rs) |
+| Shortcodes | `shortcodes` | [`examples/landing`](../examples/landing_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| Taxonomy (tags + categories) | `taxonomy` | [`examples/blog`](../examples/blog_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/taxonomy_templated.rs`](../tests/taxonomy_templated.rs), [`tests/test_tags.rs`](../tests/test_tags.rs) |
+| Template engine (MiniJinja) | `template_engine` | [`examples/basic`](../examples/basic_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/template_data_yaml.rs`](../tests/template_data_yaml.rs) |
+| Template plugin | `template_plugin` | [`examples/basic`](../examples/basic_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugin_contracts.rs`](../tests/plugin_contracts.rs) |
+| View Transitions API | `view_transitions` | [`examples/view_transitions`](../examples/view_transitions_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/view_transitions_plugin.rs`](../tests/view_transitions_plugin.rs) |
+| Edge-headers emitter | `postprocess::edge_headers` | [`examples/edge_headers`](../examples/edge_headers_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/edge_headers_emit.rs`](../tests/edge_headers_emit.rs) |
+| Agentic discovery (agents.txt + MCP) | `postprocess::agentic_discovery` | [`examples/agentic_discovery`](../examples/agentic_discovery_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/agentic_discovery.rs`](../tests/agentic_discovery.rs) |
+| Audit CLI (14 gates + SARIF) | `audit` | [`examples/audit`](../examples/audit_example.rs) | [`benches/bench_audit.rs`](../benches/bench_audit.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs), [`tests/audit_perf.rs`](../tests/audit_perf.rs) |
+
+## Non-plugin features
+
+| Feature | Source-of-truth | Example | Benchmark | Integration test |
+|---|---|---|---|---|
+| Scaffold (`ssg --new`) | `src/core/scaffold.rs` | [`examples/quickstart`](../examples/quickstart_example.rs) | n/a (one-shot) | [`tests/golden_files.rs`](../tests/golden_files.rs) (×10 golden files) |
+| Dev server + HMR | `src/server/` | [`examples/landing`](../examples/landing_example.rs) (uses `-w`) | n/a (interactive) | [`tests/server/`](../tests/server/) |
+| Incremental compilation | `src/core/depgraph.rs` | (every example with `-w`) | [`benches/incremental_1000_pages.rs`](../benches/incremental_1000_pages.rs) | [`tests/incremental_correctness.rs`](../tests/incremental_correctness.rs) |
+| Streaming compilation (≥ 8K pages) | `src/core/streaming.rs` | (use `--max-memory` on bench corpus) | [`benches/bench_scalability.rs`](../benches/bench_scalability.rs) | [`tests/regression.rs`](../tests/regression.rs) |
+| Path-safety | `src/core/fs_ops.rs::is_safe_path` | n/a (defensive) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/build_does_not_mutate_sources.rs`](../tests/build_does_not_mutate_sources.rs), [`tests/chaos.rs`](../tests/chaos.rs) |
+| LLM HTTP client (`ureq`, no shellout) | `src/plugins/llm.rs` | [`examples/agentic_discovery`](../examples/agentic_discovery_example.rs) | n/a (network) | [`tests/llm_no_shellout.rs`](../tests/llm_no_shellout.rs) |
+| Fault-injection failpoints | `fail = "0.5"` | n/a | n/a | [`tests/fault_injection.rs`](../tests/fault_injection.rs) (×8 failpoints) |
+| Subcommand surface (`ssg dev`/`build`/`check`/`audit`/`deploy`) | `src/cmd/cli.rs` | each example wraps one subcommand | n/a | [`tests/cli_subcommands.rs`](../tests/cli_subcommands.rs) |
+
+## CI gates (v0.0.45 additions)
+
+| Gate | Workflow | Resolves |
+|---|---|---|
+| `repo-hygiene` (no stray profraw, no tracked profraw) | [`ci.yml`](../.github/workflows/ci.yml) | #556 |
+| `no-shellout` lint (`Command::new("curl"\|"wget"\|…)` in `src/`) | [`ci.yml`](../.github/workflows/ci.yml) | #558 |
+| `ADR citation graph` (every `adr: ADR-NNNN` resolves to `docs/adrs/`) | [`ci.yml`](../.github/workflows/ci.yml) | #557 |
+| `feature powerset` (`cargo hack check --feature-powerset --depth 2`) | [`ci.yml`](../.github/workflows/ci.yml) | #584 |
+| `cargo-vet` | [`ci.yml`](../.github/workflows/ci.yml) | #561 |
+| `Miri` (schedule + `run-miri` label) | [`miri.yml`](../.github/workflows/miri.yml) | #560 |
+| SARIF upload to GitHub Code Scanning | [`ci.yml`](../.github/workflows/ci.yml) | #562 |
+| Coverage floor 95.5 / 95.5 / 96.5 (regions / functions / lines) | [`ci.yml`](../.github/workflows/ci.yml) | (v0.0.45 lift, ~+0.45 over baseline) |
+
+## See also
+
+- [`BENCHMARKS.md`](../BENCHMARKS.md) — perf-gate budgets + cross-SSG comparison
+- [`docs/adrs/`](adrs/) — Architecture Decision Records
+- [`supply-chain/README.md`](../supply-chain/README.md) — `cargo-vet` policy
+- [`SECURITY.md`](../SECURITY.md) — threat model + security defaults
