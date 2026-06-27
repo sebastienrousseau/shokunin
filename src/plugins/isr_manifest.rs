@@ -639,4 +639,146 @@ mod tests {
     fn plugin_default_constructs() {
         let _p = <IsrManifestPlugin as Default>::default();
     }
+
+    #[test]
+    fn plugin_after_compile_full_run_writes_manifest_and_copies_sources() {
+        // Covers after_compile's full happy path: build_manifest +
+        // write_manifest + copy_sources (the line-90 branch the dry-run
+        // test skips).
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        fs::write(content_dir.join("hello.md"), "hello world").unwrap();
+        fs::write(template_dir.join("index.html"), "<html/>").unwrap();
+
+        let ctx = PluginContext {
+            content_dir: content_dir.clone(),
+            build_dir: site_dir.clone(),
+            site_dir: site_dir.clone(),
+            template_dir,
+            config: None,
+            cache: None,
+            memory_budget: None,
+            html_files: None,
+            dep_graph: None,
+            dry_run: false,
+        };
+
+        IsrManifestPlugin.after_compile(&ctx).unwrap();
+        assert!(site_dir.join(MANIFEST_RELATIVE_PATH).exists());
+    }
+
+    #[test]
+    fn collect_md_files_nonexistent_dir_returns_empty() {
+        // Covers line ~162 `if !dir.exists() return Ok(vec![])`.
+        let out = collect_md_files(Path::new("/nonexistent/xxx")).unwrap();
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn collect_md_files_skips_hidden_dirs_v2() {
+        // Differs from the existing same-named test by exercising
+        // the path-skip branch with a nested .md instead of relying
+        // on top-level filtering.
+        let dir = tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(".hidden")).unwrap();
+        fs::write(dir.path().join(".hidden/secret.md"), "x").unwrap();
+        fs::write(dir.path().join("visible.md"), "x").unwrap();
+        let out = collect_md_files(dir.path()).unwrap();
+        assert_eq!(out.len(), 1);
+        assert!(out[0].file_name().unwrap() == "visible.md");
+    }
+
+    #[test]
+    fn collect_md_files_walks_nested_v2() {
+        let dir = tempdir().unwrap();
+        let sub = dir.path().join("a/b/c");
+        fs::create_dir_all(&sub).unwrap();
+        fs::write(sub.join("deep.md"), "x").unwrap();
+        fs::write(dir.path().join("shallow.md"), "x").unwrap();
+        let out = collect_md_files(dir.path()).unwrap();
+        assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn collect_templates_nonexistent_dir_returns_empty() {
+        // Covers line ~249.
+        let out = collect_templates(Path::new("/nonexistent/yyy"));
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn extract_isr_cache_yaml_both_keys() {
+        // Covers lines 312-315 (s_maxage + swr) and line 332 return.
+        let text = "---\nisr:\n  s_maxage: 600\n  swr: 3600\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        assert_eq!(p.s_maxage, 600);
+        assert_eq!(p.swr, 3600);
+    }
+
+    #[test]
+    fn extract_isr_cache_yaml_dash_variants() {
+        // Covers the s-maxage/stale-while-revalidate alt keys.
+        let text =
+            "---\nisr:\n  s-maxage: 42\n  stale-while-revalidate: 99\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        assert_eq!(p.s_maxage, 42);
+        assert_eq!(p.swr, 99);
+    }
+
+    #[test]
+    fn extract_isr_cache_ignores_unknown_keys_in_isr_block() {
+        // Covers line 317 `_ => {}` for unknown keys inside isr block.
+        let text = "---\nisr:\n  unknown_key: 5\n  s_maxage: 7\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        assert_eq!(p.s_maxage, 7);
+    }
+
+    #[test]
+    fn extract_isr_cache_isr_block_exits_on_non_indented_line() {
+        // Covers line 320-321 (line not empty AND not indented → exit).
+        let text = "---\nisr:\n  s_maxage: 5\ntitle: Hi\nswr: 8\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        // s_maxage in block was picked up; swr at top level was NOT.
+        assert_eq!(p.s_maxage, 5);
+        assert_eq!(p.swr, ssg_core::DEFAULT_SWR);
+    }
+
+    #[test]
+    fn extract_isr_cache_no_frontmatter_returns_none() {
+        assert!(extract_isr_cache("just body text").is_none());
+    }
+
+    #[test]
+    fn extract_isr_cache_no_isr_block_returns_none() {
+        let text = "---\ntitle: Hi\n---\n";
+        assert!(extract_isr_cache(text).is_none());
+    }
+
+    #[test]
+    fn extract_frontmatter_block_toml_fences() {
+        // Covers lines 344-347 (+++ TOML branch).
+        let text = "+++\ntitle = \"X\"\n+++\nbody";
+        let body = extract_frontmatter_block(text).unwrap();
+        assert!(body.contains("title"));
+    }
+
+    #[test]
+    fn derive_url_index_md_maps_to_root_index_html() {
+        assert_eq!(derive_url("index.md"), "/index.html");
+    }
+
+    #[test]
+    fn derive_url_nested_index_maps_to_dir_slash_index_html() {
+        assert_eq!(derive_url("about/index.md"), "/about/index.html");
+    }
+
+    #[test]
+    fn derive_url_regular_md_maps_to_dir_slash_index_html() {
+        assert_eq!(derive_url("posts/hello.md"), "/posts/hello/index.html");
+    }
 }

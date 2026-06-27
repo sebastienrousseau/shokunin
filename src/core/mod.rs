@@ -4,6 +4,7 @@
 pub mod cache;
 pub mod collections;
 pub mod content;
+pub mod content_stager;
 pub mod depgraph;
 pub mod deploy;
 pub mod deploy_adapter;

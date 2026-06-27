@@ -284,4 +284,27 @@ mod tests {
         assert!(url.starts_with('/'));
         assert!(!url.contains('\\'));
     }
+
+    #[test]
+    fn pure_content_with_graph_edges_yields_hmr_html() {
+        // Covers the line ~113 `Some(HmrMessage::html(url_paths))`
+        // arm — a content change that resolves to one or more
+        // outputs via the dep-graph.
+        let mut graph = DepGraph::new();
+        // Source content/blog/foo.md produces build/blog/foo/index.html.
+        graph.add_output(
+            Path::new("content/blog/foo.md"),
+            Path::new("build/blog/foo/index.html"),
+        );
+        let batch = ChangeBatch {
+            paths: vec![pb("content/blog/foo.md")],
+        };
+        let out = process_batch(&batch, &graph, Path::new("build"));
+        let json = out.frame.unwrap().to_json();
+        assert!(json.contains("hmr-html"), "expected hmr-html, got: {json}");
+        assert!(
+            json.contains("/blog/foo/"),
+            "expected URL list to carry the page, got: {json}"
+        );
+    }
 }

@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.44"                      # The version of the library
+version = "0.0.45"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -176,12 +176,14 @@ clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
 http-handle = "0.0.5"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+# adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
+# See docs/adrs/0002-rayon-orchestration.md.
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.44" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.44" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.44" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.45" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.45" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.45" }
 thiserror = "2"
 staticdatagen = "0.0.9"
 toml = "1.1.2"
@@ -193,21 +195,25 @@ toml = "1.1.2"
 sha2 = "0.11"
 base64 = "0.22"
 
+# adr: ADR-0005 — `ureq` is the LLM transport. See docs/adrs/0005-ureq-for-llm.md.
 # Synchronous, blocking, pure-Rust HTTP client for the local-LLM content
 # pipeline (`LlmPlugin`). Replaces the previous `curl` subprocess shellout
 # (issue #520) so the AI plugin works on Windows runners without `curl.exe`,
 # closes a shell-injection surface, and surfaces network failures as typed
 # `SsgError` variants instead of stderr strings. Pure rustls — no native
 # OpenSSL link, no tokio runtime — fits ssg's tokio-free Rayon-only
-# architecture.
+# architecture (ADR-0001).
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 
+# adr: ADR-0003 — `lol_html` for all plugin HTML rewriting. See
+# docs/adrs/0003-lol_html-over-html5ever.md.
 # Cloudflare's streaming HTML rewriter (issue #525). Pure Rust, zero-copy,
 # CSS-selector driven — replaces the fragile `str::find` / `str::rfind`
 # rewriting that previously lived in the image, search, CSP, and html-fix
 # plugins. BSD-3-Clause (already allowed in deny.toml). No C deps.
 lol_html = "3.0.0"
 
+# adr: ADR-0001 — tokio-free; OS-event-driven watcher.
 # Event-driven filesystem watcher for `ssg dev` (issue #526). Replaces the
 # polling FileWatcher in src/server/watch.rs with OS-native FSEvents /
 # inotify / ReadDirectoryChangesW so idle CPU is ~0% and edit-to-rebuild
@@ -217,11 +223,13 @@ lol_html = "3.0.0"
 # ReadDirectoryChangesW on Windows — no tokio, no async runtime.
 notify = "8"
 
+# adr: ADR-0004 — sync `tungstenite` for HMR fan-out (supersession planned
+# in v0.0.48 #571). See docs/adrs/0004-sync-tungstenite-for-hmr.md.
 # Sync WebSocket implementation for the HMR broadcaster (issue #526).
 # Used by `HmrBroadcaster` to push hmr-html / hmr-css / reload frames
 # to every connected dev-browser tab. No tokio — the broadcaster fans
 # out from a std::thread::spawn loop reading from a std::sync::mpsc
-# channel, matching ssg's tokio-free Rayon architecture.
+# channel, matching ssg's tokio-free Rayon architecture (ADR-0001).
 tungstenite = "0.29"
 
 
@@ -270,10 +278,6 @@ serde_yaml_ng = "0.10"
 # dependency graph and the rest of SSG is rayon-based.
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter", "fmt", "json"] }
-
-# Platform-specific dependency for Unix with OpenSSL
-[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
-openssl = { version = "0.10.79", features = ["vendored"] }
 
 # -----------------------------------------------------------------------------
 # Criterion Benchmark
@@ -385,7 +389,7 @@ path = "examples/landing_example.rs"      # Path to the example file
 name = "portfolio"                        # Name of the example
 path = "examples/portfolio_example.rs"    # Path to the example file
 
-# --- v0.0.44 feature-area examples -------------------------------------------
+# --- v0.0.45 feature-area examples -------------------------------------------
 
 [[example]]
 # Browser-native vector semantic search (`ssg-search`).

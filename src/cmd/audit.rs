@@ -75,6 +75,8 @@ pub fn run(sub_m: &ArgMatches) -> Result<Outcome, SsgError> {
         report.print_json()?;
     } else if sub_m.get_flag("junit") {
         report.print_junit();
+    } else if sub_m.get_flag("sarif") {
+        report.print_sarif();
     } else {
         report.print_text();
     }
@@ -222,7 +224,15 @@ pub fn build_subcommand() -> clap::Command {
             Arg::new("junit")
                 .help("Emit JUnit XML to stdout instead of rich text")
                 .long("junit")
-                .action(ArgAction::SetTrue),
+                .action(ArgAction::SetTrue)
+                .conflicts_with("sarif"),
+        )
+        .arg(
+            Arg::new("sarif")
+                .help("Emit SARIF v2.1.0 JSON (GitHub Code Scanning, GitLab Ultra, Sonatype) — issue #562")
+                .long("sarif")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("json"),
         )
         .arg(
             Arg::new("skip-network")
@@ -345,5 +355,215 @@ mod tests {
             .unwrap();
         let err = run(&matches).unwrap_err();
         assert!(matches!(err, SsgError::Validation { .. }));
+    }
+
+    #[test]
+    fn explain_with_known_gate_prints() {
+        // Covers explain_gate(Some(gate)) success arm. We accept any
+        // gate name that exists; pick `wcag` which always ships.
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from(["audit", "--explain", "--gate", "wcag"])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn explain_with_no_gate_prints_all() {
+        // Covers explain_gate(None) loop.
+        let cmd = build_subcommand();
+        let matches = cmd.try_get_matches_from(["audit", "--explain"]).unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn json_output_branch() {
+        // Covers `report.print_json()` arm (line ~75).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--json",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn sarif_output_branch() {
+        // Covers `report.print_sarif()` arm (line ~79) — the new
+        // --sarif flag routes here instead of falling through to
+        // print_text.
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--sarif",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn junit_output_branch() {
+        // Covers `report.print_junit()` arm (line ~77).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--junit",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn cli_overrides_gate_severity_failon() {
+        // Covers apply_cli_overrides paths for --gate, --severity,
+        // --fail-on (lines 117-128).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--gate",
+                "wcag",
+                "--severity",
+                "warn",
+                "--fail-on",
+                "error",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn cli_override_skip_network_flag() {
+        // Covers apply_cli_overrides --skip-network arm (line 130-131).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--skip-network",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn cli_override_no_skip_network_flag() {
+        // Covers apply_cli_overrides --no-skip-network arm (line 133-134).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--no-skip-network",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn load_audit_config_missing_file_returns_default() {
+        // Covers the `Err` -> default branch at line 100-101 of
+        // load_audit_config (path passed but file doesn't exist).
+        let cfg =
+            load_audit_config(Some(&PathBuf::from("/nonexistent/x.toml")))
+                .unwrap();
+        // Default config: severity_floor is `Warn`-or-similar by
+        // default. Smoke-check that we got a usable value back.
+        assert!(format!("{cfg:?}").contains("AuditConfig"));
+    }
+
+    #[test]
+    fn load_audit_config_garbage_toml_returns_default() {
+        // Covers the toml::from_str -> unwrap_or_default branch at
+        // line 112-113 (file exists, parse fails).
+        let tmp = tempfile::tempdir().unwrap();
+        let bad = tmp.path().join("bad.toml");
+        std::fs::write(&bad, "this is = not valid <<< toml >>>").unwrap();
+        let cfg = load_audit_config(Some(&bad)).unwrap();
+        assert!(format!("{cfg:?}").contains("AuditConfig"));
+    }
+
+    #[test]
+    fn load_audit_config_with_table_parses() {
+        // Covers the success path through line 112-113.
+        let tmp = tempfile::tempdir().unwrap();
+        let good = tmp.path().join("ssg.toml");
+        std::fs::write(
+            &good,
+            r#"
+[audit]
+severity_floor = "warn"
+fail_on = "error"
+"#,
+        )
+        .unwrap();
+        let cfg = load_audit_config(Some(&good)).unwrap();
+        assert!(format!("{cfg:?}").contains("AuditConfig"));
+    }
+
+    #[test]
+    fn run_and_dispatch_pass_quiet() {
+        // Covers run_and_dispatch's Pass + quiet arm (line 274-278).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
+            .unwrap();
+        run_and_dispatch(&matches, true).unwrap();
+    }
+
+    #[test]
+    fn run_and_dispatch_pass_verbose() {
+        // Covers the !quiet log::info!() arm (line 275-276).
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
+            .unwrap();
+        run_and_dispatch(&matches, false).unwrap();
     }
 }

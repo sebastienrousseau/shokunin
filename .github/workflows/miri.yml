@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Miri — undefined-behaviour, data-race, and uninit-memory detector.
+#
+# Trigger model (v0.0.45 #583 revision):
+#   - `schedule`: nightly Cron run on main, no churn from PR pushes.
+#   - `workflow_dispatch`: manual trigger from the Actions UI.
+#   - `pull_request`: opt-in via label `run-miri`. PRs that don't
+#     carry the label do not pay the ~90-minute Miri tax.
+#
+# Why not on every push: the v0.0.45 coverage lift pushed the lib
+# suite to ~2500 tests. Miri's interpreter is 50-100x slower than
+# native, so the run is consistently > 90 minutes. Triggering on
+# every push-to-feat caused every PR to spawn ~4 cancelled Miri
+# runs (the concurrency group kills each previous run as the next
+# push arrives). Decoupled triggers fix the noise without losing
+# the signal — Miri still runs nightly and on demand.
+
+name: Miri
+
+on:
+  schedule:
+    # Nightly at 02:30 UTC.
+    - cron: "30 2 * * *"
+  pull_request:
+    types: [labeled, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: miri-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # rust-toolchain.toml pins stable; override per-job for Miri which
+  # requires nightly. RUSTUP_TOOLCHAIN beats the toml file.
+  RUSTUP_TOOLCHAIN: nightly
+
+jobs:
+  miri:
+    # Only run on PRs that explicitly carry the `run-miri` label;
+    # skip the lib-test pass on routine PRs to avoid the 90-minute
+    # tax. schedule / workflow_dispatch always run.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-miri'))
+    name: cargo miri test --lib
+    runs-on: ubuntu-latest
+    # Miri's interpreter is ~50-100x slower than native test execution;
+    # the v0.0.45 lift pushed the lib suite to ~2500 tests. 180-minute
+    # cap leaves head-room for future test growth without re-tuning.
+    timeout-minutes: 180
+    # Advisory window: first 30 days after #560 lands. Drop this once
+    # the `.miri-skip` allowlist stabilises and Miri is reliably green.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install nightly + miri component
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: miri
+
+      - name: cargo miri setup
+        run: cargo miri setup
+
+      - name: Run Miri on lib tests
+        # Honour the skip-list in `.miri-skip`. Each entry is a test
+        # path (e.g. `plugin::cache::persists_across_runs`); the script
+        # transforms them into a `--skip` argument list.
+        run: |
+          set -euo pipefail
+          skip_args=""
+          if [ -f .miri-skip ]; then
+            while IFS= read -r line; do
+              # Strip comments + blank lines.
+              entry="${line%%#*}"
+              entry="${entry## }"
+              entry="${entry%% }"
+              [ -n "$entry" ] || continue
+              skip_args="$skip_args --skip $entry"
+            done < .miri-skip
+          fi
+          echo "Skip list: $skip_args"
+          # MIRIFLAGS:
+          #   -Zmiri-disable-isolation: allow tests that read $CARGO_HOME etc.
+          #   -Zmiri-permissive-provenance: ureq + smol both rely on
+          #     int-to-ptr casts that strict provenance flags trip on;
+          #     the operations are sound under permissive provenance.
+          export MIRIFLAGS="-Zmiri-disable-isolation -Zmiri-permissive-provenance"
+          cargo miri test --lib --features test-fault-injection -- $skip_args

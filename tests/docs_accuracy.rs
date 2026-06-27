@@ -316,6 +316,53 @@ fn sbom_cyclondx_version_matches_module_claim() {
     );
 }
 
+#[test]
+fn features_matrix_is_exhaustive() {
+    // docs/features-coverage.md must list every plugin module under
+    // src/plugins/<name>.rs in its first table. Adding a new plugin
+    // without updating the matrix fires this assertion with the
+    // offending module name — keeping examples/benches/regression
+    // coverage discoverable as the surface grows.
+    let matrix = read("docs/features-coverage.md");
+
+    // The plugin module names to check are derived from src/plugins/*.rs
+    // (excluding mod.rs, plugin.rs, plugins.rs which are infrastructure,
+    // and the postprocess + builtin_templates submodules).
+    let plugins_dir = workspace().join("src/plugins");
+    let mut module_names = Vec::new();
+    for entry in fs::read_dir(&plugins_dir).unwrap().flatten() {
+        let p = entry.path();
+        if p.extension().and_then(|s| s.to_str()) != Some("rs") {
+            continue;
+        }
+        if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
+            // Skip infrastructure modules and the registry shim;
+            // those are themselves covered by the "Plugin trait +
+            // lifecycle" + "Plugin registry" rows.
+            let skip = matches!(stem, "mod" | "plugins"); // `plugin` IS listed
+            if !skip {
+                module_names.push(stem.to_string());
+            }
+        }
+    }
+
+    let mut missing = Vec::new();
+    for name in &module_names {
+        // The matrix lists module names in `<code>` backticks in the
+        // second column. A bare substring is precise enough because
+        // the names are unique (e.g. `accessibility`, `ai`, `csp`).
+        let needle = format!("`{name}`");
+        if !matrix.contains(&needle) {
+            missing.push(name.clone());
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "docs/features-coverage.md is missing rows for these plugin modules:\n  {}\n\nAdd one row per module to the first table.",
+        missing.join("\n  ")
+    );
+}
+
 #[cfg(test)]
 mod helpers {
     use super::*;

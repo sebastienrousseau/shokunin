@@ -29,11 +29,55 @@ env:
   CARGO_INCREMENTAL: "0"
   CARGO_PROFILE_DEV_DEBUG: "0"
   RUST_BACKTRACE: short
-  COVERAGE_REGIONS_FLOOR: "95.0"
-  COVERAGE_LINES_FLOOR: "95.0"
-  COVERAGE_FUNCTIONS_FLOOR: "95.0"
+  # Floors raised v0.0.45 (#583) after the coverage lift (~90 new tests
+  # across rpc_schema, cmd::audit, edge_headers, mcp, isr_manifest,
+  # dev_server, lib.rs, search, audit::output::json, iso20022, audit::mod,
+  # cmd::error, broken_links, accessibility, plus serde_json refactor
+  # in plugin/sbom/accessibility/json formatters).
+  #
+  # Gate uses `cargo llvm-cov --lib` to keep example_outputs.rs
+  # integration tests (which run real `ssg build` invocations with their
+  # own timeouts in the `examples` job) out of the instrumented run.
+  COVERAGE_REGIONS_FLOOR: "95.5"
+  COVERAGE_LINES_FLOOR: "96.5"
+  COVERAGE_FUNCTIONS_FLOOR: "95.5"
 
 jobs:
+  # ── Phase 0: repo hygiene (issue #556) ──────────────────────────────
+  # Fast gate (~5 s, no toolchain) that fails if coverage detritus or
+  # other build artefacts leak into the working tree. Runs in parallel
+  # with `lint` so it can't be skipped by a clippy failure.
+  repo-hygiene:
+    name: repo hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: No stray *.profraw outside target/
+        run: |
+          set -euo pipefail
+          # Mirror .gitignore exclusions so local-pre-commit reuse is sane.
+          stray=$(find . -name '*.profraw' \
+              -not -path './target/*' \
+              -not -path './.git/*' \
+              -not -path './.claude/*' || true)
+          if [ -n "$stray" ]; then
+            echo "::error::stray *.profraw outside target/ — run 'make coverage' (sets LLVM_PROFILE_FILE) and re-run:"
+            echo "$stray"
+            exit 1
+          fi
+      - name: No tracked *.profraw
+        run: |
+          set -euo pipefail
+          tracked=$(git ls-files '*.profraw' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::*.profraw tracked by git (must be ignored, never committed):"
+            echo "$tracked"
+            exit 1
+          fi
+
   # ── Phase 1: lint (blocks downstream) ───────────────────────────────
   lint:
     name: fmt + clippy
@@ -50,6 +94,11 @@ jobs:
         with:
           shared-key: lint
 
+      - name: Install ripgrep (#558, #557, #584)
+        # Required by tools/lint-no-shellout.sh and tools/lint-adr.sh.
+        # ubuntu-latest doesn't preinstall rg — adding ~1s for apt.
+        run: sudo apt-get install -y ripgrep
+
       - name: cargo fmt
         run: cargo fmt --all -- --check
 
@@ -64,6 +113,26 @@ jobs:
             -D warnings \
             -A clippy::unwrap_used \
             -A clippy::expect_used
+
+      - name: no shellout regression (#558)
+        # Refuses Command::new("<shell-binary>") in src/ or crates/.
+        # Regression guard for v0.0.44 LlmPlugin port from curl to ureq (#520).
+        run: ./tools/lint-no-shellout.sh
+
+      - name: ADR citation graph (#557)
+        # Refuses dangling `adr: ADR-NNNN` citations in tracked source.
+        # Every cited ADR must resolve to a file in docs/adrs/.
+        run: ./tools/lint-adr.sh
+
+      - name: feature powerset check (#584)
+        # cargo-hack runs `cargo check` across every reachable subset
+        # of the feature flags (45 combinations at v0.0.45). Catches
+        # cfg-gating gaps where helper items become dead under
+        # --no-default-features. `--depth 2` keeps the runner cost
+        # bounded; full powerset (`--depth N`) is exponential.
+        run: |
+          cargo install --locked cargo-hack
+          cargo hack check --feature-powerset --depth 2 --no-dev-deps
 
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
@@ -155,6 +224,27 @@ jobs:
         # asserts every relative link resolves to an existing file.
         run: cargo test --test doc_links
 
+      - name: Emit SARIF audit report (#562)
+        # Runs the 14-gate audit against the bundled examples/blog
+        # output (produced by `Validator regression suite` above)
+        # and emits SARIF v2.1.0. The codeql-action upload step
+        # below pushes it to GitHub Code Scanning so findings appear
+        # in the Security tab.
+        run: |
+          if [ -d examples/blog/public ]; then
+            cargo run --quiet -- audit \
+              --output examples/blog/public \
+              --sarif > ssg-audit.sarif || true
+          else
+            echo '{"version":"2.1.0","runs":[]}' > ssg-audit.sarif
+          fi
+      - name: Upload SARIF to GitHub Code Scanning (#562)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ssg-audit.sarif
+          category: ssg-audit
+
   # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
   coverage:
     name: coverage gate
@@ -173,24 +263,37 @@ jobs:
           shared-key: coverage
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
-      - name: Run coverage (lib + integration, exclude heavy examples)
+      - name: Run coverage (lib only — example_outputs runs in `examples` job)
         run: |
-          # Exclude documented stub modules from coverage:
+          # Exclude documented untestable modules from coverage:
           # - src/core/deploy_adapter.rs ships 6 "not yet implemented" deploy
           #   adapters (#527 in v0.0.43); they're stubs by design until each
           #   target is fleshed out in a follow-up.
+          # - src/main.rs is the binary entry point — exercised by
+          #   running the binary, never by `cargo test`. The library code
+          #   that main.rs delegates to (lib.rs::run + dispatch_invocation)
+          #   is what the gate cares about.
+          #
+          # We run `--lib` (not `--tests`) so the example_outputs
+          # integration suite — which invokes `ssg build` end-to-end with
+          # its own multi-minute timeouts — runs in the separate
+          # `examples` job and doesn't get instrumented here. Integration
+          # tests in tests/*.rs that DO exercise lib paths still contribute
+          # via the doctests embedded in lib.rs/src/**.
+          IGNORE='src/core/deploy_adapter\.rs|src/main\.rs'
           cargo llvm-cov --lib --features test-fault-injection \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs' \
+            --ignore-filename-regex "$IGNORE" \
             --no-report --quiet
           cargo llvm-cov report --summary-only \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
+            --ignore-filename-regex "$IGNORE"
           cargo llvm-cov report --lcov --output-path coverage.lcov \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs'
+            --ignore-filename-regex "$IGNORE"
       - name: Enforce coverage floor
         run: |
           set -euo pipefail
+          IGNORE='src/core/deploy_adapter\.rs|src/main\.rs'
           summary=$(cargo llvm-cov report --json --summary-only \
-            --ignore-filename-regex 'src/core/deploy_adapter\.rs')
+            --ignore-filename-regex "$IGNORE")
           regions=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['regions']['percent'])")
           lines=$(echo   "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['lines']['percent'])")
           fns=$(echo     "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['totals']['functions']['percent'])")
@@ -230,3 +333,28 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check
         run: cargo deny check
+
+  # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
+  # cargo-vet complements cargo-deny (license + CVE) with per-crate
+  # attestation: every transitive dep must be audited by us, vouched
+  # by an imported trust set, or explicitly exempted. See
+  # supply-chain/README.md for the exemption reduction policy.
+  vet:
+    name: cargo-vet
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: vet
+      - name: Install cargo-vet
+        run: cargo install cargo-vet --locked
+      - name: Run cargo-vet
+        # `--locked` matches our cargo-deny convention and refuses
+        # unexpected lock-file drift on PRs.
+        run: cargo vet --locked

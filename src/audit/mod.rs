@@ -579,6 +579,20 @@ impl AuditReport {
         let s = output::junit::format(self);
         println!("{s}");
     }
+
+    /// Convenience: prints the SARIF v2.1.0 formatter to stdout (#562).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// r.print_sarif();
+    /// ```
+    pub fn print_sarif(&self) {
+        let s = output::sarif::format(self);
+        println!("{s}");
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -999,5 +1013,69 @@ mod tests {
             ],
         };
         assert_eq!(report.max_severity(), Some(Severity::Error));
+    }
+
+    #[test]
+    fn site_load_nonexistent_returns_empty_html_files() {
+        // Covers line 240 — `Vec::new()` arm when root doesn't exist.
+        let site = Site::load(Path::new("/nonexistent/xxx-audit")).unwrap();
+        assert!(site.html_files.is_empty());
+    }
+
+    #[test]
+    fn audit_config_default_is_new() {
+        // Covers lines 381-383.
+        let cfg = AuditConfig::default();
+        assert_eq!(cfg.severity_floor, AuditConfig::new().severity_floor);
+    }
+
+    #[test]
+    fn audit_report_len_and_is_empty_align() {
+        // Covers lines 517-519 (len) + 531-533 (is_empty).
+        let r0 = AuditReport { gates: vec![] };
+        assert_eq!(r0.len(), 0);
+        assert!(r0.is_empty());
+        let r1 = AuditReport {
+            gates: vec![GateResult {
+                name: "g".into(),
+                skipped: false,
+                skip_reason: None,
+                severity_counts: SeverityCounts {
+                    info: 0,
+                    warn: 0,
+                    error: 0,
+                },
+                findings: vec![],
+            }],
+        };
+        assert_eq!(r1.len(), 1);
+        assert!(!r1.is_empty());
+    }
+
+    #[test]
+    fn audit_runner_debug_lists_gate_names() {
+        // Covers lines 595-603 — Debug impl for AuditRunner.
+        let runner = AuditRunner::new(AuditConfig::new());
+        let dbg = format!("{runner:?}");
+        assert!(dbg.contains("AuditRunner"));
+        assert!(dbg.contains("gates"));
+    }
+
+    #[test]
+    fn audit_runner_with_gates_accepts_empty_vec() {
+        // Covers lines 634-639 — with_gates constructor.
+        let runner = AuditRunner::with_gates(AuditConfig::new(), Vec::new());
+        assert!(runner.gate_names().is_empty());
+    }
+
+    #[test]
+    fn audit_report_print_sarif_emits_to_stdout() {
+        // Covers AuditReport::print_sarif body (lines 592-595).
+        // The doctest under #[doc] doesn't get credited toward
+        // `cargo llvm-cov --tests` coverage on stable; this unit
+        // test does. We don't assert on stdout content — just that
+        // the call runs to completion without panicking.
+        let r = AuditReport { gates: vec![] };
+        r.print_sarif();
     }
 }

@@ -1,0 +1,11 @@
+[[links]]
+name = "Home"
+url = "/"
+
+[[links]]
+name = "About"
+url = "/about.html"
+
+[[links]]
+name = "Blog"
+url = "/blog/"

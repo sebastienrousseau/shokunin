@@ -580,7 +580,48 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - name: Publish to crates.io
+      - name: Publish workspace sub-crates to crates.io (dep order)
+        # `cargo publish -p ssg` fails if ssg-core / ssg-rpc-macro /
+        # ssg-rpc / ssg-search at the matching version don't already
+        # exist on crates.io (path deps are verified against the
+        # registry). Publish them first, in dependency order:
+        #
+        #   ssg-core         (no internal deps)
+        #   ssg-rpc-macro    (no internal deps)
+        #   ssg-rpc          (depends on ssg-rpc-macro)
+        #   ssg-search       (no internal deps)
+        #
+        # crates.io's index needs ~30s after each publish before the
+        # next crate can depend on the freshly-published version, so
+        # we sleep between calls. `--no-verify` skips the rebuild
+        # against the registry (we already built + tested in earlier
+        # CI phases) and shaves a few minutes off the wall clock.
+        #
+        # Idempotent retry: if a version is already on crates.io
+        # (e.g. previous release run already published the sub-crate
+        # and the workflow is being re-run), don't fail the build.
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search; do
+            echo "::group::cargo publish -p $c"
+            if cargo publish -p "$c" --locked --no-verify; then
+              echo "✓ $c published"
+            else
+              ver=$(grep '^version = ' "crates/$c/Cargo.toml" | head -1 | cut -d'"' -f2)
+              if curl -fsS "https://crates.io/api/v1/crates/$c/$ver" >/dev/null 2>&1; then
+                echo "✓ $c $ver already on crates.io — continuing"
+              else
+                echo "::error::cargo publish -p $c failed and version not on crates.io"
+                exit 1
+              fi
+            fi
+            echo "::endgroup::"
+            sleep 30
+          done
+
+      - name: Publish ssg to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p ssg --locked

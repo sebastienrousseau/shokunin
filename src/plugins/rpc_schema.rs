@@ -108,7 +108,33 @@ fn ensure_parent(path: &Path) -> Result<(), SsgError> {
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;
+    use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
+    use ssg_rpc::{ssg_rpc, RpcError};
     use tempfile::tempdir;
+
+    /// Tiny in-test RPC so the dispatch inventory has at least one
+    /// entry during `cargo test --lib`, exercising the full emit
+    /// path inside `RpcSchemaPlugin::after_compile`. Without this,
+    /// the inventory is empty and the early-return at line ~78
+    /// hides the rest of the function from coverage instrumentation.
+    #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+    struct CovInput {
+        v: u32,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+    struct CovOutput {
+        out: u32,
+    }
+
+    #[ssg_rpc]
+    #[doc = "Coverage probe: only exists so the inventory is non-empty."]
+    fn _ssg_rpc_schema_coverage_probe(
+        input: CovInput,
+    ) -> Result<CovOutput, RpcError> {
+        Ok(CovOutput { out: input.v + 1 })
+    }
 
     fn ctx_for(site_dir: &Path) -> PluginContext {
         PluginContext {
@@ -141,23 +167,47 @@ mod tests {
     }
 
     #[test]
-    fn empty_inventory_is_a_noop_or_writes_valid_header() {
-        // The ssg binary itself doesn't register any #[ssg_rpc]
-        // functions in lib unit-test context, so on its own this
-        // should not produce a file. We assert behavioural
-        // neutrality: either no file, or a valid header-bearing
-        // file (when integration tests in the same binary linked
-        // some).
+    fn coverage_probe_dispatches_and_increments() {
+        // Drives the `_ssg_rpc_schema_coverage_probe` body via the
+        // dispatcher so its 5 lines (signature + return expression)
+        // are covered. Without this, the probe is registered into
+        // the inventory but never executed.
+        let out = ssg_rpc::dispatch::dispatch(
+            "_ssg_rpc_schema_coverage_probe",
+            r#"{"v":41}"#,
+        )
+        .expect("dispatch");
+        assert!(out.contains("\"out\":42"));
+    }
+
+    #[test]
+    fn writes_typescript_when_inventory_nonempty() {
+        // The `_ssg_rpc_schema_coverage_probe` above registers a
+        // single descriptor, so iter_descriptors().next() returns
+        // Some(_) and the emit path executes end-to-end.
         let dir = tempdir().unwrap();
         let ctx = ctx_for(dir.path());
         RpcSchemaPlugin::new().after_compile(&ctx).unwrap();
         let path = dir.path().join(RPC_DTS_RELATIVE_PATH);
-        if path.exists() {
-            let txt = fs::read_to_string(&path).unwrap();
-            assert!(
-                txt.contains("AUTO-GENERATED"),
-                "emitted file should carry the header: {txt}"
-            );
-        }
+        assert!(path.exists(), "rpc.d.ts must be written");
+        let txt = fs::read_to_string(&path).unwrap();
+        assert!(
+            txt.contains("AUTO-GENERATED"),
+            "emitted file should carry the header: {txt}"
+        );
+    }
+
+    #[test]
+    fn ensure_parent_creates_missing_directory() {
+        let dir = tempdir().unwrap();
+        let nested = dir.path().join("a/b/c/file.d.ts");
+        ensure_parent(&nested).unwrap();
+        assert!(nested.parent().unwrap().is_dir());
+    }
+
+    #[test]
+    fn ensure_parent_path_without_parent_is_ok() {
+        // `Path::new("")` has no parent — must be a no-op (Ok).
+        ensure_parent(Path::new("")).unwrap();
     }
 }

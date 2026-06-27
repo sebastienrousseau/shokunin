@@ -402,4 +402,59 @@ mod tests {
         let _clone = g;
         assert!(format!("{g:?}").contains("BrokenLinksGate"));
     }
+
+    #[test]
+    fn internal_target_exists_empty_href_is_ok() {
+        // Covers line 134 — `href_clean.is_empty()` early return.
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "#"));
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "?"));
+        assert!(internal_target_exists(tmp.path(), tmp.path(), ""));
+    }
+
+    #[test]
+    fn internal_target_exists_resolves_relative_from_root_when_page_has_no_parent(
+    ) {
+        // Covers line 143 — `else { root.join(href_clean) }` arm when
+        // the page has no parent.
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("target.html"), "x").unwrap();
+        // Pass the root itself as the page; root has no parent
+        // outside the tempdir, but its `parent()` is still Some — to
+        // force the else arm we use an empty-component Path.
+        // The simplest deterministic path: the function strips '?'
+        // and '#' then joins root + href_clean.
+        assert!(internal_target_exists(
+            tmp.path(),
+            std::path::Path::new(""),
+            "target.html"
+        ));
+    }
+
+    #[test]
+    fn internal_target_exists_dir_with_index_html() {
+        // Covers line 150 — `candidate.is_dir() && index.html exists`.
+        let tmp = tempfile::tempdir().unwrap();
+        let sub = tmp.path().join("docs");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(sub.join("index.html"), "<html/>").unwrap();
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "/docs"));
+    }
+
+    #[test]
+    fn internal_target_exists_via_with_index_branch() {
+        // Covers line 154 — `with_index.exists()` arm. The candidate
+        // doesn't itself exist but `<candidate>/index.html` does and
+        // the dir was created.
+        let tmp = tempfile::tempdir().unwrap();
+        let sub = tmp.path().join("section");
+        std::fs::create_dir_all(&sub).unwrap();
+        std::fs::write(sub.join("index.html"), "<html/>").unwrap();
+        // Note: this branch fires when candidate is a directory that
+        // exists — but we cover the second `with_index.exists()` path
+        // when the candidate string isn't itself an existing dir but
+        // the index variant does. To reliably reach line 154 we
+        // construct a non-extension href.
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "/section/"));
+    }
 }

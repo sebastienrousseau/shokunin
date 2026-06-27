@@ -186,7 +186,14 @@ fn build_100_pages_within_budget() {
         eprintln!("[perf_budgets] templates missing — skipping 100-page");
         return;
     };
-    assert_under_budget("100-page build", t, Duration::from_millis(500));
+    // Budget raised from 500 → 800 ms in v0.0.45 (#583) to absorb the
+    // `content_stager` shim cost: one pre-staging pass that copies +
+    // frontmatter-transforms every `.md`, plus a second pass that
+    // injects template-default keys. The shim itself is parallelised
+    // via Rayon, but the per-file I/O is still on the critical path
+    // until upstream issues #67–#71 land (tracked in #585) and the
+    // shim is deleted in v0.0.46.
+    assert_under_budget("100-page build", t, Duration::from_millis(800));
 }
 
 #[test]

@@ -33,21 +33,32 @@ pub struct TaxonomyTerm {
 
 // =====================================================================
 // Built-in templates (embedded so the binary works without scaffold)
+//
+// The constants below are only loaded by the MiniJinja loader inside
+// `cfg(feature = "templates")` (line ~174). The non-templates fallback
+// impl renders without referencing them, so we gate each constant
+// behind the feature so `cargo check --no-default-features` does not
+// trip on `dead_code = "deny"` (see workspace [lints.rust]).
 // =====================================================================
 
 /// Built-in tag term-page template (#542).
+#[cfg(feature = "templates")]
 const BUILTIN_TAG_HTML: &str = include_str!("builtin_templates/tag.html");
 /// Built-in category term-page template (#542).
+#[cfg(feature = "templates")]
 const BUILTIN_CATEGORY_HTML: &str =
     include_str!("builtin_templates/category.html");
 /// Built-in archive/topic term-page template (#542).
+#[cfg(feature = "templates")]
 const BUILTIN_ARCHIVE_HTML: &str =
     include_str!("builtin_templates/archive.html");
 /// Built-in taxonomy index-page template (lists all terms) (#542).
+#[cfg(feature = "templates")]
 const BUILTIN_TAXONOMY_INDEX_HTML: &str =
     include_str!("builtin_templates/taxonomy_index.html");
 /// Built-in minimal `base.html` for sites that ship none of their own.
 /// User-provided `base.html` is preferred via the path loader (#542).
+#[cfg(feature = "templates")]
 const BUILTIN_BASE_HTML: &str = include_str!("builtin_templates/base.html");
 
 /// Plugin that generates taxonomy index pages for tags and categories.
@@ -134,6 +145,11 @@ enum TaxonomyKind {
     Archive,
 }
 
+// These helpers only feed the MiniJinja-driven renderer; the
+// non-templates fallback emits literal HTML and never asks for the
+// template filename or term variable. Gated to suppress dead_code
+// under `--no-default-features`.
+#[cfg(feature = "templates")]
 impl TaxonomyKind {
     /// User-overridable template filename (looked up in the user's
     /// `templates/tera/` directory first).
@@ -454,6 +470,7 @@ impl<'a> TaxonomyRenderer<'a> {
 /// Resolves the user's template directory, preferring
 /// `<template_dir>/tera/` (the canonical layout) but falling back to
 /// `<template_dir>/` if `tera/` is absent.
+#[cfg(feature = "templates")]
 fn resolve_user_template_dir(ctx: &PluginContext) -> Option<PathBuf> {
     let tera = ctx.template_dir.join("tera");
     if tera.is_dir() {
@@ -467,6 +484,7 @@ fn resolve_user_template_dir(ctx: &PluginContext) -> Option<PathBuf> {
 
 /// Converts a list of (title, url) pairs into JSON page objects with
 /// `title` and `url` keys, suitable for template iteration.
+#[cfg(feature = "templates")]
 fn pages_to_json(pages: &[(String, String)]) -> Vec<serde_json::Value> {
     pages
         .iter()

@@ -5,7 +5,7 @@
 //! # ssg-core — Platform-independent SSG compilation pipeline
 //!
 //! This crate contains the pure-logic core of SSG, with no system
-//! dependencies (`openssl`, `rayon`, `http-handle`). It compiles to
+//! dependencies (`rayon`, `http-handle`). It compiles to
 //! `wasm32-wasi` and `wasm32-unknown-unknown` (via `wasm-bindgen`).
 //!
 //! ## Features

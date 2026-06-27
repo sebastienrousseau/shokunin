@@ -262,17 +262,21 @@ fn check_invariants(
     }
 }
 
-/// The full 10-invariant gate. Currently aspirational — at the time
-/// of writing, the shipped example templates emit some pages
-/// (taxonomy indexes, several home pages) without `<h1>` and a few
-/// without `<meta name=viewport>`. Those are template-level fixes
-/// that need their own focused commit; until then this test is
-/// `#[ignore]` and reviewers can opt in via
-/// `cargo test --test element_presence -- --ignored`.
+/// The full 10-invariant gate. **Always-on** in v0.0.45 (#495).
 ///
-/// The always-on `core_invariants_hold_for_every_page` below covers
-/// the subset every example page currently satisfies — it's the
-/// real per-PR regression gate.
+/// Originally aspirational because the bundled example templates
+/// (basic, landing, plugins, blog taxonomy indexes) shipped without
+/// `<h1>`, `<meta name=viewport>`, or the full Open Graph chain;
+/// flipping the gate to always-on used to fail for those pages.
+/// Subsequent template-coverage work (`v0.0.43` landing + view-
+/// transitions, `v0.0.44` SEO `lol_html` port, the `v0.0.45` example
+/// matrix sweep) closed those gaps. Every page under `examples/*/
+/// public/` that isn't in [`is_exempt`] now satisfies all 10
+/// invariants.
+///
+/// The smaller [`core_invariants_hold_for_every_page`] below is
+/// retained as a fast, per-page sanity gate that runs even when
+/// `examples/*/public/` hasn't been populated yet.
 #[test]
 fn every_built_example_page_satisfies_universal_invariants() {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -373,13 +377,13 @@ fn every_built_example_page_satisfies_universal_invariants() {
 /// - `<main>` landmark (WCAG 1.3.1)
 /// - charset declared (HTML5)
 ///
-/// Pre-existing gaps that live in the aspirational `#[ignore]`d test
-/// above (`every_built_example_page_satisfies_universal_invariants`):
-/// `<h1>`-exactly-once, viewport meta, `<meta name=description>`,
-/// canonical URL, Open Graph chain (`og:title`/`og:description`/
-/// `og:type`), `twitter:card`. The bundled `examples/basic` template
-/// is intentionally minimal and omits the SEO-recommended chain;
-/// other examples have it via the shared SEO plugins.
+/// Invariants covered here are a fast subset of the always-on
+/// `every_built_example_page_satisfies_universal_invariants`
+/// (above): `<html lang>`, `<title>` non-empty, `<main>` landmark,
+/// charset declared. The bigger gate covers `<h1>`-exactly-once,
+/// viewport meta, `<meta name=description>`, canonical URL, the
+/// Open Graph chain (`og:title`/`og:description`/`og:type`), and
+/// `twitter:card`.
 fn check_core_invariants(
     path: &Path,
     rel: &str,

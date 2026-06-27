@@ -1462,4 +1462,20 @@ mod tests {
         // Attribute not found
         assert_eq!(extract_attr_value("<img alt=\"hello\">", "width"), None);
     }
+
+    #[test]
+    fn default_wcag_version_is_22() {
+        // Covers default_wcag_version fn body (lines 69-71). Used by
+        // serde when the wcag_version field is absent during deserialise.
+        assert_eq!(default_wcag_version(), "2.2");
+    }
+
+    #[test]
+    fn accessibility_report_deserialises_without_wcag_version() {
+        // Confirms the serde default integration: a JSON blob without
+        // wcag_version still parses and yields "2.2".
+        let json = r#"{"pages_scanned":0,"total_issues":0,"pages":[]}"#;
+        let r: AccessibilityReport = serde_json::from_str(json).unwrap();
+        assert_eq!(r.wcag_version, "2.2");
+    }
 }

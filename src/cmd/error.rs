@@ -200,4 +200,58 @@ mod tests {
         assert!(msg.contains("name too long"));
         assert!(msg.contains("Validation"));
     }
+
+    #[test]
+    fn cli_error_source_io_returns_some() {
+        // Covers line 103 — IoError arm of Error::source().
+        let io = std::io::Error::other("x");
+        let err = CliError::IoError(io);
+        use std::error::Error;
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn cli_error_source_toml_returns_some() {
+        // Covers line 104 — TomlError arm of Error::source().
+        let toml_err: toml::de::Error =
+            toml::from_str::<crate::cmd::SsgConfig>("invalid {{{").unwrap_err();
+        let err = CliError::TomlError(toml_err);
+        use std::error::Error;
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn cli_error_source_other_variants_return_none() {
+        // Covers line 105 — `_ => None` arm.
+        use std::error::Error;
+        let cases = [
+            CliError::InvalidPath {
+                field: "f".into(),
+                details: "d".into(),
+            },
+            CliError::MissingArgument("a".into()),
+            CliError::InvalidUrl("u".into()),
+            CliError::ValidationError("v".into()),
+        ];
+        for err in &cases {
+            assert!(err.source().is_none(), "expected None for {err:?}");
+        }
+    }
+
+    #[test]
+    fn cli_error_from_io_error_via_from_impl() {
+        // Covers the From<io::Error> conversion.
+        let io = std::io::Error::other("x");
+        let err: CliError = io.into();
+        assert!(matches!(err, CliError::IoError(_)));
+    }
+
+    #[test]
+    fn cli_error_from_toml_error_via_from_impl() {
+        // Covers the From<toml::de::Error> conversion.
+        let toml_err: toml::de::Error =
+            toml::from_str::<crate::cmd::SsgConfig>("bad {{{").unwrap_err();
+        let err: CliError = toml_err.into();
+        assert!(matches!(err, CliError::TomlError(_)));
+    }
 }

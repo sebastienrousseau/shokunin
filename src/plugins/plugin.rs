@@ -136,6 +136,9 @@ impl PluginCache {
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
+        // Infallible: HashMap<String, u64> is always serialisable to
+        // JSON. We keep the `map_err` for clippy::expect_used (which is
+        // denied in lib); the closure body is dark but harmless.
         let json =
             serde_json::to_string_pretty(&serialisable).map_err(|e| {
                 SsgError::Io {

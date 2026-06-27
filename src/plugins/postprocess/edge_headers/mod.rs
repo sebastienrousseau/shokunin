@@ -423,4 +423,134 @@ mod tests {
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("_headers").exists());
     }
+
+    fn cfg_with_targets(targets: Vec<&str>) -> crate::cmd::SsgConfig {
+        let mut edge = crate::cmd::EdgeHeadersConfig::default();
+        edge.targets = targets.into_iter().map(String::from).collect();
+        crate::cmd::SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("http://example.com".to_string())
+            .edge_headers(edge)
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn after_compile_cloudflare_target_writes_wrangler_headers() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["cloudflare"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        let written = site.join(".ssg/edge/wrangler-headers.toml");
+        assert!(written.exists(), "{}", written.display());
+        let body = fs::read_to_string(&written).unwrap();
+        assert!(body.contains("Strict-Transport-Security"));
+    }
+
+    #[test]
+    fn after_compile_netlify_target_writes_underscore_headers() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["netlify"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        let written = site.join("_headers");
+        assert!(written.exists());
+        let body = fs::read_to_string(&written).unwrap();
+        assert!(body.contains("Strict-Transport-Security"));
+    }
+
+    #[test]
+    fn after_compile_vercel_target_writes_json() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["vercel"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        let written = site.join(".ssg/edge/vercel-headers.json");
+        assert!(written.exists());
+        let body = fs::read_to_string(&written).unwrap();
+        assert!(body.contains("Strict-Transport-Security"));
+    }
+
+    #[test]
+    fn after_compile_unknown_target_is_warned_and_skipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["unknown-cdn"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        assert!(!site.join("_headers").exists());
+        assert!(!site.join(".ssg/edge").exists());
+    }
+
+    #[test]
+    fn after_compile_target_name_is_case_insensitive() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["CloudFlare"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join(".ssg/edge/wrangler-headers.toml").exists());
+    }
+
+    #[test]
+    fn after_compile_all_three_targets_emit_all_three_artefacts() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["cloudflare", "netlify", "vercel"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        EdgeHeadersPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("_headers").exists());
+        assert!(site.join(".ssg/edge/wrangler-headers.toml").exists());
+        assert!(site.join(".ssg/edge/vercel-headers.json").exists());
+    }
+
+    #[test]
+    fn new_constructs_unit() {
+        let _ = EdgeHeadersPlugin::new();
+    }
 }

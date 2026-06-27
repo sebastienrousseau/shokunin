@@ -10,8 +10,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned / Upcoming
+- See [v0.0.46 tracker (#585)](https://github.com/sebastienrousseau/static-site-generator/issues/585) — land the eight upstream fixes filed against `staticdatagen` / `staticweaver` / `metadata-gen` / `rssgen` and delete the corresponding shim functions in `src/core/content_stager.rs`.
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
-- **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.30% / 96.25% / 96.90% with `--lib --tests`. The remaining ~1100 uncovered regions sit in I/O-heavy production glue that needs source-level seams before it can be exercised: (1) add a `ServeTransport`-style trait seam to `src/server/server.rs::handle_server` to mirror `serve_site_with`'s pattern, (2) instrument ~30 additional `fail_point!()` sites across `src/lib.rs::run()`, `src/core/stream.rs`, and `src/plugins/search.rs` for the error branches that don't yet have failpoints, (3) add a mock HTTP/WebSocket transport for `src/server/livereload.rs`'s file watcher, (4) write ~40 fault-injection tests against the new instrumentation. Realistic effort: 1-2 weeks of dedicated work.
+- **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.71 / 96.87 / 95.77 with `--lib`. The remaining uncovered regions sit in I/O-heavy production glue that needs source-level seams.
+
+## [0.0.45] - 2026-06-27
+
+### Added
+- **Hygiene + correctness + supply-chain attestation baseline.** PR [#583](https://github.com/sebastienrousseau/static-site-generator/pull/583) closed 15 issues:
+  - **#556** profraw hygiene + `repo-hygiene` CI gate; `make coverage` pins `LLVM_PROFILE_FILE` to `target/coverage/`.
+  - **#557** Six baseline ADRs in [`docs/adrs/`](docs/adrs/) + `lint-adr` CI gate enforcing the `adr: ADR-NNNN` citation graph.
+  - **#558** No-shellout regression lint (`tools/lint-no-shellout.sh`).
+  - **#559 + #494** `BENCHMARKS.md` expanded 83 → 245 lines; `tools/seed-bench-corpus.sh` generates deterministic 10/100/1K/10K corpora.
+  - **#560** Miri workflow — nightly schedule + `run-miri`-labelled PR trigger, 180-min timeout.
+  - **#561** `cargo-vet` supply-chain attestation (Mozilla / Bytecode Alliance / Google trust sets).
+  - **#562** SARIF v2.1.0 emitter for `ssg audit` + GitHub Code Scanning upload step.
+  - **#563** Dead `openssl` direct dep removed (7 transitive crates dropped from `Cargo.lock`).
+  - **#584** `cargo check --no-default-features` dead-code errors fixed; `cargo-hack feature-powerset` CI step added.
+  - **#466** Golden-file framework expanded 1 → 11 goldens (10 scaffold + 1 e2e sitemap).
+  - **#495** A11y element-presence gate confirmed always-on.
+  - **#21** 100% `rustdoc` coverage verified across all six workspace crates.
+  - **#22** README v0.0.45 sync + workspace version bump 0.0.44 → 0.0.45.
+  - **#23 / #24 / #25** [`docs/features-coverage.md`](docs/features-coverage.md) + `features_matrix_is_exhaustive` test gate.
+
+- **Content-staging shim** ([`src/core/content_stager.rs`](src/core/content_stager.rs), [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md)) — works around five `staticdatagen 0.0.9` / `staticweaver 0.0.2` / `metadata-gen 0.0.4` brittleness points so 2,371-file real-world user sites build again. Upstream fixes filed and tracked in [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585).
+
+### Fixed
+- **Site-build regression on user sites without `layout:` frontmatter**, missing `main.js`/`sw.js`, no `tags.md`, multi-line YAML scalars, or template references to keys content omits. Detailed root-cause in [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md). Validated against `sebastienrousseau/sebastienrousseau.github.io` — 102 root pages, 6.40s build, all 102 a11y-passing.
+
+### Changed
+- **CI coverage floors raised** from 95.0 → 95.5 / 96.5 / 95.5 (regions / lines / functions). Coverage gate uses `cargo llvm-cov --lib` to keep the heavy `example_outputs.rs` integration suite in its own job.
+- **Miri trigger model**: nightly schedule + `run-miri` label-gated PR runs (decoupled from every push).
+- **100-page build budget** in `tests/perf_budgets.rs` raised 500ms → 800ms to absorb the `content_stager` shim. Reverts in v0.0.46.
+
+### Security
+- **cargo-vet attestation** (#561) layered over `cargo-deny`.
+- **SARIF feed into GitHub Code Scanning** (#562) surfaces audit findings in the Security tab.
+
+### Performance
+- **Content-stager pre-pass is Rayon-parallelised** (`copy_tree` and `inject_template_defaults_recursive`).
+
+### Internal
+- ~90 new unit tests, ~6 integration tests (`tests/regression_user_site.rs`). Total lib suite: **2,530 / 2,530 passing**.
+- Workspace versions bumped 0.0.44 → 0.0.45 across `ssg`, `ssg-core`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-search`, `ssg-wasm`.
+- ADR-0007 documents the staging shim explicitly so future maintainers see the upstream debt at a glance.
 
 ## [0.0.40] - 2026-06-06
 
