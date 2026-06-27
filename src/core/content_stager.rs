@@ -1027,6 +1027,64 @@ mod tests {
     }
 
     #[test]
+    fn inject_missing_keys_no_frontmatter_passthrough() {
+        // Covers `let Some(...) = find_opening_fence(...) else { return body.to_string(); }`.
+        let body = "no frontmatter here\nplain markdown";
+        let out = inject_missing_keys(body, &["x".to_string()]);
+        assert_eq!(out, body);
+    }
+
+    #[test]
+    fn inject_missing_keys_unterminated_frontmatter_passthrough() {
+        // Covers `let Some(...) = find_closing_fence(...) else { return body.to_string(); }`.
+        let body = "---\ntitle: T\n# never closes";
+        let out = inject_missing_keys(body, &["x".to_string()]);
+        assert_eq!(out, body);
+    }
+
+    #[test]
+    fn inject_missing_keys_with_bom_preserves_bom() {
+        // Covers the `if body.starts_with('\u{FEFF}') { format!("\u{FEFF}{out}") }`
+        // branch inside `inject_missing_keys` — distinct from the
+        // existing `bom_is_preserved` test which only exercises the
+        // sibling layout-injection function.
+        let body = "\u{FEFF}---\ntitle: T\n---\nbody";
+        let out = inject_missing_keys(body, &["author".to_string()]);
+        assert!(out.starts_with('\u{FEFF}'));
+        assert!(out.contains("author: \"\""));
+    }
+
+    #[test]
+    fn find_closing_braces_returns_none_when_unterminated() {
+        // Covers `find_closing_braces` walking past the end without
+        // seeing `}}` — happens for malformed templates.
+        let mut out = std::collections::BTreeSet::new();
+        extract_simple_vars("{{ never_closes", &mut out);
+        // No vars extracted because the closing braces weren't found.
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn find_opening_fence_returns_none_when_first_nonblank_is_not_dashes() {
+        // Covers the bare-line non-`---` arm — the helper returns
+        // None and downstream injection functions fall through.
+        let body = "# Just a heading\n\n---\nfrontmatter: too late\n---\n";
+        let out = inject_default_layout_if_missing(body, "page");
+        // No injection because frontmatter doesn't start on first non-blank line.
+        assert_eq!(out, body);
+    }
+
+    #[test]
+    fn find_opening_fence_skips_leading_blank_lines() {
+        // Covers the `byte_pos += line.len(); continue;` branch when
+        // the YAML fence is preceded by blank lines.
+        let body = "\n\n\n---\ntitle: T\n---\nbody";
+        let out = inject_default_layout_if_missing(body, "page");
+        assert!(out.contains("layout: \"page\""));
+        assert!(out.contains("title: T"));
+    }
+
+    #[test]
     fn collapse_multiline_quoted_scalar_collapses_two_line() {
         let input = "url: \"\nhttps://example.com/x\"\n";
         let out = collapse_multiline_quoted_scalars(input);
