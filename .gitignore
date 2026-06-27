@@ -56,6 +56,11 @@ Icon?
 # Backups
 /backup_dir/
 
+# Bench corpora — generated on demand by tools/seed-bench-corpus.sh.
+# The medium (1K) and large (10K) sets are too big to track; the
+# tiny/small sets are also regenerated locally and not committed.
+/benches/corpus/
+
 # Local overrides
 /fixes.txt
 
