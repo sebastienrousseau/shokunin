@@ -413,7 +413,8 @@ mod tests {
     }
 
     #[test]
-    fn internal_target_exists_resolves_relative_from_root_when_page_has_no_parent() {
+    fn internal_target_exists_resolves_relative_from_root_when_page_has_no_parent(
+    ) {
         // Covers line 143 — `else { root.join(href_clean) }` arm when
         // the page has no parent.
         let tmp = tempfile::tempdir().unwrap();
@@ -437,11 +438,7 @@ mod tests {
         let sub = tmp.path().join("docs");
         std::fs::create_dir_all(&sub).unwrap();
         std::fs::write(sub.join("index.html"), "<html/>").unwrap();
-        assert!(internal_target_exists(
-            tmp.path(),
-            tmp.path(),
-            "/docs"
-        ));
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "/docs"));
     }
 
     #[test]
@@ -458,10 +455,6 @@ mod tests {
         // when the candidate string isn't itself an existing dir but
         // the index variant does. To reliably reach line 154 we
         // construct a non-extension href.
-        assert!(internal_target_exists(
-            tmp.path(),
-            tmp.path(),
-            "/section/"
-        ));
+        assert!(internal_target_exists(tmp.path(), tmp.path(), "/section/"));
     }
 }
