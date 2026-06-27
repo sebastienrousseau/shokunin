@@ -579,6 +579,20 @@ impl AuditReport {
         let s = output::junit::format(self);
         println!("{s}");
     }
+
+    /// Convenience: prints the SARIF v2.1.0 formatter to stdout (#562).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ssg::audit::AuditReport;
+    /// let r = AuditReport { gates: vec![] };
+    /// r.print_sarif();
+    /// ```
+    pub fn print_sarif(&self) {
+        let s = output::sarif::format(self);
+        println!("{s}");
+    }
 }
 
 // ---------------------------------------------------------------------

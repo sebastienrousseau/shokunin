@@ -224,6 +224,27 @@ jobs:
         # asserts every relative link resolves to an existing file.
         run: cargo test --test doc_links
 
+      - name: Emit SARIF audit report (#562)
+        # Runs the 14-gate audit against the bundled examples/blog
+        # output (produced by `Validator regression suite` above)
+        # and emits SARIF v2.1.0. The codeql-action upload step
+        # below pushes it to GitHub Code Scanning so findings appear
+        # in the Security tab.
+        run: |
+          if [ -d examples/blog/public ]; then
+            cargo run --quiet -- audit \
+              --output examples/blog/public \
+              --sarif > ssg-audit.sarif || true
+          else
+            echo '{"version":"2.1.0","runs":[]}' > ssg-audit.sarif
+          fi
+      - name: Upload SARIF to GitHub Code Scanning (#562)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ssg-audit.sarif
+          category: ssg-audit
+
   # ── Phase 2c: coverage gate (Linux only — llvm-cov is heavy) ────────
   coverage:
     name: coverage gate

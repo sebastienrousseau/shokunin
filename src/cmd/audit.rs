@@ -75,6 +75,8 @@ pub fn run(sub_m: &ArgMatches) -> Result<Outcome, SsgError> {
         report.print_json()?;
     } else if sub_m.get_flag("junit") {
         report.print_junit();
+    } else if sub_m.get_flag("sarif") {
+        report.print_sarif();
     } else {
         report.print_text();
     }
@@ -222,7 +224,15 @@ pub fn build_subcommand() -> clap::Command {
             Arg::new("junit")
                 .help("Emit JUnit XML to stdout instead of rich text")
                 .long("junit")
-                .action(ArgAction::SetTrue),
+                .action(ArgAction::SetTrue)
+                .conflicts_with("sarif"),
+        )
+        .arg(
+            Arg::new("sarif")
+                .help("Emit SARIF v2.1.0 JSON (GitHub Code Scanning, GitLab Ultra, Sonatype) — issue #562")
+                .long("sarif")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("json"),
         )
         .arg(
             Arg::new("skip-network")

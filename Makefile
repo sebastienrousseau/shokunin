@@ -91,7 +91,7 @@ lint: ensure-clippy ## Lint the project with Clippy.
 	@echo "Linting with Clippy..."
 	@cargo clippy --all-features --all-targets --all -- \
 		--deny clippy::dbg_macro --deny clippy::unimplemented --deny clippy::todo --deny warnings \
-		--deny missing_docs --deny broken_intra_doc_links --forbid unused_must_use --deny clippy::result_unit_err
+		--deny missing_docs --deny rustdoc::broken_intra_doc_links --forbid unused_must_use --deny clippy::result_unit_err
 
 # Run all unit and integration tests in the project.
 .PHONY: test
