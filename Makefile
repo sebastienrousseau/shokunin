@@ -39,12 +39,13 @@ bench: ## Run performance benchmarks (Criterion).
 
 # Run llvm-cov with profraw files pinned under target/coverage/ so they
 # never leak into the working tree. Mirrors the ci.yml coverage job
-# exactly so local + CI numbers match.
+# exactly so local + CI numbers match. Uses --lib (not --tests) so the
+# heavy example_outputs integration suite stays in its own CI job.
 .PHONY: coverage
-coverage: ## Run cargo llvm-cov; profraw output stays under target/coverage/.
+coverage: ## Run cargo llvm-cov --lib; profraw output stays under target/coverage/.
 	@mkdir -p target/coverage
 	@LLVM_PROFILE_FILE="$$PWD/target/coverage/%m-%p.profraw" \
-	  cargo llvm-cov --tests --features test-fault-injection \
+	  cargo llvm-cov --lib --features test-fault-injection \
 	    --ignore-filename-regex 'src/core/deploy_adapter\.rs|src/main\.rs' \
 	    --summary-only
 
