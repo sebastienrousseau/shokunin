@@ -1,16 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 # Miri — undefined-behaviour, data-race, and uninit-memory detector.
-# Runs on every push to main + every PR + workflow_dispatch. First
-# 30 days advisory (continue-on-error: true); flip required once the
-# .miri-skip allowlist stabilises (see #560).
+#
+# Trigger model (v0.0.45 #583 revision):
+#   - `schedule`: nightly Cron run on main, no churn from PR pushes.
+#   - `workflow_dispatch`: manual trigger from the Actions UI.
+#   - `pull_request`: opt-in via label `run-miri`. PRs that don't
+#     carry the label do not pay the ~90-minute Miri tax.
+#
+# Why not on every push: the v0.0.45 coverage lift pushed the lib
+# suite to ~2500 tests. Miri's interpreter is 50-100x slower than
+# native, so the run is consistently > 90 minutes. Triggering on
+# every push-to-feat caused every PR to spawn ~4 cancelled Miri
+# runs (the concurrency group kills each previous run as the next
+# push arrives). Decoupled triggers fix the noise without losing
+# the signal — Miri still runs nightly and on demand.
 
 name: Miri
 
 on:
-  push:
-    branches: [main, "feat/**"]
+  schedule:
+    # Nightly at 02:30 UTC.
+    - cron: "30 2 * * *"
   pull_request:
+    types: [labeled, synchronize]
   workflow_dispatch:
 
 concurrency:
@@ -26,12 +39,20 @@ env:
 
 jobs:
   miri:
+    # Only run on PRs that explicitly carry the `run-miri` label;
+    # skip the lib-test pass on routine PRs to avoid the 90-minute
+    # tax. schedule / workflow_dispatch always run.
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-miri'))
     name: cargo miri test --lib
     runs-on: ubuntu-latest
     # Miri's interpreter is ~50-100x slower than native test execution;
-    # the v0.0.45 lift pushed the lib suite to ~2500 tests, which runs
-    # well over the original 30-minute cap. Bumped to 90.
-    timeout-minutes: 90
+    # the v0.0.45 lift pushed the lib suite to ~2500 tests. 180-minute
+    # cap leaves head-room for future test growth without re-tuning.
+    timeout-minutes: 180
     # Advisory window: first 30 days after #560 lands. Drop this once
     # the `.miri-skip` allowlist stabilises and Miri is reliably green.
     continue-on-error: true
