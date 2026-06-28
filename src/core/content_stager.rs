@@ -37,7 +37,7 @@
 //! 2. **Multi-line quoted-scalar collapse.** `staticdatagen 0.0.10`
 //!    pins `metadata-gen = "0.0.4"` (the pre-#20 release; tracked at
 //!    [staticdatagen #100](https://github.com/sebastienrousseau/staticdatagen/issues/100)).
-//!    [`copy_tree`] applies the same collapse pass that's now upstream
+//!    `copy_tree` (the per-file staging helper) applies the same collapse pass that's now upstream
 //!    in `metadata-gen 0.0.5`, so the user's content sees consistent
 //!    behaviour regardless of which `metadata-gen` is transitively
 //!    resolved.

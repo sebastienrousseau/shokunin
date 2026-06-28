@@ -29,8 +29,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Generate documentation
+        # `--cfg docsrs` is intentionally NOT set here. That flag would
+        # activate `#![cfg_attr(docsrs, feature(doc_cfg))]` in
+        # `crates/ssg-search/src/lib.rs`, which requires the nightly
+        # toolchain — the local pages build uses stable. The real
+        # docs.rs render reads `[package.metadata.docs.rs]` in
+        # `Cargo.toml` (where the flag IS set, with multi-target
+        # nightly). Has been failing this workflow since v0.0.44
+        # (commit 6036b46) until this fix.
         run: |
-          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+          cargo doc --no-deps --all-features --workspace
           echo '<html><head><meta http-equiv="refresh" content="0; url=/ssg/"></head><body></body></html>' > ./target/doc/index.html
 
       - name: Upload Pages artifact
