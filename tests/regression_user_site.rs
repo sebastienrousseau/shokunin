@@ -244,3 +244,63 @@ fn full_user_pattern_combined() {
     fx.run_build().unwrap();
     require_html_exists(&fx.site_dir(), "article");
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// v0.0.46 regression scaffolding — nested-locale content tree.
+//
+// Blocked on `staticdatagen 0.0.10` (issue #70 in the upstream tracker,
+// landing on `feat/v0.0.10` PR #72). Marked `#[ignore]` for now so the
+// gate stays green; flip to active once `Cargo.toml` bumps the dep on
+// `feat/v0.0.46`. See `examples/multilingual_full_example.rs` for the
+// runnable showcase that exercises the same shape.
+// ─────────────────────────────────────────────────────────────────────
+
+#[test]
+#[ignore = "blocked on staticdatagen >= 0.0.10 — fixed by feat/v0.0.10 PR #72 (issue #70)"]
+fn nested_locale_subdirectories_build_per_language() {
+    // Mirrors the Jekyll `content/<lang>/<slug>.md` shape on a small
+    // 3-locale × 2-post tree. Once staticdatagen 0.0.10 is in the dep
+    // graph, every per-locale post lands at
+    // `public/<lang>/post-N/index.html` and this test goes green.
+    let fx = Fixture::new();
+    fs::write(
+        fx.template_dir().join("page.html"),
+        "<!doctype html><html lang=\"{{ language }}\"><body>{{ content }}</body></html>",
+    )
+    .unwrap();
+
+    for &(lang, native) in
+        &[("en", "English"), ("fr", "Français"), ("de", "Deutsch")]
+    {
+        let dir = fx.content_dir().join(lang);
+        fs::create_dir_all(&dir).unwrap();
+        for i in 1..=2 {
+            let body = format!(
+                "---\n\
+                 title: \"{native} post {i}\"\n\
+                 description: \"localised body in {native}\"\n\
+                 permalink: \"https://example.invalid/{lang}/post-{i}\"\n\
+                 layout: page\n\
+                 language: \"{lang}\"\n\
+                 hreflang: \"{lang}\"\n\
+                 ---\n\
+                 {native} post body {i}"
+            );
+            fs::write(dir.join(format!("post-{i}.md")), body).unwrap();
+        }
+    }
+
+    fx.run_build().unwrap();
+
+    // Every per-locale URL must materialise — `add()` walked
+    // recursively AND `get_processed_file_name` preserved the
+    // locale prefix.
+    for &lang in &["en", "fr", "de"] {
+        for i in 1..=2 {
+            require_html_exists(
+                &fx.site_dir(),
+                &format!("{lang}/post-{i}"),
+            );
+        }
+    }
+}

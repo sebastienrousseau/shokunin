@@ -365,6 +365,13 @@ name = "multilingual"                     # Name of the example
 path = "examples/multilingual_example.rs" # Path to the example file
 
 [[example]]
+# Nested-locale content showcase (5 locales × 5 posts under
+# `content/<lang>/`). Exercises the staticdatagen #70 / 0.0.10
+# recursive walk; runs cleanly against 0.0.9 with warnings.
+name = "multilingual_full"                          # Name of the example
+path = "examples/multilingual_full_example.rs"      # Path to the example file
+
+[[example]]
 # Plugin pipeline example — SEO, search, minify, live-reload.
 name = "plugins"                          # Name of the example
 path = "examples/plugins_example.rs"      # Path to the example file

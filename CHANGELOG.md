@@ -7,10 +7,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] — v0.0.46 in flight
 
-### Planned / Upcoming
-- See [v0.0.46 tracker (#585)](https://github.com/sebastienrousseau/static-site-generator/issues/585) — land the eight upstream fixes filed against `staticdatagen` / `staticweaver` / `metadata-gen` / `rssgen` and delete the corresponding shim functions in `src/core/content_stager.rs`.
+Status snapshot: all 8 upstream fixes for [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585) are pushed as 4 PRs against the user-owned upstream repos and are awaiting review + release. Once those publish to crates.io, this branch (`feat/v0.0.46`) bumps the deps in a single commit, deletes the corresponding shim functions in `src/core/content_stager.rs`, and closes [ssg#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) (HTML-entity double-escape) on the staticweaver side.
+
+### Upstream PRs landing in v0.0.46
+
+| Repo | Branch | PR | Closes (upstream) | Closes (downstream) |
+|---|---|---|---|---|
+| `staticdatagen` (next: 0.0.10) | `feat/v0.0.10` | [#72](https://github.com/sebastienrousseau/staticdatagen/pull/72) | `staticdatagen#67` / `#68` / `#69` / `#70` / `#71` + 4 dependabot bumps | `inject_default_layout_if_missing`, `stage_templates_with_required_stubs`, `ensure_tags_stub`, recursive content walk, log-ordering noise |
+| `metadata-gen` (next: 0.0.5) | `feat/v0.0.5` | [#21](https://github.com/sebastienrousseau/metadata-gen/pull/21) | `metadata-gen#20` | `collapse_multiline_quoted_scalars` (upstreamed into metadata-gen) |
+| `staticweaver` (next: 0.0.3) | `feat/v0.0.3` | [#29](https://github.com/sebastienrousseau/staticweaver/pull/29) | `staticweaver#28` + `askama_escape` drop | `collect_template_vars`, `inject_missing_keys`, `inject_template_defaults_recursive` + closes [ssg#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) (idempotent HTML escape) |
+| `rssgen` (next: 0.0.6) | `feat/v0.0.6` | [#35](https://github.com/sebastienrousseau/rssgen/pull/35) | `rssgen#34` | (no ssg shim — error messages and relative-URL acceptance are pure upstream improvements) |
+
+### Pre-staged on `feat/v0.0.46`
+
+- **`examples/multilingual_full/`** — 32-file content tree (5 locales × `index.md` + 5 posts) demonstrating the nested `content/<lang>/<slug>.md` layout. Runs cleanly against today's `staticdatagen 0.0.9` (warns per missing per-locale page) and goes fully green once `0.0.10` lands.
+- **`examples/multilingual_full_example.rs`** — runnable showcase, registered as the `multilingual_full` `[[example]]`.
+- **`tests/regression_user_site.rs::nested_locale_subdirectories_build_per_language`** — new regression case, currently `#[ignore]`d with `blocked on staticdatagen >= 0.0.10`. Flip the attribute off in the dep-bump commit.
+
+### Planned / Upcoming (deferred — not v0.0.46 scope)
+
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
 - **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.71 / 96.87 / 95.77 with `--lib`. The remaining uncovered regions sit in I/O-heavy production glue that needs source-level seams.
 
