@@ -82,7 +82,12 @@ jobs:
   lint:
     name: fmt + clippy
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Was 5m; bumped to 15m in v0.0.46 because the
+    # `feature powerset check` step does an uncached
+    # `cargo install --locked cargo-hack` (~3m compile) plus the
+    # powerset itself, which routinely landed at 5m15s on a cold
+    # cache and got timeout-cancelled. 15m matches the test job.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
