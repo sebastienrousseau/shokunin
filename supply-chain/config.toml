@@ -1432,6 +1432,10 @@ criteria = "safe-to-deploy"
 version = "0.0.5"
 criteria = "safe-to-deploy"
 
+[[exemptions.rss-gen]]
+version = "0.0.6"
+criteria = "safe-to-deploy"
+
 [[exemptions.rustc-hash]]
 version = "2.1.2"
 criteria = "safe-to-deploy"
@@ -1664,8 +1668,16 @@ criteria = "safe-to-deploy"
 version = "0.0.9"
 criteria = "safe-to-deploy"
 
+[[exemptions.staticdatagen]]
+version = "0.0.10"
+criteria = "safe-to-deploy"
+
 [[exemptions.staticweaver]]
 version = "0.0.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.staticweaver]]
+version = "0.0.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.string_cache]]
