@@ -657,5 +657,4 @@ mod tests {
         assert!(out.contains("twitter_url: \"https://"));
         assert_eq!(out.lines().count(), 1);
     }
-
 }

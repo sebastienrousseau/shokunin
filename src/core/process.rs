@@ -485,8 +485,8 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(ProcessError::CompilationError(_))
-                    | Err(ProcessError::DirectoryCreation { .. })
+                Err(ProcessError::CompilationError(_)
+                    | ProcessError::DirectoryCreation { .. })
             ),
             "Expected DirectoryCreation or CompilationError from args, got: {result:?}"
         );

@@ -2,7 +2,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # multilingual_full — nested-locale content showcase
+//! # `multilingual_full` — nested-locale content showcase
 //!
 //! ## What this example demonstrates
 //!
@@ -59,7 +59,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let _ = std::fs::remove_dir_all(site_dir);
     std::fs::create_dir_all(build_dir)?;
 
-    println!("multilingual_full: compiling 32 source files across 5 locales...");
+    println!(
+        "multilingual_full: compiling 32 source files across 5 locales..."
+    );
 
     // `compile_site` already routes through the v0.0.45 content
     // stager (default-layout injection, template stub fill-in, etc.)
@@ -72,7 +74,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     for &lang in LOCALES {
         // Posts land at `<lang>/post-N/index.html`.
         for i in 1..=POSTS_PER_LOCALE {
-            let p = site_dir.join(lang).join(format!("post-{i}")).join("index.html");
+            let p = site_dir
+                .join(lang)
+                .join(format!("post-{i}"))
+                .join("index.html");
             if p.exists() {
                 found += 1;
             } else {
@@ -96,8 +101,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "  found {found}/{expected} per-locale pages  ({missing} missing)"
     );
 
+    println!();
     if missing > 0 {
-        println!();
         println!(
             "  ⚠ {missing} pages missing — staticdatagen recursive walk regressed?"
         );
@@ -107,7 +112,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             std::process::exit(1);
         }
     } else {
-        println!();
         println!(
             "  ✓ every per-locale page landed — nested-locale walk works."
         );

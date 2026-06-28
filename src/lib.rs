@@ -2317,8 +2317,7 @@ mod tests {
         fs::create_dir_all(&site)?;
         fs::create_dir_all(&template)?;
 
-        let result =
-            compile_site(&build, &content_file, &site, &template);
+        let result = compile_site(&build, &content_file, &site, &template);
         assert!(
             result.is_err(),
             "compile_site should propagate the io error when \

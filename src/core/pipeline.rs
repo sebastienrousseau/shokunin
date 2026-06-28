@@ -676,15 +676,13 @@ pub fn compile_site(
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
-    compile(build_dir, &staged_content, site_dir, template_dir).map_err(
-        |e| {
-            eprintln!("    Error compiling site: {e:?}");
-            SsgError::io(
-                std::io::Error::other(format!("Failed to compile site: {e:?}")),
-                build_dir,
-            )
-        },
-    )
+    compile(build_dir, &staged_content, site_dir, template_dir).map_err(|e| {
+        eprintln!("    Error compiling site: {e:?}");
+        SsgError::io(
+            std::io::Error::other(format!("Failed to compile site: {e:?}")),
+            build_dir,
+        )
+    })
 }
 
 /// Registers the default plugin pipeline.

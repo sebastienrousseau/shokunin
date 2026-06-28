@@ -296,10 +296,7 @@ fn nested_locale_subdirectories_build_per_language() {
     // locale prefix.
     for &lang in &["en", "fr", "de"] {
         for i in 1..=2 {
-            require_html_exists(
-                &fx.site_dir(),
-                &format!("{lang}/post-{i}"),
-            );
+            require_html_exists(&fx.site_dir(), &format!("{lang}/post-{i}"));
         }
     }
 }
