@@ -642,21 +642,28 @@ pub fn compile_site(
     site_dir: &Path,
     template_dir: &Path,
 ) -> Result<(), SsgError> {
-    // v0.0.45 regression fix: `staticdatagen 0.0.9` panics with
-    // `invalid template or partial name: ""` when a markdown file's
-    // frontmatter lacks a `layout:` key. Stage the content tree into
-    // `<build_dir>/.ssg-content-staged/` with `layout: "page"`
-    // injected for every `.md` file that's missing one, then point
-    // the compiler at the staged tree.
+    // v0.0.46: `staticdatagen 0.0.10` (closes upstream #67, #68, #69,
+    // #70, #71) handles missing layout keys, absent aux files
+    // (`main.js`/`sw.js`), absent tags-page templates, nested locale
+    // walk, and success-log ordering natively — three of the v0.0.45
+    // stager shims were retired in this release. The two surviving
+    // shims:
     //
-    // The user's source `content_dir` is never written to. Files
-    // that already declare a layout pass through verbatim. See
-    // [`content_stager`](crate::content_stager) for the full
-    // behaviour matrix and tests.
-    // Scan the user's templates for every `{{ var }}` reference so we
-    // can inject empty defaults for any frontmatter key the template
-    // expects but the content omits. Without this, staticweaver
-    // bombs out with "Unresolved template tag: <key>" mid-build.
+    //   * `collect_template_vars` + `stage_content_with_template_defaults`
+    //     pre-fill empty `key: ""` frontmatter entries for every
+    //     `{{ var }}` reference the templates make. staticweaver
+    //     0.0.3 has `with_lax_undefined(true)` (closes upstream
+    //     staticweaver#28) but staticdatagen 0.0.10 doesn't yet opt
+    //     into it. Tracked: <https://github.com/sebastienrousseau/staticdatagen/issues/99>.
+    //
+    //   * The same staging pass also collapses multi-line double-quoted
+    //     YAML scalars before staticdatagen sees them. `metadata-gen 0.0.5`
+    //     (closes upstream metadata-gen#20) handles this natively,
+    //     but staticdatagen 0.0.10 still pins `metadata-gen = "0.0.4"`.
+    //     Tracked: <https://github.com/sebastienrousseau/staticdatagen/issues/100>.
+    //
+    // Once those two upstream follow-ups land, the residual shim
+    // collapses to ~50 LOC.
     let template_vars =
         crate::content_stager::collect_template_vars(template_dir)
             .map_err(|e| SsgError::io(e, template_dir))?;
@@ -669,26 +676,13 @@ pub fn compile_site(
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
-    // staticdatagen 0.0.9 also hard-fails when the template directory
-    // doesn't carry main.js + sw.js — its copy_auxiliary_files step
-    // is unconditional. Stage the template tree with zero-byte stubs
-    // for whichever required files the user hasn't shipped.
-    let staged_templates =
-        crate::content_stager::stage_templates_with_required_stubs(
-            template_dir,
+    compile(build_dir, &staged_content, site_dir, template_dir).map_err(|e| {
+        eprintln!("    Error compiling site: {e:?}");
+        SsgError::io(
+            std::io::Error::other(format!("Failed to compile site: {e:?}")),
             build_dir,
         )
-        .map_err(|e| SsgError::io(e, template_dir))?;
-
-    compile(build_dir, &staged_content, site_dir, &staged_templates).map_err(
-        |e| {
-            eprintln!("    Error compiling site: {e:?}");
-            SsgError::io(
-                std::io::Error::other(format!("Failed to compile site: {e:?}")),
-                build_dir,
-            )
-        },
-    )
+    })
 }
 
 /// Registers the default plugin pipeline.

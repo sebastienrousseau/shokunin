@@ -2301,19 +2301,57 @@ mod tests {
 
     #[test]
     fn test_compile_site_error() -> Result<()> {
+        // v0.0.46: staticdatagen 0.0.10 + the trimmed content_stager
+        // treat empty content + empty templates as "no work to do"
+        // (clean Ok), so we can't reproduce the v0.0.45 "happens to
+        // error" pattern with empty dirs. Pass a real *file* where the
+        // content directory is expected — `staticdatagen::add` opens
+        // it via `read_dir` which fails on a non-directory.
         let temp_dir = tempdir()?;
         let build = temp_dir.path().join("build");
-        let content = temp_dir.path().join("content");
+        let content_file = temp_dir.path().join("content_file");
         let site = temp_dir.path().join("site");
         let template = temp_dir.path().join("template");
         fs::create_dir_all(&build)?;
+        fs::write(&content_file, "not a directory")?;
+        fs::create_dir_all(&site)?;
+        fs::create_dir_all(&template)?;
+
+        let result = compile_site(&build, &content_file, &site, &template);
+        assert!(
+            result.is_err(),
+            "compile_site should propagate the io error when \
+             content_dir is a file, got: {result:?}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_compile_site_propagates_compile_error() -> Result<()> {
+        // v0.0.46: exercises the `compile(...).map_err(...)` closure
+        // in `pipeline::compile_site` — the branch that fires when
+        // `staticdatagen::compile` returns Err *after* the stager has
+        // succeeded. Pass a `build_dir` that's a regular file: the
+        // stager doesn't touch `build_dir` directly (it stages under
+        // `std::env::temp_dir()`), so it succeeds; `compile` then
+        // can't write into the non-directory and the closure wraps
+        // the io error into an `SsgError`.
+        let temp_dir = tempdir()?;
+        let build_file = temp_dir.path().join("build_file");
+        let content = temp_dir.path().join("content");
+        let site = temp_dir.path().join("site");
+        let template = temp_dir.path().join("template");
+        fs::write(&build_file, "not a directory")?;
         fs::create_dir_all(&content)?;
         fs::create_dir_all(&site)?;
         fs::create_dir_all(&template)?;
 
-        let result = compile_site(&build, &content, &site, &template);
-        // Compilation with empty dirs will fail
-        assert!(result.is_err());
+        let result = compile_site(&build_file, &content, &site, &template);
+        assert!(
+            result.is_err(),
+            "compile_site should propagate compile()'s error when \
+             build_dir is a file, got: {result:?}"
+        );
         Ok(())
     }
 

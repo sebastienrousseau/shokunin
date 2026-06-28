@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.45"                      # The version of the library
+version = "0.0.46"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -181,11 +181,11 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.45" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.45" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.45" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.46" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.46" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.46" }
 thiserror = "2"
-staticdatagen = "0.0.9"
+staticdatagen = "0.0.10"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
@@ -363,6 +363,13 @@ path = "examples/quickstart_example.rs"   # Path to the example file
 # Multilingual example configuration for showcasing the library.
 name = "multilingual"                     # Name of the example
 path = "examples/multilingual_example.rs" # Path to the example file
+
+[[example]]
+# Nested-locale content showcase (5 locales × 5 posts under
+# `content/<lang>/`). Exercises the staticdatagen #70 / 0.0.10
+# recursive walk; runs cleanly against 0.0.9 with warnings.
+name = "multilingual_full"                          # Name of the example
+path = "examples/multilingual_full_example.rs"      # Path to the example file
 
 [[example]]
 # Plugin pipeline example — SEO, search, minify, live-reload.

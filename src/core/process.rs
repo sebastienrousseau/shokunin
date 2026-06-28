@@ -446,8 +446,14 @@ mod tests {
     #[test]
     fn test_args_all_required_arguments(
     ) -> Result<(), Box<dyn std::error::Error>> {
+        // v0.0.46: staticdatagen 0.0.10's recursive `add()` returns
+        // an empty file list (not an error) for nonexistent paths, so
+        // we have to pass a real *file* where the content directory
+        // is expected — `read_dir` fails on a non-directory and that
+        // bubbles up as a `CompilationError`.
         let temp_dir = tempdir()?;
-        let content_dir = temp_dir.path().join("content");
+        let content_file = temp_dir.path().join("content_file");
+        fs::write(&content_file, "not a directory")?;
         let output_dir = temp_dir.path().join("output");
         let site_dir = temp_dir.path().join("new_site");
         let template_dir = temp_dir.path().join("template");
@@ -460,7 +466,7 @@ mod tests {
             .get_matches_from(vec![
                 "test",
                 "--content",
-                content_dir.to_str().unwrap(),
+                content_file.to_str().unwrap(),
                 "--output",
                 output_dir.to_str().unwrap(),
                 "--new",
@@ -469,11 +475,20 @@ mod tests {
                 template_dir.to_str().unwrap(),
             ]);
 
-        // Since `compile` is shadowed, it will use the mock compile function
         let result = args(&matches);
+        // v0.0.46: `args()` runs `ensure_directory` against each path
+        // before reaching the compile pipeline, so the invalid
+        // `content_file` (a regular file, not a dir) now surfaces as
+        // `ProcessError::DirectoryCreation` rather than wrapping into
+        // `ProcessError::CompilationError`. Either variant indicates
+        // a correctly-propagated input error.
         assert!(
-            matches!(result, Err(ProcessError::CompilationError(_))),
-            "Expected CompilationError from args"
+            matches!(
+                result,
+                Err(ProcessError::CompilationError(_)
+                    | ProcessError::DirectoryCreation { .. })
+            ),
+            "Expected DirectoryCreation or CompilationError from args, got: {result:?}"
         );
 
         Ok(())
@@ -627,26 +642,34 @@ mod tests {
 
     #[test]
     fn test_internal_compile_with_empty_directories() {
+        // v0.0.46: staticdatagen 0.0.10 treats empty content + empty
+        // templates as "no work to do", so this test now asserts
+        // error PROPAGATION (not raw "empty inputs fail"). Pass a
+        // real file where `content_dir` is expected — the underlying
+        // `read_dir` fails on a non-directory.
         let temp_dir = tempdir().unwrap();
 
-        // Create empty required directories
         let build_dir = temp_dir.path().join("build");
-        let content_dir = temp_dir.path().join("content");
+        let content_file = temp_dir.path().join("content_file");
         let site_dir = temp_dir.path().join("site");
         let template_dir = temp_dir.path().join("template");
 
         fs::create_dir_all(&build_dir).unwrap();
-        fs::create_dir_all(&content_dir).unwrap();
+        fs::write(&content_file, "not a directory").unwrap();
         fs::create_dir_all(&site_dir).unwrap();
         fs::create_dir_all(&template_dir).unwrap();
 
         let result = internal_compile(
             &build_dir,
-            &content_dir,
+            &content_file,
             &site_dir,
             &template_dir,
         );
 
-        assert!(result.is_err());
+        assert!(
+            result.is_err(),
+            "internal_compile should propagate the io error when \
+             content_dir is a file, got: {result:?}"
+        );
     }
 }

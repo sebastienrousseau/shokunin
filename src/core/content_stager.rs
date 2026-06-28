@@ -1,119 +1,77 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Content staging — workaround for the `staticdatagen 0.0.9`
-//! empty-layout regression that breaks any site whose markdown files
-//! don't carry a `layout:` frontmatter key.
+//! Content staging — residual upstream-gap workarounds for the
+//! `staticdatagen` → `staticweaver` → `metadata-gen` pipeline.
 //!
-//! ## The regression
+//! ## v0.0.46 residual scope
 //!
-//! `staticdatagen 0.0.9` (the markdown → HTML compiler we ship) calls
-//! the templating engine like this:
+//! Most of v0.0.45's shim layer was retired in v0.0.46 by upstream
+//! fixes:
 //!
-//! ```ignore
-//! engine.render_page(
-//!     &context,
-//!     metadata.get("layout").cloned().unwrap_or_default().as_str(),
-//! )
-//! ```
+//! - `staticdatagen 0.0.10` (closes upstream `#67`, `#68`, `#69`,
+//!   `#70`, `#71`) handles missing `layout:` keys, absent
+//!   `main.js`/`sw.js`, absent tags-page templates, nested-locale
+//!   walk (`_posts/<lang>/`), and success-log ordering natively.
+//! - `staticweaver 0.0.3` (closes upstream `#28`) added the
+//!   `Engine::with_lax_undefined(true)` opt-in.
+//! - `staticweaver 0.0.3` also made `escape_html_into` idempotent
+//!   (closes [ssg #589](https://github.com/sebastienrousseau/static-site-generator/issues/589)).
+//! - `rss-gen 0.0.6` (closes upstream `#34`) prefixed validation
+//!   errors with `channel.` / `item.` context and accepts
+//!   relative URLs at item level.
+//! - `metadata-gen 0.0.5` (closes upstream `#20`) collapses
+//!   multi-line double-quoted YAML scalars internally.
 //!
-//! When `layout` is absent from the frontmatter, `unwrap_or_default()`
-//! produces an empty string.
+//! What remains here are **two** narrow gaps the upstreams haven't
+//! closed yet:
 //!
-//! The `MiniJinja` layer then fails with
-//! `invalid template or partial name: ""` and the whole build aborts.
+//! 1. **Template-default injection.** `staticdatagen 0.0.10` doesn't
+//!    yet opt the staticweaver Engine into `lax_undefined` (tracked at
+//!    [staticdatagen #99](https://github.com/sebastienrousseau/staticdatagen/issues/99)),
+//!    so unresolved `{{ var }}` tags still abort the build.
+//!    [`collect_template_vars`] + [`stage_content_with_template_defaults`]
+//!    pre-fill an empty `var: ""` for every key the templates reference
+//!    but the content omits.
 //!
-//! That's wrong shape — every prior SSG version silently fell back to
-//! a `page` (or similar) layout for unannotated content. We can't ship
-//! a patched `staticdatagen` from a branch PR, but we *can* shield it
-//! from the bad inputs by pre-processing content into a staging
-//! directory.
+//! 2. **Multi-line quoted-scalar collapse.** `staticdatagen 0.0.10`
+//!    pins `metadata-gen = "0.0.4"` (the pre-#20 release; tracked at
+//!    [staticdatagen #100](https://github.com/sebastienrousseau/staticdatagen/issues/100)).
+//!    [`copy_tree`] applies the same collapse pass that's now upstream
+//!    in `metadata-gen 0.0.5`, so the user's content sees consistent
+//!    behaviour regardless of which `metadata-gen` is transitively
+//!    resolved.
 //!
-//! ## What this module does
+//! Both shims auto-retire when the corresponding staticdatagen follow-up
+//! releases — the residual module shrinks to nothing.
 //!
-//! Walks `content_dir` once, copies every file to a parallel
-//! `staging_dir` tree, and for every `.md` file whose frontmatter
-//! lacks a `layout:` key:
+//! ## Why staging instead of editing in-place?
 //!
-//! 1. detects the missing key with a cheap line-scan over the YAML
-//!    fence block (no full YAML parse — the bug is structural, not
-//!    semantic);
-//! 2. inserts `layout: "<default>"` as the first key in the
-//!    frontmatter, preserving every other line verbatim;
-//! 3. writes the augmented body to the staged path.
+//! The user's checkout is sacred:
 //!
-//! Non-markdown files are byte-for-byte copies. Empty frontmatter
-//! (no `---` fence) is left untouched — those files won't trigger the
-//! bug because the `metadata.get("layout")` lookup never runs without
-//! a parseable frontmatter block.
+//! - the build runs from a CI checkout the user expects to be read-only;
+//! - reruns of the build would re-inject defaults, doubling lines.
 //!
-//! ## Why not modify the source tree?
-//!
-//! The user's checkout is sacred. Two reasons we must not edit
-//! `content_dir`:
-//!
-//! - the build runs from a CI checkout that the user expects to be
-//!   read-only;
-//! - reruns of the build would re-inject the default, doubling lines.
-//!
-//! Instead we operate on a fresh directory under `<build_dir>/.ssg-content-staged/`
-//! that's recreated on every build.
+//! Instead we operate on a fresh directory under
+//! [`std::env::temp_dir()`] (FNV-1a-keyed by `build_dir` + pid) that's
+//! recreated on every build.
 
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Default layout name injected into `.md` files that lack one.
+/// Stages a copy of `content_dir` and injects empty defaults for every
+/// `{{ var }}` reference the templates make.
 ///
-/// Matches the scaffold's `templates/tera/page.html`, which is the
-/// universally-available layout in every SSG-generated project.
-pub const DEFAULT_LAYOUT: &str = "page";
-
-/// Stages a copy of `content_dir` under `<build_dir>/.ssg-content-staged/`
-/// and injects `layout: "<DEFAULT_LAYOUT>"` into every markdown file
-/// whose frontmatter lacks one.
-///
-/// Returns the path to the staged directory. The caller passes that
-/// path to `staticdatagen::compile` instead of the original
-/// `content_dir`.
-///
-/// # Errors
-///
-/// Returns [`io::Error`] when the staging directory cannot be created
-/// or a source file cannot be read or written.
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::core_group::content_stager::stage_content_with_default_layout;
-/// use std::fs;
-///
-/// let tmp = tempfile::tempdir().unwrap();
-/// let src = tmp.path().join("content");
-/// let build = tmp.path().join("build");
-/// fs::create_dir_all(&src).unwrap();
-/// fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
-///
-/// let staged = stage_content_with_default_layout(&src, &build).unwrap();
-/// let out = fs::read_to_string(staged.join("a.md")).unwrap();
-/// assert!(out.contains("layout: \"page\""));
-/// assert!(out.contains("title: A"));
-/// ```
-pub fn stage_content_with_default_layout(
-    content_dir: &Path,
-    build_dir: &Path,
-) -> Result<PathBuf, io::Error> {
-    stage_content_with_template_defaults(content_dir, build_dir, &[])
-}
-
-/// Like [`stage_content_with_default_layout`] but also injects empty
-/// defaults for every `{{ var }}` reference the templates make.
-///
-/// Closes the staticweaver "Unresolved template tag" crash that
-/// fires when user content omits a key their template references.
+/// Works around the staticweaver "Unresolved template tag" crash that
+/// fires when user content omits a key their template references —
+/// `staticdatagen 0.0.10` still calls `Engine::new(...)` without
+/// `.with_lax_undefined(true)`. Tracked at [staticdatagen #99].
 ///
 /// `template_var_keys` is the result of [`collect_template_vars`] run
 /// over the user's template directory.
+///
+/// [staticdatagen #99]: https://github.com/sebastienrousseau/staticdatagen/issues/99
 ///
 /// # Errors
 ///
@@ -135,53 +93,16 @@ pub fn stage_content_with_template_defaults(
 
     copy_tree(content_dir, &staging_dir)?;
 
-    // staticdatagen 0.0.9's tags-page generator (`write_tags_html_to_file`)
-    // unconditionally opens `<build_dir>/tags/index.html` and replaces a
-    // `[[content]]` placeholder. If the user hasn't shipped a tags page,
-    // the open fails with "No such file or directory (os error 2)" and
-    // the entire build aborts after producing all real outputs. Stub
-    // one in so the open succeeds; the resulting tags page just won't
-    // be linked anywhere.
-    //
-    // The stub is created BEFORE template-default injection so the
-    // injector covers it too — every `{{ var }}` reference in the
-    // user's templates lands in the staged tags.md as well.
-    ensure_tags_stub(&staging_dir)?;
+    // staticdatagen 0.0.10 closes upstream #69 — the tags-page generator
+    // is now a no-op when no `tags.md` / `tags/index.md` template is
+    // present. The v0.0.45 `ensure_tags_stub` shim was retired in this
+    // release.
 
     if !template_var_keys.is_empty() {
         inject_template_defaults_recursive(&staging_dir, template_var_keys)?;
     }
 
     Ok(staging_dir)
-}
-
-fn ensure_tags_stub(staged_content_dir: &Path) -> Result<(), io::Error> {
-    let candidates = [
-        staged_content_dir.join("tags.md"),
-        staged_content_dir.join("tags/index.md"),
-    ];
-    if candidates.iter().any(|p| p.exists()) {
-        return Ok(());
-    }
-    // Minimal stub: layout + title + an absolute-URL permalink (rss-gen
-    // 0.0.5 validates this as a real URL — relative paths trip
-    // "Invalid link: Invalid URL provided") + the literal `[[content]]`
-    // placeholder that staticdatagen's tags writer expects to find.
-    //
-    // The `https://example.invalid/tags/` host is reserved (RFC 2606
-    // `.invalid` TLD) so it can never collide with a real site URL.
-    // Users with their own tags page replace this stub by checking
-    // their tags.md or tags/index.md into the content tree.
-    let stub = "---\n\
-                layout: \"page\"\n\
-                title: \"Tags\"\n\
-                description: \"Tag index\"\n\
-                permalink: \"https://example.invalid/tags/\"\n\
-                ---\n\
-                \n\
-                [[content]]\n";
-    fs::write(staged_content_dir.join("tags.md"), stub)?;
-    Ok(())
 }
 
 /// Picks a staging-directory location *outside* `build_dir` so the
@@ -212,13 +133,13 @@ fn staging_root_for(suffix: &str, build_dir: &Path) -> PathBuf {
     ))
 }
 
-/// Recursively mirrors `src` into `dst`, transforming `.md` files via
-/// [`inject_default_layout_if_missing`] and copying everything else
-/// verbatim. Per-file work runs in parallel via Rayon — `read +
-/// transform + write` is the hot path that determined whether the
-/// staging shim added meaningful build-time overhead. With ~100 pages
-/// the parallel pass keeps the staging cost under ~50 ms on a 4-core
-/// runner, well inside the perf-budget gate.
+/// Recursively mirrors `src` into `dst`, applying
+/// [`collapse_multiline_quoted_scalars`] to `.md` files and copying
+/// everything else verbatim. Per-file work runs in parallel via Rayon
+/// — `read + transform + write` is the hot path that determined
+/// whether the staging shim added meaningful build-time overhead.
+/// With ~100 pages the parallel pass keeps the staging cost under
+/// ~50 ms on a 4-core runner, well inside the perf-budget gate.
 fn copy_tree(src: &Path, dst: &Path) -> Result<(), io::Error> {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
@@ -239,9 +160,14 @@ fn copy_tree(src: &Path, dst: &Path) -> Result<(), io::Error> {
         .into_par_iter()
         .filter_map(|(src_path, dst_path, is_md)| {
             let r = if is_md {
+                // staticdatagen 0.0.10 closes upstream #67 — missing
+                // `layout:` keys default to "page" inside the compiler
+                // itself. Per-file work is now ONLY the multi-line
+                // quoted-scalar collapse (still needed until
+                // staticdatagen bumps `metadata-gen` to 0.0.5;
+                // tracked: staticdatagen#100).
                 fs::read_to_string(&src_path).and_then(|body| {
-                    let staged =
-                        inject_default_layout_if_missing(&body, DEFAULT_LAYOUT);
+                    let staged = collapse_multiline_quoted_scalars(&body);
                     fs::write(&dst_path, staged)
                 })
             } else {
@@ -531,108 +457,6 @@ fn is_markdown(p: &Path) -> bool {
     )
 }
 
-/// Returns `body` with `layout: "<default>"` inserted as the first key
-/// in the YAML frontmatter block when the block exists and the key is
-/// absent.
-///
-/// Idempotent: a second pass over a previously-staged
-/// file returns the input unchanged.
-///
-/// Behaviour matrix:
-///
-/// | Input shape                                     | Output                       |
-/// | ----------------------------------------------- | ---------------------------- |
-/// | No frontmatter fence at all                     | unchanged                    |
-/// | Frontmatter with existing `layout:` key         | unchanged                    |
-/// | Frontmatter without `layout:` key               | `layout: "<default>"` injected as the first key inside the fence |
-/// | Empty frontmatter (`---\n---`)                  | `layout: "<default>"` injected as the only key |
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::core_group::content_stager::inject_default_layout_if_missing;
-///
-/// // Already has layout — untouched.
-/// let with_layout = "---\nlayout: post\ntitle: T\n---\nbody";
-/// assert_eq!(inject_default_layout_if_missing(with_layout, "page"), with_layout);
-///
-/// // Missing layout — gets one.
-/// let no_layout = "---\ntitle: T\n---\nbody";
-/// let out = inject_default_layout_if_missing(no_layout, "page");
-/// assert!(out.contains("layout: \"page\""));
-/// assert!(out.contains("title: T"));
-///
-/// // No frontmatter — passthrough.
-/// let plain = "# heading\n\nbody";
-/// assert_eq!(inject_default_layout_if_missing(plain, "page"), plain);
-/// ```
-#[must_use]
-pub fn inject_default_layout_if_missing(
-    body: &str,
-    default_layout: &str,
-) -> String {
-    // Tolerate a UTF-8 BOM and leading whitespace before the fence —
-    // both occur in editor-mangled exports.
-    let trimmed = body.trim_start_matches('\u{FEFF}');
-
-    // Find the opening fence `---\n` (or `---\r\n`). We rely on
-    // the fence being on the first non-blank line; static-site
-    // generators universally require this shape.
-    let Some((lead, after_open)) = find_opening_fence(trimmed) else {
-        return body.to_string();
-    };
-
-    // Locate the closing fence within `after_open`.
-    let Some(close_rel) = find_closing_fence(after_open) else {
-        return body.to_string();
-    };
-
-    let block = &after_open[..close_rel];
-    let after_block = &after_open[close_rel..];
-
-    // Normalise multi-line quoted scalars before checking for the
-    // layout key. The user's content sometimes carries values like:
-    //
-    //     twitter_url: "
-    //     https://example.com/x"
-    //
-    // which is YAML-spec-compliant (newline → space in the value)
-    // but trips noyalib's stricter parser inside `metadata-gen`.
-    // Collapsing them onto a single line is shape-preserving and
-    // unblocks the downstream extractor.
-    let normalised_block = collapse_multiline_quoted_scalars(block);
-
-    if frontmatter_has_layout_key(&normalised_block) {
-        // Even if no layout injection happens, write the normalised
-        // block back so the downstream extractor sees a parseable
-        // value.
-        if normalised_block != block {
-            let mut out = String::with_capacity(body.len());
-            out.push_str(&trimmed[..trimmed.len() - after_open.len()]);
-            out.push_str(&normalised_block);
-            out.push_str(after_block);
-            if body.starts_with('\u{FEFF}') {
-                return format!("\u{FEFF}{out}");
-            }
-            return out;
-        }
-        return body.to_string();
-    }
-
-    let mut out = String::with_capacity(body.len() + 32);
-    out.push_str(&trimmed[..trimmed.len() - after_open.len()]);
-    let _ = lead;
-    out.push_str(&format!("layout: \"{default_layout}\"\n"));
-    out.push_str(&normalised_block);
-    out.push_str(after_block);
-
-    // Re-prepend any BOM we trimmed off.
-    if body.starts_with('\u{FEFF}') {
-        return format!("\u{FEFF}{out}");
-    }
-    out
-}
-
 /// Collapses YAML-spec-compliant multi-line quoted scalars onto a
 /// single line so noyalib's stricter parser inside `metadata-gen`
 /// can read them.
@@ -748,283 +572,10 @@ fn find_closing_fence(after_open: &str) -> Option<usize> {
 // Template staging
 // ---------------------------------------------------------------------
 
-/// Files that `staticdatagen 0.0.9` unconditionally copies from the
-/// template directory in `copy_auxiliary_files`. Missing files abort
-/// the build with `No such file or directory (os error 2)`.
-const REQUIRED_TEMPLATE_FILES: &[&str] = &["main.js", "sw.js"];
-
-/// Stages a copy of `template_dir` under
-/// `<build_dir>/.ssg-templates-staged/` and writes empty-stub files
-/// for any required-template-files entry (`main.js`, `sw.js`) the
-/// user hasn't provided.
-///
-/// This shields `staticdatagen`'s hardcoded auxiliary-file copy step
-/// from breaking the build on minimal template sets. The user's
-/// original templates are read-only.
-///
-/// Returns the staged template directory path.
-///
-/// # Errors
-///
-/// Returns [`io::Error`] if the staging directory cannot be created
-/// or a source file cannot be read or written.
-///
-/// # Examples
-///
-/// ```rust
-/// use ssg::core_group::content_stager::stage_templates_with_required_stubs;
-/// use std::fs;
-///
-/// let tmp = tempfile::tempdir().unwrap();
-/// let src = tmp.path().join("templates");
-/// let build = tmp.path().join("build");
-/// fs::create_dir_all(&src).unwrap();
-/// fs::write(src.join("page.html"), "<html/>").unwrap();
-///
-/// let staged = stage_templates_with_required_stubs(&src, &build).unwrap();
-/// assert!(staged.join("page.html").exists());
-/// // staticdatagen's hardcoded auxiliary files get stubbed in:
-/// assert!(staged.join("main.js").exists());
-/// assert!(staged.join("sw.js").exists());
-/// ```
-pub fn stage_templates_with_required_stubs(
-    template_dir: &Path,
-    build_dir: &Path,
-) -> Result<PathBuf, io::Error> {
-    let staging_dir = staging_root_for("templates", build_dir);
-
-    if staging_dir.exists() {
-        fs::remove_dir_all(&staging_dir)?;
-    }
-    fs::create_dir_all(&staging_dir)?;
-
-    if template_dir.is_dir() {
-        copy_templates_tree(template_dir, &staging_dir)?;
-    }
-
-    for name in REQUIRED_TEMPLATE_FILES {
-        let dest = staging_dir.join(name);
-        if !dest.exists() {
-            // Empty stub — staticdatagen only checks the path
-            // resolves, not the content. A 0-byte file satisfies
-            // both copy_auxiliary_files and any browser that
-            // requests the asset (it'll just be empty).
-            fs::write(&dest, b"")?;
-        }
-    }
-    Ok(staging_dir)
-}
-
-fn copy_templates_tree(src: &Path, dst: &Path) -> Result<(), io::Error> {
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let file_name = entry.file_name();
-        let src_path = entry.path();
-        let dst_path = dst.join(&file_name);
-        let file_type = entry.file_type()?;
-        if file_type.is_dir() {
-            fs::create_dir_all(&dst_path)?;
-            copy_templates_tree(&src_path, &dst_path)?;
-        } else if file_type.is_file() {
-            let _ = fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    Ok(())
-}
-
-/// Returns `true` if any line inside the frontmatter block starts
-/// with `layout:` (after optional whitespace; comments excluded).
-fn frontmatter_has_layout_key(block: &str) -> bool {
-    for raw in block.lines() {
-        let line = raw.trim_start();
-        // Skip YAML comments.
-        if line.starts_with('#') {
-            continue;
-        }
-        if line.starts_with("layout:")
-            || line.starts_with("layout :")
-            || line.starts_with("\"layout\":")
-            || line.starts_with("'layout':")
-        {
-            return true;
-        }
-    }
-    false
-}
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn no_frontmatter_passthrough() {
-        let input = "# Heading\n\nBody.";
-        assert_eq!(inject_default_layout_if_missing(input, "page"), input);
-    }
-
-    #[test]
-    fn existing_layout_passthrough() {
-        let input = "---\nlayout: post\ntitle: T\n---\nbody";
-        assert_eq!(inject_default_layout_if_missing(input, "page"), input);
-    }
-
-    #[test]
-    fn quoted_layout_passthrough() {
-        let input = "---\nlayout: \"report\"\ntitle: T\n---\nbody";
-        assert_eq!(inject_default_layout_if_missing(input, "page"), input);
-    }
-
-    #[test]
-    fn missing_layout_gets_injected() {
-        let input = "---\ntitle: T\n---\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        assert!(out.contains("layout: \"page\""));
-        assert!(out.contains("title: T"));
-        assert!(out.contains("body"));
-    }
-
-    #[test]
-    fn empty_frontmatter_gets_injection() {
-        let input = "---\n---\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        assert!(out.contains("layout: \"page\""));
-        assert!(out.contains("body"));
-    }
-
-    #[test]
-    fn idempotent_double_pass() {
-        let input = "---\ntitle: T\n---\nbody";
-        let once = inject_default_layout_if_missing(input, "page");
-        let twice = inject_default_layout_if_missing(&once, "page");
-        assert_eq!(once, twice);
-    }
-
-    #[test]
-    fn injection_preserves_user_keys_in_order() {
-        // Real-world shape: heading-comment + many keys, no layout.
-        let input = "---\n\n# Front Matter (YAML)\n\nauthor: \"x\"\ntitle: \"y\"\n---\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        // Layout lands as the FIRST key inside the fence.
-        let layout_pos = out.find("layout:").unwrap();
-        let author_pos = out.find("author:").unwrap();
-        let title_pos = out.find("title:").unwrap();
-        assert!(layout_pos < author_pos);
-        assert!(author_pos < title_pos);
-        // Other keys preserved verbatim.
-        assert!(out.contains("# Front Matter (YAML)"));
-        assert!(out.contains("author: \"x\""));
-        assert!(out.contains("title: \"y\""));
-    }
-
-    #[test]
-    fn comment_line_is_not_confused_for_layout() {
-        // A comment that mentions "layout" must NOT block injection.
-        let input = "---\n# layout: explained\ntitle: T\n---\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        assert!(out.contains("layout: \"page\""));
-    }
-
-    #[test]
-    fn crlf_line_endings_are_handled() {
-        let input = "---\r\ntitle: T\r\n---\r\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        assert!(out.contains("layout: \"page\""));
-        assert!(out.contains("title: T"));
-    }
-
-    #[test]
-    fn bom_is_preserved() {
-        let input = "\u{FEFF}---\ntitle: T\n---\nbody";
-        let out = inject_default_layout_if_missing(input, "page");
-        assert!(out.starts_with('\u{FEFF}'));
-        assert!(out.contains("layout: \"page\""));
-    }
-
-    #[test]
-    fn stage_content_recreates_tree_with_injection() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("content");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(src.join("nested")).unwrap();
-        fs::write(src.join("page.md"), "---\ntitle: P\n---\nbody").unwrap();
-        fs::write(
-            src.join("nested/with-layout.md"),
-            "---\nlayout: post\ntitle: WL\n---\nbody",
-        )
-        .unwrap();
-        fs::write(src.join("nested/data.json"), "{}").unwrap();
-
-        let staged = stage_content_with_default_layout(&src, &build).unwrap();
-        // Files are mirrored.
-        assert!(staged.join("page.md").exists());
-        assert!(staged.join("nested/with-layout.md").exists());
-        assert!(staged.join("nested/data.json").exists());
-        // Injection happened for the missing-layout file.
-        let page = fs::read_to_string(staged.join("page.md")).unwrap();
-        assert!(page.contains("layout: \"page\""));
-        // Existing layout untouched.
-        let wl =
-            fs::read_to_string(staged.join("nested/with-layout.md")).unwrap();
-        assert!(wl.contains("layout: post"));
-        assert!(!wl.contains("layout: \"page\""));
-        // Non-markdown file copied verbatim.
-        assert_eq!(
-            fs::read_to_string(staged.join("nested/data.json")).unwrap(),
-            "{}"
-        );
-    }
-
-    #[test]
-    fn stage_templates_creates_missing_required_stubs() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("templates");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("page.html"), "<html/>").unwrap();
-        // No main.js, no sw.js — staticdatagen would crash.
-
-        let staged = stage_templates_with_required_stubs(&src, &build).unwrap();
-        assert!(staged.join("page.html").exists());
-        assert!(staged.join("main.js").exists());
-        assert!(staged.join("sw.js").exists());
-        // Stubs are zero-byte.
-        assert_eq!(fs::metadata(staged.join("sw.js")).unwrap().len(), 0);
-    }
-
-    #[test]
-    fn stage_templates_preserves_existing_required_files() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("templates");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("main.js"), "// real main").unwrap();
-        // sw.js still missing.
-
-        let staged = stage_templates_with_required_stubs(&src, &build).unwrap();
-        // Existing file untouched.
-        assert_eq!(
-            fs::read_to_string(staged.join("main.js")).unwrap(),
-            "// real main"
-        );
-        // Missing one stubbed.
-        assert!(staged.join("sw.js").exists());
-    }
-
-    #[test]
-    fn stage_templates_handles_nonexistent_template_dir() {
-        // Some sites pass a template_dir that doesn't exist yet
-        // (the legacy CLI used to scaffold one). The staging must
-        // still produce a usable dir with the required stubs.
-        let tmp = tempfile::tempdir().unwrap();
-        let nope = tmp.path().join("nonexistent-templates");
-        let build = tmp.path().join("build");
-
-        let staged =
-            stage_templates_with_required_stubs(&nope, &build).unwrap();
-        assert!(staged.join("main.js").exists());
-        assert!(staged.join("sw.js").exists());
-    }
 
     #[test]
     fn inject_missing_keys_no_frontmatter_passthrough() {
@@ -1062,26 +613,6 @@ mod tests {
         extract_simple_vars("{{ never_closes", &mut out);
         // No vars extracted because the closing braces weren't found.
         assert!(out.is_empty());
-    }
-
-    #[test]
-    fn find_opening_fence_returns_none_when_first_nonblank_is_not_dashes() {
-        // Covers the bare-line non-`---` arm — the helper returns
-        // None and downstream injection functions fall through.
-        let body = "# Just a heading\n\n---\nfrontmatter: too late\n---\n";
-        let out = inject_default_layout_if_missing(body, "page");
-        // No injection because frontmatter doesn't start on first non-blank line.
-        assert_eq!(out, body);
-    }
-
-    #[test]
-    fn find_opening_fence_skips_leading_blank_lines() {
-        // Covers the `byte_pos += line.len(); continue;` branch when
-        // the YAML fence is preceded by blank lines.
-        let body = "\n\n\n---\ntitle: T\n---\nbody";
-        let out = inject_default_layout_if_missing(body, "page");
-        assert!(out.contains("layout: \"page\""));
-        assert!(out.contains("title: T"));
     }
 
     #[test]
@@ -1125,87 +656,5 @@ mod tests {
         let out = collapse_multiline_quoted_scalars(input);
         assert!(out.contains("twitter_url: \"https://"));
         assert_eq!(out.lines().count(), 1);
-    }
-
-    #[test]
-    fn injection_via_main_function_normalises_multiline_then_injects_layout() {
-        let body = "---\ntitle: T\nurl: \"\nhttps://x.com\"\n---\nbody";
-        let out = inject_default_layout_if_missing(body, "page");
-        // Layout was injected.
-        assert!(out.contains("layout: \"page\""));
-        // Multi-line value collapsed.
-        assert!(out.contains("url: \"https://x.com\""));
-        // Body preserved.
-        assert!(out.contains("body"));
-    }
-
-    #[test]
-    fn stage_content_creates_tags_stub_when_absent() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("content");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
-
-        let staged = stage_content_with_default_layout(&src, &build).unwrap();
-        let tags = staged.join("tags.md");
-        assert!(tags.exists());
-        let body = fs::read_to_string(&tags).unwrap();
-        assert!(body.contains("layout:"));
-        assert!(body.contains("[[content]]"));
-    }
-
-    #[test]
-    fn stage_content_preserves_existing_tags_page() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("content");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(
-            src.join("tags.md"),
-            "---\nlayout: post\ntitle: \"Real Tags\"\n---\nreal body",
-        )
-        .unwrap();
-
-        let staged = stage_content_with_default_layout(&src, &build).unwrap();
-        let body = fs::read_to_string(staged.join("tags.md")).unwrap();
-        // User's body is preserved verbatim.
-        assert!(body.contains("Real Tags"));
-        assert!(body.contains("real body"));
-    }
-
-    #[test]
-    fn stage_content_preserves_existing_tags_index_md() {
-        // Some sites ship `tags/index.md` instead of `tags.md`.
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("content");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(src.join("tags")).unwrap();
-        fs::write(
-            src.join("tags/index.md"),
-            "---\nlayout: post\ntitle: NestedTags\n---\nnested",
-        )
-        .unwrap();
-
-        let staged = stage_content_with_default_layout(&src, &build).unwrap();
-        // We do NOT create a sibling tags.md when tags/index.md
-        // already exists.
-        assert!(staged.join("tags/index.md").exists());
-        assert!(!staged.join("tags.md").exists());
-    }
-
-    #[test]
-    fn stage_content_is_idempotent_across_runs() {
-        let tmp = tempfile::tempdir().unwrap();
-        let src = tmp.path().join("content");
-        let build = tmp.path().join("build");
-        fs::create_dir_all(&src).unwrap();
-        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
-
-        let _staged1 = stage_content_with_default_layout(&src, &build).unwrap();
-        let staged2 = stage_content_with_default_layout(&src, &build).unwrap();
-        let body = fs::read_to_string(staged2.join("a.md")).unwrap();
-        // No double-injection on the second run.
-        assert_eq!(body.matches("layout:").count(), 1);
     }
 }
