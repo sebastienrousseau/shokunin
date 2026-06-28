@@ -198,12 +198,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "askama_escape"
-version = "0.10.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "619743e34b5ba4e9703bba34deac3427c72507c7159f5fd030aea8cac0cfe341"
-
-[[package]]
 name = "async-trait"
 version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1998,22 +1992,6 @@ checksum = "6970f50e31d6fc17d3fa27329444bfa74e196cf62e95052a3f6fee181dba6425"
 dependencies = [
  "bytes",
  "itoa",
-]
-
-[[package]]
-name = "http-handle"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168bdf0482e99f2193ebe6df957fc0456f7f2c17c44146edc9326f8f5a48ac79"
-dependencies = [
- "ctrlc",
- "euxis-commons",
- "log",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "version_check",
 ]
 
 [[package]]
@@ -4338,16 +4316,13 @@ dependencies = [
 
 [[package]]
 name = "rss-gen"
-version = "0.0.5"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b80bc3f61d3a43d92302b7d7b1bbc2db17b3f83eeae69f5ab87730829166f592"
+checksum = "3be5690e7b2de7129db714a796f194c861962f2ac88254c48d883c6a2ea38a0b"
 dependencies = [
- "dtt 0.0.10",
- "euxis-commons",
  "log",
  "quick-xml 0.40.1",
  "serde",
- "serde_json",
  "thiserror 2.0.18",
  "time",
  "url",
@@ -4940,7 +4915,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4948,7 +4923,7 @@ dependencies = [
  "criterion",
  "fail",
  "frontmatter-gen",
- "http-handle 0.0.5",
+ "http-handle",
  "image",
  "lightningcss",
  "log",
@@ -4992,7 +4967,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "log",
  "pulldown-cmark",
@@ -5006,7 +4981,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "criterion",
  "inventory",
@@ -5019,7 +4994,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5028,7 +5003,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "getrandom 0.3.4",
  "js-sys",
@@ -5042,7 +5017,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.45"
+version = "0.0.46"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
@@ -5067,20 +5042,20 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.9"
+version = "0.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e27435f8dd8ab685cef7d12b5405cf2c550ce488b5c3c4ac303462851e6ae0f3"
+checksum = "c65cac1c53722961e8e806cb469c9e0482f4811b2569fcbe9586eff8bd7fb2ed"
 dependencies = [
  "anyhow",
  "comrak 0.52.0",
  "html-generator 0.0.6",
- "http-handle 0.0.4",
+ "http-handle",
  "idna",
  "langweave",
  "log",
  "metadata-gen",
  "pulldown-cmark",
- "quick-xml 0.39.4",
+ "quick-xml 0.40.1",
  "rayon",
  "regex",
  "rss-gen",
@@ -5093,16 +5068,16 @@ dependencies = [
  "url",
  "uuid",
  "version_check",
+ "walkdir",
  "xml-rs 1.0.0",
 ]
 
 [[package]]
 name = "staticweaver"
-version = "0.0.2"
+version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae2a375c7a4feb15ddd81a7a68f093a82d4c8363cf9d1959102434f98f4b90bf"
+checksum = "d358780740c9a469e59253ea11035cbd84911e75f7d62745bd6d955db5deb049"
 dependencies = [
- "askama_escape",
  "fnv",
  "tempfile",
  "thiserror 2.0.18",

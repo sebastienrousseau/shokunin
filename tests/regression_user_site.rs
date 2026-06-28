@@ -246,17 +246,16 @@ fn full_user_pattern_combined() {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// v0.0.46 regression scaffolding — nested-locale content tree.
+// v0.0.46 regression: nested-locale content tree.
 //
-// Blocked on `staticdatagen 0.0.10` (issue #70 in the upstream tracker,
-// landing on `feat/v0.0.10` PR #72). Marked `#[ignore]` for now so the
-// gate stays green; flip to active once `Cargo.toml` bumps the dep on
-// `feat/v0.0.46`. See `examples/multilingual_full_example.rs` for the
-// runnable showcase that exercises the same shape.
+// staticdatagen 0.0.10 (issue #70) added recursive directory walk via
+// walkdir, and preserves the per-locale subdir prefix in the URL.
+// This test exercises that shape end-to-end on a small 3-locale × 2-post
+// tempdir. See `examples/multilingual_full_example.rs` for the larger
+// 5 × 5 runnable showcase.
 // ─────────────────────────────────────────────────────────────────────
 
 #[test]
-#[ignore = "blocked on staticdatagen >= 0.0.10 — fixed by feat/v0.0.10 PR #72 (issue #70)"]
 fn nested_locale_subdirectories_build_per_language() {
     // Mirrors the Jekyll `content/<lang>/<slug>.md` shape on a small
     // 3-locale × 2-post tree. Once staticdatagen 0.0.10 is in the dep

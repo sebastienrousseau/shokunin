@@ -70,19 +70,24 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut found = 0usize;
     let mut missing = 0usize;
     for &lang in LOCALES {
+        // Posts land at `<lang>/post-N/index.html`.
         for i in 1..=POSTS_PER_LOCALE {
             let p = site_dir.join(lang).join(format!("post-{i}")).join("index.html");
             if p.exists() {
                 found += 1;
             } else {
                 missing += 1;
+                eprintln!("  MISSING: {}", p.display());
             }
         }
-        let idx = site_dir.join(lang).join("index.html");
+        // Per-locale `index.md` lands at `<lang>/index/index.html`
+        // (staticdatagen treats every non-root .md as a subdir).
+        let idx = site_dir.join(lang).join("index").join("index.html");
         if idx.exists() {
             found += 1;
         } else {
             missing += 1;
+            eprintln!("  MISSING: {}", idx.display());
         }
     }
 
@@ -94,17 +99,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     if missing > 0 {
         println!();
         println!(
-            "  ⚠ {missing} pages missing — staticdatagen #70 still active."
+            "  ⚠ {missing} pages missing — staticdatagen recursive walk regressed?"
         );
-        println!(
-            "    This is expected against staticdatagen 0.0.9; bump to"
-        );
-        println!(
-            "    0.0.10 once the upstream fix is released and the"
-        );
-        println!("    per-locale pages will appear on their own.");
-        // Exit cleanly so CI's example_outputs gate doesn't fail before
-        // the dep bump.
+        // Exit non-zero only when we have a regression worth flagging
+        // — staticdatagen 0.0.10 should now produce all 30 pages.
+        if std::env::var("CI").is_err() {
+            std::process::exit(1);
+        }
     } else {
         println!();
         println!(

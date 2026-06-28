@@ -7,29 +7,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v0.0.46 in flight
-
-Status snapshot: all 8 upstream fixes for [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585) are pushed as 4 PRs against the user-owned upstream repos and are awaiting review + release. Once those publish to crates.io, this branch (`feat/v0.0.46`) bumps the deps in a single commit, deletes the corresponding shim functions in `src/core/content_stager.rs`, and closes [ssg#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) (HTML-entity double-escape) on the staticweaver side.
-
-### Upstream PRs landing in v0.0.46
-
-| Repo | Branch | PR | Closes (upstream) | Closes (downstream) |
-|---|---|---|---|---|
-| `staticdatagen` (next: 0.0.10) | `feat/v0.0.10` | [#72](https://github.com/sebastienrousseau/staticdatagen/pull/72) | `staticdatagen#67` / `#68` / `#69` / `#70` / `#71` + 4 dependabot bumps | `inject_default_layout_if_missing`, `stage_templates_with_required_stubs`, `ensure_tags_stub`, recursive content walk, log-ordering noise |
-| `metadata-gen` (next: 0.0.5) | `feat/v0.0.5` | [#21](https://github.com/sebastienrousseau/metadata-gen/pull/21) | `metadata-gen#20` | `collapse_multiline_quoted_scalars` (upstreamed into metadata-gen) |
-| `staticweaver` (next: 0.0.3) | `feat/v0.0.3` | [#29](https://github.com/sebastienrousseau/staticweaver/pull/29) | `staticweaver#28` + `askama_escape` drop | `collect_template_vars`, `inject_missing_keys`, `inject_template_defaults_recursive` + closes [ssg#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) (idempotent HTML escape) |
-| `rssgen` (next: 0.0.6) | `feat/v0.0.6` | [#35](https://github.com/sebastienrousseau/rssgen/pull/35) | `rssgen#34` | (no ssg shim — error messages and relative-URL acceptance are pure upstream improvements) |
-
-### Pre-staged on `feat/v0.0.46`
-
-- **`examples/multilingual_full/`** — 32-file content tree (5 locales × `index.md` + 5 posts) demonstrating the nested `content/<lang>/<slug>.md` layout. Runs cleanly against today's `staticdatagen 0.0.9` (warns per missing per-locale page) and goes fully green once `0.0.10` lands.
-- **`examples/multilingual_full_example.rs`** — runnable showcase, registered as the `multilingual_full` `[[example]]`.
-- **`tests/regression_user_site.rs::nested_locale_subdirectories_build_per_language`** — new regression case, currently `#[ignore]`d with `blocked on staticdatagen >= 0.0.10`. Flip the attribute off in the dep-bump commit.
+## [Unreleased]
 
 ### Planned / Upcoming (deferred — not v0.0.46 scope)
 
+- **Residual content-staging shim removal** — two narrow gaps remain in `src/core/content_stager.rs` until upstream follow-ups land: template-default injection (blocked on [staticdatagen#99](https://github.com/sebastienrousseau/staticdatagen/issues/99) — opting the staticweaver Engine into `lax_undefined`) and multi-line quoted-scalar collapse (blocked on [staticdatagen#100](https://github.com/sebastienrousseau/staticdatagen/issues/100) — bumping the transitive `metadata-gen` dep to `0.0.5`). Once both land, the module collapses to ~50 LOC.
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
 - **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.71 / 96.87 / 95.77 with `--lib`. The remaining uncovered regions sit in I/O-heavy production glue that needs source-level seams.
+
+## [0.0.46] - 2026-06-28
+
+The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cycle landed and shipped; the bulk of the v0.0.45 content-staging shim is gone.
+
+### Upstream PRs that landed in this release
+
+| Repo | Released | PR | Closes (upstream) | Closes (downstream) |
+|---|---|---|---|---|
+| `staticdatagen` → 0.0.10 | 2026-06-28 12:39 UTC | [#72](https://github.com/sebastienrousseau/staticdatagen/pull/72) | `#67` / `#68` / `#69` / `#70` / `#71` + 4 dependabot bumps | `inject_default_layout_if_missing`, `stage_templates_with_required_stubs`, `ensure_tags_stub`, `stage_content_with_default_layout` (4 stager pub fns retired) |
+| `staticweaver` → 0.0.3 (then 0.0.4) | 2026-06-28 09:21 / 17:40 UTC | [#29](https://github.com/sebastienrousseau/staticweaver/pull/29) | `#28` + `askama_escape` drop | closes [ssg#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) (idempotent HTML escape) via the `staticdatagen 0.0.10 → staticweaver 0.0.3` transitive dep |
+| `rss-gen` → 0.0.6 | 2026-06-28 10:19 UTC | [#35](https://github.com/sebastienrousseau/rssgen/pull/35) | `#34` (context-prefixed validation errors + relative item-link URLs per RSS 2.0 §5.7) | (no ssg shim — pure upstream improvements) |
+| `metadata-gen` → 0.0.5 | 2026-06-28 20:01 UTC | [#21](https://github.com/sebastienrousseau/metadata-gen/pull/21) | `#20` | held — `staticdatagen 0.0.10` still pins `metadata-gen = "0.0.4"`. Tracked: [staticdatagen#100](https://github.com/sebastienrousseau/staticdatagen/issues/100). |
+
+### Changed
+
+- **`Cargo.toml`** — `staticdatagen 0.0.9 → 0.0.10`. Lockfile reflects the transitive bumps: `staticweaver 0.0.2 → 0.0.3`, `rss-gen 0.0.5 → 0.0.6`.
+- **`src/core/content_stager.rs`** — reduced from ~1,300 to ~660 LOC. Four shim public functions retired (their bugs closed natively in `staticdatagen 0.0.10`): `stage_content_with_default_layout`, `inject_default_layout_if_missing`, `ensure_tags_stub` (private), `stage_templates_with_required_stubs`. The `DEFAULT_LAYOUT` + `REQUIRED_TEMPLATE_FILES` consts and three helpers (`copy_templates_tree`, `frontmatter_has_layout_key`, the layout-injection branch of `copy_tree`) went with them. 21 obsolete unit tests removed. Module docstring rewritten to document the two residual shims and their upstream tracking issues.
+- **`src/core/pipeline.rs::compile_site`** — drops the `stage_templates_with_required_stubs` call; the user's `template_dir` is now passed directly to `staticdatagen::compile`. The pipeline doc-comment now describes the v0.0.46 residual scope rather than the v0.0.45 regression matrix.
+- **3 v0.0.45-era input-validation tests updated** (`test_compile_site_error`, `test_internal_compile_with_empty_directories`, `test_args_all_required_arguments`) — empty directories are now a valid "no work to do" build under `staticdatagen 0.0.10` (closes upstream #68 / #69) so the tests were re-pointed at a genuine io error (a file passed where a directory is expected) to keep error-propagation coverage.
+
+### Added
+
+- **`examples/multilingual_full/`** — 32-file content tree (5 locales × `index.md` + 5 posts) demonstrating the nested `content/<lang>/<slug>.md` layout that `staticdatagen 0.0.10` (closes upstream #70) walks recursively. Registered as the `multilingual_full` `[[example]]`. Verified end-to-end: 30/30 per-locale pages land.
+- **`tests/regression_user_site.rs::nested_locale_subdirectories_build_per_language`** — new always-on regression covering the recursive walk on a 3 × 2 in-memory tempdir.
+- **Two upstream follow-up issues filed** to track the remaining staticdatagen wiring needed before the residual shim disappears: [staticdatagen#99](https://github.com/sebastienrousseau/staticdatagen/issues/99) (`Engine::with_lax_undefined(true)`) and [staticdatagen#100](https://github.com/sebastienrousseau/staticdatagen/issues/100) (bump `metadata-gen` to `0.0.5`).
+
+### Fixed
+
+- **[#589](https://github.com/sebastienrousseau/static-site-generator/issues/589) — HTML-entity double-escape** (`&` → `&amp;amp;`) corrupting body text, `og:title`, `twitter:title`, JSON-LD strings, and `href`s on ~30 % of real-world pages. Closed transitively by bumping `staticdatagen` to 0.0.10 (which pulls in `staticweaver 0.0.3`'s idempotent `escape_html_into` from [staticweaver#29](https://github.com/sebastienrousseau/staticweaver/pull/29)).
+
+### Workspace versions
+
+`ssg`, `ssg-core`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-search`, `ssg-wasm` — all bumped 0.0.45 → 0.0.46.
 
 ## [0.0.45] - 2026-06-27
 

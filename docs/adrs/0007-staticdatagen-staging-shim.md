@@ -111,9 +111,23 @@ concurrent builds (including the parallel test runner) cannot collide.
 
 ## Status
 
-Accepted as **a temporary measure**. The path to removal is documented
-in `sebastienrousseau/static-site-generator#585` (v0.0.46 tracker),
-which links each shim function to its upstream issue:
+**Partially superseded in v0.0.46.** Four of the original five shim
+functions were retired when `staticdatagen 0.0.10` (closes upstream
+`#67` / `#68` / `#69` / `#71`) and `staticweaver 0.0.3` (closes upstream
+`#28` and ships idempotent HTML escape for ssg#589) shipped on
+2026-06-28. The two residual shims (`stage_content_with_template_defaults`
+and the multi-line quoted-scalar collapse inside `copy_tree`) are
+gated on two follow-up issues filed against `staticdatagen`:
+[`#99`](https://github.com/sebastienrousseau/staticdatagen/issues/99)
+(opt the Engine into `lax_undefined`) and
+[`#100`](https://github.com/sebastienrousseau/staticdatagen/issues/100)
+(bump the transitive `metadata-gen` dep to `0.0.5`). Once both land,
+the module collapses to ~50 LOC and this ADR will be re-marked
+**Superseded** in full.
+
+Originally accepted as **a temporary measure**. The path to removal is
+documented in `sebastienrousseau/static-site-generator#585` (v0.0.46
+tracker), which links each shim function to its upstream issue:
 
 | Shim | Upstream issue |
 |---|---|
