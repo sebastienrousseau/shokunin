@@ -12,7 +12,7 @@
 //!   (warn).
 
 use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
-use super::hreflang_attr;
+use super::{find_tag_end, hreflang_attr};
 
 const NAME: &str = "images";
 
@@ -137,11 +137,13 @@ struct ImgRef {
 
 fn extract_imgs(html: &str) -> Vec<ImgRef> {
     let mut out = Vec::new();
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<img") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        // Quote-aware end detection: SVG data-URIs in `src` carry raw
+        // `>` characters that a naive find('>') truncates on.
+        let end = find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
         let src = hreflang_attr(tag, "src").unwrap_or_default();
@@ -292,6 +294,49 @@ mod tests {
         let html = r#"<html><body><img src="//cdn.example/a.jpg" alt="x" width="1" height="1"></body></html>"#;
         let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
         assert!(f.iter().all(|x| x.code.as_deref() != Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn svg_data_uri_with_raw_gt_does_not_truncate_tag() {
+        // Regression: naive find('>') cut the tag at the first `>`
+        // inside the data-URI, losing alt/width/height that follow.
+        let html = "<html><body><img alt=\"Banner\" \
+            src=\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'>\
+            <rect width='1' height='1'/></svg>\" \
+            width=\"1440\" height=\"398\"></body></html>";
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("IMG-ALT")
+                && x.code.as_deref() != Some("IMG-DIMS")),
+            "attributes after a data-URI must be seen: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_valueless_alt_counts_as_alt() {
+        // Minifiers collapse alt="" to bare `alt` on decorative images.
+        let html = "<html><body>\
+            <img alt height=33 role=presentation src=a.jpg width=100>\
+            </body></html>";
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("IMG-ALT")
+                && x.code.as_deref() != Some("IMG-DIMS")),
+            "bare `alt` + unquoted dims must count: {f:?}"
+        );
+    }
+
+    #[test]
+    fn truly_missing_alt_still_flagged_on_minified_tag() {
+        // True positive preserved on unquoted minified markup.
+        let html = "<html><body>\
+            <img height=33 src=a.jpg width=100>\
+            </body></html>";
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("IMG-ALT")),
+            "missing alt must still flag: {f:?}"
+        );
     }
 
     #[test]

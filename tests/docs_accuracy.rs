@@ -363,6 +363,65 @@ fn features_matrix_is_exhaustive() {
     );
 }
 
+// =====================================================================
+// Claims reconciliation wording gates (v0.0.47 plan §3 item 2.5)
+// =====================================================================
+
+#[test]
+fn compilation_claims_use_bounded_memory_batch_wording() {
+    // `src/core/streaming.rs` is a *batch* compiler with a memory
+    // budget — content is compiled batch-by-batch to disk, not
+    // incrementally streamed. v0.0.47 renamed the user-facing claim
+    // from "streaming compilation" to "bounded-memory batch
+    // compilation"; this gate pins the new wording so it can't
+    // drift back. The word "streaming" remains legitimate for the
+    // lol_html rewriting path and chunked file I/O — only the exact
+    // phrase "streaming compilation" is banned from these docs.
+    for rel in ["README.md", "BENCHMARKS.md", "docs/guide/streaming.md"] {
+        let doc = read(rel).to_lowercase();
+        assert!(
+            !doc.contains("streaming compilation"),
+            "{rel} still says `streaming compilation` — the honest \
+             wording is `bounded-memory batch compilation` \
+             (core/streaming.rs is a batch compiler; see v0.0.47 \
+             plan §3 item 2.5)."
+        );
+        assert!(
+            doc.contains("bounded-memory batch"),
+            "{rel} lost the `bounded-memory batch` wording that \
+             describes core/streaming.rs. Restore it (v0.0.47 plan \
+             §3 item 2.5)."
+        );
+    }
+}
+
+#[test]
+fn pqc_claims_are_posture_guidance_not_capability() {
+    // SSG's PQC surface is configuration *guidance* (TLS/PQC notes
+    // in edge-header emitters + an HSTS/TLS posture audit gate) —
+    // not post-quantum cryptography. ML-DSA content-provenance
+    // signing is roadmap (#579 / SECURITY.md Hardening Roadmap).
+    // The README must describe this as "PQC posture guidance" and
+    // never as a "PQC-aware" / "post-quantum" capability.
+    let readme = read("README.md");
+    assert!(
+        readme.contains("PQC posture guidance"),
+        "README lost the `PQC posture guidance` wording for the \
+         edge-headers feature (v0.0.47 plan §3 item 2.5)."
+    );
+    assert!(
+        !readme.contains("PQC-aware"),
+        "README says `PQC-aware` — that overstates the feature. Use \
+         `PQC posture guidance` (v0.0.47 plan §3 item 2.5)."
+    );
+    assert!(
+        !readme.to_lowercase().contains("post-quantum"),
+        "README claims `post-quantum` as a capability. SSG emits \
+         PQC *posture guidance*; ML-DSA provenance signing is \
+         roadmap (#579)."
+    );
+}
+
 #[cfg(test)]
 mod helpers {
     use super::*;

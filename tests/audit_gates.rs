@@ -2,7 +2,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Integration tests for the 14 native audit gates (issue #549).
+//! Integration tests for the 15 native audit gates (issue #549).
 //!
 //! Per AC8 every gate has at least one positive (passing site) and
 //! one negative (intentionally-failing site) test. AC1 / AC2 / AC3 /
@@ -53,7 +53,7 @@ const PASSING_PAGE: &str = "<!doctype html><html lang=\"en\"><head>\
 </head><body><main><h1>Hello</h1><img src=\"/a.jpg\" alt=\"a\" width=\"10\" height=\"10\"></main></body></html>";
 
 // =====================================================================
-// 14 gates × 2 (positive + negative) = 28 baseline tests
+// 15 gates × 2 (positive + negative) = 30 baseline tests
 // =====================================================================
 
 #[test]
@@ -440,15 +440,48 @@ fn search_index_negative_hash_mismatch_flagged() {
         .any(|x| x.code.as_deref() == Some("SEARCH-HASH-MISMATCH")));
 }
 
+#[test]
+fn lang_consistency_positive_same_base_language_passes() {
+    // en vs en-GB share the base subtag `en` — consistent.
+    let html = "<!doctype html><html lang=\"en\"><head><title>x</title>\
+        <script type=\"application/ld+json\">\
+        {\"@context\":\"https://schema.org\",\"@type\":\"WebPage\",\
+        \"inLanguage\":\"en-GB\"}</script>\
+        </head><body><main><h1>x</h1></main></body></html>";
+    let (_tmp, site) = one_page(html);
+    let f = gates::lang_consistency::LangConsistencyGate
+        .run(&site, &AuditOptions::default());
+    assert!(f.is_empty(), "got {f:?}");
+}
+
+#[test]
+fn lang_consistency_negative_base_language_mismatch_flagged() {
+    // inLanguage en-GB on <html lang="hi"> — base `en` vs `hi`.
+    let html = "<!doctype html><html lang=\"hi\"><head><title>x</title>\
+        <script type=\"application/ld+json\">\
+        {\"@context\":\"https://schema.org\",\"@type\":\"WebPage\",\
+        \"inLanguage\":\"en-GB\"}</script>\
+        </head><body><main><h1>x</h1></main></body></html>";
+    let (_tmp, site) = one_page(html);
+    let f = gates::lang_consistency::LangConsistencyGate
+        .run(&site, &AuditOptions::default());
+    let m: Vec<_> = f
+        .iter()
+        .filter(|x| x.code.as_deref() == Some("LANG-MISMATCH"))
+        .collect();
+    assert_eq!(m.len(), 1, "expected one LANG-MISMATCH warning: {f:?}");
+    assert_eq!(m[0].severity, Severity::Warn);
+}
+
 // =====================================================================
 // Acceptance criteria — end-to-end scenarios
 // =====================================================================
 
 #[test]
-fn ac1_audit_runs_all_fourteen_gates() {
+fn ac1_audit_runs_all_fifteen_gates() {
     let (_tmp, site) = one_page(PASSING_PAGE);
     let report = AuditRunner::new(AuditConfig::new()).run(&site);
-    assert_eq!(report.gates.len(), 14, "must run 14 gates");
+    assert_eq!(report.gates.len(), 15, "must run 15 gates");
 }
 
 #[test]
@@ -471,7 +504,7 @@ fn ac3_json_output_has_stable_shape() {
     let json = ssg::audit::output::json::format(&report).unwrap();
     let v: serde_json::Value = serde_json::from_str(&json).unwrap();
     assert!(v["gates"].is_array());
-    assert_eq!(v["gates"].as_array().unwrap().len(), 14);
+    assert_eq!(v["gates"].as_array().unwrap().len(), 15);
     let first = &v["gates"][0];
     assert!(first["name"].is_string());
     assert!(first["severity_counts"]["error"].is_number());
@@ -543,7 +576,7 @@ fn ac7_junit_output_is_valid_xml_with_per_gate_testsuite() {
     let report = AuditRunner::new(AuditConfig::new()).run(&site);
     let xml = ssg::audit::output::junit::format(&report);
     assert!(xml.starts_with("<?xml version=\"1.0\""));
-    assert_eq!(xml.matches("<testsuite ").count(), 14);
+    assert_eq!(xml.matches("<testsuite ").count(), 15);
     assert!(xml.contains("</testsuites>"));
 }
 

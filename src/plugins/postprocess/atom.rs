@@ -3,7 +3,8 @@
 
 //! Atom 1.0 feed plugin.
 
-use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars, xml_escape};
+use super::helpers::{read_meta_sidecars, xml_escape};
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
@@ -128,8 +129,22 @@ fn build_atom_entry(
         format!("{base_url}/{rel_path}/")
     };
 
-    let rfc3339 = parse_rfc2822_lenient(&pub_date)
-        .map_or_else(|| pub_date.clone(), |dt| dt.to_rfc3339());
+    // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible date
+    // chain — RFC 2822, long-form, and ISO 8601 inputs all normalise
+    // to the RFC 3339 shape Atom requires; unparseable values pass
+    // through verbatim (previous behaviour) with a warning naming the
+    // failing field.
+    let rfc3339 = match parse_flexible_date(&pub_date) {
+        Ok(dt) => dt.to_rfc3339(),
+        Err(err) => {
+            if !pub_date.is_empty() {
+                log::warn!(
+                    "[atom-feed] 'item_pub_date' for '{rel_path}': {err}"
+                );
+            }
+            pub_date.clone()
+        }
+    };
 
     Some((
         rfc3339.clone(),
@@ -391,6 +406,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -1120,6 +1136,51 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_atom_entry_iso_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO Date".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+
+        let result = build_atom_entry("isodate", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.updated, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.published, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_build_atom_entry_long_form_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long Form".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+
+        let result = build_atom_entry("longform", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.updated, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_build_atom_entry_iso_datetime_normalised() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO DT".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "2026-07-01T07:07:07Z".to_string(),
+        );
+
+        let result = build_atom_entry("isodt", &meta, "https://example.com");
+        let (date_key, _) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T07:07:07+00:00");
+    }
+
+    // -----------------------------------------------------------------
     // collect_atom_entries
     // -----------------------------------------------------------------
 
@@ -1288,6 +1349,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1508,6 +1570,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),

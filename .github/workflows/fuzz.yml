@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Nightly libFuzzer runs over the cargo-fuzz harness in fuzz/
+# (v0.0.47 plan §3 item 2.1, issue #566).
+#
+# Each target runs for 300 s in fork mode (-fork=2). Crash / timeout /
+# OOM reproducers land in fuzz/artifacts/<target>/ and are uploaded as
+# workflow artifacts for triage. The harness lives outside the cargo
+# workspace (fuzz/Cargo.toml has its own [workspace] table) so nightly
+# + sanitizer flags never leak into the main build.
+
+name: Fuzz
+
+on:
+  schedule:
+    # Nightly at 02:30 UTC — offset from scheduled.yml to avoid
+    # stacking runner load.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fuzz:
+    name: fuzz · ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - fuzz_frontmatter
+          - fuzz_markdown
+          - fuzz_shortcodes
+          - fuzz_html_rewrite
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # nightly
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: fuzz
+          workspaces: fuzz
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Run ${{ matrix.target }} (300 s, fork mode)
+        run: |
+          cargo +nightly fuzz run ${{ matrix.target }} -- \
+            -fork=2 \
+            -max_total_time=300 \
+            -timeout=30
+
+      - name: Upload crash artifacts
+        # Only exists if libFuzzer found a crash/timeout/OOM; the step
+        # above will have failed, so gate on always() and tolerate an
+        # empty directory.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 30

@@ -183,18 +183,28 @@ pub(super) fn extract_canonical(html: &str) -> String {
 }
 
 /// Extract the content of a specific meta tag by name or property.
+///
+/// Attribute-based matching: tolerant of attribute order, quoting style
+/// (double, single, unquoted), and case — minified HTML emits forms
+/// like `<meta content=x name=twitter:image>` that literal prefix
+/// matching misses.
 pub(super) fn extract_existing_meta(html: &str, attr: &str) -> String {
-    for prefix in &[
-        format!("<meta name=\"{attr}\" content=\""),
-        format!("<meta property=\"{attr}\" content=\""),
-        format!("<meta name='{attr}' content='"),
-        format!("<meta property='{attr}' content='"),
-    ] {
-        if let Some(pos) = html.find(prefix.as_str()) {
-            let after = &html[pos + prefix.len()..];
-            let delim = if prefix.ends_with('\'') { '\'' } else { '"' };
-            if let Some(end) = after.find(delim) {
-                let value = after[..end].trim();
+    use crate::audit::gates::{find_tag_end, hreflang_attr};
+
+    let lower = html.to_ascii_lowercase();
+    let mut cursor = 0;
+    while let Some(rel) = lower[cursor..].find("<meta") {
+        let abs = cursor + rel;
+        let end = find_tag_end(html, abs);
+        let tag = &html[abs..end];
+        cursor = end;
+        let matches = ["name", "property"].iter().any(|key| {
+            hreflang_attr(tag, key)
+                .is_some_and(|v| v.eq_ignore_ascii_case(attr))
+        });
+        if matches {
+            if let Some(content) = hreflang_attr(tag, "content") {
+                let value = content.trim();
                 if !value.is_empty() {
                     return value.to_string();
                 }
@@ -319,6 +329,46 @@ mod tests {
     fn extract_title_from_html() {
         let html = "<html><head><title>Test Page</title></head></html>";
         assert_eq!(extract_title(html), "Test Page");
+    }
+
+    #[test]
+    fn extract_existing_meta_minified_unquoted_and_reordered() {
+        // Regression: minified HTML emits unquoted values with
+        // `content` before `name`/`property`.
+        let html = "<head><meta content=https://ex.test/img.png \
+                    name=twitter:image></head>";
+        assert_eq!(
+            extract_existing_meta(html, "twitter:image"),
+            "https://ex.test/img.png"
+        );
+        let html2 =
+            "<head><meta content=\"https://ex.test/og.png\" property=og:image></head>";
+        assert_eq!(
+            extract_existing_meta(html2, "og:image"),
+            "https://ex.test/og.png"
+        );
+    }
+
+    #[test]
+    fn extract_existing_meta_quoted_forms_still_work() {
+        let html = r#"<meta name="author" content="Alice">"#;
+        assert_eq!(extract_existing_meta(html, "author"), "Alice");
+        let html2 = r#"<meta property='og:image' content='/x.png'>"#;
+        assert_eq!(extract_existing_meta(html2, "og:image"), "/x.png");
+    }
+
+    #[test]
+    fn extract_existing_meta_absent_returns_empty() {
+        let html = "<head><meta name=viewport content=width=device-width>\
+                    </head>";
+        assert_eq!(extract_existing_meta(html, "og:image"), "");
+    }
+
+    #[test]
+    fn extract_existing_meta_skips_empty_content_and_keeps_scanning() {
+        let html = "<meta name=author content=\"\">\
+                    <meta name=author content=\"Bea\">";
+        assert_eq!(extract_existing_meta(html, "author"), "Bea");
     }
 
     #[test]

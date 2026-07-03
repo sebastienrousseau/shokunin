@@ -281,3 +281,23 @@ fn markdown_ext_fault_read_returns_err() {
 // output for "hello ~~world~~" because the transformation is a
 // pure-text substitution. Covering this branch organically is part
 // of the v0.0.41 coverage push.
+
+// =====================================================================
+// io_pool::write (issue #569 phase 1 — writer-thread pool)
+// =====================================================================
+
+#[test]
+#[serial]
+fn io_pool_fault_write_surfaces_at_flush() {
+    let _guard = FailGuard("io_pool::write");
+    fail::cfg("io_pool::write", "return").expect("activate failpoint");
+
+    let dir = tempdir().expect("tempdir");
+    let pool = ssg::io_pool::IoPool::with_threads(2);
+    pool.write(dir.path().join("x.html"), b"x".to_vec())
+        .expect("enqueue succeeds; failure surfaces at flush");
+    let err = pool
+        .flush()
+        .expect_err("flush must surface the injected write failure");
+    assert!(format!("{err:?}").contains("injected: io_pool::write"));
+}

@@ -112,22 +112,24 @@ impl AuditGate for CspSriGate {
 }
 
 fn extract_meta_csp(html: &str) -> Option<String> {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let needle = "<meta";
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find(needle) {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
-        if tag
-            .to_lowercase()
-            .contains("http-equiv=\"content-security-policy\"")
-        {
+        cursor = end;
+        // Attribute-based match: tolerant of quoting style, case, and
+        // attribute order — minifiers emit unquoted
+        // `http-equiv=Content-Security-Policy`.
+        let is_csp = super::hreflang_attr(tag, "http-equiv")
+            .is_some_and(|v| v.eq_ignore_ascii_case("content-security-policy"));
+        if is_csp {
             if let Some(c) = super::hreflang_attr(tag, "content") {
                 return Some(c);
             }
         }
-        cursor = end;
     }
     None
 }
@@ -145,7 +147,7 @@ fn extract_remote_assets(html: &str) -> Vec<RemoteAsset> {
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<script") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
         let Some(src) = super::hreflang_attr(tag, "src") else {
@@ -164,13 +166,16 @@ fn extract_remote_assets(html: &str) -> Vec<RemoteAsset> {
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<link") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
-        let lower_tag = tag.to_lowercase();
-        if !lower_tag.contains("rel=\"stylesheet\"")
-            && !lower_tag.contains("rel='stylesheet'")
-        {
+        // `rel` may be unquoted (minified) and space-separated
+        // (`rel="stylesheet preload"`).
+        let is_stylesheet = super::hreflang_attr(tag, "rel").is_some_and(|r| {
+            r.split_ascii_whitespace()
+                .any(|t| t.eq_ignore_ascii_case("stylesheet"))
+        });
+        if !is_stylesheet {
             continue;
         }
         let Some(href) = super::hreflang_attr(tag, "href") else {
@@ -349,6 +354,50 @@ mod tests {
         let s = site_with(&[("index.html", html)]);
         let f = CspSriGate.run(&s, &AuditOptions::default());
         assert!(f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")));
+    }
+
+    #[test]
+    fn minified_unquoted_csp_meta_recognised() {
+        // Regression: minified HTML emits unquoted attribute values in
+        // original case; the gate must not report CSP-MISSING.
+        let html = "<html><head>\
+            <meta content=\"default-src 'self'\" http-equiv=Content-Security-Policy>\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("CSP-MISSING")),
+            "unquoted http-equiv must count: {f:?}"
+        );
+    }
+
+    #[test]
+    fn other_http_equiv_meta_does_not_count_as_csp() {
+        // True positive preserved: a page whose only http-equiv is
+        // something else still has no CSP.
+        let html = "<html><head>\
+            <meta http-equiv=X-UA-Compatible content=\"IE=edge\">\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("CSP-MISSING")),
+            "non-CSP http-equiv must still flag: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_unquoted_stylesheet_rel_needs_integrity() {
+        let html = "<html><head>\
+            <meta http-equiv=Content-Security-Policy content=\"default-src 'self'\">\
+            <link href=https://cdn.example/s.css rel=stylesheet>\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")),
+            "unquoted rel=stylesheet must be seen: {f:?}"
+        );
     }
 
     #[test]

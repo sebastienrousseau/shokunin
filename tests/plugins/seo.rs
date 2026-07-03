@@ -8,3 +8,4 @@ mod helpers;
 mod jsonld;
 mod robots;
 mod seo_plugin;
+mod social_cascade;

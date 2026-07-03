@@ -3,9 +3,8 @@
 
 //! RSS aggregate plugin.
 
-use super::helpers::{
-    extract_xml_value, parse_rfc2822_lenient, read_meta_sidecars, xml_escape,
-};
+use super::helpers::{extract_xml_value, read_meta_sidecars, xml_escape};
+use crate::dates::{parse_flexible_date, DateFormat};
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::fs;
@@ -43,8 +42,29 @@ fn collect_articles(
             format!("{base_url}/{rel_path}/")
         };
 
-        let sort_key = parse_rfc2822_lenient(&pub_date)
-            .map_or_else(|| pub_date.clone(), |dt| dt.to_rfc3339());
+        // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible
+        // date chain (RFC 2822 → long form → ISO 8601). RFC 2822
+        // inputs pass through verbatim so existing feed output stays
+        // byte-identical; long-form/ISO inputs are normalised into a
+        // valid RFC 2822 <pubDate> instead of leaking raw strings.
+        let (sort_key, pub_date) = match parse_flexible_date(&pub_date) {
+            Ok(dt) => {
+                let rfc2822 = if dt.format == DateFormat::Rfc2822 {
+                    pub_date.clone()
+                } else {
+                    dt.to_rfc2822()
+                };
+                (dt.to_rfc3339(), rfc2822)
+            }
+            Err(err) => {
+                if !pub_date.is_empty() {
+                    log::warn!(
+                        "[rss-aggregate] 'item_pub_date' for '{rel_path}': {err}"
+                    );
+                }
+                (pub_date.clone(), pub_date)
+            }
+        };
 
         let escaped_desc = xml_escape(&description);
 
@@ -301,6 +321,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -611,6 +632,84 @@ mod tests {
             "angle brackets should be escaped: {xml}"
         );
         assert!(xml.contains("&amp;"), "ampersands should be escaped: {xml}");
+    }
+
+    // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_collect_articles_rfc2822_date_passes_through_verbatim() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "RFC".to_string());
+        // Deliberately wrong weekday (2026-04-11 is a Saturday):
+        // verbatim passthrough keeps the feed byte-identical.
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let entries = vec![("rfc".to_string(), meta)];
+        let articles = collect_articles(&entries, "https://example.com");
+        assert!(
+            articles[0]
+                .1
+                .contains("<pubDate>Thu, 11 Apr 2026 06:06:06 +0000</pubDate>"),
+            "RFC 2822 input must pass through unchanged: {}",
+            articles[0].1
+        );
+        assert_eq!(articles[0].0, "2026-04-11T06:06:06+00:00");
+    }
+
+    #[test]
+    fn test_collect_articles_iso_date_becomes_rfc2822_pubdate() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+        let entries = vec![("iso".to_string(), meta)];
+        let articles = collect_articles(&entries, "https://example.com");
+        assert!(
+            articles[0]
+                .1
+                .contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
+            "ISO input should be normalised to RFC 2822: {}",
+            articles[0].1
+        );
+        assert_eq!(articles[0].0, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_collect_articles_long_form_date_becomes_rfc2822_pubdate() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+        let entries = vec![("long".to_string(), meta)];
+        let articles = collect_articles(&entries, "");
+        assert!(
+            articles[0]
+                .1
+                .contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
+            "long-form input should be normalised to RFC 2822: {}",
+            articles[0].1
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_unparseable_date_passes_through() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Bad".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
+        let entries = vec![("bad".to_string(), meta)];
+        let articles = collect_articles(&entries, "");
+        assert!(
+            articles[0].1.contains("<pubDate>not-a-date</pubDate>"),
+            "unparseable input keeps previous passthrough behaviour: {}",
+            articles[0].1
+        );
+        assert_eq!(articles[0].0, "not-a-date");
     }
 
     #[test]

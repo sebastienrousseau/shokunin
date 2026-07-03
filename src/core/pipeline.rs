@@ -544,7 +544,19 @@ pub fn execute_build_pipeline_with(
             )?;
         }
     } else {
-        compile_site(build_dir, content_dir, site_dir, template_dir)?;
+        // Spec A2/B1 (plan §2 item 1.2, issue #586): thread the site's
+        // base URL into the compile so the content stager can inject a
+        // derived `permalink:` for pages that don't declare one —
+        // mirroring how the postprocess plugins source `base_url` from
+        // the plugin context's config.
+        let base_url = ctx.config.as_ref().map(|c| c.base_url.clone());
+        compile_site_with_base_url(
+            build_dir,
+            content_dir,
+            site_dir,
+            template_dir,
+            base_url.as_deref(),
+        )?;
     }
 
     // Cache HTML file list once — shared by all after_compile plugins,
@@ -623,6 +635,11 @@ pub fn depgraph_cache_root(site_dir: &Path) -> PathBuf {
 
 /// Compiles the static site from source directories.
 ///
+/// Convenience wrapper over [`compile_site_with_base_url`] with no
+/// base URL — no `permalink:` derivation happens on staged content.
+/// The full build pipeline calls [`compile_site_with_base_url`] with
+/// the configured `base_url` instead (spec A2/B1, plan §2 item 1.2).
+///
 /// # Examples
 ///
 /// ```no_run
@@ -642,6 +659,52 @@ pub fn compile_site(
     site_dir: &Path,
     template_dir: &Path,
 ) -> Result<(), SsgError> {
+    compile_site_with_base_url(
+        build_dir,
+        content_dir,
+        site_dir,
+        template_dir,
+        None,
+    )
+}
+
+/// Compiles the static site, deriving a `permalink:` for every staged
+/// markdown page that declares neither `permalink` nor `url` when
+/// `base_url` is provided (spec A2/B1, plan §2 item 1.2, issue #586).
+///
+/// The derived value is [`crate::urls::derive_permalink`] applied to
+/// `(base_url, content_rel_path)` —
+/// i.e. the pretty directory URL of the page's compiled output — so
+/// the injected permalink, the canonical `<link>`, and the feed
+/// `<link>` all come from one code path
+/// ([`crate::urls::derive_page_url`]). This makes `rss-gen`'s
+/// "channel.link is missing" hard-fail unreachable for pages without
+/// author-specified permalinks.
+///
+/// Passing `base_url: None` (or an empty string) skips the permalink
+/// derivation entirely and behaves like [`compile_site`].
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::pipeline::compile_site_with_base_url;
+/// use std::path::Path;
+///
+/// // Real call requires populated content/template trees; only the
+/// // signature is exercised here.
+/// let _ = compile_site_with_base_url(
+///     Path::new("build"), Path::new("content"),
+///     Path::new("site"), Path::new("templates"),
+///     Some("https://example.com"),
+/// );
+/// ```
+pub fn compile_site_with_base_url(
+    build_dir: &Path,
+    content_dir: &Path,
+    site_dir: &Path,
+    template_dir: &Path,
+    base_url: Option<&str>,
+) -> Result<(), SsgError> {
     // v0.0.46: `staticdatagen 0.0.10` (closes upstream #67, #68, #69,
     // #70, #71) handles missing layout keys, absent aux files
     // (`main.js`/`sw.js`), absent tags-page templates, nested locale
@@ -649,7 +712,7 @@ pub fn compile_site(
     // stager shims were retired in this release. The two surviving
     // shims:
     //
-    //   * `collect_template_vars` + `stage_content_with_template_defaults`
+    //   * `collect_template_vars` + `stage_content_with_site_defaults`
     //     pre-fill empty `key: ""` frontmatter entries for every
     //     `{{ var }}` reference the templates make. staticweaver
     //     0.0.3 has `with_lax_undefined(true)` (closes upstream
@@ -664,15 +727,21 @@ pub fn compile_site(
     //
     // Once those two upstream follow-ups land, the residual shim
     // collapses to ~50 LOC.
+    //
+    // The same staging pass also threads `base_url` through so the
+    // stager can inject a derived `permalink:` for pages that declare
+    // neither `permalink` nor `url` (spec A2/B1, plan §2 item 1.2,
+    // issue #586).
     let template_vars =
         crate::content_stager::collect_template_vars(template_dir)
             .map_err(|e| SsgError::io(e, template_dir))?;
 
     let staged_content =
-        crate::content_stager::stage_content_with_template_defaults(
+        crate::content_stager::stage_content_with_site_defaults(
             content_dir,
             build_dir,
             &template_vars,
+            base_url,
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
@@ -754,6 +823,12 @@ pub fn register_default_plugins(
 
     // AI readiness
     plugins.register(ai::AiPlugin);
+
+    // Agent JSON API (#586 port 3): /api/agents/{index,posts,topics,
+    // person}.json. Default-on like AiPlugin; programmatic opt-out via
+    // AgentApiPlugin::disabled(). (The oEmbed emitter — port 4 — is
+    // opt-in and therefore NOT registered here; see crate::oembed.)
+    plugins.register(crate::agent_api::AgentApiPlugin::default());
 
     // Taxonomy and pagination
     plugins.register(taxonomy::TaxonomyPlugin);

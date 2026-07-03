@@ -13,6 +13,7 @@
 mod canonical;
 pub mod helpers;
 pub mod jsonld;
+pub(crate) mod lang;
 mod robots;
 mod seo_plugin;
 
@@ -266,7 +267,11 @@ mod tests {
 
         let result = plugin.transform_html(&html, &page_path, &ctx)?;
         assert!(result.contains("<link rel=\"canonical\""));
-        assert!(result.contains("https://example.com/index.html"));
+        // Canonical URLs share `urls::derive_page_url` with permalink
+        // injection and feed links (spec A2/B1, plan §2 item 1.2,
+        // issue #586): root index.html collapses to the bare base URL
+        // with a trailing slash.
+        assert!(result.contains("href=\"https://example.com/\""));
         Ok(())
     }
 
@@ -443,7 +448,10 @@ mod tests {
 
         let result = plugin.transform_html(&html, &page_path, &ctx)?;
         assert!(
-            result.contains("https://example.com/index.html"),
+            // index.html collapses to the directory URL under the
+            // shared `urls::derive_page_url` convention (spec A2/B1,
+            // plan §2 item 1.2, issue #586).
+            result.contains("href=\"https://example.com/\""),
             "should produce clean URL without double slash"
         );
         assert!(

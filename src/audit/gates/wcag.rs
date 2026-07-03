@@ -101,7 +101,9 @@ fn check_img_alt(html: &str, out: &mut Vec<Issue>) {
         let abs = pos + start;
         let tag_end = find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
-        let has_alt = tag.contains("alt=\"") || tag.contains("alt='");
+        // Attribute-based lookup: minifiers collapse `alt=""` to a bare
+        // valueless `alt`, and unquoted `alt=x` is legal — both count.
+        let has_alt = super::hreflang_attr(tag, "alt").is_some();
         if !has_alt {
             push(out, "1.1.1", "error", "<img> missing alt attribute");
         }
@@ -255,6 +257,33 @@ mod tests {
     fn empty_site_produces_no_findings() {
         let f = WcagGate.run(&empty_site(), &AuditOptions::default());
         assert!(f.is_empty());
+    }
+
+    #[test]
+    fn minified_valueless_alt_satisfies_1_1_1() {
+        // Minifiers collapse alt="" to a bare `alt` on decorative
+        // images — that still satisfies WCAG 1.1.1.
+        let html = "<!doctype html><html lang=en><head><title>x</title></head>\
+            <body><main><h1>x</h1>\
+            <img alt height=33 role=presentation src=a.png width=100>\
+            </main></body></html>";
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("WCAG-1.1.1")),
+            "bare `alt` must satisfy 1.1.1: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_img_without_alt_still_flagged_1_1_1() {
+        let html = "<!doctype html><html lang=en><head><title>x</title></head>\
+            <body><main><h1>x</h1><img src=a.png width=1 height=1>\
+            </main></body></html>";
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("WCAG-1.1.1")),
+            "missing alt must still flag: {f:?}"
+        );
     }
 
     #[test]

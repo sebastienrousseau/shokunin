@@ -11,7 +11,7 @@ use super::AuditGate;
 
 pub mod util;
 #[allow(unused_imports)]
-pub use util::{find_tag_end, hreflang_attr};
+pub use util::{find_tag_end, hreflang_attr, strip_script_and_style};
 
 pub mod ai_discovery;
 pub mod broken_links;
@@ -21,6 +21,7 @@ pub mod hreflang;
 pub mod html5;
 pub mod images;
 pub mod jsonld;
+pub mod lang_consistency;
 pub mod markdownlint;
 pub mod metadata;
 pub mod performance;
@@ -28,17 +29,18 @@ pub mod pqc_tls;
 pub mod search_index;
 pub mod wcag;
 
-/// Returns the 14 built-in gates in registration order.
+/// Returns the 15 built-in gates in registration order.
 ///
 /// Order is part of the public contract: the JSON output, `JUnit` XML
-/// output, and CI dashboard tooling all rely on it being stable.
+/// output, and CI dashboard tooling all rely on it being stable — new
+/// gates append at the end so existing positions never shift.
 ///
 /// # Examples
 ///
 /// ```
 /// use ssg::audit::gates::all;
 /// let gates = all();
-/// assert_eq!(gates.len(), 14);
+/// assert_eq!(gates.len(), 15);
 /// assert_eq!(gates[0].name(), "wcag");
 /// ```
 #[must_use]
@@ -58,6 +60,7 @@ pub fn all() -> Vec<Box<dyn AuditGate>> {
         Box::new(feeds::FeedsGate),
         Box::new(images::ImagesGate),
         Box::new(search_index::SearchIndexGate),
+        Box::new(lang_consistency::LangConsistencyGate),
     ]
 }
 
@@ -66,10 +69,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn all_returns_fourteen_gates_in_stable_order() {
+    fn all_returns_fifteen_gates_in_stable_order() {
         let gates = all();
         let names: Vec<&str> = gates.iter().map(|g| g.name()).collect();
-        assert_eq!(names.len(), 14);
+        assert_eq!(names.len(), 15);
         assert_eq!(
             names,
             vec![
@@ -87,6 +90,7 @@ mod tests {
                 "feeds",
                 "images",
                 "search_index",
+                "lang_consistency",
             ]
         );
     }
@@ -146,9 +150,10 @@ mod tests {
     }
 
     #[test]
-    fn last_gate_is_search_index() {
+    fn last_gate_is_lang_consistency() {
+        // New gates append at the end so existing positions are stable.
         let gates = all();
-        assert_eq!(gates.last().map(|g| g.name()), Some("search_index"));
+        assert_eq!(gates.last().map(|g| g.name()), Some("lang_consistency"));
     }
 
     #[test]

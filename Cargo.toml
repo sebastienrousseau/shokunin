@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.46"                      # The version of the library
+version = "0.0.47"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -181,9 +181,9 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-core = { path = "crates/ssg-core", version = "0.0.46" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.46" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.46" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.47" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.47" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.47" }
 thiserror = "2"
 staticdatagen = "0.0.10"
 toml = "1.1.2"
@@ -437,6 +437,11 @@ path = "examples/iso20022_example.rs"
 # 14-gate native CI audit runner (#549).
 name = "audit_example"
 path = "examples/audit_example.rs"
+
+[[example]]
+# Agent JSON API (/api/agents/*.json) + oEmbed 1.0 emitters (#586 ports 3-4).
+name = "agent_api_example"
+path = "examples/agent_api_example.rs"
 
 # -----------------------------------------------------------------------------
 # Linting Configuration

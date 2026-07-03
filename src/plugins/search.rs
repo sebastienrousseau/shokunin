@@ -74,26 +74,42 @@ impl SearchIndex {
 
         let entries: Vec<SearchEntry> = capped
             .par_iter()
-            .map(|path| -> Result<SearchEntry, SsgError> {
-                let html = fs::read_to_string(path).with_path(path)?;
+            .map_init(
+                // Per-thread scratch buffer reused across files, so each
+                // rayon worker amortises one HTML-sized allocation over
+                // its whole share of the corpus instead of allocating a
+                // fresh `String` per file (issue #578, plan §4 3.1).
+                String::new,
+                |buf, path| -> Result<SearchEntry, SsgError> {
+                    buf.clear();
+                    let mut file = fs::File::open(path).with_path(path)?;
+                    let _ = std::io::Read::read_to_string(&mut file, buf)
+                        .with_path(path)?;
+                    let html: &str = buf;
 
-                let rel_url = path
-                    .strip_prefix(site_dir)
-                    .unwrap_or(path)
-                    .to_string_lossy()
-                    .replace('\\', "/");
+                    // Build `/{rel}` with backslashes normalised in one
+                    // pass — replaces the `to_string_lossy().replace()`
+                    // double allocation (issue #578, plan §4 3.1).
+                    let rel = path.strip_prefix(site_dir).unwrap_or(path);
+                    let rel_lossy = rel.to_string_lossy();
+                    let mut url = String::with_capacity(rel_lossy.len() + 1);
+                    url.push('/');
+                    for ch in rel_lossy.chars() {
+                        url.push(if ch == '\\' { '/' } else { ch });
+                    }
 
-                let title = extract_title(&html);
-                let headings = extract_headings(&html);
-                let content = extract_text(&html);
+                    let title = extract_title(html);
+                    let headings = extract_headings(html);
+                    let content = extract_text(html);
 
-                Ok(SearchEntry {
-                    title,
-                    url: format!("/{rel_url}"),
-                    content: truncate(&content, MAX_CONTENT_LENGTH),
-                    headings,
-                })
-            })
+                    Ok(SearchEntry {
+                        title,
+                        url,
+                        content: truncate(&content, MAX_CONTENT_LENGTH),
+                        headings,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, SsgError>>()?;
 
         Ok(Self { entries })

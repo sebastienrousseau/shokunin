@@ -386,6 +386,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         }
     }
 

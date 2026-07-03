@@ -1,11 +1,18 @@
-<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+{# SPDX-License-Identifier: Apache-2.0 OR MIT #}
 <!DOCTYPE html>
 <html lang="{{ site.language | default('en') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site.title | default('Site') }}{% endblock %}</title>
-  {% if site.base_url %}<link rel="canonical" href="{{ site.base_url }}{{ page_url | default('/') }}">{% endif %}
+  {% if site.base_url %}<link rel="canonical" href="{{ site.base_url | safe }}{{ page_url | default('/') | safe }}">{% endif %}
+  <meta name="generator" content="ssg-taxonomy">
+  {% if page_description %}<meta name="description" content="{{ page_description }}">{% endif %}
+  <meta property="og:title" content="{{ page_title | default(site.title) | default('Site') }}">
+  <meta property="og:type" content="website">
+  {% if page_description %}<meta property="og:description" content="{{ page_description }}">{% endif %}
+  {% if site.base_url %}<meta property="og:url" content="{{ site.base_url | safe }}{{ page_url | default('/') | safe }}">{% endif %}
+  <meta name="twitter:card" content="summary">
   {% block head_extra %}{% endblock %}
 </head>
 <body>

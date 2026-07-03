@@ -1,6 +1,6 @@
 ---
 
-# Front Matter (YAML)
+## Front Matter (YAML)
 
 author: "hello@threshold.press (Threshold)"
 banner_alt: "Threshold banner"
@@ -30,7 +30,7 @@ locale: "en_GB"
 logo_alt: "Threshold logo"
 logo_height: "33"
 logo_width: "100"
-logo: ""
+logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMzMnPjxyZWN0IHdpZHRoPScxMDAnIGhlaWdodD0nMzMnIHJ4PSc2JyBmaWxsPScjMTY2NTM0Jy8+PHRleHQgeD0nNTAnIHk9JzIyJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZicgZm9udC1zaXplPScxMycgZm9udC13ZWlnaHQ9JzYwMCcgZmlsbD0nI2ZmZicgdGV4dC1hbmNob3I9J21pZGRsZSc+VGhyZXNob2xkPC90ZXh0Pjwvc3ZnPg=="
 name: "Threshold"
 permalink: "https://threshold.press/wcag-2-1-vs-2-2/"
 rating: "general"
@@ -45,7 +45,7 @@ title: "WCAG 2.2: what actually changed for builders"
 url: "https://threshold.press"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
-# News - The News SiteMap front matter (YAML).
+## News - The News SiteMap front matter (YAML).
 news_genres: "Blog"
 news_keywords: "blog, ssg, example"
 news_language: "en"
@@ -55,7 +55,7 @@ news_publication_date: "Wed, 16 Apr 2026 00:00:00 GMT"
 news_publication_name: "Threshold"
 news_title: "WCAG 2.2: what actually changed for builders"
 
-# RSS - The RSS feed front matter (YAML).
+## RSS - The RSS feed front matter (YAML).
 atom_link: https://threshold.press/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
@@ -72,7 +72,7 @@ ttl: "60"
 type: "website"
 webmaster: hello@threshold.press (Threshold)
 
-# Apple - The Apple front matter (YAML).
+## Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait"
 apple_touch_icon_sizes: "192x192"
 apple-mobile-web-app-capable: "yes"
@@ -81,10 +81,10 @@ apple-mobile-web-app-status-bar-style: "black-translucent"
 apple-mobile-web-app-title: "Threshold"
 apple-touch-fullscreen: "yes"
 
-# MS Application - The MS Application front matter (YAML).
+## MS Application - The MS Application front matter (YAML).
 msapplication-navbutton-color: "rgb(0,102,204)"
 
-# Twitter Card - The Twitter Card front matter (YAML).
+## Twitter Card - The Twitter Card front matter (YAML).
 twitter_card: "summary"
 twitter_creator: "thresholdpress"
 twitter_description: "Nine new criteria, three of them affect every form on the web. A practical translation from spec language to ship-it advice."
@@ -94,7 +94,7 @@ twitter_site: "thresholdpress"
 twitter_title: "WCAG 2.2: what actually changed for builders"
 twitter_url: "https://threshold.press"
 
-# Humans.txt - The Humans.txt front matter (YAML).
+## Humans.txt - The Humans.txt front matter (YAML).
 author_website: "https://threshold.press"
 author_twitter: "@thresholdpress"
 author_location: "London, UK"
@@ -105,6 +105,8 @@ site_components: "SSG, Threshold Templates"
 site_software: "SSG, Rust"
 
 ---
+
+# WCAG 2.2: what actually changed for builders
 
 ## The nine new criteria, one paragraph each
 

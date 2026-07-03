@@ -31,7 +31,10 @@
 /// - Returns a non-zero status code if an error occurs.
 fn main() {
     match ssg::run() {
-        Ok(()) => println!("Site generated successfully."),
+        // stderr, not stdout: `ssg audit --sarif` streams machine-readable
+        // SARIF JSON on stdout, and a trailing status line corrupts it for
+        // strict parsers (CI redirects stdout straight into ssg-audit.sarif).
+        Ok(()) => eprintln!("Site generated successfully."),
         Err(e) => {
             eprintln!("Program encountered an error: {e}");
             std::process::exit(1);

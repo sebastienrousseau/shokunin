@@ -28,7 +28,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::RwLock,
 };
 
 // ── Configuration ────────────────────────────────────────────────────
@@ -108,7 +108,13 @@ struct LocaleMatrixCache {
 pub struct I18nPlugin {
     config: I18nConfig,
     /// Lazily-populated locale matrix shared by hooks.
-    matrix: Mutex<LocaleMatrixCache>,
+    ///
+    /// `RwLock` rather than `Mutex` (plan §4 3.4): after warm-up the
+    /// matrix is read-mostly — parallel `transform_html` workers only
+    /// take the shared read lock, so lookups no longer serialise. The
+    /// write lock is taken only on first fill and on the deliberate
+    /// `after_compile` invalidation.
+    matrix: RwLock<LocaleMatrixCache>,
 }
 
 impl I18nPlugin {
@@ -128,7 +134,7 @@ impl I18nPlugin {
     pub fn new(config: I18nConfig) -> Self {
         Self {
             config,
-            matrix: Mutex::new(LocaleMatrixCache::default()),
+            matrix: RwLock::new(LocaleMatrixCache::default()),
         }
     }
 
@@ -136,10 +142,25 @@ impl I18nPlugin {
     /// directory. Cheap on subsequent calls — the directory walk only
     /// executes once per `site_dir`.
     fn ensure_matrix(&self, site_dir: &Path) -> Result<(), SsgError> {
+        // Fast path: shared read lock. After warm-up every caller
+        // (including parallel `transform_html` workers) takes only this
+        // branch (plan §4 3.4).
+        {
+            let cache = self
+                .matrix
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if cache.site_dir.as_deref() == Some(site_dir) {
+                return Ok(());
+            }
+        }
+
         let mut cache = self
             .matrix
-            .lock()
+            .write()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // Double-check under the write lock — another thread may have
+        // filled the cache while we waited for it.
         if cache.site_dir.as_deref() == Some(site_dir) {
             return Ok(());
         }
@@ -180,7 +201,7 @@ impl Plugin for I18nPlugin {
         {
             let mut cache = self
                 .matrix
-                .lock()
+                .write()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             cache.site_dir = None;
         }
@@ -189,7 +210,7 @@ impl Plugin for I18nPlugin {
         let (present_locales, pages) = {
             let cache = self
                 .matrix
-                .lock()
+                .read()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             (cache.present_locales.clone(), cache.pages.clone())
         };
@@ -206,7 +227,7 @@ impl Plugin for I18nPlugin {
 
         // Inject hreflang into each HTML page.
         inject_hreflang_all(
-            &ctx.site_dir,
+            ctx,
             &pages,
             &present_locales,
             &self.config.default_locale,
@@ -217,7 +238,7 @@ impl Plugin for I18nPlugin {
 
         // Generate per-locale sitemaps.
         generate_locale_sitemaps(
-            &ctx.site_dir,
+            ctx,
             &pages,
             &present_locales,
             &self.config.default_locale,
@@ -266,7 +287,7 @@ impl Plugin for I18nPlugin {
         let (locale_for_file, rel_path, page_locales) = {
             let cache = self
                 .matrix
-                .lock()
+                .read()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             if cache.present_locales.len() < 2 {
                 return Ok(html.to_string());
@@ -296,12 +317,19 @@ impl Plugin for I18nPlugin {
         );
         let base = base_url.trim_end_matches('/');
 
+        // Resolve this page's language once (spec A5, plan §2 1.5) so
+        // the hreflang self-reference and the switcher's self entry
+        // agree with `<html lang>` / `inLanguage` / `og:locale`.
+        let self_lang = crate::seo::lang::resolve_page_lang(html, path, ctx);
+
         let links = build_hreflang_links(
             &rel_path,
             &page_locales,
             &self.config.default_locale,
             base,
             &self.config.url_prefix,
+            &locale_for_file,
+            &self_lang,
         );
 
         let Some(mut out) = inject_before_head_close(html, &links) else {
@@ -313,6 +341,7 @@ impl Plugin for I18nPlugin {
         out = inject_lang_switcher(
             &out,
             &locale_for_file,
+            &self_lang,
             &rel_path,
             &page_locales.iter().cloned().collect::<Vec<_>>(),
             base,
@@ -426,14 +455,21 @@ const HREFLANG_MARKER: &str = "rel=\"alternate\" hreflang=";
 
 /// Inject hreflang `<link>` tags into every HTML page that exists in at
 /// least two locales.
+///
+/// Each page's SELF-reference `hreflang` (and the language-switcher
+/// self entry) carries the language resolved by
+/// `seo::lang::resolve_page_lang` for that page — the same value the
+/// `<html lang>`, JSON-LD `inLanguage`, and `og:locale` sinks publish
+/// (spec A5 acceptance: four sinks, one value).
 fn inject_hreflang_all(
-    site_dir: &Path,
+    ctx: &PluginContext,
     pages: &HashMap<String, HashSet<String>>,
     locales: &[String],
     default_locale: &str,
     base_url: &str,
     strategy: &UrlPrefixStrategy,
 ) -> Result<(), SsgError> {
+    let site_dir = ctx.site_dir.as_path();
     let base = base_url.trim_end_matches('/');
     let mut count = 0usize;
 
@@ -460,12 +496,19 @@ fn inject_hreflang_all(
                 continue;
             }
 
+            // Resolve this page's language once so every self-labelled
+            // emission below agrees with the other language sinks.
+            let self_lang =
+                crate::seo::lang::resolve_page_lang(&html, &file, ctx);
+
             let links = build_hreflang_links(
                 rel_path,
                 page_locales,
                 default_locale,
                 base,
                 strategy,
+                locale,
+                &self_lang,
             );
 
             let html = if let Some(injected) =
@@ -480,6 +523,7 @@ fn inject_hreflang_all(
             let html = inject_lang_switcher(
                 &html,
                 locale,
+                &self_lang,
                 rel_path,
                 &page_locales.iter().cloned().collect::<Vec<_>>(),
                 base,
@@ -601,9 +645,15 @@ fn rewrite_ap_lang_items(
 /// Replaces the `<!-- ssg:lang-switcher -->` marker with a full language
 /// switcher listing every available locale. Called by the i18n plugin
 /// only when multiple locales are present on disk.
+///
+/// `self_lang` is the current page's resolved language
+/// (`seo::lang::resolve_page_lang`); the switcher's self entry
+/// advertises it in `lang=`/`hreflang=` so the switcher agrees with
+/// the page's other language sinks (spec A5).
 fn inject_lang_switcher(
     html: &str,
     current_locale: &str,
+    self_lang: &str,
     rel_path: &str,
     locales: &[String],
     base_url: &str,
@@ -614,9 +664,10 @@ fn inject_lang_switcher(
     }
     let mut sorted = locales.to_vec();
     sorted.sort();
-    let switcher = generate_lang_switcher_html(
+    let switcher = generate_lang_switcher_html_with_self_lang(
         &sorted,
         current_locale,
+        self_lang,
         rel_path,
         base_url,
         strategy,
@@ -629,12 +680,23 @@ fn inject_lang_switcher(
 const LANG_SWITCHER_MARKER: &str = "<!-- ssg:lang-switcher -->";
 
 /// Build the hreflang `<link>` block for a single page.
+///
+/// `self_locale` names the locale *directory* the target page lives
+/// in and `self_lang` the page's resolved language from
+/// `seo::lang::resolve_page_lang` (spec A5, plan §2 1.5): the
+/// SELF-reference entry advertises `hreflang="{self_lang}"` so it
+/// agrees with `<html lang>`, JSON-LD `inLanguage`, and `og:locale`.
+/// Alternate entries for OTHER locales keep the per-target-locale
+/// label — those describe the target document, not this one. The
+/// `href` values always use the locale directory so links stay valid.
 fn build_hreflang_links(
     rel_path: &str,
     page_locales: &HashSet<String>,
     default_locale: &str,
     base: &str,
     strategy: &UrlPrefixStrategy,
+    self_locale: &str,
+    self_lang: &str,
 ) -> String {
     let mut links = String::new();
 
@@ -643,8 +705,24 @@ fn build_hreflang_links(
 
     for locale in &sorted {
         let href = build_url(base, locale, rel_path, strategy);
+        // Issue #522 AC5: locale codes are preserved case-sensitively
+        // (`zh-tw` stays `zh-tw`, never normalised to `zh-TW`). The
+        // resolved language (spec A5) therefore only replaces the
+        // authored locale code when it genuinely differs beyond case —
+        // i.e. a frontmatter `language:` override — so four-sink
+        // agreement holds (hreflang comparison is case-insensitive per
+        // BCP-47) without breaking the byte-level #522 contract.
+        let hreflang = if locale.as_str() == self_locale {
+            if self_lang.eq_ignore_ascii_case(self_locale) {
+                self_locale
+            } else {
+                self_lang
+            }
+        } else {
+            locale.as_str()
+        };
         links.push_str(&format!(
-            "    <link rel=\"alternate\" hreflang=\"{locale}\" href=\"{href}\" />\n"
+            "    <link rel=\"alternate\" hreflang=\"{hreflang}\" href=\"{href}\" />\n"
         ));
     }
 
@@ -701,14 +779,23 @@ fn inject_before_head_close(html: &str, links: &str) -> Option<String> {
 // ── Per-locale sitemaps ──────────────────────────────────────────────
 
 /// Generate `sitemap-{locale}.xml` for every present locale.
+///
+/// Inside `sitemap-{L}.xml`, each `<url>` names the `L`-locale copy of
+/// a page, so the `xhtml:link` whose `hreflang` matches `L` is that
+/// page's SELF-reference. That entry is routed through
+/// [`resolved_page_lang_for`] (spec A5, plan §2 1.5) so it carries the
+/// same value as `<html lang>`, JSON-LD `inLanguage`, `og:locale`, and
+/// the in-page hreflang self-reference. Alternates for other locales
+/// keep their per-target-locale labels.
 fn generate_locale_sitemaps(
-    site_dir: &Path,
+    ctx: &PluginContext,
     pages: &HashMap<String, HashSet<String>>,
     locales: &[String],
     default_locale: &str,
     base_url: &str,
     strategy: &UrlPrefixStrategy,
 ) -> Result<(), SsgError> {
+    let site_dir = ctx.site_dir.as_path();
     let base = base_url.trim_end_matches('/');
 
     for locale in locales {
@@ -730,6 +817,10 @@ fn generate_locale_sitemaps(
             xml.push_str("  <url>\n");
             xml.push_str(&format!("    <loc>{loc}</loc>\n"));
 
+            // The page this <url> entry describes — its resolved
+            // language labels the self-referencing xhtml:link.
+            let self_lang = resolved_page_lang_for(ctx, locale, rel_path);
+
             // xhtml:link alternates for all locales that share this page.
             if let Some(page_locales) = pages.get(*rel_path) {
                 let mut alts: Vec<&String> = page_locales.iter().collect();
@@ -737,8 +828,20 @@ fn generate_locale_sitemaps(
                 for alt_locale in &alts {
                     let alt_href =
                         build_url(base, alt_locale, rel_path, strategy);
+                    // Issue #522 AC5: preserve authored locale casing;
+                    // resolved language wins only on a real override
+                    // (see build_hreflang_links for the rationale).
+                    let hreflang = if alt_locale.as_str() == locale.as_str() {
+                        if self_lang.eq_ignore_ascii_case(locale.as_str()) {
+                            locale.as_str()
+                        } else {
+                            self_lang.as_str()
+                        }
+                    } else {
+                        alt_locale.as_str()
+                    };
                     xml.push_str(&format!(
-                        "    <xhtml:link rel=\"alternate\" hreflang=\"{alt_locale}\" href=\"{alt_href}\" />\n"
+                        "    <xhtml:link rel=\"alternate\" hreflang=\"{hreflang}\" href=\"{alt_href}\" />\n"
                     ));
                 }
                 // x-default
@@ -760,6 +863,24 @@ fn generate_locale_sitemaps(
 
     println!("[i18n] Generated {} locale sitemaps", locales.len());
     Ok(())
+}
+
+/// Resolves the language of the built page at
+/// `<site_dir>/<locale>/<rel_path>` via
+/// `seo::lang::resolve_page_lang`, falling back to the locale
+/// directory name when the file cannot be read (deleted mid-build,
+/// permissions) — the pre-A5 label, so output never regresses below
+/// the historic behaviour.
+fn resolved_page_lang_for(
+    ctx: &PluginContext,
+    locale: &str,
+    rel_path: &str,
+) -> String {
+    let file = ctx.site_dir.join(locale).join(rel_path);
+    fs::read_to_string(&file).map_or_else(
+        |_| locale.to_string(),
+        |html| crate::seo::lang::resolve_page_lang(&html, &file, ctx),
+    )
 }
 
 // ── Accept-Language parsing ─────────────────────────────────────────
@@ -904,6 +1025,34 @@ pub fn generate_lang_switcher_html(
     base_url: &str,
     strategy: &UrlPrefixStrategy,
 ) -> String {
+    generate_lang_switcher_html_with_self_lang(
+        locales,
+        current_locale,
+        current_locale,
+        current_path,
+        base_url,
+        strategy,
+    )
+}
+
+/// Like [`generate_lang_switcher_html`] but with the current page's
+/// resolved language decoupled from its locale directory name.
+///
+/// The plugin resolves each page's language through
+/// `seo::lang::resolve_page_lang` (spec A5, plan §2 1.5) and passes it
+/// as `self_lang`; the self entry then advertises
+/// `lang="{self_lang}" hreflang="{self_lang}"` (e.g. `hi-IN` for a
+/// page under `/hi/` whose front matter says `language: hi-IN`) while
+/// entries for other locales keep their per-target-locale labels and
+/// all `href`s keep using locale directory names.
+fn generate_lang_switcher_html_with_self_lang(
+    locales: &[String],
+    current_locale: &str,
+    self_lang: &str,
+    current_path: &str,
+    base_url: &str,
+    strategy: &UrlPrefixStrategy,
+) -> String {
     let base = base_url.trim_end_matches('/');
     let mut html = String::from(
         "<nav class=\"lang-switcher\" aria-label=\"Language\">\n  <ul>\n",
@@ -911,13 +1060,20 @@ pub fn generate_lang_switcher_html(
 
     for locale in locales {
         let href = build_url(base, locale, current_path, strategy);
-        let aria = if locale == current_locale {
-            " aria-current=\"page\""
+        // Issue #522 AC5: preserve authored locale casing; the resolved
+        // language wins only on a real frontmatter override (see
+        // build_hreflang_links for the rationale).
+        let (aria, lang_attr) = if locale == current_locale {
+            if self_lang.eq_ignore_ascii_case(locale) {
+                (" aria-current=\"page\"", locale.as_str())
+            } else {
+                (" aria-current=\"page\"", self_lang)
+            }
         } else {
-            ""
+            ("", locale.as_str())
         };
         html.push_str(&format!(
-            "    <li><a href=\"{href}\" lang=\"{locale}\" hreflang=\"{locale}\"{aria}>{locale}</a></li>\n"
+            "    <li><a href=\"{href}\" lang=\"{lang_attr}\" hreflang=\"{lang_attr}\"{aria}>{locale}</a></li>\n"
         ));
     }
 
@@ -964,6 +1120,33 @@ mod tests {
             Path::new("templates"),
             config,
         )
+    }
+
+    /// Like [`make_ctx`] but with a real build dir so
+    /// `seo::lang::resolve_page_lang` can find `.meta` sidecars.
+    fn make_ctx_with_build(site_dir: &Path, build_dir: &Path) -> PluginContext {
+        let config = crate::cmd::SsgConfig::builder()
+            .site_name("test".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("test config");
+        PluginContext::with_config(
+            Path::new("content"),
+            build_dir,
+            site_dir,
+            Path::new("templates"),
+            config,
+        )
+    }
+
+    /// Writes a front-matter sidecar under `<build>/.meta/<rel>.meta.json`.
+    fn write_lang_sidecar(build_dir: &Path, rel_html: &str, json: &str) {
+        let sidecar = build_dir
+            .join(".meta")
+            .join(rel_html)
+            .with_extension("meta.json");
+        fs::create_dir_all(sidecar.parent().expect("parent")).expect("mkdir");
+        fs::write(sidecar, json).expect("write sidecar");
     }
 
     /// Helper: create an HTML file with a `</head>` tag.
@@ -1358,6 +1541,172 @@ mod tests {
         ));
     }
 
+    // ── Resolved self-reference language (spec A5, plan §2 1.5) ──
+
+    /// Full fixture: `/en/about.html` + `/hi/about.html` where the hi
+    /// page's front-matter sidecar declares `language: hi-IN`.
+    fn a5_fixture(tmp: &Path) -> PluginContext {
+        let site = tmp.join("site");
+        let build = tmp.join("build");
+        fs::create_dir_all(&site).expect("mkdir site");
+        write_html(&site, "en/about.html", "EN About");
+        write_html(&site, "hi/about.html", "HI About");
+        write_lang_sidecar(&build, "hi/about.html", r#"{"language":"hi-IN"}"#);
+        make_ctx_with_build(&site, &build)
+    }
+
+    #[test]
+    fn hreflang_self_reference_uses_resolved_page_language() {
+        let tmp = tempdir().unwrap();
+        let ctx = a5_fixture(tmp.path());
+        let site = ctx.site_dir.clone();
+
+        let config = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "hi".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        I18nPlugin::new(config).after_compile(&ctx).unwrap();
+
+        let hi = fs::read_to_string(site.join("hi/about.html")).unwrap();
+        // Self-reference carries the resolver's value, not the
+        // directory name — one value across all four sinks.
+        assert!(
+            hi.contains(
+                "hreflang=\"hi-IN\" href=\"https://example.com/hi/about.html\""
+            ),
+            "hi self-reference should be resolved to hi-IN: {hi}"
+        );
+        // Alternate to the OTHER locale keeps its per-target label.
+        assert!(
+            hi.contains(
+                "hreflang=\"en\" href=\"https://example.com/en/about.html\""
+            ),
+            "alternate to en must keep its label: {hi}"
+        );
+
+        let en = fs::read_to_string(site.join("en/about.html")).unwrap();
+        // From the en page, the link *to* the hi page is an alternate
+        // (per-target-locale by definition) — unchanged.
+        assert!(
+            en.contains(
+                "hreflang=\"hi\" href=\"https://example.com/hi/about.html\""
+            ),
+            "en page's alternate to hi keeps the locale label: {en}"
+        );
+        assert!(
+            en.contains(
+                "hreflang=\"en\" href=\"https://example.com/en/about.html\""
+            ),
+            "en self-reference resolves to en: {en}"
+        );
+    }
+
+    #[test]
+    fn locale_sitemap_self_reference_uses_resolved_page_language() {
+        let tmp = tempdir().unwrap();
+        let ctx = a5_fixture(tmp.path());
+        let site = ctx.site_dir.clone();
+
+        let config = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "hi".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        I18nPlugin::new(config).after_compile(&ctx).unwrap();
+
+        let hi_sm = fs::read_to_string(site.join("sitemap-hi.xml")).unwrap();
+        // sitemap-hi.xml describes the /hi/ copies: the self xhtml:link
+        // is resolver-labelled.
+        assert!(
+            hi_sm.contains(
+                "hreflang=\"hi-IN\" href=\"https://example.com/hi/about.html\""
+            ),
+            "sitemap-hi self alternate should be hi-IN: {hi_sm}"
+        );
+        assert!(
+            hi_sm.contains(
+                "hreflang=\"en\" href=\"https://example.com/en/about.html\""
+            ),
+            "sitemap-hi alternate to en keeps its label: {hi_sm}"
+        );
+
+        let en_sm = fs::read_to_string(site.join("sitemap-en.xml")).unwrap();
+        // From sitemap-en.xml, the hi entry is an alternate — its
+        // per-target-locale label is preserved.
+        assert!(
+            en_sm.contains(
+                "hreflang=\"hi\" href=\"https://example.com/hi/about.html\""
+            ),
+            "sitemap-en alternate to hi keeps the locale label: {en_sm}"
+        );
+    }
+
+    #[test]
+    fn lang_switcher_self_entry_uses_resolved_page_language() {
+        let tmp = tempdir().unwrap();
+        let site = tmp.path().join("site");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&site).unwrap();
+        // Pages carry the switcher marker so injection kicks in.
+        write_html(&site, "en/page.html", LANG_SWITCHER_MARKER);
+        write_html(&site, "hi/page.html", LANG_SWITCHER_MARKER);
+        write_lang_sidecar(&build, "hi/page.html", r#"{"language":"hi-IN"}"#);
+        let ctx = make_ctx_with_build(&site, &build);
+
+        let config = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "hi".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        I18nPlugin::new(config).after_compile(&ctx).unwrap();
+
+        let hi = fs::read_to_string(site.join("hi/page.html")).unwrap();
+        // Self entry: resolved language on lang=/hreflang=, visible
+        // label still the locale directory name.
+        assert!(
+            hi.contains(
+                "lang=\"hi-IN\" hreflang=\"hi-IN\" aria-current=\"page\">hi</a>"
+            ),
+            "switcher self entry should use the resolved language: {hi}"
+        );
+        // Other-locale entry unchanged.
+        assert!(
+            hi.contains("lang=\"en\" hreflang=\"en\">en</a>"),
+            "switcher alternate entry keeps the locale label: {hi}"
+        );
+    }
+
+    #[test]
+    fn transform_html_self_reference_uses_resolved_page_language() {
+        let tmp = tempdir().unwrap();
+        let ctx = a5_fixture(tmp.path());
+        let site = ctx.site_dir.clone();
+
+        let config = I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "hi".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        };
+        let plugin = I18nPlugin::new(config);
+
+        let hi_path = site.join("hi/about.html");
+        let html = fs::read_to_string(&hi_path).unwrap();
+        let out = plugin.transform_html(&html, &hi_path, &ctx).unwrap();
+        assert!(
+            out.contains(
+                "hreflang=\"hi-IN\" href=\"https://example.com/hi/about.html\""
+            ),
+            "fused-transform self-reference should be resolved: {out}"
+        );
+        assert!(
+            out.contains(
+                "hreflang=\"en\" href=\"https://example.com/en/about.html\""
+            ),
+            "fused-transform alternate keeps its label: {out}"
+        );
+    }
+
     // ── I18nPlugin with actual locale directories ───────────────
 
     #[test]
@@ -1636,8 +1985,14 @@ mod tests {
         let _ = locales.insert("en".to_string());
         let _ = pages.insert("index.html".to_string(), locales);
 
-        let res = generate_locale_sitemaps(
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
             &file_path,
+            Path::new("templates"),
+        );
+        let res = generate_locale_sitemaps(
+            &ctx,
             &pages,
             &["en".to_string()],
             "en",
@@ -1859,6 +2214,7 @@ mod tests {
         let out = inject_lang_switcher(
             html,
             "en",
+            "en",
             "index.html",
             &["en".to_string(), "fr".to_string()],
             "https://example.com",
@@ -1874,6 +2230,7 @@ mod tests {
         let html = "<html><body>nothing here</body></html>";
         let out = inject_lang_switcher(
             html,
+            "en",
             "en",
             "index.html",
             &["en".to_string()],
@@ -2000,7 +2357,7 @@ mod tests {
         p.ensure_matrix(tmp.path()).unwrap();
         // Second call against the same dir hits the cache fast-path.
         p.ensure_matrix(tmp.path()).unwrap();
-        let cache = p.matrix.lock().unwrap();
+        let cache = p.matrix.read().unwrap();
         assert_eq!(cache.present_locales, vec!["en", "fr"]);
     }
 
@@ -2025,7 +2382,7 @@ mod tests {
         p.ensure_matrix(tmp1.path()).unwrap();
         // Then re-populate against tmp2 — must NOT short-circuit.
         p.ensure_matrix(tmp2.path()).unwrap();
-        let cache = p.matrix.lock().unwrap();
+        let cache = p.matrix.read().unwrap();
         assert_eq!(cache.site_dir.as_deref(), Some(tmp2.path()));
         assert!(cache.pages.contains_key("about.html"));
     }

@@ -55,6 +55,7 @@ fn base_cfg(agents: Option<AgentsConfig>) -> SsgConfig {
         edge_headers: ssg::cmd::EdgeHeadersConfig::default(),
         agents,
         transitions: false,
+        security: ssg::cmd::SecurityConfig::default(),
     }
 }
 

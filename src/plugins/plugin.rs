@@ -695,6 +695,12 @@ impl PluginManager {
         let html_files = ctx.get_html_files();
         let transformed = std::sync::atomic::AtomicUsize::new(0);
 
+        // Writer pool (issue #569 phase 1): rayon workers hand changed
+        // files to dedicated writer threads instead of blocking a CPU
+        // slot on `fs::write`. Unchanged files are skipped entirely —
+        // on a no-op rebuild this pass writes zero files.
+        let io_pool = crate::io_pool::IoPool::new();
+
         html_files
             .par_iter()
             .try_for_each(|path| -> Result<(), SsgError> {
@@ -706,12 +712,20 @@ impl PluginManager {
                 }
 
                 if html != original {
-                    fs::write(path, &html).with_path(path)?;
+                    io_pool.write(path, html.into_bytes())?;
                     let _ = transformed
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
                 Ok(())
             })?;
+
+        // Barrier: everything after this pass (dep-graph repopulation
+        // and the plugin content-hash cache rebuild in
+        // `pipeline::compile_with_plugins`, dev-server reads, audits)
+        // re-reads the transformed files from disk, so all queued
+        // writes must be durably complete — and any write failure
+        // surfaced — before this function returns.
+        io_pool.flush()?;
 
         let count = transformed.load(std::sync::atomic::Ordering::Relaxed);
         if count > 0 {
@@ -1270,5 +1284,141 @@ mod tests {
         let p = FailPlugin { hook: "serve" };
         assert!(p.before_compile(&ctx).is_ok());
         assert!(p.after_compile(&ctx).is_ok());
+    }
+
+    /// Transform plugin that returns the input unchanged (but as a
+    /// fresh `String`, like real plugins that found nothing to do).
+    #[derive(Debug)]
+    struct IdentityTransformPlugin;
+    impl Plugin for IdentityTransformPlugin {
+        fn name(&self) -> &'static str {
+            "identity-transform"
+        }
+        fn transform_html(
+            &self,
+            html: &str,
+            _path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Ok(html.to_string())
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    /// Transform plugin that rewrites a marker when present.
+    #[derive(Debug)]
+    struct MarkerRewritePlugin;
+    impl Plugin for MarkerRewritePlugin {
+        fn name(&self) -> &'static str {
+            "marker-rewrite"
+        }
+        fn transform_html(
+            &self,
+            html: &str,
+            _path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Ok(html.replace("CHANGE-ME", "CHANGED"))
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    /// Makes `path` read-only so any attempted rewrite fails loudly.
+    #[allow(clippy::permissions_set_readonly_false)] // test cleanup only
+    fn set_readonly(path: &Path, readonly: bool) {
+        let mut perms = fs::metadata(path).unwrap().permissions();
+        perms.set_readonly(readonly);
+        fs::set_permissions(path, perms).unwrap();
+    }
+
+    #[test]
+    fn test_fused_noop_chain_rewrites_zero_files() {
+        // Plan §4 3.2: on a no-op rebuild the transform pass must
+        // write 0 files. The files are made read-only, so if the
+        // pass attempted any write it would surface as an Err from
+        // the IoPool flush barrier.
+        let dir = tempfile::tempdir().unwrap();
+        let files: Vec<_> = (0..3)
+            .map(|i| {
+                let f = dir.path().join(format!("p{i}.html"));
+                fs::write(&f, format!("<p>page {i}</p>")).unwrap();
+                set_readonly(&f, true);
+                f
+            })
+            .collect();
+
+        let mut pm = PluginManager::new();
+        pm.register(IdentityTransformPlugin);
+        pm.register(MarkerRewritePlugin); // no marker present ⇒ no-op
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        // Zero writes ⇒ Ok even though every file is read-only.
+        pm.run_fused_transforms(&ctx).unwrap();
+
+        for (i, f) in files.iter().enumerate() {
+            assert_eq!(
+                fs::read_to_string(f).unwrap(),
+                format!("<p>page {i}</p>")
+            );
+            set_readonly(f, false); // restore for tempdir cleanup
+        }
+    }
+
+    #[test]
+    fn test_fused_modifying_chain_writes_exactly_changed_files() {
+        // The file containing the marker is rewritten; the untouched
+        // file stays byte-identical AND is read-only — proving the
+        // pass wrote exactly the changed set.
+        let dir = tempfile::tempdir().unwrap();
+        let changed = dir.path().join("changed.html");
+        let untouched = dir.path().join("untouched.html");
+        fs::write(&changed, "<p>CHANGE-ME</p>").unwrap();
+        fs::write(&untouched, "<p>static</p>").unwrap();
+        set_readonly(&untouched, true);
+
+        let mut pm = PluginManager::new();
+        pm.register(MarkerRewritePlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        pm.run_fused_transforms(&ctx).unwrap();
+
+        // Barrier semantics: the rewritten bytes are visible on disk
+        // immediately after run_fused_transforms returns.
+        assert_eq!(fs::read_to_string(&changed).unwrap(), "<p>CHANGED</p>");
+        assert_eq!(fs::read_to_string(&untouched).unwrap(), "<p>static</p>");
+        set_readonly(&untouched, false);
+    }
+
+    #[test]
+    fn test_fused_transform_write_failure_surfaces_at_flush() {
+        // A rewrite aimed at a read-only file must produce an error,
+        // not silently drop the write (IoPool flush barrier).
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("locked.html");
+        fs::write(&f, "<p>CHANGE-ME</p>").unwrap();
+        set_readonly(&f, true);
+
+        let mut pm = PluginManager::new();
+        pm.register(MarkerRewritePlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("write to read-only file must surface");
+        assert!(matches!(err, SsgError::Io { .. }));
+        set_readonly(&f, false);
     }
 }

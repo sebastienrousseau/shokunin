@@ -197,6 +197,15 @@ Edit this file at `content/blog/first-post.md`.
 }
 
 /// Writes all template files.
+///
+/// The scaffolded `base.html` emits
+/// `<html lang="{{ site.language | default(value='en') }}">`. That is
+/// *not* a site-wide constant: the template engine resolves
+/// `site.language` per page (spec A5, plan §2 1.5 — front-matter
+/// `language` → front-matter `hreflang` → site default → `"en"`, see
+/// `TemplateEngine::render_page` in `core/template_engine.rs`), so a
+/// page with front-matter `language: hi` renders `<html lang="hi">`
+/// even when the site default is `en-GB`.
 fn write_template_files(root: &Path) -> Result<()> {
     fail_point!("scaffold::write-base", |_| {
         anyhow::bail!("injected: scaffold::write-base")

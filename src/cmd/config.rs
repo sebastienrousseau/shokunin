@@ -107,6 +107,106 @@ impl EdgeHeadersConfig {
     }
 }
 
+/// Digest algorithm used for Subresource Integrity `integrity=`
+/// attributes on externalized assets (v0.0.47 plan §3 item 2.3).
+///
+/// Applies to the SRI attributes emitted by the fingerprint plugin
+/// (`crate::assets::FingerprintPlugin`) and the CSP inline-extraction
+/// plugin (`crate::csp::CspPlugin`). It deliberately does **not**
+/// govern CSP *directive source hashes* (the `'sha256-…'` entries
+/// inside a Content-Security-Policy header/meta value) — those stay
+/// SHA-256 for the broadest UA compatibility.
+///
+/// Serialized in `ssg.toml` as the lowercase strings `"sha256"`,
+/// `"sha384"`, and `"sha512"`; kept in lockstep with the
+/// `security.sri_algorithm` enum in `ssg.schema.json`.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum SriAlgorithm {
+    /// SHA-256 — the pre-v0.0.47 behaviour, kept for back-compat.
+    Sha256,
+    /// SHA-384 — the default; matches the README/SECURITY.md claim.
+    #[default]
+    Sha384,
+    /// SHA-512 — the strongest digest the SRI spec admits.
+    Sha512,
+}
+
+impl SriAlgorithm {
+    /// Returns the SRI prefix token for this algorithm
+    /// (`"sha256"`, `"sha384"`, or `"sha512"`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SriAlgorithm;
+    ///
+    /// assert_eq!(SriAlgorithm::default().prefix(), "sha384");
+    /// assert_eq!(SriAlgorithm::Sha256.prefix(), "sha256");
+    /// ```
+    #[must_use]
+    pub const fn prefix(self) -> &'static str {
+        match self {
+            Self::Sha256 => "sha256",
+            Self::Sha384 => "sha384",
+            Self::Sha512 => "sha512",
+        }
+    }
+
+    /// Computes the full SRI attribute value for `data`:
+    /// `<prefix>-<base64(digest(data))>`.
+    ///
+    /// Browsers compare the `integrity` attribute against
+    /// `base64(digest(body))` per the
+    /// [W3C SRI spec](https://www.w3.org/TR/SRI/#the-integrity-attribute),
+    /// so the returned string is exactly what a UA will validate the
+    /// response body against.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SriAlgorithm;
+    ///
+    /// // SHA-384("") — well-known empty-input digest.
+    /// assert_eq!(
+    ///     SriAlgorithm::Sha384.integrity(b""),
+    ///     "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+    /// );
+    /// ```
+    #[must_use]
+    pub fn integrity(self, data: &[u8]) -> String {
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        use sha2::{Digest as _, Sha256, Sha384, Sha512};
+
+        let b64 = match self {
+            Self::Sha256 => STANDARD.encode(Sha256::digest(data)),
+            Self::Sha384 => STANDARD.encode(Sha384::digest(data)),
+            Self::Sha512 => STANDARD.encode(Sha512::digest(data)),
+        };
+        format!("{}-{}", self.prefix(), b64)
+    }
+}
+
+/// Security tunables (v0.0.47 plan §3 item 2.3). Surfaces the
+/// `[security]` section of `ssg.toml`:
+///
+/// ```toml
+/// [security]
+/// sri_algorithm = "sha384"   # "sha256" | "sha384" | "sha512"
+/// ```
+///
+/// Absent section (the default) means SHA-384 SRI, matching the
+/// documented posture in README/SECURITY.md.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct SecurityConfig {
+    /// Digest algorithm for `integrity=` attributes on externalized
+    /// assets. Defaults to [`SriAlgorithm::Sha384`].
+    #[serde(default)]
+    pub sri_algorithm: SriAlgorithm,
+}
+
 /// Core configuration for the static site generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SsgConfig {
@@ -160,6 +260,11 @@ pub struct SsgConfig {
     /// Defaults to `false` to keep zero-JS sites zero-JS.
     #[serde(default)]
     pub transitions: bool,
+    /// Security tunables (v0.0.47 plan §3 item 2.3): the `[security]`
+    /// section of `ssg.toml`. Currently holds the SRI digest
+    /// algorithm; absent ⇒ SHA-384.
+    #[serde(default)]
+    pub security: SecurityConfig,
 }
 
 impl Default for SsgConfig {
@@ -592,6 +697,26 @@ impl SsgConfigBuilder {
         self.config.edge_headers = edge;
         self
     }
+    /// Sets the security tunables (v0.0.47 plan §3 item 2.3).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::{SecurityConfig, SriAlgorithm, SsgConfig};
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .security(SecurityConfig {
+    ///         sri_algorithm: SriAlgorithm::Sha512,
+    ///     })
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.security.sri_algorithm, SriAlgorithm::Sha512);
+    /// ```
+    #[must_use]
+    pub const fn security(mut self, security: SecurityConfig) -> Self {
+        self.config.security = security;
+        self
+    }
     /// Enables the View Transitions + lazy-nav client (issue #547).
     ///
     /// # Examples
@@ -867,6 +992,72 @@ language = "en-GB"
             .build()
             .unwrap();
         assert!(cfg.cdn_prefix.is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // [security] sri_algorithm (v0.0.47 plan §3 item 2.3)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn security_section_absent_defaults_to_sha384() {
+        let config_str = r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+    "#;
+        let cfg: SsgConfig = config_str.parse().unwrap();
+        assert_eq!(cfg.security.sri_algorithm, SriAlgorithm::Sha384);
+    }
+
+    #[test]
+    fn security_sri_algorithm_parses_all_enum_values() {
+        for (raw, expected) in [
+            ("sha256", SriAlgorithm::Sha256),
+            ("sha384", SriAlgorithm::Sha384),
+            ("sha512", SriAlgorithm::Sha512),
+        ] {
+            let config_str = format!(
+                r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+
+    [security]
+    sri_algorithm = "{raw}"
+    "#
+            );
+            let cfg: SsgConfig = config_str.parse().unwrap();
+            assert_eq!(cfg.security.sri_algorithm, expected, "raw = {raw}");
+        }
+    }
+
+    #[test]
+    fn security_sri_algorithm_rejects_unknown_value() {
+        let config_str = r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+
+    [security]
+    sri_algorithm = "md5"
+    "#;
+        let cfg: Result<SsgConfig, _> = config_str.parse();
+        assert!(matches!(cfg, Err(CliError::TomlError(_))));
     }
 
     // -----------------------------------------------------------------

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 pub mod accessibility;
+pub mod agent_api;
 pub mod ai;
 pub mod assets;
 pub mod csp;
@@ -15,6 +16,7 @@ pub mod isr_manifest;
 pub mod llm;
 pub mod llm_cache;
 pub mod markdown_ext;
+pub mod oembed;
 pub mod og_image;
 pub mod pagination;
 pub mod plugin;

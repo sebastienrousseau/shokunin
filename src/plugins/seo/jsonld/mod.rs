@@ -5,12 +5,12 @@
 
 use super::helpers::{
     extract_date_from_html, extract_description, extract_first_content_image,
-    extract_html_lang, extract_meta_author, extract_meta_date, extract_title,
+    extract_meta_author, extract_meta_date, extract_title,
 };
+use super::lang::resolve_page_lang;
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
-use std::fs;
 use std::path::Path;
 
 pub mod iso20022;
@@ -95,6 +95,10 @@ impl JsonLdPlugin {
 }
 
 /// Builds an Article JSON-LD object from page metadata.
+///
+/// `lang` is the already-resolved page language from
+/// [`resolve_page_lang`] (spec A5, plan §2 1.5) — never empty, so no
+/// inline fallback is needed at this sink.
 fn build_article_jsonld(
     title: &str,
     description: &str,
@@ -112,7 +116,10 @@ fn build_article_jsonld(
         "headline": title,
         "description": description,
         "url": page_url,
-        "inLanguage": if lang.is_empty() { "en" } else { lang },
+        // spec A5: language comes from the single page-language
+        // resolver — the hard-coded "en" fallback that used to live
+        // here was the bug's signature (plan §2 1.5).
+        "inLanguage": lang,
         "mainEntityOfPage": {
             "@type": "WebPage",
             "@id": page_url
@@ -150,6 +157,10 @@ fn build_article_jsonld(
 }
 
 /// Builds a `WebPage` JSON-LD object from page metadata.
+///
+/// `lang` is the already-resolved page language from
+/// [`resolve_page_lang`] (spec A5, plan §2 1.5) — never empty, so no
+/// inline fallback is needed at this sink.
 fn build_webpage_jsonld(
     title: &str,
     description: &str,
@@ -165,7 +176,10 @@ fn build_webpage_jsonld(
         "name": title,
         "description": description,
         "url": page_url,
-        "inLanguage": if lang.is_empty() { "en" } else { lang }
+        // spec A5: language comes from the single page-language
+        // resolver — the hard-coded "en" fallback that used to live
+        // here was the bug's signature (plan §2 1.5).
+        "inLanguage": lang
     });
 
     if !author_name.is_empty() {
@@ -231,12 +245,17 @@ fn build_breadcrumb_jsonld(
 }
 
 /// Builds all JSON-LD scripts for a single page.
+///
+/// `lang` is the canonical page language from [`resolve_page_lang`]
+/// (spec A5, plan §2 1.5), resolved once by the caller so every
+/// emitted block agrees.
 fn build_jsonld_scripts(
     html: &str,
     base: &str,
     rel_path: &str,
     org_name: &str,
     breadcrumbs: bool,
+    lang: &str,
 ) -> Vec<serde_json::Value> {
     let title = extract_title(html);
     let description = extract_description(html, 160);
@@ -246,7 +265,6 @@ fn build_jsonld_scripts(
     let date_published = extract_date_from_html(html, "datePublished")
         .or_else(|| extract_meta_date(html));
     let date_modified = extract_date_from_html(html, "dateModified");
-    let lang = extract_html_lang(html);
 
     let mut scripts = Vec::new();
 
@@ -260,7 +278,7 @@ fn build_jsonld_scripts(
             &image_url,
             date_published.as_ref(),
             date_modified.as_ref(),
-            &lang,
+            lang,
         ));
     } else {
         scripts.push(build_webpage_jsonld(
@@ -270,7 +288,7 @@ fn build_jsonld_scripts(
             &author_name,
             &image_url,
             date_published.as_ref(),
-            &lang,
+            lang,
         ));
     }
 
@@ -311,12 +329,17 @@ impl Plugin for JsonLdPlugin {
             .to_string_lossy()
             .replace('\\', "/");
 
+        // spec A5 (plan §2 1.5): resolve the page language once so
+        // every JSON-LD block agrees with the other language sinks.
+        let lang = resolve_page_lang(html, path, ctx);
+
         let mut scripts = build_jsonld_scripts(
             html,
             base,
             &rel_path,
             &self.config.org_name,
             self.config.breadcrumbs,
+            &lang,
         );
 
         // ── ISO 20022 / banking extension (opt-in via frontmatter) ──
@@ -356,35 +379,12 @@ fn read_iso20022_block(
     ctx: &PluginContext,
     rel_path: &str,
 ) -> Option<serde_json::Value> {
-    let sidecar_dir = ctx.build_dir.join(".meta");
-    let candidate = sidecar_dir.join(rel_path).with_extension("meta.json");
-
-    let raw = if candidate.exists() {
-        fs::read_to_string(&candidate).ok()?
-    } else {
-        // Fallback: try the `<stem>.md.meta.json` convention used by
-        // `emit_sidecars` for content coming from `.md` source files.
-        // `rel_path` here is `<...>/foo.html`; the original markdown
-        // sidecar is at `<...>/foo.md.meta.json` keyed off the *input*
-        // file extension. Strip `.html` and append `.md.meta.json`.
-        let alt = sidecar_dir.join(rel_path.trim_end_matches(".html"));
-        let alt = alt.with_extension("md.meta.json");
-        if alt.exists() {
-            fs::read_to_string(&alt).ok()?
-        } else {
-            // Last resort — look next to the HTML file itself (legacy
-            // emission location used by `frontmatter::read_sidecar`).
-            let inline = path.with_extension("meta.json");
-            if inline.exists() {
-                fs::read_to_string(&inline).ok()?
-            } else {
-                return None;
-            }
-        }
-    };
-
-    let value: serde_json::Value = serde_json::from_str(&raw).ok()?;
-    value.get("iso20022").cloned()
+    // Sidecar lookup is shared with the page-language resolver
+    // (spec A5) — see `seo::lang::read_page_sidecar` for the
+    // three-location resolution order.
+    super::lang::read_page_sidecar(path, ctx, rel_path)?
+        .get("iso20022")
+        .cloned()
 }
 
 /// Builds ISO 20022 JSON-LD scripts for a page, given its sidecar
@@ -895,7 +895,9 @@ mod tests {
     }
 
     #[test]
-    fn article_defaults_lang_to_en_when_empty() {
+    fn article_emits_resolved_lang_verbatim() {
+        // spec A5: the inline "en" fallback is gone — the caller
+        // passes the resolver's output and this sink echoes it.
         let v = build_article_jsonld(
             "T",
             "D",
@@ -905,9 +907,9 @@ mod tests {
             "",
             None,
             None,
-            "",
+            "hi",
         );
-        assert_eq!(v["inLanguage"], "en");
+        assert_eq!(v["inLanguage"], "hi");
     }
 
     // ── build_webpage_jsonld ───────────────────────────────────
@@ -933,7 +935,8 @@ mod tests {
 
     #[test]
     fn webpage_omits_optional_fields_when_empty() {
-        let v = build_webpage_jsonld("T", "D", "https://x/p", "", "", None, "");
+        let v =
+            build_webpage_jsonld("T", "D", "https://x/p", "", "", None, "en");
         assert!(v.get("author").is_none());
         assert!(v.get("image").is_none());
         assert!(v.get("datePublished").is_none());
@@ -976,7 +979,7 @@ mod tests {
         let html = r#"<html><head><title>Post</title></head>
             <body><article>content</article></body></html>"#;
         let scripts =
-            build_jsonld_scripts(html, "https://x", "p/", "Org", false);
+            build_jsonld_scripts(html, "https://x", "p/", "Org", false, "en");
         assert_eq!(scripts[0]["@type"], "Article");
     }
 
@@ -984,15 +987,21 @@ mod tests {
     fn build_scripts_picks_webpage_when_no_article_tag() {
         let html = "<html><head><title>P</title></head><body>x</body></html>";
         let scripts =
-            build_jsonld_scripts(html, "https://x", "p/", "Org", false);
+            build_jsonld_scripts(html, "https://x", "p/", "Org", false, "en");
         assert_eq!(scripts[0]["@type"], "WebPage");
     }
 
     #[test]
     fn build_scripts_includes_breadcrumb_when_enabled() {
         let html = "<html><head><title>P</title></head><body>x</body></html>";
-        let scripts =
-            build_jsonld_scripts(html, "https://x", "blog/post/", "Org", true);
+        let scripts = build_jsonld_scripts(
+            html,
+            "https://x",
+            "blog/post/",
+            "Org",
+            true,
+            "en",
+        );
         assert!(
             scripts.iter().any(|s| s["@type"] == "BreadcrumbList"),
             "breadcrumb should be present when enabled and path nested"
@@ -1002,8 +1011,14 @@ mod tests {
     #[test]
     fn build_scripts_skips_breadcrumb_when_disabled() {
         let html = "<html><head><title>P</title></head><body>x</body></html>";
-        let scripts =
-            build_jsonld_scripts(html, "https://x", "blog/post/", "Org", false);
+        let scripts = build_jsonld_scripts(
+            html,
+            "https://x",
+            "blog/post/",
+            "Org",
+            false,
+            "en",
+        );
         assert!(!scripts.iter().any(|s| s["@type"] == "BreadcrumbList"));
     }
 
@@ -1053,6 +1068,132 @@ mod tests {
             .transform_html(raw, &page_path, &c)
             .unwrap();
         assert_eq!(after, raw);
+    }
+
+    // ── inLanguage via resolve_page_lang (spec A5, plan §2 1.5) ────
+
+    /// Context with a site `language` and declared `[i18n]` locales,
+    /// rooted so that sidecars under `<dir>/build/.meta` are found.
+    fn locale_ctx(
+        dir: &Path,
+        language: &str,
+        locales: &[&str],
+    ) -> PluginContext {
+        let mut c = PluginContext::new(
+            Path::new("content"),
+            &dir.join("build"),
+            &dir.join("site"),
+            Path::new("templates"),
+        );
+        c.config = Some(crate::cmd::SsgConfig {
+            language: language.to_string(),
+            i18n: Some(crate::i18n::I18nConfig {
+                default_locale: locales
+                    .first()
+                    .map_or_else(|| "en".to_string(), |l| (*l).to_string()),
+                locales: locales.iter().map(|l| (*l).to_string()).collect(),
+                url_prefix: Default::default(),
+            }),
+            ..crate::cmd::SsgConfig::default()
+        });
+        c
+    }
+
+    /// Extracts `inLanguage` from the first injected JSON-LD block.
+    fn injected_in_language(html: &str) -> String {
+        let block = extract_jsonld_blocks(html)
+            .into_iter()
+            .next()
+            .expect("page should carry an injected JSON-LD block");
+        let v: serde_json::Value = serde_json::from_str(&block).unwrap();
+        v["inLanguage"].as_str().unwrap_or_default().to_string()
+    }
+
+    #[test]
+    fn in_language_is_path_driven_on_locale_pages() {
+        // The A5 signature bug: a /hi/… page whose template carries
+        // the site-wide lang="en-GB" must emit inLanguage=hi.
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en-GB", &["en", "hi", "fr"]);
+        let html = r#"<html lang="en-GB"><head><title>नमस्ते</title></head><body>x</body></html>"#;
+        let page = dir.path().join("site/hi/2026-06-01-post/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert_eq!(injected_in_language(&out), "hi");
+    }
+
+    #[test]
+    fn in_language_is_frontmatter_driven_when_sidecar_declares_language() {
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en-GB", &["en", "hi"]);
+        let sidecar = dir.path().join("build/.meta/hi/post/index.meta.json");
+        std::fs::create_dir_all(sidecar.parent().unwrap()).unwrap();
+        std::fs::write(sidecar, r#"{"language":"fr"}"#).unwrap();
+
+        let html = r#"<html lang="en-GB"><head><title>T</title></head><body>x</body></html>"#;
+        let page = dir.path().join("site/hi/post/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert_eq!(
+            injected_in_language(&out),
+            "fr",
+            "front-matter `language` outranks the locale path prefix"
+        );
+    }
+
+    #[test]
+    fn in_language_is_default_driven_on_default_locale_pages() {
+        // en-GB site, page outside any locale prefix, template lang
+        // matches the site default: all sources agree on en-GB.
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en-GB", &["en"]);
+        let html = r#"<html lang="en-GB"><head><title>T</title></head><body>x</body></html>"#;
+        let page = dir.path().join("site/about/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert_eq!(injected_in_language(&out), "en-GB");
+    }
+
+    #[test]
+    fn in_language_en_fallback_only_when_nothing_resolves() {
+        // No config, no sidecar, no locale prefix, no <html lang>:
+        // only then does the resolver's final "en" constant fire.
+        let dir = tempdir().unwrap();
+        let c = ctx(&dir.path().join("site"));
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let page = dir.path().join("site/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert_eq!(injected_in_language(&out), "en");
+    }
+
+    #[test]
+    fn in_language_validation_passes_on_locale_fixtures() {
+        // Fixture pages for en, fr, hi and en-GB must build with zero
+        // JSON-LD validation findings (spec A5 acceptance).
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en-GB", &["en", "fr", "hi"]);
+        for (rel, want) in [
+            ("en/page/index.html", "en"),
+            ("fr/page/index.html", "fr"),
+            ("hi/page/index.html", "hi"),
+            ("page/index.html", "en-GB"),
+        ] {
+            let html = r#"<html lang="en-GB"><head><title>T</title></head><body>x</body></html>"#;
+            let page = dir.path().join("site").join(rel);
+            let out = JsonLdPlugin::new(cfg())
+                .transform_html(html, &page, &c)
+                .unwrap();
+            assert_eq!(injected_in_language(&out), want, "page {rel}");
+            assert!(
+                validate_jsonld(&out).is_empty(),
+                "page {rel} must emit zero JSON-LD validation findings"
+            );
+        }
     }
 
     // ── JSON-LD validation (issue #467) ────────────────────────────

@@ -93,7 +93,11 @@ impl Plugin for VectorSearchPlugin {
         fs::write(&emb_path, &artifacts.embeddings).with_path(&emb_path)?;
 
         let man_path = dir.join(MANIFEST_FILE);
-        fs::write(&man_path, &artifacts.manifest_json).with_path(&man_path)?;
+        let manifest_json = stamp_embeddings_hash(
+            &artifacts.manifest_json,
+            &artifacts.embeddings,
+        );
+        fs::write(&man_path, manifest_json).with_path(&man_path)?;
 
         let model_path = dir.join(MODEL_FILE);
         fs::write(&model_path, &artifacts.model).with_path(&model_path)?;
@@ -109,6 +113,43 @@ impl Plugin for VectorSearchPlugin {
         );
         Ok(())
     }
+}
+
+/// Adds an `embeddings_sha256` field to the manifest JSON so the
+/// `search_index` audit gate can verify `embeddings.bin` integrity
+/// (the gate reads `manifest.json#embeddings_sha256` and compares it
+/// to the SHA-256 of the binary — see
+/// `src/audit/gates/search_index.rs`). Returns the manifest verbatim
+/// if it fails to parse (defensive; `ssg-search` always emits valid
+/// JSON).
+fn stamp_embeddings_hash(manifest_json: &[u8], embeddings: &[u8]) -> Vec<u8> {
+    use sha2::{Digest, Sha256};
+
+    let Ok(mut manifest) =
+        serde_json::from_slice::<serde_json::Value>(manifest_json)
+    else {
+        return manifest_json.to_vec();
+    };
+    let Some(obj) = manifest.as_object_mut() else {
+        return manifest_json.to_vec();
+    };
+
+    let mut hasher = Sha256::new();
+    hasher.update(embeddings);
+    let digest = hasher.finalize();
+    let mut hex = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write as _;
+        // Infallible on String; ignore the Result per fmt::Write docs.
+        let _ = write!(hex, "{byte:02x}");
+    }
+
+    let _ = obj.insert(
+        "embeddings_sha256".to_string(),
+        serde_json::Value::String(hex),
+    );
+    serde_json::to_vec_pretty(&manifest)
+        .unwrap_or_else(|_| manifest_json.to_vec())
 }
 
 /// Returns the first `max_chars` Unicode scalar values of `s`. (Plain
@@ -221,6 +262,40 @@ mod tests {
         let m: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(m["count"].as_u64().unwrap(), 2);
         assert_eq!(m["entries"].as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn manifest_carries_embeddings_sha256_matching_bin() {
+        use sha2::{Digest, Sha256};
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hash me</p>");
+        let c = ctx(tmp.path());
+        VectorSearchPlugin.after_compile(&c).unwrap();
+
+        let emb = fs::read(tmp.path().join("search/embeddings.bin")).unwrap();
+        let mut h = Sha256::new();
+        h.update(&emb);
+        let expected =
+            h.finalize()
+                .iter()
+                .fold(String::with_capacity(64), |mut s, b| {
+                    use std::fmt::Write;
+                    let _ = write!(s, "{b:02x}");
+                    s
+                });
+
+        let json = fs::read_to_string(tmp.path().join("search/manifest.json"))
+            .unwrap();
+        let m: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(m["embeddings_sha256"].as_str().unwrap(), expected);
+    }
+
+    #[test]
+    fn stamp_embeddings_hash_passes_through_invalid_json() {
+        let raw = b"not json".to_vec();
+        assert_eq!(stamp_embeddings_hash(&raw, b"x"), raw);
+        let arr = b"[1,2]".to_vec();
+        assert_eq!(stamp_embeddings_hash(&arr, b"x"), arr);
     }
 
     #[test]

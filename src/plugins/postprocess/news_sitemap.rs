@@ -3,7 +3,8 @@
 
 //! News sitemap fix plugin.
 
-use super::helpers::{read_meta_sidecars, rfc2822_to_iso8601, xml_escape};
+use super::helpers::{read_meta_sidecars, xml_escape};
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::fs;
@@ -98,16 +99,35 @@ fn build_news_entry(
         return None;
     }
 
+    // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible date
+    // chain for <news:publication_date> — RFC 2822, long-form, and
+    // ISO 8601 inputs all normalise to a W3C datetime now. This is
+    // the ssg-side half of the chain that retires the upstream
+    // "'day' component could not be parsed" warning spam.
     let pub_date = meta
         .get("item_pub_date")
-        .map(|d| rfc2822_to_iso8601(d))
+        .map(|d| match parse_flexible_date(d) {
+            Ok(dt) => dt.to_w3c_date(),
+            Err(err) => {
+                if !d.is_empty() {
+                    log::warn!(
+                        "[news-sitemap-fix] 'item_pub_date' for \
+                         '{rel_path}': {err}"
+                    );
+                }
+                d.clone()
+            }
+        })
         .unwrap_or_default();
 
-    let loc = if base_url.is_empty() {
-        format!("{rel_path}/index.html")
-    } else {
-        format!("{base_url}/{rel_path}/index.html")
-    };
+    // Spec A2/B1 (plan §2 item 1.2): `<loc>` goes through the shared
+    // page-URL derivation so news-sitemap, sitemap, canonical `<link>`
+    // and feed `<link>` all publish the same directory-URL convention
+    // (`{base}/{rel_path}/`, never `…/index.html`).
+    let loc = crate::urls::derive_page_url(
+        base_url,
+        &format!("{rel_path}/index.html"),
+    );
 
     let keywords = meta
         .get("keywords")
@@ -179,6 +199,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -363,11 +384,86 @@ mod tests {
         let entry =
             build_news_entry("my-article", &meta, "https://example.com")
                 .expect("valid metadata should produce an entry");
-        assert!(entry
-            .contains("<loc>https://example.com/my-article/index.html</loc>"));
+        // Directory-URL convention shared with canonical/feed/sitemap
+        // (plan §2 item 1.2, `urls::derive_page_url`).
+        assert!(entry.contains("<loc>https://example.com/my-article/</loc>"));
         assert!(entry.contains("<news:name>Author</news:name>"));
         assert!(entry.contains("<news:title>My Article</news:title>"));
         assert!(entry.contains("<news:language>en</news:language>"));
+    }
+
+    // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_news_entry_rfc2822_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "RFC".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let entry = build_news_entry("rfc", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-04-11T06:06:06+00:00\
+                 </news:publication_date>"
+            ),
+            "RFC 2822 input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_iso_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+        let entry = build_news_entry("iso", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-07-01T00:00:00+00:00\
+                 </news:publication_date>"
+            ),
+            "ISO input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_long_form_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+        let entry = build_news_entry("long", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-07-01T00:00:00+00:00\
+                 </news:publication_date>"
+            ),
+            "long-form input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_unparseable_date_passes_through() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Bad".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
+        let entry = build_news_entry("bad", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>not-a-date</news:publication_date>"
+            ),
+            "unparseable input keeps previous passthrough behaviour: {entry}"
+        );
     }
 
     #[test]
@@ -378,8 +474,9 @@ mod tests {
         let entry = build_news_entry("post", &meta, "")
             .expect("should produce entry without base_url");
         assert!(
-            entry.contains("<loc>post/index.html</loc>"),
-            "loc should use relative path when base_url is empty: {entry}"
+            entry.contains("<loc>/post/</loc>"),
+            "loc should be a rooted directory URL when base_url is \
+             empty: {entry}"
         );
         assert!(
             entry.contains("<news:name>Writer</news:name>"),

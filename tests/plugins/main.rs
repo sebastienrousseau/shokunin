@@ -6,6 +6,7 @@
 //! See `tests/core/main.rs` for the canonical layout commentary.
 
 mod accessibility;
+mod agent_api;
 mod ai;
 mod assets;
 mod csp;
@@ -16,6 +17,7 @@ mod image_plugin;
 mod islands;
 mod llm;
 mod markdown_ext;
+mod oembed;
 mod og_image;
 mod pagination;
 mod plugin;

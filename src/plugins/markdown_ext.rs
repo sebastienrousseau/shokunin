@@ -41,6 +41,7 @@ use crate::plugin::{Plugin, PluginContext};
 use crate::walk::walk_files_bounded_depth;
 use crate::MAX_DIR_DEPTH;
 use pulldown_cmark::{html as cmark_html, Options, Parser};
+use std::borrow::Cow;
 use std::fs;
 
 /// Plugin that expands GFM Markdown extensions in source files.
@@ -344,20 +345,32 @@ fn render_with_options(markdown: &str, extra: Options) -> String {
     let parser = Parser::new_ext(markdown, opts);
     let mut html = String::with_capacity(markdown.len() + 64);
     cmark_html::push_html(&mut html, parser);
-    html.trim_end().to_string()
+    // Trim trailing whitespace in place instead of cloning the whole
+    // rendered block (issue #578, plan §4 3.1).
+    let trimmed_len = html.trim_end().len();
+    html.truncate(trimmed_len);
+    html
 }
 
 /// Replaces `~~text~~` with `<del>text</del>` outside of inline code spans.
-fn apply_strikethrough(line: &str) -> String {
+///
+/// Single pass that only allocates when a complete `~~…~~` pair is
+/// actually replaced; lines without strikethrough are returned borrowed
+/// (issue #578, plan §4 3.1). Unchanged spans are copied slice-wise, so
+/// multi-byte UTF-8 text between replacements is preserved verbatim
+/// (the previous byte-by-byte `push(byte as char)` mangled it).
+fn apply_strikethrough(line: &str) -> Cow<'_, str> {
     let bytes = line.as_bytes();
-    let mut out = String::with_capacity(line.len());
+    // Lazily-created output buffer; `copied` tracks how much of `line`
+    // has already been flushed into it.
+    let mut out: Option<String> = None;
+    let mut copied = 0usize;
     let mut i = 0usize;
     let mut in_code = false;
 
     while i < bytes.len() {
         if bytes[i] == b'`' {
             in_code = !in_code;
-            out.push('`');
             i += 1;
             continue;
         }
@@ -368,17 +381,28 @@ fn apply_strikethrough(line: &str) -> String {
         {
             // Find closing `~~`.
             if let Some(close) = find_strike_close(line, i + 2) {
-                out.push_str("<del>");
-                out.push_str(&line[i + 2..close]);
-                out.push_str("</del>");
+                let buf = out.get_or_insert_with(|| {
+                    String::with_capacity(line.len() + 16)
+                });
+                buf.push_str(&line[copied..i]);
+                buf.push_str("<del>");
+                buf.push_str(&line[i + 2..close]);
+                buf.push_str("</del>");
                 i = close + 2;
+                copied = i;
                 continue;
             }
         }
-        out.push(bytes[i] as char);
         i += 1;
     }
-    out
+
+    match out {
+        Some(mut buf) => {
+            buf.push_str(&line[copied..]);
+            Cow::Owned(buf)
+        }
+        None => Cow::Borrowed(line),
+    }
 }
 
 /// Returns the byte offset of the next `~~` after `from`, or `None`.
@@ -591,6 +615,39 @@ mod tests {
     #[test]
     fn apply_strikethrough_leaves_unmatched_tildes() {
         assert_eq!(apply_strikethrough("just ~~ here"), "just ~~ here");
+    }
+
+    #[test]
+    fn apply_strikethrough_borrows_when_no_delimiter() {
+        // Issue #578: the no-strikethrough fast path must not allocate.
+        assert!(matches!(
+            apply_strikethrough("plain line, nothing to do"),
+            Cow::Borrowed(_)
+        ));
+    }
+
+    #[test]
+    fn apply_strikethrough_preserves_multibyte_text() {
+        assert_eq!(
+            apply_strikethrough("café ~~ancien~~ nouveau — été"),
+            "café <del>ancien</del> nouveau — été"
+        );
+    }
+
+    #[test]
+    fn expand_gfm_multiline_without_strikethrough_unchanged() {
+        // Multiline body with no GFM constructs: byte-identical output.
+        let input = "# Title\n\nfirst plain line\nsecond plain line\n\nthird paragraph line\n";
+        assert_eq!(expand_gfm(input, None), input);
+    }
+
+    #[test]
+    fn expand_gfm_mixed_lines_only_transforms_strikethrough() {
+        let input = "keep this line\n~~gone~~ stays\nanother plain line\n";
+        assert_eq!(
+            expand_gfm(input, None),
+            "keep this line\n<del>gone</del> stays\nanother plain line\n"
+        );
     }
 
     #[test]

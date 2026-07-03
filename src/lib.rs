@@ -117,11 +117,13 @@ pub use crate::core_group::cache;
 pub use crate::core_group::collections;
 pub use crate::core_group::content;
 pub use crate::core_group::content_stager;
+pub use crate::core_group::dates;
 pub use crate::core_group::depgraph;
 pub use crate::core_group::deploy;
 pub use crate::core_group::deploy_adapter;
 pub use crate::core_group::frontmatter;
 pub use crate::core_group::fs_ops;
+pub use crate::core_group::io_pool;
 pub use crate::core_group::logging;
 pub use crate::core_group::otel;
 pub use crate::core_group::pipeline;
@@ -132,10 +134,12 @@ pub use crate::core_group::stream;
 pub use crate::core_group::streaming;
 #[cfg(feature = "templates")]
 pub use crate::core_group::template_engine;
+pub use crate::core_group::urls;
 pub use crate::core_group::walk;
 
 // Re-export plugin modules
 pub use crate::plugins_group::accessibility;
+pub use crate::plugins_group::agent_api;
 pub use crate::plugins_group::ai;
 pub use crate::plugins_group::assets;
 pub use crate::plugins_group::csp;
@@ -149,6 +153,7 @@ pub use crate::plugins_group::isr_manifest;
 pub use crate::plugins_group::llm;
 pub use crate::plugins_group::llm_cache;
 pub use crate::plugins_group::markdown_ext;
+pub use crate::plugins_group::oembed;
 pub use crate::plugins_group::og_image;
 pub use crate::plugins_group::pagination;
 pub use crate::plugins_group::plugin;

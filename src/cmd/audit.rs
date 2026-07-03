@@ -172,7 +172,7 @@ fn explain_gate(name: Option<&str>) -> Result<(), SsgError> {
 pub fn build_subcommand() -> clap::Command {
     use clap::{Arg, ArgAction};
     clap::Command::new("audit")
-        .about("Run the 14 native audit gates against the built site")
+        .about("Run the 15 native audit gates against the built site")
         .long_about(
             "Runs WCAG, JSON-LD, hreflang, CSP/SRI, PQC TLS, HTML5, broken \
              links, metadata, markdown, performance, AI discovery, feeds, \

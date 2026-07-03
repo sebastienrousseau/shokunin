@@ -7,11 +7,10 @@
 //! with Subresource Integrity (SRI) hashes, eliminating the need for
 //! `'unsafe-inline'` in the Content-Security-Policy header.
 
+use crate::cmd::SriAlgorithm;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use anyhow::Result;
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use sha2::{Digest, Sha256};
 use std::{fs, path::Path};
 
 /// Canonical Content-Security-Policy string emitted by the CSP plugin.
@@ -25,6 +24,22 @@ use std::{fs, path::Path};
 /// and [`inject_csp_meta`] (which strip `'unsafe-inline'` from any
 /// preexisting `<meta>` policy on the way through).
 pub const DEFAULT_CSP_POLICY: &str = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'";
+
+/// Content-Security-Policy template with `{script_hashes}` and
+/// `{style_hashes}` slots (spec B4, v0.0.47 plan §3 item 2.4).
+///
+/// [`render_policy_template`] expands each slot into zero or more
+/// space-prefixed `'sha256-…'` source expressions. With both slots
+/// empty the rendered string is byte-identical to
+/// [`DEFAULT_CSP_POLICY`], so pages without inline blocks fall back
+/// to exactly the global policy — the invariant is pinned by a unit
+/// test in this module.
+///
+/// This constant is the single template notion for the CSP plugin; a
+/// future `[security.csp] template` knob in `ssg.toml` overrides it by
+/// passing the configured string to [`render_policy_template`] — the
+/// rendering path already accepts an arbitrary template.
+pub const DEFAULT_CSP_POLICY_TEMPLATE: &str = "default-src 'self'; script-src 'self'{script_hashes}; style-src 'self'{style_hashes}; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'";
 
 /// Returns the canonical Content-Security-Policy string that the CSP
 /// plugin's inline-extraction posture is designed to enforce.
@@ -53,6 +68,211 @@ pub const fn computed_policy() -> &'static str {
     DEFAULT_CSP_POLICY
 }
 
+/// CSP source hashes for the inline blocks remaining on a single page
+/// (spec B4, plan §3 item 2.4).
+///
+/// Each entry is a bare `sha256-<base64>` token — the caller wraps it
+/// in single quotes when splicing it into a CSP directive. Hashes are
+/// listed in document order with duplicates removed, so the same
+/// input HTML always produces the same vector (determinism gate).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PageCspHashes {
+    /// Hashes of inline `<script>` bodies (no `src=` attribute),
+    /// including non-executable blocks such as JSON-LD structured
+    /// data — hash-listing them keeps the policy valid for UAs that
+    /// apply `script-src` to data blocks.
+    pub scripts: Vec<String>,
+    /// Hashes of inline `<style>` bodies.
+    pub styles: Vec<String>,
+}
+
+impl PageCspHashes {
+    /// Returns `true` when the page has no inline blocks at all.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::csp::PageCspHashes;
+    ///
+    /// assert!(PageCspHashes::default().is_empty());
+    /// ```
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.scripts.is_empty() && self.styles.is_empty()
+    }
+}
+
+/// Computes the CSP source hashes for every inline block on a page.
+///
+/// Unlike the extraction pass ([`CspPlugin::transform_html`]), this
+/// scan does **not** skip JSON-LD or livereload-marked scripts: it
+/// hashes whatever is still inline in the HTML it is given, because
+/// its consumers (the `edge_headers` postprocess plugin) run on the
+/// final page bytes and need the policy to match what actually ships.
+///
+/// CSP directive source hashes are always SHA-256 for the broadest UA
+/// compatibility; the `[security] sri_algorithm` knob governs only
+/// SRI `integrity=` attributes (see the `compute_sri` doc comment).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::page_inline_hashes;
+///
+/// let html = r#"<script type="application/ld+json">{"@type":"Thing"}</script>"#;
+/// let hashes = page_inline_hashes(html);
+/// assert_eq!(hashes.scripts.len(), 1);
+/// assert!(hashes.scripts[0].starts_with("sha256-"));
+/// assert!(hashes.styles.is_empty());
+/// ```
+#[must_use]
+pub fn page_inline_hashes(html: &str) -> PageCspHashes {
+    let hash =
+        |content: &str| SriAlgorithm::Sha256.integrity(content.as_bytes());
+
+    let mut scripts = Vec::new();
+    for content in collect_inline_contents(html, "script") {
+        let h = hash(content);
+        if !scripts.contains(&h) {
+            scripts.push(h);
+        }
+    }
+
+    let mut styles = Vec::new();
+    for content in collect_inline_contents(html, "style") {
+        let h = hash(content);
+        if !styles.contains(&h) {
+            styles.push(h);
+        }
+    }
+
+    PageCspHashes { scripts, styles }
+}
+
+/// Renders a CSP policy template, expanding the `{script_hashes}` and
+/// `{style_hashes}` slots into space-prefixed `'sha256-…'` sources.
+///
+/// Empty slices render to an empty string, so a template rendered
+/// with no hashes reduces to its hash-free form (for
+/// [`DEFAULT_CSP_POLICY_TEMPLATE`] that is exactly
+/// [`DEFAULT_CSP_POLICY`]). The output never contains
+/// `'unsafe-inline'` unless the template itself does.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::{render_policy_template, DEFAULT_CSP_POLICY, DEFAULT_CSP_POLICY_TEMPLATE};
+///
+/// let empty = render_policy_template(DEFAULT_CSP_POLICY_TEMPLATE, &[], &[]);
+/// assert_eq!(empty, DEFAULT_CSP_POLICY);
+///
+/// let one = render_policy_template(
+///     DEFAULT_CSP_POLICY_TEMPLATE,
+///     &["sha256-abc".to_string()],
+///     &[],
+/// );
+/// assert!(one.contains("script-src 'self' 'sha256-abc';"));
+/// ```
+#[must_use]
+pub fn render_policy_template(
+    template: &str,
+    script_hashes: &[String],
+    style_hashes: &[String],
+) -> String {
+    let expand = |hashes: &[String]| -> String {
+        let mut out = String::new();
+        for h in hashes {
+            out.push_str(" '");
+            out.push_str(h);
+            out.push('\'');
+        }
+        out
+    };
+    template
+        .replace("{script_hashes}", &expand(script_hashes))
+        .replace("{style_hashes}", &expand(style_hashes))
+}
+
+/// Computes the per-page Content-Security-Policy for a built HTML
+/// page, or `None` when the page has no inline blocks and the global
+/// [`computed_policy`] applies unchanged (spec B4).
+///
+/// The returned policy is [`DEFAULT_CSP_POLICY_TEMPLATE`] rendered
+/// with the page's inline SHA-256 source hashes — hash-strict, never
+/// containing `'unsafe-inline'`.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::page_policy;
+///
+/// assert!(page_policy("<html><head></head><body></body></html>").is_none());
+///
+/// let html = r#"<script type="application/ld+json">{"@type":"Thing"}</script>"#;
+/// let policy = page_policy(html).expect("inline JSON-LD yields a policy");
+/// assert!(policy.contains("'sha256-"));
+/// assert!(!policy.contains("unsafe-inline"));
+/// ```
+#[must_use]
+pub fn page_policy(html: &str) -> Option<String> {
+    let hashes = page_inline_hashes(html);
+    if hashes.is_empty() {
+        return None;
+    }
+    Some(render_policy_template(
+        DEFAULT_CSP_POLICY_TEMPLATE,
+        &hashes.scripts,
+        &hashes.styles,
+    ))
+}
+
+/// Collects the raw inner contents of every non-empty inline
+/// `<tag>…</tag>` block, in document order. `<script>` elements with
+/// a `src=` attribute are skipped (they are external, not inline).
+fn collect_inline_contents<'a>(html: &'a str, tag: &str) -> Vec<&'a str> {
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    let mut out = Vec::new();
+    let mut from = 0;
+
+    while let Some(pos) = html[from..].find(&open) {
+        let abs = from + pos;
+        let after_open = abs + open.len();
+
+        // The opener must be a real tag boundary (`<script>` or
+        // `<script …>`), not a prefix of another name.
+        match html[after_open..].chars().next() {
+            Some(c) if c == '>' || c.is_ascii_whitespace() || c == '/' => {}
+            _ => {
+                from = after_open;
+                continue;
+            }
+        }
+
+        let Some(tag_end_rel) = html[abs..].find('>') else {
+            break;
+        };
+        let content_start = abs + tag_end_rel + 1;
+        let opening_tag = &html[abs..content_start];
+
+        if tag == "script" && opening_tag.contains("src=") {
+            from = content_start;
+            continue;
+        }
+
+        let Some(close_rel) = html[content_start..].find(&close) else {
+            break;
+        };
+        let content = &html[content_start..content_start + close_rel];
+        if !content.trim().is_empty() {
+            out.push(content);
+        }
+        from = content_start + close_rel + close.len();
+    }
+
+    out
+}
+
 /// Plugin that extracts inline styles/scripts to external files with SRI.
 ///
 /// Runs in `after_compile` after all other content transforms but before
@@ -61,7 +281,9 @@ pub const fn computed_policy() -> &'static str {
 /// 1. Finds `<style>…</style>` and `<script>…</script>` inline blocks
 /// 2. Writes each block to `_csp/<hash>.css` or `_csp/<hash>.js`
 /// 3. Replaces the inline block with a `<link>`/`<script src>` tag
-///    including `integrity` and `crossorigin` attributes
+///    including `integrity` and `crossorigin` attributes — SHA-384 by
+///    default, configurable via `[security] sri_algorithm` in
+///    `ssg.toml` (v0.0.47 plan §3 item 2.3)
 /// 4. Rewrites any `<meta>` CSP tags to remove `'unsafe-inline'`
 ///
 /// Blocks with `type="application/ld+json"` or `data-ssg-livereload`
@@ -111,8 +333,14 @@ impl Plugin for CspPlugin {
         ctx: &PluginContext,
     ) -> Result<String, SsgError> {
         let csp_dir = ctx.site_dir.join("_csp");
+        // `[security] sri_algorithm` from ssg.toml; absent config ⇒
+        // SHA-384 (v0.0.47 plan §3 item 2.3).
+        let sri_algorithm = ctx
+            .config
+            .as_ref()
+            .map_or_else(SriAlgorithm::default, |c| c.security.sri_algorithm);
         let (rewritten, extracted) =
-            extract_inline_blocks(html, &csp_dir, &ctx.site_dir)
+            extract_inline_blocks(html, &csp_dir, &ctx.site_dir, sri_algorithm)
                 .map_err(|e| SsgError::io(e, path))?;
 
         if extracted > 0 {
@@ -143,6 +371,7 @@ fn extract_inline_blocks(
     html: &str,
     csp_dir: &Path,
     site_dir: &Path,
+    sri_algorithm: SriAlgorithm,
 ) -> Result<(String, usize)> {
     let mut result = html.to_string();
     let mut count = 0;
@@ -158,7 +387,7 @@ fn extract_inline_blocks(
         fs::create_dir_all(csp_dir)?;
         fs::write(&file_path, content.as_bytes())?;
 
-        let sri = compute_sri(content.as_bytes());
+        let sri = compute_sri(content.as_bytes(), sri_algorithm);
         let rel_path = file_path
             .strip_prefix(site_dir)
             .unwrap_or(&file_path)
@@ -185,7 +414,7 @@ fn extract_inline_blocks(
         fs::create_dir_all(csp_dir)?;
         fs::write(&file_path, content.as_bytes())?;
 
-        let sri = compute_sri(content.as_bytes());
+        let sri = compute_sri(content.as_bytes(), sri_algorithm);
         let rel_path = file_path
             .strip_prefix(site_dir)
             .unwrap_or(&file_path)
@@ -419,13 +648,18 @@ fn fnv_hash(data: &[u8]) -> u64 {
     h
 }
 
-/// Computes an SRI hash string: `sha256-<base64>`.
-fn compute_sri(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let bytes = hasher.finalize();
-    let b64 = BASE64.encode(bytes);
-    format!("sha256-{b64}")
+/// Computes an SRI attribute value: `<algo>-<base64(digest)>`,
+/// SHA-384 by default.
+///
+/// IMPORTANT DISTINCTION (v0.0.47 plan §3 item 2.3): this algorithm
+/// knob governs only the `integrity=` **attribute** on externalized
+/// assets. CSP **directive source hashes** — the `'sha256-…'` entries
+/// inside a Content-Security-Policy header/meta value — must stay
+/// SHA-256 for the broadest UA compatibility. SRI attributes and CSP
+/// source hashes are different mechanisms; do not route CSP directive
+/// hashes through this function's configurable algorithm.
+fn compute_sri(data: &[u8], sri_algorithm: SriAlgorithm) -> String {
+    sri_algorithm.integrity(data)
 }
 
 #[cfg(test)]
@@ -440,13 +674,82 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (result, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
 
         assert_eq!(count, 1);
         assert!(result.contains("<link rel=\"stylesheet\""));
-        assert!(result.contains("integrity="));
+        // Default SRI algorithm is SHA-384 (v0.0.47 plan §3 item 2.3).
+        assert!(result.contains("integrity=\"sha384-"));
         assert!(!result.contains("<style>"));
+    }
+
+    #[test]
+    fn extract_style_block_default_sha384_exact_vector() {
+        // Known vector: the style body is written to disk verbatim
+        // (no minification in this plugin), so the integrity value is
+        // exactly base64(SHA-384("body { color: red; }")).
+        let html = "<html><head><style>body { color: red; }</style></head><body></body></html>";
+        let dir = tempdir().unwrap();
+        let csp_dir = dir.path().join("_csp");
+
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
+
+        assert_eq!(count, 1);
+        assert!(
+            result.contains(
+                "integrity=\"sha384-BN8siYsJqlPeNsRFs2pYbTW0uiUBy9v6JVVKpHaS+KNqD0ZFotD5OFKMkI6/s6sb\""
+            ),
+            "expected exact SHA-384 SRI vector; got: {result}"
+        );
+    }
+
+    #[test]
+    fn transform_html_sri_algorithm_config_override_emits_sha256() {
+        // `[security] sri_algorithm = "sha256"` back-compat knob
+        // (v0.0.47 plan §3 item 2.3), wired through PluginContext
+        // config: exact SHA-256 vector for "body { color: red; }".
+        use crate::cmd::{SecurityConfig, SsgConfig};
+
+        let html = "<html><head><style>body { color: red; }</style></head><body></body></html>";
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+
+        let config = SsgConfig::builder()
+            .security(SecurityConfig {
+                sri_algorithm: SriAlgorithm::Sha256,
+            })
+            .build()
+            .unwrap();
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            config,
+        );
+        let out = CspPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        assert!(
+            out.contains(
+                "integrity=\"sha256-XeYlw2NVzOfB1UCIJqCyGr+0n7bA4fFslFpvKu84IAw=\""
+            ),
+            "expected exact SHA-256 SRI vector; got: {out}"
+        );
+        assert!(!out.contains("sha384-"), "override must win: {out}");
     }
 
     #[test]
@@ -456,12 +759,18 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (result, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
 
         assert_eq!(count, 1);
         assert!(result.contains("<script src="));
-        assert!(result.contains("integrity="));
+        // Default SRI algorithm is SHA-384 (v0.0.47 plan §3 item 2.3).
+        assert!(result.contains("integrity=\"sha384-"));
         assert!(!result.contains("console.log"));
     }
 
@@ -471,8 +780,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (result, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
 
         assert_eq!(count, 0);
         assert!(result.contains("application/ld+json"));
@@ -484,8 +798,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (result, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
 
         assert_eq!(count, 0);
         assert!(result.contains("data-ssg-livereload"));
@@ -498,8 +817,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (result, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (result, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
 
         assert_eq!(count, 0);
         assert_eq!(result, html);
@@ -518,8 +842,13 @@ mod tests {
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
 
-        let (_, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (_, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
         assert_eq!(count, 0);
     }
 
@@ -573,8 +902,16 @@ mod tests {
 
     #[test]
     fn compute_sri_format() {
-        let sri = compute_sri(b"test");
-        assert!(sri.starts_with("sha256-"));
+        // Default algorithm ⇒ sha384- prefix; explicit sha256/sha512
+        // overrides carry their own prefixes.
+        let sri = compute_sri(b"test", SriAlgorithm::default());
+        assert!(sri.starts_with("sha384-"));
+        assert!(
+            compute_sri(b"test", SriAlgorithm::Sha256).starts_with("sha256-")
+        );
+        assert!(
+            compute_sri(b"test", SriAlgorithm::Sha512).starts_with("sha512-")
+        );
     }
 
     // ── CspPlugin::new + inject_csp_meta coverage ───────────────────
@@ -657,11 +994,16 @@ mod tests {
         let html = r#"<html><body><script type="module">import x from '/m.js';</script></body></html>"#;
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
-        let (out, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (out, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
         assert_eq!(count, 1);
         assert!(out.contains(r#"type="module""#), "got: {out}");
-        assert!(out.contains("integrity="), "got: {out}");
+        assert!(out.contains("integrity=\"sha384-"), "got: {out}");
     }
 
     #[test]
@@ -669,10 +1011,108 @@ mod tests {
         let html = r#"<html><body><script data-domain="example.com">window.x=1;</script></body></html>"#;
         let dir = tempdir().unwrap();
         let csp_dir = dir.path().join("_csp");
-        let (out, count) =
-            extract_inline_blocks(html, &csp_dir, dir.path()).unwrap();
+        let (out, count) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            dir.path(),
+            SriAlgorithm::default(),
+        )
+        .unwrap();
         assert_eq!(count, 1);
         assert!(out.contains(r#"data-domain="example.com""#), "got: {out}");
+    }
+
+    // ── per-page CSP (spec B4, plan §3 item 2.4) ────────────────────
+
+    /// The exact base64(SHA-256(...)) of `{"@type":"Thing"}` — the
+    /// JSON-LD body used across the B4 tests.
+    const JSONLD_BODY: &str = r#"{"@type":"Thing"}"#;
+
+    #[test]
+    fn template_with_empty_slots_is_exactly_the_global_policy() {
+        // Invariant promised by DEFAULT_CSP_POLICY_TEMPLATE's docs:
+        // no hashes ⇒ byte-identical to DEFAULT_CSP_POLICY.
+        assert_eq!(
+            render_policy_template(DEFAULT_CSP_POLICY_TEMPLATE, &[], &[]),
+            DEFAULT_CSP_POLICY
+        );
+    }
+
+    #[test]
+    fn page_inline_hashes_includes_jsonld_blocks() {
+        let html = format!(
+            r#"<html><body><script type="application/ld+json">{JSONLD_BODY}</script></body></html>"#
+        );
+        let hashes = page_inline_hashes(&html);
+        assert_eq!(hashes.scripts.len(), 1);
+        let expected = SriAlgorithm::Sha256.integrity(JSONLD_BODY.as_bytes());
+        assert_eq!(hashes.scripts[0], expected);
+    }
+
+    #[test]
+    fn page_inline_hashes_skips_external_scripts_and_empty_blocks() {
+        let html = r#"<html><body>
+            <script src="/app.js"></script>
+            <script>   </script>
+            <style></style>
+        </body></html>"#;
+        assert!(page_inline_hashes(html).is_empty());
+    }
+
+    #[test]
+    fn page_inline_hashes_orders_by_document_position_and_dedups() {
+        let html =
+            "<script>aaa</script><script>bbb</script><script>aaa</script>";
+        let hashes = page_inline_hashes(html);
+        assert_eq!(hashes.scripts.len(), 2, "duplicate block deduped");
+        assert_eq!(
+            hashes.scripts[0],
+            SriAlgorithm::Sha256.integrity(b"aaa"),
+            "document order preserved"
+        );
+        assert_eq!(hashes.scripts[1], SriAlgorithm::Sha256.integrity(b"bbb"));
+    }
+
+    #[test]
+    fn page_inline_hashes_collects_styles_separately() {
+        let html = "<style>body{color:red}</style><script>alert(1)</script>";
+        let hashes = page_inline_hashes(html);
+        assert_eq!(hashes.styles.len(), 1);
+        assert_eq!(hashes.scripts.len(), 1);
+        assert_eq!(
+            hashes.styles[0],
+            SriAlgorithm::Sha256.integrity(b"body{color:red}")
+        );
+    }
+
+    #[test]
+    fn page_policy_is_hash_strict_never_unsafe_inline() {
+        // test_csp_strict analogue (spec B4 acceptance): when hashes
+        // are present the policy carries them and no 'unsafe-inline'.
+        let html = format!(
+            r#"<script type="application/ld+json">{JSONLD_BODY}</script>"#
+        );
+        let policy = page_policy(&html).expect("policy for inline JSON-LD");
+        let expected = SriAlgorithm::Sha256.integrity(JSONLD_BODY.as_bytes());
+        assert!(
+            policy.contains(&format!("script-src 'self' '{expected}'")),
+            "policy must carry the exact sha256 source: {policy}"
+        );
+        assert!(!policy.contains("unsafe-inline"));
+    }
+
+    #[test]
+    fn page_policy_none_without_inline_blocks() {
+        assert!(page_policy(
+            "<html><head><title>t</title></head><body>x</body></html>"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn page_policy_is_deterministic() {
+        let html = "<style>a{}</style><script>x=1</script>";
+        assert_eq!(page_policy(html), page_policy(html));
     }
 
     #[test]

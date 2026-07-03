@@ -10,7 +10,7 @@
 //! HTTP HEAD only when explicitly opted in.
 
 use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
-use super::hreflang_attr;
+use super::{find_tag_end, hreflang_attr, strip_script_and_style};
 use std::path::PathBuf;
 
 const NAME: &str = "links";
@@ -106,13 +106,16 @@ fn is_external(href: &str) -> bool {
 
 fn extract_link_targets(html: &str) -> Vec<String> {
     let mut out = Vec::new();
-    let lower = html.to_lowercase();
+    // Blank out <script>/<style> contents first: markup embedded in JS
+    // string literals (e.g. the search overlay building result rows
+    // with '<a href="'+esc(lp+e.url)+'">') is not a document link.
+    let html = strip_script_and_style(html);
+    let lower = html.to_ascii_lowercase();
     for (open, attr) in &[("<a ", "href"), ("<img", "src")] {
         let mut cursor = 0;
         while let Some(rel) = lower[cursor..].find(open) {
             let abs = cursor + rel;
-            let end =
-                lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+            let end = find_tag_end(&html, abs);
             let tag = &html[abs..end];
             cursor = end;
             if let Some(v) = hreflang_attr(tag, attr) {
@@ -401,6 +404,83 @@ mod tests {
         let _copy: BrokenLinksGate = g;
         let _clone = g;
         assert!(format!("{g:?}").contains("BrokenLinksGate"));
+    }
+
+    #[test]
+    fn anchor_markup_inside_script_string_is_ignored() {
+        // Regression: 10 false LINK-INTERNAL-MISSING from the search
+        // overlay's JS building '<a … href="'+esc(lp+e.url)+'">'.
+        let pages = &[
+            (
+                "index.html",
+                "<html><body><script>\nvar html='';\
+             html+='<a class=\"ssg-result\" href=\"'+esc(lp+e.url)+'\">'\
+             +'<div>x</div></a>';\n</script>\
+             <a href=\"/exists/\">real</a></body></html>",
+            ),
+            ("exists/index.html", "<html><body>t</body></html>"),
+        ];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
+            "JS-string anchors must be ignored: {f:?}"
+        );
+    }
+
+    #[test]
+    fn broken_link_in_body_still_fires_when_page_has_scripts() {
+        // True positive preserved: a real broken <a href> in the body
+        // must still fire even when the page carries <script> blocks.
+        let pages = &[(
+            "index.html",
+            "<html><body><script>var x='<a href=\"/js-only/\">';</script>\
+             <a href=\"/really-missing/\">broken</a></body></html>",
+        )];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        let missing: Vec<_> = f
+            .iter()
+            .filter(|x| x.code.as_deref() == Some("LINK-INTERNAL-MISSING"))
+            .collect();
+        assert_eq!(missing.len(), 1, "exactly the body link: {f:?}");
+        assert!(missing[0].message.contains("/really-missing/"));
+    }
+
+    #[test]
+    fn href_with_raw_gt_in_quoted_value_does_not_truncate_tag() {
+        // find('>') used to cut the tag inside quoted values.
+        let pages = &[
+            (
+                "index.html",
+                "<html><body><img src=\"data:image/svg+xml;utf8,<svg viewBox='0 0 1 1'></svg>\" alt=\"x\">\
+                 <a href=\"/ok/\">ok</a></body></html>",
+            ),
+            ("ok/index.html", "<html><body>t</body></html>"),
+        ];
+        let f = BrokenLinksGate.run(
+            &site_with(pages),
+            &AuditOptions {
+                skip_network: true,
+                ..AuditOptions::default()
+            },
+        );
+        assert!(
+            f.iter()
+                .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
+            "quoted `>` must not truncate tags: {f:?}"
+        );
     }
 
     #[test]

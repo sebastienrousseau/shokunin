@@ -1,0 +1,191 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Deterministic cross-platform output gate (v0.0.47 plan §2 item 1.7).
+#
+# Builds `benches/corpus/small` (100 deterministic pages seeded by
+# tools/seed-bench-corpus.sh) on ubuntu-latest AND macos-latest, hashes
+# the emitted site tree, and fails if the two trees differ byte-for-byte.
+# Also runs a same-runner double-build check: two `ssg build` runs from
+# the same binary must emit identical trees (catches HashMap-iteration
+# ordering, timestamps, and other run-to-run nondeterminism cheaply, at
+# fixture scale — the full binary-reproducibility double build stays in
+# scheduled.yml).
+#
+# SOURCE_DATE_EPOCH is pinned per the reproducible-build convention
+# documented in SECURITY.md (same 1700000000 epoch as scheduled.yml's
+# `reproducible` job).
+#
+# Hashing strategy: a sorted per-file SHA-256 manifest (relative paths,
+# content-only) rather than `tar --sort=name --mtime=@0 --owner=0
+# --group=0 | sha256sum`. GNU tar options don't exist in macOS BSD tar,
+# and manifest hashing sidesteps NFC/NFD filename-normalization noise —
+# the corpus paths are ASCII and the hash covers file *content* plus
+# LC_ALL=C-sorted relative paths only. The manifest is uploaded next to
+# the tree hash so a mismatch pinpoints the exact divergent file(s).
+
+name: Determinism
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Reproducible-build epoch — see SECURITY.md §Reproducible builds.
+  SOURCE_DATE_EPOCH: "1700000000"
+
+jobs:
+  # ── Build the fixture site and hash the output tree, per OS ────────
+  build-hash:
+    name: site hash · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: determinism-${{ matrix.os }}
+
+      - name: Build ssg (release, locked)
+        run: cargo build --release --locked -p ssg
+
+      - name: Seed deterministic fixture corpus
+        # 100 pages, byte-identical across machines/OSes by construction
+        # (page bodies derive from SHA-256 of the page index).
+        run: ./tools/seed-bench-corpus.sh small
+
+      - name: Build the fixture site
+        run: |
+          ./target/release/ssg build \
+            --content benches/corpus/small/content \
+            --template benches/corpus/small/templates \
+            --output benches/corpus/small/public
+
+      - name: Hash the output tree
+        run: |
+          set -euo pipefail
+          cd benches/corpus/small/public
+          # Content-only manifest: "<sha256>  <sorted relative path>".
+          # `shasum -a 256` exists on both ubuntu (perl) and macOS.
+          find . -type f -print0 | LC_ALL=C sort -z \
+            | while IFS= read -r -d '' f; do
+                printf '%s  %s\n' \
+                  "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"
+              done > "$RUNNER_TEMP/manifest.txt"
+          shasum -a 256 "$RUNNER_TEMP/manifest.txt" \
+            | awk '{print $1}' > "$RUNNER_TEMP/tree.sha256"
+          echo "tree hash (${{ matrix.os }}): $(cat "$RUNNER_TEMP/tree.sha256")"
+
+      - name: Upload tree hash + manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: determinism-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/tree.sha256
+            ${{ runner.temp }}/manifest.txt
+          if-no-files-found: error
+          retention-days: 7
+
+  # ── Cross-OS comparison: ubuntu tree must equal macos tree ──────────
+  cross-os-compare:
+    name: cross-os hash compare
+    needs: build-hash
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: hashes
+
+      - name: Compare tree hashes
+        run: |
+          set -euo pipefail
+          linux=$(cat hashes/determinism-ubuntu-latest/tree.sha256)
+          macos=$(cat hashes/determinism-macos-latest/tree.sha256)
+          echo "ubuntu-latest: ${linux}"
+          echo "macos-latest:  ${macos}"
+          if [ "$linux" = "$macos" ]; then
+            echo "✓ Deterministic across OSes: ${linux}"
+          else
+            echo "::error::Site output differs between ubuntu-latest and macos-latest"
+            echo "Divergent files (manifest diff):"
+            diff -u hashes/determinism-ubuntu-latest/manifest.txt \
+                    hashes/determinism-macos-latest/manifest.txt || true
+            exit 1
+          fi
+
+  # ── Same-runner double build: two runs must emit identical trees ────
+  double-build:
+    name: double build · ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          shared-key: determinism-ubuntu-latest
+
+      - name: Build ssg (release, locked)
+        run: cargo build --release --locked -p ssg
+
+      - name: Seed deterministic fixture corpus
+        run: ./tools/seed-bench-corpus.sh small
+
+      - name: Build the fixture site twice
+        run: |
+          set -euo pipefail
+          for run in 1 2; do
+            out="$RUNNER_TEMP/out-${run}"
+            rm -rf "$out"
+            ./target/release/ssg build \
+              --content benches/corpus/small/content \
+              --template benches/corpus/small/templates \
+              --output "$out"
+          done
+
+      - name: Compare the two output trees
+        run: |
+          set -euo pipefail
+          hash_tree() {
+            (
+              cd "$1"
+              find . -type f -print0 | LC_ALL=C sort -z \
+                | while IFS= read -r -d '' f; do
+                    printf '%s  %s\n' \
+                      "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"
+                  done
+            )
+          }
+          hash_tree "$RUNNER_TEMP/out-1" > "$RUNNER_TEMP/manifest-1.txt"
+          hash_tree "$RUNNER_TEMP/out-2" > "$RUNNER_TEMP/manifest-2.txt"
+          h1=$(shasum -a 256 "$RUNNER_TEMP/manifest-1.txt" | awk '{print $1}')
+          h2=$(shasum -a 256 "$RUNNER_TEMP/manifest-2.txt" | awk '{print $1}')
+          echo "build 1: ${h1}"
+          echo "build 2: ${h2}"
+          if [ "$h1" = "$h2" ]; then
+            echo "✓ Double build deterministic: ${h1}"
+          else
+            echo "::error::Two builds of the same corpus emitted different trees"
+            diff -u "$RUNNER_TEMP/manifest-1.txt" "$RUNNER_TEMP/manifest-2.txt" || true
+            exit 1
+          fi

@@ -1415,22 +1415,28 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
         });
     });
 
-    // template_plugin.
-    use ssg::template_plugin::TemplatePlugin;
-    let tdir = tempfile::tempdir().unwrap();
-    c.bench_function(
-        "template_plugin::TemplatePlugin::from_template_dir",
-        |b| {
-            b.iter(|| {
-                black_box(TemplatePlugin::from_template_dir(black_box(
-                    tdir.path(),
-                )))
-            });
-        },
-    );
+    // template_plugin. The `ssg::template_plugin` re-export is gated
+    // behind the `templates` feature, so the whole section must be
+    // cfg-gated or `--no-default-features` fails to type-check this
+    // bench (v0.0.47 plan, W1-E gating fix). cargo-hack's
+    // feature-powerset job checks with `--no-dev-deps` (lib/bins
+    // only), so this gate is what keeps `cargo check --all-targets
+    // --no-default-features` green locally.
     #[cfg(feature = "templates")]
     {
         use ssg::template_engine::TemplateConfig;
+        use ssg::template_plugin::TemplatePlugin;
+        let tdir = tempfile::tempdir().unwrap();
+        c.bench_function(
+            "template_plugin::TemplatePlugin::from_template_dir",
+            |b| {
+                b.iter(|| {
+                    black_box(TemplatePlugin::from_template_dir(black_box(
+                        tdir.path(),
+                    )))
+                });
+            },
+        );
         c.bench_function("template_plugin::TemplatePlugin::new", |b| {
             b.iter(|| {
                 black_box(TemplatePlugin::new(TemplateConfig::default()))

@@ -65,7 +65,7 @@ pub enum CliInvocation {
         target: String,
     },
     /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
-    /// run the 14 native CI gates against the built site (issue #549).
+    /// run the 15 native CI gates against the built site (issue #549).
     Audit,
     /// Legacy flag-only invocation (`ssg -s public -w`). Behaves like
     /// `Dev` if `--serve` is present, otherwise like `Build`. Emits a

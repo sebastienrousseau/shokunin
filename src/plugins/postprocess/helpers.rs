@@ -106,10 +106,6 @@ pub(super) struct Rfc2822Date {
 }
 
 impl Rfc2822Date {
-    pub(super) fn to_iso_date(&self) -> String {
-        format!("{:04}-{:02}-{:02}", self.year, self.month, self.day)
-    }
-
     pub(super) fn to_rfc3339(&self) -> String {
         let tz = if self.tz == "+0000" || self.tz == "GMT" || self.tz == "UTC" {
             "+00:00".to_string()
@@ -172,14 +168,6 @@ pub(super) fn parse_rfc2822_lenient(rfc: &str) -> Option<Rfc2822Date> {
         sec,
         tz: tz.to_string(),
     })
-}
-
-/// Convert an RFC 2822 date string to ISO 8601 date (YYYY-MM-DD).
-///
-/// Tolerates incorrect weekday names (common in generated feeds) by
-/// stripping the leading "Day, " prefix and parsing the remainder.
-pub(super) fn rfc2822_to_iso_date(rfc: &str) -> Option<String> {
-    parse_rfc2822_lenient(rfc).map(|dt| dt.to_iso_date())
 }
 
 /// Convert an RFC 2822 date string to ISO 8601 datetime.
@@ -348,14 +336,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
-    // rfc2822_to_iso_date / rfc2822_to_iso8601
+    // rfc2822_to_iso8601
     // -----------------------------------------------------------------
-
-    #[test]
-    fn test_rfc2822_to_iso_date() {
-        let result = rfc2822_to_iso_date("Thu, 11 Apr 2026 06:06:06 +0000");
-        assert_eq!(result, Some("2026-04-11".to_string()));
-    }
 
     #[test]
     fn test_rfc2822_to_iso8601() {
@@ -373,20 +355,6 @@ mod tests {
     // -----------------------------------------------------------------
     // Rfc2822Date
     // -----------------------------------------------------------------
-
-    #[test]
-    fn test_rfc2822_date_to_iso_date() {
-        let dt = Rfc2822Date {
-            year: 2026,
-            month: 4,
-            day: 11,
-            hour: 6,
-            min: 6,
-            sec: 6,
-            tz: "+0000".to_string(),
-        };
-        assert_eq!(dt.to_iso_date(), "2026-04-11");
-    }
 
     #[test]
     fn test_rfc2822_date_to_rfc3339_utc() {

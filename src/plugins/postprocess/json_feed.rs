@@ -10,7 +10,8 @@
 //! `after_compile`, reading the same `.meta.json` sidecars (with the
 //! same `build_dir/.meta` and `rss.xml` fallbacks).
 
-use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars};
+use super::helpers::read_meta_sidecars;
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
@@ -252,10 +253,23 @@ pub(super) fn build_item(
         format!("{base_url}/{rel_path}/")
     };
 
-    let date_published = parse_rfc2822_lenient(&pub_date)
-        .map_or_else(|| pub_date.clone(), |dt| dt.to_rfc3339());
-    let date_modified = parse_rfc2822_lenient(&modified_date)
-        .map_or_else(|| modified_date.clone(), |dt| dt.to_rfc3339());
+    // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible date
+    // chain — RFC 2822, long-form, and ISO 8601 all normalise to the
+    // RFC 3339 shape JSON Feed 1.1 requires; unparseable values pass
+    // through verbatim (previous behaviour) with a warning naming the
+    // failing field.
+    let flex_rfc3339 = |field: &str, raw: &str| match parse_flexible_date(raw) {
+        Ok(dt) => dt.to_rfc3339(),
+        Err(err) => {
+            if !raw.is_empty() {
+                log::warn!("[json-feed] '{field}' for '{rel_path}': {err}");
+            }
+            raw.to_string()
+        }
+    };
+    let date_published = flex_rfc3339("item_pub_date", &pub_date);
+    let date_modified =
+        flex_rfc3339("last_build_date/date_modified", &modified_date);
 
     // Tags: prefer "tags" (comma-separated), fall back to "category".
     let mut tags: Vec<String> = meta
@@ -400,6 +414,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -628,6 +643,51 @@ mod tests {
         assert_eq!(item.url, "https://example.com/p/");
     }
 
+    // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_item_iso_date_normalised_to_rfc3339() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+        let item = build_item("iso", &meta, "https://example.com", &[])
+            .expect("valid item");
+        assert_eq!(item.date_published, "2026-07-01T00:00:00+00:00");
+        assert_eq!(item.date_modified, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_build_item_long_form_date_normalised_to_rfc3339() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+        let _ = meta.insert(
+            "date_modified".to_string(),
+            "2026-07-02T07:07:07Z".to_string(),
+        );
+        let item = build_item("long", &meta, "https://example.com", &[])
+            .expect("valid item");
+        assert_eq!(item.date_published, "2026-07-01T00:00:00+00:00");
+        assert_eq!(item.date_modified, "2026-07-02T07:07:07+00:00");
+    }
+
+    #[test]
+    fn test_build_item_unparseable_date_passes_through() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Bad".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
+        let item = build_item("bad", &meta, "https://example.com", &[])
+            .expect("valid item");
+        // Verbatim fallback preserves the plugin's previous output.
+        assert_eq!(item.date_published, "not-a-date");
+    }
+
     #[test]
     fn test_json_feed_plugin_name() {
         assert_eq!(JsonFeedPlugin.name(), "json-feed");
@@ -697,6 +757,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),
@@ -791,6 +852,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),

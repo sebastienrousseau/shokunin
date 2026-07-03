@@ -95,11 +95,15 @@ fn locate_content_dir(root: &Path) -> Option<std::path::PathBuf> {
 fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
     let mut h1_count = 0usize;
     let mut in_code_block = false;
+    let fm_lines = frontmatter_line_count(text);
 
     // MD041: first non-frontmatter, non-blank line must be `# `.
+    // A frontmatter `title:` satisfies the requirement too — mirrors
+    // upstream markdownlint's `front_matter_title` behaviour, since
+    // the H1 is template-provided from the title on such pages.
     let first_content_line = first_heading_candidate(text);
     if let Some(line) = first_content_line {
-        if !line.starts_with("# ") {
+        if !line.starts_with("# ") && !frontmatter_has_title(text, fm_lines) {
             findings.push(
                 Finding::new(
                     NAME,
@@ -114,6 +118,11 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
 
     for (idx, raw_line) in text.lines().enumerate() {
         let line_no = idx + 1;
+        // YAML frontmatter is not Markdown — never lint it (URL values
+        // like `permalink:` are not bare-URL prose, `#` is a comment).
+        if idx < fm_lines {
+            continue;
+        }
         if raw_line.trim_start().starts_with("```") {
             in_code_block = !in_code_block;
             continue;
@@ -186,6 +195,34 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
             .with_path(rel.to_string()),
         );
     }
+}
+
+/// Returns the number of leading lines occupied by YAML frontmatter
+/// (opening `---`, body, closing `---` inclusive), or `0` when the
+/// file has none or the fence never closes.
+fn frontmatter_line_count(text: &str) -> usize {
+    let mut lines = text.lines();
+    if lines.next().map(str::trim) != Some("---") {
+        return 0;
+    }
+    let mut count = 1;
+    for line in lines {
+        count += 1;
+        if line.trim() == "---" {
+            return count;
+        }
+    }
+    0
+}
+
+/// `true` when the frontmatter block declares a `title:` (or `title=`)
+/// key — upstream markdownlint's `front_matter_title` default.
+fn frontmatter_has_title(text: &str, fm_lines: usize) -> bool {
+    fm_lines > 0
+        && text.lines().take(fm_lines).skip(1).any(|line| {
+            let lower = line.trim_start().to_ascii_lowercase();
+            lower.starts_with("title:") || lower.starts_with("title=")
+        })
 }
 
 fn first_heading_candidate(text: &str) -> Option<&str> {
@@ -345,6 +382,109 @@ mod tests {
                 .all(|x| x.code.as_deref() != Some("MD-INPUT-MISSING")),
             "sibling content/ should be discovered: {f:?}"
         );
+    }
+
+    #[test]
+    fn frontmatter_url_values_are_not_bare_urls() {
+        // Regression: ~110 false MD034 on frontmatter values like
+        // `permalink: "https://…"` — YAML is not Markdown prose.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\npermalink: \"https://example.com/x/\"\n\
+             url: https://example.com\natom: \"https://example.com/atom.xml\"\n\
+             ---\n\n# Heading\n\nbody.\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "frontmatter URLs must not trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn bare_url_in_body_still_flagged_after_frontmatter() {
+        // True positive preserved: bare URLs in body text still fire.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\n---\n\n# Heading\n\nSee https://bare.example\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "body bare URL must still trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_hard_tabs_and_trailing_ws_are_exempt() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\nkey:\t\"tabbed\"   \n---\n\n# Heading\n\nbody\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD010")
+                && x.code.as_deref() != Some("MD009")),
+            "frontmatter must be exempt from MD009/MD010: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_yaml_comment_is_not_an_h1() {
+        // A YAML `# comment` inside frontmatter must not count toward
+        // MD025's H1 tally.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\n# yaml comment\ntitle: \"X\"\n---\n\n# Only H1\n\nbody\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD025")),
+            "yaml comments are not headings: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_title_satisfies_md041() {
+        // Upstream `front_matter_title` behaviour: the H1 is
+        // template-provided from `title:`, so no MD041.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"Threshold\"\n---\n\n## Section heading\n\nbody\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD041")),
+            "frontmatter title: must satisfy MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn missing_title_and_h1_still_trips_md041() {
+        // True positive preserved: no `title:` and no leading `# `.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\nauthor: \"A\"\n---\n\n## Not an H1\n\nbody\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD041")),
+            "no title + no H1 must still trip MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_helpers_edge_cases() {
+        assert_eq!(frontmatter_line_count("no frontmatter\n"), 0);
+        assert_eq!(frontmatter_line_count("---\ntitle: x\n---\n"), 3);
+        assert_eq!(
+            frontmatter_line_count("---\nnever closed\n"),
+            0,
+            "unterminated fence is not frontmatter"
+        );
+        assert!(frontmatter_has_title("---\nTitle: \"X\"\n---\n", 3));
+        assert!(!frontmatter_has_title("---\nsubtitle: \"X\"\n---\n", 3));
+        assert!(!frontmatter_has_title("body only\n", 0));
     }
 
     #[test]

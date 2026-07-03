@@ -6,9 +6,9 @@
 //! Provides cache-busting via content-hash filenames and Subresource
 //! Integrity attributes for CSS and JS files.
 
+use crate::cmd::SriAlgorithm;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
@@ -23,6 +23,11 @@ use std::{
 /// 2. Rename: `style.css` → `style.a1b2c3d4.css`
 /// 3. Rewrite all HTML `<link>` and `<script>` references
 /// 4. Add `integrity` and `crossorigin` attributes (SRI)
+///
+/// The SRI digest algorithm defaults to SHA-384 and is configurable
+/// via `[security] sri_algorithm` in `ssg.toml` (v0.0.47 plan §3
+/// item 2.3). The cache-busting filename fingerprint stays SHA-256
+/// regardless — it is not a security control.
 #[derive(Debug, Clone, Copy)]
 pub struct FingerprintPlugin;
 
@@ -63,13 +68,22 @@ impl Plugin for FingerprintPlugin {
             .into_iter()
             .partition(|p| p.extension().is_some_and(|e| e == "css"));
 
-        let mut manifest = fingerprint_assets(&non_css, &ctx.site_dir)?;
+        // `[security] sri_algorithm` from ssg.toml; absent config ⇒
+        // SHA-384 (v0.0.47 plan §3 item 2.3).
+        let sri_algorithm = ctx
+            .config
+            .as_ref()
+            .map_or_else(SriAlgorithm::default, |c| c.security.sri_algorithm);
+
+        let mut manifest =
+            fingerprint_assets(&non_css, &ctx.site_dir, sri_algorithm)?;
 
         for css_path in &css_files {
             rewrite_css_urls_inplace(css_path, &ctx.site_dir, &manifest)?;
         }
 
-        let css_manifest = fingerprint_assets(&css_files, &ctx.site_dir)?;
+        let css_manifest =
+            fingerprint_assets(&css_files, &ctx.site_dir, sri_algorithm)?;
         manifest.extend(css_manifest);
 
         rewrite_html_references(&ctx.site_dir, &manifest)?;
@@ -88,11 +102,12 @@ impl Plugin for FingerprintPlugin {
 fn fingerprint_assets(
     assets: &[PathBuf],
     site_dir: &Path,
+    sri_algorithm: SriAlgorithm,
 ) -> Result<HashMap<String, AssetInfo>, SsgError> {
     let mut manifest = HashMap::new();
 
     for asset_path in assets {
-        let info = fingerprint_file(asset_path, site_dir)?;
+        let info = fingerprint_file(asset_path, site_dir, sri_algorithm)?;
         let _ = manifest.insert(info.0, info.1);
     }
 
@@ -103,6 +118,7 @@ fn fingerprint_assets(
 fn fingerprint_file(
     asset_path: &Path,
     site_dir: &Path,
+    sri_algorithm: SriAlgorithm,
 ) -> Result<(String, AssetInfo), SsgError> {
     let mut content = fs::read(asset_path).with_path(asset_path)?;
     let ext = asset_path
@@ -131,7 +147,7 @@ fn fingerprint_file(
     let new_name = format!("{stem}.{short_hash}.{ext}");
     let new_path = asset_path.with_file_name(&new_name);
 
-    let sri = format!("sha256-{}", sri_base64(&content));
+    let sri = sri_algorithm.integrity(&content);
 
     if minified {
         fs::write(&new_path, &content).with_path(&new_path)?;
@@ -388,11 +404,13 @@ fn rewrite_asset_refs(
 
 /// SHA-256 hash as a 64-char hex string.
 ///
-/// Used for the cache-busting fingerprint suffix (`name.<hash>.ext`).
-/// The first 8 hex characters of this output are taken as the
-/// short content fingerprint; the full digest is also reused as the
-/// raw input to [`sri_base64`] for the `integrity="sha256-..."`
-/// attribute.
+/// Used only for the cache-busting fingerprint suffix
+/// (`name.<hash>.ext`); the first 8 hex characters of this output are
+/// taken as the short content fingerprint. The `integrity` attribute
+/// is computed separately via [`SriAlgorithm::integrity`] (SHA-384 by
+/// default — v0.0.47 plan §3 item 2.3), so the filename fingerprint
+/// deliberately stays SHA-256: it is a cache key, not a security
+/// control.
 fn sha256_hex(data: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(data);
@@ -403,20 +421,6 @@ fn sha256_hex(data: &[u8]) -> String {
         let _ = write!(s, "{b:02x}");
     }
     s
-}
-
-/// Returns the canonical Subresource Integrity payload for `data`.
-///
-/// Browsers compare the `integrity` attribute against `base64(SHA-256(body))`
-/// per the [W3C SRI spec](https://www.w3.org/TR/SRI/#the-integrity-attribute).
-/// Combined with the `sha256-` prefix at the call site, the resulting
-/// attribute is exactly what a browser will validate the response body
-/// against.
-fn sri_base64(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let bytes = hasher.finalize();
-    BASE64.encode(bytes)
 }
 
 /// Minimal CSS minifier that removes comments and compresses whitespace.
@@ -691,11 +695,22 @@ mod tests {
     }
 
     #[test]
-    fn test_sri_base64_known_vector() {
-        // SHA-256("") base64-encoded is the canonical 47ZHRWlj-... value.
+    fn test_sri_default_algorithm_known_vector() {
+        // SHA-384("") base64-encoded — the canonical empty-input
+        // digest. The default SRI algorithm is SHA-384 (v0.0.47 plan
+        // §3 item 2.3).
         assert_eq!(
-            sri_base64(b""),
-            "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+            SriAlgorithm::default().integrity(b""),
+            "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+        );
+    }
+
+    #[test]
+    fn test_sri_sha256_override_known_vector() {
+        // SHA-256("") base64-encoded is the canonical 47DEQpj8... value.
+        assert_eq!(
+            SriAlgorithm::Sha256.integrity(b""),
+            "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
         );
     }
 
@@ -740,11 +755,82 @@ mod tests {
             .collect();
         assert_eq!(entries.len(), 1);
 
-        // HTML should reference the fingerprinted file
+        // HTML should reference the fingerprinted file with a SHA-384
+        // integrity attribute (the default — v0.0.47 plan §3 item 2.3).
         let output = fs::read_to_string(site.join("index.html")).unwrap();
-        assert!(output.contains("integrity="));
+        assert!(output.contains("integrity=\"sha384-"));
         assert!(output.contains("crossorigin=\"anonymous\""));
         assert!(!output.contains("href=\"style.css\""));
+    }
+
+    #[test]
+    fn default_sri_is_sha384_with_exact_known_vector() {
+        // End-to-end through the plugin with NO config: the JS body
+        // survives minification byte-for-byte ("console.log(1);" has
+        // no removable whitespace/comments), so the emitted integrity
+        // attribute must be exactly base64(SHA-384("console.log(1);")).
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("app.js"), "console.log(1);").unwrap();
+        fs::write(
+            site.join("index.html"),
+            r#"<html><head><script src="app.js"></script></head></html>"#,
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+
+        let html = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(
+            html.contains(
+                "integrity=\"sha384-JawyHuhqEMFMvdtX+VHylbI0hfJp2F7nvwFVRqqfuOoK5oW7TG/7V11Zs7zeFWIE\""
+            ),
+            "expected exact SHA-384 SRI vector; got: {html}"
+        );
+    }
+
+    #[test]
+    fn sri_algorithm_config_override_emits_sha256() {
+        // `[security] sri_algorithm = "sha256"` back-compat knob
+        // (v0.0.47 plan §3 item 2.3): the exact SHA-256 vector for
+        // "console.log(1);" must be emitted instead of SHA-384.
+        use crate::cmd::{SecurityConfig, SsgConfig};
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("app.js"), "console.log(1);").unwrap();
+        fs::write(
+            site.join("index.html"),
+            r#"<html><head><script src="app.js"></script></head></html>"#,
+        )
+        .unwrap();
+
+        let config = SsgConfig::builder()
+            .security(SecurityConfig {
+                sri_algorithm: SriAlgorithm::Sha256,
+            })
+            .build()
+            .unwrap();
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            config,
+        );
+        FingerprintPlugin.after_compile(&ctx).unwrap();
+
+        let html = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(
+            html.contains(
+                "integrity=\"sha256-NcFG924SlHfGQGG8hFEeEJDz1NgFlxPmZj3Us1sfdkI=\""
+            ),
+            "expected exact SHA-256 SRI vector; got: {html}"
+        );
+        assert!(!html.contains("sha384-"), "override must win: {html}");
     }
 
     #[test]
@@ -798,7 +884,8 @@ mod tests {
         let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
         FingerprintPlugin.after_compile(&ctx).unwrap();
         let html = fs::read_to_string(site.join("index.html")).unwrap();
-        assert!(html.contains("integrity="));
+        // Default algorithm is SHA-384 (v0.0.47 plan §3 item 2.3).
+        assert!(html.contains("integrity=\"sha384-"));
     }
 
     #[test]
@@ -845,15 +932,18 @@ mod tests {
     }
 
     #[test]
-    fn sri_base64_is_nonempty_for_input() {
-        assert!(!sri_base64(b"hello").is_empty());
+    fn sri_integrity_is_nonempty_for_input() {
+        assert!(!SriAlgorithm::default().integrity(b"hello").is_empty());
     }
 
     #[test]
-    fn sri_base64_emits_44_char_payload() {
-        // SHA-256 → 32 raw bytes → base64 with padding = 44 chars.
-        assert_eq!(sri_base64(b"hello").len(), 44);
-        assert_eq!(sri_base64(b"").len(), 44);
+    fn sri_integrity_payload_lengths_per_algorithm() {
+        // "sha384-" (7) + SHA-384 → 48 raw bytes → base64 = 64 chars.
+        assert_eq!(SriAlgorithm::Sha384.integrity(b"hello").len(), 7 + 64);
+        // "sha256-" (7) + SHA-256 → 32 raw bytes → base64 = 44 chars.
+        assert_eq!(SriAlgorithm::Sha256.integrity(b"hello").len(), 7 + 44);
+        // "sha512-" (7) + SHA-512 → 64 raw bytes → base64 = 88 chars.
+        assert_eq!(SriAlgorithm::Sha512.integrity(b"hello").len(), 7 + 88);
     }
 
     #[test]
@@ -863,14 +953,14 @@ mod tests {
             "style.css".to_string(),
             AssetInfo {
                 fingerprinted: "style.abc12345.css".to_string(),
-                sri: "sha256-xyz".to_string(),
+                sri: "sha384-xyz".to_string(),
             },
         );
 
         let html = r#"<link rel="stylesheet" href="style.css">"#;
         let result = rewrite_asset_refs(html, &manifest);
         assert!(result.contains("style.abc12345.css"));
-        assert!(result.contains("integrity=\"sha256-xyz\""));
+        assert!(result.contains("integrity=\"sha384-xyz\""));
     }
 
     // ── CSS url() rewriting (resolves audit item #2) ───────────────
@@ -1034,7 +1124,8 @@ mod tests {
     fn test_fingerprint_file_missing_returns_io_error() {
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing.css");
-        let res = fingerprint_file(&missing, dir.path());
+        let res =
+            fingerprint_file(&missing, dir.path(), SriAlgorithm::default());
         assert!(res.is_err());
         let err = res.unwrap_err();
         assert!(matches!(err, SsgError::Io { .. }));

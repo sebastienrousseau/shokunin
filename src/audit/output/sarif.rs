@@ -117,6 +117,7 @@ fn describe_gate(name: &str) -> String {
         "feeds"         => "RSS / Atom / JSON Feed schema validity.".to_string(),
         "images"        => "Responsive <picture>, alt text presence, modern format coverage.".to_string(),
         "search_index"  => "ssg-search artefacts: embeddings.bin, model.bin, tokenizer.bin, manifest.json.".to_string(),
+        "lang_consistency" => "JSON-LD inLanguage vs <html lang> base-language consistency.".to_string(),
         other            => format!("ssg audit gate `{other}` (third-party).") ,
     }
 }

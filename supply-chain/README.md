@@ -56,6 +56,72 @@ Target trajectory: 544 → 350 by v0.1.0, → 100 by v1.0.0. Tracked as
 a recurring v0.0.* milestone task (no per-release issue — the bar
 moves down quarterly).
 
+**Progress: 544 → 533 exemption entries (v0.0.47).** The first 13
+first-party audit certificates landed in `audits.toml`, burning 11
+exemption entries (two of the audited versions — `base64` 0.13.1 and
+0.22.1 — had no exemption entry to burn). `cargo vet` now reports
+100 fully-audited crates, up from 89 at the v0.0.45 bootstrap. This
+data feeds the planned "544 to Zero" whitepaper.
+
+## First-party audits (v0.0.47, plan §3 item 2.2)
+
+All 13 certificates were written against the **exact published
+source at the locked version**, taken from the local
+`~/.cargo/registry/src` cache — not from same-author development
+checkouts, which had drifted ahead of the pinned versions (e.g. the
+`staticdatagen` working tree was at 0.0.10 while the lockfile pins
+0.0.9).
+
+Methodology per crate (`safe-to-deploy` bar):
+
+1. Full read of `build.rs` (every same-author crate carries the
+   same `version_check` rustc-version gate — no codegen, no
+   network, no file writes).
+2. Pattern sweep over `src/`: `unsafe` blocks, `proc-macro = true`,
+   network access (`std::net`, `TcpStream`, `reqwest`, `ureq`,
+   `hyper`), process spawning (`Command::new`, `process::Command`),
+   filesystem deletion (`remove_dir_all` / `remove_file`),
+   `include!`, and env/credential reads (`std::env::var`).
+3. Manual inspection of **every** hit in context (e.g.
+   `http-handle`'s `libc::sendfile` FFI, `staticdatagen`'s opt-in
+   `sh -c` `CommandExecutor`, `staticweaver`'s feature-gated
+   remote-template fetch).
+4. Findings that fall short of disqualifying are disclosed verbatim
+   in the certificate's `notes` field — an audit is only as
+   trustworthy as its caveats.
+
+Audited (crate@version — rough review time, seeding the "544 to
+Zero" per-audit cost data):
+
+| Certificate | Time | Notable finding disclosed |
+|---|---|---|
+| `staticdatagen@0.0.9` | ~40 min | opt-in `sh -c` `CommandExecutor` API (unused by ssg; no-shellout lint) |
+| `frontmatter-gen@0.0.6` | ~20 min | env-var config knobs, parse-or-default |
+| `html-generator@0.0.3` | ~20 min | comrak raw-HTML passthrough always on |
+| `html-generator@0.0.6` | ~25 min | raw HTML opt-in + ammonia; emoji-data env override |
+| `mdx-gen@0.0.1`, `@0.0.2` | ~10 min each | comrak raw-HTML passthrough |
+| `http-handle@0.0.4`, `@0.0.5` | ~35 min each | `libc::sendfile` FFI; test-only env mutation; AGPL, dev-server-only |
+| `metadata-gen@0.0.4` | ~10 min | clean |
+| `staticweaver@0.0.2` | ~25 min | remote-template fetch behind non-default feature (not compiled here) |
+| `rss-gen@0.0.5` | ~15 min | clean |
+| `base64@0.13.1`, `@0.22.1` | ~10 min each | clean (`forbid(unsafe_code)`) |
+
+Declined (kept as exemption, with reason):
+
+- **`sha2@0.11.0`** — 59 `unsafe` sites (SIMD intrinsics /
+  arch-specific digest backends). A grep-plus-inspection review
+  cannot honestly certify hand-written crypto SIMD; this needs a
+  dedicated review session or a trust-set audit of the 0.11 line.
+  Its exemption stays until then.
+
+## Exemption ratchet (CI)
+
+`supply-chain/exemptions-baseline.txt` records the current exemption
+count (533). The `vet` job in `ci.yml` fails any PR whose
+`[[exemptions.*]]` entry count in `config.toml` **exceeds** that
+baseline — the ratchet only moves downward. When you burn exemptions
+down, lower the baseline file in the same PR; never raise it.
+
 ## CI integration
 
 `.github/workflows/ci.yml` runs `cargo vet --locked` in a dedicated

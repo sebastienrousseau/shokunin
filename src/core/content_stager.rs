@@ -45,6 +45,21 @@
 //! Both shims auto-retire when the corresponding staticdatagen follow-up
 //! releases — the residual module shrinks to nothing.
 //!
+//! ## Permalink derivation (spec A2/B1, plan §2 item 1.2, issue #586)
+//!
+//! `staticdatagen`'s RSS generator hard-fails the whole build when a
+//! post lacks `permalink:` front matter (`rss-gen`: "channel.link is
+//! missing"). Because every page passes through this stager before
+//! `staticdatagen::compile`, the stager can make that failure
+//! unreachable: when a staged `.md` file's frontmatter carries
+//! neither `permalink` nor `url`, [`stage_content_with_site_defaults`]
+//! injects `permalink: "{base_url}/{relative_output_path}"` derived
+//! via [`crate::urls::derive_permalink`]. Author-specified permalinks
+//! always win — files that already declare `permalink` or `url` pass
+//! through verbatim. Only YAML `---` fenced frontmatter flows through
+//! this stager (the template-default shim shares the same
+//! constraint); files without a frontmatter block are left untouched.
+//!
 //! ## Why staging instead of editing in-place?
 //!
 //! The user's checkout is sacred:
@@ -71,6 +86,9 @@ use std::path::{Path, PathBuf};
 /// `template_var_keys` is the result of [`collect_template_vars`] run
 /// over the user's template directory.
 ///
+/// Convenience wrapper over [`stage_content_with_site_defaults`] with
+/// no base URL — no `permalink:` derivation happens on staged content.
+///
 /// [staticdatagen #99]: https://github.com/sebastienrousseau/staticdatagen/issues/99
 ///
 /// # Errors
@@ -82,6 +100,70 @@ pub fn stage_content_with_template_defaults(
     build_dir: &Path,
     template_var_keys: &[String],
 ) -> Result<PathBuf, io::Error> {
+    stage_content_with_site_defaults(
+        content_dir,
+        build_dir,
+        template_var_keys,
+        None,
+    )
+}
+
+/// Like [`stage_content_with_template_defaults`] but also derives a
+/// `permalink:` for staged `.md` files that don't declare one.
+///
+/// Injection targets every staged `.md` file whose frontmatter
+/// carries neither `permalink` nor `url` (spec A2/B1, plan §2 item
+/// 1.2, issue #586). The derived value comes from
+/// [`crate::urls::derive_permalink`] applied to `base_url` and the
+/// file's content-relative path — i.e.
+/// `{base_url}/{relative_output_path}` under the compiler's
+/// `foo.md → foo/index.html` output convention, published as a pretty
+/// directory URL (`{base_url}/foo/`). This guarantees `staticdatagen`
+/// / `rss-gen` always see a channel/item link and can never abort the
+/// build with "channel.link is missing".
+///
+/// Passing `base_url: None` (or an empty/whitespace-only base URL)
+/// disables permalink injection and behaves exactly like
+/// [`stage_content_with_template_defaults`] — an rss-gen-valid
+/// permalink must be an *absolute* URL, so there is nothing useful to
+/// derive without a base.
+///
+/// Author-specified front matter always wins: files that already
+/// declare `permalink` or `url` pass through verbatim.
+///
+/// # Errors
+///
+/// Returns [`io::Error`] when the staging directory cannot be created
+/// or a source file cannot be read or written.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content_stager::stage_content_with_site_defaults;
+/// use std::fs;
+///
+/// let tmp = tempfile::tempdir().unwrap();
+/// let src = tmp.path().join("content");
+/// let build = tmp.path().join("build");
+/// fs::create_dir_all(&src).unwrap();
+/// fs::write(src.join("post.md"), "---\ntitle: A\n---\nbody").unwrap();
+///
+/// let staged = stage_content_with_site_defaults(
+///     &src, &build, &[], Some("https://example.com"),
+/// ).unwrap();
+/// let out = fs::read_to_string(staged.join("post.md")).unwrap();
+/// assert!(out.contains("permalink: \"https://example.com/post/\""));
+/// ```
+pub fn stage_content_with_site_defaults(
+    content_dir: &Path,
+    build_dir: &Path,
+    template_var_keys: &[String],
+    base_url: Option<&str>,
+) -> Result<PathBuf, io::Error> {
+    // An empty base URL can't produce the absolute permalink rss-gen
+    // validates for — treat it as "no base URL, skip injection".
+    let base_url = base_url.map(str::trim).filter(|b| !b.is_empty());
+
     let staging_dir = staging_root_for("content", build_dir);
 
     // Recreate the staging directory each run so a previous build's
@@ -91,7 +173,7 @@ pub fn stage_content_with_template_defaults(
     }
     fs::create_dir_all(&staging_dir)?;
 
-    copy_tree(content_dir, &staging_dir)?;
+    copy_tree(content_dir, &staging_dir, base_url)?;
 
     // staticdatagen 0.0.10 closes upstream #69 — the tags-page generator
     // is now a no-op when no `tags.md` / `tags/index.md` template is
@@ -134,13 +216,19 @@ fn staging_root_for(suffix: &str, build_dir: &Path) -> PathBuf {
 }
 
 /// Recursively mirrors `src` into `dst`, applying
-/// [`collapse_multiline_quoted_scalars`] to `.md` files and copying
-/// everything else verbatim. Per-file work runs in parallel via Rayon
+/// [`collapse_multiline_quoted_scalars`] to `.md` files (and, when
+/// `base_url` is present, [`inject_permalink_if_missing`] — spec
+/// A2/B1, plan §2 item 1.2, issue #586) and copying everything else
+/// verbatim. Per-file work runs in parallel via Rayon
 /// — `read + transform + write` is the hot path that determined
 /// whether the staging shim added meaningful build-time overhead.
 /// With ~100 pages the parallel pass keeps the staging cost under
 /// ~50 ms on a 4-core runner, well inside the perf-budget gate.
-fn copy_tree(src: &Path, dst: &Path) -> Result<(), io::Error> {
+fn copy_tree(
+    src: &Path,
+    dst: &Path,
+    base_url: Option<&str>,
+) -> Result<(), io::Error> {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
 
@@ -167,7 +255,23 @@ fn copy_tree(src: &Path, dst: &Path) -> Result<(), io::Error> {
                 // staticdatagen bumps `metadata-gen` to 0.0.5;
                 // tracked: staticdatagen#100).
                 fs::read_to_string(&src_path).and_then(|body| {
-                    let staged = collapse_multiline_quoted_scalars(&body);
+                    let mut staged = collapse_multiline_quoted_scalars(&body);
+                    // Guarantee a permalink so rss-gen's
+                    // "channel.link is missing" hard-fail is
+                    // unreachable (spec A2/B1, plan §2 item 1.2,
+                    // issue #586). Author-specified `permalink`/`url`
+                    // keys always win — see
+                    // `inject_permalink_if_missing`.
+                    if let Some(base) = base_url {
+                        if let Ok(rel) = src_path.strip_prefix(src) {
+                            let rel = rel.to_string_lossy();
+                            let permalink =
+                                crate::urls::derive_permalink(base, &rel);
+                            staged = inject_permalink_if_missing(
+                                &staged, &permalink,
+                            );
+                        }
+                    }
                     fs::write(&dst_path, staged)
                 })
             } else {
@@ -429,6 +533,76 @@ pub fn inject_missing_keys(body: &str, keys: &[String]) -> String {
     out
 }
 
+/// Injects `permalink: "<permalink>"` as the first key of the YAML
+/// frontmatter block when the block exists and declares *neither*
+/// `permalink` nor `url` (spec A2/B1, plan §2 item 1.2, issue #586).
+///
+/// Author-specified values always win: a file with either key passes
+/// through byte-for-byte. Files without a frontmatter fence are left
+/// untouched — the stager's structural line-scan (shared with the
+/// template-default shim) only operates on YAML `---` fenced blocks,
+/// and `staticdatagen` extracts no metadata from fence-less files
+/// anyway.
+///
+/// Idempotent: a second pass over previously-staged content returns
+/// the input unchanged (the injected `permalink:` is detected as an
+/// existing key).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::content_stager::inject_permalink_if_missing;
+///
+/// // Missing both keys — derived permalink lands as the first key.
+/// let out = inject_permalink_if_missing(
+///     "---\ntitle: T\n---\nbody",
+///     "https://example.com/t/",
+/// );
+/// assert!(out.contains("permalink: \"https://example.com/t/\""));
+///
+/// // Author-specified permalink wins verbatim.
+/// let with_permalink = "---\npermalink: /mine/\ntitle: T\n---\nbody";
+/// assert_eq!(
+///     inject_permalink_if_missing(with_permalink, "https://x/"),
+///     with_permalink
+/// );
+///
+/// // `url` counts as author-specified too.
+/// let with_url = "---\nurl: /u/\ntitle: T\n---\nbody";
+/// assert_eq!(inject_permalink_if_missing(with_url, "https://x/"), with_url);
+/// ```
+#[must_use]
+pub fn inject_permalink_if_missing(body: &str, permalink: &str) -> String {
+    let trimmed = body.trim_start_matches('\u{FEFF}');
+    let Some((_lead, after_open)) = find_opening_fence(trimmed) else {
+        return body.to_string();
+    };
+    let Some(close_rel) = find_closing_fence(after_open) else {
+        return body.to_string();
+    };
+    let block = &after_open[..close_rel];
+    let after_block = &after_open[close_rel..];
+
+    // Author-specified link keys always win (spec B1): `permalink`
+    // is what staticdatagen reads; `url` is the common alias authors
+    // migrating from other generators carry.
+    if frontmatter_has_key(block, "permalink")
+        || frontmatter_has_key(block, "url")
+    {
+        return body.to_string();
+    }
+
+    let mut out = String::with_capacity(body.len() + permalink.len() + 16);
+    out.push_str(&trimmed[..trimmed.len() - after_open.len()]);
+    out.push_str(&format!("permalink: \"{permalink}\"\n"));
+    out.push_str(block);
+    out.push_str(after_block);
+    if body.starts_with('\u{FEFF}') {
+        return format!("\u{FEFF}{out}");
+    }
+    out
+}
+
 /// Returns `true` if the frontmatter block declares `key` (any
 /// quoting style, comments skipped).
 fn frontmatter_has_key(block: &str, key: &str) -> bool {
@@ -656,5 +830,219 @@ mod tests {
         let out = collapse_multiline_quoted_scalars(input);
         assert!(out.contains("twitter_url: \"https://"));
         assert_eq!(out.lines().count(), 1);
+    }
+
+    // ---------------------------------------------------------------
+    // Permalink derivation (spec A2/B1, plan §2 item 1.2, issue #586)
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn inject_permalink_adds_key_when_missing() {
+        let out = inject_permalink_if_missing(
+            "---\ntitle: T\n---\nbody",
+            "https://example.com/t/",
+        );
+        assert!(out.contains("permalink: \"https://example.com/t/\""));
+        assert!(out.contains("title: T"));
+        assert!(out.contains("body"));
+    }
+
+    #[test]
+    fn inject_permalink_preserves_author_permalink_verbatim() {
+        let input = "---\npermalink: /custom/place/\ntitle: T\n---\nbody";
+        assert_eq!(
+            inject_permalink_if_missing(input, "https://example.com/t/"),
+            input
+        );
+    }
+
+    #[test]
+    fn inject_permalink_treats_url_key_as_author_specified() {
+        let input = "---\nurl: https://elsewhere.example/\ntitle: T\n---\nb";
+        assert_eq!(
+            inject_permalink_if_missing(input, "https://example.com/t/"),
+            input
+        );
+    }
+
+    #[test]
+    fn inject_permalink_no_frontmatter_passthrough() {
+        let input = "# Heading\n\nBody.";
+        assert_eq!(
+            inject_permalink_if_missing(input, "https://example.com/"),
+            input
+        );
+    }
+
+    #[test]
+    fn inject_permalink_unterminated_fence_passthrough() {
+        let input = "---\ntitle: T\n# never closes";
+        assert_eq!(
+            inject_permalink_if_missing(input, "https://example.com/"),
+            input
+        );
+    }
+
+    #[test]
+    fn inject_permalink_preserves_bom() {
+        let input = "\u{FEFF}---\ntitle: T\n---\nbody";
+        let out = inject_permalink_if_missing(input, "https://example.com/t/");
+        assert!(out.starts_with('\u{FEFF}'));
+        assert!(out.contains("permalink: \"https://example.com/t/\""));
+    }
+
+    #[test]
+    fn inject_permalink_is_idempotent() {
+        let input = "---\ntitle: T\n---\nbody";
+        let once = inject_permalink_if_missing(input, "https://example.com/t/");
+        let twice =
+            inject_permalink_if_missing(&once, "https://example.com/t/");
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn stage_with_site_defaults_derives_permalinks_for_all_pages() {
+        // Plan §2 1.2 acceptance shape: a 3-page fixture where ZERO
+        // pages carry `permalink:` must stage with derived permalinks
+        // matching `{base_url}/{output_path}` under the compiler's
+        // `foo.md → foo/index.html` pretty-URL convention.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(src.join("posts")).unwrap();
+        fs::write(src.join("index.md"), "---\ntitle: Home\n---\nhome").unwrap();
+        fs::write(src.join("about.md"), "---\ntitle: About\n---\nab").unwrap();
+        fs::write(src.join("posts/first.md"), "---\ntitle: First\n---\npost")
+            .unwrap();
+
+        let staged = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("https://example.com"),
+        )
+        .unwrap();
+
+        let home = fs::read_to_string(staged.join("index.md")).unwrap();
+        assert!(
+            home.contains("permalink: \"https://example.com/\""),
+            "index.md must map to the site root URL: {home}"
+        );
+        let about = fs::read_to_string(staged.join("about.md")).unwrap();
+        assert!(
+            about.contains("permalink: \"https://example.com/about/\""),
+            "about.md must map to a pretty directory URL: {about}"
+        );
+        let post = fs::read_to_string(staged.join("posts/first.md")).unwrap();
+        assert!(
+            post.contains("permalink: \"https://example.com/posts/first/\""),
+            "nested page must include its directory path: {post}"
+        );
+    }
+
+    #[test]
+    fn stage_with_site_defaults_keeps_author_permalink_verbatim() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(
+            src.join("custom.md"),
+            "---\nlayout: post\npermalink: \"https://example.com/my-spot/\"\ntitle: C\n---\nbody",
+        )
+        .unwrap();
+
+        let staged = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("https://example.com"),
+        )
+        .unwrap();
+        let body = fs::read_to_string(staged.join("custom.md")).unwrap();
+        assert!(body.contains("permalink: \"https://example.com/my-spot/\""));
+        // Exactly one permalink key — no derived duplicate.
+        assert_eq!(body.matches("permalink:").count(), 1);
+    }
+
+    #[test]
+    fn stage_with_site_defaults_handles_nested_index_md() {
+        // `about/index.md` publishes at `about/index.html` →
+        // permalink `{base}/about/` (index.html collapses to the
+        // directory URL, matching the Atom feed convention).
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(src.join("about")).unwrap();
+        fs::write(src.join("about/index.md"), "---\ntitle: About\n---\nbody")
+            .unwrap();
+
+        let staged = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("https://example.com/"),
+        )
+        .unwrap();
+        let body = fs::read_to_string(staged.join("about/index.md")).unwrap();
+        assert!(
+            body.contains("permalink: \"https://example.com/about/\""),
+            "trailing-slash base + nested index.md: {body}"
+        );
+    }
+
+    #[test]
+    fn stage_without_base_url_injects_no_permalink() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
+
+        // Legacy entry point — must stay permalink-free.
+        let staged =
+            stage_content_with_template_defaults(&src, &build, &[]).unwrap();
+        let body = fs::read_to_string(staged.join("a.md")).unwrap();
+        assert!(!body.contains("permalink:"));
+
+        // Empty / whitespace-only base URL disables injection too —
+        // rss-gen only accepts absolute URLs, so there is nothing
+        // valid to derive.
+        let staged =
+            stage_content_with_site_defaults(&src, &build, &[], Some("   "))
+                .unwrap();
+        let body = fs::read_to_string(staged.join("a.md")).unwrap();
+        assert!(!body.contains("permalink:"));
+    }
+
+    #[test]
+    fn stage_with_site_defaults_is_idempotent_across_runs() {
+        // v0.0.46 retired the layout-injection shim (staticdatagen
+        // 0.0.10 defaults missing `layout:` natively), so the staged
+        // output must carry exactly one derived permalink and no
+        // injected layout key — across repeated staging runs.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
+
+        let _first = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("https://example.com"),
+        )
+        .unwrap();
+        let staged = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("https://example.com"),
+        )
+        .unwrap();
+        let body = fs::read_to_string(staged.join("a.md")).unwrap();
+        assert_eq!(body.matches("permalink:").count(), 1);
+        assert_eq!(body.matches("layout:").count(), 0);
     }
 }

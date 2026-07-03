@@ -66,7 +66,7 @@ fn full_audit_on_scaffold_completes_under_five_seconds() {
     let start = Instant::now();
     let report = runner.run(&site);
     let elapsed = start.elapsed();
-    assert_eq!(report.gates.len(), 14);
+    assert_eq!(report.gates.len(), 15);
     assert!(
         elapsed.as_secs_f64() < 5.0,
         "audit took {elapsed:?}; budget is 5 s"

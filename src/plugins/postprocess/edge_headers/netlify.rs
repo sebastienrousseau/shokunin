@@ -10,6 +10,7 @@
 //! file and the route group follows underneath.
 
 use super::PQC_NOTE_LINES;
+use std::collections::BTreeMap;
 
 /// Renders the Netlify `_headers` body.
 ///
@@ -21,9 +22,25 @@ use super::PQC_NOTE_LINES;
 ///   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 ///   Content-Security-Policy: …
 ///   …
+///
+/// /blog/post/
+///   Content-Security-Policy: … 'sha256-…' …
 /// ```
+///
+/// `page_csp` adds one route group per page that carries a
+/// hash-strict per-page CSP (spec B4); groups render in the map's
+/// sorted order so output is deterministic. **Platform caveat:**
+/// Netlify merges headers from *every* matching rule into one
+/// comma-separated value, and a comma-joined CSP is enforced as
+/// multiple policies (all must pass). Deployments that rely on the
+/// per-page hashes should drop the global `Content-Security-Policy`
+/// via `[edge_headers.overrides]` or dedupe at the platform level;
+/// the per-path entries themselves are correct and self-contained.
 #[must_use]
-pub(super) fn render(headers: &[(String, String)]) -> String {
+pub(super) fn render(
+    headers: &[(String, String)],
+    page_csp: &BTreeMap<String, String>,
+) -> String {
     let mut out = String::new();
 
     // PQC docstring (AC6).
@@ -39,6 +56,13 @@ pub(super) fn render(headers: &[(String, String)]) -> String {
         out.push_str(&format!("  {key}: {value}\n"));
     }
 
+    // Per-page CSP route groups (spec B4) — sorted BTreeMap order.
+    for (path, policy) in page_csp {
+        out.push('\n');
+        out.push_str(&format!("{path}\n"));
+        out.push_str(&format!("  Content-Security-Policy: {policy}\n"));
+    }
+
     out
 }
 
@@ -51,14 +75,14 @@ mod tests {
 
     #[test]
     fn render_includes_pqc_docstring() {
-        let body = render(&merged_headers(&BTreeMap::new()));
+        let body = render(&merged_headers(&BTreeMap::new()), &BTreeMap::new());
         assert!(body.contains("X25519+ML-KEM-768"));
         assert!(body.contains("netlify.com"));
     }
 
     #[test]
     fn render_uses_wildcard_route_group() {
-        let body = render(&merged_headers(&BTreeMap::new()));
+        let body = render(&merged_headers(&BTreeMap::new()), &BTreeMap::new());
         let route_line = body
             .lines()
             .find(|l| !l.starts_with('#') && !l.trim().is_empty());
@@ -67,7 +91,7 @@ mod tests {
 
     #[test]
     fn render_indents_headers_under_route() {
-        let body = render(&merged_headers(&BTreeMap::new()));
+        let body = render(&merged_headers(&BTreeMap::new()), &BTreeMap::new());
         assert!(body.contains("  Strict-Transport-Security:"));
         assert!(body.contains("  Content-Security-Policy:"));
         assert!(body.contains("  X-Content-Type-Options: nosniff"));
@@ -81,7 +105,7 @@ mod tests {
     fn render_has_no_duplicate_csp_header() {
         // AC7: even with overrides set on a non-CSP header, only one
         // Content-Security-Policy must be emitted.
-        let body = render(&merged_headers(&BTreeMap::new()));
+        let body = render(&merged_headers(&BTreeMap::new()), &BTreeMap::new());
         let csp_count = body
             .lines()
             .filter(|l| l.contains("Content-Security-Policy:"))
@@ -91,7 +115,7 @@ mod tests {
 
     #[test]
     fn render_with_empty_headers_still_emits_route_group() {
-        let body = render(&[]);
+        let body = render(&[], &BTreeMap::new());
         assert!(body.contains("/*\n"));
         assert!(body.starts_with("# ssg edge-headers: Netlify _headers"));
     }
@@ -103,7 +127,7 @@ mod tests {
             ("Second".to_string(), "2".to_string()),
             ("Third".to_string(), "3".to_string()),
         ];
-        let body = render(&headers);
+        let body = render(&headers, &BTreeMap::new());
         let i_first = body.find("First:").unwrap();
         let i_second = body.find("Second:").unwrap();
         let i_third = body.find("Third:").unwrap();
@@ -112,7 +136,7 @@ mod tests {
 
     #[test]
     fn render_starts_with_docstring_then_blank_line_then_route() {
-        let body = render(&[]);
+        let body = render(&[], &BTreeMap::new());
         let lines: Vec<&str> = body.lines().collect();
         // First line must be a comment.
         assert!(lines[0].starts_with('#'));
@@ -126,7 +150,7 @@ mod tests {
 
     #[test]
     fn render_emits_pqc_note_lines_as_comment_block() {
-        let body = render(&[]);
+        let body = render(&[], &BTreeMap::new());
         for line in PQC_NOTE_LINES {
             let formatted = format!("# {line}");
             assert!(body.contains(&formatted), "missing PQC line: {formatted}");
@@ -135,8 +159,38 @@ mod tests {
 
     #[test]
     fn render_includes_link_to_netlify_docs() {
-        let body = render(&[]);
+        let body = render(&[], &BTreeMap::new());
         assert!(body.contains("docs.netlify.com"));
+    }
+
+    #[test]
+    fn render_appends_per_page_csp_groups_sorted() {
+        // spec B4: pages with inline hashes get their own route group.
+        let mut pages: BTreeMap<String, String> = BTreeMap::new();
+        let _ = pages.insert(
+            "/blog/post/".to_string(),
+            "script-src 'self' 'sha256-abc'".to_string(),
+        );
+        let _ = pages.insert(
+            "/about/".to_string(),
+            "script-src 'self' 'sha256-def'".to_string(),
+        );
+        let body = render(&merged_headers(&BTreeMap::new()), &pages);
+        let i_about = body.find("/about/\n").unwrap();
+        let i_blog = body.find("/blog/post/\n").unwrap();
+        assert!(i_about < i_blog, "groups must render in sorted order");
+        assert!(body
+            .contains("/blog/post/\n  Content-Security-Policy: script-src 'self' 'sha256-abc'"));
+    }
+
+    #[test]
+    fn render_without_pages_has_no_extra_route_groups() {
+        let body = render(&merged_headers(&BTreeMap::new()), &BTreeMap::new());
+        let route_groups = body
+            .lines()
+            .filter(|l| l.starts_with('/') && !l.starts_with("/*"))
+            .count();
+        assert_eq!(route_groups, 0);
     }
 
     #[test]
@@ -146,7 +200,7 @@ mod tests {
             "Permissions-Policy".to_string(),
             "geolocation=(self)".to_string(),
         );
-        let body = render(&merged_headers(&overrides));
+        let body = render(&merged_headers(&overrides), &BTreeMap::new());
         assert!(body.contains("Permissions-Policy: geolocation=(self)"));
     }
 }

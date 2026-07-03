@@ -4,6 +4,7 @@
 //! Mirror of `src/plugins/postprocess/`.
 
 mod atom;
+mod edge_headers;
 mod helpers;
 mod html_fix;
 mod manifest;

@@ -27,7 +27,7 @@ Comprehensive guides for the Static Site Generator (SSG).
 - [Search](search.md) — Client-side search index, 28 locales, keyboard shortcut
 - [Internationalisation](i18n.md) — Hreflang, x-default, locale sitemaps, lang switcher
 - [Interactive Islands](islands.md) — Web Components, hydration strategies, zero JS default
-- [Streaming Compilation](streaming.md) — Memory-bounded batch processing for large sites
+- [Bounded-Memory Batch Compilation](streaming.md) — Memory-bounded batch processing for large sites
 
 ## Advanced
 

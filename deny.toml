@@ -58,5 +58,14 @@ ignore = [
     "RUSTSEC-2025-0057", # fxhash (unmaintained) — via selectors/scraper
     "RUSTSEC-2025-0119", # number_prefix (unmaintained) — via indicatif
     "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
-    "RUSTSEC-2026-0097", # rand 0.8.5 (unsound w/ custom logger) — via phf_generator, no 0.8.6 fix yet
+    # quick-xml <0.41: parser DoS pair (quadratic dup-attr check; unbounded
+    # ns-decl allocation). Both paths are transitive and build-time only —
+    # ssg parses no untrusted XML at runtime. 0.39.4 arrives via
+    # sitemap-gen→html-generator 0.0.3→mdx-gen 0.0.1→comrak 0.28→syntect→
+    # plist; 0.40.1 via staticdatagen→metadata-gen 0.0.4. Removal plan
+    # (2026-07-04): the staticdatagen 0.0.11 + html-generator 0.0.7 +
+    # mdx-gen 0.0.5 releases staged for v0.0.47 collapse the 0.39 path;
+    # a metadata-gen release with quick-xml ≥0.41 clears the 0.40 path.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
 ]
