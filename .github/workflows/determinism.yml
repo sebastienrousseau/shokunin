@@ -127,6 +127,24 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # TEMPORARY diagnostic (remove once the atom.xml/feed.json
+      # cross-OS divergence — currently under investigation — is
+      # root-caused and fixed): upload the raw feed files so a failing
+      # run's exact bytes can be diffed directly, instead of just the
+      # hash. Cheap (a few KB); rss.xml is included as a known-good
+      # control since it hasn't diverged.
+      - name: Upload raw feed files for diagnosis
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: determinism-raw-${{ matrix.os }}
+          path: |
+            benches/corpus/small/public/atom.xml
+            benches/corpus/small/public/feed.json
+            benches/corpus/small/public/rss.xml
+            benches/corpus/small/public/sbom.cdx.json
+          if-no-files-found: warn
+          retention-days: 7
+
   # ── Cross-OS comparison: ubuntu tree must equal macos tree ──────────
   cross-os-compare:
     name: cross-os hash compare
