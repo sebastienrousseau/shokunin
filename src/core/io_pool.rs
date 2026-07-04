@@ -181,13 +181,7 @@ impl IoPool {
         });
 
         let workers = (0..threads)
-            .map(|i| {
-                let rx = Arc::clone(&rx);
-                let state = Arc::clone(&state);
-                std::thread::Builder::new()
-                    .name(format!("ssg-io-writer-{i}"))
-                    .spawn(move || worker_loop(&rx, &state))
-            })
+            .map(|i| spawn_writer(i, Arc::clone(&rx), Arc::clone(&state)))
             .filter_map(|handle| match handle {
                 Ok(h) => Some(h),
                 Err(e) => {
@@ -379,6 +373,22 @@ impl Drop for IoPool {
     }
 }
 
+/// Spawns one named writer thread, with a fault-injection point so
+/// tests can drive the "no writer threads could be spawned"
+/// degenerate-pool fallback (feature `test-fault-injection`).
+fn spawn_writer(
+    index: usize,
+    rx: Arc<Mutex<Receiver<WriteJob>>>,
+    state: Arc<PoolState>,
+) -> io::Result<JoinHandle<()>> {
+    fail_point!("io_pool::spawn", |_| {
+        Err(io::Error::other("injected: io_pool::spawn"))
+    });
+    std::thread::Builder::new()
+        .name(format!("ssg-io-writer-{index}"))
+        .spawn(move || worker_loop(&rx, &state))
+}
+
 /// Default writer-thread count: half the available cores, floored at
 /// 1 and capped at [`MAX_WRITERS`].
 fn default_writer_threads() -> usize {
@@ -431,7 +441,78 @@ mod tests {
     use rayon::prelude::*;
     use tempfile::tempdir;
 
+    /// Extracts the path from an `SsgError::Io`, `None` otherwise.
+    ///
+    /// Used instead of inline `match … => panic!` so both arms are
+    /// exercised (see `io_error_path_returns_none_for_non_io`).
+    fn io_error_path(err: &SsgError) -> Option<PathBuf> {
+        match err {
+            SsgError::Io { path, .. } => Some(path.clone()),
+            _ => None,
+        }
+    }
+
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn io_error_path_returns_none_for_non_io() {
+        let err = SsgError::Validation {
+            field: "f".to_string(),
+            message: "m".to_string(),
+        };
+        assert!(io_error_path(&err).is_none());
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn default_pool_behaves_like_new() {
+        let pool = IoPool::default();
+        assert!(pool.threads() >= 1);
+        assert!(pool.flush().is_ok());
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn flush_logs_additional_errors_and_returns_first() {
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let bad_a = dir.path().join("no-dir-a").join("a.html");
+        let bad_b = dir.path().join("no-dir-b").join("b.html");
+
+        let pool = IoPool::with_threads(1);
+        pool.write(&bad_a, b"a".to_vec()).unwrap();
+        pool.write(&bad_b, b"b".to_vec()).unwrap();
+
+        // Both writes fail; flush returns the first error and logs
+        // the second (the additional-failure loop body executes).
+        let err = pool.flush().expect_err("flush must fail");
+        let path = io_error_path(&err).expect("must be an Io error");
+        assert!(path == bad_a || path == bad_b);
+
+        // Error buffer is cleared afterwards.
+        assert!(pool.flush().is_ok());
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn drop_without_flush_logs_unobserved_errors() {
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let bad = dir.path().join("missing-dir").join("x.html");
+        {
+            let pool = IoPool::with_threads(1);
+            pool.write(&bad, b"x".to_vec()).unwrap();
+            // Give the worker time to fail the write so the error is
+            // buffered before the drop (drop drains regardless, but
+            // this makes the captured-error path deterministic).
+            while pool.state.lock().pending > 0 {
+                std::thread::yield_now();
+            }
+            // No flush() — Drop must log the unobserved failure.
+        }
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn empty_pool_flush_is_ok() {
         let pool = IoPool::new();
         assert!(pool.flush().is_ok());
@@ -439,6 +520,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn thread_count_is_clamped() {
         assert_eq!(IoPool::with_threads(0).threads(), 1);
         assert_eq!(IoPool::with_threads(100).threads(), MAX_WRITERS);
@@ -447,6 +529,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn concurrent_rayon_producers_all_bytes_correct() {
         let dir = tempdir().unwrap();
         let pool = IoPool::with_threads(3);
@@ -473,6 +556,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn write_error_surfaces_at_flush_and_pool_survives() {
         let dir = tempdir().unwrap();
         let missing = dir.path().join("no-such-subdir").join("x.html");
@@ -480,10 +564,9 @@ mod tests {
         let pool = IoPool::with_threads(2);
         pool.write(&missing, b"x".to_vec()).unwrap(); // enqueue OK
         let err = pool.flush().expect_err("flush must surface the failure");
-        match err {
-            SsgError::Io { path, .. } => assert_eq!(path, missing),
-            other => panic!("expected SsgError::Io, got {other:?}"),
-        }
+        let path = io_error_path(&err)
+            .expect("flush error must be SsgError::Io with a path");
+        assert_eq!(path, missing);
 
         // Error buffer cleared; pool still functional.
         assert!(pool.flush().is_ok());
@@ -498,6 +581,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn unwritable_dir_error_surfaces_at_flush() {
         use std::os::unix::fs::PermissionsExt;
 
@@ -515,6 +599,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn drop_without_flush_completes_queued_writes() {
         let dir = tempdir().unwrap();
         {
@@ -538,6 +623,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
     fn flush_is_reusable_across_batches() {
         let dir = tempdir().unwrap();
         let pool = IoPool::with_threads(2);
@@ -552,5 +638,111 @@ mod tests {
 
         assert_eq!(fs::read_to_string(dir.path().join("a.txt")).unwrap(), "a");
         assert_eq!(fs::read_to_string(dir.path().join("b.txt")).unwrap(), "b");
+    }
+
+    /// Fault-injection tests. Failpoints are process-global, so every
+    /// test here serialises via `serial_test` and restores the
+    /// failpoint with an RAII guard (mirrors `tests/fault_injection.rs`).
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+        use serial_test::serial;
+
+        /// RAII guard that disables a failpoint on drop.
+        struct FailGuard<'a>(&'a str);
+
+        impl Drop for FailGuard<'_> {
+            fn drop(&mut self) {
+                let _ = fail::cfg(self.0, "off");
+            }
+        }
+
+        #[test]
+        #[serial(io_pool_failpoints)]
+        fn injected_write_failure_surfaces_at_flush() {
+            let _guard = FailGuard("io_pool::write");
+            fail::cfg("io_pool::write", "return").expect("activate failpoint");
+
+            let dir = tempdir().unwrap();
+            let pool = IoPool::with_threads(1);
+            pool.write(dir.path().join("x.html"), b"x".to_vec())
+                .unwrap();
+            let err = pool.flush().expect_err("injected write must fail");
+            assert!(
+                format!("{err}").contains("injected: io_pool::write"),
+                "got: {err}"
+            );
+        }
+
+        #[test]
+        #[serial(io_pool_failpoints)]
+        fn spawn_failure_falls_back_to_inline_writes() {
+            crate::test_support::init_logger();
+            let dir = tempdir().unwrap();
+
+            let pool = {
+                let _guard = FailGuard("io_pool::spawn");
+                fail::cfg("io_pool::spawn", "return")
+                    .expect("activate failpoint");
+                IoPool::with_threads(2)
+            };
+
+            // No writer threads: the pool degrades to inline writes.
+            assert_eq!(pool.threads(), 0);
+            pool.write(dir.path().join("inline.html"), b"i".to_vec())
+                .unwrap();
+            assert_eq!(pool.completed_writes(), 1);
+            assert_eq!(
+                fs::read_to_string(dir.path().join("inline.html")).unwrap(),
+                "i"
+            );
+
+            // An inline write that fails surfaces immediately.
+            let err = pool
+                .write(dir.path().join("no-dir").join("y.html"), b"y".to_vec())
+                .expect_err("inline write into missing dir must fail");
+            assert!(io_error_path(&err).is_some());
+
+            assert!(pool.flush().is_ok());
+        }
+
+        #[test]
+        #[serial(io_pool_failpoints)]
+        fn write_after_workers_died_returns_typed_error() {
+            crate::test_support::init_logger();
+            let dir = tempdir().unwrap();
+            let pool = IoPool::with_threads(1);
+
+            {
+                let _guard = FailGuard("io_pool::write");
+                fail::cfg("io_pool::write", "panic")
+                    .expect("activate failpoint");
+                // The single worker dequeues this job and panics,
+                // dropping the channel receiver.
+                pool.write(dir.path().join("doomed.html"), b"d".to_vec())
+                    .unwrap();
+
+                // Once the receiver is gone, send() fails and write()
+                // surfaces the disconnected-channel error.
+                let err = loop {
+                    match pool
+                        .write(dir.path().join("after.html"), b"a".to_vec())
+                    {
+                        Err(e) => break e,
+                        Ok(()) => std::thread::sleep(
+                            std::time::Duration::from_millis(1),
+                        ),
+                    }
+                };
+                assert!(
+                    format!("{err}").contains("writer threads terminated"),
+                    "got: {err}"
+                );
+            }
+            // Drop joins the panicked worker (join().is_err() branch).
+            // Never call flush() here: the panicked job left
+            // `pending > 0` permanently.
+            drop(pool);
+        }
     }
 }

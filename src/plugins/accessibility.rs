@@ -165,23 +165,14 @@ impl Plugin for AccessibilityPlugin {
 
         // Write the per-page issue report.
         let report_path = ctx.site_dir.join("accessibility-report.json");
-        let json = serde_json::to_string_pretty(&report).map_err(|e| {
-            SsgError::Io {
-                path: report_path.clone(),
-                source: std::io::Error::other(e),
-            }
-        })?;
+        let json = to_pretty_json(&report, &report_path)?;
         fs::write(&report_path, json).with_path(&report_path)?;
 
         // Write the WCAG 2.2 compliance matrix.
         let compliance =
             build_compliance_report(html_files.len(), &failed_criteria);
         let matrix_path = ctx.site_dir.join("wcag-compliance.json");
-        let json_compliance = serde_json::to_string_pretty(&compliance)
-            .map_err(|e| SsgError::Io {
-                path: matrix_path.clone(),
-                source: std::io::Error::other(e),
-            })?;
+        let json_compliance = to_pretty_json(&compliance, &matrix_path)?;
         fs::write(&matrix_path, json_compliance).with_path(&matrix_path)?;
 
         if report.total_issues > 0 {
@@ -203,6 +194,25 @@ impl Plugin for AccessibilityPlugin {
 
         Ok(())
     }
+}
+
+/// Serialises a report artifact as pretty-printed JSON, mapping any
+/// serialisation failure onto [`SsgError::Io`] keyed by the artifact
+/// path it was destined for.
+fn to_pretty_json<T: Serialize>(
+    value: &T,
+    path: &std::path::Path,
+) -> Result<String, SsgError> {
+    fail_point!("accessibility::to-json", |_| {
+        Err(SsgError::Io {
+            path: path.to_path_buf(),
+            source: std::io::Error::other("injected: accessibility::to-json"),
+        })
+    });
+    serde_json::to_string_pretty(value).map_err(|e| SsgError::Io {
+        path: path.to_path_buf(),
+        source: std::io::Error::other(e),
+    })
 }
 
 /// Constructs the WCAG 2.2 compliance matrix. Marks `all_pages_pass=false`
@@ -919,8 +929,10 @@ mod tests {
 
     #[test]
     fn test_img_alt_present() {
-        let html = r#"<html lang="en"><head></head><body><main><img src="photo.jpg" alt="A photo"></main></body></html>"#;
+        let html = r#"<html lang="en"><head></head><body><main><img src="photo.jpg" alt="A photo"><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
+        // The seeded <marquee> (2.3.1) keeps the issue list non-empty
+        // so the criterion predicate actually executes.
         assert!(!issues.iter().any(|i| i.criterion == "1.1.1"));
     }
 
@@ -929,7 +941,7 @@ mod tests {
         // Regression: a `>` inside an SVG data URL in `src` previously
         // truncated the tag and the parser missed the `alt` attribute,
         // raising a false `<img> missing alt text: (no src)` issue.
-        let html = r#"<html lang="en"><head></head><body><main><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10'/></svg>" alt="Banner" width="10" height="10"></main></body></html>"#;
+        let html = r#"<html lang="en"><head></head><body><main><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect width='10' height='10'/></svg>" alt="Banner" width="10" height="10"><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
         assert!(
             !issues.iter().any(|i| i.criterion == "1.1.1"),
@@ -967,7 +979,7 @@ mod tests {
 
     #[test]
     fn test_nav_with_label_passes() {
-        let html = r#"<html lang="en"><head></head><body><nav aria-label="Main"></nav><main></main></body></html>"#;
+        let html = r#"<html lang="en"><head></head><body><nav aria-label="Main"></nav><main><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
         assert!(!issues.iter().any(|i| i.message.contains("aria-label")));
     }
@@ -1002,6 +1014,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
     fn after_compile_clean_pages_logs_all_passed() {
         // Line 108: the `else` branch logging "All N pages passed".
         // Requires a site with at least one clean page.
@@ -1047,6 +1060,7 @@ mod tests {
     fn check_link_text_empty_anchor_with_aria_label_passes() {
         let html = r#"<html lang="en"><head></head><body><main>
             <a href="/page" aria-label="Read more"></a>
+            <marquee>seed</marquee>
         </main></body></html>"#;
         let issues = check_page(html);
         assert!(!issues.iter().any(|i| i.criterion == "2.4.4"));
@@ -1056,6 +1070,7 @@ mod tests {
     fn check_link_text_empty_anchor_with_title_passes() {
         let html = r#"<html lang="en"><head></head><body><main>
             <a href="/page" title="Read more"></a>
+            <marquee>seed</marquee>
         </main></body></html>"#;
         let issues = check_page(html);
         assert!(!issues.iter().any(|i| i.criterion == "2.4.4"));
@@ -1173,6 +1188,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
     fn test_plugin_writes_report() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -1215,7 +1231,7 @@ mod tests {
     fn test_target_size_compliant_passes() {
         let html = r#"<html lang="en"><head><style>
             button { width: 32px; height: 32px; }
-        </style></head><body><main></main></body></html>"#;
+        </style></head><body><main><marquee>seed</marquee></main></body></html>"#;
         let issues: Vec<_> = check_page(html)
             .into_iter()
             .filter(|i| i.criterion == "2.5.8")
@@ -1242,7 +1258,7 @@ mod tests {
     fn test_focus_appearance_with_box_shadow_passes() {
         let html = r#"<html lang="en"><head><style>
             a:focus { outline: none; box-shadow: 0 0 0 2px blue; }
-        </style></head><body><main></main></body></html>"#;
+        </style></head><body><main><marquee>seed</marquee></main></body></html>"#;
         let issues: Vec<_> = check_page(html)
             .into_iter()
             .filter(|i| i.criterion == "2.4.13")
@@ -1271,6 +1287,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
     fn test_compliance_matrix_emitted() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -1315,7 +1332,7 @@ mod tests {
         // triggered a false 2.5.8 violation.
         let html = r#"<html lang="en"><head><style>
             button { /* width: 10px */ width: 32px; height: 32px; }
-        </style></head><body><main></main></body></html>"#;
+        </style></head><body><main><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
         assert!(
             !issues.iter().any(|i| i.criterion == "2.5.8"),
@@ -1330,7 +1347,7 @@ mod tests {
         let html = r#"<html lang="en"><head><style>
             @media print { button { width: 10px; height: 10px; } }
             button { width: 32px; height: 32px; }
-        </style></head><body><main></main></body></html>"#;
+        </style></head><body><main><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
         assert!(
             !issues.iter().any(|i| i.criterion == "2.5.8"),
@@ -1362,7 +1379,7 @@ mod tests {
         let html = r#"<html lang="en"><head><style>
             @supports (display: grid) { a:focus { outline: none; } }
             a:focus { outline: 2px solid blue; }
-        </style></head><body><main></main></body></html>"#;
+        </style></head><body><main><marquee>seed</marquee></main></body></html>"#;
         let issues = check_page(html);
         assert!(
             !issues.iter().any(|i| i.criterion == "2.4.13"),
@@ -1422,6 +1439,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
     fn after_compile_write_failure_returns_io_error() {
         let dir = tempdir().unwrap();
 
@@ -1477,5 +1495,276 @@ mod tests {
         let json = r#"{"pages_scanned":0,"total_issues":0,"pages":[]}"#;
         let r: AccessibilityReport = serde_json::from_str(json).unwrap();
         assert_eq!(r.wcag_version, "2.2");
+    }
+
+    // ── to_pretty_json ──────────────────────────────────────────────
+
+    #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
+    fn to_pretty_json_maps_serde_failure_to_io_error() {
+        // JSON object keys must be strings — a tuple-keyed map makes
+        // `serde_json::to_string_pretty` fail, driving the error arm.
+        let bad: std::collections::BTreeMap<(u8, u8), u8> =
+            std::iter::once(((1, 2), 3)).collect();
+        let err = to_pretty_json(&bad, Path::new("artifact.json"))
+            .expect_err("non-string map keys must fail serialisation");
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == Path::new("artifact.json"))
+        );
+    }
+
+    #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
+    fn after_compile_matrix_write_failure_returns_io_error() {
+        // The issue report writes fine, but `wcag-compliance.json`
+        // already exists as a *directory* so the second write fails.
+        let dir = tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("wcag-compliance.json")).unwrap();
+
+        let ctx = test_ctx(dir.path());
+        let err = AccessibilityPlugin.after_compile(&ctx).unwrap_err();
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == &dir.path().join("wcag-compliance.json"))
+        );
+        assert!(
+            dir.path().join("accessibility-report.json").exists(),
+            "issue report must have been written before the failure"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel(accessibility_failpoint)]
+    fn after_compile_unreadable_page_returns_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let page = dir.path().join("index.html");
+        fs::write(&page, "<html lang=\"en\"><body></body></html>").unwrap();
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = test_ctx(dir.path());
+        let res = AccessibilityPlugin.after_compile(&ctx);
+
+        // Restore permissions before asserting so cleanup always works.
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o644)).unwrap();
+
+        let err = res.expect_err("unreadable page must abort the scan");
+        assert!(matches!(err, SsgError::Io { ref path, .. } if path == &page));
+    }
+
+    // ── CSS helper internals ────────────────────────────────────────
+
+    #[test]
+    fn first_px_value_returns_none_for_non_numeric_value() {
+        assert_eq!(first_px_value("width:auto;", "width"), None);
+    }
+
+    #[test]
+    fn first_px_value_returns_none_for_non_px_unit() {
+        assert_eq!(first_px_value("width:10em;", "width"), None);
+    }
+
+    #[test]
+    fn extract_all_style_blocks_ignores_unterminated_block() {
+        let html = "<html><head><style>button{width:8px}";
+        assert!(extract_all_style_blocks(html).is_empty());
+    }
+
+    #[test]
+    fn strip_at_rules_removes_bare_at_rule_with_semicolon() {
+        let out = strip_at_rules("@import url(x.css);a{color:red}");
+        assert!(!out.contains("@import"), "got: {out}");
+        assert!(out.contains("a{color:red}"));
+    }
+
+    #[test]
+    fn strip_at_rules_stops_at_unterminated_preamble() {
+        // `@media (min-width: 600px` runs to EOF with neither `{` nor
+        // `;` — the scanner must bail without panicking.
+        let out = strip_at_rules("a{x:y}@media (min-width: 600px");
+        assert!(out.contains("a{x:y}"));
+        assert!(!out.contains("@media"));
+    }
+
+    #[test]
+    fn parse_top_level_rules_handles_nested_braces_in_body() {
+        // Defensive brace balancing: a nested `{}` inside a rule body
+        // must not truncate the body early.
+        let rules = parse_top_level_rules("s{a{b}c}");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].0, "s");
+        assert_eq!(rules[0].1, "a{b}c");
+    }
+
+    // ── alt-attribute helpers ───────────────────────────────────────
+
+    #[test]
+    fn has_empty_alt_detects_bare_alt_attribute() {
+        // `<img alt>` — valueless alt is "present" but empty.
+        assert!(has_empty_alt("<img src=x alt>"));
+        assert!(has_empty_alt("<img alt src=x>"));
+        // Truncated tag ending exactly in ` alt`.
+        assert!(has_empty_alt("<img src=x alt"));
+    }
+
+    #[test]
+    fn has_empty_alt_detects_unquoted_missing_value() {
+        // `alt=` followed by neither quote style — treated as empty.
+        assert!(has_empty_alt("<img alt=>"));
+        // A single-quoted non-empty value is NOT empty.
+        assert!(!has_empty_alt("<img alt='photo'>"));
+    }
+
+    #[test]
+    fn is_decorative_img_covers_all_role_spellings() {
+        assert!(is_decorative_img("<img role=\"presentation\">"));
+        assert!(is_decorative_img("<img role=\"none\">"));
+        assert!(is_decorative_img("<img role='presentation'>"));
+        assert!(is_decorative_img("<img role='none'>"));
+        assert!(is_decorative_img("<img role=presentation>"));
+        assert!(is_decorative_img("<img role=none>"));
+        assert!(!is_decorative_img("<img role=\"img\">"));
+    }
+
+    #[test]
+    fn find_tag_end_without_closing_bracket_returns_len() {
+        let html = "<img src=\"unterminated";
+        assert_eq!(find_tag_end(html, 0), html.len());
+    }
+
+    // ── check_img_alt edge shapes ───────────────────────────────────
+
+    #[test]
+    fn empty_alt_without_decorative_role_is_flagged() {
+        let html = r#"<html lang="en"><body><main><img src="x.png" alt=""></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            issues.iter().any(|i| i.criterion == "1.1.1"),
+            "empty alt without decorative role must flag 1.1.1: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn empty_alt_with_decorative_role_passes() {
+        let html = r#"<html lang="en"><body><main><img src="x.png" alt="" role="presentation"><marquee>seed</marquee></main></body></html>"#;
+        let issues = check_page(html);
+        assert!(
+            !issues.iter().any(|i| i.criterion == "1.1.1"),
+            "decorative empty-alt image must not flag 1.1.1: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn missing_alt_and_missing_src_reports_no_src_placeholder() {
+        let html = r#"<html lang="en"><body><main><img></main></body></html>"#;
+        let issues = check_page(html);
+        let issue = issues
+            .iter()
+            .find(|i| i.criterion == "1.1.1")
+            .expect("img without alt must be flagged");
+        assert!(
+            issue.message.contains("(no src)"),
+            "missing src should use the placeholder: {}",
+            issue.message
+        );
+    }
+
+    // ── fragment / malformed input shapes ───────────────────────────
+
+    #[test]
+    fn check_html_lang_skips_fragment_without_html_tag() {
+        let mut issues = Vec::new();
+        check_html_lang("<p>fragment only</p>", &mut issues);
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn check_link_text_tolerates_unterminated_anchor() {
+        // `<a ` with no `>` before EOF — inner content can't be found,
+        // so no issue is raised and the scanner terminates.
+        let mut issues = Vec::new();
+        check_link_text("<a href=/x", &mut issues);
+        assert!(issues.is_empty());
+    }
+
+    // ── strip_non_content_blocks ────────────────────────────────────
+
+    #[test]
+    fn strip_non_content_blocks_removes_html_comments() {
+        let out = strip_non_content_blocks("<body><!-- <main> --></body>");
+        assert!(!out.contains("<main>"));
+        assert!(out.contains("<body>"));
+    }
+
+    #[test]
+    fn strip_non_content_blocks_tolerates_unterminated_comment() {
+        let out = strip_non_content_blocks("<body><!-- no close");
+        assert!(out.contains("<!--"), "unterminated comment kept: {out}");
+    }
+
+    #[test]
+    fn strip_non_content_blocks_tolerates_unterminated_style() {
+        let out = strip_non_content_blocks("<body><style>a{}");
+        assert!(out.contains("<style>"), "unterminated style kept: {out}");
+    }
+
+    #[test]
+    fn strip_non_content_blocks_tolerates_unterminated_script() {
+        let out = strip_non_content_blocks("<body><script>let x=1;");
+        assert!(out.contains("<script>"), "unterminated script kept: {out}");
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard<'a>(&'a str);
+
+    impl Drop for FailGuard<'_> {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn ctx_for(dir: &Path) -> PluginContext {
+        PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            dir,
+            Path::new("templates"),
+        )
+    }
+
+    #[test]
+    #[serial_test::serial(accessibility_failpoint)]
+    fn report_serialisation_failure_aborts_after_compile() {
+        let _guard = FailGuard("accessibility::to-json");
+        fail::cfg("accessibility::to-json", "return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let err = AccessibilityPlugin
+            .after_compile(&ctx_for(dir.path()))
+            .expect_err("first serialisation must fail");
+        assert!(err.to_string().contains("accessibility-report.json"));
+    }
+
+    #[test]
+    #[serial_test::serial(accessibility_failpoint)]
+    fn matrix_serialisation_failure_aborts_after_compile() {
+        // First call (issue report) succeeds, second (matrix) fails.
+        let _guard = FailGuard("accessibility::to-json");
+        fail::cfg("accessibility::to-json", "1*off->1*return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let err = AccessibilityPlugin
+            .after_compile(&ctx_for(dir.path()))
+            .expect_err("second serialisation must fail");
+        assert!(err.to_string().contains("wcag-compliance.json"));
     }
 }

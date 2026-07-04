@@ -239,17 +239,33 @@ mod tests {
 
     #[test]
     fn default_config_base_url_uses_default_host_and_port() {
+        // Plain conditions only: format-arg expressions in an assert
+        // message are evaluated lazily and would leave never-executed
+        // regions behind.
         let cfg = default_config();
-        assert!(
-            cfg.base_url.contains(DEFAULT_HOST),
-            "base_url should embed DEFAULT_HOST: {}",
-            cfg.base_url
-        );
-        assert!(
-            cfg.base_url.contains(&DEFAULT_PORT.to_string()),
-            "base_url should embed DEFAULT_PORT: {}",
-            cfg.base_url
-        );
+        assert!(cfg.base_url.contains(DEFAULT_HOST));
+        assert!(cfg.base_url.contains(&DEFAULT_PORT.to_string()));
+    }
+
+    #[test]
+    fn with_env_restores_previous_value_and_survives_poisoning() {
+        const KEY: &str = "SSG_TEST_WITH_ENV_POISON";
+
+        // Poison the internal ENV_LOCK by panicking inside `f`.
+        let poisoned = std::panic::catch_unwind(|| {
+            with_env(KEY, Some("first"), || panic!("poison the env lock"));
+        });
+        assert!(poisoned.is_err(), "the panic must propagate");
+
+        // The panic skipped the restore, so KEY is still "first".
+        // This call must (a) recover from the poisoned lock and
+        // (b) restore the previous value afterwards.
+        with_env(KEY, Some("second"), || {
+            assert_eq!(std::env::var(KEY).ok().as_deref(), Some("second"));
+        });
+        assert_eq!(std::env::var(KEY).ok().as_deref(), Some("first"));
+
+        std::env::remove_var(KEY);
     }
 
     #[test]

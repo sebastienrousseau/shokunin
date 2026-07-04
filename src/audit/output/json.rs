@@ -31,10 +31,22 @@ use crate::error::SsgError;
 /// assert!(s.contains("\"gates\""));
 /// ```
 pub fn format(report: &AuditReport) -> Result<String, SsgError> {
-    serde_json::to_string_pretty(report).map_err(|e| SsgError::Io {
+    fail_point!("audit::json-format", |_| {
+        Err(SsgError::Io {
+            path: std::path::PathBuf::from("<audit-report>"),
+            source: std::io::Error::other("injected: audit::json-format"),
+        })
+    });
+    serde_json::to_string_pretty(report).map_err(serialize_error)
+}
+
+/// Wraps a `serde_json` serialisation failure in [`SsgError::Io`]
+/// against the synthetic `<audit-report>` path.
+fn serialize_error(e: serde_json::Error) -> SsgError {
+    SsgError::Io {
         path: std::path::PathBuf::from("<audit-report>"),
         source: std::io::Error::other(e),
-    })
+    }
 }
 
 #[cfg(test)]
@@ -67,6 +79,19 @@ mod tests {
         assert_eq!(v["gates"][0]["findings"][0]["code"], "X");
         assert_eq!(v["gates"][0]["findings"][0]["path"], "a.html");
         assert_eq!(v["gates"][0]["findings"][0]["severity"], "warn");
+    }
+
+    #[test]
+    fn serialize_error_maps_to_io_variant() {
+        let e = serde_json::from_str::<serde_json::Value>("{")
+            .expect_err("truncated JSON must fail");
+        match serialize_error(e) {
+            SsgError::Io { path, source } => {
+                assert_eq!(path, std::path::PathBuf::from("<audit-report>"));
+                assert_eq!(source.kind(), std::io::ErrorKind::Other);
+            }
+            other => panic!("expected SsgError::Io, got {other:?}"),
+        }
     }
 
     #[test]

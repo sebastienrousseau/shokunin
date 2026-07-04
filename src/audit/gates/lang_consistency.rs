@@ -224,7 +224,7 @@ mod tests {
             .filter(|x| x.code.as_deref() == Some("LANG-MISMATCH"))
             .collect();
         assert_eq!(m.len(), 1, "expected one mismatch: {f:?}");
-        assert!(matches!(m[0].severity, Severity::Warn));
+        assert_eq!(m[0].severity, Severity::Warn);
         assert!(m[0].message.contains("en-GB"));
         assert!(m[0].message.contains("hi"));
     }
@@ -321,6 +321,64 @@ mod tests {
         assert_eq!(base_lang("hi"), "hi");
         assert_eq!(base_lang(" fr-CA "), "fr");
         assert_eq!(base_lang(""), "");
+    }
+
+    #[test]
+    fn html_lang_with_empty_base_subtag_is_skipped() {
+        // `lang="-GB"` yields an empty primary subtag; the page is
+        // skipped rather than compared against a meaningless base.
+        let f = LangConsistencyGate
+            .run(&site(&page("\"-GB\"", "en")), &AuditOptions::default());
+        assert!(f.is_empty(), "empty base subtag must skip: {f:?}");
+    }
+
+    #[test]
+    fn non_string_in_language_value_is_ignored() {
+        let html = "<!doctype html><html lang=\"hi\"><head>\
+             <script type=\"application/ld+json\">\
+             {\"@type\":\"WebPage\",\"inLanguage\":42}</script>\
+             </head><body></body></html>";
+        let f = LangConsistencyGate.run(&site(html), &AuditOptions::default());
+        assert!(f.is_empty(), "numeric inLanguage is ignored: {f:?}");
+    }
+
+    #[test]
+    fn unreadable_html_file_is_skipped() {
+        let tmp = tempfile::tempdir().unwrap();
+        let bogus = tmp.path().join("ghost.html");
+        let s = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: vec![bogus],
+        };
+        std::mem::forget(tmp);
+        let f = LangConsistencyGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty());
+    }
+
+    #[test]
+    fn fragment_without_html_tag_yields_no_lang() {
+        assert_eq!(extract_html_lang("<body>no html tag</body>"), None);
+    }
+
+    #[test]
+    fn non_jsonld_script_blocks_are_ignored() {
+        let blocks = extract_jsonld_blocks(
+            "<script>var x = 1;</script>\
+             <script type=\"application/ld+json\">{}</script>",
+        );
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0], "{}");
+    }
+
+    #[test]
+    fn language_object_without_name_is_ignored() {
+        let html = "<!doctype html><html lang=\"hi\"><head>\
+             <script type=\"application/ld+json\">\
+             {\"@type\":\"WebPage\",\"inLanguage\":\
+             {\"@type\":\"Language\"}}</script>\
+             </head><body></body></html>";
+        let f = LangConsistencyGate.run(&site(html), &AuditOptions::default());
+        assert!(f.is_empty(), "nameless Language object is ignored: {f:?}");
     }
 
     #[test]

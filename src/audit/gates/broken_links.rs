@@ -149,15 +149,12 @@ fn internal_target_exists(
     if candidate.exists() {
         return true;
     }
-    if candidate.is_dir() && candidate.join("index.html").exists() {
-        return true;
-    }
-    let with_index = candidate.join("index.html");
-    if with_index.exists() {
-        return true;
-    }
-    // /foo (no extension) -> /foo.html or /foo/index.html
-    let mut html_candidate = candidate.clone();
+    // NOTE: probing `<candidate>/index.html` here would be dead code —
+    // an existing `index.html` child implies `candidate` is an
+    // existing, traversable directory, which `exists()` above already
+    // returned true for.
+    // /foo (no extension) -> /foo.html
+    let mut html_candidate = candidate;
     if html_candidate.extension().is_none() {
         let _ = html_candidate.set_extension("html");
         if html_candidate.exists() {
@@ -178,9 +175,8 @@ mod tests {
         let mut files = Vec::new();
         for (rel, html) in pages {
             let p = root.join(rel);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(rel) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, html).unwrap();
             files.push(p);
         }
@@ -196,7 +192,7 @@ mod tests {
         let pages = &[
             (
                 "index.html",
-                r#"<html><body><a href="/about/">about</a></body></html>"#,
+                r#"<html><body><a href="/about/">about</a><a href="https://ext.example/">ext</a></body></html>"#,
             ),
             ("about/index.html", "<html><body>about</body></html>"),
         ];
@@ -207,10 +203,8 @@ mod tests {
                 ..AuditOptions::default()
             },
         );
-        let errors: Vec<_> = f
-            .iter()
-            .filter(|x| matches!(x.severity, Severity::Error))
-            .collect();
+        let errors: Vec<_> =
+            f.iter().filter(|x| x.severity == Severity::Error).collect();
         assert!(errors.is_empty(), "got {errors:?}");
     }
 
@@ -261,6 +255,7 @@ mod tests {
                 <a href="javascript:void(0)">j</a>
                 <a href="data:image/png;base64,xx">d</a>
                 <a href="">e</a>
+                <a href="https://ext.example/">keeps f non-empty</a>
             </body></html>"##,
         )];
         let f = BrokenLinksGate.run(
@@ -318,7 +313,7 @@ mod tests {
         let pages = &[
             (
                 "index.html",
-                r#"<html><body><a href="about.html?x=1#sec">a</a></body></html>"#,
+                r#"<html><body><a href="about.html?x=1#sec">a</a><a href="https://ext.example/">ext</a></body></html>"#,
             ),
             ("about.html", "<html></html>"),
         ];
@@ -341,7 +336,7 @@ mod tests {
         let pages = &[
             (
                 "index.html",
-                r#"<html><body><a href="/about">a</a></body></html>"#,
+                r#"<html><body><a href="/about">a</a><a href="https://ext.example/">ext</a></body></html>"#,
             ),
             ("about.html", "<html></html>"),
         ];
@@ -361,9 +356,11 @@ mod tests {
 
     #[test]
     fn no_skip_network_does_not_emit_external_skip_finding() {
+        // The broken internal link keeps `f` non-empty so the
+        // no-external-skip predicate actually evaluates.
         let pages = &[(
             "index.html",
-            r#"<html><body><a href="https://example.com">x</a></body></html>"#,
+            r#"<html><body><a href="https://example.com">x</a><a href="/missing/">m</a></body></html>"#,
         )];
         let f = BrokenLinksGate.run(
             &site_with(pages),
@@ -416,7 +413,8 @@ mod tests {
                 "<html><body><script>\nvar html='';\
              html+='<a class=\"ssg-result\" href=\"'+esc(lp+e.url)+'\">'\
              +'<div>x</div></a>';\n</script>\
-             <a href=\"/exists/\">real</a></body></html>",
+             <a href=\"/exists/\">real</a>\
+             <a href=\"https://ext.example/\">ext</a></body></html>",
             ),
             ("exists/index.html", "<html><body>t</body></html>"),
         ];
@@ -465,7 +463,8 @@ mod tests {
             (
                 "index.html",
                 "<html><body><img src=\"data:image/svg+xml;utf8,<svg viewBox='0 0 1 1'></svg>\" alt=\"x\">\
-                 <a href=\"/ok/\">ok</a></body></html>",
+                 <a href=\"/ok/\">ok</a>\
+                 <a href=\"https://ext.example/\">ext</a></body></html>",
             ),
             ("ok/index.html", "<html><body>t</body></html>"),
         ];
@@ -481,6 +480,15 @@ mod tests {
                 .all(|x| x.code.as_deref() != Some("LINK-INTERNAL-MISSING")),
             "quoted `>` must not truncate tags: {f:?}"
         );
+    }
+
+    #[test]
+    fn tags_without_target_attribute_yield_no_links() {
+        // <a> without href / <img> without src are skipped.
+        let targets = extract_link_targets(
+            r#"<a id="top">anchor</a><img alt="deco"><a href="/x">x</a>"#,
+        );
+        assert_eq!(targets, vec!["/x".to_string()]);
     }
 
     #[test]
@@ -513,7 +521,7 @@ mod tests {
 
     #[test]
     fn internal_target_exists_dir_with_index_html() {
-        // Covers line 150 — `candidate.is_dir() && index.html exists`.
+        // A directory target resolves via `candidate.exists()`.
         let tmp = tempfile::tempdir().unwrap();
         let sub = tmp.path().join("docs");
         std::fs::create_dir_all(&sub).unwrap();
@@ -522,19 +530,23 @@ mod tests {
     }
 
     #[test]
-    fn internal_target_exists_via_with_index_branch() {
-        // Covers line 154 — `with_index.exists()` arm. The candidate
-        // doesn't itself exist but `<candidate>/index.html` does and
-        // the dir was created.
+    fn internal_target_exists_via_trailing_slash_dir() {
+        // Trailing-slash directory hrefs resolve via `exists()` too.
         let tmp = tempfile::tempdir().unwrap();
         let sub = tmp.path().join("section");
         std::fs::create_dir_all(&sub).unwrap();
         std::fs::write(sub.join("index.html"), "<html/>").unwrap();
-        // Note: this branch fires when candidate is a directory that
-        // exists — but we cover the second `with_index.exists()` path
-        // when the candidate string isn't itself an existing dir but
-        // the index variant does. To reliably reach line 154 we
-        // construct a non-extension href.
         assert!(internal_target_exists(tmp.path(), tmp.path(), "/section/"));
+    }
+
+    #[test]
+    fn internal_target_with_extension_and_missing_is_false() {
+        // Extension present: the `.html` fallback must not engage.
+        let tmp = tempfile::tempdir().unwrap();
+        assert!(!internal_target_exists(
+            tmp.path(),
+            tmp.path(),
+            "/ghost.png"
+        ));
     }
 }

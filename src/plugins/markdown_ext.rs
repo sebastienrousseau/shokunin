@@ -716,7 +716,9 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn plugin_transforms_markdown_files_in_place() {
+        crate::test_support::init_logger();
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
@@ -854,5 +856,115 @@ mod tests {
             ),
             "![alt](data:image/png;base64,123)"
         );
+    }
+
+    #[test]
+    fn split_frontmatter_unterminated_fence_treats_all_as_body() {
+        // Opening `---\n` with no closing fence at all: both `find`
+        // branches miss and the whole input is the body.
+        let input = "---\ntitle: broken frontmatter with no closing fence";
+        let (fm, body) = split_frontmatter(input);
+        assert_eq!(fm, "");
+        assert_eq!(body, input);
+    }
+
+    #[test]
+    fn expand_gfm_without_trailing_newline_pops_added_newline() {
+        // The line-walk emits a trailing '\n'; when the source body has
+        // none, expand_gfm must pop it to stay byte-faithful.
+        let out = expand_gfm("~~a~~", None);
+        assert_eq!(out, "<del>a</del>");
+    }
+
+    #[test]
+    fn is_task_list_line_rejects_malformed_checkbox_syntax() {
+        // No space after the bullet.
+        assert!(!is_task_list_line("-[ ] task"));
+        // Invalid checkbox state character.
+        assert!(!is_task_list_line("- [y] task"));
+        // Missing closing bracket.
+        assert!(!is_task_list_line("- [x} task"));
+        // No space after the checkbox.
+        assert!(!is_task_list_line("- [x]task"));
+    }
+
+    #[test]
+    fn apply_strikethrough_skips_code_span_inside_strike_content() {
+        // The closing-delimiter scan must jump over inline code spans
+        // between the opening and closing `~~`.
+        assert_eq!(
+            apply_strikethrough("~~has `tick` inside~~"),
+            "<del>has `tick` inside</del>"
+        );
+    }
+
+    #[test]
+    fn rewrite_html_images_unterminated_src_quote_left_unchanged() {
+        // src attribute opened but never closed before `>`: the value
+        // scan finds no closing quote and the tag is left as-is.
+        let input = "<img src=\"unterminated.png>";
+        assert_eq!(rewrite_html_images(input, "https://cdn/"), input);
+    }
+
+    #[test]
+    fn rewrite_html_images_without_src_attribute_left_unchanged() {
+        let input = "<img alt=\"no source here\">";
+        assert_eq!(rewrite_html_images(input, "https://cdn/"), input);
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::{Plugin, PluginContext};
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop (mirrors the
+    /// convention in `tests/fault_injection.rs`).
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn before_compile_read_failpoint_propagates() {
+        let _guard = FailGuard("markdown_ext::read");
+        fail::cfg("markdown_ext::read", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().to_path_buf();
+        fs::write(content.join("post.md"), "# Hi").unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let err = MarkdownExtPlugin
+            .before_compile(&ctx)
+            .expect_err("injected read failure must propagate");
+        assert!(format!("{err:?}").contains("injected: markdown_ext::read"));
+    }
+
+    #[test]
+    #[serial]
+    fn before_compile_write_failpoint_propagates() {
+        let _guard = FailGuard("markdown_ext::write");
+        fail::cfg("markdown_ext::write", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().to_path_buf();
+        // Content that expand_gfm rewrites, so the write site is reached.
+        fs::write(content.join("post.md"), "~~old~~ new\n").unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let err = MarkdownExtPlugin
+            .before_compile(&ctx)
+            .expect_err("injected write failure must propagate");
+        assert!(format!("{err:?}").contains("injected: markdown_ext::write"));
     }
 }

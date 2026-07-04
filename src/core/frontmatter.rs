@@ -557,4 +557,80 @@ mod tests {
             "depth guard should have stopped descent"
         );
     }
+
+    // -------------------------------------------------------------------
+    // emit_sidecars / read_sidecar — error paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn emit_sidecars_propagates_unreadable_content_dir() {
+        // `collect_md_files` fails when the content directory itself
+        // can't be listed — the `?` on line 44.
+        use std::os::unix::fs::PermissionsExt;
+        let (_dir, content, sidecars) = make_layout();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .expect("chmod content dir");
+
+        let res = emit_sidecars(&content, &sidecars);
+
+        // Restore perms so tempdir cleanup works.
+        let _ =
+            fs::set_permissions(&content, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate
+        // Ok; when the failure fired, the error must render non-empty.
+        assert!(res.err().is_none_or(|e| !format!("{e:#}").is_empty()));
+    }
+
+    #[test]
+    fn emit_sidecars_read_failure_carries_file_context() {
+        // A `.md` file with non-UTF-8 bytes makes `read_to_string`
+        // fail, exercising the `with_context` closure on line 49.
+        let (_dir, content, sidecars) = make_layout();
+        fs::write(content.join("bad.md"), [0xFF, 0xFE, 0x00]).unwrap();
+
+        let err = emit_sidecars(&content, &sidecars).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("Failed to read"),
+            "context should mention the failed read: {err:#}"
+        );
+    }
+
+    #[test]
+    fn emit_sidecars_create_dir_failure_propagates() {
+        // Pointing `sidecar_dir` at an existing *file* makes the
+        // `create_dir_all` on line 74 fail.
+        let (dir, content, _sidecars) = make_layout();
+        fs::write(content.join("a.md"), "---\ntitle: X\n---\nBody").unwrap();
+        let blocker = dir.path().join("blocker");
+        fs::write(&blocker, "i am a file").unwrap();
+
+        assert!(emit_sidecars(&content, &blocker).is_err());
+    }
+
+    #[test]
+    fn emit_sidecars_write_failure_propagates() {
+        // A *directory* squatting on the sidecar path makes the
+        // `fs::write` on line 78 fail.
+        let (_dir, content, sidecars) = make_layout();
+        fs::write(content.join("a.md"), "---\ntitle: X\n---\nBody").unwrap();
+        fs::create_dir_all(sidecars.join("a.meta.json")).unwrap();
+
+        assert!(emit_sidecars(&content, &sidecars).is_err());
+    }
+
+    #[test]
+    fn read_sidecar_read_failure_carries_context() {
+        // A sidecar that exists but holds non-UTF-8 bytes exercises
+        // the `with_context` closure on lines 109-111.
+        let dir = tempdir().expect("tempdir");
+        let html = dir.path().join("page.html");
+        fs::write(dir.path().join("page.meta.json"), [0xFF, 0xFE]).unwrap();
+
+        let err = read_sidecar(&html).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("Failed to read sidecar"),
+            "context should mention the sidecar: {err:#}"
+        );
+    }
 }

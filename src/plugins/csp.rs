@@ -39,6 +39,22 @@ pub const DEFAULT_CSP_POLICY: &str = "default-src 'self'; script-src 'self'; sty
 /// future `[security.csp] template` knob in `ssg.toml` overrides it by
 /// passing the configured string to [`render_policy_template`] — the
 /// rendering path already accepts an arbitrary template.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::{
+///     render_policy_template, DEFAULT_CSP_POLICY, DEFAULT_CSP_POLICY_TEMPLATE,
+/// };
+///
+/// assert!(DEFAULT_CSP_POLICY_TEMPLATE.contains("{script_hashes}"));
+/// assert!(DEFAULT_CSP_POLICY_TEMPLATE.contains("{style_hashes}"));
+///
+/// // Both slots empty ⇒ byte-identical to the global policy.
+/// let rendered =
+///     render_policy_template(DEFAULT_CSP_POLICY_TEMPLATE, &[], &[]);
+/// assert_eq!(rendered, DEFAULT_CSP_POLICY);
+/// ```
 pub const DEFAULT_CSP_POLICY_TEMPLATE: &str = "default-src 'self'; script-src 'self'{script_hashes}; style-src 'self'{style_hashes}; img-src 'self' https: data:; font-src 'self' https:; connect-src 'self'; frame-ancestors 'none'";
 
 /// Returns the canonical Content-Security-Policy string that the CSP
@@ -75,6 +91,18 @@ pub const fn computed_policy() -> &'static str {
 /// in single quotes when splicing it into a CSP directive. Hashes are
 /// listed in document order with duplicates removed, so the same
 /// input HTML always produces the same vector (determinism gate).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::csp::page_inline_hashes;
+///
+/// let html = "<style>body{margin:0}</style><script>init()</script>";
+/// let hashes = page_inline_hashes(html);
+/// assert_eq!(hashes.scripts.len(), 1);
+/// assert_eq!(hashes.styles.len(), 1);
+/// assert!(!hashes.is_empty());
+/// ```
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PageCspHashes {
     /// Hashes of inline `<script>` bodies (no `src=` attribute),
@@ -635,7 +663,13 @@ pub fn inject_csp_meta(html: &str, policy: &str) -> String {
         Ok(())
     });
 
-    rewrite_html(html, vec![head_handler]).unwrap_or_else(|_| html.to_string())
+    rewrite_or_original(html, rewrite_html(html, vec![head_handler]))
+}
+
+/// Unwraps a rewrite result, returning the original HTML unchanged
+/// when `lol_html` failed (in practice only allocation exhaustion).
+fn rewrite_or_original(html: &str, res: Result<String, SsgError>) -> String {
+    res.unwrap_or_else(|_| html.to_string())
 }
 
 /// FNV-1a 64-bit hash.
@@ -1127,5 +1161,167 @@ mod tests {
             .transform_html(html, &site.join("index.html"), &ctx)
             .unwrap();
         assert_eq!(out, html);
+    }
+
+    // -------------------------------------------------------------------
+    // Parser edge branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn page_inline_hashes_dedupes_identical_style_blocks() {
+        let html = "<style>a{color:red}</style><style>a{color:red}</style>";
+        let hashes = page_inline_hashes(html);
+        assert_eq!(hashes.styles.len(), 1);
+    }
+
+    #[test]
+    fn collect_inline_contents_skips_prefix_tag_names() {
+        // `<styles>` must not match a `<style` opener lookup.
+        let html = "<styles>ignored</styles><style>a{}</style>";
+        let out = collect_inline_contents(html, "style");
+        assert_eq!(out, vec!["a{}"]);
+    }
+
+    #[test]
+    fn collect_inline_contents_accepts_slash_after_tag_name() {
+        // `<style/` is still a tag boundary for the opener check.
+        let html = "<style/>a{}</style>";
+        let out = collect_inline_contents(html, "style");
+        assert_eq!(out, vec!["a{}"]);
+    }
+
+    #[test]
+    fn collect_inline_contents_stops_when_opening_tag_unterminated() {
+        let html = "<style media=all";
+        assert!(collect_inline_contents(html, "style").is_empty());
+    }
+
+    #[test]
+    fn collect_inline_contents_stops_when_close_tag_missing() {
+        let html = "<style>a{} no closing fence";
+        assert!(collect_inline_contents(html, "style").is_empty());
+    }
+
+    #[test]
+    fn find_inline_block_returns_none_without_close_tag() {
+        assert!(find_inline_block("<style>a{}", "style").is_none());
+    }
+
+    #[test]
+    fn find_inline_script_returns_none_when_opening_unterminated() {
+        assert!(find_inline_script("<script").is_none());
+    }
+
+    #[test]
+    fn find_inline_script_returns_none_without_close_tag() {
+        assert!(find_inline_script("<script>var x = 1;").is_none());
+    }
+
+    #[test]
+    fn find_inline_script_skips_empty_script_then_finds_real_one() {
+        let html = "<script>   </script><script>var x = 1;</script>";
+        let (_, _, content, _) = find_inline_script(html).unwrap();
+        assert_eq!(content, "var x = 1;");
+    }
+
+    #[test]
+    fn rewrite_or_original_returns_input_on_error() {
+        let err = SsgError::io(
+            std::io::Error::other("synthetic rewrite failure"),
+            "<lol_html>",
+        );
+        assert_eq!(rewrite_or_original("<p>x</p>", Err(err)), "<p>x</p>");
+    }
+
+    // -------------------------------------------------------------------
+    // IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn after_compile_fails_when_csp_dir_squatted_by_file() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("_csp"), "not a dir").unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = CspPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn transform_html_fails_when_csp_dir_squatted_by_file() {
+        // extract_inline_blocks' create_dir_all fails, and the io
+        // error is wrapped with the page path.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("_csp"), "not a dir").unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = CspPlugin
+            .transform_html(
+                "<style>a{}</style>",
+                &site.join("index.html"),
+                &ctx,
+            )
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn extract_inline_blocks_script_dir_create_fails_when_squatted_by_file() {
+        // Script-only page: the style loop never runs, so the script
+        // loop's own create_dir_all hits the squatted `_csp` file.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("_csp"), "not a dir").unwrap();
+
+        let res = extract_inline_blocks(
+            "<script>var x = 1;</script>",
+            &site.join("_csp"),
+            &site,
+            SriAlgorithm::default(),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn extract_inline_blocks_style_write_fails_when_squatted_by_dir() {
+        // The style payload filename is deterministic (FNV-1a of the
+        // content); a directory squatting it makes fs::write fail.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let csp_dir = site.join("_csp");
+        let content = "a{color:red}";
+        let squat =
+            csp_dir.join(format!("{:016x}.css", fnv_hash(content.as_bytes())));
+        fs::create_dir_all(&squat).unwrap();
+
+        let res = extract_inline_blocks(
+            &format!("<style>{content}</style>"),
+            &csp_dir,
+            &site,
+            SriAlgorithm::default(),
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn extract_inline_blocks_script_write_fails_when_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let csp_dir = site.join("_csp");
+        let content = "var x = 1;";
+        let squat =
+            csp_dir.join(format!("{:016x}.js", fnv_hash(content.as_bytes())));
+        fs::create_dir_all(&squat).unwrap();
+
+        let res = extract_inline_blocks(
+            &format!("<script>{content}</script>"),
+            &csp_dir,
+            &site,
+            SriAlgorithm::default(),
+        );
+        assert!(res.is_err());
     }
 }

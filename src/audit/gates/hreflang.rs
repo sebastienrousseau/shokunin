@@ -67,20 +67,10 @@ impl AuditGate for HreflangGate {
                 if lang == "x-default" || my_lang.is_some_and(|m| m == lang) {
                     continue;
                 }
-                let Some(target_rel) = resolve_href(href, &site.root) else {
-                    findings.push(
-                        Finding::new(
-                            NAME,
-                            Severity::Error,
-                            format!(
-                                "hreflang=\"{lang}\" points to \"{href}\" which is not under the site root"
-                            ),
-                        )
-                        .with_code("HREFLANG-EXTERNAL")
-                        .with_path(rel.clone()),
-                    );
-                    continue;
-                };
+                // resolve_href maps absolute URLs to their path part,
+                // so every href resolves to a site-relative candidate;
+                // nonexistent targets surface as TARGET-MISSING below.
+                let target_rel = resolve_href(href, &site.root);
                 let Some(reverse) = index.get(&target_rel) else {
                     findings.push(
                         Finding::new(
@@ -158,7 +148,7 @@ fn extract_alternates(html: &str) -> Vec<Alternate> {
 
 use super::hreflang_attr as attr;
 
-fn resolve_href(href: &str, root: &std::path::Path) -> Option<String> {
+fn resolve_href(href: &str, root: &std::path::Path) -> String {
     let stripped = href.trim_start_matches('/');
     // Strip absolute URL prefix if present
     let path_part = if let Some(rest) = stripped.strip_prefix("http://") {
@@ -181,7 +171,7 @@ fn resolve_href(href: &str, root: &std::path::Path) -> Option<String> {
     // missing" against the resolved path so authors get an actionable
     // message.
     let _ = root;
-    Some(with_index.to_string_lossy().into_owned())
+    with_index.to_string_lossy().into_owned()
 }
 
 #[cfg(test)]
@@ -195,9 +185,8 @@ mod tests {
         let mut files = Vec::new();
         for (rel, html) in pages {
             let p = root.join(rel);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(rel) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, html).unwrap();
             files.push(p);
         }
@@ -386,6 +375,37 @@ mod tests {
         let _clone = g;
         let dbg = format!("{g:?}");
         assert!(dbg.contains("HreflangGate"));
+    }
+
+    #[test]
+    fn page_without_self_lang_skips_reciprocity_check() {
+        // Neither page declares its own language (no data-self / self
+        // alternate), so my_lang is None and the reciprocity check is
+        // skipped after target resolution.
+        let en = r#"<html><head>
+            <link rel="alternate" hreflang="fr" href="/fr/index.html">
+        </head><body></body></html>"#;
+        let fr = r#"<html><head>
+            <link rel="alternate" hreflang="en" href="/en/index.html">
+        </head><body></body></html>"#;
+        let s = site_with(&[("en/index.html", en), ("fr/index.html", fr)]);
+        let f = HreflangGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "no self-lang means no reciprocity: {f:?}");
+    }
+
+    #[test]
+    fn resolve_href_handles_scheme_and_index_variants() {
+        let root = std::path::Path::new("/unused");
+        assert_eq!(
+            resolve_href("http://example.com/fr/index.html", root),
+            "fr/index.html"
+        );
+        assert_eq!(resolve_href("http://example.com", root), "index.html");
+        assert_eq!(resolve_href("https://example.com", root), "index.html");
+        assert_eq!(resolve_href("/fr/", root), "fr/index.html");
+        assert_eq!(resolve_href("/fr", root), "fr/index.html");
+        assert_eq!(resolve_href("", root), "index.html");
+        assert_eq!(resolve_href("/de/page.html", root), "de/page.html");
     }
 
     #[test]

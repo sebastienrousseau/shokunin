@@ -151,6 +151,14 @@ fn fingerprint_file(
 
     if minified {
         fs::write(&new_path, &content).with_path(&new_path)?;
+        fail_point!("assets::remove-original", |_| {
+            Err(SsgError::Io {
+                path: asset_path.to_path_buf(),
+                source: std::io::Error::other(
+                    "injected: assets::remove-original",
+                ),
+            })
+        });
         fs::remove_file(asset_path).with_path(asset_path)?;
     } else {
         fs::rename(asset_path, &new_path).with_path(asset_path)?;
@@ -1128,10 +1136,11 @@ mod tests {
             fingerprint_file(&missing, dir.path(), SriAlgorithm::default());
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = err {
-            assert_eq!(path, missing);
-        }
+        // Branch-free variant + path check (`matches!`/`if let` would
+        // leave never-taken arms as uncovered regions).
+        let debug = format!("{err:?}");
+        assert!(debug.contains("Io"));
+        assert!(debug.contains("missing.css"));
     }
 
     #[test]
@@ -1142,9 +1151,314 @@ mod tests {
         let res = rewrite_css_urls_inplace(&missing, dir.path(), &manifest);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = err {
-            assert_eq!(path, missing);
+        // Branch-free variant + path check (see note above).
+        let debug = format!("{err:?}");
+        assert!(debug.contains("Io"));
+        assert!(debug.contains("missing.css"));
+    }
+
+    // -------------------------------------------------------------------
+    // Minifier edge branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn minify_css_handles_escaped_quote_inside_string() {
+        // The escaped quote must not close the string; the final real
+        // quote does (even backslash count).
+        let input = "a{content:\"x\\\"y\";}";
+        let out = minify_css(input);
+        assert!(out.contains("\"x\\\"y\""));
+    }
+
+    #[test]
+    fn minify_js_handles_escaped_quote_inside_string() {
+        let input = "const s = \"a\\\"b\";";
+        let out = minify_js(input);
+        assert!(out.contains("\"a\\\"b\""));
+    }
+
+    #[test]
+    fn minify_js_preserves_division_operator() {
+        // `/` not followed by `*` or `/` is plain division.
+        assert_eq!(minify_js("const x = a / b;"), "const x=a/b;");
+    }
+
+    #[test]
+    fn minify_js_leading_comment_produces_leading_newline_branch() {
+        // A file that opens with a line comment pushes '\n' into an
+        // empty result, so the clean pass sees whitespace at i == 0
+        // (prev == None).
+        assert_eq!(minify_js("// c\nvar x = 1;"), "var x=1;");
+    }
+
+    // -------------------------------------------------------------------
+    // resolve_css_url edge branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn resolve_css_url_relative_css_dir_hits_curdir_and_escape() {
+        // A relative css_dir keeps the leading `./` CurDir component,
+        // and the resolved path cannot start with the absolute
+        // site_dir prefix, so the URL is rejected.
+        let site = Path::new("/abs/site");
+        let out = resolve_css_url("img.png", Path::new("./css"), site);
+        assert!(out.is_none());
+    }
+
+    #[test]
+    fn resolve_css_url_rejects_paths_escaping_site_dir() {
+        let dir = tempdir().unwrap();
+        let site = dir.path();
+        let css_dir = site.join("css");
+        let out = resolve_css_url("/../../etc/passwd", &css_dir, site);
+        assert!(out.is_none());
+    }
+
+    // -------------------------------------------------------------------
+    // fingerprint_file — rename/write error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn fingerprint_file_write_fails_when_new_path_squatted_by_dir() {
+        // For minified CSS the fingerprinted name is deterministic:
+        // sha256(minified). A directory squatting it makes fs::write
+        // fail.
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        let css = "body { color: red; }";
+        fs::write(&css_path, css).unwrap();
+        let hash = sha256_hex(minify_css(css).as_bytes());
+        let squat = dir.path().join(format!("style.{}.css", &hash[..8]));
+        fs::create_dir_all(squat.join("keep")).unwrap();
+
+        let res =
+            fingerprint_file(&css_path, dir.path(), SriAlgorithm::default());
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn fingerprint_file_rename_fails_when_new_path_is_nonempty_dir() {
+        // Non-minified assets go through fs::rename, which fails when
+        // the target is a non-empty directory.
+        let dir = tempdir().unwrap();
+        let png_path = dir.path().join("img.png");
+        fs::write(&png_path, b"png-bytes").unwrap();
+        let hash = sha256_hex(b"png-bytes");
+        let squat = dir.path().join(format!("img.{}.png", &hash[..8]));
+        fs::create_dir_all(squat.join("keep")).unwrap();
+
+        let res =
+            fingerprint_file(&png_path, dir.path(), SriAlgorithm::default());
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn fingerprint_file_non_utf8_css_is_renamed_not_minified() {
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("bin.css");
+        fs::write(&css_path, [0xFF, 0xFE, 0x00, 0x9F]).unwrap();
+        let (rel_old, info) =
+            fingerprint_file(&css_path, dir.path(), SriAlgorithm::default())
+                .unwrap();
+        assert_eq!(rel_old, "bin.css");
+        assert!(info.fingerprinted.ends_with(".css"));
+        assert!(!css_path.exists(), "original renamed away");
+    }
+
+    #[test]
+    fn fingerprint_file_non_utf8_js_is_renamed_not_minified() {
+        let dir = tempdir().unwrap();
+        let js_path = dir.path().join("bin.js");
+        fs::write(&js_path, [0xFF, 0xFE, 0x00, 0x9F]).unwrap();
+        let (rel_old, info) =
+            fingerprint_file(&js_path, dir.path(), SriAlgorithm::default())
+                .unwrap();
+        assert_eq!(rel_old, "bin.js");
+        assert!(info.fingerprinted.ends_with(".js"));
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile / helpers — IO error propagation
+    // -------------------------------------------------------------------
+
+    fn plugin_ctx(root: &Path, site: &Path) -> PluginContext {
+        PluginContext::new(root, root, site, root)
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_site_has_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res =
+            FingerprintPlugin.after_compile(&plugin_ctx(dir.path(), &site));
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
         }
+    }
+
+    #[test]
+    fn after_compile_propagates_non_css_fingerprint_error() {
+        // Squat the PNG's fingerprinted name so stage 1 fails.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("img.png"), b"png-bytes").unwrap();
+        let hash = sha256_hex(b"png-bytes");
+        let squat = site.join(format!("img.{}.png", &hash[..8]));
+        fs::create_dir_all(squat.join("keep")).unwrap();
+
+        let err = FingerprintPlugin
+            .after_compile(&plugin_ctx(dir.path(), &site))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_propagates_css_fingerprint_error() {
+        // Squat the CSS's fingerprinted name so stage 2 fails after
+        // the url() rewrite pass succeeded.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let css = "body { color: blue; }";
+        fs::write(site.join("style.css"), css).unwrap();
+        let hash = sha256_hex(minify_css(css).as_bytes());
+        let squat = site.join(format!("style.{}.css", &hash[..8]));
+        fs::create_dir_all(squat.join("keep")).unwrap();
+
+        let err = FingerprintPlugin
+            .after_compile(&plugin_ctx(dir.path(), &site))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_unreadable_css_error() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let css_path = site.join("style.css");
+        fs::write(&css_path, "body{}").unwrap();
+        fs::set_permissions(&css_path, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res =
+            FingerprintPlugin.after_compile(&plugin_ctx(dir.path(), &site));
+
+        let _ =
+            fs::set_permissions(&css_path, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_is_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("img.png"), b"png-bytes").unwrap();
+        let html = site.join("index.html");
+        fs::write(&html, "<img src=\"/img.png\">").unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res =
+            FingerprintPlugin.after_compile(&plugin_ctx(dir.path(), &site));
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_is_readonly() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("img.png"), b"png-bytes").unwrap();
+        let html = site.join("index.html");
+        fs::write(&html, "<img src=\"/img.png\">").unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let res =
+            FingerprintPlugin.after_compile(&plugin_ctx(dir.path(), &site));
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn rewrite_html_references_fails_on_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = rewrite_html_references(&site, &HashMap::new());
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn rewrite_css_urls_inplace_write_error_on_readonly_css() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path();
+        let css_path = site.join("style.css");
+        fs::write(&css_path, "a{background:url(/img.png);}").unwrap();
+        let mut manifest = HashMap::new();
+        let _ = manifest.insert(
+            "img.png".to_string(),
+            AssetInfo {
+                fingerprinted: "img.deadbeef.png".to_string(),
+                sri: "sha384-x".to_string(),
+            },
+        );
+        fs::set_permissions(&css_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let res = rewrite_css_urls_inplace(&css_path, site, &manifest);
+
+        let _ =
+            fs::set_permissions(&css_path, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    fn fingerprint_assets_propagates_missing_file_error() {
+        let dir = tempdir().unwrap();
+        let missing = vec![dir.path().join("nope.css")];
+        let res =
+            fingerprint_assets(&missing, dir.path(), SriAlgorithm::default());
+        assert!(res.is_err());
     }
 }

@@ -491,4 +491,99 @@ mod tests {
             resolve_page_lang("", &page(dir.path(), "p/index.html"), &ctx);
         assert_eq!(lang, "en-GB");
     }
+
+    #[test]
+    fn unreadable_primary_sidecar_returns_none() {
+        // The sidecar path exists but is a directory, so the
+        // `fs::read_to_string(..).ok()?` branch bails with `None`.
+        let dir = tempdir().unwrap();
+        let sidecar = dir
+            .path()
+            .join("build")
+            .join(".meta")
+            .join("p")
+            .join("index.meta.json");
+        fs::create_dir_all(&sidecar).unwrap();
+
+        let ctx = ctx_with(dir.path(), None, None);
+        let got = read_page_sidecar(
+            &page(dir.path(), "p/index.html"),
+            &ctx,
+            "p/index.html",
+        );
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn unreadable_md_convention_sidecar_returns_none() {
+        // `<stem>.md.meta.json` exists but is a directory → the second
+        // lookup's `.ok()?` short-circuits to `None`.
+        let dir = tempdir().unwrap();
+        let alt = dir
+            .path()
+            .join("build")
+            .join(".meta")
+            .join("post.md.meta.json");
+        fs::create_dir_all(&alt).unwrap();
+
+        let ctx = ctx_with(dir.path(), None, None);
+        let got = read_page_sidecar(
+            &page(dir.path(), "post.html"),
+            &ctx,
+            "post.html",
+        );
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn inline_legacy_sidecar_next_to_html_is_found() {
+        // Last-resort lookup: `<page>.meta.json` next to the HTML file
+        // itself (legacy `frontmatter::read_sidecar` location).
+        let dir = tempdir().unwrap();
+        let page_dir = dir.path().join("site").join("p");
+        fs::create_dir_all(&page_dir).unwrap();
+        fs::write(page_dir.join("index.meta.json"), r#"{"language":"hi"}"#)
+            .unwrap();
+
+        let ctx = ctx_with(dir.path(), Some("en"), None);
+        let lang =
+            resolve_page_lang("", &page(dir.path(), "p/index.html"), &ctx);
+        assert_eq!(lang, "hi");
+    }
+
+    #[test]
+    fn unreadable_inline_sidecar_returns_none() {
+        // Inline `<page>.meta.json` exists but is a directory → the
+        // third lookup's `.ok()?` short-circuits to `None`.
+        let dir = tempdir().unwrap();
+        let inline = dir.path().join("site").join("p").join("index.meta.json");
+        fs::create_dir_all(&inline).unwrap();
+
+        let ctx = ctx_with(dir.path(), None, None);
+        let got = read_page_sidecar(
+            &page(dir.path(), "p/index.html"),
+            &ctx,
+            "p/index.html",
+        );
+        assert!(got.is_none());
+    }
+
+    #[test]
+    fn empty_declared_locale_set_defaults_to_en() {
+        // An `[i18n]` block with zero declared locales — the helper's
+        // default-locale fallback kicks in and no path prefix can ever
+        // match, so the site language decides.
+        let dir = tempdir().unwrap();
+        let ctx = ctx_with(dir.path(), None, Some(&[]));
+        let i18n = ctx.config.as_ref().unwrap().i18n.as_ref().unwrap();
+        assert_eq!(i18n.default_locale, "en");
+        assert!(i18n.locales.is_empty());
+
+        let lang = resolve_page_lang(
+            "",
+            &page(dir.path(), "fr/about/index.html"),
+            &ctx,
+        );
+        assert_eq!(lang, DEFAULT_PAGE_LANG, "fr/ is undeclared → no locale");
+    }
 }

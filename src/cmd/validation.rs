@@ -124,25 +124,86 @@ pub(super) fn validate_path_safety(
     // If path exists, check if it's a symlink
     if path.exists() {
         fail_point!("cmd::symlink-metadata", |_| {
+            #[cfg(all(test, feature = "test-fault-injection"))]
+            if !fault::armed("cmd::symlink-metadata") {
+                // A concurrent lib test activated the process-global
+                // failpoint; this thread did not arm it, so behave as
+                // if the failpoint were inactive.
+                return check_symlink(path, field);
+            }
             Err(CliError::IoError(std::io::Error::other(
                 "injected: cmd::symlink-metadata",
             )))
         });
-        let metadata = fs::symlink_metadata(path).map_err(|_| {
-            CliError::IoError(std::io::Error::other(
-                "Failed to get path metadata",
-            ))
-        })?;
-
-        if metadata.file_type().is_symlink() {
-            return Err(CliError::InvalidPath {
-                field: field.to_string(),
-                details: "Path is a symlink".to_string(),
-            });
-        }
+        return check_symlink(path, field);
     }
 
     Ok(())
+}
+
+/// Symlink tail of [`validate_path_safety`]: fetch metadata and reject
+/// symlinks. Extracted so the `cmd::symlink-metadata` failpoint can
+/// fall through to identical behaviour for unarmed threads.
+fn check_symlink(path: &Path, field: &str) -> Result<(), CliError> {
+    let metadata = symlink_metadata_checked(path).map_err(|_| {
+        CliError::IoError(std::io::Error::other("Failed to get path metadata"))
+    })?;
+
+    if metadata.file_type().is_symlink() {
+        return Err(CliError::InvalidPath {
+            field: field.to_string(),
+            details: "Path is a symlink".to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// `fs::symlink_metadata` behind the `cmd::symlink-metadata-io`
+/// thread-local fault. The real call only fails on a TOCTOU race (the
+/// path vanishing after `exists()`), so tests inject the failure to
+/// drive the `map_err` branch in [`check_symlink`].
+fn symlink_metadata_checked(path: &Path) -> std::io::Result<fs::Metadata> {
+    #[cfg(all(test, feature = "test-fault-injection"))]
+    if fault::armed("cmd::symlink-metadata-io") {
+        return Err(std::io::Error::other(
+            "injected: cmd::symlink-metadata-io",
+        ));
+    }
+    fs::symlink_metadata(path)
+}
+
+/// Thread-local fault injection scoped to the current thread, so
+/// arming a fault in one test cannot leak into concurrently running
+/// tests that validate existing paths.
+#[cfg(all(test, feature = "test-fault-injection"))]
+mod fault {
+    use std::cell::Cell;
+
+    thread_local! {
+        static ARMED: Cell<Option<&'static str>> = const { Cell::new(None) };
+    }
+
+    /// Arms `name` for the current thread; disarmed when the returned
+    /// guard drops (panic-safe).
+    pub(super) fn arm(name: &'static str) -> ArmGuard {
+        ARMED.with(|a| a.set(Some(name)));
+        ArmGuard
+    }
+
+    /// Returns whether `name` is armed on the current thread.
+    pub(super) fn armed(name: &str) -> bool {
+        ARMED.with(|a| a.get() == Some(name))
+    }
+
+    /// RAII guard that disarms the thread-local fault on drop.
+    #[derive(Debug)]
+    pub(super) struct ArmGuard;
+
+    impl Drop for ArmGuard {
+        fn drop(&mut self) {
+            ARMED.with(|a| a.set(None));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -235,25 +296,30 @@ mod tests {
         assert!(validate_url("ftp://example.com").is_err());
     }
 
+    /// Region-free variant of `assert!(matches!(err, InvalidPath))` —
+    /// `matches!` would leave its never-taken false arm uncovered.
+    fn assert_invalid_path(result: Result<(), CliError>) {
+        let err = result.expect_err("expected InvalidPath error");
+        assert!(format!("{err:?}").starts_with("InvalidPath"));
+    }
+
     #[test]
     fn test_validate_path_with_invalid_chars() {
         let result =
             validate_path_safety(Path::new("path<with>invalid"), "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        assert_invalid_path(result);
     }
 
     #[test]
     fn test_validate_path_with_traversal() {
         let result = validate_path_safety(Path::new("../etc/passwd"), "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        assert_invalid_path(result);
     }
 
     #[test]
     fn test_validate_path_with_reserved_name() {
-        let result = validate_path_safety(Path::new("con"), "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
-        let result = validate_path_safety(Path::new("aux"), "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        assert_invalid_path(validate_path_safety(Path::new("con"), "test"));
+        assert_invalid_path(validate_path_safety(Path::new("aux"), "test"));
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -261,7 +327,7 @@ mod tests {
     fn test_validate_path_with_backslash() {
         let result =
             validate_path_safety(Path::new("path\\with\\backslash"), "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        assert_invalid_path(result);
     }
 
     #[cfg(unix)]
@@ -274,7 +340,77 @@ mod tests {
         std::os::unix::fs::symlink(&target, &link).unwrap();
 
         let result = validate_path_safety(&link, "test");
-        assert!(matches!(result, Err(CliError::InvalidPath { .. })));
+        assert_invalid_path(result);
+    }
+
+    #[test]
+    fn is_valid_url_empty_port_after_colon_is_accepted() {
+        // A trailing colon with no digits skips the port parse
+        // entirely — covers the empty-port branch.
+        assert!(is_valid_url("http://example.com:"));
+        assert!(is_valid_url("https://example.com:/path"));
+    }
+
+    #[test]
+    fn validate_path_root_has_no_file_stem() {
+        // `/` has no file stem, covering the `if let Some(stem)` miss
+        // branch; it exists and is not a symlink, so the result is Ok.
+        assert!(validate_path_safety(Path::new("/"), "test").is_ok());
+    }
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+
+        /// RAII guard that disables a `fail` failpoint on drop.
+        struct FailGuard<'a>(&'a str);
+
+        impl Drop for FailGuard<'_> {
+            fn drop(&mut self) {
+                let _ = fail::cfg(self.0, "off");
+            }
+        }
+
+        #[test]
+        fn symlink_metadata_failpoint_short_circuits_armed_thread_only() {
+            let temp_dir = tempdir().unwrap();
+            let existing = temp_dir.path().join("real.txt");
+            fs::write(&existing, "x").unwrap();
+
+            let _fail_guard = FailGuard("cmd::symlink-metadata");
+            fail::cfg("cmd::symlink-metadata", "return")
+                .expect("activate failpoint");
+
+            // Unarmed thread: the active global failpoint must fall
+            // through to the real symlink check.
+            assert!(
+                validate_path_safety(&existing, "test").is_ok(),
+                "unarmed thread must pass through the failpoint"
+            );
+
+            // Armed thread: the injected error short-circuits.
+            let _arm = fault::arm("cmd::symlink-metadata");
+            let err = validate_path_safety(&existing, "test")
+                .expect_err("armed failpoint must short-circuit");
+            assert!(
+                format!("{err}").contains("injected: cmd::symlink-metadata")
+            );
+        }
+
+        #[test]
+        fn symlink_metadata_io_fault_drives_map_err() {
+            let temp_dir = tempdir().unwrap();
+            let existing = temp_dir.path().join("real.txt");
+            fs::write(&existing, "x").unwrap();
+
+            let _arm = fault::arm("cmd::symlink-metadata-io");
+            let err = validate_path_safety(&existing, "test")
+                .expect_err("injected metadata error must propagate");
+            assert!(
+                format!("{err}").contains("Failed to get path metadata"),
+                "map_err must wrap the injected error: {err}"
+            );
+        }
     }
 
     // -----------------------------------------------------------------

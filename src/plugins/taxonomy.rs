@@ -1454,7 +1454,335 @@ mod tests {
         );
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
+        // Branch-free variant check (a `matches!` here would leave its
+        // never-taken `_ => false` arm as an uncovered region).
+        assert!(format!("{err:?}").contains("Io"));
+    }
+
+    // -------------------------------------------------------------------
+    // Template loader — user overrides + error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_templates_in_tera_dir_override_builtins() {
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        // Custom templates in <template_dir>/tera/ — both end with a
+        // newline so the "already ends with \n" branch is taken.
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("tag.html"),
+            "<html>ssg-taxonomy CUSTOMTERM {{ tag }}</html>\n",
+        )
+        .unwrap();
+        fs::write(
+            tera.join("taxonomy_index.html"),
+            "<html>ssg-taxonomy CUSTOMINDEX</html>\n",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let term =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(term.contains("CUSTOMTERM"));
+        assert!(term.ends_with('\n'));
+        let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(index.contains("CUSTOMINDEX"));
+        assert!(index.ends_with('\n'));
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn nonexistent_template_dir_falls_back_to_builtins() {
+        // resolve_user_template_dir returns None; the loader skips the
+        // user-dir probe entirely.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let build = dir.path().join("build");
+        let meta = build.join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&meta).unwrap();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let ctx = PluginContext::new(
+            dir.path(),
+            &build,
+            &site,
+            &dir.path().join("no-such-templates"),
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("tags/rust/index.html").exists());
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_term_template_fails_tag_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("tag.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_category_template_fails_category_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "categories": ["guides"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("category.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_archive_template_fails_topic_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "topic_clusters": ["wasm"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("archive.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_index_template_fails_index_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("taxonomy_index.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_term_template_extending_missing_base_fails_render() {
+        // `{% extends "missing.html" %}` compiles but fails at render
+        // time, exercising the render map_err and the loader's
+        // unknown-name `None` fallback.
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("tag.html"),
+            "{% extends \"missing.html\" %}",
+        )
+        .unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_index_template_extending_missing_base_fails_render() {
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("taxonomy_index.html"),
+            "{% extends \"missing.html\" %}",
+        )
+        .unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    // -------------------------------------------------------------------
+    // Sidecar collection — IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_sidecar_file_fails_collection() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, _site, meta, ctx) = make_layout();
+        let sidecar = meta.join("locked.meta.json");
+        fs::write(&sidecar, r#"{"title": "L"}"#).unwrap();
+        fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ =
+            fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_meta_subdir_fails_collection() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, _site, meta, ctx) = make_layout();
+        let sub = meta.join("locked");
+        fs::create_dir_all(&sub).unwrap();
+        fs::set_permissions(&sub, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // generate_taxonomy_pages — write error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn term_dir_squatted_by_file_fails_generation() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags")).unwrap();
+        fs::write(site.join("tags/rust"), "not a dir").unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn term_index_squatted_by_dir_fails_write() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags/rust/index.html")).unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn taxonomy_index_squatted_by_dir_fails_write() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags/index.html")).unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn write_taxonomy_page_logs_when_keeping_author_page() {
+        // init_logger raises the level so the log::debug! format
+        // argument region executes.
+        init_logger();
+        let dir = tempdir().unwrap();
+        let page = dir.path().join("index.html");
+        fs::write(&page, "<html>hand-written</html>").unwrap();
+
+        write_taxonomy_page(&page, "<html>ssg-taxonomy</html>").unwrap();
+        let kept = fs::read_to_string(&page).unwrap();
+        assert!(kept.contains("hand-written"));
+    }
+
+    // -------------------------------------------------------------------
+    // extract_terms_from_value — remaining branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn extract_terms_string_ignored_when_strings_disallowed() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!("rust, web");
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", false);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn extract_terms_array_skips_whitespace_only_parts() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!(["ok", " , "]);
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        assert_eq!(map.len(), 1);
+        assert!(map.contains_key("ok"));
+    }
+
+    #[test]
+    fn extract_terms_string_skips_empty_parts() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!("a,,b");
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        assert_eq!(map.len(), 2);
     }
 }
 

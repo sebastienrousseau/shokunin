@@ -500,8 +500,9 @@ mod tests {
 
         let files = collect_md_files(dir.path()).unwrap();
         assert_eq!(files.len(), 2);
-        // Sorted lexicographically by full path.
-        assert!(files[0].ends_with("b.md") || files[0].ends_with("sub/a.md"));
+        // Sorted lexicographically by full path: `b.md` < `sub/a.md`.
+        assert!(files[0].ends_with("b.md"));
+        assert!(files[1].ends_with("sub/a.md"));
     }
 
     #[test]
@@ -780,5 +781,254 @@ mod tests {
     #[test]
     fn derive_url_regular_md_maps_to_dir_slash_index_html() {
         assert_eq!(derive_url("posts/hello.md"), "/posts/hello/index.html");
+    }
+
+    /// Builds a non-dry-run [`PluginContext`] over the three dirs.
+    fn make_ctx(
+        content_dir: &Path,
+        template_dir: &Path,
+        site_dir: &Path,
+    ) -> PluginContext {
+        PluginContext {
+            content_dir: content_dir.to_path_buf(),
+            build_dir: site_dir.to_path_buf(),
+            site_dir: site_dir.to_path_buf(),
+            template_dir: template_dir.to_path_buf(),
+            config: None,
+            cache: None,
+            memory_budget: None,
+            html_files: None,
+            dep_graph: None,
+            dry_run: false,
+        }
+    }
+
+    #[cfg(unix)]
+    fn deny_access(p: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(p, fs::Permissions::from_mode(0o000)).unwrap();
+    }
+
+    #[cfg(unix)]
+    fn restore_access(p: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(p, fs::Permissions::from_mode(0o755));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_unreadable_subdir_error() {
+        // A chmod-000 subdir makes `visit`'s read_dir fail inside the
+        // recursion, exercising the Io closure and every `?` layer up
+        // through after_compile.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(content_dir.join("locked")).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        deny_access(&content_dir.join("locked"));
+
+        let ctx = make_ctx(&content_dir, &template_dir, &site_dir);
+        let res = IsrManifestPlugin.after_compile(&ctx);
+
+        restore_access(&content_dir.join("locked"));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn build_manifest_propagates_unreadable_md_error() {
+        // A chmod-000 markdown file makes `fs::read` in
+        // build_entry_for_markdown fail.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        let md = content_dir.join("locked.md");
+        fs::write(&md, "# locked").unwrap();
+        deny_access(&md);
+
+        let res = build_manifest(&content_dir, &template_dir, &site_dir);
+
+        restore_access(&md);
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn build_manifest_propagates_unreadable_template_error() {
+        // A chmod-000 template makes the per-template `fs::read` fail.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        fs::write(content_dir.join("a.md"), "# a").unwrap();
+        let tpl = template_dir.join("index.html");
+        fs::write(&tpl, "<html/>").unwrap();
+        deny_access(&tpl);
+
+        let res = build_manifest(&content_dir, &template_dir, &site_dir);
+
+        restore_access(&tpl);
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    fn after_compile_fails_when_ssg_dir_is_a_file() {
+        // `site/.ssg` existing as a *file* makes write_manifest's
+        // create_dir_all fail, covering its Io closure and the `?`
+        // propagation in after_compile.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+        fs::write(site_dir.join(".ssg"), "not a dir").unwrap();
+
+        let ctx = make_ctx(&content_dir, &template_dir, &site_dir);
+        let err = IsrManifestPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn write_manifest_fails_when_manifest_path_is_a_dir() {
+        // A directory squatting on `.ssg/manifest.json` makes
+        // `fs::write` fail.
+        let dir = tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(MANIFEST_RELATIVE_PATH)).unwrap();
+        let err = write_manifest(&Manifest::default(), dir.path()).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_content_out_is_a_file() {
+        // write_manifest succeeds but copy_sources' create_dir_all
+        // fails because `.ssg/content` exists as a file.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(site_dir.join(".ssg")).unwrap();
+        fs::write(site_dir.join(CONTENT_RELATIVE_DIR), "not a dir").unwrap();
+
+        let ctx = make_ctx(&content_dir, &template_dir, &site_dir);
+        let err = IsrManifestPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    /// Builds a one-entry manifest whose entry lists `sources`.
+    fn manifest_with_sources(sources: Vec<String>) -> Manifest {
+        let byte_refs: Vec<&[u8]> = vec![b"x"; sources.len()];
+        let entry = build_entry(sources, &byte_refs, None);
+        let mut m = Manifest::new(build_stamp());
+        m.insert("/index.html".to_string(), entry);
+        m
+    }
+
+    #[test]
+    fn copy_sources_skips_unknown_prefix_and_missing_files() {
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+
+        let m = manifest_with_sources(vec![
+            "bogus/thing".to_string(),
+            "content/missing.md".to_string(),
+            "templates/missing.html".to_string(),
+        ]);
+        copy_sources(&content_dir, &template_dir, &site_dir, &m).unwrap();
+        // Nothing staged: all sources skipped.
+        let staged = site_dir.join(CONTENT_RELATIVE_DIR);
+        assert_eq!(fs::read_dir(staged).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn copy_sources_fails_when_dst_parent_is_a_file() {
+        // `.ssg/content/content` exists as a file, so create_dir_all
+        // for the destination parent fails.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::write(content_dir.join("a.md"), "# a").unwrap();
+        let content_out = site_dir.join(CONTENT_RELATIVE_DIR);
+        fs::create_dir_all(&content_out).unwrap();
+        fs::write(content_out.join("content"), "not a dir").unwrap();
+
+        let m = manifest_with_sources(vec!["content/a.md".to_string()]);
+        let err = copy_sources(&content_dir, &template_dir, &site_dir, &m)
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn copy_sources_fails_when_dst_path_is_a_dir() {
+        // The destination path itself is a directory, so fs::copy
+        // fails after the parent create_dir_all succeeded.
+        let dir = tempdir().unwrap();
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("public");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::write(content_dir.join("a.md"), "# a").unwrap();
+        let dst = site_dir.join(CONTENT_RELATIVE_DIR).join("content/a.md");
+        fs::create_dir_all(&dst).unwrap();
+
+        let m = manifest_with_sources(vec!["content/a.md".to_string()]);
+        let err = copy_sources(&content_dir, &template_dir, &site_dir, &m)
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn extract_isr_cache_ignores_indented_line_without_colon() {
+        let text = "---\nisr:\n  nocolonhere\n  s_maxage: 3\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        assert_eq!(p.s_maxage, 3);
+    }
+
+    #[test]
+    fn extract_isr_cache_blank_line_keeps_isr_block_open() {
+        // An empty line inside the isr block is neither indented nor
+        // non-empty, so the block stays open.
+        let text = "---\nisr:\n\n  s_maxage: 4\n---\n";
+        let p = extract_isr_cache(text).unwrap();
+        assert_eq!(p.s_maxage, 4);
+    }
+
+    #[test]
+    fn extract_frontmatter_block_unclosed_yaml_returns_none() {
+        assert!(extract_frontmatter_block("---\nno closing fence").is_none());
+    }
+
+    #[test]
+    fn extract_frontmatter_block_unclosed_toml_returns_none() {
+        assert!(extract_frontmatter_block("+++\nno closing fence").is_none());
     }
 }

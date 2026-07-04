@@ -354,7 +354,10 @@ mod tests {
             ])
             .unwrap();
         let err = run(&matches).unwrap_err();
-        assert!(matches!(err, SsgError::Validation { .. }));
+        // Debug-format check keeps this assertion region-free — a
+        // `matches!` here would leave its never-taken false arm
+        // uncovered.
+        assert!(format!("{err:?}").starts_with("Validation"));
     }
 
     #[test]
@@ -539,6 +542,111 @@ fail_on = "error"
         .unwrap();
         let cfg = load_audit_config(Some(&good)).unwrap();
         assert!(format!("{cfg:?}").contains("AuditConfig"));
+    }
+
+    #[test]
+    fn fail_on_info_turns_info_findings_into_fail_outcome() {
+        // An empty site still yields info-level skip findings from the
+        // PQC/search/markdown gates, so lowering --fail-on to `info`
+        // must flip the outcome to Fail.
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--fail-on",
+                "info",
+            ])
+            .unwrap();
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Fail);
+    }
+
+    #[test]
+    fn unparseable_severity_and_fail_on_are_ignored() {
+        // Covers the `Severity::parse -> None` miss branches for both
+        // --severity and --fail-on.
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--severity",
+                "bogus-level",
+                "--fail-on",
+                "another-bogus-level",
+            ])
+            .unwrap();
+        // Defaults stay in force, so the empty site still passes.
+        let outcome = run(&matches).unwrap();
+        assert_eq!(outcome, Outcome::Pass);
+    }
+
+    #[test]
+    fn run_and_dispatch_propagates_run_errors() {
+        // Covers the `?` on run() inside run_and_dispatch.
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--explain",
+                "--gate",
+                "no-such-gate",
+            ])
+            .unwrap();
+        let err = run_and_dispatch(&matches, true).unwrap_err();
+        assert!(format!("{err:?}").starts_with("Validation"));
+    }
+
+    #[test]
+    fn run_and_dispatch_fail_outcome_exits_one() {
+        // `run_and_dispatch` calls process::exit(1) on Outcome::Fail,
+        // which would kill the test harness — so the Fail arm runs in
+        // a child copy of this exact test, and the parent asserts on
+        // the child's exit code and stderr.
+        if std::env::var("SSG_AUDIT_EXIT_TEST").is_ok() {
+            let tmp = tempfile::tempdir().unwrap();
+            let site = tmp.path().join("public");
+            std::fs::create_dir_all(&site).unwrap();
+            let cmd = build_subcommand();
+            let matches = cmd
+                .try_get_matches_from([
+                    "audit",
+                    "--output",
+                    site.to_str().unwrap(),
+                    "--fail-on",
+                    "info",
+                ])
+                .unwrap();
+            // quiet = false so the eprintln branch executes too.
+            let _ = run_and_dispatch(&matches, false);
+            unreachable!("run_and_dispatch must exit(1) on Fail");
+        }
+
+        let exe = std::env::current_exe().unwrap();
+        let output = std::process::Command::new(exe)
+            .args([
+                "--exact",
+                "cmd::audit::tests::run_and_dispatch_fail_outcome_exits_one",
+                "--nocapture",
+            ])
+            .env("SSG_AUDIT_EXIT_TEST", "1")
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(1), "child must exit(1)");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains("audit: one or more gates failed"),
+            "child stderr must carry the failure banner, got: {stderr}"
+        );
     }
 
     #[test]

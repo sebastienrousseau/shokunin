@@ -1038,14 +1038,26 @@ mod tests {
         assert!(validate_iban("GB29 NWBK 6016 1331 9268 19").is_valid());
     }
 
+    /// Extracts the rejection reason, or the empty string for a
+    /// [`ValidationOutcome::Valid`] result.
+    fn invalid_reason(outcome: ValidationOutcome) -> String {
+        match outcome {
+            ValidationOutcome::Invalid { reason } => reason,
+            ValidationOutcome::Valid => String::new(),
+        }
+    }
+
+    #[test]
+    fn invalid_reason_is_empty_for_valid_outcome() {
+        assert_eq!(invalid_reason(ValidationOutcome::Valid), "");
+    }
+
     #[test]
     fn iban_rejects_bad_checksum() {
         // Tweak last digit so MOD-97 fails.
         let res = validate_iban("GB29NWBK60161331926811");
         assert!(!res.is_valid());
-        if let ValidationOutcome::Invalid { reason } = res {
-            assert!(reason.contains("MOD-97"));
-        }
+        assert!(invalid_reason(res).contains("MOD-97"));
     }
 
     #[test]
@@ -1073,9 +1085,7 @@ mod tests {
     fn bic_rejects_9_char_length() {
         let res = validate_bic("NWBKGB2LX");
         assert!(!res.is_valid());
-        if let ValidationOutcome::Invalid { reason } = res {
-            assert!(reason.contains("8 or 11"));
-        }
+        assert!(invalid_reason(res).contains("8 or 11"));
     }
 
     #[test]
@@ -1408,5 +1418,275 @@ mod tests {
         let v = serde_json::json!({"@type": "BankAccount", "identifier": "x"});
         let errs = validate_schema_org(&v);
         assert!(errs.iter().any(|e| e.field == "@context"));
+    }
+
+    // ── Optional-field omission in JSON-LD emitters ─────────────────
+
+    #[test]
+    fn payment_instrument_jsonld_omits_optional_fields() {
+        let p = PaymentInstrument {
+            name: None,
+            instrument_type: "transfer".to_string(),
+            brand: None,
+        };
+        let v = p.to_jsonld();
+        assert!(v.get("name").is_none());
+        assert!(v.get("brand").is_none());
+        assert_eq!(v["iso20022:instrumentType"], "transfer");
+    }
+
+    #[test]
+    fn financial_product_jsonld_omits_optional_fields() {
+        let p = FinancialProduct {
+            name: "Plain Loan".to_string(),
+            product_type: "loan".to_string(),
+            issuer: None,
+            annual_percentage_rate: None,
+            isin: None,
+        };
+        let v = p.to_jsonld();
+        assert!(v.get("provider").is_none());
+        assert!(v.get("annualPercentageRate").is_none());
+        assert!(v.get("iso20022:isin").is_none());
+        assert!(v.get("identifier").is_none());
+    }
+
+    #[test]
+    fn strip_context_passes_non_object_values_through() {
+        let v = strip_context(serde_json::json!("scalar"));
+        assert_eq!(v, serde_json::json!("scalar"));
+    }
+
+    // ── Iso20022Entity dispatch surfaces ────────────────────────────
+
+    #[test]
+    fn entity_to_jsonld_covers_remaining_variants() {
+        let pi = Iso20022Entity::PaymentInstrument(PaymentInstrument {
+            instrument_type: "card".to_string(),
+            ..PaymentInstrument::default()
+        });
+        assert_eq!(pi.to_jsonld()["@type"], "PaymentService");
+
+        let rfi = Iso20022Entity::RegulatedFinancialInstitution(
+            RegulatedFinancialInstitution {
+                name: "Acme Bank".to_string(),
+                ..RegulatedFinancialInstitution::default()
+            },
+        );
+        assert_eq!(rfi.to_jsonld()["@type"], "BankOrCreditUnion");
+
+        let fp = Iso20022Entity::FinancialProduct(FinancialProduct {
+            name: "Bond".to_string(),
+            product_type: "derivative".to_string(),
+            ..FinancialProduct::default()
+        });
+        assert_eq!(fp.to_jsonld()["@type"], "FinancialProduct");
+    }
+
+    #[test]
+    fn entity_type_name_payment_instrument() {
+        let pi =
+            Iso20022Entity::PaymentInstrument(PaymentInstrument::default());
+        assert_eq!(pi.type_name(), "PaymentInstrument");
+    }
+
+    // ── DispatchError display ───────────────────────────────────────
+
+    #[test]
+    fn dispatch_error_display_all_variants() {
+        assert!(DispatchError::MissingType
+            .to_string()
+            .contains("missing the required `type` field"));
+        assert!(DispatchError::UnknownType("Widget".to_string())
+            .to_string()
+            .contains("`Widget` is not one of"));
+        assert!(DispatchError::Malformed("bad shape".to_string())
+            .to_string()
+            .contains("malformed: bad shape"));
+    }
+
+    // ── from_frontmatter: remaining discriminants + error paths ────
+
+    #[test]
+    fn dispatch_non_string_type_field_is_missing_type() {
+        let fm = serde_json::json!({"type": 42});
+        assert_eq!(
+            from_frontmatter(&fm).unwrap_err(),
+            DispatchError::MissingType
+        );
+    }
+
+    #[test]
+    fn dispatch_payment_instrument_round_trip_and_malformed() {
+        let ok = serde_json::json!({
+            "type": "PaymentInstrument",
+            "instrument_type": "card",
+        });
+        let entity = from_frontmatter(&ok).unwrap();
+        assert_eq!(entity.type_name(), "PaymentInstrument");
+
+        // `instrument_type` is required — omitting it fails deserialise.
+        let bad = serde_json::json!({"type": "PaymentInstrument"});
+        assert!(matches!(
+            from_frontmatter(&bad),
+            Err(DispatchError::Malformed(_))
+        ));
+    }
+
+    #[test]
+    fn dispatch_regulated_institution_round_trip_and_malformed() {
+        let ok = serde_json::json!({
+            "type": "RegulatedFinancialInstitution",
+            "name": "Acme Bank",
+        });
+        let entity = from_frontmatter(&ok).unwrap();
+        assert_eq!(entity.type_name(), "RegulatedFinancialInstitution");
+
+        let bad = serde_json::json!({"type": "RegulatedFinancialInstitution"});
+        assert!(matches!(
+            from_frontmatter(&bad),
+            Err(DispatchError::Malformed(_))
+        ));
+    }
+
+    #[test]
+    fn dispatch_financial_product_round_trip_and_malformed() {
+        let ok = serde_json::json!({
+            "type": "FinancialProduct",
+            "name": "Green Bond",
+            "product_type": "deposit",
+        });
+        let entity = from_frontmatter(&ok).unwrap();
+        assert_eq!(entity.type_name(), "FinancialProduct");
+
+        let bad = serde_json::json!({"type": "FinancialProduct"});
+        assert!(matches!(
+            from_frontmatter(&bad),
+            Err(DispatchError::Malformed(_))
+        ));
+    }
+
+    #[test]
+    fn dispatch_bank_account_malformed_payload() {
+        // `iban` must be a string — a number fails deserialisation.
+        let bad = serde_json::json!({"type": "BankAccount", "iban": 123});
+        assert!(matches!(
+            from_frontmatter(&bad),
+            Err(DispatchError::Malformed(_))
+        ));
+    }
+
+    #[test]
+    fn dispatch_financial_transaction_malformed_payload() {
+        let bad = serde_json::json!({
+            "type": "FinancialTransaction",
+            "debtor_account": "not an object",
+        });
+        assert!(matches!(
+            from_frontmatter(&bad),
+            Err(DispatchError::Malformed(_))
+        ));
+    }
+
+    // ── warn_invalid_fields: remaining walk combinations ────────────
+
+    #[test]
+    fn warn_walks_bank_account_with_bic_only() {
+        let e = Iso20022Entity::BankAccount(BankAccount {
+            iban: None,
+            bic: Some("BAD".to_string()),
+            ..BankAccount::default()
+        });
+        assert_eq!(warn_invalid_fields(&e, "page.md"), 1);
+    }
+
+    #[test]
+    fn warn_walks_transaction_with_sparse_accounts() {
+        // Debtor carries only a BIC; creditor carries only an IBAN —
+        // exercises every Some/None combination in the account walk.
+        let e = Iso20022Entity::FinancialTransaction(FinancialTransaction {
+            debtor_account: Some(BankAccount {
+                iban: None,
+                bic: Some("BAD".to_string()),
+                ..BankAccount::default()
+            }),
+            creditor_account: Some(BankAccount {
+                iban: Some("INVALID".to_string()),
+                bic: None,
+                ..BankAccount::default()
+            }),
+            ..FinancialTransaction::default()
+        });
+        assert_eq!(warn_invalid_fields(&e, "page.md"), 2);
+    }
+
+    #[test]
+    fn warn_transaction_without_accounts_emits_nothing() {
+        let e = Iso20022Entity::FinancialTransaction(
+            FinancialTransaction::default(),
+        );
+        assert_eq!(warn_invalid_fields(&e, "page.md"), 0);
+    }
+
+    #[test]
+    fn warn_skips_entities_without_account_fields() {
+        let pi =
+            Iso20022Entity::PaymentInstrument(PaymentInstrument::default());
+        assert_eq!(warn_invalid_fields(&pi, "page.md"), 0);
+        let fp = Iso20022Entity::FinancialProduct(FinancialProduct::default());
+        assert_eq!(warn_invalid_fields(&fp, "page.md"), 0);
+    }
+
+    // ── Schema.org validator: remaining arms ────────────────────────
+
+    #[test]
+    fn schema_validator_flags_financial_product_missing_name() {
+        // Hits the second literal of the BankOrCreditUnion |
+        // FinancialProduct match arm.
+        let v = serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "FinancialProduct",
+        });
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field == "name"));
+    }
+
+    #[test]
+    fn schema_validator_passes_institution_with_name() {
+        let v = RegulatedFinancialInstitution {
+            name: "Acme Bank".to_string(),
+            ..RegulatedFinancialInstitution::default()
+        }
+        .to_jsonld();
+        assert!(validate_schema_org(&v).is_empty());
+    }
+
+    #[test]
+    fn schema_validator_flags_payment_service_missing_instrument_type() {
+        let v = serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "PaymentService",
+        });
+        let errs = validate_schema_org(&v);
+        assert!(errs.iter().any(|e| e.field == "iso20022:instrumentType"));
+    }
+
+    #[test]
+    fn schema_validator_passes_payment_service_with_instrument_type() {
+        let v = PaymentInstrument {
+            instrument_type: "card".to_string(),
+            ..PaymentInstrument::default()
+        }
+        .to_jsonld();
+        assert!(validate_schema_org(&v).is_empty());
+    }
+
+    #[test]
+    fn schema_validator_ignores_unknown_types() {
+        let v = serde_json::json!({
+            "@context": "https://schema.org",
+            "@type": "SomethingElse",
+        });
+        assert!(validate_schema_org(&v).is_empty());
     }
 }

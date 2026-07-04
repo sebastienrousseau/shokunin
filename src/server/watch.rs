@@ -306,22 +306,89 @@ impl FileWatcher {
         out: &mut HashMap<PathBuf, SystemTime>,
     ) -> io::Result<()> {
         for entry in fs::read_dir(dir)? {
-            let entry = entry?;
+            let entry = next_entry(entry)?;
             let path = entry.path();
-            let ft = entry.file_type()?;
+            let ft = entry_file_type(&entry)?;
 
             if ft.is_dir() {
                 Self::walk_dir(&path, out)?;
             } else if ft.is_file() {
-                if let Ok(meta) = fs::metadata(&path) {
-                    if let Ok(mtime) = meta.modified() {
-                        let _ = out.insert(path, mtime);
-                    }
-                }
+                out.extend(snapshot_mtime(&path).map(|mtime| (path, mtime)));
             }
         }
         Ok(())
     }
+}
+
+/// Thread-local fault injection for the walker's two mid-iteration
+/// error branches, which only occur on I/O races that can't be
+/// reproduced deterministically. Thread-local — unlike a
+/// process-global `fail` failpoint — so arming a fault in one test
+/// cannot leak into concurrently running watcher tests.
+#[cfg(all(test, feature = "test-fault-injection"))]
+mod fault {
+    use std::cell::Cell;
+
+    thread_local! {
+        static ARMED: Cell<Option<&'static str>> = const { Cell::new(None) };
+    }
+
+    /// Arms `name` for the current thread; disarmed when the returned
+    /// guard drops (panic-safe).
+    pub(super) fn arm(name: &'static str) -> ArmGuard {
+        ARMED.with(|a| a.set(Some(name)));
+        ArmGuard
+    }
+
+    /// Returns whether `name` is armed on the current thread.
+    pub(super) fn armed(name: &str) -> bool {
+        ARMED.with(|a| a.get() == Some(name))
+    }
+
+    /// RAII guard that disarms the thread-local fault on drop.
+    #[derive(Debug)]
+    pub(super) struct ArmGuard;
+
+    impl Drop for ArmGuard {
+        fn drop(&mut self) {
+            ARMED.with(|a| a.set(None));
+        }
+    }
+}
+
+/// Unwraps one `read_dir` entry. Wrapped so tests can inject a
+/// mid-iteration failure via the `watch::dir-entry` thread-local
+/// fault — the real error only occurs on I/O races that can't be
+/// reproduced deterministically.
+// Not `const`: under `cfg(test, feature = "test-fault-injection")` the
+// body calls `fault::armed`/`io::Error::other`, neither a const fn —
+// only the plain-lib build (where that block is stripped away) looks
+// const-eligible to clippy.
+#[allow(clippy::missing_const_for_fn)]
+fn next_entry(entry: io::Result<fs::DirEntry>) -> io::Result<fs::DirEntry> {
+    #[cfg(all(test, feature = "test-fault-injection"))]
+    if fault::armed("watch::dir-entry") {
+        return Err(io::Error::other("injected: watch::dir-entry"));
+    }
+    entry
+}
+
+/// Queries an entry's file type. Wrapped so tests can inject a failure
+/// via the `watch::entry-file-type` thread-local fault (see
+/// [`next_entry`]).
+fn entry_file_type(entry: &fs::DirEntry) -> io::Result<fs::FileType> {
+    #[cfg(all(test, feature = "test-fault-injection"))]
+    if fault::armed("watch::entry-file-type") {
+        return Err(io::Error::other("injected: watch::entry-file-type"));
+    }
+    entry.file_type()
+}
+
+/// Best-effort modification time for a snapshot entry. Returns `None`
+/// when the file vanished between the directory listing and the stat,
+/// or when the platform can't report `mtime`.
+fn snapshot_mtime(path: &Path) -> Option<SystemTime> {
+    fs::metadata(path).ok()?.modified().ok()
 }
 
 // ---------------------------------------------------------------------------
@@ -835,5 +902,211 @@ mod tests {
     #[test]
     fn test_classify_no_extension() {
         assert_eq!(classify_change(Path::new("Makefile")), ChangeKind::Other);
+    }
+
+    #[test]
+    fn snapshot_mtime_returns_some_for_existing_file() {
+        let dir = tmp_dir("mtime_some");
+        let file = dir.join("a.md");
+        write_file(&file, "content");
+        assert!(snapshot_mtime(&file).is_some());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn snapshot_mtime_returns_none_for_missing_file() {
+        // Covers the metadata-error branch — the file "vanished"
+        // between listing and stat.
+        let missing = Path::new("/nonexistent_ssg_watch_mtime_test");
+        assert!(snapshot_mtime(missing).is_none());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn new_watcher_errors_on_unreadable_subdirectory() {
+        use std::os::unix::fs::PermissionsExt;
+        // Covers the walk_dir/scan_directory error propagation through
+        // FileWatcher::new: read_dir on the unreadable child fails.
+        let dir = tmp_dir("unreadable_new");
+        let locked = dir.join("locked");
+        fs::create_dir_all(&locked).expect("create locked dir");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .expect("chmod");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let res = FileWatcher::new(cfg);
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        let _ = fs::remove_dir_all(&dir);
+        assert!(res.is_err(), "unreadable subdirectory must fail the scan");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn check_for_changes_errors_when_directory_becomes_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tmp_dir("unreadable_check");
+        write_file(&dir.join("a.md"), "x");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o000))
+            .expect("chmod");
+        let res = watcher.check_for_changes();
+
+        let _ = fs::set_permissions(&dir, fs::Permissions::from_mode(0o755));
+        let _ = fs::remove_dir_all(&dir);
+        assert!(res.is_err(), "unreadable root must fail the rescan");
+    }
+
+    #[test]
+    fn watch_blocking_keeps_polling_while_callback_returns_true() {
+        // First invocation returns true (keep watching) and plants a
+        // new change; second invocation stops. Covers the
+        // continue-watching branch and the poll sleep.
+        let dir = tmp_dir("blocking_continue");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+        watcher.snapshots.clear(); // force an immediate "added" change
+
+        let mut calls = 0;
+        let plant = dir.join("b.md");
+        watch_blocking(&mut watcher, |_changes| {
+            calls += 1;
+            if calls == 1 {
+                let mut f = File::create(&plant).expect("create planted");
+                f.write_all(b"new").expect("write planted");
+                true // keep watching — the planted file re-fires us
+            } else {
+                false
+            }
+        });
+
+        assert_eq!(calls, 2, "callback should fire for the planted change");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn watch_blocking_idles_through_no_change_polls() {
+        // A delayed writer thread leaves several empty poll cycles
+        // before the change lands — covering the `Ok(_) => {}` arm.
+        let dir = tmp_dir("blocking_idle");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+        watcher.snapshots.clear();
+
+        let planted = dir.join("late.md");
+        let mut calls = 0;
+        let mut writer: Option<thread::JoinHandle<()>> = None;
+        watch_blocking(&mut watcher, |_changes| {
+            calls += 1;
+            if calls == 1 {
+                let path = planted.clone();
+                writer = Some(thread::spawn(move || {
+                    thread::sleep(Duration::from_millis(50));
+                    let mut f = File::create(&path).expect("create late");
+                    f.write_all(b"late").expect("write late");
+                }));
+                true // idle polls follow until the late write lands
+            } else {
+                false
+            }
+        });
+
+        assert_eq!(calls, 2);
+        if let Some(h) = writer {
+            h.join().expect("writer thread");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn watch_blocking_reports_scan_errors_and_recovers() {
+        use std::os::unix::fs::PermissionsExt;
+        // A helper thread makes the directory unreadable for a short
+        // window (several failing polls hit the `Err` arm), then
+        // restores it and plants a change so the loop can stop.
+        let dir = tmp_dir("blocking_error");
+        write_file(&dir.join("a.md"), "v1");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+        watcher.snapshots.clear();
+
+        let mut calls = 0;
+        let mut helper: Option<thread::JoinHandle<()>> = None;
+        let root = dir.clone();
+        watch_blocking(&mut watcher, |_changes| {
+            calls += 1;
+            if calls == 1 {
+                let root = root.clone();
+                helper = Some(thread::spawn(move || {
+                    fs::set_permissions(
+                        &root,
+                        fs::Permissions::from_mode(0o000),
+                    )
+                    .expect("lock dir");
+                    thread::sleep(Duration::from_millis(50));
+                    fs::set_permissions(
+                        &root,
+                        fs::Permissions::from_mode(0o755),
+                    )
+                    .expect("unlock dir");
+                    let mut f = File::create(root.join("late.md"))
+                        .expect("create late");
+                    f.write_all(b"late").expect("write late");
+                }));
+                true
+            } else {
+                false
+            }
+        });
+
+        assert_eq!(calls, 2, "loop must survive scan errors and recover");
+        if let Some(h) = helper {
+            h.join().expect("helper thread");
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+
+        #[test]
+        fn walk_dir_surfaces_injected_entry_error() {
+            let dir = tmp_dir("fault_entry");
+            write_file(&dir.join("a.md"), "x");
+
+            let guard = fault::arm("watch::dir-entry");
+            let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+            let err = FileWatcher::new(cfg)
+                .expect_err("injected entry error must propagate");
+            assert!(err.to_string().contains("watch::dir-entry"));
+
+            drop(guard);
+            let _ = fs::remove_dir_all(&dir);
+        }
+
+        #[test]
+        fn walk_dir_surfaces_injected_file_type_error() {
+            let dir = tmp_dir("fault_file_type");
+            write_file(&dir.join("a.md"), "x");
+
+            let guard = fault::arm("watch::entry-file-type");
+            let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+            let err = FileWatcher::new(cfg)
+                .expect_err("injected file-type error must propagate");
+            assert!(err.to_string().contains("watch::entry-file-type"));
+
+            drop(guard);
+            let _ = fs::remove_dir_all(&dir);
+        }
     }
 }

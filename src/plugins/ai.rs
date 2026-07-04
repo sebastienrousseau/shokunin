@@ -1260,4 +1260,122 @@ mod tests {
             .collect();
         assert_eq!(names, vec!["apple.html", "mango.html", "zebra.html"]);
     }
+
+    // -------------------------------------------------------------------
+    // is_excluded_page — falsy draft/private values and string forms
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_is_excluded_page_draft_false_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ =
+            meta.insert("draft".to_string(), serde_json::Value::Bool(false));
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private_string_true() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "private".to_string(),
+            serde_json::Value::String("true".to_string()),
+        );
+        assert!(is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private_false_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ =
+            meta.insert("private".to_string(), serde_json::Value::Bool(false));
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    // -------------------------------------------------------------------
+    // Sidecar read failures — a directory named *.meta.json exists but
+    // cannot be read as a file, driving the empty-map fallback arm.
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn collect_page_entries_unreadable_sidecar_falls_back_to_empty_meta() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head></head><body>Hi</body></html>",
+        )
+        .unwrap();
+        // Directory at the sidecar path: exists() is true, but
+        // read_to_string fails (EISDIR), so meta falls back to an
+        // empty map and the page (no title) is dropped.
+        fs::create_dir_all(dir.path().join("page.meta.json")).unwrap();
+
+        let entries = collect_page_entries(dir.path()).unwrap();
+        assert!(
+            entries.is_empty(),
+            "titleless page must be dropped: {entries:?}"
+        );
+    }
+
+    #[test]
+    fn llms_full_txt_unreadable_sidecar_skips_page() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head></head><body>Hidden body</body></html>",
+        )
+        .unwrap();
+        fs::create_dir_all(dir.path().join("page.meta.json")).unwrap();
+
+        generate_llms_full_txt(dir.path(), None).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(
+            !body.contains("Hidden body"),
+            "page without readable sidecar (no title) must be skipped:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // llms.txt — entry line without a description
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn llms_txt_entry_without_description_omits_colon_suffix() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "", "");
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("- [Home](/index.html)\n"),
+            "description-less entry must be a bare link:\n{body}"
+        );
+        assert!(
+            !body.contains("- [Home](/index.html):"),
+            "no trailing colon without a description:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // llms-full.txt — canonical absolute URLs when base_url is set
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn llms_full_txt_uses_canonical_root_for_urls() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+
+        let config = SsgConfig {
+            site_name: "S".to_string(),
+            base_url: "https://example.com/".to_string(),
+            ..Default::default()
+        };
+        generate_llms_full_txt(dir.path(), Some(&config)).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(
+            body.contains("## [Home](https://example.com/index.html)"),
+            "page URL must be prefixed with the canonical root:\n{body}"
+        );
+    }
 }

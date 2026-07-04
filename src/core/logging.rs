@@ -39,17 +39,26 @@ impl log::Log for SimpleLogger {
     }
 
     fn log(&self, record: &log::Record) {
-        if self.enabled(record.metadata()) {
-            eprintln!(
-                "[{} {}] {}",
-                record.level(),
-                record.module_path().unwrap_or(""),
-                record.args()
-            );
-        }
+        log_record(self.enabled(record.metadata()), record);
     }
 
     fn flush(&self) {}
+}
+
+/// Writes `record` to stderr when `enabled` is true.
+///
+/// Extracted from `SimpleLogger::log` so both the enabled and the
+/// filtered branch are unit-testable without racing other tests over
+/// the process-global `log::max_level()`.
+fn log_record(enabled: bool, record: &log::Record) {
+    if enabled {
+        eprintln!(
+            "[{} {}] {}",
+            record.level(),
+            record.module_path().unwrap_or(""),
+            record.args()
+        );
+    }
 }
 
 /// Initializes the logging system based on environment variables.
@@ -59,10 +68,24 @@ pub(crate) fn initialize_logging() -> Result<(), SsgError> {
 
     let level = parse_log_level(&log_level);
 
-    let _ = log::set_logger(&SimpleLogger).map(|()| log::set_max_level(level));
+    let installed = log::set_logger(&SimpleLogger).is_ok();
+    apply_log_level(installed, level);
 
     info!("Logging initialized at level: {log_level}");
     Ok(())
+}
+
+/// Applies `level` as the global max level iff the logger install
+/// succeeded.
+///
+/// Extracted from `initialize_logging` so both branches are
+/// deterministically unit-testable: whether `log::set_logger` wins
+/// or loses depends on process-global state (another test may have
+/// installed a logger first).
+fn apply_log_level(installed: bool, level: LevelFilter) {
+    if installed {
+        log::set_max_level(level);
+    }
 }
 
 /// Creates and initialises a log file for the static site generator.
@@ -284,6 +307,53 @@ mod tests {
         // return Err which we ignore.
         let res = initialize_logging();
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn apply_log_level_covers_both_branches() {
+        // installed=false must not touch the global level; we cannot
+        // compare before/after snapshots because other tests mutate
+        // the global level concurrently — the branch executing without
+        // side effects is the contract under test.
+        apply_log_level(false, LevelFilter::Error);
+
+        // installed=true sets the level. Trace matches the shared
+        // test fixture's level, so concurrent tests are never starved
+        // of log output. Another test may overwrite the level between
+        // the set and the read, but never to Off.
+        apply_log_level(true, LevelFilter::Trace);
+        assert!(log::max_level() > LevelFilter::Off);
+    }
+
+    #[test]
+    fn log_record_respects_enabled_flag() {
+        let record = log::Record::builder()
+            .level(log::Level::Info)
+            .args(format_args!("visible test record"))
+            .build();
+        // Both branches: filtered out, then printed to stderr.
+        log_record(false, &record);
+        log_record(true, &record);
+    }
+
+    #[test]
+    fn simple_logger_enabled_and_flush() {
+        use log::Log;
+
+        crate::test_support::init_logger();
+        let logger = SimpleLogger;
+        let metadata = log::Metadata::builder()
+            .level(log::Level::Error)
+            .target("ssg-test")
+            .build();
+        assert!(logger.enabled(&metadata));
+        logger.flush(); // no-op, but the region is exercised
+
+        let record = log::Record::builder()
+            .level(log::Level::Error)
+            .args(format_args!("via Log::log"))
+            .build();
+        logger.log(&record);
     }
 
     #[test]

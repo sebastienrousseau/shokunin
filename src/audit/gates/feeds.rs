@@ -173,9 +173,8 @@ mod tests {
         let root = tmp.path().to_path_buf();
         for (name, body) in files {
             let p = root.join(name);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(name) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, body).unwrap();
         }
         std::mem::forget(tmp);
@@ -301,6 +300,17 @@ mod tests {
         // Should not panic — the gate `continue`s on read error.
         let _ = FeedsGate.run(&s, &AuditOptions::default());
         std::mem::forget(tmp);
+    }
+
+    #[test]
+    fn non_utf8_xml_file_is_skipped() {
+        // Invalid UTF-8 makes read_to_string fail on a real file that
+        // walk_files does return, driving the per-file `continue`.
+        let s = site_with_files(&[("good.xml", "<urlset></urlset>")]);
+        std::fs::write(s.root.join("bad.xml"), [0xFFu8, 0xFE, 0x00, 0x9F])
+            .unwrap();
+        let f = FeedsGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "non-UTF8 xml must be skipped: {f:?}");
     }
 
     #[test]

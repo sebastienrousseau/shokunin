@@ -163,10 +163,15 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
             let before = &raw_line[..idx2];
             let after_url =
                 raw_line[idx2..].split_whitespace().next().unwrap_or("");
+            // The whitespace-delimited token swallows a trailing `>` /
+            // `)` delimiter (`<https://x>` yields `https://x>`), so the
+            // closing delimiter must be looked for both at the end of
+            // the token and immediately after it.
+            let tail = &raw_line[idx2 + after_url.len()..];
             let in_bracket = before.contains('(')
-                && raw_line[idx2 + after_url.len()..].starts_with(')');
+                && (after_url.ends_with(')') || tail.starts_with(')'));
             let in_lt = before.ends_with('<')
-                && raw_line[idx2 + after_url.len()..].starts_with('>');
+                && (after_url.ends_with('>') || tail.starts_with('>'));
             let in_link = before.ends_with("](");
             if !in_bracket && !in_lt && !in_link {
                 findings.push(
@@ -324,11 +329,14 @@ mod tests {
 
     #[test]
     fn bare_url_inside_markdown_link_is_silent() {
+        // Trailing whitespace keeps `f` non-empty (MD009) so the
+        // no-MD034 predicate actually evaluates.
         let s = site_with_content(&[(
             "doc.md",
-            "# title\n\n[click](https://example.com)\n",
+            "# title\n\n[click](https://example.com)\nws \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD009")));
         assert!(f.iter().all(|x| x.code.as_deref() != Some("MD034")));
     }
 
@@ -344,11 +352,17 @@ mod tests {
 
     #[test]
     fn code_block_contents_are_not_linted() {
+        // Trailing whitespace after the fence keeps at least one benign
+        // finding in `f`, so the exemption predicate actually evaluates.
         let s = site_with_content(&[(
             "doc.md",
-            "# title\n\n```\n\ttab in code\nhttps://bare.in-code\n```\n",
+            "# title\n\n```\n\ttab in code\nhttps://bare.in-code\n```\n\nws \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD009")),
+            "outside-fence lint must still fire: {f:?}"
+        );
         // Inside the fenced block: MD010 and MD034 should NOT fire.
         assert!(
             f.iter().all(|x| x.code.as_deref() != Some("MD010")
@@ -367,15 +381,21 @@ mod tests {
     #[test]
     fn empty_file_produces_no_md041() {
         // first_heading_candidate returns None on a fully empty file.
-        let s = site_with_content(&[("empty.md", "")]);
+        // The sibling file's MD009 keeps `f` non-empty so the
+        // no-MD041 predicate actually evaluates.
+        let s =
+            site_with_content(&[("empty.md", ""), ("ws.md", "# t\n\nws \n")]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD009")));
         assert!(f.iter().all(|x| x.code.as_deref() != Some("MD041")));
     }
 
     #[test]
     fn sibling_content_dir_layout_is_discovered() {
         // Use a `<root>/../content` layout, mimicking real ssg sites.
-        let s = site_with_content(&[("doc.md", "# ok\n")]);
+        // Trailing whitespace produces a finding, proving the file
+        // was actually scanned (and keeping the predicate evaluated).
+        let s = site_with_content(&[("doc.md", "# ok\n\nws \n")]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
         assert!(
             f.iter()
@@ -392,7 +412,7 @@ mod tests {
             "doc.md",
             "---\ntitle: \"X\"\npermalink: \"https://example.com/x/\"\n\
              url: https://example.com\natom: \"https://example.com/atom.xml\"\n\
-             ---\n\n# Heading\n\nbody.\n",
+             ---\n\n# Heading\n\nbody. \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
         assert!(
@@ -417,11 +437,18 @@ mod tests {
 
     #[test]
     fn frontmatter_hard_tabs_and_trailing_ws_are_exempt() {
+        // The body bare URL guarantees `f` is non-empty, so the
+        // exemption predicate below actually evaluates per finding.
         let s = site_with_content(&[(
             "doc.md",
-            "---\ntitle: \"X\"\nkey:\t\"tabbed\"   \n---\n\n# Heading\n\nbody\n",
+            "---\ntitle: \"X\"\nkey:\t\"tabbed\"   \n---\n\n# Heading\n\n\
+             see https://bare.example\n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "body lint must still fire: {f:?}"
+        );
         assert!(
             f.iter().all(|x| x.code.as_deref() != Some("MD010")
                 && x.code.as_deref() != Some("MD009")),
@@ -435,7 +462,7 @@ mod tests {
         // MD025's H1 tally.
         let s = site_with_content(&[(
             "doc.md",
-            "---\n# yaml comment\ntitle: \"X\"\n---\n\n# Only H1\n\nbody\n",
+            "---\n# yaml comment\ntitle: \"X\"\n---\n\n# Only H1\n\nbody \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
         assert!(
@@ -450,7 +477,7 @@ mod tests {
         // template-provided from `title:`, so no MD041.
         let s = site_with_content(&[(
             "doc.md",
-            "---\ntitle: \"Threshold\"\n---\n\n## Section heading\n\nbody\n",
+            "---\ntitle: \"Threshold\"\n---\n\n## Section heading\n\nbody \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
         assert!(
@@ -485,6 +512,76 @@ mod tests {
         assert!(frontmatter_has_title("---\nTitle: \"X\"\n---\n", 3));
         assert!(!frontmatter_has_title("---\nsubtitle: \"X\"\n---\n", 3));
         assert!(!frontmatter_has_title("body only\n", 0));
+    }
+
+    #[test]
+    fn unreadable_markdown_file_is_skipped() {
+        // Invalid UTF-8 makes read_to_string fail, driving the
+        // per-file `continue` branch without permission games.
+        let s = site_with_content(&[("good.md", "# ok\n")]);
+        let content = s.root.parent().unwrap().join("content");
+        std::fs::write(content.join("binary.md"), [0xFF, 0xFE, 0x00, 0x9F])
+            .unwrap();
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "unreadable file must be skipped: {f:?}");
+    }
+
+    #[test]
+    fn content_dir_directly_under_root_is_discovered() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("site");
+        let content = root.join("content");
+        std::fs::create_dir_all(&content).unwrap();
+        std::fs::write(content.join("doc.md"), "no heading here\n").unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: Vec::new(),
+        };
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD041")),
+            "direct <root>/content must be scanned: {f:?}"
+        );
+    }
+
+    #[test]
+    fn root_without_parent_skips_with_info() {
+        // `/` has no parent, driving the `parent()?` early return.
+        let s = Site {
+            root: PathBuf::from("/"),
+            html_files: Vec::new(),
+        };
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        if !Path::new("/content").is_dir() {
+            assert_eq!(f.len(), 1);
+            assert_eq!(f[0].code.as_deref(), Some("MD-INPUT-MISSING"));
+        }
+    }
+
+    #[test]
+    fn autolink_url_in_angle_brackets_is_silent() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\nVisit <https://example.com> today.\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "autolink form must not trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn leading_blank_line_then_heading_is_clean() {
+        // First physical line is blank: first_heading_candidate must
+        // fall through to the first non-blank line.
+        let s = site_with_content(&[("doc.md", "\n# Title\n\nbody\n")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD041")),
+            "blank first line must not trip MD041: {f:?}"
+        );
     }
 
     #[test]

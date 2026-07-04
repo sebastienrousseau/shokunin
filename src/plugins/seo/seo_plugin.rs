@@ -329,6 +329,10 @@ fn inject_seo_tags_html(
     lang: &str,
     social: &SocialMeta,
 ) -> Result<String> {
+    fail_point!("seo::inject-tags", |_| {
+        Err(anyhow::anyhow!("injected: seo::inject-tags"))
+    });
+
     let canonical = extract_canonical(html);
 
     let is_article = html.contains("<article");
@@ -896,5 +900,107 @@ mod tests {
             .transform_html(raw, Path::new("frag.html"), &c)
             .unwrap();
         assert_eq!(after, raw);
+    }
+
+    #[test]
+    fn og_tags_skips_image_block_when_og_image_present() {
+        // An existing og:image means the whole image block (image +
+        // width/height) is left alone.
+        let html = r#"<html><head>
+            <meta property="og:image" content="/have.png">
+        </head></html>"#;
+        let tags = build_og_tags(html, &social("T", "D"), "", "website", "en");
+        let joined = tags.join("\n");
+        assert!(
+            !joined.contains("og:image"),
+            "existing og:image must suppress image emission: {joined}"
+        );
+    }
+
+    #[test]
+    fn og_tags_skips_dimensions_when_width_already_present() {
+        // og:image is missing (and derivable from twitter:image), but
+        // explicit dimensions already exist — only og:image is added.
+        let html = r#"<html><head>
+            <meta name="twitter:image" content="/twit.png">
+            <meta property="og:image:width" content="800">
+            <meta property="og:image:height" content="420">
+        </head></html>"#;
+        let tags = build_og_tags(html, &social("T", "D"), "", "website", "en");
+        let joined = tags.join("\n");
+        assert!(joined.contains(r#"property="og:image" content="/twit.png""#));
+        assert!(
+            !joined.contains(r#"content="1200""#),
+            "must not re-emit default dimensions: {joined}"
+        );
+    }
+
+    #[test]
+    fn twitter_tags_skips_image_when_twitter_image_present() {
+        let html = r#"<html><head>
+            <meta name="twitter:image" content="/have.png">
+        </head></html>"#;
+        let tags = build_twitter_tags(html, &social("T", "D"), "summary");
+        let joined = tags.join("\n");
+        assert!(
+            !joined.contains("twitter:image"),
+            "existing twitter:image must suppress emission: {joined}"
+        );
+    }
+
+    #[test]
+    fn og_locale_with_empty_declared_locale_set_uses_site_language() {
+        // Zero declared locales: the helper's default-locale fallback
+        // kicks in and the site language drives og:locale.
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en-GB", &[]);
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let page = dir.path().join("about/index.html");
+        let out = SeoPlugin.transform_html(html, &page, &c).unwrap();
+        assert!(
+            out.contains(r#"property="og:locale" content="en_GB""#),
+            "expected og:locale=en_GB from site language, got: {out}"
+        );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard<'a>(&'a str);
+
+    impl Drop for FailGuard<'_> {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn transform_html_maps_injection_failure_to_io_error() {
+        let _guard = FailGuard("seo::inject-tags");
+        fail::cfg("seo::inject-tags", "return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let c = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            dir.path(),
+            Path::new("templates"),
+        );
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let err = SeoPlugin
+            .transform_html(html, Path::new("page.html"), &c)
+            .expect_err("failpoint must abort tag injection");
+        assert!(
+            err.to_string().contains("seo::inject-tags"),
+            "injected error should surface with its failpoint name: {err}"
+        );
     }
 }

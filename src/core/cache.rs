@@ -378,6 +378,7 @@ mod tests {
 
     // 1. Loading a missing cache yields an empty map.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn load_missing_cache() {
         let tmp = TempDir::new().ok().unwrap();
         let cache_path = tmp.path().join("nonexistent.json");
@@ -387,6 +388,7 @@ mod tests {
 
     // 2. Loading a valid cache round-trips correctly.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn load_valid_cache() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "a.md", "hello");
@@ -401,6 +403,7 @@ mod tests {
 
     // 3. Detect changed files.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn detect_changes() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "a.md", "v1");
@@ -420,6 +423,7 @@ mod tests {
 
     // 4. No changes detected when content is identical.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn detect_no_changes() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "a.md", "same");
@@ -435,6 +439,7 @@ mod tests {
 
     // 5. New files appear as changed.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn new_files_are_changed() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "a.md", "hello");
@@ -454,6 +459,7 @@ mod tests {
 
     // 6. Deleted files are pruned from the map on update.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn deleted_files_pruned() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "a.md", "keep");
@@ -472,6 +478,7 @@ mod tests {
 
     // 7. Save / load round-trip preserves all entries.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn save_load_roundtrip() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "x.md", "data1");
@@ -487,6 +494,7 @@ mod tests {
 
     // 8. Empty content directory yields no changed files.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn empty_directory() {
         let (_tmp, content, cache_path) = setup();
         let cache = BuildCache::load(&cache_path).ok().unwrap();
@@ -496,6 +504,7 @@ mod tests {
 
     // 9. Non-existent content directory yields no changed files.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn nonexistent_directory() {
         let tmp = TempDir::new().ok().unwrap();
         let cache_path = tmp.path().join(".ssg-cache.json");
@@ -507,6 +516,7 @@ mod tests {
 
     // 10. Fingerprint is deterministic for the same content.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn fingerprint_deterministic() {
         let tmp = TempDir::new().ok().unwrap();
         let path = tmp.path().join("test.txt");
@@ -519,6 +529,7 @@ mod tests {
 
     // 11. Different content produces different fingerprints.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn fingerprint_varies_with_content() {
         let tmp = TempDir::new().ok().unwrap();
         let p1 = tmp.path().join("a.txt");
@@ -533,6 +544,7 @@ mod tests {
 
     // 12. Subdirectory files are tracked correctly.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn subdirectory_tracking() {
         let (_tmp, content, cache_path) = setup();
         write_file(&content, "posts/2024/hello.md", "hi");
@@ -550,6 +562,7 @@ mod tests {
 
     // 13. Corrupted JSON in cache file returns an error.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn build_cache_load_corrupted_json() {
         // Arrange
         let tmp = TempDir::new().ok().unwrap();
@@ -565,6 +578,7 @@ mod tests {
 
     // 14. Empty directory produces no changes.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn build_cache_empty_directory() {
         // Arrange
         let (_tmp, content, cache_path) = setup();
@@ -581,6 +595,7 @@ mod tests {
 
     // 15. File present in cache but deleted from disk is detected on update.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn build_cache_file_removed_detected() {
         // Arrange
         let (_tmp, content, cache_path) = setup();
@@ -601,6 +616,7 @@ mod tests {
 
     // 17. default_path() returns the compile-time constant.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn default_path_returns_compile_time_constant() {
         // Covers the const fn at lines 250-252. The function is a
         // trivial static-string accessor but it's part of the
@@ -611,6 +627,7 @@ mod tests {
 
     // 18. walk() propagates read_dir errors via with_context.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn walk_errors_on_nonexistent_directory() {
         // Covers the with_context format! closure at lines 156-158.
         // We call the walker directly with a path that doesn't
@@ -634,6 +651,7 @@ mod tests {
     // We make `cache_path` a directory so File::open succeeds existence
     // check but read_to_string fails ("Is a directory").
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn load_read_failure_fires_with_context_closure() {
         let tmp = TempDir::new().ok().unwrap();
         let cache_path = tmp.path().join("cache-as-dir");
@@ -651,6 +669,7 @@ mod tests {
     // asserts is_err; here we assert the closure-generated message
     // (lines 96-98) made it into the error chain.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn load_parse_failure_message_contains_path() {
         let tmp = TempDir::new().ok().unwrap();
         let cache_path = tmp.path().join("bad.json");
@@ -672,6 +691,7 @@ mod tests {
     // an intermediate file (not dir) at the parent so fs::write fails
     // (parent is a file, not a directory).
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn save_write_failure_fires_with_context_closure() {
         let tmp = TempDir::new().ok().unwrap();
         let parent_as_file = tmp.path().join("not-a-dir");
@@ -688,6 +708,7 @@ mod tests {
 
     // 16. Unchanged files do not appear in the changed list.
     #[test]
+    #[serial_test::parallel(cache_failpoints)]
     fn build_cache_unchanged_files_not_reported() {
         // Arrange
         let (_tmp, content, cache_path) = setup();
@@ -707,5 +728,131 @@ mod tests {
             changed.is_empty(),
             "unchanged files must not be in changed list"
         );
+    }
+
+    // ── deep error-path coverage (unix permission tricks) ───────────
+
+    // 22. fingerprint failure inside changed_files propagates.
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel(cache_failpoints)]
+    fn changed_files_propagates_unreadable_file_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let (_tmp, content, cache_path) = setup();
+        write_file(&content, "locked.md", "secret");
+        let locked = content.join("locked.md");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).ok();
+
+        let cache = BuildCache::new(&cache_path);
+        let result = cache.changed_files(&content);
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o644)).ok();
+        assert!(result.is_err(), "unreadable file must fail hashing");
+    }
+
+    // 23. fingerprint failure inside update propagates.
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel(cache_failpoints)]
+    fn update_propagates_unreadable_file_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let (_tmp, content, cache_path) = setup();
+        write_file(&content, "locked.md", "secret");
+        let locked = content.join("locked.md");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).ok();
+
+        let mut cache = BuildCache::new(&cache_path);
+        let result = cache.update(&content);
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o644)).ok();
+        assert!(result.is_err(), "unreadable file must fail hashing");
+    }
+
+    // 24. walk() propagates read_dir errors raised inside recursion.
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel(cache_failpoints)]
+    fn walk_propagates_error_from_nested_unreadable_directory() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let (_tmp, content, cache_path) = setup();
+        write_file(&content, "ok.md", "fine");
+        let nested = content.join("locked-dir");
+        fs::create_dir_all(&nested).ok();
+        write_file(&nested, "hidden.md", "invisible");
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o000)).ok();
+
+        let cache = BuildCache::new(&cache_path);
+        let result = cache.changed_files(&content);
+
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o755)).ok();
+        assert!(result.is_err(), "unreadable nested dir must fail the walk");
+    }
+
+    /// Fault-injection tests for the cache failpoints. These mirror
+    /// `tests/fault_injection.rs` but live in the lib test binary so
+    /// unit-test coverage measurement observes the injected bodies.
+    /// Failpoints are process-global: each test is #[serial] on the
+    /// same key the other cache tests join as #[parallel].
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+        use serial_test::serial;
+
+        /// RAII guard that disables a failpoint on drop.
+        struct FailGuard<'a>(&'a str);
+
+        impl Drop for FailGuard<'_> {
+            fn drop(&mut self) {
+                let _ = fail::cfg(self.0, "off");
+            }
+        }
+
+        #[test]
+        #[serial(cache_failpoints)]
+        fn load_read_failpoint_injects_error() {
+            let (_tmp, _content, cache_path) = setup();
+            fs::write(&cache_path, "{}").ok();
+
+            let _guard = FailGuard("cache::read");
+            fail::cfg("cache::read", "return").expect("activate failpoint");
+            let err = BuildCache::load(&cache_path).unwrap_err();
+            assert!(
+                format!("{err:?}").contains("injected: cache::read"),
+                "got: {err:?}"
+            );
+        }
+
+        #[test]
+        #[serial(cache_failpoints)]
+        fn load_parse_failpoint_injects_error() {
+            let (_tmp, _content, cache_path) = setup();
+            fs::write(&cache_path, "{\"fingerprints\":{}}").ok();
+
+            let _guard = FailGuard("cache::parse");
+            fail::cfg("cache::parse", "return").expect("activate failpoint");
+            let err = BuildCache::load(&cache_path).unwrap_err();
+            assert!(
+                format!("{err:?}").contains("injected: cache::parse"),
+                "got: {err:?}"
+            );
+        }
+
+        #[test]
+        #[serial(cache_failpoints)]
+        fn save_write_failpoint_injects_error() {
+            let (_tmp, _content, cache_path) = setup();
+
+            let _guard = FailGuard("cache::write");
+            fail::cfg("cache::write", "return").expect("activate failpoint");
+            let cache = BuildCache::new(&cache_path);
+            let err = cache.save().unwrap_err();
+            assert!(
+                format!("{err:?}").contains("injected: cache::write"),
+                "got: {err:?}"
+            );
+        }
     }
 }

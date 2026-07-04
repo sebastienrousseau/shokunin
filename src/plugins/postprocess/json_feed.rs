@@ -104,7 +104,7 @@ impl Plugin for JsonFeedPlugin {
         );
 
         let feed_path = ctx.site_dir.join("feed.json");
-        let serialized = serde_json::to_string_pretty(&feed_json)
+        let serialized = serialize_feed(&feed_json)
             .unwrap_or_else(|_| feed_json.to_string());
         fs::write(&feed_path, serialized).with_path(&feed_path)?;
 
@@ -116,6 +116,18 @@ impl Plugin for JsonFeedPlugin {
         );
         Ok(())
     }
+}
+
+/// Serialize the feed with a fault-injection hook so tests can drive
+/// the compact-encoding fallback branch (pretty-printing a `Value`
+/// built from owned strings cannot fail in practice).
+fn serialize_feed(feed_json: &Value) -> serde_json::Result<String> {
+    fail_point!("postprocess::json-feed-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::json-feed-serialize"
+        )
+    ));
+    serde_json::to_string_pretty(feed_json)
 }
 
 /// A single JSON Feed item ready for serialisation.
@@ -342,7 +354,10 @@ fn detect_locale_from_path(
     rel_path: &str,
     known_locales: &[String],
 ) -> Option<String> {
-    let first = rel_path.split('/').next()?;
+    // `split` always yields at least one segment, so this cannot be
+    // empty-handed; `unwrap_or_default` keeps the expression total
+    // without an unreachable `None` branch.
+    let first = rel_path.split('/').next().unwrap_or_default();
     if known_locales.iter().any(|l| l == first) {
         Some(first.to_string())
     } else {
@@ -427,7 +442,7 @@ mod tests {
 
     #[test]
     fn test_json_feed_top_level_fields() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Hello World".to_string());
@@ -444,13 +459,13 @@ mod tests {
         write_meta_sidecar(tmp.path(), "hello", &meta);
 
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
 
         let feed_path = tmp.path().join("feed.json");
         assert!(feed_path.exists(), "feed.json should be created");
 
-        let raw = fs::read_to_string(&feed_path)?;
-        let value: Value = serde_json::from_str(&raw)?;
+        let raw = fs::read_to_string(&feed_path).unwrap();
+        let value: Value = serde_json::from_str(&raw).unwrap();
         assert_eq!(value["version"], JSON_FEED_VERSION);
         assert_eq!(value["title"], "Test Site");
         assert_eq!(value["home_page_url"], "https://example.com/");
@@ -463,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_json_feed_item_required_fields() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Item Test".to_string());
@@ -478,11 +493,12 @@ mod tests {
         write_meta_sidecar(tmp.path(), "item-test", &meta);
 
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
 
-        let value: Value = serde_json::from_str(&fs::read_to_string(
-            tmp.path().join("feed.json"),
-        )?)?;
+        let value: Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join("feed.json")).unwrap(),
+        )
+        .unwrap();
         let item = &value["items"][0];
 
         assert!(item["id"].is_string());
@@ -504,7 +520,7 @@ mod tests {
 
     #[test]
     fn test_json_feed_injects_link_into_html() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Link Test".to_string());
@@ -519,12 +535,13 @@ mod tests {
         fs::write(
             &html_path,
             "<html><head><title>T</title></head><body></body></html>",
-        )?;
+        )
+        .unwrap();
 
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
 
-        let html = fs::read_to_string(&html_path)?;
+        let html = fs::read_to_string(&html_path).unwrap();
         assert!(
             html.contains("application/feed+json"),
             "missing feed+json link tag in: {html}"
@@ -535,16 +552,16 @@ mod tests {
 
     #[test]
     fn test_json_feed_empty_site_dir() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("feed.json").exists());
         Ok(())
     }
 
     #[test]
     fn test_json_feed_sorts_descending_and_truncates() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         for i in 0..60 {
             let mut meta = HashMap::new();
             let _ = meta.insert("title".to_string(), format!("P{i}"));
@@ -561,10 +578,11 @@ mod tests {
         }
 
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
-        let value: Value = serde_json::from_str(&fs::read_to_string(
-            tmp.path().join("feed.json"),
-        )?)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
+        let value: Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join("feed.json")).unwrap(),
+        )
+        .unwrap();
         let items = value["items"].as_array().unwrap();
         assert_eq!(items.len(), MAX_ITEMS);
         // sorted descending => first sort_key >= last
@@ -576,7 +594,7 @@ mod tests {
 
     #[test]
     fn test_json_feed_empty_author_shows_unknown() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "T".to_string());
         let _ = meta.insert("description".to_string(), "b".to_string());
@@ -587,10 +605,11 @@ mod tests {
         write_meta_sidecar(tmp.path(), "noauth", &meta);
 
         let ctx = make_ctx(tmp.path());
-        JsonFeedPlugin.after_compile(&ctx)?;
-        let value: Value = serde_json::from_str(&fs::read_to_string(
-            tmp.path().join("feed.json"),
-        )?)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
+        let value: Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join("feed.json")).unwrap(),
+        )
+        .unwrap();
         assert_eq!(value["items"][0]["authors"][0]["name"], "Unknown");
         Ok(())
     }
@@ -703,16 +722,19 @@ mod tests {
 
     #[test]
     fn test_json_feed_idempotent_link_injection() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_path = tmp.path().join("page.html");
         fs::write(
             &html_path,
             "<html><head><title>T</title></head><body></body></html>",
-        )?;
-        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")?;
-        let first = fs::read_to_string(&html_path)?;
-        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")?;
-        let second = fs::read_to_string(&html_path)?;
+        )
+        .unwrap();
+        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")
+            .unwrap();
+        let first = fs::read_to_string(&html_path).unwrap();
+        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")
+            .unwrap();
+        let second = fs::read_to_string(&html_path).unwrap();
         assert_eq!(first, second);
         assert_eq!(
             second.matches("application/feed+json").count(),
@@ -724,11 +746,12 @@ mod tests {
 
     #[test]
     fn test_json_feed_link_skips_files_without_head() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_path = tmp.path().join("frag.html");
-        fs::write(&html_path, "<div>no head</div>")?;
-        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")?;
-        let result = fs::read_to_string(&html_path)?;
+        fs::write(&html_path, "<div>no head</div>").unwrap();
+        inject_json_feed_link(tmp.path(), "https://example.com/feed.json")
+            .unwrap();
+        let result = fs::read_to_string(&html_path).unwrap();
         assert!(!result.contains("application/feed+json"));
         Ok(())
     }
@@ -826,7 +849,7 @@ mod tests {
 
     #[test]
     fn test_json_feed_no_base_url() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "T".to_string());
         let _ = meta.insert("description".to_string(), "x".to_string());
@@ -861,14 +884,222 @@ mod tests {
             Path::new("t"),
             config,
         );
-        JsonFeedPlugin.after_compile(&ctx)?;
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
 
-        let value: Value = serde_json::from_str(&fs::read_to_string(
-            tmp.path().join("feed.json"),
-        )?)?;
+        let value: Value = serde_json::from_str(
+            &fs::read_to_string(tmp.path().join("feed.json")).unwrap(),
+        )
+        .unwrap();
         assert_eq!(value["feed_url"], "feed.json");
         assert_eq!(value["home_page_url"], "/");
         assert_eq!(value["items"][0]["url"], "p/");
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // build_dir/.meta fallback (site_dir has no sidecars)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_json_feed_falls_back_to_build_meta_dir() {
+        let tmp = tempdir().unwrap();
+        let build = tmp.path().join("build");
+        let site = tmp.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let page_dir = build.join(".meta").join("post");
+        fs::create_dir_all(&page_dir).unwrap();
+        fs::write(
+            page_dir.join("page.meta.json"),
+            r#"{"title":"From Build Meta","item_pub_date":"Thu, 11 Apr 2026 06:06:06 +0000"}"#,
+        )
+        .unwrap();
+
+        crate::test_support::init_logger();
+        let config = crate::cmd::SsgConfig {
+            base_url: "https://example.com".to_string(),
+            site_name: "Test Site".to_string(),
+            site_title: "Test Site".to_string(),
+            site_description: "A test site".to_string(),
+            language: "en".to_string(),
+            content_dir: std::path::PathBuf::from("content"),
+            output_dir: std::path::PathBuf::from("build"),
+            template_dir: std::path::PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+            cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        };
+        let ctx = PluginContext::with_config(
+            Path::new("content"),
+            &build,
+            &site,
+            Path::new("templates"),
+            config,
+        );
+        JsonFeedPlugin.after_compile(&ctx).unwrap();
+
+        let raw = fs::read_to_string(site.join("feed.json")).unwrap();
+        assert!(raw.contains("From Build Meta"));
+    }
+
+    // -----------------------------------------------------------------
+    // JsonFeedItem::to_json: per-item language
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_to_json_includes_language_when_present() {
+        let item = JsonFeedItem {
+            sort_key: "2026".to_string(),
+            id: "id".to_string(),
+            url: "u/".to_string(),
+            title: "T".to_string(),
+            content_html: "C".to_string(),
+            date_published: "2026-01-01T00:00:00+00:00".to_string(),
+            date_modified: "2026-01-01T00:00:00+00:00".to_string(),
+            author: "A".to_string(),
+            tags: Vec::new(),
+            language: Some("fr".to_string()),
+        };
+        let v = item.to_json();
+        assert_eq!(v["language"], "fr");
+    }
+
+    // -----------------------------------------------------------------
+    // build_item: whitespace-only category yields no tags
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_item_ignores_whitespace_only_category() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "T".to_string());
+        let _ = meta.insert("category".to_string(), "   ".to_string());
+        let item = build_item("p", &meta, "", &[]).unwrap();
+        assert!(item.tags.is_empty(), "blank category must not become a tag");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_default_locale fallbacks
+    // -----------------------------------------------------------------
+
+    fn ctx_with_locale(
+        site_dir: &Path,
+        default_locale: &str,
+        language: &str,
+    ) -> PluginContext {
+        let config = crate::cmd::SsgConfig {
+            base_url: String::new(),
+            site_name: "S".to_string(),
+            site_title: String::new(),
+            site_description: String::new(),
+            language: language.to_string(),
+            content_dir: std::path::PathBuf::from("c"),
+            output_dir: std::path::PathBuf::from("b"),
+            template_dir: std::path::PathBuf::from("t"),
+            serve_dir: None,
+            i18n: Some(crate::i18n::I18nConfig {
+                default_locale: default_locale.to_string(),
+                locales: vec!["en".to_string(), "fr".to_string()],
+                url_prefix: Default::default(),
+            }),
+            cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        };
+        PluginContext::with_config(
+            Path::new("c"),
+            Path::new("b"),
+            site_dir,
+            Path::new("t"),
+            config,
+        )
+    }
+
+    #[test]
+    fn test_extract_default_locale_empty_i18n_uses_language() {
+        let tmp = tempdir().unwrap();
+        let ctx = ctx_with_locale(tmp.path(), "", "de");
+        assert_eq!(extract_default_locale(&ctx), "de");
+    }
+
+    #[test]
+    fn test_extract_default_locale_all_empty_falls_back_to_en() {
+        let tmp = tempdir().unwrap();
+        let ctx = ctx_with_locale(tmp.path(), "", "");
+        assert_eq!(extract_default_locale(&ctx), "en");
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_when_feed_json_is_a_directory() {
+        let tmp = tempdir().unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+        fs::create_dir_all(tmp.path().join("feed.json")).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let err = JsonFeedPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("feed.json"));
+    }
+
+    #[test]
+    fn test_after_compile_propagates_unreadable_html_error() {
+        let tmp = tempdir().unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+        fs::write(tmp.path().join("bad.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let err = JsonFeedPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("bad.html"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_inject_json_feed_link_write_failure_on_readonly_html() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let html_path = tmp.path().join("index.html");
+        fs::write(
+            &html_path,
+            "<html><head><title>T</title></head><body></body></html>",
+        )
+        .unwrap();
+        fs::set_permissions(&html_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let result =
+            inject_json_feed_link(tmp.path(), "https://x.example/feed.json");
+        let _ =
+            fs::set_permissions(&html_path, fs::Permissions::from_mode(0o644));
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("index.html"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_inject_json_feed_link_walk_failure_on_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result =
+            inject_json_feed_link(tmp.path(), "https://x.example/feed.json");
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        assert!(result.is_err(), "expected an error from the locked path");
     }
 }

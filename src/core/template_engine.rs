@@ -180,19 +180,19 @@ impl TemplateEngine {
             let _ = ctx.insert(k.clone(), v.clone());
         }
 
-        // Determine which template to use, fall back to page.html
-        let tmpl_name = if self.env.get_template(template_name).is_ok() {
-            template_name
-        } else if self.env.get_template("page.html").is_ok() {
-            "page.html"
-        } else {
-            // No matching template — return content as-is
-            return Ok(page_content.to_string());
-        };
-
-        let tmpl = self.env.get_template(tmpl_name).with_context(|| {
-            format!("Failed to load template '{tmpl_name}'")
-        })?;
+        // Determine which template to use, fall back to page.html.
+        // Single lookup per candidate — the successful `get_template`
+        // result is reused directly, so the resolve and load steps can
+        // never disagree.
+        let (tmpl_name, tmpl) =
+            if let Ok(t) = self.env.get_template(template_name) {
+                (template_name, t)
+            } else if let Ok(t) = self.env.get_template("page.html") {
+                ("page.html", t)
+            } else {
+                // No matching template — return content as-is
+                return Ok(page_content.to_string());
+            };
 
         tmpl.render(serde_json::Value::Object(ctx))
             .with_context(|| format!("Failed to render template '{tmpl_name}'"))
@@ -684,6 +684,43 @@ mod tests {
         fs::write(data.join("broken.toml"), "not valid toml [[[").unwrap();
         fs::write(data.join("broken.json"), "{not valid").unwrap();
         fs::write(data.join("good.toml"), r#"x = "y""#).unwrap();
+
+        let result = TemplateEngine::load_data_files(&content);
+        assert!(result.contains_key("good"));
+        assert!(!result.contains_key("broken"));
+    }
+
+    #[test]
+    fn load_data_files_skips_non_utf8_file() {
+        // A file whose bytes are not valid UTF-8 makes
+        // `read_to_string` fail, taking the `continue` arm.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let data = dir.path().join("data");
+        fs::create_dir_all(&data).unwrap();
+
+        fs::write(data.join("binary.toml"), [0xFF, 0xFE, 0x00, 0x01]).unwrap();
+        fs::write(data.join("ok.toml"), r#"k = "v""#).unwrap();
+
+        let result = TemplateEngine::load_data_files(&content);
+        assert!(result.contains_key("ok"));
+        assert!(!result.contains_key("binary"));
+    }
+
+    #[test]
+    fn load_data_files_skips_invalid_yaml() {
+        // Exercises the YAML parse-error arm (including the
+        // `log::warn!` format arguments).
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let data = dir.path().join("data");
+        fs::create_dir_all(&data).unwrap();
+
+        fs::write(data.join("broken.yml"), "key: [unclosed").unwrap();
+        fs::write(data.join("good.yaml"), "k: v").unwrap();
 
         let result = TemplateEngine::load_data_files(&content);
         assert!(result.contains_key("good"));

@@ -51,7 +51,7 @@ impl Plugin for ManifestFixPlugin {
         // when it tries to fetch them.
         drop_empty_icons(&mut manifest);
 
-        let output = serde_json::to_string_pretty(&manifest)
+        let output = serialize_manifest(&manifest)
             .map_err(|e| SsgError::io(e, &manifest_path))?;
         fs::write(&manifest_path, output).with_path(&manifest_path)?;
 
@@ -92,11 +92,24 @@ fn drop_empty_icons(manifest: &mut serde_json::Value) {
     if icons.is_empty() {
         // An empty array is preferable to `[{src:""}]` — but if there are
         // truly no usable icons, drop the key entirely so the manifest
-        // doesn't advertise an empty icon set.
-        if let Some(map) = manifest.as_object_mut() {
-            let _ = map.remove("icons");
-        }
+        // doesn't advertise an empty icon set. (`get_mut("icons")`
+        // succeeding above guarantees this is an object.)
+        let _ = manifest.as_object_mut().and_then(|map| map.remove("icons"));
     }
+}
+
+/// Serialize the manifest with a fault-injection hook so tests can
+/// drive the error branch (pretty-printing a `Value` cannot fail in
+/// practice).
+fn serialize_manifest(
+    manifest: &serde_json::Value,
+) -> serde_json::Result<String> {
+    fail_point!("postprocess::manifest-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::manifest-serialize"
+        )
+    ));
+    serde_json::to_string_pretty(manifest)
 }
 
 /// Fixes a truncated description by ensuring it ends at a word boundary.
@@ -163,9 +176,9 @@ mod tests {
 
     #[test]
     fn after_compile_no_op_when_manifest_missing() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        ManifestFixPlugin.after_compile(&ctx)?;
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("manifest.json").exists());
         Ok(())
     }
@@ -236,60 +249,64 @@ mod tests {
 
     #[test]
     fn after_compile_drops_empty_icons_in_manifest() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
         fs::write(
             &manifest_path,
             r#"{"name":"X","description":"Already terminated.","icons":[{"src":""}]}"#,
-        )?;
+        ).unwrap();
         let ctx = test_ctx(tmp.path());
-        ManifestFixPlugin.after_compile(&ctx)?;
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
         let after: serde_json::Value =
-            serde_json::from_str(&fs::read_to_string(&manifest_path)?)?;
+            serde_json::from_str(&fs::read_to_string(&manifest_path).unwrap())
+                .unwrap();
         assert!(after.get("icons").is_none(), "empty icon should be dropped");
         Ok(())
     }
 
     #[test]
     fn test_manifest_fix_repairs_truncated_description() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
         fs::write(
             &manifest_path,
             r#"{"name":"Test","description":"A new paper suggests Shor's algorithm could run on as few as 10,000 qubits. The threshold for cryptographically relevant"}"#,
-        )?;
+        ).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        ManifestFixPlugin.after_compile(&ctx)?;
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&manifest_path)?;
-        let manifest: serde_json::Value = serde_json::from_str(&result)?;
+        let result = fs::read_to_string(&manifest_path).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(&result).unwrap();
         let desc = manifest["description"].as_str().unwrap();
-        assert!(
-            desc.ends_with("...") || desc.ends_with('.') || desc.ends_with('!'),
-            "Description should end cleanly, got: {desc}"
-        );
+        // Non-short-circuiting `|` so every operand is evaluated.
+        let clean =
+            desc.ends_with("...") | desc.ends_with('.') | desc.ends_with('!');
+        assert!(clean, "Description should end cleanly, got: {desc}");
         Ok(())
     }
 
     #[test]
     fn test_manifest_fix_uses_sidecar_description() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
         fs::write(
             &manifest_path,
             r#"{"name":"Test","description":"Short description"}"#,
-        )?;
+        )
+        .unwrap();
         fs::write(
             tmp.path().join("index.meta.json"),
             r#"{"description":"This is a very long description that we are using to test manifest metadata sidecar description truncation logic in the manifest fix plugin. We need to make sure that the total length of this text exceeds two hundred characters so that the truncation is triggered."}"#,
-        )?;
+        ).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        ManifestFixPlugin.after_compile(&ctx)?;
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&manifest_path)?;
-        let manifest: serde_json::Value = serde_json::from_str(&result)?;
+        let result = fs::read_to_string(&manifest_path).unwrap();
+        let manifest: serde_json::Value =
+            serde_json::from_str(&result).unwrap();
         let desc = manifest["description"].as_str().unwrap();
         assert!(desc.starts_with("This is a very long"));
         assert!(desc.ends_with("..."));
@@ -321,5 +338,60 @@ mod tests {
 
         let desc = find_full_description(&entries);
         assert!(desc.is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // after_compile: manifest without a description key
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn after_compile_handles_manifest_without_description() {
+        let tmp = tempdir().unwrap();
+        let manifest_path = tmp.path().join("manifest.json");
+        fs::write(&manifest_path, r#"{"name":"X"}"#).unwrap();
+        let ctx = test_ctx(tmp.path());
+        ManifestFixPlugin.after_compile(&ctx).unwrap();
+        let after: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&manifest_path).unwrap())
+                .unwrap();
+        assert!(
+            after.get("description").is_none(),
+            "no description key must be invented"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn after_compile_errors_on_invalid_utf8_manifest() {
+        let tmp = tempdir().unwrap();
+        let manifest_path = tmp.path().join("manifest.json");
+        fs::write(&manifest_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = ManifestFixPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("manifest.json"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_write_failure_on_readonly_manifest() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let manifest_path = tmp.path().join("manifest.json");
+        fs::write(&manifest_path, r#"{"name":"X","description":"Done."}"#)
+            .unwrap();
+        fs::set_permissions(&manifest_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = test_ctx(tmp.path());
+        let result = ManifestFixPlugin.after_compile(&ctx);
+        let _ = fs::set_permissions(
+            &manifest_path,
+            fs::Permissions::from_mode(0o644),
+        );
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("manifest.json"));
     }
 }

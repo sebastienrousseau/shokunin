@@ -456,38 +456,39 @@ mod tests {
 
     #[test]
     fn test_minify_plugin_empty_dir() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn test_minify_plugin_processes_html() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let html_path = temp.path().join("index.html");
-        fs::write(&html_path, "<h1>  Hello   World  </h1>")?;
+        fs::write(&html_path, "<h1>  Hello   World  </h1>").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(&html_path)?;
+        let content = fs::read_to_string(&html_path).unwrap();
         assert!(!content.contains("  "));
         Ok(())
     }
 
     #[test]
     fn test_minify_plugin_skips_non_html() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let css_path = temp.path().join("style.css");
-        fs::write(&css_path, "body {   color: red;   }")?;
+        fs::write(&css_path, "body {   color: red;   }").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
         // CSS minification only runs under the `minify` feature; on
         // the default build the file is untouched.
-        let content = fs::read_to_string(&css_path)?;
+        let content = fs::read_to_string(&css_path).unwrap();
         #[cfg(not(feature = "minify"))]
         assert!(content.contains("   "));
         #[cfg(feature = "minify")]
@@ -503,7 +504,7 @@ mod tests {
     #[test]
     fn test_minify_plugin_nonexistent_dir() -> Result<()> {
         let ctx = test_ctx_with(Path::new("/nonexistent"));
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
@@ -529,20 +530,20 @@ mod tests {
 
     #[test]
     fn test_image_opti_plugin_finds_images() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("photo.png"), "PNG")?;
-        fs::write(temp.path().join("logo.jpg"), "JPG")?;
-        fs::write(temp.path().join("style.css"), "CSS")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("photo.png"), "PNG").unwrap();
+        fs::write(temp.path().join("logo.jpg"), "JPG").unwrap();
+        fs::write(temp.path().join("style.css"), "CSS").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
     #[test]
     fn test_image_opti_plugin_nonexistent_dir() -> Result<()> {
         let ctx = test_ctx_with(Path::new("/nonexistent"));
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
@@ -554,10 +555,10 @@ mod tests {
 
     #[test]
     fn test_deploy_plugin_prints_target() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
         let p = DeployPlugin::new("production");
-        p.after_compile(&ctx)?;
+        p.after_compile(&ctx).unwrap();
         Ok(())
     }
 
@@ -602,18 +603,19 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn minify_plugin_empty_html_file() -> Result<()> {
         // Arrange
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let html_path = temp.path().join("empty.html");
-        fs::write(&html_path, "")?;
+        fs::write(&html_path, "").unwrap();
 
         // Act
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
         // Assert — file exists, no crash
-        let content = fs::read_to_string(&html_path)?;
+        let content = fs::read_to_string(&html_path).unwrap();
         assert!(content.is_empty());
         Ok(())
     }
@@ -621,20 +623,23 @@ mod tests {
     #[test]
     fn image_opti_plugin_finds_jpeg_variants() -> Result<()> {
         // Arrange
-        let temp = tempdir()?;
-        fs::write(temp.path().join("photo.jpg"), "JPG")?;
-        fs::write(temp.path().join("banner.jpeg"), "JPEG")?;
-        fs::write(temp.path().join("readme.txt"), "text")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("photo.jpg"), "JPG").unwrap();
+        fs::write(temp.path().join("banner.jpeg"), "JPEG").unwrap();
+        fs::write(temp.path().join("readme.txt"), "text").unwrap();
+        // Extensionless entry drives the `path.extension()` None branch
+        // in the verification loop below.
+        fs::write(temp.path().join("LICENSE"), "MIT").unwrap();
 
         // Act
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
 
         // Assert — plugin runs without error (it only logs; we verify no crash)
         // Also verify both extensions are recognized by the match arm
         let mut found = Vec::new();
-        for entry in fs::read_dir(temp.path())? {
-            let path = entry?.path();
+        for entry in fs::read_dir(temp.path()).unwrap() {
+            let path = entry.unwrap().path();
             if let Some(ext) = path.extension() {
                 let ext = ext.to_string_lossy().to_lowercase();
                 if matches!(ext.as_str(), "jpg" | "jpeg") {
@@ -649,15 +654,15 @@ mod tests {
     #[test]
     fn image_opti_plugin_nested_directories() -> Result<()> {
         // Arrange — ImageOptiPlugin only reads top-level (read_dir, not recursive)
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let subdir = temp.path().join("subdir");
-        fs::create_dir(&subdir)?;
-        fs::write(subdir.join("deep.png"), "PNG")?;
-        fs::write(temp.path().join("top.png"), "PNG")?;
+        fs::create_dir(&subdir).unwrap();
+        fs::write(subdir.join("deep.png"), "PNG").unwrap();
+        fs::write(temp.path().join("top.png"), "PNG").unwrap();
 
         // Act
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
 
         // Assert — plugin completes without error; subdir images are not
         // discovered since read_dir is non-recursive
@@ -667,13 +672,13 @@ mod tests {
     #[test]
     fn deploy_plugin_custom_target() -> Result<()> {
         // Arrange
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
         let target_name = "staging-eu-west-1";
         let plugin = DeployPlugin::new(target_name);
 
         // Act — after_compile prints the target
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
         // Assert — the stored target matches what was provided
         assert_eq!(plugin.target, target_name);
@@ -760,18 +765,19 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn minify_plugin_processes_multiple_html_files() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("a.html"), "<p>  hello  </p>")?;
-        fs::write(temp.path().join("b.html"), "<div>  world  </div>")?;
-        fs::write(temp.path().join("c.txt"), "  not html  ")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("a.html"), "<p>  hello  </p>").unwrap();
+        fs::write(temp.path().join("b.html"), "<div>  world  </div>").unwrap();
+        fs::write(temp.path().join("c.txt"), "  not html  ").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
-        let a = fs::read_to_string(temp.path().join("a.html"))?;
-        let b = fs::read_to_string(temp.path().join("b.html"))?;
-        let c = fs::read_to_string(temp.path().join("c.txt"))?;
+        let a = fs::read_to_string(temp.path().join("a.html")).unwrap();
+        let b = fs::read_to_string(temp.path().join("b.html")).unwrap();
+        let c = fs::read_to_string(temp.path().join("c.txt")).unwrap();
 
         assert!(!a.contains("  "), "a.html should be minified");
         assert!(!b.contains("  "), "b.html should be minified");
@@ -781,30 +787,32 @@ mod tests {
 
     #[cfg(not(feature = "minify"))]
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn minify_plugin_whitespace_only_html_file() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("ws.html"), "   \n\t  \n  ")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("ws.html"), "   \n\t  \n  ").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(temp.path().join("ws.html"))?;
+        let content = fs::read_to_string(temp.path().join("ws.html")).unwrap();
         assert_eq!(content, " ");
         Ok(())
     }
 
     #[cfg(not(feature = "minify"))]
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn minify_plugin_html_with_pre_block_not_modified() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let original =
             "<html><pre>  keep  spaces  </pre><p>  other  </p></html>";
-        fs::write(temp.path().join("pre.html"), original)?;
+        fs::write(temp.path().join("pre.html"), original).unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(temp.path().join("pre.html"))?;
+        let content = fs::read_to_string(temp.path().join("pre.html")).unwrap();
         assert_eq!(content, original);
         Ok(())
     }
@@ -815,20 +823,23 @@ mod tests {
 
     #[test]
     fn image_opti_plugin_finds_gif_and_bmp() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("anim.gif"), "GIF")?;
-        fs::write(temp.path().join("icon.bmp"), "BMP")?;
-        fs::write(temp.path().join("doc.pdf"), "PDF")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("anim.gif"), "GIF").unwrap();
+        fs::write(temp.path().join("icon.bmp"), "BMP").unwrap();
+        fs::write(temp.path().join("doc.pdf"), "PDF").unwrap();
+        // Extensionless entry drives the `path.extension()` None branch
+        // in the verification loop below.
+        fs::write(temp.path().join("Makefile"), "all:").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
 
         // Verify the plugin ran without error. The plugin only logs —
         // we verify it recognizes gif/bmp by not crashing and check
         // file counts manually.
         let mut count = 0;
-        for entry in fs::read_dir(temp.path())? {
-            let path = entry?.path();
+        for entry in fs::read_dir(temp.path()).unwrap() {
+            let path = entry.unwrap().path();
             if let Some(ext) = path.extension() {
                 let ext = ext.to_string_lossy().to_lowercase();
                 if matches!(ext.as_str(), "gif" | "bmp") {
@@ -842,31 +853,31 @@ mod tests {
 
     #[test]
     fn image_opti_plugin_empty_dir_no_crash() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
     #[test]
     fn image_opti_plugin_no_images() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("readme.txt"), "text")?;
-        fs::write(temp.path().join("style.css"), "css")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("readme.txt"), "text").unwrap();
+        fs::write(temp.path().join("style.css"), "css").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
     #[test]
     fn image_opti_plugin_files_without_extension() -> Result<()> {
-        let temp = tempdir()?;
-        fs::write(temp.path().join("Makefile"), "all:")?;
-        fs::write(temp.path().join("LICENSE"), "MIT")?;
+        let temp = tempdir().unwrap();
+        fs::write(temp.path().join("Makefile"), "all:").unwrap();
+        fs::write(temp.path().join("LICENSE"), "MIT").unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        ImageOptiPlugin.after_compile(&ctx)?;
+        ImageOptiPlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
@@ -876,24 +887,24 @@ mod tests {
 
     #[test]
     fn deploy_plugin_empty_target() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
         let plugin = DeployPlugin::new("");
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
         assert_eq!(plugin.target, "");
         Ok(())
     }
 
     #[test]
     fn deploy_plugin_various_targets() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let ctx = test_ctx_with(temp.path());
 
         for target in ["staging", "production", "preview", "canary"] {
             let plugin = DeployPlugin::new(target);
             assert_eq!(plugin.name(), "deploy");
             assert_eq!(plugin.target, target);
-            plugin.after_compile(&ctx)?;
+            plugin.after_compile(&ctx).unwrap();
         }
         Ok(())
     }
@@ -1003,21 +1014,23 @@ mod tests {
     #[cfg(feature = "minify")]
     #[test]
     fn minify_plugin_recursive_walk_processes_nested_html() -> Result<()> {
-        let temp = tempdir()?;
+        let temp = tempdir().unwrap();
         let deep = temp.path().join("blog").join("2026").join("post");
-        fs::create_dir_all(&deep)?;
+        fs::create_dir_all(&deep).unwrap();
         let nested = deep.join("index.html");
         fs::write(
             &nested,
             "<html>  <body>   <p>   nested   </p>   </body>   </html>",
-        )?;
+        )
+        .unwrap();
         let top = temp.path().join("index.html");
-        fs::write(&top, "<html>  <body>   <p>   top   </p>   </body></html>")?;
+        fs::write(&top, "<html>  <body>   <p>   top   </p>   </body></html>")
+            .unwrap();
 
         let ctx = test_ctx_with(temp.path());
-        MinifyPlugin.after_compile(&ctx)?;
+        MinifyPlugin.after_compile(&ctx).unwrap();
 
-        let nested_after = fs::read_to_string(&nested)?;
+        let nested_after = fs::read_to_string(&nested).unwrap();
         // Nested file must have been touched (size strictly smaller).
         assert!(
             nested_after.len()
@@ -1026,5 +1039,99 @@ mod tests {
             "nested file should have been minified: {nested_after}"
         );
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // MinifyPlugin — per-file read/write error propagation
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn minify_plugin_read_failure_on_invalid_utf8_html() {
+        let temp = tempdir().unwrap();
+        // Invalid UTF-8 makes read_to_string fail inside the html pass.
+        fs::write(temp.path().join("broken.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let ctx = test_ctx_with(temp.path());
+        let err = MinifyPlugin
+            .after_compile(&ctx)
+            .expect_err("invalid UTF-8 html must surface a read error");
+        let msg = format!("{err:?}");
+        assert!(msg.contains("broken.html"), "path context expected: {msg}");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn minify_plugin_write_failure_on_readonly_html() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = tempdir().unwrap();
+        let file = temp.path().join("locked.html");
+        fs::write(&file, "<p>  spaced  out  </p>").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx = test_ctx_with(temp.path());
+        let result = MinifyPlugin.after_compile(&ctx);
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        let err =
+            result.expect_err("write to a read-only html file must surface");
+        let msg = format!("{err:?}");
+        assert!(msg.contains("locked.html"), "path context expected: {msg}");
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop (mirrors the
+    /// convention in `tests/fault_injection.rs`).
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn minify_read_failpoint_propagates() {
+        let _guard = FailGuard("plugins::minify-read");
+        fail::cfg("plugins::minify-read", "return")
+            .expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("index.html"), "<p>x</p>").unwrap();
+
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let err = MinifyPlugin
+            .after_compile(&ctx)
+            .expect_err("injected read failure must propagate");
+        assert!(format!("{err:?}").contains("injected: plugins::minify-read"));
+    }
+
+    #[test]
+    #[serial]
+    fn minify_write_failpoint_propagates() {
+        let _guard = FailGuard("plugins::minify-write");
+        fail::cfg("plugins::minify-write", "return")
+            .expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("index.html"), "<p>x</p>").unwrap();
+
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let err = MinifyPlugin
+            .after_compile(&ctx)
+            .expect_err("injected write failure must propagate");
+        assert!(format!("{err:?}").contains("injected: plugins::minify-write"));
     }
 }

@@ -495,4 +495,211 @@ mod tests {
         IslandPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("_islands").exists());
     }
+
+    // -------------------------------------------------------------------
+    // transform_html — remaining branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn transform_html_skips_when_loader_already_injected() {
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = "<body><ssg-island component=\"c\"></ssg-island>\
+                    <script src=\"/_islands/ssg-island.js\"></script></body>";
+        let out = IslandPlugin
+            .transform_html(html, Path::new("i.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn transform_html_appends_loader_when_body_close_missing() {
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = "<ssg-island component=\"c\"></ssg-island>";
+        let out = IslandPlugin
+            .transform_html(html, Path::new("i.html"), &ctx)
+            .unwrap();
+        assert!(out.ends_with("</script>\n"));
+        assert!(out.starts_with(html));
+    }
+
+    // -------------------------------------------------------------------
+    // extract_island_components — parser edges
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn extract_ignores_empty_component_name() {
+        let html = "<ssg-island component=\"\"></ssg-island>";
+        assert!(extract_island_components(html).is_empty());
+    }
+
+    #[test]
+    fn extract_ignores_unterminated_component_value() {
+        // No closing quote before the tag's `>` — the value never
+        // terminates within the tag.
+        let html = "<ssg-island component=\"counter></ssg-island>";
+        assert!(extract_island_components(html).is_empty());
+    }
+
+    #[test]
+    fn extract_stops_on_unterminated_tag() {
+        let html = "<ssg-island component=\"counter\"";
+        assert!(extract_island_components(html).is_empty());
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile — copy branches + IO errors
+    // -------------------------------------------------------------------
+
+    /// Site layout with one page referencing `counter`.
+    fn island_site(dir: &Path) -> std::path::PathBuf {
+        let site = dir.join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(
+            site.join("index.html"),
+            "<html><body><ssg-island component=\"counter\"></ssg-island></body></html>",
+        )
+        .unwrap();
+        site
+    }
+
+    #[test]
+    fn after_compile_without_source_islands_dir_still_writes_loader() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        // content_dir has no sibling islands/ directory.
+        let content = dir.path().join("nested").join("content");
+        fs::create_dir_all(&content).unwrap();
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
+
+        IslandPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("_islands/ssg-island.js").exists());
+        assert!(!site.join("_islands/counter.js").exists());
+    }
+
+    #[test]
+    fn after_compile_skips_component_without_source_bundle() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        // islands/ exists, but has no counter.js.
+        fs::create_dir_all(dir.path().join("islands")).unwrap();
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
+
+        IslandPlugin.after_compile(&ctx).unwrap();
+        assert!(!site.join("_islands/counter.js").exists());
+        assert!(site.join("_islands/manifest.json").exists());
+    }
+
+    #[test]
+    fn after_compile_fails_when_islands_dir_squatted_by_file() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        fs::write(site.join("_islands"), "not a dir").unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = IslandPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_bundle_dst_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(dir.path().join("islands")).unwrap();
+        fs::write(dir.path().join("islands/counter.js"), "export {}").unwrap();
+        // A directory squats the copy destination.
+        fs::create_dir_all(site.join("_islands/counter.js")).unwrap();
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
+
+        let err = IslandPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_manifest_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(site.join("_islands/manifest.json")).unwrap();
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
+
+        let err = IslandPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_loader_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(site.join("_islands/ssg-island.js")).unwrap();
+        let ctx = PluginContext::new(&content, dir.path(), &site, dir.path());
+
+        let err = IslandPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_is_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = island_site(dir.path());
+        let html = site.join("index.html");
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = IslandPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // inject_island_loader (test-only helper) — remaining branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn inject_island_loader_errors_on_missing_file() {
+        let dir = tempdir().unwrap();
+        assert!(inject_island_loader(&dir.path().join("nope.html")).is_err());
+    }
+
+    #[test]
+    fn inject_island_loader_appends_without_body_close() {
+        let dir = tempdir().unwrap();
+        let page = dir.path().join("p.html");
+        fs::write(&page, "<p>no body close</p>").unwrap();
+        inject_island_loader(&page).unwrap();
+        let out = fs::read_to_string(&page).unwrap();
+        assert!(out.ends_with("</script>\n"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn inject_island_loader_write_error_on_readonly_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let page = dir.path().join("p.html");
+        fs::write(&page, "<body></body>").unwrap();
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let res = inject_island_loader(&page);
+
+        let _ = fs::set_permissions(&page, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
 }

@@ -365,7 +365,7 @@ fn emit_targets(
             "vercel" => {
                 fs::create_dir_all(&edge_dir).with_path(&edge_dir)?;
                 let out_path = edge_dir.join("vercel-headers.json");
-                let body = vercel::render(&headers, page_csp).map_err(|e| {
+                let body = vercel_render(&headers, page_csp).map_err(|e| {
                     SsgError::io(
                         std::io::Error::other(e.to_string()),
                         &out_path,
@@ -383,6 +383,21 @@ fn emit_targets(
     }
 
     Ok(())
+}
+
+/// Delegates to [`vercel::render`] with a fault-injection hook so
+/// tests can drive the error-mapping branch (serialising the vercel
+/// header JSON cannot fail in practice).
+fn vercel_render(
+    headers: &[(String, String)],
+    page_csp: &BTreeMap<String, String>,
+) -> Result<String, serde_json::Error> {
+    fail_point!("postprocess::vercel-render", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::vercel-render"
+        )
+    ));
+    vercel::render(headers, page_csp)
 }
 
 /// Maps a built HTML file path to its served URL path.
@@ -599,7 +614,7 @@ mod tests {
         );
         EdgeHeadersPlugin.after_compile(&ctx).unwrap();
         let written = site.join(".ssg/edge/wrangler-headers.toml");
-        assert!(written.exists(), "{}", written.display());
+        assert!(written.exists(), "wrangler-headers.toml must be written");
         let body = fs::read_to_string(&written).unwrap();
         assert!(body.contains("Strict-Transport-Security"));
     }
@@ -882,5 +897,103 @@ mod tests {
             i_alpha < i_zeta,
             "entries must be sorted regardless of insertion order"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // emit_targets error paths (directory/file collisions)
+    // -----------------------------------------------------------------
+
+    fn edge_cfg(targets: &[&str]) -> EdgeHeadersConfig {
+        let mut edge = EdgeHeadersConfig::default();
+        edge.targets = targets.iter().map(|t| (*t).to_string()).collect();
+        edge
+    }
+
+    #[test]
+    fn emit_targets_cloudflare_errors_when_ssg_dir_is_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        // A file named .ssg blocks create_dir_all(.ssg/edge).
+        fs::write(site.join(".ssg"), "not a dir").unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err =
+            emit_targets(&ctx, &edge_cfg(&["cloudflare"]), &BTreeMap::new())
+                .unwrap_err();
+        assert!(format!("{err}").contains(".ssg"));
+    }
+
+    #[test]
+    fn emit_targets_cloudflare_errors_when_output_is_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(site.join(".ssg/edge/wrangler-headers.toml"))
+            .unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err =
+            emit_targets(&ctx, &edge_cfg(&["cloudflare"]), &BTreeMap::new())
+                .unwrap_err();
+        assert!(format!("{err}").contains("wrangler-headers.toml"));
+    }
+
+    #[test]
+    fn emit_targets_netlify_errors_when_headers_is_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(site.join("_headers")).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = emit_targets(&ctx, &edge_cfg(&["netlify"]), &BTreeMap::new())
+            .unwrap_err();
+        assert!(format!("{err}").contains("_headers"));
+    }
+
+    #[test]
+    fn emit_targets_vercel_errors_when_ssg_dir_is_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join(".ssg"), "not a dir").unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = emit_targets(&ctx, &edge_cfg(&["vercel"]), &BTreeMap::new())
+            .unwrap_err();
+        assert!(format!("{err}").contains(".ssg"));
+    }
+
+    #[test]
+    fn emit_targets_vercel_errors_when_output_is_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(site.join(".ssg/edge/vercel-headers.json")).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = emit_targets(&ctx, &edge_cfg(&["vercel"]), &BTreeMap::new())
+            .unwrap_err();
+        assert!(format!("{err}").contains("vercel-headers.json"));
+    }
+
+    // -----------------------------------------------------------------
+    // transform_html: emit failure propagates
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn transform_html_propagates_emit_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        // `_headers` exists as a directory → netlify write fails.
+        fs::create_dir_all(site.join("_headers")).unwrap();
+        let cfg = cfg_with_targets(vec!["netlify"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        // Inline script gives the page a hash-strict CSP so the
+        // transform reaches emit_targets.
+        let html = "<html><head><script>var x = 1;</script></head><body></body></html>";
+        let err = EdgeHeadersPlugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap_err();
+        assert!(format!("{err}").contains("_headers"));
     }
 }

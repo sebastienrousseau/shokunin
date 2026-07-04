@@ -379,6 +379,8 @@ mod tests {
         b.subscribe(Box::new(|_| Ok(())));
         b.subscribe(Box::new(|_| Ok(())));
         assert_eq!(b.subscriber_count(), 2);
+        // Deliver one frame so both registered sinks actually run.
+        assert_eq!(b.broadcast(&HmrMessage::reload()), 2);
     }
 
     #[test]
@@ -421,9 +423,7 @@ mod tests {
         let seen: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
         let seen_clone = Arc::clone(&seen);
         b.subscribe(Box::new(move |s| {
-            if let Ok(mut g) = seen_clone.lock() {
-                *g = Some(s.to_string());
-            }
+            *seen_clone.lock().unwrap() = Some(s.to_string());
             Ok(())
         }));
 
@@ -446,6 +446,27 @@ mod tests {
         let d = format!("{b:?}");
         assert!(d.contains("HmrBroadcaster"));
         assert!(d.contains('1'));
+        // Run the registered sink once so the closure body executes.
+        assert_eq!(b.broadcast(&HmrMessage::reload()), 1);
+    }
+
+    #[test]
+    fn broadcaster_recovers_from_poisoned_sink_lock() {
+        // Poison the internal sinks mutex, then exercise every lock
+        // site: subscribe silently no-ops, broadcast returns 0, the
+        // counters fall back to 0.
+        let b = HmrBroadcaster::new();
+        b.subscribe(Box::new(|_| Ok(())));
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = b.sinks.lock().unwrap();
+            panic!("poison sinks");
+        }));
+
+        b.subscribe(Box::new(|_| Ok(()))); // if-let Ok fails: no-op
+        assert_eq!(b.subscriber_count(), 0, "poisoned lock reads as empty");
+        assert_eq!(b.broadcast(&HmrMessage::reload()), 0);
+        let d = format!("{b:?}");
+        assert!(d.contains('0'), "Debug falls back to 0: {d}");
     }
 
     #[test]

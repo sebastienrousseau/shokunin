@@ -404,4 +404,89 @@ mod tests {
             get_collection("/nonexistent/path/here").unwrap();
         assert!(posts.is_empty());
     }
+
+    #[test]
+    fn derive_slug_root_index_falls_back_to_stem() {
+        // "index.md" at the tree root: parent().file_name() is None,
+        // so the parent-name branch is skipped and the stem is used.
+        let p = PathBuf::from("index.md");
+        assert_eq!(derive_slug(&p, Path::new("")), "index");
+    }
+
+    #[test]
+    fn walk_markdown_accepts_markdown_extension_and_skips_others() {
+        let dir = tempdir().unwrap();
+        write_post(
+            dir.path(),
+            "long.markdown",
+            "---\ntitle: L\ndate: 2026-01-01\n---\nBody\n",
+        );
+        write_post(dir.path(), "notes.txt", "not collected");
+
+        let posts: Vec<Entry<Post>> = get_collection(dir.path()).unwrap();
+        assert_eq!(posts.len(), 1);
+        assert_eq!(posts[0].slug, "long");
+    }
+
+    #[test]
+    fn load_entry_read_failure_carries_path_context() {
+        let err = load_entry::<Post>(Path::new(
+            "/nonexistent-ssg-collections/missing.md",
+        ))
+        .unwrap_err();
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("read /nonexistent-ssg-collections"),
+            "got: {msg}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_collection_propagates_unreadable_root_dir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("locked");
+        fs::create_dir_all(&content).unwrap();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = get_collection::<Post>(&content);
+
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable dir must error");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_collection_propagates_nested_unreadable_dir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Drives the recursive walk_markdown `?` error path.
+        let dir = tempdir().unwrap();
+        let nested = dir.path().join("sub");
+        fs::create_dir_all(&nested).unwrap();
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = get_collection::<Post>(dir.path());
+
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "nested unreadable dir must error");
+    }
+
+    #[test]
+    fn get_entry_propagates_frontmatter_type_error() {
+        let dir = tempdir().unwrap();
+        write_post(
+            dir.path(),
+            "bad.md",
+            "---\ntitle:\n  - a list\ndate: 2026-01-01\n---\n",
+        );
+        let result = get_entry::<Post>(dir.path(), "bad");
+        assert!(result.is_err(), "type mismatch must propagate");
+    }
 }

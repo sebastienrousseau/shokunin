@@ -30,7 +30,6 @@ mod tests {
     use super::helpers::*;
     use super::*;
     use crate::plugin::{Plugin, PluginContext};
-    use anyhow::Result;
     use std::fs;
     use std::path::Path;
     use tempfile::tempdir;
@@ -88,13 +87,14 @@ mod tests {
     }
 
     #[test]
-    fn test_seo_plugin_injects_meta_tags() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_seo_plugin_injects_meta_tags() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let html = make_html("Hello World", "<p>Some content here</p>");
 
-        let result =
-            SeoPlugin.transform_html(&html, Path::new("index.html"), &ctx)?;
+        let result = SeoPlugin
+            .transform_html(&html, Path::new("index.html"), &ctx)
+            .unwrap();
         assert!(result.contains("<meta name=\"description\""));
         assert!(result.contains("<meta property=\"og:title\""));
         assert!(result.contains("Hello World"));
@@ -105,22 +105,22 @@ mod tests {
         assert!(
             result.contains("<meta name=\"twitter:card\" content=\"summary\"")
         );
-        Ok(())
     }
 
     #[test]
-    fn test_seo_plugin_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_seo_plugin_idempotent() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let html = make_html("Test", "<p>Content</p>");
 
-        let first =
-            SeoPlugin.transform_html(&html, Path::new("page.html"), &ctx)?;
-        let second =
-            SeoPlugin.transform_html(&first, Path::new("page.html"), &ctx)?;
+        let first = SeoPlugin
+            .transform_html(&html, Path::new("page.html"), &ctx)
+            .unwrap();
+        let second = SeoPlugin
+            .transform_html(&first, Path::new("page.html"), &ctx)
+            .unwrap();
 
         assert_eq!(first, second);
-        Ok(())
     }
 
     #[test]
@@ -152,35 +152,33 @@ mod tests {
     }
 
     #[test]
-    fn test_seo_plugin_handles_missing_title() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_seo_plugin_handles_missing_title() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let html =
             "<html><head></head><body><p>No title here</p></body></html>";
 
-        let result =
-            SeoPlugin.transform_html(html, Path::new("no-title.html"), &ctx)?;
+        let result = SeoPlugin
+            .transform_html(html, Path::new("no-title.html"), &ctx)
+            .unwrap();
         // Should still inject og:type and twitter:card
         assert!(result.contains("<meta property=\"og:type\""));
         assert!(result.contains("<meta name=\"twitter:card\""));
         // Should not inject og:title (no title available)
         assert!(!result.contains("<meta property=\"og:title\""));
-        Ok(())
     }
 
     #[test]
-    fn test_seo_plugin_empty_dir() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_seo_plugin_empty_dir() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         assert!(SeoPlugin.after_compile(&ctx).is_ok());
-        Ok(())
     }
 
     #[test]
-    fn test_seo_plugin_nonexistent_dir() -> Result<()> {
+    fn test_seo_plugin_nonexistent_dir() {
         let ctx = test_ctx(Path::new("/nonexistent/path"));
         assert!(SeoPlugin.after_compile(&ctx).is_ok());
-        Ok(())
     }
 
     // -----------------------------------------------------------------
@@ -194,57 +192,55 @@ mod tests {
     }
 
     #[test]
-    fn test_robots_plugin_creates_file() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_robots_plugin_creates_file() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = RobotsPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
         let path = tmp.path().join("robots.txt");
         assert!(path.exists());
-        Ok(())
     }
 
     #[test]
-    fn test_robots_plugin_correct_content() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_robots_plugin_correct_content() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = RobotsPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
+        let content =
+            fs::read_to_string(tmp.path().join("robots.txt")).unwrap();
         assert!(content.contains("User-agent: *"));
         assert!(content.contains("Allow: /"));
         assert!(content.contains("Sitemap: https://example.com/sitemap.xml"));
-        Ok(())
     }
 
     #[test]
-    fn test_robots_plugin_does_not_overwrite() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_robots_plugin_does_not_overwrite() {
+        let tmp = tempdir().unwrap();
         let robots_path = tmp.path().join("robots.txt");
-        fs::write(&robots_path, "User-agent: *\nDisallow: /secret\n")?;
+        fs::write(&robots_path, "User-agent: *\nDisallow: /secret\n").unwrap();
 
         let ctx = test_ctx(tmp.path());
         let plugin = RobotsPlugin::new("https://example.com");
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(&robots_path)?;
+        let content = fs::read_to_string(&robots_path).unwrap();
         assert!(content.contains("Disallow: /secret"));
         assert!(!content.contains("Sitemap:"));
-        Ok(())
     }
 
     #[test]
-    fn test_robots_plugin_custom_base_url() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_robots_plugin_custom_base_url() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = RobotsPlugin::new("https://my-site.org");
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
+        let content =
+            fs::read_to_string(tmp.path().join("robots.txt")).unwrap();
         assert!(content.contains("Sitemap: https://my-site.org/sitemap.xml"));
-        Ok(())
     }
 
     // -----------------------------------------------------------------
@@ -258,50 +254,47 @@ mod tests {
     }
 
     #[test]
-    fn test_canonical_plugin_injects_tag() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_canonical_plugin_injects_tag() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
         let html = make_html("Home", "<p>Welcome</p>");
         let page_path = tmp.path().join("index.html");
 
-        let result = plugin.transform_html(&html, &page_path, &ctx)?;
+        let result = plugin.transform_html(&html, &page_path, &ctx).unwrap();
         assert!(result.contains("<link rel=\"canonical\""));
         // Canonical URLs share `urls::derive_page_url` with permalink
         // injection and feed links (spec A2/B1, plan §2 item 1.2,
         // issue #586): root index.html collapses to the bare base URL
         // with a trailing slash.
         assert!(result.contains("href=\"https://example.com/\""));
-        Ok(())
     }
 
     #[test]
-    fn test_canonical_plugin_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+    fn test_canonical_plugin_idempotent() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
         let html = make_html("Page", "<p>Content</p>");
         let page_path = tmp.path().join("page.html");
 
-        let first = plugin.transform_html(&html, &page_path, &ctx)?;
-        let second = plugin.transform_html(&first, &page_path, &ctx)?;
+        let first = plugin.transform_html(&html, &page_path, &ctx).unwrap();
+        let second = plugin.transform_html(&first, &page_path, &ctx).unwrap();
 
         assert_eq!(first, second);
-        Ok(())
     }
 
     #[test]
-    fn test_canonical_plugin_nested_files() -> Result<()> {
-        let tmp = tempdir()?;
-        fs::create_dir_all(tmp.path().join("blog"))?;
+    fn test_canonical_plugin_nested_files() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("blog")).unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com");
         let html = make_html("Post", "<p>Blog post</p>");
         let page_path = tmp.path().join("blog/post.html");
 
-        let result = plugin.transform_html(&html, &page_path, &ctx)?;
+        let result = plugin.transform_html(&html, &page_path, &ctx).unwrap();
         assert!(result.contains("https://example.com/blog/post.html"));
-        Ok(())
     }
 
     // -----------------------------------------------------------------
@@ -405,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn seo_plugin_skips_existing_single_quote_meta() -> Result<()> {
+    fn seo_plugin_skips_existing_single_quote_meta() {
         // Arrange: meta tags use single quotes
         let html = "<html><head>\
                      <meta name='description' content='Already set'>\
@@ -415,15 +408,13 @@ mod tests {
                      <meta name='twitter:card' content='summary'>\
                      <title>Test</title></head>\
                      <body><p>Content</p></body></html>";
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
 
         // Act
-        let result = SeoPlugin.transform_html(
-            html,
-            Path::new("single-quote.html"),
-            &ctx,
-        )?;
+        let result = SeoPlugin
+            .transform_html(html, Path::new("single-quote.html"), &ctx)
+            .unwrap();
         assert_eq!(
             result.matches("meta name=\"description\"").count()
                 + result.matches("meta name='description'").count(),
@@ -435,18 +426,17 @@ mod tests {
             1,
             "og:title should not be duplicated"
         );
-        Ok(())
     }
 
     #[test]
-    fn canonical_plugin_trailing_slash_base_url() -> Result<()> {
-        let tmp = tempdir()?;
+    fn canonical_plugin_trailing_slash_base_url() {
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = CanonicalPlugin::new("https://example.com/");
         let html = make_html("Home", "<p>Welcome</p>");
         let page_path = tmp.path().join("index.html");
 
-        let result = plugin.transform_html(&html, &page_path, &ctx)?;
+        let result = plugin.transform_html(&html, &page_path, &ctx).unwrap();
         assert!(
             // index.html collapses to the directory URL under the
             // shared `urls::derive_page_url` convention (spec A2/B1,
@@ -458,21 +448,21 @@ mod tests {
             !result.contains("https://example.com//"),
             "should not contain double slash in canonical URL"
         );
-        Ok(())
     }
 
     #[test]
-    fn robots_plugin_trailing_slash_base_url() -> Result<()> {
+    fn robots_plugin_trailing_slash_base_url() {
         // Arrange: base_url has a trailing slash
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
         let plugin = RobotsPlugin::new("https://example.com/");
 
         // Act
-        plugin.after_compile(&ctx)?;
+        plugin.after_compile(&ctx).unwrap();
 
         // Assert: sitemap URL has no double slash
-        let content = fs::read_to_string(tmp.path().join("robots.txt"))?;
+        let content =
+            fs::read_to_string(tmp.path().join("robots.txt")).unwrap();
         assert!(
             content.contains("Sitemap: https://example.com/sitemap.xml"),
             "sitemap URL should not have double slash, got: {content}"
@@ -481,7 +471,6 @@ mod tests {
             !content.contains("https://example.com//"),
             "should not contain double slash"
         );
-        Ok(())
     }
 
     #[test]
@@ -1184,14 +1173,15 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
-    fn inject_seo_tags_article_page_uses_large_image_card() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_seo_tags_article_page_uses_large_image_card() {
+        let tmp = tempdir().unwrap();
         let html = "<html><head><title>Blog Post</title></head>\
                      <body><article><p>Article content</p></article></body></html>";
         let ctx = test_ctx(tmp.path());
 
-        let result =
-            SeoPlugin.transform_html(html, Path::new("post.html"), &ctx)?;
+        let result = SeoPlugin
+            .transform_html(html, Path::new("post.html"), &ctx)
+            .unwrap();
         assert!(
             result.contains("content=\"summary_large_image\""),
             "article pages should use summary_large_image twitter card"
@@ -1200,7 +1190,6 @@ mod tests {
             result.contains("content=\"article\""),
             "article pages should use og:type=article"
         );
-        Ok(())
     }
 
     // -----------------------------------------------------------------
@@ -1208,14 +1197,14 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
-    fn canonical_plugin_replaces_not_skips_existing() -> Result<()> {
-        let tmp = tempdir()?;
+    fn canonical_plugin_replaces_not_skips_existing() {
+        let tmp = tempdir().unwrap();
         let html = r#"<html><head><link rel="canonical" href="https://old.com/wrong"></head><body></body></html>"#;
         let plugin = CanonicalPlugin::new("https://correct.com");
         let ctx = test_ctx(tmp.path());
         let page_path = tmp.path().join("page.html");
 
-        let result = plugin.transform_html(html, &page_path, &ctx)?;
+        let result = plugin.transform_html(html, &page_path, &ctx).unwrap();
         assert!(
             result.contains("https://correct.com/page.html"),
             "canonical should be replaced with correct URL"
@@ -1229,6 +1218,5 @@ mod tests {
             1,
             "should have exactly one canonical link"
         );
-        Ok(())
     }
 }

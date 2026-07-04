@@ -774,9 +774,8 @@ mod tests {
 
     fn write_sidecar(ctx: &PluginContext, name: &str, json: &str) {
         let p = ctx.build_dir.join(".meta").join(name);
-        if let Some(parent) = p.parent() {
-            fs::create_dir_all(parent).unwrap();
-        }
+        // `p` always has a parent (it was built via join).
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, json).unwrap();
     }
 
@@ -1022,14 +1021,11 @@ mod tests {
         let arr = posts.as_array().unwrap();
         assert_eq!(arr[0]["locale"], "fr_FR");
         assert_eq!(arr[1]["locale"], "de");
-        // SsgConfig::builder default language.
+        // SsgConfig::builder always supplies a non-empty default
+        // language, so the site language is the expected fallback.
         let site_lang = ctx.config.as_ref().unwrap().language.clone();
-        let expected = if site_lang.is_empty() {
-            "en"
-        } else {
-            &site_lang
-        };
-        assert_eq!(arr[2]["locale"], *expected);
+        assert!(!site_lang.is_empty());
+        assert_eq!(arr[2]["locale"], *site_lang);
     }
 
     // -----------------------------------------------------------------
@@ -1309,7 +1305,138 @@ mod tests {
         assert!(!truthy(None));
         assert!(falsy(Some(&json!(false))));
         assert!(falsy(Some(&json!("no"))));
+        assert!(falsy(Some(&json!("0"))));
         assert!(!falsy(Some(&json!(true))));
         assert!(!falsy(None));
+    }
+
+    // -----------------------------------------------------------------
+    // Remaining branches — IO errors, parser edges, term shapes
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn after_compile_fails_when_api_dir_squatted_by_file() {
+        let (_tmp, ctx) = make_ctx();
+        write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
+        // `site/api` is a file, so create_dir_all(site/api/agents)
+        // fails.
+        fs::write(ctx.site_dir.join("api"), "not a dir").unwrap();
+        let err = AgentApiPlugin::default().after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_doc_path_squatted_by_dir() {
+        let (_tmp, ctx) = make_ctx();
+        write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
+        // A directory squats `index.json`, so fs::write fails.
+        fs::create_dir_all(ctx.site_dir.join(API_DIR).join("index.json"))
+            .unwrap();
+        let err = AgentApiPlugin::default().after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_sidecar_is_skipped() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, ctx) = make_ctx();
+        write_sidecar(&ctx, "ok.meta.json", r#"{"title":"OK"}"#);
+        write_sidecar(&ctx, "locked.meta.json", r#"{"title":"L"}"#);
+        let locked = ctx.build_dir.join(".meta/locked.meta.json");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let posts = collect_posts(&ctx);
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass perms; the readable sidecar always
+        // survives either way.
+        assert!(posts.iter().any(|p| p.title == "OK"));
+    }
+
+    #[test]
+    fn site_dir_walk_skips_meta_tree_and_drafts() {
+        // Both sidecar roots yield zero posts (site/.meta only has a
+        // draft), so the site-dir walk runs: it must skip the `.meta`
+        // staging tree and non-public sidecars while keeping the good
+        // one.
+        let dir = tempdir().unwrap();
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        fs::create_dir_all(&build).unwrap();
+        fs::create_dir_all(site.join(".meta")).unwrap();
+        fs::write(
+            site.join(".meta/draft.meta.json"),
+            r#"{"title":"D","draft":true}"#,
+        )
+        .unwrap();
+        fs::write(site.join("ok.meta.json"), r#"{"title":"OK"}"#).unwrap();
+        fs::write(site.join("skip.meta.json"), r#"{"title":"S","draft":true}"#)
+            .unwrap();
+        let ctx = PluginContext::new(dir.path(), &build, &site, dir.path());
+
+        let posts = collect_posts(&ctx);
+        assert_eq!(posts.len(), 1);
+        assert_eq!(posts[0].title, "OK");
+    }
+
+    #[test]
+    fn terms_field_ignores_non_string_array_items() {
+        let meta: serde_json::Map<String, Value> =
+            serde_json::from_str(r#"{"tags": ["a", 42, null, "b"]}"#).unwrap();
+        assert_eq!(terms_field(&meta, "tags"), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn jsonld_word_count_returns_none_without_tag_close() {
+        // `application/ld+json` marker but no `>` afterwards.
+        let html = "<script type=\"application/ld+json";
+        assert!(jsonld_word_count(html).is_none());
+    }
+
+    #[test]
+    fn jsonld_word_count_returns_none_without_script_close() {
+        let html = "<script type=\"application/ld+json\">{\"wordCount\": 3}";
+        assert!(jsonld_word_count(html).is_none());
+    }
+
+    #[test]
+    fn topics_map_dedupes_term_shared_by_tags_and_clusters() {
+        let (_tmp, ctx) = make_ctx();
+        write_sidecar(
+            &ctx,
+            "p.meta.json",
+            r#"{"title":"P","tags":"x","topic_clusters":"x"}"#,
+        );
+        AgentApiPlugin::default().after_compile(&ctx).unwrap();
+        let topics = read_doc(&ctx, "topics.json");
+        let urls = topics["x"].as_array().unwrap();
+        assert_eq!(urls.len(), 1, "shared term must not duplicate the URL");
+    }
+
+    #[test]
+    fn parse_author_paren_form_with_empty_parts_falls_through() {
+        // `()` — both name and email empty, so the paren branch does
+        // not return and the raw string becomes the name.
+        let (name, email) = parse_author("()");
+        assert_eq!(name.as_deref(), Some("()"));
+        assert!(email.is_none());
+    }
+
+    #[test]
+    fn parse_author_angle_form_email_only() {
+        // Empty display name: the `email.is_some()` side of the `||`
+        // decides.
+        let (name, email) = parse_author("<jane@example.com>");
+        assert!(name.is_none());
+        assert_eq!(email.as_deref(), Some("jane@example.com"));
+    }
+
+    #[test]
+    fn parse_author_angle_form_with_empty_parts_falls_through() {
+        let (name, email) = parse_author("<>");
+        assert_eq!(name.as_deref(), Some("<>"));
+        assert!(email.is_none());
     }
 }

@@ -669,22 +669,36 @@ mod tests {
         }
     }
 
+    /// Region-free variant of `assert!(matches!(inv, <Variant>))` —
+    /// `matches!` (or a `panic!` fallback arm) would leave a
+    /// never-taken region uncovered. `CliInvocation`'s Debug repr is
+    /// deterministic, so exact string equality is just as strict.
+    fn assert_invocation(inv: &CliInvocation, expected: &str) {
+        assert_eq!(format!("{inv:?}"), expected);
+    }
+
     #[test]
     fn parse_build_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "build"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Build));
+        assert_invocation(&inv, "Build");
     }
 
     #[test]
     fn parse_dev_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "dev"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Dev));
+        assert_invocation(&inv, "Dev");
     }
 
     #[test]
     fn parse_check_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "check"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Check));
+        assert_invocation(&inv, "Check");
+    }
+
+    #[test]
+    fn parse_audit_subcommand() {
+        let (inv, _m) = Cli::parse_and_dispatch(["ssg", "audit"]).unwrap();
+        assert_invocation(&inv, "Audit");
     }
 
     #[test]
@@ -692,10 +706,7 @@ mod tests {
         let (inv, _m) =
             Cli::parse_and_dispatch(["ssg", "deploy", "--target", "netlify"])
                 .unwrap();
-        match inv {
-            CliInvocation::Deploy { target } => assert_eq!(target, "netlify"),
-            other => panic!("expected Deploy, got {other:?}"),
-        }
+        assert_invocation(&inv, "Deploy { target: \"netlify\" }");
     }
 
     #[test]
@@ -728,13 +739,21 @@ mod tests {
     fn legacy_invocation_with_flags_is_detected() {
         let (inv, _m) =
             Cli::parse_and_dispatch(["ssg", "-s", "public"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Legacy));
+        assert_invocation(&inv, "Legacy");
     }
 
     #[test]
     fn bare_invocation_routes_through_legacy_parser() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Legacy));
+        assert_invocation(&inv, "Legacy");
+    }
+
+    #[test]
+    fn legacy_parser_rejects_unknown_flag() {
+        // Covers the `?` propagation from the legacy try_get_matches_from.
+        let err = Cli::parse_and_dispatch(["ssg", "--definitely-not-a-flag"])
+            .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::UnknownArgument);
     }
 
     #[test]

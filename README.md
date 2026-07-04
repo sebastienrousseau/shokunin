@@ -138,10 +138,10 @@ graph TD
 | Metric | Value |
 | :--- | :--- |
 | **Source** | 71,000+ lines across 6 workspace crates (`ssg`, `ssg-core`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
-| **Test suite** | 2,795 unit tests + 36 integration test suites |
+| **Test suite** | 3,489 unit tests + 36 integration test suites |
 | **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
 | **Plugin pipeline** | 38 plugins, Rayon-parallelised |
-| **Audit gates** | 14 (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
+| **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
 | **Search** | Browser-native int8 vector embeddings via `ssg-search` (WASM, ≤2 MB gzipped budget) |
@@ -185,7 +185,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge adapters with KV / Edge Config content provider, SHA-256-keyed ISR manifest, invalidation webhook, optional View Transitions client (`transitions = true`) |
 | **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
 | **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC posture guidance — emits current best-practice TLS/PQC configuration guidance for your CDN (X25519+ML-KEM-768 hybrid notes); ML-DSA content-provenance signing is roadmap (#579) |
-| **Audit CLI** | `ssg audit` runs 15 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
+| **Audit CLI** | `ssg audit` runs 15 gates (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
 | **Architecture Decision Records** | Six baseline ADRs under [`docs/adrs/`](docs/adrs/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
 | **Supply-chain attestation** | `cargo-vet` (v0.0.45 #561) layers per-crate audit attestation over `cargo deny`'s license + CVE checks. Imports Mozilla Firefox, Bytecode Alliance, and Google trust sets; exemption-reduction policy in [`supply-chain/README.md`](supply-chain/README.md) |
 | **Concurrency proofs** | Miri job ([`.github/workflows/miri.yml`](.github/workflows/miri.yml), v0.0.45 #560) runs `cargo miri test --lib` on a nightly schedule + `run-miri`-labelled PRs. Loom + Kani follow in v0.0.46 (#564 / #565) |

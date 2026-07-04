@@ -1152,9 +1152,10 @@ mod tests {
     /// Helper: create an HTML file with a `</head>` tag.
     fn write_html(dir: &Path, rel: &str, body: &str) {
         let path = dir.join(rel);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).expect("mkdir");
-        }
+        // dir.join(rel) always has a parent; expect avoids an
+        // uncoverable `if let` fallthrough region.
+        let parent = path.parent().expect("joined path has a parent");
+        fs::create_dir_all(parent).expect("mkdir");
         let html = format!(
             "<!DOCTYPE html><html><head><title>Test</title></head><body>{body}</body></html>"
         );
@@ -1967,11 +1968,12 @@ mod tests {
         let res =
             collect_html_files_recursive(&missing, &missing, "en", &mut map);
         assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = err {
-            assert_eq!(path, missing);
-        }
+        let dbg = format!("{:?}", res.unwrap_err());
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("missing"),
+            "error should carry the missing path: {dbg}"
+        );
     }
 
     #[test]
@@ -2000,8 +2002,8 @@ mod tests {
             &UrlPrefixStrategy::SubPath,
         );
         assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
+        let dbg = format!("{:?}", res.unwrap_err());
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
     }
 
     // ── transform_html (issue #522 fused-transform pass) ────────────
@@ -2385,5 +2387,446 @@ mod tests {
         let cache = p.matrix.read().unwrap();
         assert_eq!(cache.site_dir.as_deref(), Some(tmp2.path()));
         assert!(cache.pages.contains_key("about.html"));
+    }
+
+    // ── coverage: error propagation + rarely-taken branches ─────────
+
+    /// Builds a two-locale config (`en` default).
+    fn cfg_en_fr() -> I18nConfig {
+        I18nConfig {
+            default_locale: "en".into(),
+            locales: vec!["en".into(), "fr".into()],
+            url_prefix: UrlPrefixStrategy::SubPath,
+        }
+    }
+
+    #[test]
+    fn ensure_matrix_double_check_returns_early_for_racing_fillers() {
+        use std::sync::Arc;
+
+        // Two threads race to fill the matrix while the test pins the
+        // read side: both pass the read-lock fast path (cache empty),
+        // queue on the write lock, and whichever loses the race takes
+        // the double-checked early return.
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+
+        let plugin = Arc::new(I18nPlugin::new(cfg_en_fr()));
+        let read_guard = plugin
+            .matrix
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+
+        let mut handles = Vec::new();
+        for _ in 0..2 {
+            let p = Arc::clone(&plugin);
+            let site = tmp.path().to_path_buf();
+            handles.push(std::thread::spawn(move || {
+                p.ensure_matrix(&site).expect("fill succeeds");
+            }));
+        }
+        // Let both workers pass the read check and block on the write
+        // lock before releasing it.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        drop(read_guard);
+        for h in handles {
+            h.join().expect("worker thread");
+        }
+
+        let cache = plugin
+            .matrix
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        assert_eq!(cache.site_dir.as_deref(), Some(tmp.path()));
+        assert_eq!(cache.present_locales, vec!["en", "fr"]);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_unreadable_locale_dir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        let fr = tmp.path().join("fr");
+        fs::set_permissions(&fr, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let result = I18nPlugin::new(cfg_en_fr()).after_compile(&ctx);
+        fs::set_permissions(&fr, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(result.is_err(), "unreadable locale dir must be an Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn transform_html_propagates_unreadable_locale_dir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        let fr = tmp.path().join("fr");
+        fs::set_permissions(&fr, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let result = I18nPlugin::new(cfg_en_fr()).transform_html(
+            "<html><head></head><body>EN</body></html>",
+            &tmp.path().join("en/index.html"),
+            &ctx,
+        );
+        fs::set_permissions(&fr, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(result.is_err(), "unreadable locale dir must be an Err");
+    }
+
+    #[test]
+    fn after_compile_without_config_falls_back_to_example_base_url() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+
+        // PluginContext::new leaves `config` unset, driving the
+        // map_or_else fallback closure.
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        I18nPlugin::new(cfg_en_fr()).after_compile(&ctx).unwrap();
+
+        let html =
+            fs::read_to_string(tmp.path().join("en/index.html")).unwrap();
+        assert!(
+            html.contains("https://example.com/en/index.html"),
+            "fallback base url expected: {html}"
+        );
+    }
+
+    #[test]
+    fn transform_html_without_config_falls_back_to_example_base_url() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        let out = I18nPlugin::new(cfg_en_fr())
+            .transform_html(
+                "<html><head><title>T</title></head><body>EN</body></html>",
+                &tmp.path().join("en/index.html"),
+                &ctx,
+            )
+            .unwrap();
+        assert!(
+            out.contains("https://example.com/en/index.html"),
+            "fallback base url expected: {out}"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_page_read_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        let en_page = tmp.path().join("en/index.html");
+        fs::set_permissions(&en_page, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let result = I18nPlugin::new(cfg_en_fr()).after_compile(&ctx);
+        fs::set_permissions(&en_page, fs::Permissions::from_mode(0o644))
+            .unwrap();
+        assert!(result.is_err(), "unreadable page must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_page_write_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        // Read succeeds, the write-back of the injected page does not.
+        let en_page = tmp.path().join("en/index.html");
+        fs::set_permissions(&en_page, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let result = I18nPlugin::new(cfg_en_fr()).after_compile(&ctx);
+        fs::set_permissions(&en_page, fs::Permissions::from_mode(0o644))
+            .unwrap();
+        assert!(result.is_err(), "read-only page must surface as Err");
+    }
+
+    #[test]
+    fn after_compile_propagates_sitemap_write_error() {
+        // A directory squatting on sitemap-en.xml makes the sitemap
+        // write fail after hreflang injection succeeded.
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        fs::create_dir(tmp.path().join("sitemap-en.xml")).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let err = I18nPlugin::new(cfg_en_fr())
+            .after_compile(&ctx)
+            .expect_err("sitemap write over a directory must fail");
+        assert!(format!("{err:?}").contains("Io"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_locale_redirect_write_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Injection + sitemaps succeed; the root redirect (an existing
+        // ssg-generated redirect page, now read-only) cannot be
+        // rewritten and must surface as Err.
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+        let index = tmp.path().join("index.html");
+        fs::write(&index, "<!-- ssg-locale-redirect -->").unwrap();
+        fs::set_permissions(&index, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        let result = I18nPlugin::new(cfg_en_fr()).after_compile(&ctx);
+        fs::set_permissions(&index, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(result.is_err(), "redirect rewrite must surface as Err");
+    }
+
+    #[test]
+    fn resolve_locale_and_rel_site_dir_itself_returns_none() {
+        // strip_prefix leaves an empty relative path, so the first
+        // component lookup takes the `?` None branch.
+        let site = Path::new("/site");
+        assert!(resolve_locale_and_rel(site, site, &["en".into()]).is_none());
+    }
+
+    #[test]
+    fn collect_locale_pages_skips_locale_without_directory() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+
+        let map =
+            collect_locale_pages(tmp.path(), &["en".into(), "ghost".into()])
+                .unwrap();
+        assert_eq!(map.len(), 1);
+        assert!(map["index.html"].contains("en"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn collect_html_files_recursive_nested_unreadable_dir_errors() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let root = tmp.path().join("en");
+        let nested = root.join("locked");
+        fs::create_dir_all(&nested).unwrap();
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let mut map = HashMap::new();
+        let res = collect_html_files_recursive(&root, &root, "en", &mut map);
+        fs::set_permissions(&nested, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(res.is_err(), "nested unreadable dir must be an Err");
+    }
+
+    #[test]
+    fn collect_locale_pages_ignores_non_html_files() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        fs::write(tmp.path().join("en/style.css"), "body{}").unwrap();
+
+        let map = collect_locale_pages(tmp.path(), &["en".into()]).unwrap();
+        assert_eq!(map.len(), 1, "css files must not be collected");
+    }
+
+    #[test]
+    fn inject_hreflang_all_skips_locale_missing_from_page_set() {
+        // Page shared by en+fr; `de` is in the locale list but not in
+        // the page's locale set, taking the first `continue`.
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/index.html", "EN");
+        write_html(tmp.path(), "fr/index.html", "FR");
+
+        let mut page_locales = HashSet::new();
+        let _ = page_locales.insert("en".to_string());
+        let _ = page_locales.insert("fr".to_string());
+        let mut pages = HashMap::new();
+        let _ = pages.insert("index.html".to_string(), page_locales);
+
+        let ctx = make_ctx(tmp.path());
+        inject_hreflang_all(
+            &ctx,
+            &pages,
+            &["en".into(), "fr".into(), "de".into()],
+            "en",
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+        )
+        .unwrap();
+
+        let html =
+            fs::read_to_string(tmp.path().join("en/index.html")).unwrap();
+        assert!(html.contains(HREFLANG_MARKER));
+    }
+
+    #[test]
+    fn inject_hreflang_all_skips_page_file_missing_on_disk() {
+        // The pages map claims an `fr` copy that does not exist; the
+        // `!file.exists()` continue must skip it without error.
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "en/ghost.html", "EN");
+
+        let mut page_locales = HashSet::new();
+        let _ = page_locales.insert("en".to_string());
+        let _ = page_locales.insert("fr".to_string());
+        let mut pages = HashMap::new();
+        let _ = pages.insert("ghost.html".to_string(), page_locales);
+
+        let ctx = make_ctx(tmp.path());
+        inject_hreflang_all(
+            &ctx,
+            &pages,
+            &["en".into(), "fr".into()],
+            "en",
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+        )
+        .unwrap();
+
+        let html =
+            fs::read_to_string(tmp.path().join("en/ghost.html")).unwrap();
+        assert!(html.contains(HREFLANG_MARKER));
+    }
+
+    #[test]
+    fn inject_hreflang_all_keeps_headless_page_unrewritten_inline() {
+        // A shared page without a real <head> element: the injection
+        // shim returns None and the original html flows through.
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("en")).unwrap();
+        fs::create_dir_all(tmp.path().join("fr")).unwrap();
+        let raw = "<html><body>no head</body></html>";
+        fs::write(tmp.path().join("en/nohead.html"), raw).unwrap();
+        fs::write(tmp.path().join("fr/nohead.html"), raw).unwrap();
+
+        let ctx = make_ctx(tmp.path());
+        I18nPlugin::new(cfg_en_fr()).after_compile(&ctx).unwrap();
+
+        let html =
+            fs::read_to_string(tmp.path().join("en/nohead.html")).unwrap();
+        assert!(
+            !html.contains(HREFLANG_MARKER),
+            "headless page must not receive hreflang links: {html}"
+        );
+    }
+
+    #[test]
+    fn inject_before_head_close_stray_end_tag_returns_none() {
+        // The lowercase substring check passes but lol_html never sees
+        // a real <head> element, so the rewrite is a no-op and the
+        // shim reports None.
+        assert!(
+            inject_before_head_close("stray closer</head>", "<x/>").is_none()
+        );
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_single_quoted_attrs_and_relative_base() {
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        // Single-quoted attributes drive the second quote-candidate
+        // iteration for both data-lang and href; the empty base yields
+        // a non-http URL that is used verbatim.
+        let input = "<a class='ap-lang-item' data-lang='fr' href='/old'>F</a>";
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "",
+            &UrlPrefixStrategy::SubPath,
+            "index.html",
+        );
+        assert!(out.contains("href='/fr/index.html'"), "got: {out}");
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_unterminated_data_lang_left_unchanged() {
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        // The data-lang value quote never closes inside the tag, so no
+        // language is extracted and the tag is left as-is.
+        let input = "<a class=\"ap-lang-item\" data-lang=\"fr>F</a>";
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "index.html",
+        );
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_without_data_lang_left_unchanged() {
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        let input = "<a class=\"ap-lang-item\" href=\"/x\">F</a>";
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "index.html",
+        );
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_unterminated_href_left_unchanged() {
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        // data-lang parses but the href value quote never closes, so
+        // the href rewrite loop exhausts both quote candidates.
+        let input =
+            "<a class=\"ap-lang-item\" data-lang=\"fr\" href=\"/old>F</a>";
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "index.html",
+        );
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn rewrite_ap_lang_items_ignores_plain_anchor_tags() {
+        let mut locales = HashSet::new();
+        let _ = locales.insert("fr".to_string());
+        // The document mentions ap-lang-item (so the fast path does
+        // not bail) but the anchor itself is a plain link.
+        let input = "<span>ap-lang-item</span><a href=\"/plain\">keep me</a>";
+        let out = rewrite_ap_lang_items(
+            input,
+            &locales,
+            "https://example.com",
+            &UrlPrefixStrategy::SubPath,
+            "index.html",
+        );
+        assert_eq!(out, input);
     }
 }

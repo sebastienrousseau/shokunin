@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_rss_aggregate_single_item_trigger() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let rss_path = tmp.path().join("rss.xml");
         fs::write(
             &rss_path,
@@ -360,16 +360,17 @@ mod tests {
     </item>
   </channel>
 </rss>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
         Ok(())
     }
 
     #[test]
     fn test_rss_aggregate_with_full_metadata() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let rss_path = tmp.path().join("rss.xml");
         fs::write(
@@ -385,7 +386,8 @@ mod tests {
     </item>
   </channel>
 </rss>"#,
-        )?;
+        )
+        .unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Article One".to_string());
@@ -409,9 +411,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "article-one", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&rss_path)?;
+        let result = fs::read_to_string(&rss_path).unwrap();
 
         assert!(
             result.contains(
@@ -453,14 +455,14 @@ mod tests {
 
     #[test]
     fn test_rss_aggregate_banner_with_image_field() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let rss_path = tmp.path().join("rss.xml");
         fs::write(
             &rss_path,
             r#"<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>T</title><link>https://example.com</link><description>D</description><item><title>X</title></item></channel></rss>"#,
-        )?;
+        ).unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Image Test".to_string());
@@ -478,9 +480,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "img-test", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&rss_path)?;
+        let result = fs::read_to_string(&rss_path).unwrap();
         assert!(
             result.contains("url=\"https://cdn.example.com/photo.png\""),
             "Should use absolute image URL as-is: {result}"
@@ -494,14 +496,14 @@ mod tests {
 
     #[test]
     fn test_rss_aggregate_jpeg_mime() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let rss_path = tmp.path().join("rss.xml");
         fs::write(
             &rss_path,
             r#"<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>T</title><link>https://example.com</link><description>D</description><item><title>X</title></item></channel></rss>"#,
-        )?;
+        ).unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "JPEG Test".to_string());
@@ -515,9 +517,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "jpeg-test", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&rss_path)?;
+        let result = fs::read_to_string(&rss_path).unwrap();
         assert!(
             result.contains("type=\"image/jpeg\""),
             "Should default to image/jpeg for .jpg: {result}"
@@ -527,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_rss_aggregate_skips_multi_item() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let rss_path = tmp.path().join("rss.xml");
         let original = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -535,12 +537,12 @@ mod tests {
 <item><title>A</title></item>
 <item><title>B</title></item>
 </channel></rss>"#;
-        fs::write(&rss_path, original)?;
+        fs::write(&rss_path, original).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&rss_path)?;
+        let result = fs::read_to_string(&rss_path).unwrap();
         assert_eq!(result, original, "Should not modify feed with >1 items");
         Ok(())
     }
@@ -650,12 +652,10 @@ mod tests {
         );
         let entries = vec![("rfc".to_string(), meta)];
         let articles = collect_articles(&entries, "https://example.com");
+        let item = &articles[0].1;
         assert!(
-            articles[0]
-                .1
-                .contains("<pubDate>Thu, 11 Apr 2026 06:06:06 +0000</pubDate>"),
-            "RFC 2822 input must pass through unchanged: {}",
-            articles[0].1
+            item.contains("<pubDate>Thu, 11 Apr 2026 06:06:06 +0000</pubDate>"),
+            "RFC 2822 input must pass through unchanged: {item}"
         );
         assert_eq!(articles[0].0, "2026-04-11T06:06:06+00:00");
     }
@@ -668,12 +668,10 @@ mod tests {
             meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
         let entries = vec![("iso".to_string(), meta)];
         let articles = collect_articles(&entries, "https://example.com");
+        let item = &articles[0].1;
         assert!(
-            articles[0]
-                .1
-                .contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
-            "ISO input should be normalised to RFC 2822: {}",
-            articles[0].1
+            item.contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
+            "ISO input should be normalised to RFC 2822: {item}"
         );
         assert_eq!(articles[0].0, "2026-07-01T00:00:00+00:00");
     }
@@ -686,12 +684,10 @@ mod tests {
             .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
         let entries = vec![("long".to_string(), meta)];
         let articles = collect_articles(&entries, "");
+        let item = &articles[0].1;
         assert!(
-            articles[0]
-                .1
-                .contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
-            "long-form input should be normalised to RFC 2822: {}",
-            articles[0].1
+            item.contains("<pubDate>Wed, 01 Jul 2026 00:00:00 +0000</pubDate>"),
+            "long-form input should be normalised to RFC 2822: {item}"
         );
     }
 
@@ -704,10 +700,10 @@ mod tests {
             meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
         let entries = vec![("bad".to_string(), meta)];
         let articles = collect_articles(&entries, "");
+        let item = &articles[0].1;
         assert!(
-            articles[0].1.contains("<pubDate>not-a-date</pubDate>"),
-            "unparseable input keeps previous passthrough behaviour: {}",
-            articles[0].1
+            item.contains("<pubDate>not-a-date</pubDate>"),
+            "unparseable input keeps previous passthrough behaviour: {item}"
         );
         assert_eq!(articles[0].0, "not-a-date");
     }
@@ -776,11 +772,231 @@ mod tests {
 
     #[test]
     fn test_rss_no_file_is_noop() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         // No rss.xml exists
         let ctx = test_ctx(tmp.path());
-        RssAggregatePlugin.after_compile(&ctx)?;
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("rss.xml").exists());
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // Regression: sidecars with non-string fields (numeric word_count)
+    // must not be dropped from the aggregate feed
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_rss_aggregate_keeps_page_with_numeric_sidecar_field() {
+        let tmp = tempdir().unwrap();
+        let rss_path = tmp.path().join("rss.xml");
+        fs::write(
+            &rss_path,
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>T</title><link>https://example.com</link><description>D</description><item><title>X</title></item></channel></rss>"#,
+        )
+        .unwrap();
+
+        // Hand-written sidecar with a NUMBER-valued field — the
+        // pipeline emits numeric word_count, which previously failed
+        // HashMap<String, String> deserialisation and silently dropped
+        // the page from the feed.
+        let page_dir = tmp.path().join("counted");
+        fs::create_dir_all(&page_dir).unwrap();
+        fs::write(
+            page_dir.join("page.meta.json"),
+            r#"{"title":"Counted Post","description":"Has word_count","item_pub_date":"Thu, 11 Apr 2026 06:06:06 +0000","word_count":342}"#,
+        )
+        .unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
+
+        let result = fs::read_to_string(&rss_path).unwrap();
+        assert!(
+            result.contains("<title>Counted Post</title>"),
+            "page with numeric sidecar field must appear in feed: {result}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // collect_articles: relative banner with no base_url
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_collect_articles_relative_banner_without_base_url() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Img".to_string());
+        let _ = meta.insert("banner".to_string(), "/img/pic.png".to_string());
+        let entries = vec![("img".to_string(), meta)];
+        let articles = collect_articles(&entries, "");
+        let item = &articles[0].1;
+        assert!(
+            item.contains("url=\"/img/pic.png\""),
+            "relative banner is kept verbatim when base_url empty: {item}"
+        );
+    }
+
+    #[test]
+    fn test_collect_articles_skips_blank_tag_segments() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Tags".to_string());
+        let _ = meta.insert("tags".to_string(), "rust,, web".to_string());
+        let entries = vec![("tags".to_string(), meta)];
+        let articles = collect_articles(&entries, "");
+        let item = &articles[0].1;
+        assert!(item.contains("<category>rust</category>"));
+        assert!(item.contains("<category>web</category>"));
+        assert_eq!(
+            item.matches("<category>").count(),
+            2,
+            "blank tag segment must not emit an empty category: {item}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // after_compile: sort path with multiple sidecar articles
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_rss_aggregate_sorts_multiple_articles_newest_first() {
+        let tmp = tempdir().unwrap();
+        let rss_path = tmp.path().join("rss.xml");
+        fs::write(
+            &rss_path,
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>T</title><link>https://example.com</link><description>D</description><item><title>X</title></item></channel></rss>"#,
+        )
+        .unwrap();
+
+        let mut older = HashMap::new();
+        let _ = older.insert("title".to_string(), "Older".to_string());
+        let _ = older.insert(
+            "item_pub_date".to_string(),
+            "Mon, 01 Jan 2024 00:00:00 +0000".to_string(),
+        );
+        write_meta_sidecar(tmp.path(), "older", &older);
+
+        let mut newer = HashMap::new();
+        let _ = newer.insert("title".to_string(), "Newer".to_string());
+        let _ = newer.insert(
+            "item_pub_date".to_string(),
+            "Wed, 01 Jan 2025 00:00:00 +0000".to_string(),
+        );
+        write_meta_sidecar(tmp.path(), "newer", &newer);
+
+        let ctx = make_atom_ctx(tmp.path());
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
+
+        let result = fs::read_to_string(&rss_path).unwrap();
+        let newer_pos = result.find("<title>Newer</title>").unwrap();
+        let older_pos = result.find("<title>Older</title>").unwrap();
+        assert!(newer_pos < older_pos, "newest article must sort first");
+    }
+
+    // -----------------------------------------------------------------
+    // Channel title / link fallbacks
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_rss_aggregate_falls_back_to_untitled_channel() {
+        let tmp = tempdir().unwrap();
+        let rss_path = tmp.path().join("rss.xml");
+        // Single item, no <title>/<link>/<description> anywhere.
+        fs::write(
+            &rss_path,
+            "<rss version=\"2.0\"><channel><item><guid>g</guid></item></channel></rss>",
+        )
+        .unwrap();
+
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+
+        let ctx = make_atom_ctx(tmp.path());
+        RssAggregatePlugin.after_compile(&ctx).unwrap();
+
+        let result = fs::read_to_string(&rss_path).unwrap();
+        assert!(
+            result.contains("<title>Untitled</title>"),
+            "missing channel title falls back to Untitled: {result}"
+        );
+        assert!(
+            result.contains("<link>https://example.com</link>"),
+            "missing channel link falls back to base_url: {result}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_on_invalid_utf8_rss() {
+        let tmp = tempdir().unwrap();
+        let rss_path = tmp.path().join("rss.xml");
+        fs::write(&rss_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = RssAggregatePlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("rss.xml"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_after_compile_write_failure_on_readonly_rss() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let rss_path = tmp.path().join("rss.xml");
+        fs::write(
+            &rss_path,
+            r#"<rss version="2.0"><channel><title>T</title><link>x</link><description>D</description><item><title>X</title></item></channel></rss>"#,
+        )
+        .unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Post".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+        fs::set_permissions(&rss_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        let result = RssAggregatePlugin.after_compile(&ctx);
+        let _ =
+            fs::set_permissions(&rss_path, fs::Permissions::from_mode(0o644));
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("rss.xml"));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_language: config with empty site_name
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_language_with_empty_site_name() {
+        crate::test_support::init_logger();
+        let config = crate::cmd::SsgConfig {
+            base_url: String::new(),
+            site_name: String::new(),
+            site_title: String::new(),
+            site_description: String::new(),
+            language: String::new(),
+            content_dir: std::path::PathBuf::from("c"),
+            output_dir: std::path::PathBuf::from("b"),
+            template_dir: std::path::PathBuf::from("t"),
+            serve_dir: None,
+            i18n: None,
+            cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        };
+        let ctx = PluginContext::with_config(
+            Path::new("c"),
+            Path::new("b"),
+            Path::new("s"),
+            Path::new("t"),
+            config,
+        );
+        assert_eq!(extract_language(&ctx), "en");
     }
 }

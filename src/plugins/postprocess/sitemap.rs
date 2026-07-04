@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_sitemap_fix_removes_duplicate_xml_decls() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let sitemap = tmp.path().join("sitemap.xml");
         fs::write(
             &sitemap,
@@ -255,19 +255,20 @@ mod tests {
   <lastmod>2025-09-01</lastmod>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&sitemap)?;
+        let result = fs::read_to_string(&sitemap).unwrap();
         assert_eq!(result.matches("<?xml").count(), 1);
         Ok(())
     }
 
     #[test]
     fn test_sitemap_fix_normalises_double_slashes() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let sitemap = tmp.path().join("sitemap.xml");
         fs::write(
             &sitemap,
@@ -278,12 +279,13 @@ mod tests {
   <lastmod>2025-09-01</lastmod>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&sitemap)?;
+        let result = fs::read_to_string(&sitemap).unwrap();
         // Double slash normalised AND `<loc>` collapsed onto the
         // shared directory-URL convention (plan §2 item 1.2): the
         // root `index.html` publishes as the bare base URL.
@@ -299,7 +301,7 @@ mod tests {
         // `<link>` and feed `<link>` — all derive through
         // `urls::derive_page_url`, so `…/foo/index.html` publishes as
         // the pretty directory URL `…/foo/`.
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let sitemap = tmp.path().join("sitemap.xml");
         fs::write(
             &sitemap,
@@ -314,12 +316,13 @@ mod tests {
   <lastmod>2025-09-01</lastmod>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&sitemap)?;
+        let result = fs::read_to_string(&sitemap).unwrap();
         assert!(
             result.contains("<loc>https://example.com/posts/hello/</loc>"),
             "index.html should collapse to the directory URL: {result}"
@@ -381,9 +384,9 @@ mod tests {
 
     #[test]
     fn after_compile_no_op_when_sitemap_missing() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("sitemap.xml").exists());
         Ok(())
     }
@@ -522,5 +525,103 @@ mod tests {
         let result = update_lastmod_from_loc(xml, &map);
         assert!(result.contains("<lastmod>2025-01-01</lastmod>"));
         assert!(!result.contains("should-not-match"));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_best_date: empty date fields fail parsing silently
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_best_date_empty_field_yields_verbatim_date() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("item_pub_date".to_string(), String::new());
+        // The empty value fails the flexible chain without warning and
+        // falls through to the verbatim `date` fallback (also absent).
+        assert_eq!(extract_best_date(&meta), None);
+    }
+
+    // -----------------------------------------------------------------
+    // strip_duplicate_xml_decls_and_fix_urls: <atom:link> lines
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_strip_normalises_atom_link_lines() {
+        let content = "<?xml version=\"1.0\"?>\n<atom:link href=\"https://example.com//rss.xml\"/>\n";
+        let out = strip_duplicate_xml_decls_and_fix_urls(content);
+        assert!(
+            out.contains("https://example.com/rss.xml"),
+            "double slash in atom:link must be normalised: {out}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // canonicalise_loc_urls: defensive early returns
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_canonicalise_loc_urls_without_loc_tag() {
+        let line = "  <lastmod>2026-01-01</lastmod>";
+        assert_eq!(canonicalise_loc_urls(line), line);
+    }
+
+    #[test]
+    fn test_canonicalise_loc_urls_with_unclosed_loc() {
+        let line = "  <loc>https://example.com/page";
+        assert_eq!(canonicalise_loc_urls(line), line);
+    }
+
+    // -----------------------------------------------------------------
+    // update_lastmod_from_loc: unclosed <loc> keeps previous state
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_update_lastmod_ignores_unclosed_loc_line() {
+        let mut date_map = HashMap::new();
+        let _ = date_map.insert("page".to_string(), "2026-02-02".to_string());
+        let xml = "<url>\n<loc>https://example.com/page\n<lastmod>2020-01-01</lastmod>\n</url>\n";
+        let out = update_lastmod_from_loc(xml, &date_map);
+        assert!(
+            out.contains("<lastmod>2020-01-01</lastmod>"),
+            "unclosed <loc> must not update current_loc: {out}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_on_invalid_utf8_sitemap() {
+        let tmp = tempdir().unwrap();
+        let sitemap_path = tmp.path().join("sitemap.xml");
+        fs::write(&sitemap_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = SitemapFixPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("sitemap.xml"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_after_compile_write_failure_on_readonly_sitemap() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let sitemap_path = tmp.path().join("sitemap.xml");
+        fs::write(
+            &sitemap_path,
+            "<?xml version=\"1.0\"?>\n<urlset></urlset>\n",
+        )
+        .unwrap();
+        fs::set_permissions(&sitemap_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = test_ctx(tmp.path());
+        let result = SitemapFixPlugin.after_compile(&ctx);
+        let _ = fs::set_permissions(
+            &sitemap_path,
+            fs::Permissions::from_mode(0o644),
+        );
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("sitemap.xml"));
     }
 }

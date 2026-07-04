@@ -286,6 +286,74 @@ mod tests {
     }
 
     #[test]
+    fn output_to_url_keeps_leading_slash_when_prefix_strip_fails() {
+        // An absolute output path outside `output_dir` cannot be
+        // stripped; it already starts with '/' so no slash is inserted.
+        let out = pb("/abs/feed.xml");
+        let url = output_to_url(&out, Path::new("build"));
+        assert_eq!(url, "/abs/feed.xml");
+    }
+
+    #[test]
+    fn run_dev_loop_processes_live_batches_until_watcher_closes() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::time::{Duration, Instant};
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let watcher =
+            EventWatcher::with_debounce(dir.path(), Duration::from_millis(30))
+                .expect("watcher");
+        let graph = DepGraph::new();
+        let broadcaster = HmrBroadcaster::new();
+
+        let frames = std::sync::Arc::new(AtomicUsize::new(0));
+        let frames_sink = std::sync::Arc::clone(&frames);
+        broadcaster.subscribe(Box::new(move |_| {
+            let _ = frames_sink.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }));
+
+        // Generate FS events and give the backend + debouncer a bounded
+        // window to flush at least one batch into the channel. FSEvents
+        // can drop cold-start events, so poll rather than sleep once.
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while watcher
+            .recv_timeout(Duration::from_millis(0))
+            .batch()
+            .is_none()
+        {
+            if Instant::now() >= deadline {
+                break;
+            }
+            std::fs::write(dir.path().join("page.md"), b"x").expect("write");
+            std::thread::sleep(Duration::from_millis(50));
+        }
+
+        // Closing the backend drops the raw sender; the debounce thread
+        // flushes anything pending and exits, closing the batched
+        // channel — which is what makes run_dev_loop return.
+        std::fs::write(dir.path().join("late.md"), b"y").expect("write");
+        std::thread::sleep(Duration::from_millis(80));
+        watcher.close_backend_for_test();
+
+        let rebuilds = AtomicUsize::new(0);
+        let processed = run_dev_loop(
+            &watcher,
+            &graph,
+            &broadcaster,
+            Path::new("build"),
+            |_outputs| {
+                let _ = rebuilds.fetch_add(1, Ordering::SeqCst);
+            },
+        );
+
+        // Every processed batch triggered exactly one rebuild and one
+        // broadcast frame.
+        assert_eq!(processed, rebuilds.load(Ordering::SeqCst));
+        assert_eq!(processed, frames.load(Ordering::SeqCst));
+    }
+
+    #[test]
     fn pure_content_with_graph_edges_yields_hmr_html() {
         // Covers the line ~113 `Some(HmrMessage::html(url_paths))`
         // arm — a content change that resolves to one or more

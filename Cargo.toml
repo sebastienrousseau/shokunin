@@ -475,6 +475,16 @@ panic = "abort"                             # Use abort on panic for minimal ove
 rpath = false                               # Disable rpath generation
 strip = "symbols"                           # Strip symbols for smaller binary size
 
+[profile.bench]
+# Cargo's `bench` profile inherits any unset key from `[profile.release]`
+# by default — including `panic = "abort"`. Criterion's `--test` smoke
+# run (and the libtest harness generally) needs unwind semantics, so
+# leaving this unset makes every `cargo bench -- --test` invocation fail
+# with a panic-strategy mismatch against upstream unwind-compiled rlibs.
+# Override just the one key; everything else still inherits release's
+# optimisation settings.
+panic = "unwind"
+
 [profile.test]
 # Test profile configuration for debugging and development.
 codegen-units = 16                          # Balance between compile speed and disk usage

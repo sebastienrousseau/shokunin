@@ -329,4 +329,71 @@ mod tests {
             fs::read(tmp.path().join("search/embeddings.bin")).unwrap();
         assert_eq!(first, second);
     }
+
+    // -------------------------------------------------------------------
+    // IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_site_has_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = VectorSearchPlugin.after_compile(&ctx(tmp.path()));
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    fn after_compile_fails_when_search_dir_squatted_by_file() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        fs::write(tmp.path().join("search"), "not a dir").unwrap();
+        let err = VectorSearchPlugin
+            .after_compile(&ctx(tmp.path()))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    /// Squats `search/<name>` with a directory so the corresponding
+    /// `fs::write` fails.
+    fn assert_write_fails_when_squatted(name: &str) {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        fs::create_dir_all(tmp.path().join("search").join(name)).unwrap();
+        let err = VectorSearchPlugin
+            .after_compile(&ctx(tmp.path()))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_embeddings_squatted_by_dir() {
+        assert_write_fails_when_squatted(EMBEDDINGS_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_manifest_squatted_by_dir() {
+        assert_write_fails_when_squatted(MANIFEST_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_model_squatted_by_dir() {
+        assert_write_fails_when_squatted(MODEL_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_tokenizer_squatted_by_dir() {
+        assert_write_fails_when_squatted(TOKENIZER_FILE);
+    }
 }

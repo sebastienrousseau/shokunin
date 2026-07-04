@@ -750,19 +750,126 @@ mod tests {
         assert!(got.starts_with('v'));
     }
 
+    /// Serialised env-var scoping for the `default_cache_dir` tests.
+    ///
+    /// Entries are applied *sequentially* (capture-then-set per entry)
+    /// and restored in reverse, so a duplicated key deterministically
+    /// exercises both restore arms: the later entry's captured
+    /// previous value is whatever the earlier entry just set.
+    fn with_env_vars<F: FnOnce()>(vars: &[(&str, Option<&str>)], f: F) {
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let mut prev: Vec<(String, Option<String>)> = Vec::new();
+        for (key, value) in vars {
+            prev.push(((*key).to_string(), std::env::var(key).ok()));
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+        }
+        f();
+        for (key, value) in prev.into_iter().rev() {
+            match value {
+                Some(v) => std::env::set_var(&key, v),
+                None => std::env::remove_var(&key),
+            }
+        }
+    }
+
     #[test]
     fn default_cache_dir_respects_explicit_override() {
-        // Save / restore so we don't pollute the rest of the suite.
-        let prev = std::env::var("SSG_LLM_CACHE_DIR").ok();
-        std::env::set_var("SSG_LLM_CACHE_DIR", "/tmp/ssg-test-cache");
-        assert_eq!(
-            LlmCache::default_cache_dir(),
-            PathBuf::from("/tmp/ssg-test-cache")
+        // Duplicate key: the inner entry restores the outer value on
+        // unwind (Some arm), the outer entry restores the machine
+        // state.
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", Some("/outer-sentinel")),
+                ("SSG_LLM_CACHE_DIR", Some("/tmp/ssg-test-cache")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/tmp/ssg-test-cache")
+                );
+            },
         );
-        match prev {
-            Some(v) => std::env::set_var("SSG_LLM_CACHE_DIR", v),
-            None => std::env::remove_var("SSG_LLM_CACHE_DIR"),
-        }
+    }
+
+    #[test]
+    fn default_cache_dir_empty_override_falls_through_to_xdg() {
+        // An empty SSG_LLM_CACHE_DIR must be ignored; XDG_CACHE_HOME
+        // is next in the resolution order. The duplicated unset+set
+        // pair drives the remove-then-restore-None arms of the helper.
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("SSG_LLM_CACHE_DIR", Some("")),
+                ("XDG_CACHE_HOME", Some("/xdg-root")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/xdg-root").join("ssg").join("llm")
+                );
+            },
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn default_cache_dir_empty_xdg_uses_home_library_caches() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", Some("")),
+                ("HOME", Some("/home-test")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/home-test")
+                        .join("Library")
+                        .join("Caches")
+                        .join("ssg")
+                        .join("llm")
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn default_cache_dir_without_home_uses_relative_fallback() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", None),
+                ("HOME", None),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from(".ssg-llm-cache")
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn default_cache_dir_empty_home_uses_relative_fallback() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", None),
+                ("HOME", Some("")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from(".ssg-llm-cache")
+                );
+            },
+        );
     }
 
     #[test]
@@ -845,6 +952,56 @@ mod tests {
         // assert the body executed and didn't panic — either Ok or
         // Err is acceptable.
         let _ = res;
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn get_open_permission_error_counts_as_miss() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "denied", 1);
+        cache.set(&key, "x").unwrap();
+        let path = cache.entry_path(&key);
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let misses_before = cache.stats().misses;
+        assert!(
+            cache.get(&key).is_none(),
+            "EACCES must be treated as a miss"
+        );
+        assert_eq!(cache.stats().misses, misses_before + 1);
+
+        // Restore so the tempdir can be cleaned up.
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    #[test]
+    fn get_hits_when_mtime_is_in_the_future() {
+        // duration_since(modified) errors when the mtime is ahead of
+        // now; the TTL check must fall through and still return a hit.
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "future", 1);
+        cache.set(&key, "from-tomorrow").unwrap();
+        let path = cache.entry_path(&key);
+        let f = fs::OpenOptions::new().write(true).open(&path).unwrap();
+        f.set_modified(SystemTime::now() + Duration::from_secs(3600))
+            .unwrap();
+        drop(f);
+
+        assert_eq!(cache.get(&key).as_deref(), Some("from-tomorrow"));
+    }
+
+    #[test]
+    fn set_fails_when_root_is_a_file() {
+        // create_dir_all under a plain file must error, propagating
+        // through the `?` in set().
+        let dir = tempfile::tempdir().unwrap();
+        let root_file = dir.path().join("rootfile");
+        fs::write(&root_file, "not a dir").unwrap();
+        let cache = LlmCache::new(root_file);
+        let key = LlmCache::compute_key("e", "m", "p", 1);
+        assert!(cache.set(&key, "x").is_err());
+        assert_eq!(cache.stats().stores, 0);
     }
 
     #[test]

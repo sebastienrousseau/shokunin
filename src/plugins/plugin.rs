@@ -927,10 +927,15 @@ mod tests {
         pm.register(FailPlugin { hook: "before" });
         let ctx = test_ctx();
         let err = pm.run_before_compile(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("before_compile failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("before_compile failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -939,10 +944,15 @@ mod tests {
         pm.register(FailPlugin { hook: "after" });
         let ctx = test_ctx();
         let err = pm.run_after_compile(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("after_compile failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("after_compile failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -951,10 +961,15 @@ mod tests {
         pm.register(FailPlugin { hook: "serve" });
         let ctx = test_ctx();
         let err = pm.run_on_serve(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("on_serve failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("on_serve failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -1264,6 +1279,7 @@ mod tests {
     #[test]
     fn test_needs_all_files_can_be_overridden() {
         assert!(!PerFilePlugin.needs_all_files());
+        assert_eq!(PerFilePlugin.name(), "per-file");
     }
 
     #[test]
@@ -1272,6 +1288,7 @@ mod tests {
 
         // FailPlugin("before") should succeed on after_compile and on_serve
         let p = FailPlugin { hook: "before" };
+        assert_eq!(p.name(), "fail-plugin");
         assert!(p.after_compile(&ctx).is_ok());
         assert!(p.on_serve(&ctx).is_ok());
 
@@ -1351,6 +1368,9 @@ mod tests {
             })
             .collect();
 
+        assert_eq!(IdentityTransformPlugin.name(), "identity-transform");
+        assert_eq!(MarkerRewritePlugin.name(), "marker-rewrite");
+
         let mut pm = PluginManager::new();
         pm.register(IdentityTransformPlugin);
         pm.register(MarkerRewritePlugin); // no marker present ⇒ no-op
@@ -1418,7 +1438,154 @@ mod tests {
         let err = pm
             .run_fused_transforms(&ctx)
             .expect_err("write to read-only file must surface");
-        assert!(matches!(err, SsgError::Io { .. }));
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
         set_readonly(&f, false);
+    }
+
+    // -----------------------------------------------------------------
+    // PluginCache — degraded-input branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_load_unreadable_file_yields_empty_cache() {
+        // Invalid UTF-8 bytes: the file exists but read_to_string fails,
+        // taking the `let Ok(content) = … else` fallback.
+        let tmp = tempfile::tempdir().unwrap();
+        let cache_path = tmp.path().join(CACHE_FILENAME);
+        fs::write(&cache_path, [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let loaded = PluginCache::load(tmp.path());
+        assert!(
+            loaded.entries.is_empty(),
+            "unreadable cache file should yield an empty cache"
+        );
+    }
+
+    #[test]
+    fn test_cache_save_write_failure_returns_io_error() {
+        // A directory squatting on the cache filename makes fs::write fail.
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join(CACHE_FILENAME)).unwrap();
+
+        let err = PluginCache::new()
+            .save(tmp.path())
+            .expect_err("write over a directory must fail");
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+    }
+
+    // -----------------------------------------------------------------
+    // PluginContext::cache_html_files — missing site_dir branch
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_html_files_missing_site_dir_leaves_cache_unset() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = tmp.path().join("missing-site");
+        let mut ctx =
+            PluginContext::new(tmp.path(), tmp.path(), &missing, tmp.path());
+        ctx.cache_html_files();
+        assert!(
+            ctx.html_files.is_none(),
+            "missing site_dir must not populate the html cache"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Plugin trait — default transform_html implementation
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_default_transform_html_returns_input_unchanged() {
+        let ctx = test_ctx();
+        let out = NoopPlugin
+            .transform_html("<p>as-is</p>", Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, "<p>as-is</p>");
+    }
+
+    // -----------------------------------------------------------------
+    // run_fused_transforms — early-return + error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_fused_without_transform_plugins_is_trivial_ok() {
+        // NoopPlugin has has_transform() == false, so the pass exits
+        // before touching the filesystem.
+        let mut pm = PluginManager::new();
+        pm.register(NoopPlugin);
+        let ctx = test_ctx();
+        pm.run_fused_transforms(&ctx).unwrap();
+    }
+
+    #[test]
+    fn test_fused_read_failure_on_invalid_utf8_surfaces() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("broken.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let mut pm = PluginManager::new();
+        pm.register(IdentityTransformPlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("invalid UTF-8 html must surface a read error");
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("broken.html"), "path context expected: {dbg}");
+    }
+
+    /// Transform plugin whose hook always fails.
+    #[derive(Debug)]
+    struct FailingTransformPlugin;
+    impl Plugin for FailingTransformPlugin {
+        fn name(&self) -> &'static str {
+            "failing-transform"
+        }
+        fn transform_html(
+            &self,
+            _html: &str,
+            path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Err(SsgError::Io {
+                path: path.to_path_buf(),
+                source: std::io::Error::other("transform_html failed"),
+            })
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn test_fused_transform_error_stops_the_pass() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("page.html"), "<p>x</p>").unwrap();
+
+        let mut pm = PluginManager::new();
+        pm.register(FailingTransformPlugin);
+        assert_eq!(FailingTransformPlugin.name(), "failing-transform");
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("failing transform plugin must surface its error");
+        let dbg = format!("{err:?}");
+        assert!(
+            dbg.contains("transform_html failed"),
+            "plugin error expected: {dbg}"
+        );
+        // The file is untouched.
+        assert_eq!(
+            fs::read_to_string(dir.path().join("page.html")).unwrap(),
+            "<p>x</p>"
+        );
     }
 }

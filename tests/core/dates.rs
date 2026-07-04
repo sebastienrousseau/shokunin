@@ -31,7 +31,7 @@ const MONTH_NAMES: [&str; 12] = [
 ];
 
 /// Build a `FlexibleDate` fixture (UTC) for formatting tests.
-fn utc_date(
+const fn utc_date(
     year: i32,
     month: u8,
     day: u8,

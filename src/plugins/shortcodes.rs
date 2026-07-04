@@ -578,6 +578,53 @@ title: Test
     }
 
     #[test]
+    fn render_inline_shortcode_island_missing_component_emits_comment() {
+        // The `if component.is_empty()` early return of the island arm.
+        let result = expand_shortcodes(r"{{< island >}}");
+        assert!(result.contains("<!-- island: missing component -->"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn before_compile_propagates_walk_error_from_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        let locked = content.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = ShortcodePlugin.before_compile(&ctx);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable subdir must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn before_compile_write_failure_on_readonly_file_is_propagated() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let file = content.join("locked.md");
+        fs::write(&file, r#"{{< youtube id="abc" >}}"#).unwrap();
+        // Read works, the write-back of the expanded content does not.
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = ShortcodePlugin.before_compile(&ctx);
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(result.is_err(), "read-only file write must surface as Err");
+    }
+
+    #[test]
     fn before_compile_read_failure_returns_io_error() {
         let dir = tempfile::tempdir().unwrap();
         let content = dir.path().join("content");

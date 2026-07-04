@@ -502,4 +502,42 @@ mod tests {
         fs::write(&bad, "not json").unwrap();
         assert!(read_title(&bad).is_none());
     }
+
+    #[test]
+    fn page_rel_path_none_when_scheme_url_has_no_path() {
+        // Scheme present but no `/` after the host at all.
+        assert_eq!(page_rel_path("https://example.com"), None);
+    }
+
+    #[test]
+    fn build_oembed_omits_author_when_name_unparseable() {
+        // `<email>` form yields no display name, so author_name is
+        // absent.
+        let doc = build_oembed("T", Some("<jane@example.com>"), None, None);
+        assert!(doc.get("author_name").is_none());
+    }
+
+    #[test]
+    fn after_compile_fails_when_oembed_path_squatted_by_dir() {
+        let (_tmp, ctx) = make_ctx();
+        add_page(&ctx, "p", r#"{"title":"P"}"#);
+        fs::create_dir_all(ctx.site_dir.join("p.oembed.json")).unwrap();
+        let err = OembedPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn transform_html_without_config_uses_root_relative_href() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("p.oembed.json"), r#"{"title":"P"}"#).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+
+        let html = "<html><head></head><body>x</body></html>";
+        let out = OembedPlugin
+            .transform_html(html, &site.join("p.html"), &ctx)
+            .unwrap();
+        assert!(out.contains("href=\"/p.oembed.json\""));
+    }
 }

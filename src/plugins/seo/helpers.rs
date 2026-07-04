@@ -546,4 +546,74 @@ mod tests {
             None
         );
     }
+
+    #[test]
+    fn extract_existing_meta_skips_tag_without_content_attribute() {
+        // A matching meta tag that carries no `content` attribute at
+        // all must be skipped (scanning continues past it).
+        let html = "<meta name=\"author\">\
+                    <meta name=\"author\" content=\"Cid\">";
+        assert_eq!(extract_existing_meta(html, "author"), "Cid");
+    }
+
+    #[test]
+    fn extract_existing_meta_no_content_anywhere_returns_empty() {
+        let html = "<meta name=\"author\">";
+        assert_eq!(extract_existing_meta(html, "author"), "");
+    }
+
+    #[test]
+    fn extract_first_content_image_src_without_closing_quote() {
+        // `src="` opened but never closed before the tag ends — the
+        // extractor must fall through to the empty result.
+        let html = "<main><img src=\"broken.png</main>";
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    #[test]
+    fn extract_first_content_image_img_without_src_attribute() {
+        let html = "<main><img alt=\"decorative\"></main>";
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    #[test]
+    fn extract_meta_author_byline_with_empty_name_returns_empty() {
+        // `class="author">` immediately followed by a closing tag —
+        // the byline text is empty and must not be returned.
+        let html = "<html><body><span class=\"author\"></span></body></html>";
+        assert_eq!(extract_meta_author(html), "");
+    }
+
+    #[test]
+    fn extract_meta_author_byline_without_following_tag_returns_empty() {
+        // Pattern matches at the very end of the document, so there is
+        // no `<` terminating the byline text.
+        let html = "<span class=\"author\">Dana";
+        assert_eq!(extract_meta_author(html), "");
+    }
+
+    #[test]
+    fn extract_date_from_html_empty_date_returns_none() {
+        let html = r#"{"datePublished":""}"#;
+        assert_eq!(extract_date_from_html(html, "datePublished"), None);
+    }
+
+    #[test]
+    fn extract_date_from_html_unterminated_value_returns_none() {
+        // Opening quote never closed — no closing `"` after the value.
+        let html = r#"{"datePublished":"2026-01-01"#;
+        assert_eq!(extract_date_from_html(html, "datePublished"), None);
+    }
+
+    #[test]
+    fn extract_meta_date_empty_datetime_returns_none() {
+        let html = r#"<time datetime="">x</time>"#;
+        assert_eq!(extract_meta_date(html), None);
+    }
+
+    #[test]
+    fn extract_meta_date_unterminated_datetime_returns_none() {
+        let html = r#"<time datetime="2026-01-01"#;
+        assert_eq!(extract_meta_date(html), None);
+    }
 }

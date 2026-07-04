@@ -84,7 +84,15 @@ jobs:
           cd benches/corpus/small/public
           # Content-only manifest: "<sha256>  <sorted relative path>".
           # `shasum -a 256` exists on both ubuntu (perl) and macOS.
-          find . -type f -print0 | LC_ALL=C sort -z \
+          #
+          # TEMPORARY EXCLUSION (remove with the staticdatagen =0.0.11
+          # pin, v0.0.47 plan Track U): 0.0.10's news-sitemap generator
+          # stamps a wall-clock fallback for `item_pub_date` even when
+          # frontmatter carries a fixed ISO date, so news-sitemap.xml
+          # is nondeterministic per build. The staged 0.0.11 parses the
+          # ISO form (spec A4) and removes the fallback path; once the
+          # pin lands, drop this filter so the gate covers the file.
+          find . -type f ! -name 'news-sitemap.xml' -print0 | LC_ALL=C sort -z \
             | while IFS= read -r -d '' f; do
                 printf '%s  %s\n' \
                   "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"
@@ -169,7 +177,10 @@ jobs:
           hash_tree() {
             (
               cd "$1"
-              find . -type f -print0 | LC_ALL=C sort -z \
+              # news-sitemap.xml excluded — same staticdatagen-0.0.10
+              # wall-clock fallback as the cross-OS job above; drop the
+              # filter with the =0.0.11 pin.
+              find . -type f ! -name 'news-sitemap.xml' -print0 | LC_ALL=C sort -z \
                 | while IFS= read -r -d '' f; do
                     printf '%s  %s\n' \
                       "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"

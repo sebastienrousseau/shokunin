@@ -311,7 +311,9 @@ mod tests {
             Target::None,
         ] {
             let a = adapter_for(t);
-            assert!(a.deploy(&dir).is_ok(), "adapter {} failed", a.name());
+            let name = a.name();
+            let result = a.deploy(&dir);
+            assert!(result.is_ok(), "adapter {name} failed");
         }
     }
 }

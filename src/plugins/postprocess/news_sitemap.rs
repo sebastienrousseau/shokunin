@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_with_keywords() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         fs::write(
@@ -241,7 +241,8 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Breaking News".to_string());
@@ -258,9 +259,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "breaking", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert!(
             result.contains(
                 "<news:keywords>rust, programming, web</news:keywords>"
@@ -288,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_with_tags_fallback() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         fs::write(
@@ -303,7 +304,8 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Tagged Post".to_string());
@@ -316,9 +318,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "tagged", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert!(
             result.contains("<news:keywords>tech, science</news:keywords>"),
             "Should fall back to tags for keywords: {result}"
@@ -328,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_skips_when_no_placeholders() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         let original = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -340,12 +342,12 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#;
-        fs::write(&news_path, original)?;
+        fs::write(&news_path, original).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert_eq!(
             result, original,
             "Should not modify well-formed news sitemap"
@@ -486,30 +488,87 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_no_file_is_noop() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("news-sitemap.xml").exists());
         Ok(())
     }
 
     #[test]
     fn test_news_sitemap_empty_entries_no_rebuild() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let news_path = tmp.path().join("news-sitemap.xml");
         // Has placeholder but no meta sidecars to rebuild from
         let original = r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset><url><loc></loc><news:news><news:title>Untitled Article</news:title></news:news></url></urlset>"#;
-        fs::write(&news_path, original)?;
+        fs::write(&news_path, original).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert_eq!(
             result, original,
             "should not modify when no meta entries produce valid news entries"
         );
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // build_news_entry: empty item_pub_date parses to nothing silently
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_news_entry_with_empty_pub_date() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "T".to_string());
+        let _ = meta.insert("item_pub_date".to_string(), String::new());
+        let entry =
+            build_news_entry("post", &meta, "https://example.com").unwrap();
+        assert!(
+            entry.contains("<news:publication_date></news:publication_date>"),
+            "empty date passes through empty: {entry}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_on_invalid_utf8_news_sitemap() {
+        let tmp = tempdir().unwrap();
+        let news_path = tmp.path().join("news-sitemap.xml");
+        fs::write(&news_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = NewsSitemapFixPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("news-sitemap.xml"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_after_compile_write_failure_on_readonly_news_sitemap() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let news_path = tmp.path().join("news-sitemap.xml");
+        fs::write(
+            &news_path,
+            "<urlset><url><news:title>Untitled Article</news:title></url></urlset>",
+        )
+        .unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Real Title".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+        fs::set_permissions(&news_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        let result = NewsSitemapFixPlugin.after_compile(&ctx);
+        let _ =
+            fs::set_permissions(&news_path, fs::Permissions::from_mode(0o644));
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("news-sitemap.xml"));
     }
 }

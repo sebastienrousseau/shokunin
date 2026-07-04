@@ -218,24 +218,13 @@ impl EventWatcher {
         let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
         let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
 
-        let mut backend =
-            recommended_watcher(move |res: notify::Result<Event>| {
-                if let Ok(event) = res {
-                    if event_should_propagate(&event.kind) {
-                        for path in event.paths {
-                            // Best-effort: receiver dropped means the watcher
-                            // itself was dropped; nothing to do.
-                            let _ = raw_tx.send(path);
-                        }
-                    }
-                }
-            })
-            .map_err(|e| SsgError::Io {
-                path: dir.to_path_buf(),
-                source: std::io::Error::other(format!(
-                    "notify watcher init: {e}"
-                )),
-            })?;
+        let mut backend = create_backend(move |res: notify::Result<Event>| {
+            forward_event(res, &raw_tx);
+        })
+        .map_err(|e| SsgError::Io {
+            path: dir.to_path_buf(),
+            source: std::io::Error::other(format!("notify watcher init: {e}")),
+        })?;
 
         backend.watch(dir, RecursiveMode::Recursive).map_err(|e| {
             SsgError::Io {
@@ -246,17 +235,18 @@ impl EventWatcher {
 
         let shutdown = Arc::new(Mutex::new(false));
         let shutdown_clone = Arc::clone(&shutdown);
-        let debounce_handle = thread::Builder::new()
-            .name("ssg-watch-debounce".into())
-            .spawn(move || {
+        let debounce_handle = spawn_debounce_thread(
+            thread::Builder::new().name("ssg-watch-debounce".into()),
+            move || {
                 debounce_loop(raw_rx, batched_tx, debounce, &shutdown_clone);
-            })
-            .map_err(|e| SsgError::Io {
-                path: dir.to_path_buf(),
-                source: std::io::Error::other(format!(
-                    "debounce thread spawn: {e}"
-                )),
-            })?;
+            },
+        )
+        .map_err(|e| SsgError::Io {
+            path: dir.to_path_buf(),
+            source: std::io::Error::other(format!(
+                "debounce thread spawn: {e}"
+            )),
+        })?;
 
         Ok(Self {
             backend: Mutex::new(Some(backend)),
@@ -311,6 +301,13 @@ impl EventWatcher {
             Err(RecvTimeoutError::Timeout) => RecvOutcome::Timeout,
             Err(RecvTimeoutError::Disconnected) => RecvOutcome::Closed,
         }
+    }
+
+    /// Test-only: drops the notify backend so the debounce thread winds
+    /// down and the batched channel closes without dropping the watcher.
+    #[cfg(test)]
+    pub(crate) fn close_backend_for_test(&self) {
+        let _ = self.backend.lock().map(|mut b| *b = None);
     }
 
     /// Debounce window in effect for this watcher.
@@ -372,6 +369,101 @@ pub const fn event_should_propagate(kind: &EventKind) -> bool {
     )
 }
 
+/// Forwards the paths of a propagatable notify event onto `raw_tx`.
+///
+/// Extracted from the `recommended_watcher` callback so the ignore
+/// branches (backend error, `Access`/`Other` events) are unit-testable
+/// without waiting on a live OS event.
+fn forward_event(res: notify::Result<Event>, raw_tx: &Sender<PathBuf>) {
+    if let Ok(event) = res {
+        if event_should_propagate(&event.kind) {
+            for path in event.paths {
+                // Best-effort: receiver dropped means the watcher
+                // itself was dropped; nothing to do.
+                let _ = raw_tx.send(path);
+            }
+        }
+    }
+}
+
+/// Thread-local fault injection for the two error branches real OS
+/// behaviour cannot reach deterministically (backend init and thread
+/// spawn failures). Thread-local — unlike a process-global `fail`
+/// failpoint — so arming a fault in one test cannot leak into
+/// concurrently running tests that also build watchers.
+#[cfg(all(test, feature = "test-fault-injection"))]
+mod fault {
+    use std::cell::Cell;
+
+    thread_local! {
+        static ARMED: Cell<Option<&'static str>> = const { Cell::new(None) };
+    }
+
+    /// Arms `name` for the current thread; disarmed when the returned
+    /// guard drops (panic-safe).
+    pub(super) fn arm(name: &'static str) -> ArmGuard {
+        ARMED.with(|a| a.set(Some(name)));
+        ArmGuard
+    }
+
+    /// Returns whether `name` is armed on the current thread.
+    pub(super) fn armed(name: &str) -> bool {
+        ARMED.with(|a| a.get() == Some(name))
+    }
+
+    /// RAII guard that disarms the thread-local fault on drop.
+    #[derive(Debug)]
+    pub(super) struct ArmGuard;
+
+    impl Drop for ArmGuard {
+        fn drop(&mut self) {
+            ARMED.with(|a| a.set(None));
+        }
+    }
+}
+
+/// Creates the notify backend. Wrapped so tests can inject a
+/// construction failure via the `event-watch::backend-init`
+/// thread-local fault.
+fn create_backend<F: notify::EventHandler>(
+    event_handler: F,
+) -> notify::Result<RecommendedWatcher> {
+    #[cfg(all(test, feature = "test-fault-injection"))]
+    if fault::armed("event-watch::backend-init") {
+        return Err(notify::Error::generic(
+            "injected: event-watch::backend-init",
+        ));
+    }
+    recommended_watcher(event_handler)
+}
+
+/// Spawns the debounce thread. Wrapped so tests can inject a spawn
+/// failure via the `event-watch::debounce-spawn` thread-local fault.
+fn spawn_debounce_thread(
+    builder: thread::Builder,
+    body: impl FnOnce() + Send + 'static,
+) -> std::io::Result<JoinHandle<()>> {
+    #[cfg(all(test, feature = "test-fault-injection"))]
+    if fault::armed("event-watch::debounce-spawn") {
+        return Err(std::io::Error::other(
+            "injected: event-watch::debounce-spawn",
+        ));
+    }
+    builder.spawn(body)
+}
+
+/// Time left in the debounce window, or `None` once the window has
+/// closed. Extracted from [`debounce_loop`] so the boundary cases
+/// (`elapsed == window`, `elapsed > window`) are unit-testable.
+fn remaining_window(window: Duration, elapsed: Duration) -> Option<Duration> {
+    let remaining = window.checked_sub(elapsed)?;
+    if remaining.is_zero() {
+        None
+    } else {
+        Some(remaining)
+    }
+}
+
 /// Debounce loop: collect paths from `raw_rx` for at most `window`
 /// after the first event, then flush.
 ///
@@ -395,10 +487,7 @@ fn debounce_loop(
         let start = Instant::now();
 
         // Drain everything that lands inside the window.
-        while let Some(remaining) = window.checked_sub(start.elapsed()) {
-            if remaining.is_zero() {
-                break;
-            }
+        while let Some(remaining) = remaining_window(window, start.elapsed()) {
             match raw_rx.recv_timeout(remaining) {
                 Ok(p) => {
                     let _ = paths.insert(p);
@@ -654,22 +743,14 @@ mod tests {
 
         // Poll for up to ~2s — notify backends can be slow on cold start.
         let deadline = Instant::now() + Duration::from_secs(2);
-        let mut got_batch = false;
-        while Instant::now() < deadline {
-            match w.recv_timeout(Duration::from_millis(200)) {
-                RecvOutcome::Batch(b) => {
-                    assert!(!b.is_empty());
-                    got_batch = true;
-                    break;
-                }
-                RecvOutcome::Timeout => {}
-                RecvOutcome::Closed => break,
-            }
+        let mut got: Option<ChangeBatch> = None;
+        while got.is_none() && Instant::now() < deadline {
+            got = w.recv_timeout(Duration::from_millis(200)).batch();
         }
         // CI macOS FSEvents can rarely lose the first event for a brand
         // new dir; don't fail the suite — just ensure we exercised the
         // pathway without panicking.
-        let _ = got_batch;
+        assert!(got.is_none_or(|b| !b.is_empty()));
     }
 
     #[test]
@@ -696,6 +777,248 @@ mod tests {
         // Either Timeout (typical) or Batch (if FS noise) — neither should
         // be Closed under normal conditions.
         assert!(!out.is_closed());
+    }
+
+    #[test]
+    fn forward_event_sends_paths_for_propagatable_events() {
+        use notify::event::CreateKind;
+        let (tx, rx) = mpsc::channel::<PathBuf>();
+        let event = Event::new(EventKind::Create(CreateKind::File))
+            .add_path(p("a.md"))
+            .add_path(p("b.md"));
+        forward_event(Ok(event), &tx);
+        assert_eq!(rx.try_recv().unwrap(), p("a.md"));
+        assert_eq!(rx.try_recv().unwrap(), p("b.md"));
+        assert!(rx.try_recv().is_err(), "no extra paths expected");
+    }
+
+    #[test]
+    fn forward_event_ignores_access_events() {
+        use notify::event::AccessKind;
+        let (tx, rx) = mpsc::channel::<PathBuf>();
+        let event =
+            Event::new(EventKind::Access(AccessKind::Any)).add_path(p("a.md"));
+        forward_event(Ok(event), &tx);
+        assert!(rx.try_recv().is_err(), "access events must be dropped");
+    }
+
+    #[test]
+    fn forward_event_ignores_backend_errors() {
+        let (tx, rx) = mpsc::channel::<PathBuf>();
+        forward_event(Err(notify::Error::generic("boom")), &tx);
+        assert!(rx.try_recv().is_err(), "errors must be swallowed");
+    }
+
+    #[test]
+    fn forward_event_survives_dropped_receiver() {
+        use notify::event::CreateKind;
+        let (tx, rx) = mpsc::channel::<PathBuf>();
+        drop(rx);
+        let event =
+            Event::new(EventKind::Create(CreateKind::File)).add_path(p("a"));
+        // Must not panic even though the send fails.
+        forward_event(Ok(event), &tx);
+    }
+
+    #[test]
+    fn remaining_window_returns_time_left_inside_window() {
+        assert_eq!(
+            remaining_window(
+                Duration::from_millis(100),
+                Duration::from_millis(40)
+            ),
+            Some(Duration::from_millis(60))
+        );
+    }
+
+    #[test]
+    fn remaining_window_none_when_elapsed_exceeds_window() {
+        assert_eq!(
+            remaining_window(
+                Duration::from_millis(100),
+                Duration::from_millis(150)
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn remaining_window_none_at_exact_boundary() {
+        assert_eq!(
+            remaining_window(
+                Duration::from_millis(100),
+                Duration::from_millis(100)
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn debounce_loop_exits_when_shutdown_already_signalled() {
+        let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
+        let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
+        let shutdown = Arc::new(Mutex::new(true));
+
+        raw_tx.send(p("a.md")).unwrap();
+        drop(raw_tx);
+        debounce_loop(raw_rx, batched_tx, Duration::from_millis(10), &shutdown);
+
+        // Shutdown short-circuits before any batch is flushed.
+        assert!(batched_rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn debounce_loop_forces_drain_at_max_batch_paths() {
+        let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
+        let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
+        let shutdown = Arc::new(Mutex::new(false));
+
+        for i in 0..MAX_BATCH_PATHS {
+            raw_tx.send(PathBuf::from(format!("f{i}"))).unwrap();
+        }
+        drop(raw_tx);
+        // Long window: the cap — not the clock — must force the drain.
+        debounce_loop(raw_rx, batched_tx, Duration::from_secs(60), &shutdown);
+
+        let batch = batched_rx.try_recv().expect("capped batch flushed");
+        assert_eq!(batch.len(), MAX_BATCH_PATHS);
+    }
+
+    #[test]
+    fn debounce_loop_flushes_pending_batch_on_disconnect() {
+        let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
+        let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
+        let shutdown = Arc::new(Mutex::new(false));
+
+        raw_tx.send(p("only.md")).unwrap();
+        drop(raw_tx);
+        // Sender gone mid-window: the pending set must still be flushed.
+        debounce_loop(raw_rx, batched_tx, Duration::from_secs(60), &shutdown);
+
+        let batch = batched_rx.try_recv().expect("final batch flushed");
+        assert_eq!(batch.paths, vec![p("only.md")]);
+    }
+
+    #[test]
+    fn debounce_loop_exits_when_batched_receiver_dropped() {
+        let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
+        let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
+        drop(batched_rx);
+        let shutdown = Arc::new(Mutex::new(false));
+
+        let handle = thread::spawn(move || {
+            debounce_loop(
+                raw_rx,
+                batched_tx,
+                Duration::from_millis(10),
+                &shutdown,
+            );
+        });
+        raw_tx.send(p("a.md")).unwrap();
+        // The loop drains via timeout, fails to deliver the batch, and
+        // breaks out — the join must therefore complete.
+        handle.join().expect("debounce thread exits cleanly");
+    }
+
+    #[test]
+    fn recv_returns_batch_on_live_event() {
+        // recv() blocks, so drive it from a helper thread while the
+        // main thread generates filesystem events. Tolerant of lost
+        // FSEvents on cold-start: the helper is detached on timeout.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let w =
+            EventWatcher::with_debounce(dir.path(), Duration::from_millis(30))
+                .expect("watcher");
+
+        let (tx, rx) = mpsc::channel::<bool>();
+        let handle = thread::spawn(move || {
+            let got = w.recv();
+            let _ = tx.send(got.is_some());
+            drop(w);
+        });
+
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut outcome: Option<bool> = None;
+        while outcome.is_none() && Instant::now() < deadline {
+            std::fs::write(dir.path().join("touch.md"), b"x").expect("write");
+            outcome = rx.recv_timeout(Duration::from_millis(100)).ok();
+        }
+        // When the event arrived, recv() must have yielded a batch and
+        // the helper thread must be joinable.
+        assert!(outcome.is_none_or(|got| got));
+        if outcome.is_some() {
+            handle.join().expect("recv thread exits");
+        }
+    }
+
+    #[test]
+    fn drop_recovers_from_poisoned_internal_locks() {
+        // Poison all three internal mutexes, then drop. Drop must not
+        // panic — every lock() failure path is exercised.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let w =
+            EventWatcher::with_debounce(dir.path(), Duration::from_millis(20))
+                .expect("watcher");
+
+        let shutdown = Arc::clone(&w.shutdown);
+        let _ = thread::spawn(move || {
+            let _guard = shutdown.lock().unwrap();
+            panic!("poison shutdown");
+        })
+        .join();
+
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = w.backend.lock().unwrap();
+            panic!("poison backend");
+        }));
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = w.debounce_handle.lock().unwrap();
+            panic!("poison handle");
+        }));
+
+        drop(w); // must not panic or hang
+    }
+
+    #[test]
+    fn drop_tolerates_already_taken_debounce_handle() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let w =
+            EventWatcher::with_debounce(dir.path(), Duration::from_millis(20))
+                .expect("watcher");
+
+        // Steal the join handle so Drop sees `None`.
+        let handle = w.debounce_handle.lock().unwrap().take();
+        drop(w);
+
+        // The debounce thread exits once the backend (and raw_tx) is
+        // gone; join it ourselves so nothing leaks.
+        handle
+            .expect("handle present")
+            .join()
+            .expect("thread exits");
+    }
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+
+        #[test]
+        fn with_debounce_surfaces_backend_init_failure() {
+            let _guard = fault::arm("event-watch::backend-init");
+            let dir = tempfile::tempdir().expect("tempdir");
+            let err = EventWatcher::new(dir.path())
+                .expect_err("backend init failure must propagate");
+            assert!(format!("{err}").contains("notify watcher init"));
+        }
+
+        #[test]
+        fn with_debounce_surfaces_debounce_spawn_failure() {
+            let _guard = fault::arm("event-watch::debounce-spawn");
+            let dir = tempfile::tempdir().expect("tempdir");
+            let err = EventWatcher::new(dir.path())
+                .expect_err("spawn failure must propagate");
+            assert!(format!("{err}").contains("debounce thread spawn"));
+        }
     }
 
     #[test]

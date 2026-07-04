@@ -38,11 +38,12 @@ use std::fs;
 /// ```
 /// use ssg::plugin::PluginContext;
 /// use ssg::postprocess::agentic_discovery::{AgentsConfig, write_agents_txt};
+/// use std::fs;
 /// let tmp = tempfile::tempdir().unwrap();
 /// let ctx = PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
 /// let cfg = AgentsConfig::default();
 /// write_agents_txt(&ctx, &cfg).unwrap();
-/// let body = std::fs::read_to_string(tmp.path().join("agents.txt")).unwrap();
+/// let body = fs::read_to_string(tmp.path().join("agents.txt")).unwrap();
 /// assert!(body.contains("User-agent: *"));
 /// ```
 pub fn write_agents_txt(
@@ -338,5 +339,46 @@ mod tests {
         let txt = render_agents_txt(&cfg, "https://example.com");
         assert!(txt.contains("Sitemap: https://example.com/sitemap.xml"));
         assert!(!txt.contains("//sitemap.xml"));
+    }
+
+    #[test]
+    fn all_known_agent_ids_map_to_canonical_case() {
+        // Pin the remaining well-known identifiers not covered above.
+        let expected = [
+            ("chatgpt-user", "ChatGPT-User"),
+            ("oai-searchbot", "OAI-SearchBot"),
+            ("claude-web", "Claude-Web"),
+            ("googleother", "GoogleOther"),
+            ("bingbot", "Bingbot"),
+            ("ccbot", "CCBot"),
+            ("applebot-extended", "Applebot-Extended"),
+            ("facebookbot", "FacebookBot"),
+            ("meta-externalagent", "Meta-ExternalAgent"),
+            ("amazonbot", "Amazonbot"),
+            ("diffbot", "Diffbot"),
+            ("cohere-ai", "Cohere-AI"),
+        ];
+        for (id, canonical) in expected {
+            assert_eq!(canonicalise_agent_id(id), canonical, "agent {id}");
+        }
+    }
+
+    #[test]
+    fn title_case_handles_empty_segments() {
+        // `my--bot` has an empty middle segment; it must round-trip
+        // without panicking and keep the double hyphen.
+        assert_eq!(canonicalise_agent_id("my--bot"), "My--Bot");
+    }
+
+    #[test]
+    fn write_agents_txt_errors_when_target_is_a_directory() {
+        use crate::plugin::PluginContext;
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("agents.txt")).unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let cfg = AgentsConfig::default();
+        let err = write_agents_txt(&ctx, &cfg).unwrap_err();
+        assert!(format!("{err}").contains("agents.txt"));
     }
 }

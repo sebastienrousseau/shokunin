@@ -127,10 +127,22 @@ pub fn write_mcp_registry(
     };
 
     let registry = build_registry(cfg, agents, &resources);
-    let body = serde_json::to_string_pretty(&registry)
-        .map_err(|e| SsgError::io(e, &path))?;
+    let body =
+        serialize_registry(&registry).map_err(|e| SsgError::io(e, &path))?;
     fs::write(&path, body).with_path(&path)?;
     Ok(())
+}
+
+/// Serialize the registry with a fault-injection hook so tests can
+/// drive the error-mapping branch (pretty-printing a `Value` cannot
+/// fail in practice).
+fn serialize_registry(registry: &Value) -> serde_json::Result<String> {
+    fail_point!("postprocess::mcp-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::mcp-serialize"
+        )
+    ));
+    serde_json::to_string_pretty(registry)
 }
 
 /// Pure-function registry builder, callable from tests without I/O.
@@ -661,5 +673,107 @@ mod tests {
         assert!(written.exists());
         let body = fs::read_to_string(&written).unwrap();
         assert!(body.contains("\"protocolVersion\""));
+    }
+
+    #[test]
+    fn registry_tool_without_input_schema_omits_key() {
+        // Covers the implicit else of the `if let Some(schema)` arm.
+        let mut agents = AgentsConfig::default();
+        agents.mcp.tools.push(super::super::McpToolDecl {
+            name: "ping".to_string(),
+            description: "No schema".to_string(),
+            input_schema: None,
+        });
+        let reg = build_registry(&cfg(), &agents, &[]);
+        let tools = reg["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 1);
+        assert!(tools[0].get("inputSchema").is_none());
+    }
+
+    #[test]
+    fn collect_mcp_resources_builds_and_sorts_from_sidecars() {
+        // Two real sidecars exercise the build_resource closure and
+        // the URI sort comparator.
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        for (slug, title) in [("zeta", "Zeta"), ("alpha", "Alpha")] {
+            let page = site.join(slug);
+            fs::create_dir_all(&page).unwrap();
+            fs::write(
+                page.join("page.meta.json"),
+                format!(r#"{{"title":"{title}","description":"D"}}"#),
+            )
+            .unwrap();
+        }
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let resources = collect_mcp_resources(&ctx, &cfg());
+        assert_eq!(resources.len(), 2);
+        assert!(
+            resources[0].uri < resources[1].uri,
+            "resources must be sorted by URI"
+        );
+        assert_eq!(resources[0].name, "Alpha");
+        assert_eq!(resources[1].name, "Zeta");
+    }
+
+    #[test]
+    fn build_resource_rejects_empty_rel_path() {
+        let m = meta(&[("title", "Hello")]);
+        assert!(build_resource("", &m, "https://x.example").is_none());
+    }
+
+    #[test]
+    fn draft_and_published_flag_variants_are_recognised() {
+        for v in ["true", "True", "TRUE", "yes", "1"] {
+            let m = meta(&[("title", "T"), ("draft", v)]);
+            assert!(
+                build_resource("p", &m, "").is_none(),
+                "draft={v} must be treated as draft"
+            );
+        }
+        for v in ["false", "False", "FALSE", "no", "0"] {
+            let m = meta(&[("title", "T"), ("published", v)]);
+            assert!(
+                build_resource("p", &m, "").is_none(),
+                "published={v} must be treated as unpublished"
+            );
+        }
+        // Unrecognised values leave the page public.
+        let m = meta(&[("title", "T"), ("draft", "maybe")]);
+        assert!(build_resource("p", &m, "").is_some());
+    }
+
+    #[test]
+    fn agents_json_without_disallow_key_keeps_page() {
+        let m = meta(&[("title", "T"), ("agents", "{}")]);
+        assert!(build_resource("p", &m, "").is_some());
+    }
+
+    #[test]
+    fn agents_disallow_non_array_keeps_page() {
+        let m = meta(&[("title", "T"), ("agents", r#"{"disallow":"mcp"}"#)]);
+        assert!(build_resource("p", &m, "").is_some());
+    }
+
+    #[test]
+    fn write_mcp_registry_errors_when_well_known_is_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join(".well-known"), "file").unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let agents = AgentsConfig::default();
+        let err = write_mcp_registry(&ctx, &cfg(), &agents).unwrap_err();
+        assert!(format!("{err}").contains(".well-known"));
+    }
+
+    #[test]
+    fn write_mcp_registry_errors_when_target_is_a_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(".well-known/mcp.json")).unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let agents = AgentsConfig::default();
+        let err = write_mcp_registry(&ctx, &cfg(), &agents).unwrap_err();
+        assert!(format!("{err}").contains("mcp.json"));
     }
 }

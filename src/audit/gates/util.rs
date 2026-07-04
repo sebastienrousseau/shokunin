@@ -301,6 +301,14 @@ mod tests {
     }
 
     #[test]
+    fn hreflang_attr_unterminated_tag_after_last_attr_returns_none() {
+        // The scan consumes the trailing unquoted value and runs off
+        // the (gt-less) end of the tag without a match.
+        assert_eq!(hreflang_attr("<a foo=bar", "href"), None);
+        assert_eq!(hreflang_attr(r#"<a foo="bar""#, "href"), None);
+    }
+
+    #[test]
     fn strip_script_and_style_blanks_embedded_markup() {
         let html = "<script>var h='<a href=\"/ghost\">x</a>';</script>\
                     <style>a[href=\"/styled\"]{}</style>\

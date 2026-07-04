@@ -411,6 +411,7 @@ mod tests {
 
     #[test]
     fn test_template_plugin_renders() {
+        init_logger();
         let dir = tempdir().unwrap();
         setup_project(dir.path());
 
@@ -830,5 +831,195 @@ mod tests {
         let related_p3 =
             p3_fm.get("related_posts").unwrap().as_array().unwrap();
         assert!(related_p3.is_empty());
+    }
+
+    #[test]
+    fn after_compile_render_failure_logs_and_leaves_file_untouched() {
+        // A template that parses fine but fails at render time (missing
+        // include) must hit the warn branch without propagating.
+        init_logger();
+        let dir = tempdir().unwrap();
+        setup_project(dir.path());
+        fs::write(
+            dir.path().join("templates/tera/page.html"),
+            r#"{% include "missing-partial.html" %}"#,
+        )
+        .unwrap();
+
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: dir.path().join("templates/tera"),
+            ..Default::default()
+        });
+        let ctx = PluginContext::new(
+            &dir.path().join("content"),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+        );
+
+        plugin
+            .after_compile(&ctx)
+            .expect("render failure must not propagate");
+        let out =
+            fs::read_to_string(dir.path().join("site").join("index.html"))
+                .unwrap();
+        assert_eq!(out, "<h1>Welcome</h1>", "failed render must not rewrite");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_write_failure_propagates() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Read + render succeed; writing the rendered output back to a
+        // read-only file must surface as Err.
+        let dir = tempdir().unwrap();
+        setup_project(dir.path());
+        let html = dir.path().join("site").join("index.html");
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: dir.path().join("templates/tera"),
+            ..Default::default()
+        });
+        let ctx = PluginContext::new(
+            &dir.path().join("content"),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+        );
+
+        let result = plugin.after_compile(&ctx);
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        assert!(result.is_err(), "read-only output must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_walk_error_from_unreadable_site_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        setup_project(dir.path());
+        let locked = dir.path().join("site").join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: dir.path().join("templates/tera"),
+            ..Default::default()
+        });
+        let ctx = PluginContext::new(
+            &dir.path().join("content"),
+            &dir.path().join("build"),
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+        );
+
+        let result = plugin.after_compile(&ctx);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable site subdir must be an Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn read_frontmatter_for_html_unreadable_sidecar_returns_empty() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let html = site.join("post.html");
+        fs::write(&html, "").unwrap();
+        let sidecar = sidecars.join("post.meta.json");
+        fs::write(&sidecar, r#"{"title": "Hidden"}"#).unwrap();
+        fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let meta = read_frontmatter_for_html(&html, &site, &sidecars);
+        fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o644))
+            .unwrap();
+        assert!(meta.is_empty(), "unreadable sidecar must yield empty map");
+    }
+
+    #[test]
+    fn test_enrich_related_posts_mixed_shapes_and_tie_break() {
+        // Exercises the non-string array items, empty comma segments,
+        // non-array/non-string tag+category values, and the sort
+        // comparator (including the equal-overlap date tie-break).
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let a = site.join("a.html");
+        let b = site.join("b.html");
+        let c = site.join("c.html");
+        let d = site.join("d.html");
+        for f in [&a, &b, &c, &d] {
+            fs::write(f, "").unwrap();
+        }
+
+        // a: non-string tag item ignored; categories is neither array
+        //    nor string (number) and contributes nothing.
+        fs::write(
+            sidecars.join("a.meta.json"),
+            r#"{"title": "A", "date": "2026-01-01", "tags": ["shared", 42], "categories": 7}"#,
+        )
+        .unwrap();
+        // b: tags as string with empty segments (skipped).
+        fs::write(
+            sidecars.join("b.meta.json"),
+            r#"{"title": "B", "date": "2026-01-02", "tags": "shared,,"}"#,
+        )
+        .unwrap();
+        // c: categories as string with leading/trailing empty segments.
+        fs::write(
+            sidecars.join("c.meta.json"),
+            r#"{"title": "C", "date": "2026-01-03", "tags": ["shared"], "categories": ",misc,"}"#,
+        )
+        .unwrap();
+        // d: tags is neither array nor string; categories array with a
+        //    non-string item.
+        fs::write(
+            sidecars.join("d.meta.json"),
+            r#"{"title": "D", "date": "2026-01-04", "tags": 99, "categories": ["misc", 5]}"#,
+        )
+        .unwrap();
+
+        let files = vec![a.clone(), b, c, d.clone()];
+        let enriched = enrich_with_related_posts(&files, &site, &sidecars);
+
+        // a shares "shared" with b and c equally; the tie-break sorts
+        // the newer date (C) first.
+        let a_rel = enriched
+            .get(&a)
+            .unwrap()
+            .get("related_posts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(a_rel.len(), 2);
+        assert_eq!(a_rel[0]["title"], "C");
+        assert_eq!(a_rel[1]["title"], "B");
+
+        // d only shares "misc" with c.
+        let d_rel = enriched
+            .get(&d)
+            .unwrap()
+            .get("related_posts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(d_rel.len(), 1);
+        assert_eq!(d_rel[0]["title"], "C");
     }
 }

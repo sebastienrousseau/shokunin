@@ -248,6 +248,32 @@ mod tests {
     }
 
     #[test]
+    fn new_constructor_stores_supplied_theme_name() {
+        // Covers the `new` constructor (previously exercised only by
+        // doctests, which don't count towards lib coverage).
+        let plugin = HighlightPlugin::new("monokai");
+        assert_eq!(plugin.theme, "monokai");
+        let plugin2 = HighlightPlugin::new(String::from("nord"));
+        assert_eq!(plugin2.theme, "nord");
+    }
+
+    #[test]
+    fn transform_html_with_existing_css_link_skips_reinjection() {
+        // Covers the `result.contains("highlight.css")` true branch of
+        // transform_html: the markup is rewritten but no second <link>
+        // is injected.
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = r#"<html><head><link rel="stylesheet" href="/highlight.css"></head><body><pre><code class="language-rs">x</code></pre></body></html>"#;
+        let out = HighlightPlugin::default()
+            .transform_html(html, &dir.path().join("index.html"), &ctx)
+            .unwrap();
+        assert!(out.contains("highlight language-rs"));
+        assert_eq!(out.matches("/highlight.css").count(), 1);
+    }
+
+    #[test]
     fn with_theme_stores_supplied_theme_name() {
         // Covers the `with_theme` constructor at lines 38-42.
         let plugin = HighlightPlugin::with_theme("solarized");

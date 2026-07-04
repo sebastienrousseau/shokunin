@@ -211,9 +211,8 @@ mod tests {
         let mut files = Vec::new();
         for (rel, html) in pages {
             let p = root.join(rel);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(rel) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, html).unwrap();
             files.push(p);
         }
@@ -360,8 +359,11 @@ mod tests {
     fn minified_unquoted_csp_meta_recognised() {
         // Regression: minified HTML emits unquoted attribute values in
         // original case; the gate must not report CSP-MISSING.
+        // The SRI-less remote script keeps `f` non-empty so the
+        // no-CSP-MISSING predicate actually evaluates.
         let html = "<html><head>\
             <meta content=\"default-src 'self'\" http-equiv=Content-Security-Policy>\
+            <script src=\"https://cdn.example/x.js\"></script>\
         </head><body></body></html>";
         let s = site_with(&[("index.html", html)]);
         let f = CspSriGate.run(&s, &AuditOptions::default());
@@ -416,6 +418,22 @@ mod tests {
         let s = site_with(&[]);
         let f = CspSriGate.run(&s, &AuditOptions::default());
         assert!(f.is_empty());
+    }
+
+    #[test]
+    fn meta_csp_without_content_attr_yields_none() {
+        // http-equiv matches but there is no content= value to return;
+        // the scanner keeps looking and ends with None.
+        let html = r#"<meta http-equiv="Content-Security-Policy">"#;
+        assert_eq!(extract_meta_csp(html), None);
+    }
+
+    #[test]
+    fn stylesheet_link_without_href_is_skipped() {
+        let html = r#"<link rel="stylesheet"><link rel="stylesheet" href="https://cdn.example/a.css">"#;
+        let assets = extract_remote_assets(html);
+        assert_eq!(assets.len(), 1, "href-less link must be skipped");
+        assert_eq!(assets[0].href, "https://cdn.example/a.css");
     }
 
     #[test]

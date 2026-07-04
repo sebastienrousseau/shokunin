@@ -98,10 +98,11 @@ mod tests {
     #[test]
     fn every_gate_has_a_non_empty_explainer() {
         for g in all() {
+            let name = g.name();
+            let explainer = g.explain();
             assert!(
-                !g.explain().trim().is_empty(),
-                "gate `{}` has empty explainer",
-                g.name()
+                !explainer.trim().is_empty(),
+                "gate `{name}` has empty explainer"
             );
         }
     }
@@ -134,11 +135,11 @@ mod tests {
     #[test]
     fn explainers_are_reasonably_long() {
         for g in all() {
+            let name = g.name();
+            let len = g.explain().len();
             assert!(
-                g.explain().len() >= 40,
-                "gate `{}` explainer is too short ({} chars)",
-                g.name(),
-                g.explain().len()
+                len >= 40,
+                "gate `{name}` explainer is too short ({len} chars)"
             );
         }
     }

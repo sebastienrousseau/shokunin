@@ -383,6 +383,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_creates_complete_directory_structure() {
         let dir = tempdir().unwrap();
         let name = "test-site";
@@ -406,6 +407,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_writes_all_expected_files() {
         let dir = tempdir().unwrap();
         let name = "demo";
@@ -436,6 +438,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_injects_project_name_into_config() {
         let dir = tempdir().unwrap();
         let name = "my-cool-site";
@@ -450,6 +453,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_injects_project_name_into_index_md() {
         let dir = tempdir().unwrap();
         let name = "hello";
@@ -463,6 +467,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_injects_project_name_into_first_post() {
         let dir = tempdir().unwrap();
         let name = "projectx";
@@ -478,6 +483,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_static_assets_include_dark_mode_block() {
         // Guards the prefers-color-scheme media query in style.css —
         // accessibility regression tripwire.
@@ -492,6 +498,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_base_template_has_accessibility_landmarks() {
         let dir = tempdir().unwrap();
         scaffold_project_at("x", dir.path()).unwrap();
@@ -507,6 +514,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_nav_toml_has_three_default_links() {
         let dir = tempdir().unwrap();
         scaffold_project_at("y", dir.path()).unwrap();
@@ -524,6 +532,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_refuses_to_overwrite_existing_directory() {
         // The `anyhow::bail!` at line 22 protects user content from
         // being silently overwritten.
@@ -540,6 +549,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_refuses_to_overwrite_existing_file() {
         // Same guard, but the pre-existing entry is a file, not a
         // directory — both trigger the `root.exists()` check.
@@ -555,6 +565,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::serial(cwd, scaffold_fp)]
     fn scaffold_project_uses_current_working_directory() {
         // Exercises the `scaffold_project` entry point at line 13,
         // which wraps `scaffold_project_at` with env::current_dir().
@@ -577,6 +588,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_creates_file() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("test.txt");
@@ -585,6 +597,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_overwrites_existing() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("test.txt");
@@ -594,6 +607,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_error_has_label() {
         let err = write_scaffold_file(
             Path::new("/no/such/dir/file.txt"),
@@ -609,6 +623,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_empty_content() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("empty.txt");
@@ -617,6 +632,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_binary_content() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("bin.dat");
@@ -630,6 +646,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn create_scaffold_dirs_creates_all_expected_dirs() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -648,6 +665,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn create_scaffold_dirs_idempotent() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -661,6 +679,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_config_file_content() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -682,6 +701,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_content_files_creates_all_content() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -694,6 +714,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_content_files_about_has_correct_frontmatter() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -707,6 +728,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_content_files_index_has_features_list() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -719,6 +741,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_content_files_first_post_has_tags_and_code() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -738,6 +761,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_template_files_creates_all_templates() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -755,6 +779,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_template_files_page_extends_base() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -768,6 +793,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_template_files_post_has_article_structure() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -784,6 +810,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_template_files_index_extends_base() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -801,6 +828,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_static_assets_creates_stylesheet() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -821,6 +849,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_data_files_creates_nav_toml() {
         let dir = tempdir().unwrap();
         let root = dir.path().join("proj");
@@ -839,6 +868,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_special_chars_in_name() {
         let dir = tempdir().unwrap();
         let name = "my-cool_site.2026";
@@ -851,6 +881,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_single_char_name() {
         let dir = tempdir().unwrap();
         scaffold_project_at("z", dir.path()).unwrap();
@@ -862,6 +893,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_base_template_is_valid_html() {
         let dir = tempdir().unwrap();
         scaffold_project_at("t", dir.path()).unwrap();
@@ -878,6 +910,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_config_has_all_required_keys() {
         let dir = tempdir().unwrap();
         scaffold_project_at("k", dir.path()).unwrap();
@@ -902,6 +935,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn scaffold_project_at_errors_when_root_already_exists() {
         // Pre-create the project dir so the `if root.exists()` arm fires.
         let dir = tempdir().unwrap();
@@ -913,6 +947,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(scaffold_fp)]
     fn write_scaffold_file_errors_propagate_via_with_context() {
         // Both generic instantiations: &str and String. Pointing at a
         // path whose parent doesn't exist makes fs::write fail and
@@ -935,5 +970,173 @@ mod tests {
         assert!(res_string.is_err());
         let msg_string = format!("{:?}", res_string.unwrap_err());
         assert!(msg_string.contains("label-string"));
+    }
+
+    // -----------------------------------------------------------------
+    // scaffold_project — current_dir failure
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[serial_test::serial(cwd, scaffold_fp)]
+    fn scaffold_project_fails_when_cwd_has_been_deleted() {
+        // Deleting the process's working directory makes
+        // `std::env::current_dir()` fail, driving the `?` on line 32.
+        let dir = tempdir().unwrap();
+        let doomed = dir.path().join("gone");
+        fs::create_dir(&doomed).unwrap();
+        let prev = std::env::current_dir().expect("read current dir");
+        std::env::set_current_dir(&doomed).expect("pushd");
+        fs::remove_dir(&doomed).expect("delete cwd");
+
+        let result = scaffold_project("orphan");
+
+        // Always restore cwd before asserting.
+        std::env::set_current_dir(&prev).expect("popd");
+        assert!(result.is_err(), "deleted cwd must surface as an error");
+    }
+
+    // -----------------------------------------------------------------
+    // create_scaffold_dirs / write_* — real filesystem failures
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::parallel(scaffold_fp)]
+    fn scaffold_project_at_read_only_base_fails_dir_creation() {
+        // The very first create_dir_all fails, exercising the
+        // with_context closure in create_scaffold_dirs and the `?`
+        // in scaffold_project_at.
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555))
+            .unwrap();
+
+        let res = scaffold_project_at("blocked", dir.path());
+
+        let _ =
+            fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate
+        // Ok; when it failed, the context must name the directory.
+        assert!(res
+            .err()
+            .is_none_or(|e| format!("{e:?}").contains("Failed to create")));
+    }
+
+    #[test]
+    #[serial_test::parallel(scaffold_fp)]
+    fn write_content_files_index_write_failure_propagates() {
+        // A directory squatting on content/index.md fails the first
+        // write in write_content_files.
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        fs::create_dir_all(root.join("content/index.md")).unwrap();
+
+        assert!(write_content_files("p", &root).is_err());
+    }
+
+    #[test]
+    #[serial_test::parallel(scaffold_fp)]
+    fn write_content_files_about_write_failure_propagates() {
+        // index.md succeeds, about.md fails.
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("content/blog")).unwrap();
+        fs::create_dir_all(root.join("content/about.md")).unwrap();
+
+        assert!(write_content_files("p", &root).is_err());
+        assert!(root.join("content/index.md").is_file());
+    }
+
+    #[test]
+    #[serial_test::parallel(scaffold_fp)]
+    fn write_template_files_base_write_failure_propagates() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera/base.html")).unwrap();
+
+        assert!(write_template_files(&root).is_err());
+    }
+
+    #[test]
+    #[serial_test::parallel(scaffold_fp)]
+    fn write_template_files_page_write_failure_propagates() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera/page.html")).unwrap();
+
+        assert!(write_template_files(&root).is_err());
+        assert!(root.join("templates/tera/base.html").is_file());
+    }
+
+    #[test]
+    #[serial_test::parallel(scaffold_fp)]
+    fn write_template_files_post_write_failure_propagates() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("proj");
+        fs::create_dir_all(root.join("templates/tera/post.html")).unwrap();
+
+        assert!(write_template_files(&root).is_err());
+        assert!(root.join("templates/tera/page.html").is_file());
+    }
+
+    // -----------------------------------------------------------------
+    // Fault injection — every scaffold failpoint, driven from the lib
+    // test binary so `cargo llvm-cov --lib` sees the closures execute.
+    // Each test holds the `scaffold_fp` serial key, so the parallel
+    // scaffold tests above never observe an activated failpoint.
+    // -----------------------------------------------------------------
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault_injection {
+        use super::*;
+
+        /// RAII guard that disables a failpoint on drop, so a
+        /// panicking assertion still cleans up global state.
+        struct FailGuard(&'static str);
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg(self.0, "off");
+            }
+        }
+
+        /// Activates `name`, scaffolds into a fresh tempdir, and
+        /// returns the error for assertion.
+        fn run_scaffold_with_failpoint(name: &'static str) -> anyhow::Error {
+            let _guard = FailGuard(name);
+            fail::cfg(name, "return").expect("activate failpoint");
+            let dir = tempdir().expect("tempdir");
+            scaffold_project_at("fault-site", dir.path())
+                .expect_err("scaffold should fail when failpoint is active")
+        }
+
+        macro_rules! scaffold_failpoint_test {
+            ($test_name:ident, $failpoint:literal) => {
+                #[test]
+                #[serial_test::serial(scaffold_fp)]
+                fn $test_name() {
+                    let err = run_scaffold_with_failpoint($failpoint);
+                    assert!(
+                        format!("{err:?}").contains($failpoint),
+                        "error should carry the injected context: {err:?}"
+                    );
+                }
+            };
+        }
+
+        scaffold_failpoint_test!(fp_create_dir, "scaffold::create-dir");
+        scaffold_failpoint_test!(fp_write_config, "scaffold::write-config");
+        scaffold_failpoint_test!(fp_write_index, "scaffold::write-index");
+        scaffold_failpoint_test!(fp_write_about, "scaffold::write-about");
+        scaffold_failpoint_test!(fp_write_post, "scaffold::write-post");
+        scaffold_failpoint_test!(fp_write_base, "scaffold::write-base");
+        scaffold_failpoint_test!(fp_write_page_tpl, "scaffold::write-page-tpl");
+        scaffold_failpoint_test!(fp_write_post_tpl, "scaffold::write-post-tpl");
+        scaffold_failpoint_test!(
+            fp_write_index_tpl,
+            "scaffold::write-index-tpl"
+        );
+        scaffold_failpoint_test!(fp_write_css, "scaffold::write-css");
+        scaffold_failpoint_test!(fp_write_nav, "scaffold::write-nav");
     }
 }

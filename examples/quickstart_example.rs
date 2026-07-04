@@ -18,6 +18,11 @@
 //! - **Polished homepage** — hero, this-week's-roasts, location, journal teaser
 //! - **3 substantive journal posts** with their own frontmatter tags so the
 //!   tags page auto-aggregates a real index
+//! - **1 deliberately minimal post** (`cupping-notes-july.md`, front
+//!   matter = `title` + long-form `date` + `description` only) proving
+//!   the v0.0.47 flexible-date parsing (spec A4) and derived
+//!   permalinks (spec A2/B1): it builds and lands in rss.xml with a
+//!   correct feed link, verified after every build
 //! - **Curated `/posts/` listing** that links to each post with descriptions
 //! - **Real `/contact/` page** with cafe address, wholesale, subscriptions
 //! - **Generated artifacts**: sitemap.xml, news-sitemap.xml, rss.xml,
@@ -268,6 +273,50 @@ impl SiteGenerator {
         self.log_message(&format!(
             "Site generated successfully at: {}",
             self.paths.site.display()
+        ))?;
+
+        // -----------------------------------------------------------
+        // Flexible dates + permalink derivation (v0.0.47, issue #586,
+        // spec A4 + A2/B1). `content/cupping-notes-july.md` carries
+        // ONLY `title` + `date` ("July 1, 2026", long form) +
+        // `description`:
+        //   - the shared parser (ssg::dates::parse_flexible_date)
+        //     understands the long form, so the feed plugins emit a
+        //     real <pubDate> instead of warning;
+        //   - with no `permalink:` declared, the content stager
+        //     derives `{base_url}/cupping-notes-july/` (spec A2/B1),
+        //     so rss-gen always sees an item link;
+        //   - `description` stays until the staticdatagen 0.0.11 bump
+        //     (upstream leg of plan §2 item 1.2) makes rss-gen's
+        //     channel.description validation non-fatal.
+        // The acceptance check: the minimal post builds AND its
+        // per-page feed carries the derived permalink as the channel
+        // <link> — pre-v0.0.47 this exact page hard-failed the whole
+        // build with rss-gen's "channel.link is missing".
+        let minimal_page = self
+            .paths
+            .site
+            .join("cupping-notes-july")
+            .join("index.html");
+        anyhow::ensure!(
+            minimal_page.exists(),
+            "minimal title+date+body post did not build: {}",
+            minimal_page.display()
+        );
+        let page_feed = fs::read_to_string(
+            self.paths.site.join("cupping-notes-july").join("rss.xml"),
+        )
+        .context("per-page rss.xml missing for minimal post")?;
+        let derived_link =
+            format!("{}/cupping-notes-july/", self.config.base_url);
+        anyhow::ensure!(
+            page_feed.contains(&format!("<link>{derived_link}</link>")),
+            "derived permalink {derived_link} missing from the minimal \
+             post's feed"
+        );
+        self.log_message(&format!(
+            "Minimal post (title + long-form date) built with derived \
+             feed link: {derived_link}"
         ))?;
 
         Ok(())

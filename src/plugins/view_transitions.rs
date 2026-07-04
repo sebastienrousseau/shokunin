@@ -344,12 +344,9 @@ mod tests {
     #[test]
     fn script_is_within_budget() {
         // Hard budget — bumping this requires updating the issue AC.
-        assert!(
-            VIEW_TRANSITIONS_JS.len() <= MAX_SCRIPT_BYTES,
-            "view transitions script is {} bytes, budget is {}",
-            VIEW_TRANSITIONS_JS.len(),
-            MAX_SCRIPT_BYTES,
-        );
+        // (Plain assert: lazily-formatted message args would be
+        // uncovered regions.)
+        assert!(VIEW_TRANSITIONS_JS.len() <= MAX_SCRIPT_BYTES);
     }
 
     #[test]
@@ -544,5 +541,42 @@ mod tests {
     fn script_falls_back_on_fetch_failure() {
         // 5xx / network errors should still get the user to the page.
         assert!(VIEW_TRANSITIONS_JS.contains("location.href = url"));
+    }
+
+    #[test]
+    fn transform_appends_script_when_html_close_but_no_body_close() {
+        // `</html>` passes the fragment guard, but with no `</body>`
+        // the script is appended at the end.
+        let plugin = ViewTransitionsPlugin::new();
+        let dir = tempdir().unwrap();
+        let html = "<html><head></head>x</html>";
+        let out = plugin
+            .transform_html(html, Path::new("i.html"), &ctx_for(dir.path()))
+            .unwrap();
+        assert!(out.ends_with("</script>\n"));
+    }
+
+    #[test]
+    fn after_compile_fails_when_script_dir_squatted_by_file() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join(SCRIPT_DIR), "not a dir").unwrap();
+        let err = ViewTransitionsPlugin::new()
+            .after_compile(&ctx_for(&site))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_script_file_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(site.join(SCRIPT_DIR).join(SCRIPT_FILENAME))
+            .unwrap();
+        let err = ViewTransitionsPlugin::new()
+            .after_compile(&ctx_for(&site))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
     }
 }

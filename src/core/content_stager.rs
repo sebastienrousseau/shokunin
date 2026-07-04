@@ -165,13 +165,7 @@ pub fn stage_content_with_site_defaults(
     let base_url = base_url.map(str::trim).filter(|b| !b.is_empty());
 
     let staging_dir = staging_root_for("content", build_dir);
-
-    // Recreate the staging directory each run so a previous build's
-    // layout injection doesn't leak into this build's inputs.
-    if staging_dir.exists() {
-        fs::remove_dir_all(&staging_dir)?;
-    }
-    fs::create_dir_all(&staging_dir)?;
+    recreate_staging_dir(&staging_dir)?;
 
     copy_tree(content_dir, &staging_dir, base_url)?;
 
@@ -185,6 +179,16 @@ pub fn stage_content_with_site_defaults(
     }
 
     Ok(staging_dir)
+}
+
+/// Recreates the staging directory from scratch so a previous build's
+/// layout injection doesn't leak into this build's inputs.
+fn recreate_staging_dir(staging_dir: &Path) -> Result<(), io::Error> {
+    if staging_dir.exists() {
+        fs::remove_dir_all(staging_dir)?;
+    }
+    fs::create_dir_all(staging_dir)?;
+    Ok(())
 }
 
 /// Picks a staging-directory location *outside* `build_dir` so the
@@ -335,7 +339,7 @@ fn collect_entries(
 /// # Examples
 ///
 /// ```rust
-/// use ssg::core_group::content_stager::collect_template_vars;
+/// use ssg::content_stager::collect_template_vars;
 /// use std::fs;
 ///
 /// let tmp = tempfile::tempdir().unwrap();
@@ -453,6 +457,12 @@ fn inject_template_defaults_recursive(
 ) -> Result<(), io::Error> {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
+
+    fail_point!("content_stager::inject-defaults", |_| {
+        Err(io::Error::other(
+            "injected: content_stager::inject-defaults",
+        ))
+    });
 
     let mut md_files: Vec<PathBuf> = Vec::new();
     collect_markdown_files(dir, &mut md_files)?;
@@ -901,6 +911,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn stage_with_site_defaults_derives_permalinks_for_all_pages() {
         // Plan §2 1.2 acceptance shape: a 3-page fixture where ZERO
         // pages carry `permalink:` must stage with derived permalinks
@@ -941,6 +952,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn stage_with_site_defaults_keeps_author_permalink_verbatim() {
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path().join("content");
@@ -966,6 +978,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn stage_with_site_defaults_handles_nested_index_md() {
         // `about/index.md` publishes at `about/index.html` →
         // permalink `{base}/about/` (index.html collapses to the
@@ -992,6 +1005,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn stage_without_base_url_injects_no_permalink() {
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path().join("content");
@@ -1016,6 +1030,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stager_fp)]
     fn stage_with_site_defaults_is_idempotent_across_runs() {
         // v0.0.46 retired the layout-injection shim (staticdatagen
         // 0.0.10 defaults missing `layout:` natively), so the staged
@@ -1044,5 +1059,348 @@ mod tests {
         let body = fs::read_to_string(staged.join("a.md")).unwrap();
         assert_eq!(body.matches("permalink:").count(), 1);
         assert_eq!(body.matches("layout:").count(), 0);
+    }
+
+    // -----------------------------------------------------------------
+    // recreate_staging_dir — happy path and both failure arms
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn recreate_staging_dir_wipes_previous_contents() {
+        let tmp = tempfile::tempdir().unwrap();
+        let staging = tmp.path().join("staging");
+        fs::create_dir_all(&staging).unwrap();
+        fs::write(staging.join("stale.md"), "old").unwrap();
+
+        recreate_staging_dir(&staging).unwrap();
+
+        assert!(staging.is_dir());
+        assert!(!staging.join("stale.md").exists());
+    }
+
+    #[test]
+    fn recreate_staging_dir_fails_when_path_is_a_file() {
+        // `remove_dir_all` on a regular file fails — the first `?`.
+        let tmp = tempfile::tempdir().unwrap();
+        let blocked = tmp.path().join("staging");
+        fs::write(&blocked, "not a dir").unwrap();
+
+        assert!(recreate_staging_dir(&blocked).is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn recreate_staging_dir_fails_when_parent_is_read_only() {
+        // `create_dir_all` under a read-only parent fails — the
+        // second `?`.
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let parent = tmp.path().join("ro");
+        fs::create_dir_all(&parent).unwrap();
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o555))
+            .unwrap();
+
+        let res = recreate_staging_dir(&parent.join("staging"));
+
+        let _ = fs::set_permissions(&parent, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate Ok.
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn stage_fails_when_staging_root_is_blocked_by_a_file() {
+        // Drives the `recreate_staging_dir(..)?` edge inside
+        // `stage_content_with_site_defaults`.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+
+        let staging = staging_root_for("content", &build);
+        fs::write(&staging, "blocker").unwrap();
+
+        let res = stage_content_with_site_defaults(&src, &build, &[], None);
+        let _ = fs::remove_file(&staging);
+        assert!(res.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // copy_tree / collect_entries — error and skip arms
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn copy_tree_fails_when_destination_subdir_is_blocked() {
+        // A file squatting on a destination directory name makes the
+        // serial `create_dir_all` fail.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(src.join("sub")).unwrap();
+        fs::write(src.join("sub/a.md"), "---\nt: a\n---\nx").unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(dst.join("sub"), "file, not dir").unwrap();
+
+        assert!(copy_tree(&src, &dst, None).is_err());
+    }
+
+    #[test]
+    fn copy_tree_copies_non_markdown_files_verbatim() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("style.css"), "body{}").unwrap();
+
+        copy_tree(&src, &dst, None).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.join("style.css")).unwrap(),
+            "body{}"
+        );
+    }
+
+    #[test]
+    fn copy_tree_reports_first_per_file_error() {
+        // A non-UTF-8 .md file fails `read_to_string` inside the
+        // parallel pass; the first collected error is returned.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("bad.md"), [0xFF, 0xFE, 0x00]).unwrap();
+
+        assert!(copy_tree(&src, &dst, None).is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn copy_tree_propagates_unreadable_source_subdir() {
+        // The recursive collect_entries call fails when a nested
+        // source directory can't be listed.
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        let locked = src.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = copy_tree(&src, &dst, None);
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate Ok.
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn collect_entries_skips_symlinks_and_special_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("real.md"), "---\nt: a\n---\nx").unwrap();
+        std::os::unix::fs::symlink(src.join("nowhere.md"), src.join("link.md"))
+            .unwrap();
+
+        copy_tree(&src, &dst, None).unwrap();
+        assert!(dst.join("real.md").exists());
+        assert!(!dst.join("link.md").exists(), "symlinks must be skipped");
+    }
+
+    // -----------------------------------------------------------------
+    // collect_template_vars / extract_simple_vars — recursion, errors,
+    // and every reject shape
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn collect_template_vars_recurses_into_subdirectories() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = tmp.path().join("templates");
+        fs::create_dir_all(t.join("partials")).unwrap();
+        fs::write(t.join("page.html"), "{{ title }}").unwrap();
+        fs::write(t.join("partials/nav.html"), "{{ nav_label }}").unwrap();
+
+        let vars = collect_template_vars(&t).unwrap();
+        assert!(vars.contains(&"title".to_string()));
+        assert!(vars.contains(&"nav_label".to_string()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn collect_template_vars_propagates_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let t = tmp.path().join("templates");
+        let sub = t.join("locked");
+        fs::create_dir_all(&sub).unwrap();
+        fs::set_permissions(&sub, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = collect_template_vars(&t);
+
+        let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate Ok.
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    fn extract_simple_vars_rejects_every_non_simple_shape() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = tmp.path().join("templates");
+        fs::create_dir_all(&t).unwrap();
+        fs::write(
+            t.join("page.html"),
+            // empty ref, helper, closing tag, raw-emit, partial,
+            // filtered, dotted, spaced, unclosed — none are simple.
+            "{{  }}{{#each xs}}{{/each}}{{!raw}}{{>part}}\
+             {{ a | upper }}{{ a.b }}{{ a b }}{{ good }}{{ broken",
+        )
+        .unwrap();
+
+        let vars = collect_template_vars(&t).unwrap();
+        assert_eq!(vars, vec!["good".to_string()]);
+    }
+
+    #[test]
+    fn walk_collect_vars_skips_unreadable_and_non_template_files() {
+        let tmp = tempfile::tempdir().unwrap();
+        let t = tmp.path().join("templates");
+        fs::create_dir_all(&t).unwrap();
+        // Non-UTF-8 template file: read_to_string fails, silently
+        // skipped.
+        fs::write(t.join("binary.html"), [0xFF, 0xFE, 0x00]).unwrap();
+        // Non-templating extension: never scanned.
+        fs::write(t.join("style.css"), "{{ not_a_var }}").unwrap();
+        fs::write(t.join("page.html"), "{{ real_var }}").unwrap();
+
+        let vars = collect_template_vars(&t).unwrap();
+        assert_eq!(vars, vec!["real_var".to_string()]);
+    }
+
+    // -----------------------------------------------------------------
+    // inject_template_defaults_recursive — direct error/skip arms
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn inject_defaults_recurses_and_injects_in_nested_dirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        fs::create_dir_all(dir.join("blog")).unwrap();
+        fs::write(dir.join("blog/a.md"), "---\ntitle: A\n---\nx").unwrap();
+
+        inject_template_defaults_recursive(&dir, &["author".to_string()])
+            .unwrap();
+
+        let body = fs::read_to_string(dir.join("blog/a.md")).unwrap();
+        assert!(body.contains("author:"));
+    }
+
+    #[test]
+    fn inject_defaults_reports_unreadable_markdown() {
+        // Non-UTF-8 bytes fail the read inside the parallel pass.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("bad.md"), [0xFF, 0xFE]).unwrap();
+
+        let res = inject_template_defaults_recursive(&dir, &["k".to_string()]);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn inject_defaults_propagates_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        let sub = dir.join("locked");
+        fs::create_dir_all(&sub).unwrap();
+        fs::set_permissions(&sub, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = inject_template_defaults_recursive(&dir, &["k".to_string()]);
+
+        let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn collect_markdown_files_skips_symlinks() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("real.md"), "---\nt: a\n---\nx").unwrap();
+        std::os::unix::fs::symlink(dir.join("nowhere.md"), dir.join("link.md"))
+            .unwrap();
+
+        let mut found = Vec::new();
+        collect_markdown_files(&dir, &mut found).unwrap();
+        assert_eq!(found.len(), 1);
+    }
+
+    // -----------------------------------------------------------------
+    // is_markdown / find_opening_fence — remaining shapes
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn is_markdown_accepts_both_extensions() {
+        assert!(is_markdown(Path::new("a.md")));
+        assert!(is_markdown(Path::new("a.markdown")));
+        assert!(!is_markdown(Path::new("a.html")));
+    }
+
+    #[test]
+    fn find_opening_fence_skips_leading_blank_lines() {
+        let (lead, after) =
+            find_opening_fence("\n  \n---\ntitle: x\n---\nbody").unwrap();
+        assert_eq!(lead, "\n  \n");
+        assert!(after.starts_with("title: x"));
+    }
+
+    #[test]
+    fn find_opening_fence_returns_none_for_blank_only_input() {
+        assert!(find_opening_fence("\n\n  \n").is_none());
+        assert!(find_opening_fence("").is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // Fault injection — inject_template_defaults_recursive failpoint
+    // -----------------------------------------------------------------
+
+    #[cfg(feature = "test-fault-injection")]
+    #[test]
+    #[serial_test::serial(stager_fp)]
+    fn stage_fault_inject_defaults_returns_err() {
+        // RAII guard so a panicking assertion still deactivates the
+        // failpoint (mirrors tests/fault_injection.rs).
+        struct FailGuard(&'static str);
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg(self.0, "off");
+            }
+        }
+        let _guard = FailGuard("content_stager::inject-defaults");
+        fail::cfg("content_stager::inject-defaults", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
+
+        let err = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &["title".to_string()],
+            None,
+        )
+        .expect_err("failpoint must abort the staging pass");
+        assert!(format!("{err}").contains("inject-defaults"));
     }
 }

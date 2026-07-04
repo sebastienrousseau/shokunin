@@ -819,4 +819,331 @@ mod tests {
         let result = copy_dir_with_progress(&fake, tmp.path());
         assert!(result.is_err());
     }
+
+    // -----------------------------------------------------------------
+    // verify_and_copy_files — validation and error branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn verify_and_copy_files_rejects_traversal_path() {
+        let dst = tempdir().unwrap();
+        // Nonexistent path containing ".." → is_safe_path == false.
+        let err = verify_and_copy_files(
+            Path::new("../nonexistent-ssg-traversal"),
+            dst.path(),
+        )
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("directory traversal"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn verify_and_copy_files_missing_src_is_validation_error() {
+        let tmp = tempdir().unwrap();
+        let err = verify_and_copy_files(
+            &tmp.path().join("no-such-src"),
+            &tmp.path().join("dst"),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("does not exist"), "got: {err}");
+    }
+
+    #[test]
+    fn verify_and_copy_files_rejects_oversized_source_file() {
+        // A sparse file over the 10 MB limit trips verify_file_safety
+        // on the `src.is_file()` branch.
+        let tmp = tempdir().unwrap();
+        let big = tmp.path().join("big.bin");
+        let f = fs::File::create(&big).unwrap();
+        f.set_len(10 * 1024 * 1024 + 1).unwrap();
+
+        let err =
+            verify_and_copy_files(&big, &tmp.path().join("dst")).unwrap_err();
+        assert!(
+            err.to_string().contains("exceeds maximum allowed size"),
+            "got: {err}"
+        );
+    }
+
+    #[test]
+    fn verify_and_copy_files_dst_under_file_fails() {
+        let src = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), "x").unwrap();
+        let blocker = tmp.path().join("blocker");
+        fs::write(&blocker, "file").unwrap();
+
+        let result = verify_and_copy_files(src.path(), &blocker.join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_and_copy_files_small_file_src_fails_in_copy_stage() {
+        // A regular file passes the safety check but read_dir inside
+        // copy_dir_all fails on a non-directory source.
+        let tmp = tempdir().unwrap();
+        let file_src = tmp.path().join("plain.txt");
+        fs::write(&file_src, "small").unwrap();
+
+        let result = verify_and_copy_files(&file_src, &tmp.path().join("dst"));
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // copy_dir_all — parallel dispatch and error branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn copy_dir_all_uses_parallel_path_at_threshold() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        for i in 0..PARALLEL_THRESHOLD {
+            fs::write(src.path().join(format!("f{i}.txt")), format!("{i}"))
+                .unwrap();
+        }
+
+        copy_dir_all(src.path(), dst.path()).unwrap();
+        for i in 0..PARALLEL_THRESHOLD {
+            assert_eq!(
+                fs::read_to_string(dst.path().join(format!("f{i}.txt")))
+                    .unwrap(),
+                format!("{i}")
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_all_sequential_rejects_symlink() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("ok.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(
+            src.path().join("ok.txt"),
+            src.path().join("link.txt"),
+        )
+        .unwrap();
+
+        let err = copy_dir_all(src.path(), dst.path()).unwrap_err();
+        assert!(err.to_string().contains("symlink"), "got: {err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_all_parallel_rejects_symlink() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        for i in 0..PARALLEL_THRESHOLD {
+            fs::write(src.path().join(format!("f{i}.txt")), "x").unwrap();
+        }
+        std::os::unix::fs::symlink(
+            src.path().join("f0.txt"),
+            src.path().join("link.txt"),
+        )
+        .unwrap();
+
+        let err = copy_dir_all(src.path(), dst.path()).unwrap_err();
+        assert!(err.to_string().contains("symlink"), "got: {err}");
+    }
+
+    #[test]
+    fn copy_dir_all_subdir_blocked_by_file_in_dst() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("sub")).unwrap();
+        fs::write(src.path().join("sub/x.txt"), "x").unwrap();
+        // A plain file occupies the destination subdirectory path.
+        fs::write(dst.path().join("sub"), "blocking file").unwrap();
+
+        let result = copy_dir_all(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // verify_and_copy_files_async / copy_directory_recursive
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn verify_and_copy_files_async_happy_path_nested() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("sub")).unwrap();
+        fs::write(src.path().join("root.txt"), "r").unwrap();
+        fs::write(src.path().join("sub/leaf.txt"), "l").unwrap();
+
+        verify_and_copy_files_async(src.path(), dst.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.path().join("sub/leaf.txt")).unwrap(),
+            "l"
+        );
+    }
+
+    #[test]
+    fn verify_and_copy_files_async_missing_src_is_validation_error() {
+        let tmp = tempdir().unwrap();
+        let err = verify_and_copy_files_async(
+            &tmp.path().join("gone"),
+            &tmp.path().join("dst"),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("does not exist"), "got: {err}");
+    }
+
+    #[test]
+    fn verify_and_copy_files_async_src_file_fails_at_read_dir() {
+        let tmp = tempdir().unwrap();
+        let file_src = tmp.path().join("plain.txt");
+        fs::write(&file_src, "x").unwrap();
+
+        let result =
+            verify_and_copy_files_async(&file_src, &tmp.path().join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_directory_recursive_rejects_symlink_entry() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("real.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(
+            src.path().join("real.txt"),
+            src.path().join("link.txt"),
+        )
+        .unwrap();
+
+        let err = copy_directory_recursive(src.path(), dst.path()).unwrap_err();
+        assert!(err.to_string().contains("symlink"), "got: {err}");
+    }
+
+    #[test]
+    fn copy_directory_recursive_subdir_blocked_by_file() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("sub")).unwrap();
+        fs::write(src.path().join("sub/x.txt"), "x").unwrap();
+        fs::write(dst.path().join("sub"), "blocking file").unwrap();
+
+        let result = copy_directory_recursive(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_directory_recursive_copy_onto_directory_fails() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("x.txt"), "x").unwrap();
+        // The destination file path already exists as a directory.
+        fs::create_dir_all(dst.path().join("x.txt")).unwrap();
+
+        let result = copy_directory_recursive(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // copy_dir_all_async / internal_copy_dir_async
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn copy_dir_all_async_nested_happy_path() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("deep/deeper")).unwrap();
+        fs::write(src.path().join("deep/deeper/f.txt"), "d").unwrap();
+
+        copy_dir_all_async(src.path(), dst.path()).unwrap();
+        assert_eq!(
+            fs::read_to_string(dst.path().join("deep/deeper/f.txt")).unwrap(),
+            "d"
+        );
+    }
+
+    #[test]
+    fn copy_dir_all_async_dst_under_file_fails() {
+        let src = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        let blocker = tmp.path().join("blocker");
+        fs::write(&blocker, "file").unwrap();
+
+        let result = copy_dir_all_async(src.path(), &blocker.join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_all_async_src_file_fails_at_read_dir() {
+        let tmp = tempdir().unwrap();
+        let file_src = tmp.path().join("plain.txt");
+        fs::write(&file_src, "x").unwrap();
+
+        let result = copy_dir_all_async(&file_src, &tmp.path().join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_dir_all_async_rejects_symlink() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("real.txt"), "x").unwrap();
+        std::os::unix::fs::symlink(
+            src.path().join("real.txt"),
+            src.path().join("link.txt"),
+        )
+        .unwrap();
+
+        let err = copy_dir_all_async(src.path(), dst.path()).unwrap_err();
+        assert!(err.to_string().contains("symlink"), "got: {err}");
+    }
+
+    #[test]
+    fn copy_dir_all_async_subdir_blocked_by_file() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("sub")).unwrap();
+        fs::write(src.path().join("sub/x.txt"), "x").unwrap();
+        fs::write(dst.path().join("sub"), "blocking file").unwrap();
+
+        let result = copy_dir_all_async(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_all_async_copy_onto_directory_fails() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("x.txt"), "x").unwrap();
+        fs::create_dir_all(dst.path().join("x.txt")).unwrap();
+
+        let result = copy_dir_all_async(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // copy_dir_with_progress — error branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn copy_dir_with_progress_subdir_blocked_by_file() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::create_dir_all(src.path().join("sub")).unwrap();
+        fs::write(src.path().join("sub/x.txt"), "x").unwrap();
+        fs::write(dst.path().join("sub"), "blocking file").unwrap();
+
+        let result = copy_dir_with_progress(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_with_progress_copy_onto_directory_fails() {
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("x.txt"), "x").unwrap();
+        fs::create_dir_all(dst.path().join("x.txt")).unwrap();
+
+        let result = copy_dir_with_progress(src.path(), dst.path());
+        assert!(result.is_err());
+    }
 }

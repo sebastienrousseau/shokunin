@@ -365,4 +365,60 @@ mod tests {
         let result = walk_files_bounded_count(dir.path(), "html", 2).unwrap();
         assert!(result.len() <= 4);
     }
+
+    // -------------------------------------------------------------------
+    // read_dir error propagation (unreadable directory, unix-only)
+    // -------------------------------------------------------------------
+
+    #[cfg(unix)]
+    fn with_unreadable_subdir<F: FnOnce(&Path)>(run: F) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let locked = dir.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        run(dir.path());
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files(root, "md");
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_multi_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_multi(root, &["md"]);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_bounded_depth_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_bounded_depth(root, "md", 8);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_bounded_count_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_bounded_count(root, "md", 10);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
 }

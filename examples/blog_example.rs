@@ -28,7 +28,7 @@
 //! Unlike `quickstart` which is a generic starter, this example bakes in
 //! EAA compliance, responsive images, and dual-feed publishing for blogs.
 //!
-//! It is also the **audited demo site**: CI runs the 14-gate audit
+//! It is also the **audited demo site**: CI runs the 15-gate audit
 //! (`ssg audit --output examples/blog/public --sarif`) over this build,
 //! so the full feature surface is switched on here — semantic search
 //! artifacts, agentic discovery (`agents.txt` + `ai-plugin.json` +
@@ -283,6 +283,14 @@ fn main() -> Result<()> {
         }
     };
     println!("  Vector search: {}", present("search/embeddings.bin"));
+    // Per-tag landing pages (#586 port 5): TaxonomyPlugin turns every
+    // frontmatter tag into /tags/<slug>/index.html (plus the /tags/
+    // index) — e.g. `tags: "accessibility, …"` on
+    // content/accessible-typography.md yields /tags/accessibility/.
+    println!(
+        "  Tag landings:  {}",
+        present("tags/accessibility/index.html")
+    );
     println!("  agents.txt:    {}", present("agents.txt"));
     println!("  ai-plugin:     {}", present(".well-known/ai-plugin.json"));
     println!("  mcp.json:      {}", present(".well-known/mcp.json"));

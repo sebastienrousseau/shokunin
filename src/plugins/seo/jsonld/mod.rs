@@ -354,8 +354,7 @@ impl Plugin for JsonLdPlugin {
 
         let mut injection = String::new();
         for script in &scripts {
-            let json = serde_json::to_string(script)
-                .map_err(|e| SsgError::io(e, path))?;
+            let json = script_to_json(script, path)?;
             injection.push_str(&format!(
                 "<script type=\"application/ld+json\">{json}</script>\n"
             ));
@@ -367,6 +366,24 @@ impl Plugin for JsonLdPlugin {
     fn after_compile(&self, _ctx: &PluginContext) -> Result<(), SsgError> {
         Ok(())
     }
+}
+
+/// Serialises one JSON-LD script blob, mapping any serialisation
+/// failure onto [`SsgError::Io`] keyed by the page path.
+///
+/// Generic over the serialisable type so the (structurally
+/// unreachable for `serde_json::Value`) error arm stays testable.
+fn script_to_json<T: serde::Serialize>(
+    script: &T,
+    path: &Path,
+) -> Result<String, SsgError> {
+    fail_point!("jsonld::script-to-json", |_| {
+        Err(SsgError::io(
+            std::io::Error::other("injected: jsonld::script-to-json"),
+            path,
+        ))
+    });
+    serde_json::to_string(script).map_err(|e| SsgError::io(e, path))
 }
 
 /// Resolves the `.meta.json` sidecar path for a built HTML file and
@@ -1357,10 +1374,7 @@ mod tests {
         // have produced an Unparseable error because the extractor
         // would close at the inner `</script>`, leaving truncated
         // JSON.
-        assert!(
-            errs.iter().all(|e| e.schema_type != "Unparseable"),
-            "no parse errors expected, got {errs:?}"
-        );
+        assert!(errs.is_empty(), "no errors expected, got {errs:?}");
     }
 
     #[test]
@@ -1407,5 +1421,286 @@ mod tests {
     fn test_find_script_close_escaped_quotes() {
         let body = r#"{"msg":"escaped \" quote"}</script>"#;
         assert_eq!(find_script_close_skipping_strings(body), Some(26));
+    }
+
+    // ── Display + extractor edge shapes ─────────────────────────────
+
+    #[test]
+    fn validation_error_display_includes_all_fields() {
+        let e = JsonLdValidationError {
+            schema_type: "Article".to_string(),
+            field: "headline".to_string(),
+            reason: "field absent".to_string(),
+        };
+        let s = e.to_string();
+        assert!(s.contains("[Article]"));
+        assert!(s.contains("`headline`"));
+        assert!(s.contains("field absent"));
+    }
+
+    #[test]
+    fn extractor_ignores_unterminated_jsonld_script() {
+        // No closing </script> — the extractor must bail without
+        // yielding a truncated block.
+        let html = r#"<script type="application/ld+json">{"@type":"WebPage""#;
+        assert!(extract_jsonld_blocks(html).is_empty());
+    }
+
+    #[test]
+    fn find_html_tag_end_without_closing_bracket_returns_len() {
+        let html = "<script type=\"application/ld+json\"";
+        assert_eq!(find_html_tag_end(html, 0), html.len());
+    }
+
+    // ── validate_one: remaining shapes ──────────────────────────────
+
+    #[test]
+    fn validator_descends_into_top_level_array() {
+        let html = r#"<script type="application/ld+json">
+            [{"@type":"WebPage","name":"A"},{"@type":"WebPage"}]
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert_eq!(errs.len(), 1, "only the second entry is invalid: {errs:?}");
+        assert_eq!(errs[0].field, "name");
+    }
+
+    #[test]
+    fn validator_flags_faq_page_missing_main_entity() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"FAQPage"}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(errs.iter().any(|e| e.field == "mainEntity"), "{errs:?}");
+    }
+
+    #[test]
+    fn validator_checks_restaurant_and_store_literals() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"Restaurant","name":"R"}
+        </script>
+        <script type="application/ld+json">
+            {"@type":"Store","address":"1 Main St"}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter()
+                .any(|e| e.schema_type == "Restaurant" && e.field == "address"),
+            "{errs:?}"
+        );
+        assert!(
+            errs.iter()
+                .any(|e| e.schema_type == "Store" && e.field == "name"),
+            "{errs:?}"
+        );
+    }
+
+    #[test]
+    fn validator_flags_null_required_field() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"WebPage","name":null}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(errs.iter().any(|e| e.reason == "field is null"), "{errs:?}");
+    }
+
+    #[test]
+    fn validator_flags_whitespace_only_required_field() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"WebPage","name":"   "}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter().any(|e| e.reason == "field is empty string"),
+            "{errs:?}"
+        );
+    }
+
+    #[test]
+    fn validator_flags_list_item_missing_name_and_item() {
+        let html = r#"<script type="application/ld+json">
+            {"@type":"BreadcrumbList","itemListElement":[{"position":1}]}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            errs.iter()
+                .any(|e| e.field == "itemListElement[0].name|item"),
+            "{errs:?}"
+        );
+    }
+
+    #[test]
+    fn validator_tolerates_non_array_item_list_element() {
+        // `itemListElement` present but not an array — the per-item
+        // ListItem walk is skipped without panicking.
+        let html = r#"<script type="application/ld+json">
+            {"@type":"BreadcrumbList","itemListElement":"oops"}
+        </script>"#;
+        let errs = validate_jsonld(html);
+        assert!(
+            !errs.iter().any(|e| e.field.starts_with("itemListElement[")),
+            "{errs:?}"
+        );
+    }
+
+    // ── ISO 20022 sidecar opt-in (AC4) ──────────────────────────────
+
+    /// Writes a front-matter sidecar for the site-relative page `rel`.
+    fn write_sidecar(dir: &Path, rel: &str, json: &str) {
+        let sidecar = dir
+            .join("build")
+            .join(".meta")
+            .join(rel)
+            .with_extension("meta.json");
+        std::fs::create_dir_all(sidecar.parent().unwrap()).unwrap();
+        std::fs::write(sidecar, json).unwrap();
+    }
+
+    /// Context rooted in `dir` so `<dir>/build/.meta` sidecars are
+    /// found for pages under `<dir>/site`.
+    fn rooted_ctx(dir: &Path) -> PluginContext {
+        PluginContext::new(
+            Path::new("content"),
+            &dir.join("build"),
+            &dir.join("site"),
+            Path::new("templates"),
+        )
+    }
+
+    #[test]
+    fn iso20022_object_block_is_injected() {
+        let dir = tempdir().unwrap();
+        write_sidecar(
+            dir.path(),
+            "acct/index.html",
+            r#"{"iso20022":{"type":"BankAccount","iban":"GB29NWBK60161331926819"}}"#,
+        );
+        let c = rooted_ctx(dir.path());
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let page = dir.path().join("site/acct/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert!(
+            out.contains(r#""@type":"BankAccount""#),
+            "BankAccount block should be injected: {out}"
+        );
+        assert!(out.contains("GB29NWBK60161331926819"));
+    }
+
+    #[test]
+    fn iso20022_array_block_skips_invalid_entries() {
+        // Array form: one valid entity plus one entry without a type —
+        // the invalid entry is skipped with a warning, the valid one
+        // is still emitted.
+        let dir = tempdir().unwrap();
+        write_sidecar(
+            dir.path(),
+            "mix/index.html",
+            r#"{"iso20022":[
+                {"type":"PaymentInstrument","instrument_type":"card"},
+                {"no":"type"}
+            ]}"#,
+        );
+        let c = rooted_ctx(dir.path());
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let page = dir.path().join("site/mix/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert!(
+            out.contains(r#""@type":"PaymentService""#),
+            "valid array entry should be injected: {out}"
+        );
+    }
+
+    #[test]
+    fn iso20022_all_invalid_entries_injects_nothing_extra() {
+        // Every entry fails dispatch → the extension contributes zero
+        // scripts (None, not Some(vec![])).
+        let dir = tempdir().unwrap();
+        write_sidecar(
+            dir.path(),
+            "bad/index.html",
+            r#"{"iso20022":{"type":"NotAThing"}}"#,
+        );
+        let c = rooted_ctx(dir.path());
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let page = dir.path().join("site/bad/index.html");
+        let out = JsonLdPlugin::new(cfg())
+            .transform_html(html, &page, &c)
+            .unwrap();
+        assert!(
+            !out.contains("iso20022"),
+            "invalid block must contribute nothing: {out}"
+        );
+    }
+
+    #[test]
+    fn locale_ctx_with_empty_locale_set_defaults_to_en() {
+        // Zero declared locales: the helper's default-locale fallback
+        // kicks in and no path prefix can qualify as a locale.
+        let dir = tempdir().unwrap();
+        let c = locale_ctx(dir.path(), "en", &[]);
+        let i18n = c.config.as_ref().unwrap().i18n.as_ref().unwrap();
+        assert_eq!(i18n.default_locale, "en");
+        assert!(i18n.locales.is_empty());
+    }
+
+    #[test]
+    fn script_to_json_maps_serde_failure_to_io_error() {
+        // JSON object keys must be strings — a tuple-keyed map fails.
+        let bad: std::collections::BTreeMap<(u8, u8), u8> =
+            std::iter::once(((1, 2), 3)).collect();
+        let err = script_to_json(&bad, Path::new("page.html"))
+            .expect_err("non-string map keys must fail serialisation");
+        assert!(
+            matches!(err, SsgError::Io { ref path, .. } if path == Path::new("page.html"))
+        );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard<'a>(&'a str);
+
+    impl Drop for FailGuard<'_> {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn transform_html_propagates_script_serialisation_failure() {
+        let _guard = FailGuard("jsonld::script-to-json");
+        fail::cfg("jsonld::script-to-json", "return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let c = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            dir.path(),
+            Path::new("templates"),
+        );
+        let plugin = JsonLdPlugin::new(JsonLdConfig {
+            base_url: "https://example.com".to_string(),
+            org_name: "Org".to_string(),
+            breadcrumbs: false,
+        });
+        let html = "<html><head><title>T</title></head><body>x</body></html>";
+        let err = plugin
+            .transform_html(html, Path::new("page.html"), &c)
+            .expect_err("failpoint must abort script serialisation");
+        assert!(
+            err.to_string().contains("jsonld::script-to-json"),
+            "injected error should surface: {err}"
+        );
     }
 }

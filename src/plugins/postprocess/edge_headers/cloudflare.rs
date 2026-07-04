@@ -185,11 +185,12 @@ mod tests {
             .unwrap();
         // Each of the 5 baseline keys must be present.
         for (key, value) in &baseline {
-            let parsed_value =
-                values.get(key).and_then(|v| v.as_str()).unwrap_or_else(|| {
-                    panic!("missing baseline key {key} in TOML output")
-                });
-            assert_eq!(parsed_value, value);
+            let parsed_value = values.get(key).and_then(|v| v.as_str());
+            assert_eq!(
+                parsed_value,
+                Some(value.as_str()),
+                "baseline key {key} must round-trip through TOML"
+            );
         }
     }
 

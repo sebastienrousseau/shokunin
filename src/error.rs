@@ -158,6 +158,7 @@ impl<T> PathErrorExt<T> for std::io::Result<T> {
 mod tests {
     use super::*;
     use std::io;
+    use std::path::Path;
 
     #[test]
     fn test_core_error() {
@@ -261,10 +262,13 @@ mod tests {
         let ssg_res = res.with_path("restricted/file");
         assert!(ssg_res.is_err());
         let err = ssg_res.unwrap_err();
-        if let SsgError::Io { path, .. } = err {
-            assert_eq!(path, PathBuf::from("restricted/file"));
-        } else {
-            panic!("Expected SsgError::Io");
-        }
+        assert!(
+            matches!(
+                &err,
+                SsgError::Io { path, .. }
+                    if path.as_path() == Path::new("restricted/file")
+            ),
+            "expected SsgError::Io for restricted/file, got {err:?}"
+        );
     }
 }

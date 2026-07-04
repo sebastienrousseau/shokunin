@@ -89,7 +89,9 @@ pub(crate) fn normalize_bcp47(raw: &str) -> Option<String> {
     let cleaned = raw.trim().replace('_', "-");
     let mut parts = cleaned.split('-');
 
-    let primary = parts.next()?;
+    // `split` always yields at least one item, so the fallback is
+    // purely defensive: an empty primary fails the length check below.
+    let primary = parts.next().unwrap_or_default();
     if !(2..=3).contains(&primary.len())
         || !primary.bytes().all(|b| b.is_ascii_alphabetic())
     {
@@ -153,6 +155,20 @@ mod tests {
         assert_eq!(normalize_bcp47("e"), None);
         assert_eq!(normalize_bcp47("en-"), None);
         assert_eq!(normalize_bcp47("12"), None);
+    }
+
+    #[test]
+    fn normalize_keeps_numeric_and_variant_subtags_lowercase() {
+        // Numeric UN M.49 region (len 3, not alphabetic) and long
+        // variant subtags take the catch-all lowercase arm.
+        assert_eq!(normalize_bcp47("ES-419").as_deref(), Some("es-419"));
+        assert_eq!(
+            normalize_bcp47("en-GB-OXENDICT").as_deref(),
+            Some("en-GB-oxendict")
+        );
+        // Two-char subtag that is not purely alphabetic also falls
+        // through to the lowercase arm rather than region uppercasing.
+        assert_eq!(normalize_bcp47("en-a1").as_deref(), Some("en-a1"));
     }
 
     #[test]

@@ -2,7 +2,7 @@
 
 # Features × Coverage Matrix
 
-Every user-facing feature in v0.0.45 is exercised by at least one
+Every user-facing feature in v0.0.47 is exercised by at least one
 **example**, one **benchmark**, and one **regression test**. The matrix
 below is the source of truth — and the
 `tests/docs_accuracy.rs::features_matrix_is_exhaustive` test fails the
@@ -39,7 +39,7 @@ name.
 | RPC schema emitter | `rpc_schema` | [`examples/rpc`](../examples/rpc_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
 | CycloneDX SBOM | `sbom` | (every build) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs) |
 | Search widget + index | `search` | [`examples/search`](../examples/search_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/search_index_integrity.rs`](../tests/search_index_integrity.rs) |
-| Search-index emitter | `search_index` | [`examples/search`](../examples/search_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/search_index_integrity.rs`](../tests/search_index_integrity.rs) |
+| Search-index emitter (`VectorSearchPlugin`) | `search_index` | [`examples/blog`](../examples/blog_example.rs) (registers the plugin), [`examples/search`](../examples/search_example.rs) (consumes the artifacts via `ssg-search`) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/search_index_integrity.rs`](../tests/search_index_integrity.rs) |
 | SEO + JSON-LD + canonical + robots | `seo` | [`examples/portfolio`](../examples/portfolio_example.rs), [`examples/iso20022`](../examples/iso20022_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/seo_canonical_lol_html.rs`](../tests/seo_canonical_lol_html.rs), [`tests/seo_extractors_lol_html.rs`](../tests/seo_extractors_lol_html.rs), [`tests/jsonld_validation.rs`](../tests/jsonld_validation.rs), [`tests/jsonld_iso20022.rs`](../tests/jsonld_iso20022.rs) |
 | Shortcodes | `shortcodes` | [`examples/landing`](../examples/landing_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/regression.rs`](../tests/regression.rs) |
 | Taxonomy (tags + categories + per-term landing pages, #586 port 5) | `taxonomy` | [`examples/blog`](../examples/blog_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/taxonomy_templated.rs`](../tests/taxonomy_templated.rs), [`tests/test_tags.rs`](../tests/test_tags.rs) |
@@ -63,6 +63,12 @@ name.
 | Content-staging shim (workaround for upstream regressions) | `src/core/content_stager.rs` | (every build) | n/a (pre-pass) | [`tests/regression_user_site.rs`](../tests/regression_user_site.rs) |
 | Fault-injection failpoints | `fail = "0.5"` | n/a | n/a | [`tests/fault_injection.rs`](../tests/fault_injection.rs) (×8 failpoints) |
 | Subcommand surface (`ssg dev`/`build`/`check`/`audit`/`deploy`) | `src/cmd/cli.rs` | each example wraps one subcommand | n/a | [`tests/cli_subcommands.rs`](../tests/cli_subcommands.rs) |
+| Flexible date parsing (spec A4, #586) | `src/core/dates.rs` | [`examples/quickstart`](../examples/quickstart_example.rs) (`cupping-notes-july.md` — long-form `date`, minimal front matter) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/core/dates.rs`](../tests/core/dates.rs) |
+| Permalink / feed-link derivation (spec A2/B1, #586) | `src/core/urls.rs`, `src/core/content_stager.rs` | [`examples/quickstart`](../examples/quickstart_example.rs) (no `permalink:` declared; derived feed link asserted post-build) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/core/urls.rs`](../tests/core/urls.rs), [`tests/core/pipeline.rs`](../tests/core/pipeline.rs), [`tests/core/content_stager.rs`](../tests/core/content_stager.rs) |
+| `[security] sri_algorithm` knob (plan §3 item 2.3) | `src/cmd/config.rs::SriAlgorithm` | [`examples/edge_headers`](../examples/edge_headers_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs) (csp_sri gate), unit tests in [`src/plugins/assets.rs`](../src/plugins/assets.rs) |
+| Per-page CSP → edge `_headers` (spec B4, plan §3 item 2.4) | `src/plugins/csp.rs::page_policy`, `postprocess::edge_headers` | [`examples/edge_headers`](../examples/edge_headers_example.rs) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/plugins/postprocess/edge_headers.rs`](../tests/plugins/postprocess/edge_headers.rs) |
+| Buffered I/O write pool | `src/core/io_pool.rs` | (every build — fused transform pass writes through the pool) | [`benches/all_pub_api.rs`](../benches/all_pub_api.rs) | [`tests/fault_injection.rs`](../tests/fault_injection.rs) |
+| Language-consistency audit gate (spec A5) | `src/audit/gates/lang_consistency.rs` | [`examples/audit`](../examples/audit_example.rs) (runs the full gate set) | [`benches/bench_audit.rs`](../benches/bench_audit.rs) | [`tests/audit_gates.rs`](../tests/audit_gates.rs) |
 
 ## CI gates (v0.0.45 additions)
 
