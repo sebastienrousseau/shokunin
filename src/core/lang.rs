@@ -37,11 +37,16 @@
 // `seo::lang`).
 #![allow(clippy::redundant_pub_crate)]
 
+#[cfg(feature = "templates")]
 use std::collections::HashMap;
 
 /// Final constant fallback when no other source resolves (spec A5).
 ///
-/// Mirrors `seo::lang::DEFAULT_PAGE_LANG`.
+/// Mirrors `seo::lang::DEFAULT_PAGE_LANG`. Gated on `templates`: its
+/// only consumer, [`resolve_render_lang`], is only reachable from
+/// `template_engine::render_page`, itself feature-gated — without
+/// this, `--no-default-features` sees it as dead code.
+#[cfg(feature = "templates")]
 pub(crate) const DEFAULT_PAGE_LANG: &str = "en";
 
 /// Resolves the language a page should be *rendered* with, from the
@@ -57,6 +62,12 @@ pub(crate) const DEFAULT_PAGE_LANG: &str = "en";
 ///
 /// Every returned value is normalised to BCP-47 hyphen form
 /// (`EN_gb` → `en-GB`), matching what the SEO sinks publish.
+///
+/// Gated on `templates`: its sole caller is
+/// `template_engine::render_page`, itself feature-gated. Note
+/// `normalize_bcp47` below is NOT gated — `seo::lang::normalize_bcp47`
+/// delegates to it unconditionally.
+#[cfg(feature = "templates")]
 pub(crate) fn resolve_render_lang(
     frontmatter: &HashMap<String, serde_json::Value>,
     site_language: Option<&str>,
