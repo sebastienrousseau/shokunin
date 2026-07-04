@@ -19,9 +19,11 @@ serde_json = "1"
 # hand-rolled split-on-colon parser stored every value as a string
 # and silently dropped lists, flow lists, and nested maps —
 # `tags:\n  - welcome` became the literal string "" under the key
-# "tags". `serde_yaml_ng` is the maintained fork of `serde_yaml`,
-# pure Rust, no C deps, and clean on `wasm32-unknown-unknown`.
-serde_yaml_ng = "0.10"
+# "tags". `noyalib` is a from-scratch YAML implementation (not a
+# `serde_yaml` fork) — zero unsafe, no C deps, deliberately no
+# dependency on the unmaintained `serde_yaml` lineage, clean on
+# `wasm32-unknown-unknown`.
+noyalib = "0.0.12"
 sha2 = { version = "0.11", default-features = false }
 toml = "1"
 
