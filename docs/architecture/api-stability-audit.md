@@ -3,7 +3,12 @@
 # API Stability Audit — SSG 0.0.39
 
 **Issue:** [#427](https://github.com/sebastienrousseau/static-site-generator/issues/427)
-· **Target:** Prepare the public surface for `1.0.0`
+· **Target:** Prepare the public surface for eventual stabilisation
+  (no `1.0.0` — or `0.1.0` — is scheduled; see
+  [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md).
+  This audit's tiering still stands on its own merits: it documents the
+  right stability posture for each item regardless of which `0.0.x`
+  release it lands in.)
 · **Scope:** ~79 public structs/enums across 30+ modules + the `Plugin` trait
 
 This document is the inventory product of the v0.0.41 milestone "Category
@@ -172,10 +177,14 @@ Each lands as its own commit so blame stays readable.
 
 ---
 
-## Defer to `chore!: 1.0.0-rc.1` (breaking pass)
+## Defer until warranted (breaking pass — no version-milestone gate)
 
-These each break downstream and need coordinated review + a
-1.0.0-rc.1 changelog entry:
+Per [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md),
+`ssg` does not target `1.0.0-rc.1` on any horizon — every `0.0.x`
+release is already free to ship breaking changes under SemVer. These
+items are deferred by *readiness*, not by a release milestone; land
+each in whichever `0.0.x` release is ready to absorb it, with its own
+`CHANGELOG.md` breaking-change entry:
 
 1. Demote `DepGraph` and `BatchResult` to `pub(crate)` after migrating
    `tests/perf_regression.rs` and `tests/regression.rs` to in-crate test
@@ -204,4 +213,6 @@ These each break downstream and need coordinated review + a
 
 Total public types audited: **79 structs/enums + 1 trait + 30+
 functions**. After this PR's actions land, the breaking-pass set is
-pre-staged for `1.0.0-rc.1`.
+pre-staged for whichever future `0.0.x` release is ready to absorb it
+(see [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md)
+— no `1.0.0-rc.1` is scheduled).

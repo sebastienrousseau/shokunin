@@ -16,6 +16,9 @@ url = "https://raw.githubusercontent.com/mozilla-firefox/firefox/main/supply-cha
 [policy.ssg]
 audit-as-crates-io = false
 
+[policy.ssg-a11y]
+audit-as-crates-io = false
+
 [policy.ssg-core]
 audit-as-crates-io = false
 

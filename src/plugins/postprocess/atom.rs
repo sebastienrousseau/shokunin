@@ -63,7 +63,15 @@ impl Plugin for AtomFeedPlugin {
         };
 
         let mut articles = collect_atom_entries(&meta_entries, &base_url);
-        articles.sort_by(|a, b| b.0.cmp(&a.0));
+        // Sort by date descending, then by `id` ascending as a
+        // deterministic tiebreaker. `read_meta_sidecars` walks the
+        // filesystem tree, whose entry order is OS-dependent (ext4 vs
+        // APFS) — without a tiebreaker, pages sharing a date (common
+        // in synthetic fixtures) retain that non-deterministic order
+        // through the stable sort, failing the cross-OS determinism
+        // gate.
+        articles
+            .sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.id.cmp(&b.1.id)));
         articles.truncate(50);
 
         if articles.is_empty() {

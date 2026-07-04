@@ -77,7 +77,16 @@ impl Plugin for JsonFeedPlugin {
         let known_locales = extract_known_locales(ctx);
 
         let mut items = collect_items(&meta_entries, &base_url, &known_locales);
-        items.sort_by(|a, b| b.sort_key.cmp(&a.sort_key));
+        // Sort by date descending, then by `id` ascending as a
+        // deterministic tiebreaker. `read_meta_sidecars` walks the
+        // filesystem tree, whose entry order is OS-dependent (ext4 vs
+        // APFS) — without a tiebreaker, items sharing a sort_key
+        // (common in synthetic fixtures) retain that non-deterministic
+        // order through the stable sort, failing the cross-OS
+        // determinism gate.
+        items.sort_by(|a, b| {
+            b.sort_key.cmp(&a.sort_key).then_with(|| a.id.cmp(&b.id))
+        });
         items.truncate(MAX_ITEMS);
 
         if items.is_empty() {

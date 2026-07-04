@@ -163,8 +163,18 @@ fn build_sbom() -> serde_json::Value {
 /// Cheap ISO 8601 timestamp without pulling in a date crate.
 /// Uses `std::time::SystemTime` and converts `UNIX_EPOCH` seconds to
 /// `YYYY-MM-DDTHH:MM:SSZ` via the proleptic Gregorian calendar.
+///
+/// Reproducible builds (SECURITY.md convention, determinism.yml CI
+/// gate): a wall-clock timestamp makes `sbom.cdx.json` differ across
+/// otherwise-identical builds, so `SOURCE_DATE_EPOCH` wins when set —
+/// same convention as `postprocess::sbom::current_timestamp`.
 fn current_iso_timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
+    if let Ok(epoch) = std::env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(secs) = epoch.trim().parse::<u64>() {
+            return epoch_to_iso(secs);
+        }
+    }
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -213,6 +223,28 @@ mod tests {
         assert_eq!(epoch_to_iso(1_700_000_000), "2023-11-14T22:13:20Z");
         // 1577836800 = 2020-01-01 00:00:00 UTC
         assert_eq!(epoch_to_iso(1_577_836_800), "2020-01-01T00:00:00Z");
+    }
+
+    #[test]
+    #[serial_test::serial(source_date_epoch)]
+    fn current_iso_timestamp_honours_source_date_epoch() {
+        // determinism.yml gate: SOURCE_DATE_EPOCH must pin this SBOM's
+        // timestamp too — crate::sbom::SbomPlugin runs after (and
+        // overwrites the output of) postprocess::SbomPlugin, so this
+        // is the timestamp that actually survives into sbom.cdx.json.
+        let prev = std::env::var("SOURCE_DATE_EPOCH").ok();
+        std::env::set_var("SOURCE_DATE_EPOCH", "1700000000");
+        let pinned = current_iso_timestamp();
+        std::env::set_var("SOURCE_DATE_EPOCH", "not-a-number");
+        let fallback = current_iso_timestamp();
+        match prev {
+            Some(v) => std::env::set_var("SOURCE_DATE_EPOCH", v),
+            None => std::env::remove_var("SOURCE_DATE_EPOCH"),
+        }
+        assert_eq!(pinned, "2023-11-14T22:13:20Z");
+        // Unparseable epoch falls back to wall clock — assert only the
+        // shape so the test never depends on today's date.
+        assert!(fallback.ends_with('Z') && fallback.len() == 20);
     }
 
     #[test]

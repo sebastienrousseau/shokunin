@@ -200,7 +200,15 @@ impl Plugin for RssAggregatePlugin {
         let copyright = extract_copyright(&meta_entries);
 
         let mut articles = collect_articles(&meta_entries, &base_url);
-        articles.sort_by(|a, b| b.0.cmp(&a.0));
+        // Sort by date descending, then by the rendered item itself
+        // (unique per article — it embeds the item's own URL) as a
+        // deterministic tiebreaker. `read_meta_sidecars` walks the
+        // filesystem tree, whose entry order is OS-dependent (ext4 vs
+        // APFS) — without a tiebreaker, articles sharing a date
+        // (common in synthetic fixtures) retain that non-deterministic
+        // order through the stable sort, failing the cross-OS
+        // determinism gate.
+        articles.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
         articles.truncate(50);
 
         if articles.is_empty() {

@@ -137,7 +137,7 @@ graph TD
 
 | Metric | Value |
 | :--- | :--- |
-| **Source** | 71,000+ lines across 6 workspace crates (`ssg`, `ssg-core`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
+| **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
 | **Test suite** | 3,489 unit tests + 36 integration test suites |
 | **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
 | **Plugin pipeline** | 38 plugins, Rayon-parallelised |

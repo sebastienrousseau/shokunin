@@ -1,0 +1,27 @@
+[package]
+name = "ssg-a11y"
+version = "0.0.47"
+edition = "2021"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = "Standalone WCAG 2.2 AA accessibility checker — build-time HTML validation, framework-agnostic."
+repository = "https://github.com/sebastienrousseau/static-site-generator"
+homepage = "https://github.com/sebastienrousseau/static-site-generator"
+documentation = "https://docs.rs/ssg-a11y"
+keywords = ["accessibility", "wcag", "html", "a11y", "validation"]
+categories = ["accessibility", "web-programming", "parsing"]
+readme = "README.md"
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+# Deliberately minimal: the HTML/CSS scanning in this crate is hand-rolled
+# char/byte iteration (no parser dependency) so it stays trivially
+# embeddable in any framework's build pipeline. `serde`/`serde_json` are
+# only used to (de)serialise the report and compliance-matrix types.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[lints]
+workspace = true

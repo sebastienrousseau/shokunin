@@ -124,6 +124,57 @@ landed with measured evidence. Implements the
 - `mdx-gen 0.0.5`: **security** — raw-HTML pass-through no longer forced;
   safe-by-default sanitization honoring the documented contract.
 
+### New crate: `ssg-a11y`
+- Extracted the WCAG 2.2 AA accessibility checker (`src/plugins/accessibility.rs`)
+  into a standalone workspace crate,
+  [#608](https://github.com/sebastienrousseau/static-site-generator/issues/608):
+  report/matrix types, WCAG rule checks (heading hierarchy, ARIA landmarks,
+  link purpose, focus appearance, target size, banned elements, page
+  language), and the compliance-matrix builder now have zero dependency on
+  ssg's `Plugin` trait, `PluginContext`, or `SsgError` — `#![forbid(unsafe_code)]`,
+  its own error type, own README/tests. `src/plugins/accessibility.rs`
+  becomes a thin wrapper (`AccessibilityPlugin` + file I/O); public paths
+  under `ssg::accessibility::*` are unchanged for existing consumers.
+  `accessibility-report.json` / `wcag-compliance.json` output is
+  byte-shape-identical — this is a refactor, not a behavior change.
+  Workspace grows to 7 crates.
+
+### Fixed (determinism, round 2)
+- `atom.xml` / `feed.json`: `AtomFeedPlugin`/`JsonFeedPlugin` sorted entries
+  by date only; since `read_meta_sidecars` walks the filesystem (genuinely
+  OS-order-dependent — ext4 vs APFS) and the stable sort never breaks ties
+  on equal dates, synthetic fixtures where every page shares a date leaked
+  raw directory-walk order straight into the feed. Fixed with an `id`-based
+  tiebreaker at all three feed plugins (RSS/Atom/JSON Feed), plus a
+  defensive sort at `read_meta_sidecars` itself so future consumers inherit
+  deterministic input by default.
+- `sbom.cdx.json`: a **second**, independent `SbomPlugin` implementation
+  (`src/plugins/sbom.rs`, distinct from `src/plugins/postprocess/sbom.rs`)
+  runs later in the pipeline and overwrites the first's output — it had
+  its own unpinned `SystemTime::now()` call the earlier `SOURCE_DATE_EPOCH`
+  fix never touched. Fixed and covered by a matching regression test.
+- Determinism gate exclusions (`determinism.yml`) refined: `.meta/**/*.json`
+  (upstream `staticdatagen` unordered-map serialization, tracked for the
+  `=0.0.11` pin) and `.ssg-plugin-cache.json` (ssg's own incremental cache
+  — legitimately path-keyed to each build's absolute output location, not
+  a bug) are excluded from cross-path comparisons with documented reasons;
+  the cache's own key order is now deterministic (`BTreeMap`, not
+  `HashMap`) for the common same-directory-rebuild case.
+- `core/lang.rs`: `DEFAULT_PAGE_LANG` and `resolve_render_lang` were dead
+  code under `--no-default-features` (their sole caller is gated behind
+  the `templates` feature) — gated to match, verified against all 45
+  `cargo-hack --feature-powerset --depth 2` combinations.
+- `examples/audit_example.rs`: un-backticked `lang_consistency` in a doc
+  comment (clippy `doc_markdown`).
+
+### Versioning policy
+- [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md):
+  `ssg` stays on `0.0.x` versioning — incrementing by `0.0.1` per release —
+  through `0.0.999` at the earliest, to mature the API surface and
+  enterprise adoption before any `0.1.0`/`1.0.0` SemVer commitment.
+  `ROADMAP.md` and `docs/architecture/api-stability-audit.md`'s prior
+  `0.1.0`/`1.0.0` milestone targets are corrected to match.
+
 ## [0.0.46] - 2026-06-28
 
 The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cycle landed and shipped; the bulk of the v0.0.45 content-staging shim is gone.

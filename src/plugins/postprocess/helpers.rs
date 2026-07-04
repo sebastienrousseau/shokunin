@@ -123,6 +123,14 @@ pub(super) fn read_meta_sidecars(
             }
         }
     }
+    // Deterministic output (determinism.yml CI gate): `fs::read_dir`
+    // iteration order is filesystem-dependent (ext4 vs APFS), so
+    // without this sort every consumer (RSS/Atom/JSON Feed) would
+    // inherit an OS-dependent entry order. Callers still apply their
+    // own date-based sort on top; this just guarantees *their* input
+    // — and any future consumer that forgets to re-sort — starts from
+    // a stable baseline.
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(entries)
 }
 
