@@ -306,7 +306,7 @@ mod tests {
     ) {
         let page_dir = dir.join(slug);
         fs::create_dir_all(&page_dir).expect("create page dir");
-        let meta_path = page_dir.join("page.meta.json");
+        let meta_path = page_dir.join("index.meta.json");
         let json = serde_json::to_string(meta).expect("serialize meta");
         fs::write(&meta_path, json).expect("write meta");
     }
@@ -811,7 +811,7 @@ mod tests {
         let page_dir = tmp.path().join("counted");
         fs::create_dir_all(&page_dir).unwrap();
         fs::write(
-            page_dir.join("page.meta.json"),
+            page_dir.join("index.meta.json"),
             r#"{"title":"Counted Post","description":"Has word_count","item_pub_date":"Thu, 11 Apr 2026 06:06:06 +0000","word_count":342}"#,
         )
         .unwrap();

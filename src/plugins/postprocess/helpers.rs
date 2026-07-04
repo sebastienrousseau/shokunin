@@ -106,17 +106,10 @@ pub(super) fn read_meta_sidecars(
             let path = entry.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path
-                .file_name()
-                .is_some_and(|n| n.to_string_lossy().ends_with(".meta.json"))
-            {
+            } else if let Some(stem) = sidecar_stem(&path) {
                 if let Ok(content) = fs::read_to_string(&path) {
                     if let Some(meta) = parse_meta_sidecar(&content) {
-                        let rel = path
-                            .parent()
-                            .and_then(|p| p.strip_prefix(site_dir).ok())
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .unwrap_or_default();
+                        let rel = sidecar_rel_path(&path, stem, site_dir);
                         entries.push((rel, meta));
                     }
                 }
@@ -132,6 +125,44 @@ pub(super) fn read_meta_sidecars(
     // a stable baseline.
     entries.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(entries)
+}
+
+/// Returns a sidecar filename's stem (the part before `.meta.json`),
+/// or `None` if `path` isn't shaped like a `.meta.json` sidecar.
+fn sidecar_stem(path: &Path) -> Option<String> {
+    let name = path.file_name()?.to_string_lossy();
+    name.strip_suffix(".meta.json").map(str::to_string)
+}
+
+/// Derives a sidecar's page-relative path from its own filename stem
+/// plus any real (non-container) parent directories.
+///
+/// staticdatagen emits sidecars flat inside a `.meta/` container
+/// (`.meta/<slug>.meta.json`) — the identifying part is the filename
+/// stem, not the parent directory (which is always literally `.meta`
+/// and carries no per-page information; using it as the rel path, as
+/// a prior version of this function did, collapsed every page onto
+/// the same identifier and broke every feed's per-entry permalink —
+/// see the v0.0.47 determinism-gate investigation). A literal `index`
+/// stem is dropped (matching the web convention that `index.html` is
+/// a directory's default document), so a genuinely nested sidecar
+/// (`blog/hello/index.meta.json`) still resolves to `blog/hello`.
+fn sidecar_rel_path(path: &Path, stem: String, site_dir: &Path) -> String {
+    let parent_rel = path
+        .parent()
+        .and_then(|p| p.strip_prefix(site_dir).ok())
+        .map(Path::to_path_buf)
+        .unwrap_or_default();
+
+    let mut components: Vec<String> = parent_rel
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .filter(|c| c != ".meta")
+        .collect();
+    if stem != "index" {
+        components.push(stem);
+    }
+    components.join("/")
 }
 
 /// Parsed components of an RFC 2822 date.
@@ -594,11 +625,15 @@ mod tests {
 
     #[test]
     fn test_read_meta_sidecars_collects_nested_sidecar() {
+        // A genuinely nested sidecar named `index.meta.json` — the
+        // `index` stem is dropped (web convention: index.html is a
+        // directory's default document), so the parent directories
+        // alone identify the page.
         let tmp = tempfile::tempdir().unwrap();
         let page = tmp.path().join("blog").join("hello");
         fs::create_dir_all(&page).unwrap();
         fs::write(
-            page.join("page.meta.json"),
+            page.join("index.meta.json"),
             r#"{"title":"Hello","description":"D"}"#,
         )
         .unwrap();
@@ -608,6 +643,44 @@ mod tests {
         assert_eq!(
             entries[0].1.get("title").map(String::as_str),
             Some("Hello")
+        );
+    }
+
+    #[test]
+    fn test_read_meta_sidecars_flat_meta_container_uses_filename_stem() {
+        // The real staticdatagen convention (v0.0.47 determinism-gate
+        // investigation): sidecars are flat siblings inside a
+        // dedicated `.meta/` container, e.g. `.meta/page-92.meta.json`
+        // for the page compiled at `site_dir/page-92/`. The `.meta`
+        // parent carries no page identity — the filename stem does.
+        // A prior version of this function used the *parent*
+        // directory as the rel path, which collapsed every page onto
+        // the identical rel path ".meta" and broke every feed's
+        // per-entry permalink (every <link>/<id> pointed at the same
+        // bogus "/.meta/" URL).
+        let tmp = tempfile::tempdir().unwrap();
+        let meta_dir = tmp.path().join(".meta");
+        fs::create_dir_all(&meta_dir).unwrap();
+        fs::write(
+            meta_dir.join("page-92.meta.json"),
+            r#"{"title":"Ninety Two"}"#,
+        )
+        .unwrap();
+        fs::write(
+            meta_dir.join("page-31.meta.json"),
+            r#"{"title":"Thirty One"}"#,
+        )
+        .unwrap();
+        let mut entries = read_meta_sidecars(tmp.path()).unwrap();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            entries
+                .iter()
+                .map(|(rel, _)| rel.as_str())
+                .collect::<Vec<_>>(),
+            vec!["page-31", "page-92"],
+            "each page must get its own unique rel path, not the shared \
+             `.meta` container directory"
         );
     }
 

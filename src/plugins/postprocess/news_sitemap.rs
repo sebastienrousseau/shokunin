@@ -176,7 +176,7 @@ mod tests {
     ) {
         let page_dir = dir.join(slug);
         fs::create_dir_all(&page_dir).expect("create page dir");
-        let meta_path = page_dir.join("page.meta.json");
+        let meta_path = page_dir.join("index.meta.json");
         let json = serde_json::to_string(meta).expect("serialize meta");
         fs::write(&meta_path, json).expect("write meta");
     }

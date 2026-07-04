@@ -700,7 +700,7 @@ mod tests {
             let page = site.join(slug);
             fs::create_dir_all(&page).unwrap();
             fs::write(
-                page.join("page.meta.json"),
+                page.join("index.meta.json"),
                 format!(r#"{{"title":"{title}","description":"D"}}"#),
             )
             .unwrap();
