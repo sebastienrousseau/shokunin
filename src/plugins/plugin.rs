@@ -40,7 +40,7 @@
 use crate::cmd::SsgConfig;
 use crate::error::{PathErrorExt, SsgError};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fmt, fs,
     path::{Path, PathBuf},
     sync::Arc,
@@ -59,7 +59,7 @@ const CACHE_FILENAME: &str = ".ssg-plugin-cache.json";
 /// `.ssg-plugin-cache.json` in the site directory.
 #[derive(Debug, Clone, Default)]
 pub struct PluginCache {
-    entries: HashMap<PathBuf, u64>,
+    entries: BTreeMap<PathBuf, u64>,
 }
 
 impl PluginCache {
@@ -75,9 +75,9 @@ impl PluginCache {
     /// assert!(c.has_changed(Path::new("any.path")));
     /// ```
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: BTreeMap::new(),
         }
     }
 
@@ -105,7 +105,7 @@ impl PluginCache {
         let Ok(content) = fs::read_to_string(&path) else {
             return Self::new();
         };
-        let Ok(map) = serde_json::from_str::<HashMap<String, u64>>(&content)
+        let Ok(map) = serde_json::from_str::<BTreeMap<String, u64>>(&content)
         else {
             return Self::new();
         };
@@ -131,12 +131,12 @@ impl PluginCache {
     /// ```
     pub fn save(&self, site_dir: &Path) -> Result<(), SsgError> {
         let path = site_dir.join(CACHE_FILENAME);
-        let serialisable: HashMap<String, u64> = self
+        let serialisable: BTreeMap<String, u64> = self
             .entries
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
-        // Infallible: HashMap<String, u64> is always serialisable to
+        // Infallible: BTreeMap<String, u64> is always serialisable to
         // JSON. We keep the `map_err` for clippy::expect_used (which is
         // denied in lib); the closure body is dark but harmless.
         let json =

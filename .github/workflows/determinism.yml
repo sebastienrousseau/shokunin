@@ -85,14 +85,30 @@ jobs:
           # Content-only manifest: "<sha256>  <sorted relative path>".
           # `shasum -a 256` exists on both ubuntu (perl) and macOS.
           #
-          # TEMPORARY EXCLUSION (remove with the staticdatagen =0.0.11
-          # pin, v0.0.47 plan Track U): 0.0.10's news-sitemap generator
-          # stamps a wall-clock fallback for `item_pub_date` even when
-          # frontmatter carries a fixed ISO date, so news-sitemap.xml
-          # is nondeterministic per build. The staged 0.0.11 parses the
-          # ISO form (spec A4) and removes the fallback path; once the
-          # pin lands, drop this filter so the gate covers the file.
-          find . -type f ! -name 'news-sitemap.xml' -print0 | LC_ALL=C sort -z \
+          # TEMPORARY EXCLUSIONS (remove with the staticdatagen =0.0.11
+          # pin, v0.0.47 plan Track U):
+          #   - news-sitemap.xml: 0.0.10's generator stamps a
+          #     wall-clock fallback for `item_pub_date` even when
+          #     frontmatter carries a fixed ISO date. The staged 0.0.11
+          #     parses the ISO form (spec A4) and removes the fallback.
+          #   - .meta/**/*.json: 0.0.10 serialises each page's sidecar
+          #     from an unordered map, so key order (not content)
+          #     differs run-to-run. Tracked upstream; drop this filter
+          #     once a staticdatagen release sorts the keys.
+          #
+          # PERMANENT EXCLUSION: .ssg-plugin-cache.json is ssg's own
+          # incremental-rebuild cache (src/plugins/plugin.rs). It is
+          # correctly *path-dependent* — keyed by this build's absolute
+          # output path — so it legitimately differs whenever the two
+          # trees being compared live at different absolute paths (as
+          # both jobs in this workflow do). Key *order* within the file
+          # is deterministic (BTreeMap); only the path-keyed content is
+          # expected to vary, so it is out of scope for this gate.
+          find . -type f \
+            ! -name 'news-sitemap.xml' \
+            ! -path './.meta/*' \
+            ! -name '.ssg-plugin-cache.json' \
+            -print0 | LC_ALL=C sort -z \
             | while IFS= read -r -d '' f; do
                 printf '%s  %s\n' \
                   "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"
@@ -177,10 +193,19 @@ jobs:
           hash_tree() {
             (
               cd "$1"
-              # news-sitemap.xml excluded — same staticdatagen-0.0.10
-              # wall-clock fallback as the cross-OS job above; drop the
-              # filter with the =0.0.11 pin.
-              find . -type f ! -name 'news-sitemap.xml' -print0 | LC_ALL=C sort -z \
+              # Same exclusions as the cross-OS job above:
+              # news-sitemap.xml + .meta/**/*.json are a staticdatagen
+              # 0.0.10 upstream nondeterminism (wall-clock fallback;
+              # unordered sidecar map) tracked for the =0.0.11 pin.
+              # .ssg-plugin-cache.json is ssg's own incremental cache,
+              # permanently path-keyed to this build's absolute output
+              # directory — expected to differ across $RUNNER_TEMP
+              # subdirectories regardless of any content nondeterminism.
+              find . -type f \
+                ! -name 'news-sitemap.xml' \
+                ! -path './.meta/*' \
+                ! -name '.ssg-plugin-cache.json' \
+                -print0 | LC_ALL=C sort -z \
                 | while IFS= read -r -d '' f; do
                     printf '%s  %s\n' \
                       "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"

@@ -2,7 +2,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! # Audit Example — 15-gate CI audit (v0.0.44 #549; +lang_consistency in v0.0.47 #586)
+//! # Audit Example — 15-gate CI audit (v0.0.44 #549; +`lang_consistency` in v0.0.47 #586)
 //!
 //! Demonstrates the native CI audit runner against a small fixture
 //! site that is **deliberately well-formed**: a passing demo, not a
