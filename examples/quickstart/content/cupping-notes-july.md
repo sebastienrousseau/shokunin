@@ -2,11 +2,16 @@
 title: "Cupping notes — July"
 date: "July 1, 2026"
 description: "Three quick impressions from this morning's cupping table."
+banner_alt: "Heron Coffee banner"
+banner_height: "398"
+banner_width: "1440"
+banner: ""
 charset: "utf-8"
 logo_alt: "Heron Coffee logo"
 logo_height: "33"
 logo_width: "100"
 logo: ""
+name: "Heron Coffee"
 ---
 
 # Cupping notes — July
@@ -24,8 +29,16 @@ All three will be on the brew bar from Saturday.
 
 <!--
     This post is deliberately minimal (v0.0.47, issue #586, spec
-    A4 + A2/B1): front matter carries ONLY `title`, `date`, and
-    `description` — no permalink, no layout, no SEO boilerplate.
+    A4 + A2/B1): front matter carries no `permalink`, no `layout`,
+    and none of the per-page SEO/social/feed boilerplate every other
+    page in this example repeats (og/twitter meta, news_*, RSS
+    item_* fields, etc.). It still carries `charset`, `name`, and
+    the `banner_*`/`logo_*` groups — the shared site-chrome fields
+    the page template renders unconditionally from front matter with
+    no site-wide fallback. Omitting any of those produces broken
+    output instead of demonstrating anything about minimal front
+    matter: an inaccessible image element with no alt text, a
+    missing charset meta tag, or an empty JSON-LD WebPage name.
 
     - The long-form date ("July 1, 2026") exercises the shared
       flexible date parser (`ssg::dates::parse_flexible_date`) used
