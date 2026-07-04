@@ -70,7 +70,7 @@ proptest = "1"
 wasm-bindgen-test = "0.3"
 # getrandom 0.3 hard-errors on wasm32-unknown-unknown unless the `wasm_js`
 # feature is enabled. Surfacing it here just to enable the feature.
-getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 # Latency bench (issue #545 AC3 — p99 < 100 ms on 1000-doc corpus).
 # Plain `#[no_harness]` binary so we can run an assertion-style check
