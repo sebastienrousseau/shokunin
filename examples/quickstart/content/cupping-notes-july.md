@@ -2,6 +2,11 @@
 title: "Cupping notes — July"
 date: "July 1, 2026"
 description: "Three quick impressions from this morning's cupping table."
+charset: "utf-8"
+logo_alt: "Heron Coffee logo"
+logo_height: "33"
+logo_width: "100"
+logo: ""
 ---
 
 # Cupping notes — July

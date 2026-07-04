@@ -10,7 +10,6 @@
 
 use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 const NAME: &str = "hreflang";
 
@@ -158,20 +157,25 @@ fn resolve_href(href: &str, root: &std::path::Path) -> String {
     } else {
         stripped
     };
-    let candidate = PathBuf::from(path_part);
     let needs_index = path_part.is_empty()
         || path_part.ends_with('/')
         || !path_part.ends_with(".html");
-    let with_index = if needs_index {
-        candidate.join("index.html")
+    // This is a URL path, not an OS filesystem path — build it with a
+    // literal `/` rather than `PathBuf::join`, which uses `\` on
+    // Windows and would silently break every comparison against the
+    // (always `/`-separated) page paths this gate matches against.
+    let with_index = if !needs_index {
+        path_part.to_string()
+    } else if path_part.is_empty() {
+        "index.html".to_string()
     } else {
-        candidate
+        format!("{}/index.html", path_part.trim_end_matches('/'))
     };
     // Returned regardless of existence — callers report "target
     // missing" against the resolved path so authors get an actionable
     // message.
     let _ = root;
-    with_index.to_string_lossy().into_owned()
+    with_index
 }
 
 #[cfg(test)]

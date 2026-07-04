@@ -978,6 +978,11 @@ mod tests {
 
     #[test]
     #[serial_test::serial(cwd, scaffold_fp)]
+    // Windows locks a directory that is a process's current working
+    // directory, so `fs::remove_dir` on it fails with "the process
+    // cannot access the file" — there is no way to simulate a deleted
+    // cwd via this mechanism on that platform.
+    #[cfg(not(windows))]
     fn scaffold_project_fails_when_cwd_has_been_deleted() {
         // Deleting the process's working directory makes
         // `std::env::current_dir()` fail, driving the `?` on line 32.

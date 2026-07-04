@@ -1337,12 +1337,17 @@ fn classify_ureq_error(
             // formatted message which is stable across versions.
             let kind = transport.kind();
             let msg = transport.to_string();
+            // Windows phrases the same underlying WSAETIMEDOUT
+            // condition as "did not properly respond ... (os error
+            // 10060)" rather than "timed out" — match the OS error
+            // code too so the classification isn't Unix-phrasing-only.
             let looks_like_timeout = matches!(
                 kind,
                 ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
             ) && (msg.contains("timed out")
                 || msg.contains("timeout")
-                || msg.contains("deadline"));
+                || msg.contains("deadline")
+                || msg.contains("os error 10060"));
             if looks_like_timeout {
                 SsgError::LlmTimeout { duration: timeout }
             } else {

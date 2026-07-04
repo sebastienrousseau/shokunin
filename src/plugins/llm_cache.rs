@@ -844,6 +844,12 @@ mod tests {
             &[
                 ("SSG_LLM_CACHE_DIR", None),
                 ("XDG_CACHE_HOME", None),
+                // On Windows, LOCALAPPDATA is a real, always-set env
+                // var that the production code checks before falling
+                // through to HOME — must be cleared too so this test
+                // exercises the actual "nothing configured" fallback
+                // on every platform.
+                ("LOCALAPPDATA", None),
                 ("HOME", None),
             ],
             || {
@@ -861,6 +867,7 @@ mod tests {
             &[
                 ("SSG_LLM_CACHE_DIR", None),
                 ("XDG_CACHE_HOME", None),
+                ("LOCALAPPDATA", None),
                 ("HOME", Some("")),
             ],
             || {
