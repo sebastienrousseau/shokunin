@@ -18,6 +18,7 @@ build/
 !/docs/compare/
 !/docs/perf/
 !/docs/security/
+!/docs/plans/
 /examples/public/
 /examples/build/
 /mysite/
