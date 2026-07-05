@@ -149,7 +149,7 @@ pub fn parse_frontmatter(
         if let Some(end) = after.find("---") {
             let fm_str = &after[..end];
             let body = &after[end + 3..];
-            match serde_yaml_ng::from_str::<serde_json::Value>(fm_str) {
+            match noyalib::from_str::<serde_json::Value>(fm_str) {
                 Ok(serde_json::Value::Object(map)) => {
                     return (map.into_iter().collect(), body.to_string());
                 }
