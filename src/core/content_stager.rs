@@ -231,7 +231,7 @@ fn collect_entries(
 /// # Examples
 ///
 /// ```rust
-/// use ssg::core_group::content_stager::collect_template_vars;
+/// use ssg::content_stager::collect_template_vars;
 /// use std::fs;
 ///
 /// let tmp = tempfile::tempdir().unwrap();
