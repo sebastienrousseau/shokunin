@@ -4896,7 +4896,7 @@ dependencies = [
  "lightningcss",
  "log",
  "lol_html",
- "minify-html 0.15.0",
+ "minify-html 0.18.1",
  "minijinja",
  "notify",
  "noyalib 0.0.12",
