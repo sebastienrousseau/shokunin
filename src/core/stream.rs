@@ -461,6 +461,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn test_process_batch_copies_files() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src");
@@ -479,6 +480,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn test_process_batch_empty_directory() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src");
@@ -490,6 +492,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn test_process_batch_nested_dirs() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src");
@@ -581,6 +584,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn test_benchmark_throughput_runs() {
         let result = benchmark_throughput(100).unwrap();
         assert_eq!(result.files_processed, 100);
@@ -704,6 +708,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_empty_directory() {
         // Arrange — source directory with no files
         let tmp = tempdir().unwrap();
@@ -888,6 +893,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_nonexistent_src_dir() {
         let tmp = tempdir().unwrap();
         let result = process_batch(
@@ -899,6 +905,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_processor_error_stops_batch() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src");
@@ -913,6 +920,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_throughput_finite_for_fast_run() {
         let tmp = tempdir().unwrap();
         let src = tmp.path().join("src");
@@ -1006,6 +1014,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn benchmark_throughput_single_file() {
         let result = benchmark_throughput(1).unwrap();
         assert_eq!(result.files_processed, 1);
@@ -1143,6 +1152,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_dst_creation_failure_fires_context_closure() {
         // dst_dir nests under an existing *file*, so create_dir_all
         // fails and the `cannot create` context closure runs.
@@ -1159,6 +1169,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(stream_strip_prefix)]
     fn process_batch_per_file_parent_creation_failure_propagates() {
         // The per-file `create_dir_all(parent)?` fails when the
         // destination subdirectory path is blocked by a plain file.
