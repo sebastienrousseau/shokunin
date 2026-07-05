@@ -61,6 +61,12 @@ criteria = "safe-to-deploy"
 version = "0.0.4"
 notes = "Same-author crate, reviewed from the exact published crates.io source (5 source files). #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion."
 
+[[audits.noyalib]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.12"
+notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
+
 [[audits.rss-gen]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
@@ -84,9 +90,3 @@ who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.2"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."
-
-[[audits.noyalib]]
-who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
-criteria = "safe-to-deploy"
-version = "0.0.12"
-notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
