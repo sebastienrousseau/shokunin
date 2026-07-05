@@ -1518,4 +1518,172 @@ required = true
         assert_eq!(a, b);
         assert_ne!(FieldType::String, FieldType::Bool);
     }
+
+    // -------------------------------------------------------------------
+    // Error paths: unreadable inputs and fallback formatting
+    // -------------------------------------------------------------------
+
+    /// Minimal valid schema TOML used by the error-path tests.
+    const MINIMAL_SCHEMA: &str = r#"
+[[schemas]]
+name = "post"
+
+[[schemas.fields]]
+name = "title"
+type = "string"
+required = true
+"#;
+
+    #[test]
+    fn load_schemas_read_failure_carries_context() {
+        // Non-UTF-8 bytes make `read_to_string` fail, exercising the
+        // `with_context` closure on lines 190-192.
+        let dir = tempdir().unwrap();
+        let schema = dir.path().join("content.schema.toml");
+        fs::write(&schema, [0xFF, 0xFE, 0x00]).unwrap();
+
+        let err = load_schemas(&schema).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("failed to read schema file"),
+            "context should mention the schema file: {err:#}"
+        );
+    }
+
+    #[test]
+    fn fm_value_to_string_tagged_uses_debug_fallback() {
+        let tagged = frontmatter_gen::Value::Tagged(
+            "tag".to_string(),
+            Box::new(frontmatter_gen::Value::Boolean(true)),
+        );
+        let rendered = fm_value_to_string(&tagged);
+        assert!(
+            rendered.contains("Tagged"),
+            "debug fallback expected: {rendered}"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn validate_content_dir_unreadable_dir_propagates() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir(&content).unwrap();
+        let schemas = parse_schemas(MINIMAL_SCHEMA).unwrap();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = validate_content_dir(&content, &schemas);
+
+        let _ =
+            fs::set_permissions(&content, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate
+        // Ok; when the failure fired, the error must render non-empty.
+        assert!(res.err().is_none_or(|e| !format!("{e:#}").is_empty()));
+    }
+
+    #[test]
+    fn validate_content_dir_read_failure_carries_context() {
+        // A non-UTF-8 `.md` file exercises the `with_context` closure
+        // on line 480.
+        let dir = tempdir().unwrap();
+        let schemas = parse_schemas(MINIMAL_SCHEMA).unwrap();
+        fs::write(dir.path().join("bad.md"), [0xFF, 0xFE]).unwrap();
+
+        let err = validate_content_dir(dir.path(), &schemas).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("failed to read"),
+            "context should mention the failed read: {err:#}"
+        );
+    }
+
+    #[test]
+    fn validate_content_dir_skips_files_without_frontmatter() {
+        // No frontmatter block ⇒ `continue` on line 483.
+        let dir = tempdir().unwrap();
+        let schemas = parse_schemas(MINIMAL_SCHEMA).unwrap();
+        fs::write(dir.path().join("plain.md"), "# Just a heading\n").unwrap();
+
+        let errs = validate_content_dir(dir.path(), &schemas).unwrap();
+        assert!(errs.is_empty());
+    }
+
+    #[test]
+    fn plugin_before_compile_schema_read_error_maps_to_io() {
+        // Unreadable schema file drives the `map_err` closure on
+        // line 525.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("content.schema.toml"), [0xFF, 0xFE, 0x00])
+            .unwrap();
+        let ctx = PluginContext::new(
+            dir.path(),
+            Path::new("build"),
+            Path::new("public"),
+            Path::new("templates"),
+        );
+
+        assert!(ContentValidationPlugin.before_compile(&ctx).is_err());
+    }
+
+    #[test]
+    fn plugin_before_compile_logs_schema_count() {
+        // With the logger raised to Trace, the `info!` format
+        // arguments on lines 534-535 execute.
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("content.schema.toml"), MINIMAL_SCHEMA)
+            .unwrap();
+        fs::write(
+            dir.path().join("ok.md"),
+            "---\ntitle: Hi\nschema: post\n---\nBody",
+        )
+        .unwrap();
+        let ctx = PluginContext::new(
+            dir.path(),
+            Path::new("build"),
+            Path::new("public"),
+            Path::new("templates"),
+        );
+
+        assert!(ContentValidationPlugin.before_compile(&ctx).is_ok());
+    }
+
+    #[test]
+    fn plugin_before_compile_validate_error_maps_to_io() {
+        // Valid schema + unreadable content file drives the second
+        // `map_err` closure (line 539).
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("content.schema.toml"), MINIMAL_SCHEMA)
+            .unwrap();
+        fs::write(dir.path().join("bad.md"), [0xFF, 0xFE]).unwrap();
+        let ctx = PluginContext::new(
+            dir.path(),
+            Path::new("build"),
+            Path::new("public"),
+            Path::new("templates"),
+        );
+
+        assert!(ContentValidationPlugin.before_compile(&ctx).is_err());
+    }
+
+    #[test]
+    fn validate_with_schema_load_error_propagates() {
+        // The `?` on line 610.
+        let dir = tempdir().unwrap();
+        let schema = dir.path().join("schema.toml");
+        fs::write(&schema, [0xFF, 0xFE]).unwrap();
+
+        assert!(validate_with_schema(dir.path(), &schema).is_err());
+    }
+
+    #[test]
+    fn validate_with_schema_content_error_propagates() {
+        // The `?` on line 619.
+        let dir = tempdir().unwrap();
+        let schema = dir.path().join("schema.toml");
+        fs::write(&schema, MINIMAL_SCHEMA).unwrap();
+        fs::write(dir.path().join("bad.md"), [0xFF, 0xFE]).unwrap();
+
+        assert!(validate_with_schema(dir.path(), &schema).is_err());
+    }
 }

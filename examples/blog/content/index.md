@@ -1,12 +1,12 @@
 ---
 
-# Front Matter (YAML)
+## Front Matter (YAML)
 
 author: "hello@threshold.press (Threshold)"
 banner_alt: "Threshold banner"
 banner_height: "398"
 banner_width: "1440"
-banner: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>"
+banner: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNDQwIDM5OCcgcHJlc2VydmVBc3BlY3RSYXRpbz0neE1pZFlNaWQgc2xpY2UnPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0nZycgeDE9JzAnIHkxPScwJyB4Mj0nMScgeTI9JzEnPjxzdG9wIG9mZnNldD0nMCcgc3RvcC1jb2xvcj0nIzE2NjUzNCcvPjxzdG9wIG9mZnNldD0nMScgc3RvcC1jb2xvcj0nIzg2ZWZhYycvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPScxNDQwJyBoZWlnaHQ9JzM5OCcgZmlsbD0ndXJsKCNnKScvPjwvc3ZnPg=="
 cdn: "https://cloudcdn.pro"
 changefreq: "weekly"
 charset: "utf-8"
@@ -22,7 +22,7 @@ id: "https://threshold.press"
 image_alt: "Threshold logo"
 image_height: "630"
 image_width: "1200"
-image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>"
+image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNDQwIDM5OCcgcHJlc2VydmVBc3BlY3RSYXRpbz0neE1pZFlNaWQgc2xpY2UnPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0nZycgeDE9JzAnIHkxPScwJyB4Mj0nMScgeTI9JzEnPjxzdG9wIG9mZnNldD0nMCcgc3RvcC1jb2xvcj0nIzE2NjUzNCcvPjxzdG9wIG9mZnNldD0nMScgc3RvcC1jb2xvcj0nIzg2ZWZhYycvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPScxNDQwJyBoZWlnaHQ9JzM5OCcgZmlsbD0ndXJsKCNnKScvPjwvc3ZnPg=="
 keywords: "blog, ssg, static site generator, rust, example"
 language: "en-GB"
 layout: "index"
@@ -30,7 +30,7 @@ locale: "en_GB"
 logo_alt: "Threshold logo"
 logo_height: "33"
 logo_width: "100"
-logo: ""
+logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMzMnPjxyZWN0IHdpZHRoPScxMDAnIGhlaWdodD0nMzMnIHJ4PSc2JyBmaWxsPScjMTY2NTM0Jy8+PHRleHQgeD0nNTAnIHk9JzIyJyBmb250LWZhbWlseT0nc2Fucy1zZXJpZicgZm9udC1zaXplPScxMycgZm9udC13ZWlnaHQ9JzYwMCcgZmlsbD0nI2ZmZicgdGV4dC1hbmNob3I9J21pZGRsZSc+VGhyZXNob2xkPC90ZXh0Pjwvc3ZnPg=="
 name: "Threshold"
 permalink: "https://threshold.press/"
 rating: "general"
@@ -45,7 +45,7 @@ title: "Threshold"
 url: "https://threshold.press"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
-# News - The News SiteMap front matter (YAML).
+## News - The News SiteMap front matter (YAML).
 news_genres: "Blog"
 news_keywords: "blog, ssg, example"
 news_language: "en"
@@ -55,7 +55,7 @@ news_publication_date: "Wed, 16 Apr 2026 00:00:00 GMT"
 news_publication_name: "Threshold"
 news_title: "Threshold"
 
-# RSS - The RSS feed front matter (YAML).
+## RSS - The RSS feed front matter (YAML).
 atom_link: https://threshold.press/rss.xml
 category: "Technology"
 docs: https://validator.w3.org/feed/docs/rss2.html
@@ -72,7 +72,7 @@ ttl: "60"
 type: "website"
 webmaster: hello@threshold.press (Threshold)
 
-# Apple - The Apple front matter (YAML).
+## Apple - The Apple front matter (YAML).
 apple_mobile_web_app_orientations: "portrait"
 apple_touch_icon_sizes: "192x192"
 apple-mobile-web-app-capable: "yes"
@@ -81,20 +81,20 @@ apple-mobile-web-app-status-bar-style: "black-translucent"
 apple-mobile-web-app-title: "Threshold"
 apple-touch-fullscreen: "yes"
 
-# MS Application - The MS Application front matter (YAML).
+## MS Application - The MS Application front matter (YAML).
 msapplication-navbutton-color: "rgb(0,102,204)"
 
-# Twitter Card - The Twitter Card front matter (YAML).
+## Twitter Card - The Twitter Card front matter (YAML).
 twitter_card: "summary"
 twitter_creator: "blog"
 twitter_description: "An accessibility journal: WCAG, EAA, and inclusive design writing for product teams."
-twitter_image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 398' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23166534'/><stop offset='1' stop-color='%2386efac'/></linearGradient></defs><rect width='1440' height='398' fill='url(%23g)'/></svg>"
+twitter_image: ""
 twitter_image_alt: "Threshold logo"
 twitter_site: "blog"
 twitter_title: "Threshold"
 twitter_url: "https://threshold.press"
 
-# Humans.txt - The Humans.txt front matter (YAML).
+## Humans.txt - The Humans.txt front matter (YAML).
 author_website: "https://threshold.press"
 author_twitter: "@blog"
 author_location: "London, UK"

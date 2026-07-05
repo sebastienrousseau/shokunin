@@ -1,8 +1,92 @@
 
 # cargo-vet audits file
 
+[[audits.base64]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.13.1"
+notes = "Reviewed crates.io source. #![forbid(unsafe_code)]; no build.rs, no proc-macro, no network, no process spawning, no env/credential access. Pure base64 encode/decode; the only grep hits for `unsafe` are comments explaining why unsafe was avoided."
+
+[[audits.base64]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.22.1"
+notes = "Reviewed crates.io source. #![forbid(unsafe_code)]; no build.rs, no proc-macro, no network, no process spawning, no env/credential access. Pure base64 engine; `unsafe` grep hits are comments only."
+
+[[audits.frontmatter-gen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.6"
+notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; build.rs is a version_check rustc-version gate only; no network, no process spawning, no proc-macro. std::env reads are documented config knobs (MAX_FRONTMATTER_SIZE, MAX_NESTING_DEPTH, VALIDATE_STRUCTURE) with parse-or-default fallback. Filesystem removal (ssg.rs remove_dir_all) is limited to the caller-supplied output_dir."
+
+[[audits.html-generator]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.3"
+notes = "Same-author crate, reviewed from the exact published crates.io source. Zero unsafe blocks (no forbid attribute, but the only `unsafe` grep hits are comrak's render.unsafe_ flag); build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion. Caveat disclosed: comrak raw-HTML passthrough (render.unsafe_ = true) is unconditionally enabled in this version — safe for trusted own-content markdown (ssg's use), but callers feeding untrusted markdown must sanitize downstream."
+
+[[audits.html-generator]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.6"
+notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; build.rs is a version_check rustc-version gate only; no network, no process spawning, no fs deletion. Raw-HTML passthrough is opt-in (allow_unsafe_html defaults to false) with ammonia sanitization available. Single env read (HTML_GENERATOR_EMOJI_DATA) loads an alternate emoji dataset from a caller-controlled path, falling back to the bundled include_str! data."
+
+[[audits.http-handle]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.4"
+notes = "Same-author crate (AGPL-3.0; consumed by ssg's dev-server path only, never linked into build output). Reviewed from the exact published crates.io source. build.rs is a version_check rustc-version gate only; no proc-macro; network use (std::net/tokio TCP) is the crate's declared purpose as an HTTP server. unsafe sites inspected individually: test-only std::env set_var/remove_var pairs, and one libc::sendfile FFI call (Linux-only, feature high-perf) with bounded chunk sizes and owned fds. EnvSecretProvider reads only explicitly namespaced env keys configured by the caller — no ambient credential harvesting."
+
+[[audits.http-handle]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.5"
+notes = "Same-author crate (AGPL-3.0; dev-server-only in ssg). Reviewed from the exact published crates.io source. #![deny(unsafe_code)] with documented, safety-commented allow sites: the Linux sendfile FFI path and Rust-2024 test-only env mutations. build.rs is a version_check rustc-version gate only; network use is the declared HTTP-server function; no process spawning; no ambient credential access."
+
+[[audits.mdx-gen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.1"
+notes = "Same-author crate, reviewed from the exact published crates.io source (4 source files). Zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion. comrak raw-HTML passthrough enabled (trusted-content markdown pipeline)."
+
+[[audits.mdx-gen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.2"
+notes = "Same-author crate, reviewed from the exact published crates.io source (4 source files, near-identical to 0.0.1 modulo the comrak field rename to r#unsafe). Zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion."
+
+[[audits.metadata-gen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.4"
+notes = "Same-author crate, reviewed from the exact published crates.io source (5 source files). #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion."
+
 [[audits.noyalib]]
 who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
 criteria = "safe-to-deploy"
 version = "0.0.12"
 notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'
+
+[[audits.rss-gen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.5"
+notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; zero unsafe blocks; build.rs is a version_check rustc-version gate only; no network, no process spawning, no env access, no fs deletion. Pure RSS/Atom XML generation and parsing."
+
+[[audits.staticdatagen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.9"
+notes = "Same-author crate, reviewed from the exact published crates.io source (37 files). #![forbid(unsafe_code)]; build.rs is a version_check rustc-version gate only; no network. Finding disclosed: macros/shell_macros.rs exposes CommandExecutor, an opt-in API that runs caller-supplied strings via `sh -c` with an explicit no-sanitization warning in its docs. It executes nothing on its own, is not reachable from ssg's build pipeline (ssg CI enforces a no-shellout lint), and is safe as long as callers pass trusted strings. fs::remove_dir_all calls operate only on caller-supplied directories (public_dir cleanup)."
+
+[[audits.staticdatagen]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.0.9 -> 0.0.10"
+notes = "Delta review of the v0.0.10 release (2026-06-28, PR #72) against the fully-audited 0.0.9 baseline, performed 2026-07-03/04 from the local checkout fast-forwarded to the released tag while preparing the 0.0.11 fixes. Delta closes upstream #67-#71: compiler/service.rs staging simplifications, recursive nested-locale content walk, staticweaver 0.0.3 + rss-gen 0.0.6 dep bumps. No new unsafe, no new build.rs logic, no new network or process-spawn surface in the delta; the pre-existing opt-in CommandExecutor caveat from the 0.0.9 audit is unchanged."
+
+[[audits.staticweaver]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.2"
+notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."

@@ -193,10 +193,12 @@ mod tests {
 
     #[test]
     fn external_script_src_does_not_count_toward_js_budget() {
+        // Tiny page-weight budget yields PERF-PAGE-OVER, keeping `f`
+        // non-empty so the no-JS-OVER predicate actually evaluates.
         let html = r#"<html><body><script src="https://cdn.example/big.js"></script></body></html>"#;
         let opts = AuditOptions {
             js_budget: 50,
-            page_weight_budget: 1_000_000,
+            page_weight_budget: 10,
             ..AuditOptions::default()
         };
         let f = PerformanceGate.run(&site(html), &opts);
@@ -208,10 +210,11 @@ mod tests {
 
     #[test]
     fn protocol_relative_script_src_is_external() {
+        // Tiny page-weight budget keeps `f` non-empty (see above).
         let html = r#"<html><body><script src="//cdn.example/big.js"></script></body></html>"#;
         let opts = AuditOptions {
             js_budget: 1,
-            page_weight_budget: 1_000_000,
+            page_weight_budget: 10,
             ..AuditOptions::default()
         };
         let f = PerformanceGate.run(&site(html), &opts);
@@ -302,6 +305,34 @@ mod tests {
         };
         let f = PerformanceGate.run(&site(&html), &opts);
         assert!(f.iter().any(|x| x.code.as_deref() == Some("PERF-JS-OVER")));
+    }
+
+    #[test]
+    fn unterminated_inline_script_stops_counting() {
+        // No closing </script>: the scanner bails instead of looping.
+        assert_eq!(inline_js_bytes("<html><script>var x = 1;"), 0);
+    }
+
+    #[test]
+    fn missing_referenced_js_file_adds_nothing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        let html = r#"<script src="ghost.js"></script>"#;
+        let page = root.join("page.html");
+        let got = referenced_js_bytes(&root, &page, html);
+        std::mem::forget(tmp);
+        assert_eq!(got, 0);
+    }
+
+    #[test]
+    fn referenced_js_for_parentless_page_falls_back_to_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().to_path_buf();
+        std::fs::write(root.join("app.js"), vec![0u8; 123]).unwrap();
+        let html = r#"<script src="app.js"></script>"#;
+        let got = referenced_js_bytes(&root, std::path::Path::new(""), html);
+        std::mem::forget(tmp);
+        assert_eq!(got, 123);
     }
 
     #[test]

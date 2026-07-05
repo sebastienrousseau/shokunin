@@ -238,6 +238,28 @@ mod tests {
     }
 
     #[test]
+    fn emit_sidecars_reading_time_scales_with_long_body() {
+        // Every other test body is a handful of words, so
+        // `(word_count / 200).max(1)` always takes the `1` branch.
+        // Use a body with 400+ words so the quotient itself (2) wins
+        // over the floor, exercising the other side of that
+        // computation.
+        let (_tmp, content, sidecars) = make_layout();
+        let long_body = "word ".repeat(450);
+        let md = format!("---\ntitle: Long\n---\n{long_body}");
+        fs::write(content.join("long.md"), md).unwrap();
+
+        let count = emit_sidecars(&content, &sidecars).unwrap();
+        assert_eq!(count, 1);
+
+        let body = fs::read_to_string(sidecars.join("long.meta.json")).unwrap();
+        let parsed: HashMap<String, serde_json::Value> =
+            serde_json::from_str(&body).unwrap();
+        assert_eq!(parsed.get("word_count").unwrap().as_u64().unwrap(), 450);
+        assert_eq!(parsed.get("reading_time").unwrap().as_u64().unwrap(), 2);
+    }
+
+    #[test]
     fn emit_sidecars_skips_files_without_frontmatter() {
         let (_tmp, content, sidecars) = make_layout();
         fs::write(content.join("plain.md"), "No frontmatter here.").unwrap();
@@ -388,6 +410,31 @@ mod tests {
         fs::create_dir_all(&sidecars).unwrap();
 
         let html = site.join("ghost.html");
+        fs::write(&html, "").unwrap();
+
+        let result = read_sidecar_for_html(&html, &site, &sidecars).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn read_sidecar_for_html_path_outside_site_dir_uses_fallback_rel() {
+        // `html_path.strip_prefix(site_dir).unwrap_or(html_path)` — the
+        // `unwrap_or` fallback only fires when `html_path` is *not*
+        // rooted under `site_dir`. Every other test in this module
+        // passes an `html_path` that lives under `site`, so the
+        // fallback arm itself was never driven. Pass a path from a
+        // completely unrelated tree to force `strip_prefix` to return
+        // `Err`, exercising the fallback (`rel = html_path`, which is
+        // then absolute, so both the direct and `.md` lookups miss and
+        // the function still resolves cleanly to `Ok(None)`).
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join("sidecars");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let unrelated = tempdir().expect("unrelated tempdir");
+        let html = unrelated.path().join("elsewhere.html");
         fs::write(&html, "").unwrap();
 
         let result = read_sidecar_for_html(&html, &site, &sidecars).unwrap();
@@ -555,6 +602,82 @@ mod tests {
         assert!(
             files.len() <= MAX_DIR_DEPTH + 1,
             "depth guard should have stopped descent"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // emit_sidecars / read_sidecar — error paths
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn emit_sidecars_propagates_unreadable_content_dir() {
+        // `collect_md_files` fails when the content directory itself
+        // can't be listed — the `?` on line 44.
+        use std::os::unix::fs::PermissionsExt;
+        let (_dir, content, sidecars) = make_layout();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .expect("chmod content dir");
+
+        let res = emit_sidecars(&content, &sidecars);
+
+        // Restore perms so tempdir cleanup works.
+        let _ =
+            fs::set_permissions(&content, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate
+        // Ok; when the failure fired, the error must render non-empty.
+        assert!(res.err().is_none_or(|e| !format!("{e:#}").is_empty()));
+    }
+
+    #[test]
+    fn emit_sidecars_read_failure_carries_file_context() {
+        // A `.md` file with non-UTF-8 bytes makes `read_to_string`
+        // fail, exercising the `with_context` closure on line 49.
+        let (_dir, content, sidecars) = make_layout();
+        fs::write(content.join("bad.md"), [0xFF, 0xFE, 0x00]).unwrap();
+
+        let err = emit_sidecars(&content, &sidecars).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("Failed to read"),
+            "context should mention the failed read: {err:#}"
+        );
+    }
+
+    #[test]
+    fn emit_sidecars_create_dir_failure_propagates() {
+        // Pointing `sidecar_dir` at an existing *file* makes the
+        // `create_dir_all` on line 74 fail.
+        let (dir, content, _sidecars) = make_layout();
+        fs::write(content.join("a.md"), "---\ntitle: X\n---\nBody").unwrap();
+        let blocker = dir.path().join("blocker");
+        fs::write(&blocker, "i am a file").unwrap();
+
+        assert!(emit_sidecars(&content, &blocker).is_err());
+    }
+
+    #[test]
+    fn emit_sidecars_write_failure_propagates() {
+        // A *directory* squatting on the sidecar path makes the
+        // `fs::write` on line 78 fail.
+        let (_dir, content, sidecars) = make_layout();
+        fs::write(content.join("a.md"), "---\ntitle: X\n---\nBody").unwrap();
+        fs::create_dir_all(sidecars.join("a.meta.json")).unwrap();
+
+        assert!(emit_sidecars(&content, &sidecars).is_err());
+    }
+
+    #[test]
+    fn read_sidecar_read_failure_carries_context() {
+        // A sidecar that exists but holds non-UTF-8 bytes exercises
+        // the `with_context` closure on lines 109-111.
+        let dir = tempdir().expect("tempdir");
+        let html = dir.path().join("page.html");
+        fs::write(dir.path().join("page.meta.json"), [0xFF, 0xFE]).unwrap();
+
+        let err = read_sidecar(&html).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("Failed to read sidecar"),
+            "context should mention the sidecar: {err:#}"
         );
     }
 }

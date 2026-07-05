@@ -474,12 +474,10 @@ mod tests {
         let budget = MemoryBudget::from_mb(512);
         let result =
             batched_content_files(&dir.path().join("nonexistent"), &budget);
-        // walk_files treats a missing dir as empty, so batched returns Ok([])
-        // or propagates an error — either is acceptable.
-        if let Ok(batches) = result {
-            assert!(batches.is_empty());
-        }
-        // Err is also acceptable — nonexistent dir may propagate error
+        // walk_files treats a missing dir as empty, so batched returns
+        // Ok([]) — asserted without a conditional so no dead branch.
+        let batches = result.unwrap_or_default();
+        assert!(batches.is_empty());
     }
 
     #[test]
@@ -729,5 +727,246 @@ mod tests {
             42,
         );
         // Batch dirs are cleaned up, so we just verify no panic
+    }
+
+    #[test]
+    fn compile_batch_succeeds_and_merges_valid_page() {
+        // Mirrors the pipeline build fixture (full frontmatter plus a
+        // page template) so staticdatagen's compile succeeds — driving
+        // the merge-into-site_dir branch after a successful batch.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("public");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&build).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(
+            content.join("index.md"),
+            "---\ntitle: \"Home\"\ndescription: \"home\"\n\
+             permalink: \"https://example.com/\"\n---\nhome body",
+        )
+        .unwrap();
+        fs::write(
+            templates.join("page.html"),
+            "<!doctype html><html><body>{{ content }}</body></html>",
+        )
+        .unwrap();
+
+        let result = compile_batch(
+            &[content.join("index.md")],
+            &content,
+            &build,
+            &site,
+            &templates,
+            7,
+        );
+        assert!(result.is_ok(), "expected successful batch: {result:?}");
+        assert!(site.is_dir(), "site dir must be created on success");
+    }
+
+    #[test]
+    fn compile_batch_fails_when_build_dir_is_a_file() {
+        // build_dir exists as a plain file, so creating the batch
+        // content dir underneath it fails immediately.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build_file = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("a.md"), "x").unwrap();
+        fs::write(&build_file, "i am a file").unwrap();
+
+        let result = compile_batch(
+            &[content.join("a.md")],
+            &content,
+            &build_file,
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+            0,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn compile_batch_fails_when_dest_parent_blocked_by_file() {
+        // The per-file parent create_dir_all fails: the batch content
+        // dir already contains a plain file where a subdirectory is
+        // needed.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        fs::create_dir_all(content.join("sub")).unwrap();
+        fs::write(content.join("sub/a.md"), "x").unwrap();
+        let batch_content = build.join(".batch-3");
+        fs::create_dir_all(&batch_content).unwrap();
+        fs::write(batch_content.join("sub"), "blocking file").unwrap();
+
+        let result = compile_batch(
+            &[content.join("sub/a.md")],
+            &content,
+            &build,
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+            3,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn compile_batch_fails_when_batch_build_dir_blocked() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("a.md"), "x").unwrap();
+        fs::create_dir_all(&build).unwrap();
+        // Block the derived batch-build path with a plain file.
+        fs::write(build.join(".batch-5-build"), "blocking file").unwrap();
+
+        let result = compile_batch(
+            &[content.join("a.md")],
+            &content,
+            &build,
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+            5,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn compile_batch_fails_when_merge_dir_blocked_after_successful_compile() {
+        // Every other failure test in this module fails *before*
+        // reaching the merge step (blocked temp dirs abort the copy or
+        // the compile itself). Here the compile succeeds — two real
+        // pages, one of them nested under `about/` — but the site dir
+        // already has a plain *file* named `about`, so
+        // `merge_dir(&batch_site, site_dir)?` fails on
+        // `create_dir_all` when it tries to recreate that
+        // subdirectory. This drives the `?` propagation inside the
+        // `if compile_result.is_ok()` block.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("public");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&build).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(
+            content.join("index.md"),
+            "---\ntitle: \"Home\"\ndescription: \"home\"\n\
+             permalink: \"https://example.com/\"\n---\nhome body",
+        )
+        .unwrap();
+        fs::write(
+            content.join("about.md"),
+            "---\ntitle: \"About\"\ndescription: \"about\"\n\
+             permalink: \"https://example.com/about/\"\n---\nabout body",
+        )
+        .unwrap();
+        fs::write(
+            templates.join("page.html"),
+            "<!doctype html><html><body>{{ content }}</body></html>",
+        )
+        .unwrap();
+
+        // Pre-block the nested output directory with a plain file so
+        // merge_dir's `create_dir_all(&dest)` fails once compile
+        // succeeds and produces `about/index.html` in the batch output.
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("about"), "blocking file, not a directory")
+            .unwrap();
+
+        let result = compile_batch(
+            &[content.join("index.md"), content.join("about.md")],
+            &content,
+            &build,
+            &site,
+            &templates,
+            11,
+        );
+        assert!(
+            result.is_err(),
+            "merge_dir failure after a successful compile must propagate: {result:?}"
+        );
+    }
+
+    #[test]
+    fn compile_batch_fails_when_batch_site_dir_blocked() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("a.md"), "x").unwrap();
+        fs::create_dir_all(&build).unwrap();
+        fs::write(build.join(".batch-6-site"), "blocking file").unwrap();
+
+        let result = compile_batch(
+            &[content.join("a.md")],
+            &content,
+            &build,
+            &dir.path().join("site"),
+            &dir.path().join("templates"),
+            6,
+        );
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------
+    // merge_dir — error branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn merge_dir_src_is_file_fails_at_read_dir() {
+        let dir = tempdir().unwrap();
+        let src_file = dir.path().join("plain.txt");
+        fs::write(&src_file, "x").unwrap();
+
+        let result = merge_dir(&src_file, &dir.path().join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn merge_dir_subdir_blocked_by_file_in_dst() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        fs::create_dir_all(src.join("sub")).unwrap();
+        fs::write(src.join("sub/f.html"), "x").unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(dst.join("sub"), "blocking file").unwrap();
+
+        let result = merge_dir(&src, &dst);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn merge_dir_nested_failure_propagates_through_recursion() {
+        // The inner merge_dir call fails (blocked sub-subdir), and the
+        // error propagates through the recursive `?`.
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        let dst = dir.path().join("dst");
+        fs::create_dir_all(src.join("a/b")).unwrap();
+        fs::write(src.join("a/b/f.html"), "x").unwrap();
+        fs::create_dir_all(dst.join("a")).unwrap();
+        fs::write(dst.join("a/b"), "blocking file").unwrap();
+
+        let result = merge_dir(&src, &dst);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn merge_dir_copy_into_missing_dst_fails() {
+        let dir = tempdir().unwrap();
+        let src = dir.path().join("src");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("f.html"), "x").unwrap();
+
+        // dst does not exist: fs::copy into it fails.
+        let result = merge_dir(&src, &dir.path().join("missing-dst"));
+        assert!(result.is_err());
     }
 }

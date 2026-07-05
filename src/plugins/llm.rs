@@ -302,9 +302,10 @@ impl LlmPlugin {
             return Ok(0);
         }
 
+        let failing_count = failing.len();
         log::info!(
             "[llm] {} file(s) exceed grade {:.0}, attempting refinement",
-            failing.len(),
+            failing_count,
             config.target_grade
         );
 
@@ -420,7 +421,7 @@ impl LlmPlugin {
 
         for result in &failing {
             let path = content_dir.join(&result.path);
-            let Ok(original) = fs::read_to_string(&path) else {
+            let Ok(original) = read_fix_source(&path) else {
                 fix_results.push(AiFixResult {
                     path: result.path.clone(),
                     before_grade: result.grade_level,
@@ -518,6 +519,20 @@ impl LlmPlugin {
             results: fix_results,
         })
     }
+}
+
+/// Re-reads a file selected by the audit pass for LLM refinement.
+///
+/// Kept as a dedicated seam so the unreadable-file arm of
+/// [`LlmPlugin::audit_and_fix_with_report`] is drivable via the
+/// `llm::fix-read` failpoint — the real trigger is a TOCTOU window
+/// (file audited, then removed before the fix pass re-reads it)
+/// that cannot be produced deterministically from a test.
+fn read_fix_source(path: &Path) -> std::io::Result<String> {
+    fail_point!("llm::fix-read", |_| {
+        Err(std::io::Error::other("injected: llm::fix-read"))
+    });
+    fs::read_to_string(path)
 }
 
 /// Splits content into `(frontmatter_block, body)`.
@@ -1164,11 +1179,12 @@ fn generate_with_refinement(
             break;
         }
 
+        let attempt_num = attempt + 1;
         log::info!(
             "[llm] Grade {:.1} exceeds target {:.1}, refining (attempt {})",
             audit.grade_level,
             target_grade,
-            attempt + 1
+            attempt_num
         );
 
         let simplify_prompt = format!(
@@ -1323,13 +1339,7 @@ fn classify_ureq_error(
             // formatted message which is stable across versions.
             let kind = transport.kind();
             let msg = transport.to_string();
-            let looks_like_timeout = matches!(
-                kind,
-                ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
-            ) && (msg.contains("timed out")
-                || msg.contains("timeout")
-                || msg.contains("deadline"));
-            if looks_like_timeout {
+            if is_timeout_transport(kind, &msg) {
                 SsgError::LlmTimeout { duration: timeout }
             } else {
                 SsgError::LlmEndpointUnreachable {
@@ -1339,6 +1349,26 @@ fn classify_ureq_error(
             }
         }
     }
+}
+
+/// Heuristic: does this transport error look like a client-side
+/// timeout rather than a hard connection failure?
+///
+/// Extracted from [`classify_ureq_error`] as a pure function of
+/// `(kind, message)` so each OS-specific phrasing — Unix's "timed
+/// out", the generic "timeout"/"deadline" fallbacks, and Windows'
+/// WSAETIMEDOUT phrasing ("os error 10060") — is directly unit
+/// testable without depending on which OS actually produced the
+/// transport error (`ureq::Transport` has no public constructor, so
+/// synthesizing a real one in a test is not possible).
+fn is_timeout_transport(kind: ureq::ErrorKind, msg: &str) -> bool {
+    matches!(
+        kind,
+        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+    ) && (msg.contains("timed out")
+        || msg.contains("timeout")
+        || msg.contains("deadline")
+        || msg.contains("os error 10060"))
 }
 
 impl LlmPlugin {
@@ -1640,16 +1670,22 @@ mod tests {
     #[test]
     fn full_repo_readability_audit() {
         // Audits ALL Markdown content across the entire repository.
+        // The trailing entries exercise the two skip arms: a path
+        // that does not exist, and an existing dir with no Markdown.
+        let empty = tempfile::tempdir().unwrap();
+        let empty_dir = empty.path().to_string_lossy().to_string();
         let dirs = [
-            ("docs/guide", 15.0),
-            ("examples/basic/content", 10.0),
-            ("examples/blog/content", 10.0),
-            ("examples/docs/content", 13.0),
-            ("examples/landing/content", 10.0),
-            ("examples/plugins/content", 10.0),
-            ("examples/portfolio/content", 10.0),
-            ("examples/quickstart/content", 10.0),
-            ("examples/content/en", 10.0),
+            ("docs/guide".to_string(), 15.0),
+            ("examples/basic/content".to_string(), 10.0),
+            ("examples/blog/content".to_string(), 10.0),
+            ("examples/docs/content".to_string(), 13.0),
+            ("examples/landing/content".to_string(), 10.0),
+            ("examples/plugins/content".to_string(), 10.0),
+            ("examples/portfolio/content".to_string(), 10.0),
+            ("examples/quickstart/content".to_string(), 10.0),
+            ("examples/content/en".to_string(), 10.0),
+            ("this/path/does/not/exist".to_string(), 10.0),
+            (empty_dir, 10.0),
         ];
 
         let mut total_files = 0usize;
@@ -1693,13 +1729,9 @@ mod tests {
         println!("{}\n", "=".repeat(60));
     }
 
-    #[test]
-    fn audit_docs_guide() {
-        // This test is called by the readability-gate CI workflow.
-        // It audits all .md files in docs/guide/ against grade 17
-        // (documentation is technical and includes code blocks which
-        // inflate Flesch-Kincaid scores).
-        let guide_dir = Path::new("docs/guide");
+    /// Body of the readability-gate audit, parameterised on the
+    /// guide directory so the missing-dir skip arm is testable.
+    fn run_docs_guide_audit(guide_dir: &Path) {
         if !guide_dir.exists() {
             return; // Skip in environments without the guide
         }
@@ -1721,6 +1753,17 @@ mod tests {
             "\n[readability] {}/{} files pass (target: grade {:.0})",
             report.passing, report.total_files, report.target_grade
         );
+    }
+
+    #[test]
+    fn audit_docs_guide() {
+        // This test is called by the readability-gate CI workflow.
+        // It audits all .md files in docs/guide/ against grade 17
+        // (documentation is technical and includes code blocks which
+        // inflate Flesch-Kincaid scores).
+        run_docs_guide_audit(Path::new("docs/guide"));
+        // Missing-dir arm must be a silent no-op.
+        run_docs_guide_audit(Path::new("docs/this-guide-does-not-exist"));
     }
 
     // ── Coverage gap tests ────────────────────────────────────────
@@ -2774,8 +2817,73 @@ mod tests {
     // =====================================================================
 
     use std::io::{Read as _, Write as _};
-    use std::net::TcpListener;
+    use std::net::{TcpListener, TcpStream};
     use std::thread;
+
+    /// Drains one HTTP/1.1 request (headers AND body) from `stream`.
+    ///
+    /// Computes `Content-Length` from the request headers, then keeps
+    /// reading until that many body bytes are consumed. This
+    /// guarantees the client has finished sending before the mock
+    /// replies, which avoids the "Error encountered in a header" race
+    /// ureq raises when the response arrives mid-request. Returns the
+    /// raw request bytes so callers can route on the method line.
+    fn drain_request(stream: &mut TcpStream) -> Vec<u8> {
+        let _ = stream.set_nodelay(true);
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+        let mut buf = Vec::with_capacity(4096);
+        let mut chunk = [0u8; 1024];
+        let mut header_end: Option<usize> = None;
+        let mut content_length: usize = 0;
+        while header_end.is_none() {
+            match stream.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(n) => {
+                    buf.extend_from_slice(&chunk[..n]);
+                    if let Some(pos) =
+                        buf.windows(4).position(|w| w == b"\r\n\r\n")
+                    {
+                        header_end = Some(pos + 4);
+                        let header_str = String::from_utf8_lossy(&buf[..pos]);
+                        for line in header_str.split("\r\n") {
+                            if let Some(v) = line
+                                .to_ascii_lowercase()
+                                .strip_prefix("content-length:")
+                            {
+                                if let Ok(n) = v.trim().parse::<usize>() {
+                                    content_length = n;
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        if let Some(end) = header_end {
+            while buf.len().saturating_sub(end) < content_length {
+                match stream.read(&mut chunk) {
+                    Ok(0) => break,
+                    Ok(n) => buf.extend_from_slice(&chunk[..n]),
+                    Err(_) => break,
+                }
+            }
+        }
+        buf
+    }
+
+    /// Writes `response_bytes` and half-closes the socket.
+    fn respond_and_close(stream: &mut TcpStream, response_bytes: &[u8]) {
+        let _ = stream.write_all(response_bytes);
+        let _ = stream.flush();
+        let _ = stream.shutdown(std::net::Shutdown::Write);
+    }
+
+    /// Serves one canned response on an accepted connection.
+    fn serve_canned(mut stream: TcpStream, response_bytes: &[u8]) {
+        let _ = drain_request(&mut stream);
+        respond_and_close(&mut stream, response_bytes);
+    }
 
     /// Spawns a mock HTTP/1.1 server that responds to exactly one
     /// request with `response_bytes`. Returns the bound URL
@@ -2789,61 +2897,8 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         let url = format!("http://127.0.0.1:{}", addr.port());
         let handle = thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let _ = stream.set_nodelay(true);
-                let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-                // Drain headers AND body. Compute Content-Length from
-                // the request headers, then keep reading until we've
-                // consumed that many body bytes. This guarantees the
-                // client has finished sending before we reply, which
-                // avoids the "Error encountered in a header" race ureq
-                // raises when the response arrives mid-request.
-                let mut buf = Vec::with_capacity(4096);
-                let mut chunk = [0u8; 1024];
-                let mut header_end: Option<usize> = None;
-                let mut content_length: usize = 0;
-                while header_end.is_none() {
-                    match stream.read(&mut chunk) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            buf.extend_from_slice(&chunk[..n]);
-                            if let Some(pos) =
-                                buf.windows(4).position(|w| w == b"\r\n\r\n")
-                            {
-                                header_end = Some(pos + 4);
-                                let header_str =
-                                    String::from_utf8_lossy(&buf[..pos]);
-                                for line in header_str.split("\r\n") {
-                                    if let Some(v) = line
-                                        .to_ascii_lowercase()
-                                        .strip_prefix("content-length:")
-                                    {
-                                        if let Ok(n) = v.trim().parse::<usize>()
-                                        {
-                                            content_length = n;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Err(_) => break,
-                    }
-                }
-                if let Some(end) = header_end {
-                    while buf.len().saturating_sub(end) < content_length {
-                        match stream.read(&mut chunk) {
-                            Ok(0) => break,
-                            Ok(n) => {
-                                buf.extend_from_slice(&chunk[..n]);
-                            }
-                            Err(_) => break,
-                        }
-                    }
-                }
-                let _ = stream.write_all(response_bytes);
-                let _ = stream.flush();
-                let _ = stream.shutdown(std::net::Shutdown::Write);
-            }
+            let (stream, _) = listener.accept().expect("mock accept");
+            serve_canned(stream, response_bytes);
         });
         (url, handle)
     }
@@ -2906,16 +2961,11 @@ mod tests {
             Box::leak(resp_str.into_bytes().into_boxed_slice());
         let (url, _h) = spawn_mock_ollama(bytes);
         let err = query_ollama(&url, "m", "p", 5).unwrap_err();
-        // The mock may or may not deliver the body cleanly depending on
-        // OS scheduling — accept any Llm* error variant.
+        // The mock drains the full request before replying, so the
+        // body is delivered intact and the error is deterministic.
         assert!(
-            matches!(
-                err,
-                SsgError::LlmInvalidResponse { .. }
-                    | SsgError::LlmEndpointUnreachable { .. }
-                    | SsgError::LlmTimeout { .. }
-            ),
-            "expected an Llm* error variant"
+            matches!(err, SsgError::LlmInvalidResponse { .. }),
+            "expected LlmInvalidResponse, got: {err}"
         );
     }
 
@@ -3013,29 +3063,60 @@ mod tests {
         assert_eq!(out, "live-answer");
     }
 
+    /// Serialised env-var scoping (mirrors the `cmd::tests` pattern).
+    ///
+    /// Entries are applied *sequentially* (capture-then-set per entry)
+    /// and restored in reverse, so a duplicated key deterministically
+    /// exercises both restore arms: the later entry's captured
+    /// previous value is whatever the earlier entry just set.
+    fn with_env_vars<F: FnOnce()>(vars: &[(&str, Option<&str>)], f: F) {
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let mut prev: Vec<(String, Option<String>)> = Vec::new();
+        for (key, value) in vars {
+            prev.push(((*key).to_string(), std::env::var(key).ok()));
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+        }
+        f();
+        for (key, value) in prev.into_iter().rev() {
+            match value {
+                Some(v) => std::env::set_var(&key, v),
+                None => std::env::remove_var(&key),
+            }
+        }
+    }
+
     #[test]
     fn llm_config_default_respects_no_cache_env() {
-        // Save + clear SSG_NO_LLM_CACHE, assert defaults, restore.
-        let prev = std::env::var("SSG_NO_LLM_CACHE").ok();
-        std::env::set_var("SSG_NO_LLM_CACHE", "1");
-        let cfg = LlmConfig::default();
-        assert!(cfg.cache_disabled);
-
-        std::env::set_var("SSG_NO_LLM_CACHE", "0");
-        let cfg = LlmConfig::default();
-        assert!(!cfg.cache_disabled);
-
-        std::env::set_var("SSG_NO_LLM_CACHE", "off");
-        let cfg = LlmConfig::default();
-        assert!(!cfg.cache_disabled);
-
-        std::env::remove_var("SSG_NO_LLM_CACHE");
-        let cfg = LlmConfig::default();
-        assert!(!cfg.cache_disabled);
-
-        if let Some(v) = prev {
-            std::env::set_var("SSG_NO_LLM_CACHE", v);
-        }
+        // Duplicated key: the second entry's restore puts back the
+        // first entry's value (Some arm), the first restores machine
+        // state.
+        with_env_vars(
+            &[
+                ("SSG_NO_LLM_CACHE", Some("seed")),
+                ("SSG_NO_LLM_CACHE", Some("1")),
+            ],
+            || assert!(LlmConfig::default().cache_disabled),
+        );
+        with_env_vars(&[("SSG_NO_LLM_CACHE", Some("0"))], || {
+            assert!(!LlmConfig::default().cache_disabled);
+        });
+        with_env_vars(&[("SSG_NO_LLM_CACHE", Some("off"))], || {
+            assert!(!LlmConfig::default().cache_disabled);
+        });
+        // Unset + empty exercise the removal arm and the
+        // empty-string filter.
+        with_env_vars(
+            &[("SSG_NO_LLM_CACHE", None), ("SSG_NO_LLM_CACHE", Some(""))],
+            || assert!(!LlmConfig::default().cache_disabled),
+        );
+        with_env_vars(&[("SSG_NO_LLM_CACHE", None)], || {
+            assert!(!LlmConfig::default().cache_disabled);
+        });
     }
 
     /// Spawns a long-running mock that serves the same canned
@@ -3050,53 +3131,72 @@ mod tests {
         let url = format!("http://127.0.0.1:{}", addr.port());
         let handle = thread::spawn(move || {
             for stream_res in listener.incoming() {
-                let Ok(mut stream) = stream_res else { break };
-                let _ = stream.set_nodelay(true);
-                let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-                let mut buf = Vec::with_capacity(4096);
-                let mut chunk = [0u8; 1024];
-                let mut header_end: Option<usize> = None;
-                let mut content_length: usize = 0;
-                while header_end.is_none() {
-                    match stream.read(&mut chunk) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            buf.extend_from_slice(&chunk[..n]);
-                            if let Some(pos) =
-                                buf.windows(4).position(|w| w == b"\r\n\r\n")
-                            {
-                                header_end = Some(pos + 4);
-                                let header_str =
-                                    String::from_utf8_lossy(&buf[..pos]);
-                                for line in header_str.split("\r\n") {
-                                    if let Some(v) = line
-                                        .to_ascii_lowercase()
-                                        .strip_prefix("content-length:")
-                                    {
-                                        if let Ok(n) = v.trim().parse::<usize>()
-                                        {
-                                            content_length = n;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Err(_) => break,
-                    }
-                }
-                if let Some(end) = header_end {
-                    while buf.len() - end < content_length {
-                        match stream.read(&mut chunk) {
-                            Ok(0) => break,
-                            Ok(n) => buf.extend_from_slice(&chunk[..n]),
-                            Err(_) => break,
-                        }
-                    }
-                }
-                let _ = stream.write_all(response_bytes);
-                let _ = stream.flush();
-                let _ = stream.shutdown(std::net::Shutdown::Write);
+                serve_canned(stream_res.expect("mock accept"), response_bytes);
             }
+        });
+        (url, handle)
+    }
+
+    /// Spawns a long-running mock that routes on the request method:
+    /// `GET` (the health-check probe) gets `get_response`, anything
+    /// else (the `/api/generate` POST) gets `post_response`. Lets a
+    /// test pass the availability probe while failing generation.
+    fn spawn_routing_mock_ollama(
+        get_response: &'static [u8],
+        post_response: &'static [u8],
+    ) -> (String, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://127.0.0.1:{}", addr.port());
+        let handle = thread::spawn(move || {
+            for stream_res in listener.incoming() {
+                let mut stream = stream_res.expect("mock accept");
+                let request = drain_request(&mut stream);
+                let resp = if request.starts_with(b"GET") {
+                    get_response
+                } else {
+                    post_response
+                };
+                respond_and_close(&mut stream, resp);
+            }
+        });
+        (url, handle)
+    }
+
+    /// Spawns a long-running mock that serves `responses` in
+    /// connection order, repeating the last response once the list is
+    /// exhausted. Drives multi-turn flows (initial draft + refinement
+    /// pass) where each call must see different output.
+    fn spawn_sequenced_mock_ollama(
+        responses: Vec<Vec<u8>>,
+    ) -> (String, thread::JoinHandle<()>) {
+        assert!(!responses.is_empty(), "sequenced mock needs >= 1 response");
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://127.0.0.1:{}", addr.port());
+        let handle = thread::spawn(move || {
+            for (served, stream_res) in listener.incoming().enumerate() {
+                let mut stream = stream_res.expect("mock accept");
+                let _ = drain_request(&mut stream);
+                let idx = served.min(responses.len() - 1);
+                respond_and_close(&mut stream, &responses[idx]);
+            }
+        });
+        (url, handle)
+    }
+
+    /// Spawns a mock that accepts one connection, reads a little, and
+    /// then sleeps without ever responding — forcing the client-side
+    /// read timeout.
+    fn spawn_hanging_mock_ollama() -> (String, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://127.0.0.1:{}", addr.port());
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("mock accept");
+            let mut chunk = [0u8; 1024];
+            let _ = stream.read(&mut chunk);
+            thread::sleep(Duration::from_secs(3));
         });
         (url, handle)
     }
@@ -3207,5 +3307,724 @@ mod tests {
             0,
         );
         assert!(out.is_none());
+    }
+
+    // ── Frontmatter / meta-description edge branches ─────────────
+
+    #[test]
+    fn strip_frontmatter_unclosed_returns_input() {
+        let input = "---\ntitle: Hello\nNo closing delimiter here";
+        assert_eq!(strip_frontmatter(input), input);
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_unclosed_frontmatter() {
+        let content = "---\ntitle: Hello\nlanguage: fr\nNo closing delimiter";
+        assert_eq!(extract_frontmatter_lang(content), "");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_toml_empty_value_falls_through() {
+        let content = "+++\nlanguage = \"\"\n+++\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "");
+    }
+
+    #[test]
+    fn extract_frontmatter_lang_toml_key_without_equals() {
+        let content = "+++\nlanguage\n+++\nBody.";
+        assert_eq!(extract_frontmatter_lang(content), "");
+    }
+
+    #[test]
+    fn needs_meta_description_unterminated_content_attr() {
+        // content=" opens but never closes: the inner scan bails and
+        // the outer contains() check reports the tag as present.
+        let html = r#"<meta name="description" content="unterminated"#;
+        assert!(!needs_meta_description(html));
+    }
+
+    #[test]
+    fn generate_missing_alt_text_img_without_closing_bracket_breaks() {
+        // No '>' anywhere after the '<img' — the scan must break.
+        let mut html = "<body><img src=\"x.jpg\"".to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            "http://127.0.0.1:1",
+            true,
+            Path::new("t.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 0);
+        assert_eq!(html, "<body><img src=\"x.jpg\"");
+    }
+
+    #[test]
+    fn generate_missing_alt_text_replaces_empty_alt_attribute() {
+        // dry_run=false + a reachable mock Ollama + an `alt=""` tag
+        // drives the "replace existing empty alt" branch, as opposed
+        // to the "insert a brand-new alt attribute" branch exercised
+        // by the mixed-images test above.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("A friendly cat.").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let mut html =
+            r#"<html><body><img src="cat.jpg" alt=""></body></html>"#
+                .to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            &url,
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 1);
+        assert!(
+            html.contains("alt=\"A friendly cat.\""),
+            "empty alt should be replaced: {html}"
+        );
+        assert!(
+            !html.contains("alt=\"\""),
+            "empty alt attribute must be gone"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn audit_all_skips_unreadable_markdown_file() {
+        // A dangling symlink has the .md extension (so the walker
+        // collects it) but read_to_string fails, exercising the
+        // skip-on-read-failure arm.
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("good.md"), "---\nt: x\n---\nThe cat sat.")
+            .unwrap();
+        std::os::unix::fs::symlink(
+            content.join("missing-target.md"),
+            content.join("broken.md"),
+        )
+        .unwrap();
+
+        let report = LlmPlugin::audit_all(&content, 8.0).unwrap();
+        assert_eq!(report.total_files, 1, "broken symlink must be skipped");
+    }
+
+    // ── audit_and_fix / with_report against a live mock ──────────
+
+    /// A one-sentence, polysyllabic body that fails grade 8 by a
+    /// wide margin.
+    const HARD_BODY: &str = "Administrative procurement methodologies \
+                             necessitate institutional documentation \
+                             facilitating organisational comprehension \
+                             across heterogeneous stakeholder \
+                             constituencies.";
+
+    fn write_hard_file(content: &Path) {
+        fs::write(
+            content.join("hard.md"),
+            format!("---\ntitle: T\n---\n\n{HARD_BODY}"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn audit_and_fix_rewrites_file_when_llm_improves_grade() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let bytes: &'static [u8] = Box::leak(
+            mock_ollama_ok("The cat sat. It was fun.").into_boxed_slice(),
+        );
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            dry_run: false,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let rewritten = LlmPlugin::audit_and_fix(&content, &cfg).unwrap();
+        assert_eq!(rewritten, 1);
+
+        let out = fs::read_to_string(content.join("hard.md")).unwrap();
+        assert!(out.starts_with("---"), "frontmatter preserved:\n{out}");
+        assert!(out.contains("The cat sat."), "body replaced:\n{out}");
+    }
+
+    #[test]
+    fn audit_and_fix_warns_when_llm_does_not_improve_grade() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        // The mock parrots equally complex text — no improvement.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok(HARD_BODY).into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            dry_run: false,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let rewritten = LlmPlugin::audit_and_fix(&content, &cfg).unwrap();
+        assert_eq!(rewritten, 0);
+        let out = fs::read_to_string(content.join("hard.md")).unwrap();
+        assert!(out.contains("procurement"), "file must be untouched");
+    }
+
+    #[test]
+    fn audit_and_fix_skips_failing_file_with_empty_body() {
+        // A negative target makes even the empty (grade 0) body fail
+        // the audit, driving the empty-body `continue` in the fix
+        // loop.
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("empty.md"), "---\ntitle: T\n---\n").unwrap();
+
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("ignored").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            target_grade: -1.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let rewritten = LlmPlugin::audit_and_fix(&content, &cfg).unwrap();
+        assert_eq!(rewritten, 0);
+    }
+
+    #[test]
+    fn audit_and_fix_with_report_rewrites_and_reports_improvement() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let bytes: &'static [u8] = Box::leak(
+            mock_ollama_ok("The cat sat. It was fun.").into_boxed_slice(),
+        );
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            dry_run: false,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &cfg).unwrap();
+        assert_eq!(report.total_fixed, 1);
+        assert_eq!(report.results.len(), 1);
+        assert!(report.results[0].improved);
+        assert_eq!(report.results[0].action, "rewritten");
+        assert!(report.results[0].after_grade < report.results[0].before_grade);
+
+        let out = fs::read_to_string(content.join("hard.md")).unwrap();
+        assert!(out.contains("The cat sat."), "body replaced:\n{out}");
+    }
+
+    #[test]
+    fn audit_and_fix_with_report_records_no_improvement() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok(HARD_BODY).into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            dry_run: false,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &cfg).unwrap();
+        assert_eq!(report.total_fixed, 0);
+        assert_eq!(report.results.len(), 1);
+        assert!(!report.results[0].improved);
+        assert_eq!(report.results[0].action, "no-improvement");
+    }
+
+    #[test]
+    fn audit_and_fix_with_report_skips_when_generation_fails() {
+        // GET (health probe) succeeds, POST (generate) returns junk
+        // that fails JSON parsing — generate_with_refinement yields
+        // None and the per-file "skipped" arm fires.
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let get_ok: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        let post_junk: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4\r\nConnection: close\r\n\r\noops";
+        let (url, _h) = spawn_routing_mock_ollama(get_ok, post_junk);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &cfg).unwrap();
+        assert_eq!(report.total_fixed, 0);
+        assert_eq!(report.results.len(), 1);
+        assert_eq!(report.results[0].action, "skipped");
+    }
+
+    #[test]
+    fn audit_and_fix_skips_failing_file_when_generation_fails() {
+        // Same setup as the `_with_report` counterpart above, but
+        // against the plain `audit_and_fix` — drives the implicit
+        // no-op arm of its own
+        // `if let Some(refined) = generate_with_refinement(..)`
+        // (generation fails, so the failing file is left untouched
+        // and `rewritten` is not incremented).
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let get_ok: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        let post_junk: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4\r\nConnection: close\r\n\r\noops";
+        let (url, _h) = spawn_routing_mock_ollama(get_ok, post_junk);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let rewritten = LlmPlugin::audit_and_fix(&content, &cfg).unwrap();
+        assert_eq!(rewritten, 0);
+        let out = fs::read_to_string(content.join("hard.md")).unwrap();
+        assert!(out.contains("procurement"), "file must be untouched");
+    }
+
+    #[test]
+    fn audit_and_fix_with_report_skips_failing_file_with_empty_body() {
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("empty.md"), "---\ntitle: T\n---\n").unwrap();
+
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("ignored").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            target_grade: -1.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let report =
+            LlmPlugin::audit_and_fix_with_report(&content, &cfg).unwrap();
+        assert_eq!(report.total_failing, 1);
+        assert_eq!(report.results.len(), 1);
+        assert_eq!(report.results[0].action, "skipped");
+        assert!(!report.results[0].improved);
+    }
+
+    // ── after_compile against a live mock ────────────────────────
+
+    /// HTML page needing both a meta description and alt text.
+    const AUGMENTABLE_PAGE: &str = "<html><head><title>T</title></head>\
+         <body><main><p>Static site generators compile Markdown \
+         content into fast HTML pages for the web.</p>\
+         <img src=\"photo.jpg\"></main></body></html>";
+
+    #[test]
+    fn after_compile_augments_pages_via_mock_llm() {
+        let bytes: &'static [u8] = Box::leak(
+            mock_ollama_ok("A short page about static site builds.")
+                .into_boxed_slice(),
+        );
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("index.html"), AUGMENTABLE_PAGE).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            dry_run: false,
+            target_grade: 30.0, // generous → no refinement roundtrip
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(
+            out.contains("name=\"description\""),
+            "meta description injected:\n{out}"
+        );
+        assert!(
+            out.contains("A short page about static site builds."),
+            "generated text present:\n{out}"
+        );
+        assert!(
+            out.contains("application/ld+json"),
+            "JSON-LD description injected:\n{out}"
+        );
+        assert!(
+            out.contains("alt=\"A short page about static site builds.\""),
+            "alt text injected:\n{out}"
+        );
+    }
+
+    #[test]
+    fn after_compile_dry_run_logs_without_writing() {
+        let bytes: &'static [u8] = Box::leak(
+            mock_ollama_ok("A short page about static site builds.")
+                .into_boxed_slice(),
+        );
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("index.html"), AUGMENTABLE_PAGE).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            dry_run: true,
+            target_grade: 30.0,
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(out, AUGMENTABLE_PAGE, "dry-run must not modify files");
+    }
+
+    #[test]
+    fn after_compile_no_changes_needed_when_page_already_augmented() {
+        // Ollama IS reachable, but the page already has an adequate
+        // meta description and no images at all — exercises the
+        // implicit no-op arms of `needs_meta_description` being
+        // false and of the `if augmented > 0` log guard inside
+        // `after_compile`.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("unused").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let page = r#"<html><head><title>T</title><meta name="description" content="This description is already long enough to pass the fifty character minimum threshold."></head><body><main><p>Content.</p></main></body></html>"#;
+        fs::write(site.join("index.html"), page).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(out, page, "page needed no augmentation, must be untouched");
+    }
+
+    #[test]
+    fn after_compile_skips_meta_description_when_body_too_short() {
+        // Ollama reachable, page needs a meta description (no tag at
+        // all), but the extracted body text is under the 20-char
+        // floor so `generate_meta_description` short-circuits to
+        // `None` before ever calling the LLM — exercises the
+        // implicit no-op arm of
+        // `if let Some(desc) = generate_meta_description(..)` inside
+        // `after_compile`.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("unused").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let page =
+            "<html><head><title>T</title></head><body><main>Hi.</main></body></html>";
+        fs::write(site.join("index.html"), page).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(out, page, "no meta description could be generated");
+    }
+
+    // ── generate_with_refinement refinement pass ─────────────────
+
+    #[test]
+    fn generate_with_refinement_adopts_simpler_second_draft() {
+        // First draft exceeds the target grade; the refinement call
+        // returns simpler text which must be adopted.
+        let complex = "Sophisticated organisational methodologies \
+                       necessitate comprehensive administrative \
+                       documentation considerations.";
+        let simple = "The cat sat on the mat.";
+        let (url, _h) = spawn_sequenced_mock_ollama(vec![
+            mock_ollama_ok(complex),
+            mock_ollama_ok(simple),
+        ]);
+
+        let out = generate_with_refinement(&url, "m", "prompt", 5.0, 1)
+            .expect("refinement should yield text");
+        assert_eq!(out, simple);
+    }
+
+    #[test]
+    fn generate_with_refinement_keeps_draft_when_refinement_is_worse() {
+        // The refinement pass returns *more* complex text — the
+        // original draft must be kept.
+        let first = "The administrative documentation is not simple text.";
+        let worse = "Sophisticated organisational methodologies \
+                     necessitate comprehensive administrative \
+                     documentation considerations universally.";
+        let (url, _h) = spawn_sequenced_mock_ollama(vec![
+            mock_ollama_ok(first),
+            mock_ollama_ok(worse),
+        ]);
+
+        let out = generate_with_refinement(&url, "m", "prompt", 1.0, 1)
+            .expect("refinement should yield text");
+        assert_eq!(out, first);
+    }
+
+    #[test]
+    fn generate_with_refinement_keeps_draft_when_refinement_call_fails() {
+        // The refinement roundtrip itself fails (non-JSON body) —
+        // the original draft must survive.
+        let complex = "Sophisticated organisational methodologies \
+                       necessitate comprehensive administrative \
+                       documentation considerations.";
+        let junk = b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\n\r\noops".to_vec();
+        let (url, _h) =
+            spawn_sequenced_mock_ollama(vec![mock_ollama_ok(complex), junk]);
+
+        let out = generate_with_refinement(&url, "m", "prompt", 5.0, 1)
+            .expect("draft should survive a failed refinement");
+        assert_eq!(out, complex);
+    }
+
+    // ── Timeout classification + typed query cache path ──────────
+
+    #[test]
+    fn query_ollama_timeout_maps_to_llm_timeout() {
+        let (url, _h) = spawn_hanging_mock_ollama();
+        let err = query_ollama(&url, "m", "p", 1).unwrap_err();
+        assert!(
+            matches!(err, SsgError::LlmTimeout { .. }),
+            "expected LlmTimeout, got: {err}"
+        );
+    }
+
+    // ── is_timeout_transport: every OS-phrasing branch ────────────
+    //
+    // `ureq::Transport` has no public constructor, so these branches
+    // (in particular the "timeout"/"deadline"/"os error 10060"
+    // fallbacks that no real Unix socket ever actually produces) are
+    // tested directly against the extracted pure predicate rather
+    // than through a live socket.
+
+    #[test]
+    fn is_timeout_transport_unix_timed_out_phrasing() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "connection timed out"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_generic_timeout_word() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::ConnectionFailed,
+            "operation timeout"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_deadline_word() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "deadline exceeded"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_windows_os_error_10060() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "did not properly respond after a period of time (os error 10060)"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_false_for_unrelated_message() {
+        assert!(!is_timeout_transport(
+            ureq::ErrorKind::ConnectionFailed,
+            "connection refused"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_false_when_kind_is_not_io_or_connection_failed() {
+        // Even a "timed out"-shaped message must not classify as a
+        // timeout when the transport kind is unrelated to sockets.
+        assert!(!is_timeout_transport(
+            ureq::ErrorKind::InvalidUrl,
+            "request timed out"
+        ));
+    }
+
+    #[test]
+    fn llm_plugin_query_propagates_error_on_cache_miss() {
+        // Cache enabled but cold + unreachable endpoint: the live
+        // call's error must propagate through the caching path.
+        let tmp = tempfile::tempdir().unwrap();
+        let cfg = LlmConfig {
+            model: "m".into(),
+            endpoint: "http://127.0.0.1:1".into(),
+            cache_disabled: false,
+            cache_dir: Some(tmp.path().to_path_buf()),
+            ..LlmConfig::default()
+        };
+        let plugin = LlmPlugin::new(cfg);
+        assert!(plugin.query("uncached-prompt").is_err());
+    }
+
+    // ── Mock-server helper hardening (drain_request branches) ────
+
+    fn spawn_serve_canned_once(
+        response: &'static [u8],
+    ) -> (std::net::SocketAddr, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = thread::spawn(move || {
+            let (stream, _) = listener.accept().expect("accept");
+            serve_canned(stream, response);
+        });
+        (addr, handle)
+    }
+
+    const CANNED_OK: &[u8] =
+        b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+
+    #[test]
+    fn drain_request_handles_connection_closed_mid_header() {
+        let (addr, h) = spawn_serve_canned_once(CANNED_OK);
+        let mut s = TcpStream::connect(addr).unwrap();
+        s.write_all(b"GET / HT").unwrap();
+        s.shutdown(std::net::Shutdown::Write).unwrap();
+        let mut out = Vec::new();
+        let _ = s.read_to_end(&mut out);
+        h.join().unwrap();
+        assert!(out.starts_with(b"HTTP/1.1 200"), "got: {out:?}");
+    }
+
+    #[test]
+    fn drain_request_handles_header_read_timeout() {
+        // Client connects but never sends a byte: the server's 2s
+        // read timeout fires and it responds anyway.
+        let (addr, h) = spawn_serve_canned_once(CANNED_OK);
+        let mut s = TcpStream::connect(addr).unwrap();
+        let mut out = Vec::new();
+        let _ = s.read_to_end(&mut out);
+        h.join().unwrap();
+        assert!(out.starts_with(b"HTTP/1.1 200"), "got: {out:?}");
+    }
+
+    #[test]
+    fn drain_request_handles_connection_closed_mid_body() {
+        let (addr, h) = spawn_serve_canned_once(CANNED_OK);
+        let mut s = TcpStream::connect(addr).unwrap();
+        s.write_all(b"POST / HTTP/1.1\r\nContent-Length: 50\r\n\r\nabc")
+            .unwrap();
+        s.shutdown(std::net::Shutdown::Write).unwrap();
+        let mut out = Vec::new();
+        let _ = s.read_to_end(&mut out);
+        h.join().unwrap();
+        assert!(out.starts_with(b"HTTP/1.1 200"), "got: {out:?}");
+    }
+
+    #[test]
+    fn drain_request_handles_body_read_timeout() {
+        // Full header promising 50 body bytes, but the body never
+        // arrives: the body-loop read times out and the server
+        // responds anyway.
+        let (addr, h) = spawn_serve_canned_once(CANNED_OK);
+        let mut s = TcpStream::connect(addr).unwrap();
+        s.write_all(b"POST / HTTP/1.1\r\nContent-Length: 50\r\n\r\nabc")
+            .unwrap();
+        let mut out = Vec::new();
+        let _ = s.read_to_end(&mut out);
+        h.join().unwrap();
+        assert!(out.starts_with(b"HTTP/1.1 200"), "got: {out:?}");
+    }
+
+    // ── Fault injection (feature-gated) ──────────────────────────
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault {
+        use super::*;
+        use serial_test::serial;
+
+        #[test]
+        #[serial]
+        fn audit_and_fix_with_report_skips_unreadable_file() {
+            let dir = tempfile::tempdir().unwrap();
+            let content = dir.path().join("content");
+            fs::create_dir_all(&content).unwrap();
+            write_hard_file(&content);
+
+            let bytes: &'static [u8] =
+                Box::leak(mock_ollama_ok("The cat sat.").into_boxed_slice());
+            let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+            let cfg = LlmConfig {
+                endpoint: url,
+                target_grade: 8.0,
+                max_refinement_attempts: 0,
+                ..LlmConfig::default()
+            };
+
+            fail::cfg("llm::fix-read", "return").unwrap();
+            let report =
+                LlmPlugin::audit_and_fix_with_report(&content, &cfg).unwrap();
+            let _ = fail::cfg("llm::fix-read", "off");
+
+            assert_eq!(report.results.len(), 1);
+            assert_eq!(report.results[0].action, "skipped");
+            assert!(!report.results[0].improved);
+            assert_eq!(report.total_fixed, 0);
+        }
     }
 }

@@ -27,6 +27,14 @@
 //!
 //! Unlike `quickstart` which is a generic starter, this example bakes in
 //! EAA compliance, responsive images, and dual-feed publishing for blogs.
+//!
+//! It is also the **audited demo site**: CI runs the 15-gate audit
+//! (`ssg audit --output examples/blog/public --sarif`) over this build,
+//! so the full feature surface is switched on here — semantic search
+//! artifacts, agentic discovery (`agents.txt` + `ai-plugin.json` +
+//! `mcp.json`), edge headers (`_headers` with CSP/HSTS), the agent
+//! JSON API (`/api/agents/*.json`, #586 port 3), and per-page oEmbed
+//! documents (#586 port 4). See the v0.0.47 plan §12.
 
 use anyhow::{Context, Result};
 use http_handle::Server;
@@ -35,6 +43,7 @@ use ssg::{
     cmd::SsgConfig,
     execute_build_pipeline,
     plugin::{PluginContext, PluginManager},
+    postprocess::agentic_discovery::AgentsConfig,
     Paths,
 };
 use std::{fs, path::PathBuf, time::Instant};
@@ -62,7 +71,7 @@ fn main() -> Result<()> {
     // ---------------------------------------------------------------
     // 2. Build configuration
     // ---------------------------------------------------------------
-    let config = SsgConfig::builder()
+    let mut config = SsgConfig::builder()
         .site_name("threshold".to_string())
         .base_url("http://127.0.0.1:3002".to_string())
         .content_dir(content_dir.clone())
@@ -77,6 +86,30 @@ fn main() -> Result<()> {
         .language("en-GB".to_string())
         .build()
         .context("Failed to build configuration")?;
+
+    // Agentic discovery (#552): emit agents.txt, .well-known/ai-plugin.json,
+    // and .well-known/mcp.json (with one MCP resource per public page).
+    // Clears the AI-AGENTS-MISSING and AI-PLUGIN-JSON-MISSING audit notes.
+    let mut agents = AgentsConfig {
+        agents_txt: true,
+        ai_plugin: true,
+        ..AgentsConfig::default()
+    };
+    agents.mcp.enabled = true;
+    agents.mcp.auto_resources = true;
+    config.agents = Some(agents);
+
+    // Edge headers (#550): emit a Netlify-style `_headers` file at the
+    // site root carrying the baseline security headers (HSTS with a
+    // 2-year max-age, the computed CSP, …). Clears the PQC-INPUT-MISSING
+    // audit note. The extra override *declares* the TLS 1.3 posture the
+    // pqc_tls gate checks for — TLS itself is terminated by the platform,
+    // not by a static file.
+    config.edge_headers.targets = vec!["netlify".to_string()];
+    let _ = config
+        .edge_headers
+        .overrides
+        .insert("X-TLS-Min-Version".to_string(), "TLSv1.3".to_string());
 
     let paths = Paths {
         content: content_dir.clone(),
@@ -121,15 +154,39 @@ fn main() -> Result<()> {
     ));
     plugins.register(ssg::seo::CanonicalPlugin::new(config.base_url.clone()));
     plugins.register(ssg::seo::RobotsPlugin::new(config.base_url.clone()));
+
+    // Taxonomy generation (tags, categories). Registered BEFORE the
+    // search plugins so the generated /tags/<slug>/ landing pages
+    // (#586 port 5) are already on disk when the indexes are built.
+    plugins.register(ssg::taxonomy::TaxonomyPlugin);
+
+    // Lexical search (search-index.json for the modal autocomplete).
     plugins.register(ssg::search::SearchPlugin);
+
+    // Semantic vector search (#545): emits search/embeddings.bin +
+    // manifest.json (+ model/tokenizer). Clears the
+    // SEARCH-INPUT-MISSING audit note.
+    plugins.register(ssg::search_index::VectorSearchPlugin);
+
     plugins.register(ssg::accessibility::AccessibilityPlugin);
     plugins.register(ssg::plugins::MinifyPlugin);
 
     // AI readiness (llms.txt generation)
     plugins.register(ssg::ai::AiPlugin);
 
-    // Taxonomy generation (tags, categories)
-    plugins.register(ssg::taxonomy::TaxonomyPlugin);
+    // Agent JSON API (#586 port 3): /api/agents/{index,posts,topics,
+    // person}.json for AI crawlers and agent toolchains. Default-on in
+    // the CLI pipeline; explicit here because this example wires its
+    // own plugin list.
+    plugins.register(ssg::agent_api::AgentApiPlugin::default());
+
+    // oEmbed 1.0 (#586 port 4, opt-in): per-page *.oembed.json plus
+    // the <link rel="alternate" type="application/json+oembed"> tag.
+    plugins.register(ssg::oembed::OembedPlugin);
+
+    // Agentic discovery + edge headers (configured above).
+    plugins.register(ssg::postprocess::AgenticDiscoveryPlugin);
+    plugins.register(ssg::postprocess::EdgeHeadersPlugin);
 
     // ---------------------------------------------------------------
     // 4. Build the site
@@ -215,6 +272,30 @@ fn main() -> Result<()> {
     } else {
         println!("  Search index:  not found");
     }
+
+    // Full-feature demo surface (v0.0.47 plan §12): everything the
+    // audit gates probe should be present after the build.
+    let present = |rel: &str| {
+        if site_dir.join(rel).exists() {
+            "ok"
+        } else {
+            "MISSING"
+        }
+    };
+    println!("  Vector search: {}", present("search/embeddings.bin"));
+    // Per-tag landing pages (#586 port 5): TaxonomyPlugin turns every
+    // frontmatter tag into /tags/<slug>/index.html (plus the /tags/
+    // index) — e.g. `tags: "accessibility, …"` on
+    // content/accessible-typography.md yields /tags/accessibility/.
+    println!(
+        "  Tag landings:  {}",
+        present("tags/accessibility/index.html")
+    );
+    println!("  agents.txt:    {}", present("agents.txt"));
+    println!("  ai-plugin:     {}", present(".well-known/ai-plugin.json"));
+    println!("  mcp.json:      {}", present(".well-known/mcp.json"));
+    println!("  _headers:      {}", present("_headers"));
+    println!("  Agent API:     {}", present("api/agents/index.json"));
     println!("====================\n");
 
     // ---------------------------------------------------------------

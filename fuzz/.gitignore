@@ -1,0 +1,18 @@
+# cargo-fuzz build tree (own workspace — not covered by the root ignore)
+target/
+Cargo.lock
+
+# libFuzzer crash/timeout/OOM reproducers — uploaded as CI artifacts,
+# never committed. Minimized reproducers that become regression tests
+# belong in tests/, not here.
+artifacts/
+
+# libFuzzer-discovered corpus growth. Only the hand-picked seed files
+# committed under corpus/<target>/seed-* are tracked; everything the
+# fuzzer generates on top is machine-local.
+corpus/**
+!corpus/*/
+!corpus/*/seed-*
+
+# Coverage output from `cargo fuzz coverage`
+coverage/

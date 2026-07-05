@@ -95,11 +95,15 @@ fn locate_content_dir(root: &Path) -> Option<std::path::PathBuf> {
 fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
     let mut h1_count = 0usize;
     let mut in_code_block = false;
+    let fm_lines = frontmatter_line_count(text);
 
     // MD041: first non-frontmatter, non-blank line must be `# `.
+    // A frontmatter `title:` satisfies the requirement too — mirrors
+    // upstream markdownlint's `front_matter_title` behaviour, since
+    // the H1 is template-provided from the title on such pages.
     let first_content_line = first_heading_candidate(text);
     if let Some(line) = first_content_line {
-        if !line.starts_with("# ") {
+        if !line.starts_with("# ") && !frontmatter_has_title(text, fm_lines) {
             findings.push(
                 Finding::new(
                     NAME,
@@ -114,6 +118,11 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
 
     for (idx, raw_line) in text.lines().enumerate() {
         let line_no = idx + 1;
+        // YAML frontmatter is not Markdown — never lint it (URL values
+        // like `permalink:` are not bare-URL prose, `#` is a comment).
+        if idx < fm_lines {
+            continue;
+        }
         if raw_line.trim_start().starts_with("```") {
             in_code_block = !in_code_block;
             continue;
@@ -152,12 +161,17 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
             .or_else(|| raw_line.find("https://"))
         {
             let before = &raw_line[..idx2];
+            // `split_whitespace().next()` on a slice that itself starts
+            // at a non-whitespace byte (`idx2` points at `h`) always
+            // yields the run up to the next whitespace char (or EOF),
+            // i.e. the trailing `>` / `)` delimiter of `<https://x>` or
+            // `(https://x)` is swallowed into the token itself — so the
+            // closing delimiter only ever needs to be checked at the
+            // end of the token.
             let after_url =
                 raw_line[idx2..].split_whitespace().next().unwrap_or("");
-            let in_bracket = before.contains('(')
-                && raw_line[idx2 + after_url.len()..].starts_with(')');
-            let in_lt = before.ends_with('<')
-                && raw_line[idx2 + after_url.len()..].starts_with('>');
+            let in_bracket = before.contains('(') && after_url.ends_with(')');
+            let in_lt = before.ends_with('<') && after_url.ends_with('>');
             let in_link = before.ends_with("](");
             if !in_bracket && !in_lt && !in_link {
                 findings.push(
@@ -186,6 +200,34 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
             .with_path(rel.to_string()),
         );
     }
+}
+
+/// Returns the number of leading lines occupied by YAML frontmatter
+/// (opening `---`, body, closing `---` inclusive), or `0` when the
+/// file has none or the fence never closes.
+fn frontmatter_line_count(text: &str) -> usize {
+    let mut lines = text.lines();
+    if lines.next().map(str::trim) != Some("---") {
+        return 0;
+    }
+    let mut count = 1;
+    for line in lines {
+        count += 1;
+        if line.trim() == "---" {
+            return count;
+        }
+    }
+    0
+}
+
+/// `true` when the frontmatter block declares a `title:` (or `title=`)
+/// key — upstream markdownlint's `front_matter_title` default.
+fn frontmatter_has_title(text: &str, fm_lines: usize) -> bool {
+    fm_lines > 0
+        && text.lines().take(fm_lines).skip(1).any(|line| {
+            let lower = line.trim_start().to_ascii_lowercase();
+            lower.starts_with("title:") || lower.starts_with("title=")
+        })
 }
 
 fn first_heading_candidate(text: &str) -> Option<&str> {
@@ -287,11 +329,14 @@ mod tests {
 
     #[test]
     fn bare_url_inside_markdown_link_is_silent() {
+        // Trailing whitespace keeps `f` non-empty (MD009) so the
+        // no-MD034 predicate actually evaluates.
         let s = site_with_content(&[(
             "doc.md",
-            "# title\n\n[click](https://example.com)\n",
+            "# title\n\n[click](https://example.com)\nws \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD009")));
         assert!(f.iter().all(|x| x.code.as_deref() != Some("MD034")));
     }
 
@@ -307,11 +352,17 @@ mod tests {
 
     #[test]
     fn code_block_contents_are_not_linted() {
+        // Trailing whitespace after the fence keeps at least one benign
+        // finding in `f`, so the exemption predicate actually evaluates.
         let s = site_with_content(&[(
             "doc.md",
-            "# title\n\n```\n\ttab in code\nhttps://bare.in-code\n```\n",
+            "# title\n\n```\n\ttab in code\nhttps://bare.in-code\n```\n\nws \n",
         )]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD009")),
+            "outside-fence lint must still fire: {f:?}"
+        );
         // Inside the fenced block: MD010 and MD034 should NOT fire.
         assert!(
             f.iter().all(|x| x.code.as_deref() != Some("MD010")
@@ -330,20 +381,260 @@ mod tests {
     #[test]
     fn empty_file_produces_no_md041() {
         // first_heading_candidate returns None on a fully empty file.
-        let s = site_with_content(&[("empty.md", "")]);
+        // The sibling file's MD009 keeps `f` non-empty so the
+        // no-MD041 predicate actually evaluates.
+        let s =
+            site_with_content(&[("empty.md", ""), ("ws.md", "# t\n\nws \n")]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("MD009")));
         assert!(f.iter().all(|x| x.code.as_deref() != Some("MD041")));
     }
 
     #[test]
     fn sibling_content_dir_layout_is_discovered() {
         // Use a `<root>/../content` layout, mimicking real ssg sites.
-        let s = site_with_content(&[("doc.md", "# ok\n")]);
+        // Trailing whitespace produces a finding, proving the file
+        // was actually scanned (and keeping the predicate evaluated).
+        let s = site_with_content(&[("doc.md", "# ok\n\nws \n")]);
         let f = MarkdownlintGate.run(&s, &AuditOptions::default());
         assert!(
             f.iter()
                 .all(|x| x.code.as_deref() != Some("MD-INPUT-MISSING")),
             "sibling content/ should be discovered: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_url_values_are_not_bare_urls() {
+        // Regression: ~110 false MD034 on frontmatter values like
+        // `permalink: "https://…"` — YAML is not Markdown prose.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\npermalink: \"https://example.com/x/\"\n\
+             url: https://example.com\natom: \"https://example.com/atom.xml\"\n\
+             ---\n\n# Heading\n\nbody. \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "frontmatter URLs must not trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn bare_url_in_body_still_flagged_after_frontmatter() {
+        // True positive preserved: bare URLs in body text still fire.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\n---\n\n# Heading\n\nSee https://bare.example\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "body bare URL must still trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_hard_tabs_and_trailing_ws_are_exempt() {
+        // The body bare URL guarantees `f` is non-empty, so the
+        // exemption predicate below actually evaluates per finding.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"X\"\nkey:\t\"tabbed\"   \n---\n\n# Heading\n\n\
+             see https://bare.example\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "body lint must still fire: {f:?}"
+        );
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD010")
+                && x.code.as_deref() != Some("MD009")),
+            "frontmatter must be exempt from MD009/MD010: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_yaml_comment_is_not_an_h1() {
+        // A YAML `# comment` inside frontmatter must not count toward
+        // MD025's H1 tally.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\n# yaml comment\ntitle: \"X\"\n---\n\n# Only H1\n\nbody \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD025")),
+            "yaml comments are not headings: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_title_satisfies_md041() {
+        // Upstream `front_matter_title` behaviour: the H1 is
+        // template-provided from `title:`, so no MD041.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\ntitle: \"Threshold\"\n---\n\n## Section heading\n\nbody \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD041")),
+            "frontmatter title: must satisfy MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn missing_title_and_h1_still_trips_md041() {
+        // True positive preserved: no `title:` and no leading `# `.
+        let s = site_with_content(&[(
+            "doc.md",
+            "---\nauthor: \"A\"\n---\n\n## Not an H1\n\nbody\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD041")),
+            "no title + no H1 must still trip MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn frontmatter_helpers_edge_cases() {
+        assert_eq!(frontmatter_line_count("no frontmatter\n"), 0);
+        assert_eq!(frontmatter_line_count("---\ntitle: x\n---\n"), 3);
+        assert_eq!(
+            frontmatter_line_count("---\nnever closed\n"),
+            0,
+            "unterminated fence is not frontmatter"
+        );
+        assert!(frontmatter_has_title("---\nTitle: \"X\"\n---\n", 3));
+        assert!(!frontmatter_has_title("---\nsubtitle: \"X\"\n---\n", 3));
+        assert!(!frontmatter_has_title("body only\n", 0));
+    }
+
+    #[test]
+    fn unreadable_markdown_file_is_skipped() {
+        // Invalid UTF-8 makes read_to_string fail, driving the
+        // per-file `continue` branch without permission games.
+        let s = site_with_content(&[("good.md", "# ok\n")]);
+        let content = s.root.parent().unwrap().join("content");
+        std::fs::write(content.join("binary.md"), [0xFF, 0xFE, 0x00, 0x9F])
+            .unwrap();
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "unreadable file must be skipped: {f:?}");
+    }
+
+    #[test]
+    fn content_dir_directly_under_root_is_discovered() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("site");
+        let content = root.join("content");
+        std::fs::create_dir_all(&content).unwrap();
+        std::fs::write(content.join("doc.md"), "no heading here\n").unwrap();
+        std::mem::forget(tmp);
+        let s = Site {
+            root,
+            html_files: Vec::new(),
+        };
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD041")),
+            "direct <root>/content must be scanned: {f:?}"
+        );
+    }
+
+    #[test]
+    fn root_without_parent_skips_with_info() {
+        // `/` has no parent, driving the `parent()?` early return.
+        let s = Site {
+            root: PathBuf::from("/"),
+            html_files: Vec::new(),
+        };
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        if !Path::new("/content").is_dir() {
+            assert_eq!(f.len(), 1);
+            assert_eq!(f[0].code.as_deref(), Some("MD-INPUT-MISSING"));
+        }
+    }
+
+    #[test]
+    fn autolink_url_in_angle_brackets_is_silent() {
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\nVisit <https://example.com> today.\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "autolink form must not trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn leading_blank_line_then_heading_is_clean() {
+        // First physical line is blank: first_heading_candidate must
+        // fall through to the first non-blank line.
+        let s = site_with_content(&[("doc.md", "\n# Title\n\nbody\n")]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD041")),
+            "blank first line must not trip MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn whitespace_only_line_is_exempt_from_md009() {
+        // A line made up entirely of spaces still `ends_with(' ')`, but
+        // `raw_line.trim().is_empty()` is also true, so MD009 must not
+        // fire for it — only genuine trailing whitespace after real
+        // content counts. The sibling trailing-ws line keeps `f`
+        // non-empty so the exemption predicate actually evaluates.
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n   \nreal trailing ws \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        let md009_count = f
+            .iter()
+            .filter(|x| x.code.as_deref() == Some("MD009"))
+            .count();
+        assert_eq!(
+            md009_count, 1,
+            "only the real trailing-ws line should trip MD009: {f:?}"
+        );
+    }
+
+    #[test]
+    fn bare_http_url_without_s_is_flagged() {
+        // MD034 also fires for plain `http://` (not just `https://`).
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\nSee http://bare.example\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "bare http:// (no s) must still trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn markdown_link_with_space_before_closing_paren_is_silent() {
+        // `[text](url )` — a space before the closing paren means the
+        // whitespace-delimited URL token does not itself end in `)`,
+        // so `in_bracket` is false even though `in_link` (before ends
+        // with `](`) is true; the finding must still be suppressed by
+        // `in_link` alone.
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n[text](https://example.com )\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "space-before-paren markdown link must still be silent: {f:?}"
         );
     }
 

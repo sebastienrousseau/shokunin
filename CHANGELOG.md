@@ -15,6 +15,166 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Complete internal anyhow elimination** across 9 core modules (`cache`, `collections`, `content`, `depgraph`, `deploy`, `frontmatter`, `scaffold`, `stream`, `template_engine`) and 7 plugin modules (`ai`, `csp`, `llm`, `postprocess/{helpers,html_fix}`, `seo/{canonical,seo_plugin}`). `scaffold.rs` is the heaviest module in this sweep (14 uses). Once complete, `anyhow` will be dropped from the library's `[dependencies]` list in `Cargo.toml`.
 - **Ratchet CI coverage floor to ≥98.0%** (regions, lines, functions). Currently at 95.71 / 96.87 / 95.77 with `--lib`. The remaining uncovered regions sit in I/O-heavy production glue that needs source-level seams.
 
+## [0.0.47] - 2026-07-04
+
+The trust release: every headline claim is now byte-verifiable in code, the
+site-migration correctness defects (spec A1–A7) are fixed end-to-end with a
+cross-platform determinism gate, and the three largest performance wins
+landed with measured evidence. Implements the
+[v0.0.47 plan](docs/plans/v0.0.47-implementation-plan.md) and tracker
+[#586](https://github.com/sebastienrousseau/static-site-generator/issues/586).
+
+### Added
+- **Flexible date parsing** (`src/core/dates.rs`, spec A4): RFC 2822 →
+  long-form (`July 1, 2026`) → ISO 8601, zero new deps, proptest
+  round-tripped; wired into the RSS, Atom, JSON Feed, news-sitemap, and
+  sitemap plugins. Unparseable fields log which format failed.
+- **Native permalink derivation** (`src/core/urls.rs` + content stager, spec
+  A2/B1): pages without `permalink`/`url` get one derived from
+  `base_url + output_path` at staging time — feeds can never hard-fail on a
+  missing channel link. Active in the real build path via
+  `compile_site_with_base_url`.
+- **Single page-language resolver** (spec A5): frontmatter `language` →
+  `hreflang` → locale path prefix → site default. JSON-LD `inLanguage`,
+  `og:locale`, `<html lang>`, and the hreflang self-reference now agree on
+  every page, enforced by the new **`lang_consistency` audit gate** (gate
+  15).
+- **`IoPool` writer pool** ([#569](https://github.com/sebastienrousseau/static-site-generator/issues/569)
+  phase 1): bounded-channel writer threads decouple `fs::write` from rayon
+  CPU workers; the fused transform pass now **skips unchanged files**
+  (a no-op rebuild writes zero files). io_uring backend remains phase 2.
+- **`AgentApiPlugin`** (#586 port 3): `/api/agents/{index,posts,topics,person}.json`
+  — a stable, deterministic JSON API for AI crawlers and agent toolchains.
+- **`OembedPlugin`** (#586 port 4, opt-in): per-page `oembed.json` +
+  discovery `<link>`.
+- **Per-tag landing pages** (#586 port 5): `/tags/<tag>/index.html` with
+  canonical/OG essentials inlined; author-authored tag hubs are never
+  clobbered.
+- **`[security] sri_algorithm` config** (spec B3): SRI `integrity=`
+  attributes now default to **SHA-384** (matching the long-documented
+  claim), configurable to sha256/sha512; CSP directive source hashes stay
+  SHA-256 for UA compatibility.
+- **Per-page CSP → edge headers** (spec B4): inline script/style/JSON-LD
+  hashes are computed per page and emitted as per-path entries in
+  `_headers` / `vercel-headers.json` — hash-strict CSP without
+  `'unsafe-inline'`.
+- **Social-meta derivation cascade** (spec B8): `og:*`/`twitter:*` derive
+  from base frontmatter (`twitter_title ⇐ seo_title ⇐ title`,
+  `og_image ⇐ banner ⇐ image`, …); explicit fields always win, no global
+  bleed-through.
+- **CI**: `determinism.yml` (macOS↔Linux output byte-diff + double-build
+  reproducibility — the gate that would have caught spec A1 on day one),
+  `fuzz.yml` + four cargo-fuzz targets
+  ([#566](https://github.com/sebastienrousseau/static-site-generator/issues/566)),
+  OSSF Scorecard, `cargo-semver-checks` job, cargo-vet exemption ratchet,
+  and a multi-arch (amd64+arm64) GHCR image.
+- **`tools/bench-vs-{hugo,zola,eleventy}.sh`** — the comparison scripts
+  BENCHMARKS.md documented (closes the remainder of
+  [#559](https://github.com/sebastienrousseau/static-site-generator/issues/559)).
+- **cargo-vet first-party audits**: 13 genuine `safe-to-deploy` audits of
+  the same-author dependency stack; exemptions 544 → 533 with a
+  ratchet-only-downward CI gate.
+
+### Fixed
+- **Audit-gate false positives** (~122 alerts): the markdownlint gate no
+  longer lints YAML frontmatter; the broken-links gate no longer parses
+  `<a href>` inside `<script>`/`<style>`; the CSP/images/WCAG gates now
+  parse minified HTML (unquoted, valueless, reordered attributes). The demo
+  site audit is at **zero error-severity findings** (was 27 errors / 183
+  total alerts).
+- **Latent UTF-8 corruption** in strikethrough expansion: multi-byte
+  characters were mangled on any line processed through the old
+  byte-by-byte path.
+- **Demo-site defects behind real alerts**: SPDX comment before
+  `<!DOCTYPE html>`, missing H1s, missing `og:image`, empty-src logos,
+  valueless `alt`.
+- SARIF stdout purity: the "Site generated successfully." status line moved
+  to stderr so `ssg audit --sarif > file` yields strictly valid JSON.
+- `benches/all_pub_api` compiles under `--no-default-features`.
+
+### Changed
+- **One URL convention everywhere**: canonical, feed `<link>`, sitemap and
+  news-sitemap `<loc>` all derive via `urls::derive_page_url`
+  (`…/foo/index.html` → `…/foo/`).
+- **Claims reconciliation**: "PQC-aware" → "PQC posture guidance" (ML-DSA
+  provenance signing is roadmap
+  [#579](https://github.com/sebastienrousseau/static-site-generator/issues/579));
+  "streaming compilation" → "bounded-memory batch compilation" where it
+  describes `core/streaming.rs`; `tests/docs_accuracy.rs` pins the new
+  wording.
+- Workspace version 0.0.46 → 0.0.47 across all six crates.
+
+### Performance
+- Markdown render clone elimination + `Cow` strikethrough fast path:
+  **−41–63%** on realistic mostly-plain pages, −6–10% on dense GFM.
+- Zero-copy frontmatter parsing
+  ([#578](https://github.com/sebastienrousseau/static-site-generator/issues/578)):
+  −17–25% on TOML frontmatter, intermediate body clone removed.
+- Per-thread scratch reuse in search extraction; i18n locale-matrix cache
+  `Mutex` → `RwLock` (read-mostly fast path).
+
+### Upstream (staged in sibling repos, releases pending)
+- `staticdatagen 0.0.11`: `allow_unsafe_html: true` explicit (spec A1),
+  permalink fallback chain + never-abort feed semantics (spec A2), flexible
+  date parsing (spec A4).
+- `html-generator 0.0.7`: comrak 0.52, enforced escape-by-default for raw
+  HTML, structured-data title from metadata (spec A3).
+- `frontmatter-gen 0.0.7`: path-traversal guard scoped to path-typed fields
+  (spec A6).
+- `mdx-gen 0.0.5`: **security** — raw-HTML pass-through no longer forced;
+  safe-by-default sanitization honoring the documented contract.
+
+### New crate: `ssg-a11y`
+- Extracted the WCAG 2.2 AA accessibility checker (`src/plugins/accessibility.rs`)
+  into a standalone workspace crate,
+  [#608](https://github.com/sebastienrousseau/static-site-generator/issues/608):
+  report/matrix types, WCAG rule checks (heading hierarchy, ARIA landmarks,
+  link purpose, focus appearance, target size, banned elements, page
+  language), and the compliance-matrix builder now have zero dependency on
+  ssg's `Plugin` trait, `PluginContext`, or `SsgError` — `#![forbid(unsafe_code)]`,
+  its own error type, own README/tests. `src/plugins/accessibility.rs`
+  becomes a thin wrapper (`AccessibilityPlugin` + file I/O); public paths
+  under `ssg::accessibility::*` are unchanged for existing consumers.
+  `accessibility-report.json` / `wcag-compliance.json` output is
+  byte-shape-identical — this is a refactor, not a behavior change.
+  Workspace grows to 7 crates.
+
+### Fixed (determinism, round 2)
+- `atom.xml` / `feed.json`: `AtomFeedPlugin`/`JsonFeedPlugin` sorted entries
+  by date only; since `read_meta_sidecars` walks the filesystem (genuinely
+  OS-order-dependent — ext4 vs APFS) and the stable sort never breaks ties
+  on equal dates, synthetic fixtures where every page shares a date leaked
+  raw directory-walk order straight into the feed. Fixed with an `id`-based
+  tiebreaker at all three feed plugins (RSS/Atom/JSON Feed), plus a
+  defensive sort at `read_meta_sidecars` itself so future consumers inherit
+  deterministic input by default.
+- `sbom.cdx.json`: a **second**, independent `SbomPlugin` implementation
+  (`src/plugins/sbom.rs`, distinct from `src/plugins/postprocess/sbom.rs`)
+  runs later in the pipeline and overwrites the first's output — it had
+  its own unpinned `SystemTime::now()` call the earlier `SOURCE_DATE_EPOCH`
+  fix never touched. Fixed and covered by a matching regression test.
+- Determinism gate exclusions (`determinism.yml`) refined: `.meta/**/*.json`
+  (upstream `staticdatagen` unordered-map serialization, tracked for the
+  `=0.0.11` pin) and `.ssg-plugin-cache.json` (ssg's own incremental cache
+  — legitimately path-keyed to each build's absolute output location, not
+  a bug) are excluded from cross-path comparisons with documented reasons;
+  the cache's own key order is now deterministic (`BTreeMap`, not
+  `HashMap`) for the common same-directory-rebuild case.
+- `core/lang.rs`: `DEFAULT_PAGE_LANG` and `resolve_render_lang` were dead
+  code under `--no-default-features` (their sole caller is gated behind
+  the `templates` feature) — gated to match, verified against all 45
+  `cargo-hack --feature-powerset --depth 2` combinations.
+- `examples/audit_example.rs`: un-backticked `lang_consistency` in a doc
+  comment (clippy `doc_markdown`).
+
+### Versioning policy
+- [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md):
+  `ssg` stays on `0.0.x` versioning — incrementing by `0.0.1` per release —
+  through `0.0.999` at the earliest, to mature the API surface and
+  enterprise adoption before any `0.1.0`/`1.0.0` SemVer commitment.
+  `ROADMAP.md` and `docs/architecture/api-stability-audit.md`'s prior
+  `0.1.0`/`1.0.0` milestone targets are corrected to match.
+
 ## [0.0.46] - 2026-06-28
 
 The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cycle landed and shipped; the bulk of the v0.0.45 content-staging shim is gone.

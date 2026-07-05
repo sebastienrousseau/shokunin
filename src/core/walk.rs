@@ -252,6 +252,21 @@ mod tests {
     }
 
     #[test]
+    fn walk_files_skips_extensionless_files() {
+        // `path.extension()` returns `None` for a file with no dot in
+        // its name, short-circuiting `is_some_and` without invoking
+        // the comparison closure — a branch distinct from a
+        // mismatched-extension file like `b.css` (covered above).
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("README"), "").unwrap();
+        fs::write(dir.path().join("a.html"), "").unwrap();
+
+        let result = walk_files(dir.path(), "html").unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with("a.html"));
+    }
+
+    #[test]
     fn walk_files_returns_results_sorted() {
         let dir = tempdir().unwrap();
         for name in ["zebra.html", "apple.html", "mango.html"] {
@@ -292,6 +307,19 @@ mod tests {
     }
 
     #[test]
+    fn walk_files_multi_skips_extensionless_files() {
+        // Exercises the `None` arm of `if let Some(ext) = path.extension()`
+        // — a file with no extension at all is silently skipped.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("README"), "").unwrap();
+        fs::write(dir.path().join("a.jpg"), "").unwrap();
+
+        let result = walk_files_multi(dir.path(), &["jpg"]).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with("a.jpg"));
+    }
+
+    #[test]
     fn walk_files_multi_returns_empty_for_missing_directory() {
         let dir = tempdir().unwrap();
         let result =
@@ -318,6 +346,17 @@ mod tests {
     }
 
     #[test]
+    fn walk_files_bounded_depth_skips_extensionless_files() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("README"), "").unwrap();
+        fs::write(dir.path().join("a.md"), "").unwrap();
+
+        let result = walk_files_bounded_depth(dir.path(), "md", 4).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with("a.md"));
+    }
+
+    #[test]
     fn walk_files_bounded_depth_returns_empty_for_missing_directory() {
         let dir = tempdir().unwrap();
         let result =
@@ -338,6 +377,17 @@ mod tests {
         }
         let result = walk_files_bounded_count(dir.path(), "html", 5).unwrap();
         assert_eq!(result.len(), 5);
+    }
+
+    #[test]
+    fn walk_files_bounded_count_skips_extensionless_files() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("README"), "").unwrap();
+        fs::write(dir.path().join("a.html"), "").unwrap();
+
+        let result = walk_files_bounded_count(dir.path(), "html", 10).unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with("a.html"));
     }
 
     #[test]
@@ -364,5 +414,61 @@ mod tests {
         }
         let result = walk_files_bounded_count(dir.path(), "html", 2).unwrap();
         assert!(result.len() <= 4);
+    }
+
+    // -------------------------------------------------------------------
+    // read_dir error propagation (unreadable directory, unix-only)
+    // -------------------------------------------------------------------
+
+    #[cfg(unix)]
+    fn with_unreadable_subdir<F: FnOnce(&Path)>(run: F) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let locked = dir.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        run(dir.path());
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files(root, "md");
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_multi_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_multi(root, &["md"]);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_bounded_depth_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_bounded_depth(root, "md", 8);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_files_bounded_count_errors_on_unreadable_directory() {
+        with_unreadable_subdir(|root| {
+            let result = walk_files_bounded_count(root, "md", 10);
+            assert!(result.is_err(), "unreadable dir must error");
+        });
     }
 }

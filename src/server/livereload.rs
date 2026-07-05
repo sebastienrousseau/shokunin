@@ -319,7 +319,6 @@ pub fn css_reload_message(css_path: &str) -> String {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use anyhow::Result;
     use tempfile::tempdir;
 
     fn make_html(body: &str) -> String {
@@ -330,97 +329,90 @@ mod tests {
     }
 
     #[test]
-    fn inject_adds_script() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_adds_script() {
+        let tmp = tempdir().expect("tempdir");
         let path = tmp.path().join("page.html");
-        fs::write(&path, make_html("<p>Hello</p>"))?;
+        fs::write(&path, make_html("<p>Hello</p>")).expect("write");
 
-        inject_livereload(&path, DEFAULT_PORT)?;
+        inject_livereload(&path, DEFAULT_PORT).expect("inject");
 
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).expect("read");
         assert!(result.contains(MARKER));
         assert!(result.contains("WebSocket"));
         assert!(result.contains("35729"));
         assert!(result.contains("location.reload()"));
-        Ok(())
     }
 
     #[test]
-    fn inject_before_closing_body() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_before_closing_body() {
+        let tmp = tempdir().expect("tempdir");
         let path = tmp.path().join("page.html");
-        fs::write(&path, make_html("<p>Hi</p>"))?;
+        fs::write(&path, make_html("<p>Hi</p>")).expect("write");
 
-        inject_livereload(&path, DEFAULT_PORT)?;
+        inject_livereload(&path, DEFAULT_PORT).expect("inject");
 
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).expect("read");
         let script_pos = result.find(MARKER).unwrap();
         let body_pos = result.rfind("</body>").unwrap();
         assert!(script_pos < body_pos);
-        Ok(())
     }
 
     #[test]
-    fn inject_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_idempotent() {
+        let tmp = tempdir().expect("tempdir");
         let path = tmp.path().join("page.html");
-        fs::write(&path, make_html("<p>Hi</p>"))?;
+        fs::write(&path, make_html("<p>Hi</p>")).expect("write");
 
-        inject_livereload(&path, DEFAULT_PORT)?;
-        let first = fs::read_to_string(&path)?;
+        inject_livereload(&path, DEFAULT_PORT).expect("inject");
+        let first = fs::read_to_string(&path).expect("read");
 
-        inject_livereload(&path, DEFAULT_PORT)?;
-        let second = fs::read_to_string(&path)?;
+        inject_livereload(&path, DEFAULT_PORT).expect("inject");
+        let second = fs::read_to_string(&path).expect("read");
 
         assert_eq!(first, second);
-        Ok(())
     }
 
     #[test]
-    fn inject_custom_port() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_custom_port() {
+        let tmp = tempdir().expect("tempdir");
         let path = tmp.path().join("page.html");
-        fs::write(&path, make_html("<p>Hi</p>"))?;
+        fs::write(&path, make_html("<p>Hi</p>")).expect("write");
 
-        inject_livereload(&path, 9999)?;
+        inject_livereload(&path, 9999).expect("inject");
 
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).expect("read");
         assert!(result.contains("9999"));
         assert!(!result.contains("35729"));
-        Ok(())
     }
 
     #[test]
-    fn inject_no_body_tag() -> Result<()> {
-        let tmp = tempdir()?;
+    fn inject_no_body_tag() {
+        let tmp = tempdir().expect("tempdir");
         let path = tmp.path().join("page.html");
-        fs::write(&path, "<html><p>No body tag</p></html>")?;
+        fs::write(&path, "<html><p>No body tag</p></html>").expect("write");
 
-        inject_livereload(&path, DEFAULT_PORT)?;
+        inject_livereload(&path, DEFAULT_PORT).expect("inject");
 
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).expect("read");
         assert!(result.contains(MARKER));
-        Ok(())
     }
 
     #[test]
-    fn skip_non_html_files() -> Result<()> {
-        let tmp = tempdir()?;
-        fs::write(tmp.path().join("style.css"), "body{}")?;
-        fs::write(tmp.path().join("data.json"), "{}")?;
-        fs::write(tmp.path().join("readme.txt"), "hello")?;
+    fn skip_non_html_files() {
+        let tmp = tempdir().expect("tempdir");
+        fs::write(tmp.path().join("style.css"), "body{}").expect("write");
+        fs::write(tmp.path().join("data.json"), "{}").expect("write");
+        fs::write(tmp.path().join("readme.txt"), "hello").expect("write");
 
-        let files = collect_html_files(tmp.path())?;
+        let files = collect_html_files(tmp.path()).expect("collect");
         assert!(files.is_empty());
-        Ok(())
     }
 
     #[test]
-    fn empty_directory() -> Result<()> {
-        let tmp = tempdir()?;
-        let files = collect_html_files(tmp.path())?;
+    fn empty_directory() {
+        let tmp = tempdir().expect("tempdir");
+        let files = collect_html_files(tmp.path()).expect("collect");
         assert!(files.is_empty());
-        Ok(())
     }
 
     #[test]
@@ -467,11 +459,13 @@ mod tests {
     }
 
     #[test]
-    fn on_serve_injects_all_html_files() -> Result<()> {
-        let tmp = tempdir()?;
-        fs::write(tmp.path().join("index.html"), make_html("<p>Home</p>"))?;
-        fs::write(tmp.path().join("about.html"), make_html("<p>About</p>"))?;
-        fs::write(tmp.path().join("style.css"), "body{}")?;
+    fn on_serve_injects_all_html_files() {
+        let tmp = tempdir().expect("tempdir");
+        fs::write(tmp.path().join("index.html"), make_html("<p>Home</p>"))
+            .expect("write index");
+        fs::write(tmp.path().join("about.html"), make_html("<p>About</p>"))
+            .expect("write about");
+        fs::write(tmp.path().join("style.css"), "body{}").expect("write css");
 
         let ctx = PluginContext::new(
             Path::new("content"),
@@ -479,16 +473,18 @@ mod tests {
             tmp.path(),
             Path::new("templates"),
         );
-        LiveReloadPlugin::new().on_serve(&ctx)?;
+        LiveReloadPlugin::new().on_serve(&ctx).expect("on_serve");
 
-        let index = fs::read_to_string(tmp.path().join("index.html"))?;
-        let about = fs::read_to_string(tmp.path().join("about.html"))?;
-        let css = fs::read_to_string(tmp.path().join("style.css"))?;
+        let index = fs::read_to_string(tmp.path().join("index.html"))
+            .expect("read index");
+        let about = fs::read_to_string(tmp.path().join("about.html"))
+            .expect("read about");
+        let css =
+            fs::read_to_string(tmp.path().join("style.css")).expect("read css");
 
         assert!(index.contains(MARKER));
         assert!(about.contains(MARKER));
         assert!(!css.contains(MARKER));
-        Ok(())
     }
 
     #[test]
@@ -523,11 +519,11 @@ mod tests {
     }
 
     #[test]
-    fn livereload_plugin_no_html_files() -> Result<()> {
+    fn livereload_plugin_no_html_files() {
         // Arrange
-        let tmp = tempdir()?;
-        fs::write(tmp.path().join("style.css"), "body{}")?;
-        fs::write(tmp.path().join("data.json"), "{}")?;
+        let tmp = tempdir().expect("tempdir");
+        fs::write(tmp.path().join("style.css"), "body{}").expect("write");
+        fs::write(tmp.path().join("data.json"), "{}").expect("write");
 
         let ctx = PluginContext::new(
             Path::new("content"),
@@ -541,15 +537,14 @@ mod tests {
 
         // Assert
         assert!(result.is_ok());
-        Ok(())
     }
 
     #[test]
-    fn livereload_plugin_idempotent() -> Result<()> {
+    fn livereload_plugin_idempotent() {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().expect("tempdir");
         let html_path = tmp.path().join("page.html");
-        fs::write(&html_path, make_html("<p>Hello</p>"))?;
+        fs::write(&html_path, make_html("<p>Hello</p>")).expect("write");
 
         let ctx = PluginContext::new(
             Path::new("content"),
@@ -559,11 +554,15 @@ mod tests {
         );
 
         // Act — run the full plugin twice
-        LiveReloadPlugin::new().on_serve(&ctx)?;
-        let after_first = fs::read_to_string(&html_path)?;
+        LiveReloadPlugin::new()
+            .on_serve(&ctx)
+            .expect("first on_serve");
+        let after_first = fs::read_to_string(&html_path).expect("read");
 
-        LiveReloadPlugin::new().on_serve(&ctx)?;
-        let after_second = fs::read_to_string(&html_path)?;
+        LiveReloadPlugin::new()
+            .on_serve(&ctx)
+            .expect("second on_serve");
+        let after_second = fs::read_to_string(&html_path).expect("read");
 
         // Assert — content identical, no double injection
         assert_eq!(after_first, after_second);
@@ -571,7 +570,6 @@ mod tests {
         // indicator id within a single injection, so count the script tags.
         let script_count = after_second.matches("data-ssg-livereload").count();
         assert_eq!(script_count, 1, "script tag should appear exactly once");
-        Ok(())
     }
 
     #[test]
@@ -587,7 +585,7 @@ mod tests {
     }
 
     #[test]
-    fn livereload_plugin_nonexistent_dir() -> Result<()> {
+    fn livereload_plugin_nonexistent_dir() {
         // Arrange
         let ctx = PluginContext::new(
             Path::new("content"),
@@ -601,7 +599,51 @@ mod tests {
 
         // Assert — returns Ok, does not error on missing directory
         assert!(result.is_ok());
-        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn on_serve_propagates_inject_read_failure() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // An unreadable HTML file makes inject_livereload fail inside
+        // the on_serve loop, exercising its `?` propagation.
+        let tmp = tempdir().expect("tempdir");
+        let locked = tmp.path().join("locked.html");
+        fs::write(&locked, make_html("<p>Hi</p>")).expect("write");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .expect("chmod");
+
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        let res = LiveReloadPlugin::new().on_serve(&ctx);
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o644));
+        assert!(res.is_err(), "unreadable HTML file must fail on_serve");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn inject_fails_on_readonly_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // Readable but not writable: the read succeeds, the marker is
+        // absent, and the final fs::write errors — exercising the write
+        // `?` branch of inject_livereload.
+        let tmp = tempdir().expect("tempdir");
+        let path = tmp.path().join("frozen.html");
+        fs::write(&path, make_html("<p>Hi</p>")).expect("write");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o444))
+            .expect("chmod");
+
+        let res = inject_livereload(&path, DEFAULT_PORT);
+
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o644));
+        assert!(res.is_err(), "read-only HTML file must fail the write");
     }
 
     #[test]

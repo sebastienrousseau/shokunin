@@ -92,6 +92,20 @@ impl TemplateEngine {
     /// * `frontmatter` — parsed frontmatter as JSON key-value pairs
     /// * `site_globals` — site-level variables (name, `base_url`, etc.)
     ///
+    /// # Per-page language (spec A5, plan §2 1.5)
+    ///
+    /// Inside the render context, `site.language` and `page.language`
+    /// both carry the page's *resolved* language rather than the raw
+    /// site-wide default: front-matter `language` wins, then
+    /// front-matter `hreflang`, then the `site.language` global, then
+    /// `"en"` — normalised to BCP-47 hyphen form. Because the default
+    /// templates emit `<html lang="{{ site.language }}">`, a `/hi/…`
+    /// page with front-matter `language: hi` renders
+    /// `<html lang="hi">` even when the site default is `en-GB`, so
+    /// `<html lang>` agrees with the JSON-LD `inLanguage`,
+    /// `og:locale`, and hreflang self-reference sinks that resolve
+    /// through `seo::lang::resolve_page_lang`.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -117,6 +131,18 @@ impl TemplateEngine {
         frontmatter: &HashMap<String, serde_json::Value>,
         site_globals: &HashMap<String, serde_json::Value>,
     ) -> Result<String> {
+        // Resolve the page language once so every `<html lang>`
+        // emitter publishes the per-page value (spec A5, plan §2 1.5):
+        // front-matter `language` → front-matter `hreflang` → site
+        // default → "en", normalised to BCP-47 hyphen form. This is
+        // the emitter-side subset of `seo::lang::resolve_page_lang`.
+        let resolved_lang = crate::core_group::lang::resolve_render_lang(
+            frontmatter,
+            site_globals
+                .get("language")
+                .and_then(serde_json::Value::as_str),
+        );
+
         // Build page context
         let mut page: serde_json::Map<String, serde_json::Value> = frontmatter
             .iter()
@@ -126,38 +152,47 @@ impl TemplateEngine {
             "content".to_string(),
             serde_json::Value::String(page_content.to_string()),
         );
+        let _ = page.insert(
+            "language".to_string(),
+            serde_json::Value::String(resolved_lang.clone()),
+        );
 
-        // Build the full render context
+        // Build the full render context. `site.language` carries the
+        // per-page resolved language so templates that emit
+        // `<html lang="{{ site.language }}">` (scaffold base.html and
+        // user templates alike) publish the page's language without
+        // needing template changes.
+        let mut site: serde_json::Map<String, serde_json::Value> = site_globals
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        let _ = site.insert(
+            "language".to_string(),
+            serde_json::Value::String(resolved_lang),
+        );
+
         let mut ctx = serde_json::Map::new();
         let _ = ctx.insert("page".to_string(), serde_json::Value::Object(page));
-        let _ = ctx.insert(
-            "site".to_string(),
-            serde_json::Value::Object(
-                site_globals
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect(),
-            ),
-        );
+        let _ = ctx.insert("site".to_string(), serde_json::Value::Object(site));
 
         // Inject global config variables at top level
         for (k, v) in &self.config.globals {
             let _ = ctx.insert(k.clone(), v.clone());
         }
 
-        // Determine which template to use, fall back to page.html
-        let tmpl_name = if self.env.get_template(template_name).is_ok() {
-            template_name
-        } else if self.env.get_template("page.html").is_ok() {
-            "page.html"
-        } else {
-            // No matching template — return content as-is
-            return Ok(page_content.to_string());
-        };
-
-        let tmpl = self.env.get_template(tmpl_name).with_context(|| {
-            format!("Failed to load template '{tmpl_name}'")
-        })?;
+        // Determine which template to use, fall back to page.html.
+        // Single lookup per candidate — the successful `get_template`
+        // result is reused directly, so the resolve and load steps can
+        // never disagree.
+        let (tmpl_name, tmpl) =
+            if let Ok(t) = self.env.get_template(template_name) {
+                (template_name, t)
+            } else if let Ok(t) = self.env.get_template("page.html") {
+                ("page.html", t)
+            } else {
+                // No matching template — return content as-is
+                return Ok(page_content.to_string());
+            };
 
         tmpl.render(serde_json::Value::Object(ctx))
             .with_context(|| format!("Failed to render template '{tmpl_name}'"))
@@ -427,6 +462,113 @@ mod tests {
         assert!(result.contains("en-GB"));
     }
 
+    // ── Per-page <html lang> (spec A5, plan §2 1.5) ────────────────
+
+    fn engine_with_default_templates(dir: &Path) -> TemplateEngine {
+        setup_templates(dir);
+        let config = TemplateConfig {
+            template_dir: dir.join("tera"),
+            ..Default::default()
+        };
+        TemplateEngine::init(config).unwrap().unwrap()
+    }
+
+    fn site_with_language(lang: &str) -> HashMap<String, serde_json::Value> {
+        let mut site = HashMap::new();
+        let _ = site.insert(
+            "language".to_string(),
+            serde_json::Value::String(lang.to_string()),
+        );
+        site
+    }
+
+    #[test]
+    fn frontmatter_language_wins_over_site_language_in_html_lang() {
+        // The A5 acceptance shape: a page with front-matter
+        // `language: hi` must render `<html lang="hi">` even when the
+        // site-wide default is en-GB.
+        let dir = tempdir().unwrap();
+        let engine = engine_with_default_templates(dir.path());
+
+        let mut fm = HashMap::new();
+        let _ = fm.insert(
+            "language".to_string(),
+            serde_json::Value::String("hi".to_string()),
+        );
+
+        let result = engine
+            .render_page(
+                "page.html",
+                "<p>B</p>",
+                &fm,
+                &site_with_language("en-GB"),
+            )
+            .unwrap();
+        assert!(
+            result.contains(r#"<html lang="hi">"#),
+            "front-matter language must win: {result}"
+        );
+        assert!(!result.contains(r#"lang="en-GB""#));
+    }
+
+    #[test]
+    fn frontmatter_hreflang_used_when_language_absent() {
+        let dir = tempdir().unwrap();
+        let engine = engine_with_default_templates(dir.path());
+
+        let mut fm = HashMap::new();
+        let _ = fm.insert(
+            "hreflang".to_string(),
+            serde_json::Value::String("fr_fr".to_string()),
+        );
+
+        let result = engine
+            .render_page(
+                "page.html",
+                "<p>B</p>",
+                &fm,
+                &site_with_language("en"),
+            )
+            .unwrap();
+        // Also normalised to BCP-47 hyphen form.
+        assert!(
+            result.contains(r#"<html lang="fr-FR">"#),
+            "hreflang should be used and normalised: {result}"
+        );
+    }
+
+    #[test]
+    fn site_language_used_when_page_has_no_lang_signal() {
+        let dir = tempdir().unwrap();
+        let engine = engine_with_default_templates(dir.path());
+
+        let result = engine
+            .render_page(
+                "page.html",
+                "<p>B</p>",
+                &HashMap::new(),
+                &site_with_language("en-GB"),
+            )
+            .unwrap();
+        assert!(result.contains(r#"<html lang="en-GB">"#));
+    }
+
+    #[test]
+    fn en_fallback_when_no_language_anywhere() {
+        let dir = tempdir().unwrap();
+        let engine = engine_with_default_templates(dir.path());
+
+        let result = engine
+            .render_page(
+                "page.html",
+                "<p>B</p>",
+                &HashMap::new(),
+                &HashMap::new(),
+            )
+            .unwrap();
+        assert!(result.contains(r#"<html lang="en">"#));
+    }
+
     #[test]
     fn test_render_post_with_reading_time() {
         let dir = tempdir().unwrap();
@@ -541,6 +683,43 @@ mod tests {
         fs::write(data.join("broken.toml"), "not valid toml [[[").unwrap();
         fs::write(data.join("broken.json"), "{not valid").unwrap();
         fs::write(data.join("good.toml"), r#"x = "y""#).unwrap();
+
+        let result = TemplateEngine::load_data_files(&content);
+        assert!(result.contains_key("good"));
+        assert!(!result.contains_key("broken"));
+    }
+
+    #[test]
+    fn load_data_files_skips_non_utf8_file() {
+        // A file whose bytes are not valid UTF-8 makes
+        // `read_to_string` fail, taking the `continue` arm.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let data = dir.path().join("data");
+        fs::create_dir_all(&data).unwrap();
+
+        fs::write(data.join("binary.toml"), [0xFF, 0xFE, 0x00, 0x01]).unwrap();
+        fs::write(data.join("ok.toml"), r#"k = "v""#).unwrap();
+
+        let result = TemplateEngine::load_data_files(&content);
+        assert!(result.contains_key("ok"));
+        assert!(!result.contains_key("binary"));
+    }
+
+    #[test]
+    fn load_data_files_skips_invalid_yaml() {
+        // Exercises the YAML parse-error arm (including the
+        // `log::warn!` format arguments).
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let data = dir.path().join("data");
+        fs::create_dir_all(&data).unwrap();
+
+        fs::write(data.join("broken.yml"), "key: [unclosed").unwrap();
+        fs::write(data.join("good.yaml"), "k: v").unwrap();
 
         let result = TemplateEngine::load_data_files(&content);
         assert!(result.contains_key("good"));

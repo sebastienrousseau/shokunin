@@ -55,6 +55,41 @@ pub(super) fn truncate_at_word(s: &str, max_len: usize) -> String {
     }
 }
 
+/// Pass-through for a `read_dir` entry with a fault-injection hook so
+/// tests can exercise the mid-iteration error branch (which no real
+/// filesystem produces deterministically).
+#[allow(clippy::missing_const_for_fn)] // fail_point! body is non-const
+fn sidecar_dir_entry(
+    entry: std::io::Result<fs::DirEntry>,
+) -> std::io::Result<fs::DirEntry> {
+    fail_point!("postprocess::sidecar-entry", |_| Err(
+        std::io::Error::other("injected: postprocess::sidecar-entry")
+    ));
+    entry
+}
+
+/// Parse a `.meta.json` sidecar tolerantly: values are usually strings,
+/// but the pipeline also emits numeric/bool fields (e.g. `word_count`).
+/// Those are coerced to their string form instead of failing the whole
+/// sidecar (which would silently drop the page from every feed).
+/// `null` values are skipped; nested arrays/objects keep their compact
+/// JSON encoding (matching the JSON-encoded-string convention used by
+/// e.g. the MCP emitter's `agents` key).
+fn parse_meta_sidecar(content: &str) -> Option<HashMap<String, String>> {
+    let raw: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(content).ok()?;
+    let mut meta = HashMap::with_capacity(raw.len());
+    for (key, value) in raw {
+        let coerced = match value {
+            serde_json::Value::String(s) => s,
+            serde_json::Value::Null => continue,
+            other => other.to_string(),
+        };
+        let _ = meta.insert(key, coerced);
+    }
+    Some(meta)
+}
+
 /// Read `.meta.json` sidecar files from a directory to extract front
 /// matter metadata for each page.
 pub(super) fn read_meta_sidecars(
@@ -67,31 +102,67 @@ pub(super) fn read_meta_sidecars(
             continue;
         }
         for entry in fs::read_dir(&current)? {
-            let entry = entry?;
+            let entry = sidecar_dir_entry(entry)?;
             let path = entry.path();
             if path.is_dir() {
                 stack.push(path);
-            } else if path
-                .file_name()
-                .is_some_and(|n| n.to_string_lossy().ends_with(".meta.json"))
-            {
+            } else if let Some(stem) = sidecar_stem(&path) {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(meta) = serde_json::from_str::<
-                        HashMap<String, String>,
-                    >(&content)
-                    {
-                        let rel = path
-                            .parent()
-                            .and_then(|p| p.strip_prefix(site_dir).ok())
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .unwrap_or_default();
+                    if let Some(meta) = parse_meta_sidecar(&content) {
+                        let rel = sidecar_rel_path(&path, stem, site_dir);
                         entries.push((rel, meta));
                     }
                 }
             }
         }
     }
+    // Deterministic output (determinism.yml CI gate): `fs::read_dir`
+    // iteration order is filesystem-dependent (ext4 vs APFS), so
+    // without this sort every consumer (RSS/Atom/JSON Feed) would
+    // inherit an OS-dependent entry order. Callers still apply their
+    // own date-based sort on top; this just guarantees *their* input
+    // — and any future consumer that forgets to re-sort — starts from
+    // a stable baseline.
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(entries)
+}
+
+/// Returns a sidecar filename's stem (the part before `.meta.json`),
+/// or `None` if `path` isn't shaped like a `.meta.json` sidecar.
+fn sidecar_stem(path: &Path) -> Option<String> {
+    let name = path.file_name()?.to_string_lossy();
+    name.strip_suffix(".meta.json").map(str::to_string)
+}
+
+/// Derives a sidecar's page-relative path from its own filename stem
+/// plus any real (non-container) parent directories.
+///
+/// staticdatagen emits sidecars flat inside a `.meta/` container
+/// (`.meta/<slug>.meta.json`) — the identifying part is the filename
+/// stem, not the parent directory (which is always literally `.meta`
+/// and carries no per-page information; using it as the rel path, as
+/// a prior version of this function did, collapsed every page onto
+/// the same identifier and broke every feed's per-entry permalink —
+/// see the v0.0.47 determinism-gate investigation). A literal `index`
+/// stem is dropped (matching the web convention that `index.html` is
+/// a directory's default document), so a genuinely nested sidecar
+/// (`blog/hello/index.meta.json`) still resolves to `blog/hello`.
+fn sidecar_rel_path(path: &Path, stem: String, site_dir: &Path) -> String {
+    let parent_rel = path
+        .parent()
+        .and_then(|p| p.strip_prefix(site_dir).ok())
+        .map(Path::to_path_buf)
+        .unwrap_or_default();
+
+    let mut components: Vec<String> = parent_rel
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().into_owned())
+        .filter(|c| c != ".meta")
+        .collect();
+    if stem != "index" {
+        components.push(stem);
+    }
+    components.join("/")
 }
 
 /// Parsed components of an RFC 2822 date.
@@ -106,10 +177,6 @@ pub(super) struct Rfc2822Date {
 }
 
 impl Rfc2822Date {
-    pub(super) fn to_iso_date(&self) -> String {
-        format!("{:04}-{:02}-{:02}", self.year, self.month, self.day)
-    }
-
     pub(super) fn to_rfc3339(&self) -> String {
         let tz = if self.tz == "+0000" || self.tz == "GMT" || self.tz == "UTC" {
             "+00:00".to_string()
@@ -172,14 +239,6 @@ pub(super) fn parse_rfc2822_lenient(rfc: &str) -> Option<Rfc2822Date> {
         sec,
         tz: tz.to_string(),
     })
-}
-
-/// Convert an RFC 2822 date string to ISO 8601 date (YYYY-MM-DD).
-///
-/// Tolerates incorrect weekday names (common in generated feeds) by
-/// stripping the leading "Day, " prefix and parsing the remainder.
-pub(super) fn rfc2822_to_iso_date(rfc: &str) -> Option<String> {
-    parse_rfc2822_lenient(rfc).map(|dt| dt.to_iso_date())
 }
 
 /// Convert an RFC 2822 date string to ISO 8601 datetime.
@@ -348,14 +407,8 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
-    // rfc2822_to_iso_date / rfc2822_to_iso8601
+    // rfc2822_to_iso8601
     // -----------------------------------------------------------------
-
-    #[test]
-    fn test_rfc2822_to_iso_date() {
-        let result = rfc2822_to_iso_date("Thu, 11 Apr 2026 06:06:06 +0000");
-        assert_eq!(result, Some("2026-04-11".to_string()));
-    }
 
     #[test]
     fn test_rfc2822_to_iso8601() {
@@ -373,20 +426,6 @@ mod tests {
     // -----------------------------------------------------------------
     // Rfc2822Date
     // -----------------------------------------------------------------
-
-    #[test]
-    fn test_rfc2822_date_to_iso_date() {
-        let dt = Rfc2822Date {
-            year: 2026,
-            month: 4,
-            day: 11,
-            hour: 6,
-            min: 6,
-            sec: 6,
-            tz: "+0000".to_string(),
-        };
-        assert_eq!(dt.to_iso_date(), "2026-04-11");
-    }
 
     #[test]
     fn test_rfc2822_date_to_rfc3339_utc() {
@@ -557,5 +596,242 @@ mod tests {
         let line = "  <lastmod>2025-09-01</lastmod>";
         let result = normalise_url_in_xml_line(line);
         assert_eq!(result, line, "Non-URL lines should be unchanged");
+    }
+
+    // -----------------------------------------------------------------
+    // truncate_at_word: UTF-8 boundary backtracking
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_truncate_at_word_backs_up_to_char_boundary() {
+        // max_len = 2 lands in the middle of the 2-byte 'é', so the
+        // truncation point must back up to the previous boundary.
+        let result = truncate_at_word("aé bcd", 2);
+        assert_eq!(result, "a...");
+    }
+
+    // -----------------------------------------------------------------
+    // read_meta_sidecars
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_read_meta_sidecars_non_directory_input() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file = tmp.path().join("plain.txt");
+        fs::write(&file, "not a dir").unwrap();
+        let entries = read_meta_sidecars(&file).unwrap();
+        assert!(entries.is_empty(), "file input yields no sidecars");
+    }
+
+    #[test]
+    fn test_read_meta_sidecars_collects_nested_sidecar() {
+        // A genuinely nested sidecar named `index.meta.json` — the
+        // `index` stem is dropped (web convention: index.html is a
+        // directory's default document), so the parent directories
+        // alone identify the page.
+        let tmp = tempfile::tempdir().unwrap();
+        let page = tmp.path().join("blog").join("hello");
+        fs::create_dir_all(&page).unwrap();
+        fs::write(
+            page.join("index.meta.json"),
+            r#"{"title":"Hello","description":"D"}"#,
+        )
+        .unwrap();
+        let entries = read_meta_sidecars(tmp.path()).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, "blog/hello");
+        assert_eq!(
+            entries[0].1.get("title").map(String::as_str),
+            Some("Hello")
+        );
+    }
+
+    #[test]
+    fn test_read_meta_sidecars_flat_meta_container_uses_filename_stem() {
+        // The real staticdatagen convention (v0.0.47 determinism-gate
+        // investigation): sidecars are flat siblings inside a
+        // dedicated `.meta/` container, e.g. `.meta/page-92.meta.json`
+        // for the page compiled at `site_dir/page-92/`. The `.meta`
+        // parent carries no page identity — the filename stem does.
+        // A prior version of this function used the *parent*
+        // directory as the rel path, which collapsed every page onto
+        // the identical rel path ".meta" and broke every feed's
+        // per-entry permalink (every <link>/<id> pointed at the same
+        // bogus "/.meta/" URL).
+        let tmp = tempfile::tempdir().unwrap();
+        let meta_dir = tmp.path().join(".meta");
+        fs::create_dir_all(&meta_dir).unwrap();
+        fs::write(
+            meta_dir.join("page-92.meta.json"),
+            r#"{"title":"Ninety Two"}"#,
+        )
+        .unwrap();
+        fs::write(
+            meta_dir.join("page-31.meta.json"),
+            r#"{"title":"Thirty One"}"#,
+        )
+        .unwrap();
+        let mut entries = read_meta_sidecars(tmp.path()).unwrap();
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        assert_eq!(
+            entries
+                .iter()
+                .map(|(rel, _)| rel.as_str())
+                .collect::<Vec<_>>(),
+            vec!["page-31", "page-92"],
+            "each page must get its own unique rel path, not the shared \
+             `.meta` container directory"
+        );
+    }
+
+    #[test]
+    fn test_read_meta_sidecars_skips_malformed_json() {
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("bad.meta.json"), "{ not json").unwrap();
+        let entries = read_meta_sidecars(tmp.path()).unwrap();
+        assert!(entries.is_empty(), "malformed sidecars are skipped");
+    }
+
+    #[test]
+    fn test_read_meta_sidecars_ignores_non_sidecar_files() {
+        // A file that doesn't match the `.meta.json` suffix (e.g. the
+        // compiled `index.html` sitting right next to the sidecar)
+        // must be skipped by `sidecar_stem`'s `None` arm rather than
+        // treated as a sidecar.
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("index.html"), "<html></html>").unwrap();
+        fs::write(tmp.path().join("notes.txt"), "not a sidecar").unwrap();
+        fs::write(tmp.path().join("real.meta.json"), r#"{"title":"Real"}"#)
+            .unwrap();
+        let entries = read_meta_sidecars(tmp.path()).unwrap();
+        assert_eq!(entries.len(), 1, "only the genuine sidecar counts");
+        assert_eq!(entries[0].0, "real");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_read_meta_sidecars_unreadable_sidecar_file_is_skipped() {
+        // A sidecar whose *directory listing* succeeds but whose file
+        // contents can't be read (permission denied on the file
+        // itself, not its parent) must be silently skipped rather
+        // than erroring the whole walk — exercises the `fs::read_to_string`
+        // `Err` arm of `if let Ok(content) = ...`.
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let locked = tmp.path().join("locked.meta.json");
+        fs::write(&locked, r#"{"title":"Locked"}"#).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+        let result = read_meta_sidecars(tmp.path());
+        // Restore perms so tempdir cleanup works.
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o644));
+        let entries = result.unwrap();
+        assert!(
+            entries.is_empty(),
+            "an unreadable sidecar file must be skipped, not error"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_read_meta_sidecars_unreadable_subdir_errors() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+        let result = read_meta_sidecars(tmp.path());
+        // Restore perms so tempdir cleanup works.
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        assert!(result.is_err(), "unreadable subdir must error");
+    }
+
+    // -----------------------------------------------------------------
+    // parse_meta_sidecar: non-string value coercion (issue: numeric
+    // word_count sidecar fields must not drop the page)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_parse_meta_sidecar_coerces_numbers_and_bools() {
+        let meta = parse_meta_sidecar(
+            r#"{"title":"T","word_count":342,"draft":false}"#,
+        )
+        .unwrap();
+        assert_eq!(meta.get("title").map(String::as_str), Some("T"));
+        assert_eq!(meta.get("word_count").map(String::as_str), Some("342"));
+        assert_eq!(meta.get("draft").map(String::as_str), Some("false"));
+    }
+
+    #[test]
+    fn test_parse_meta_sidecar_skips_null_and_encodes_nested() {
+        let meta = parse_meta_sidecar(
+            r#"{"title":"T","banner":null,"agents":{"disallow":["mcp"]}}"#,
+        )
+        .unwrap();
+        assert!(!meta.contains_key("banner"), "null values are dropped");
+        assert_eq!(
+            meta.get("agents").map(String::as_str),
+            Some(r#"{"disallow":["mcp"]}"#)
+        );
+    }
+
+    #[test]
+    fn test_parse_meta_sidecar_rejects_non_object() {
+        assert!(parse_meta_sidecar("[1,2,3]").is_none());
+        assert!(parse_meta_sidecar("nope").is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // parse_rfc2822_lenient: remaining month arms + per-field failures
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_parse_rfc2822_lenient_all_months() {
+        let months = [
+            ("Jan", 1),
+            ("Feb", 2),
+            ("Mar", 3),
+            ("Apr", 4),
+            ("May", 5),
+            ("Jun", 6),
+            ("Jul", 7),
+            ("Aug", 8),
+            ("Sep", 9),
+            ("Oct", 10),
+            ("Nov", 11),
+            ("Dec", 12),
+        ];
+        for (name, number) in months {
+            let input = format!("11 {name} 2026 06:06:06 +0000");
+            let dt = parse_rfc2822_lenient(&input).unwrap();
+            assert_eq!(dt.month, number, "month {name}");
+        }
+    }
+
+    #[test]
+    fn test_parse_rfc2822_lenient_bad_day() {
+        assert!(parse_rfc2822_lenient("xx Apr 2026 06:06:06 +0000").is_none());
+    }
+
+    #[test]
+    fn test_parse_rfc2822_lenient_bad_year() {
+        assert!(parse_rfc2822_lenient("11 Apr 20x6 06:06:06 +0000").is_none());
+    }
+
+    #[test]
+    fn test_parse_rfc2822_lenient_bad_hour_min_sec() {
+        assert!(parse_rfc2822_lenient("11 Apr 2026 xx:06:06 +0000").is_none());
+        assert!(parse_rfc2822_lenient("11 Apr 2026 06:xx:06 +0000").is_none());
+        assert!(parse_rfc2822_lenient("11 Apr 2026 06:06:xx +0000").is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // extract_xml_value: open tag without a closing tag
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_xml_value_unclosed_tag() {
+        assert_eq!(extract_xml_value("<title>abc", "title"), None);
     }
 }

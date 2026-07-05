@@ -62,8 +62,10 @@ ignore = [
     # ns-decl allocation). Both paths are transitive and build-time only —
     # ssg parses no untrusted XML at runtime. 0.39.4 arrives via
     # sitemap-gen→html-generator 0.0.3→mdx-gen 0.0.1→comrak 0.28→syntect→
-    # plist; another copy via staticdatagen→metadata-gen 0.0.4. Drop once
-    # a staticdatagen/metadata-gen release bumps quick-xml to >=0.41.
+    # plist; 0.40.1 via staticdatagen→metadata-gen 0.0.4. Removal plan
+    # (2026-07-04): the staticdatagen 0.0.11 + html-generator 0.0.7 +
+    # mdx-gen 0.0.5 releases staged for v0.0.47 collapse the 0.39 path;
+    # a metadata-gen release with quick-xml ≥0.41 clears the 0.40 path.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
 ]

@@ -212,10 +212,7 @@ impl LlmCache {
         }
         if let Ok(home) = std::env::var("HOME") {
             if !home.is_empty() {
-                return PathBuf::from(home)
-                    .join(".cache")
-                    .join("ssg")
-                    .join("llm");
+                return generic_unix_cache_dir(&home);
             }
         }
         PathBuf::from(".ssg-llm-cache")
@@ -298,17 +295,11 @@ impl LlmCache {
             }
         };
 
-        if let Ok(meta) = file.metadata() {
-            if let Ok(modified) = meta.modified() {
-                if let Ok(age) = SystemTime::now().duration_since(modified) {
-                    if age > self.ttl {
-                        let _ = fs::remove_file(&path);
-                        let _ = self.evictions.fetch_add(1, Ordering::Relaxed);
-                        let _ = self.misses.fetch_add(1, Ordering::Relaxed);
-                        return None;
-                    }
-                }
-            }
+        if entry_is_expired(&file, self.ttl) {
+            let _ = fs::remove_file(&path);
+            let _ = self.evictions.fetch_add(1, Ordering::Relaxed);
+            let _ = self.misses.fetch_add(1, Ordering::Relaxed);
+            return None;
         }
 
         let mut buf = String::new();
@@ -354,9 +345,7 @@ impl LlmCache {
     /// ```
     pub fn set(&self, key: &[u8; 32], payload: &str) -> io::Result<()> {
         let path = self.entry_path(key);
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
+        ensure_parent_dir(&path)?;
 
         let key_hex = encode_hex(key);
         let body = serde_json::json!({
@@ -461,6 +450,74 @@ impl LlmCache {
         let (shard, rest) = hex.split_at(2);
         self.root.join(shard).join(format!("{rest}.json"))
     }
+}
+
+/// Returns `true` if `file`'s recorded modification time is older than
+/// `ttl`, meaning [`LlmCache::get`] should evict it instead of
+/// returning it as a hit.
+///
+/// Conservative on any uncertainty: if the file's metadata or modified
+/// time cannot be determined, or the clock looks skewed such that
+/// `modified` is in the future, the entry is treated as *not* expired
+/// rather than evicted — a filesystem or clock hiccup should never
+/// cause a spurious cache miss. On every real filesystem an
+/// already-open file handle reliably yields `Ok` from both
+/// `metadata()` and `modified()`, so the two failpoints below are the
+/// only way to drive those (otherwise practically unreachable, since
+/// `fs::File` exposes no way to force them from safe Rust) `Err` arms
+/// in a test.
+fn entry_is_expired(file: &fs::File, ttl: Duration) -> bool {
+    let Ok(meta) = (|| {
+        fail_point!("llm_cache::get-metadata-err", |_| Err(()));
+        file.metadata().map_err(|_| ())
+    })() else {
+        return false;
+    };
+    let Ok(modified) = (|| {
+        fail_point!("llm_cache::get-modified-err", |_| Err(()));
+        meta.modified().map_err(|_| ())
+    })() else {
+        return false;
+    };
+    let Ok(age) = SystemTime::now().duration_since(modified) else {
+        return false;
+    };
+    age > ttl
+}
+
+/// Ensures the parent directory of `path` exists, creating it (and
+/// any missing ancestors) if necessary. Used by [`LlmCache::set`]
+/// before writing the temp file that gets renamed into place.
+///
+/// [`LlmCache::entry_path`] always joins at least a shard directory
+/// and a filename onto `root`, so `path.parent()` is `Some` for every
+/// key produced through the public API in practice — the `None` arm
+/// (a path with no parent component at all) cannot be produced that
+/// way. The failpoint lets a test drive that arm directly without a
+/// contrived root value.
+fn ensure_parent_dir(path: &Path) -> io::Result<()> {
+    let parent = (|| {
+        fail_point!("llm_cache::set-no-parent", |_| None);
+        path.parent()
+    })();
+    if let Some(parent) = parent {
+        fs::create_dir_all(parent)?;
+    }
+    Ok(())
+}
+
+/// Generic Unix (`$HOME/.cache/ssg/llm`) cache-root fallback, used by
+/// every target that is neither macOS nor Windows (Linux, BSD, etc.).
+///
+/// Extracted out of [`LlmCache::default_cache_dir`] as a pure function
+/// of `home` so it is directly unit-testable regardless of which OS
+/// actually runs the test suite: on a macOS test runner, the
+/// `#[cfg(target_os = "macos")]` branch in `default_cache_dir` always
+/// intercepts first whenever `HOME` is set, so this fallback can never
+/// be reached at runtime there even though the logic is still compiled
+/// in (it is real, live code for Linux/BSD users).
+fn generic_unix_cache_dir(home: &str) -> PathBuf {
+    PathBuf::from(home).join(".cache").join("ssg").join("llm")
 }
 
 /// Lowercase-hex encode a 32-byte digest into a 64-char `String`
@@ -575,6 +632,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn round_trip_hit() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -584,6 +642,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn miss_counter_advances_on_absent_key() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -594,6 +653,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn hit_counter_advances_on_present_key() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -604,6 +664,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn evict_removes_entry() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -620,6 +681,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn ttl_zero_expires_immediately() {
         let dir = tempfile::tempdir().unwrap();
         let cache = LlmCache::with_ttl(
@@ -634,6 +696,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn corrupt_json_evicts_and_misses() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -646,6 +709,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn length_mismatch_evicts() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -662,6 +726,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn version_mismatch_evicts() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -678,6 +743,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn key_mismatch_evicts() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "p", 1);
@@ -695,6 +761,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn sharding_uses_first_two_hex_chars() {
         let (dir, cache) = cache_for_test();
         let key = [0xab; 32];
@@ -704,6 +771,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn concurrent_distinct_keys_do_not_collide() {
         // AC7 — 50 concurrent writers on distinct keys.
         let (_d, cache) = cache_for_test();
@@ -730,6 +798,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn concurrent_same_key_last_writer_wins_no_corruption() {
         // AC7 — multiple writers on the same key must produce a
         // valid entry; we accept any one of their payloads.
@@ -750,19 +819,133 @@ mod tests {
         assert!(got.starts_with('v'));
     }
 
+    /// Serialised env-var scoping for the `default_cache_dir` tests.
+    ///
+    /// Entries are applied *sequentially* (capture-then-set per entry)
+    /// and restored in reverse, so a duplicated key deterministically
+    /// exercises both restore arms: the later entry's captured
+    /// previous value is whatever the earlier entry just set.
+    fn with_env_vars<F: FnOnce()>(vars: &[(&str, Option<&str>)], f: F) {
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let mut prev: Vec<(String, Option<String>)> = Vec::new();
+        for (key, value) in vars {
+            prev.push(((*key).to_string(), std::env::var(key).ok()));
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+        }
+        f();
+        for (key, value) in prev.into_iter().rev() {
+            match value {
+                Some(v) => std::env::set_var(&key, v),
+                None => std::env::remove_var(&key),
+            }
+        }
+    }
+
     #[test]
     fn default_cache_dir_respects_explicit_override() {
-        // Save / restore so we don't pollute the rest of the suite.
-        let prev = std::env::var("SSG_LLM_CACHE_DIR").ok();
-        std::env::set_var("SSG_LLM_CACHE_DIR", "/tmp/ssg-test-cache");
-        assert_eq!(
-            LlmCache::default_cache_dir(),
-            PathBuf::from("/tmp/ssg-test-cache")
+        // Duplicate key: the inner entry restores the outer value on
+        // unwind (Some arm), the outer entry restores the machine
+        // state.
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", Some("/outer-sentinel")),
+                ("SSG_LLM_CACHE_DIR", Some("/tmp/ssg-test-cache")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/tmp/ssg-test-cache")
+                );
+            },
         );
-        match prev {
-            Some(v) => std::env::set_var("SSG_LLM_CACHE_DIR", v),
-            None => std::env::remove_var("SSG_LLM_CACHE_DIR"),
-        }
+    }
+
+    #[test]
+    fn default_cache_dir_empty_override_falls_through_to_xdg() {
+        // An empty SSG_LLM_CACHE_DIR must be ignored; XDG_CACHE_HOME
+        // is next in the resolution order. The duplicated unset+set
+        // pair drives the remove-then-restore-None arms of the helper.
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("SSG_LLM_CACHE_DIR", Some("")),
+                ("XDG_CACHE_HOME", Some("/xdg-root")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/xdg-root").join("ssg").join("llm")
+                );
+            },
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn default_cache_dir_empty_xdg_uses_home_library_caches() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", Some("")),
+                ("HOME", Some("/home-test")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from("/home-test")
+                        .join("Library")
+                        .join("Caches")
+                        .join("ssg")
+                        .join("llm")
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn default_cache_dir_without_home_uses_relative_fallback() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", None),
+                // On Windows, LOCALAPPDATA is a real, always-set env
+                // var that the production code checks before falling
+                // through to HOME — must be cleared too so this test
+                // exercises the actual "nothing configured" fallback
+                // on every platform.
+                ("LOCALAPPDATA", None),
+                ("HOME", None),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from(".ssg-llm-cache")
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn default_cache_dir_empty_home_uses_relative_fallback() {
+        with_env_vars(
+            &[
+                ("SSG_LLM_CACHE_DIR", None),
+                ("XDG_CACHE_HOME", None),
+                ("LOCALAPPDATA", None),
+                ("HOME", Some("")),
+            ],
+            || {
+                assert_eq!(
+                    LlmCache::default_cache_dir(),
+                    PathBuf::from(".ssg-llm-cache")
+                );
+            },
+        );
     }
 
     #[test]
@@ -782,6 +965,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn stats_store_counter_increments() {
         let (_d, cache) = cache_for_test();
         let k1 = LlmCache::compute_key("e", "m", "p1", 1);
@@ -792,6 +976,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn get_returns_none_when_entry_is_a_directory() {
         // File::open on a directory returns Err with kind other than
         // NotFound — hits the catch-all `Err(_) => …` arm in get().
@@ -803,6 +988,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn get_returns_none_on_missing_entry_increments_miss() {
         let (_d, cache) = cache_for_test();
         let key = LlmCache::compute_key("e", "m", "missing", 1);
@@ -847,6 +1033,59 @@ mod tests {
         let _ = res;
     }
 
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel]
+    fn get_open_permission_error_counts_as_miss() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "denied", 1);
+        cache.set(&key, "x").unwrap();
+        let path = cache.entry_path(&key);
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let misses_before = cache.stats().misses;
+        assert!(
+            cache.get(&key).is_none(),
+            "EACCES must be treated as a miss"
+        );
+        assert_eq!(cache.stats().misses, misses_before + 1);
+
+        // Restore so the tempdir can be cleaned up.
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
+    #[test]
+    #[serial_test::parallel]
+    fn get_hits_when_mtime_is_in_the_future() {
+        // duration_since(modified) errors when the mtime is ahead of
+        // now; the TTL check must fall through and still return a hit.
+        let (_d, cache) = cache_for_test();
+        let key = LlmCache::compute_key("e", "m", "future", 1);
+        cache.set(&key, "from-tomorrow").unwrap();
+        let path = cache.entry_path(&key);
+        let f = fs::OpenOptions::new().write(true).open(&path).unwrap();
+        f.set_modified(SystemTime::now() + Duration::from_secs(3600))
+            .unwrap();
+        drop(f);
+
+        assert_eq!(cache.get(&key).as_deref(), Some("from-tomorrow"));
+    }
+
+    #[test]
+    #[serial_test::parallel]
+    fn set_fails_when_root_is_a_file() {
+        // create_dir_all under a plain file must error, propagating
+        // through the `?` in set().
+        let dir = tempfile::tempdir().unwrap();
+        let root_file = dir.path().join("rootfile");
+        fs::write(&root_file, "not a dir").unwrap();
+        let cache = LlmCache::new(root_file);
+        let key = LlmCache::compute_key("e", "m", "p", 1);
+        assert!(cache.set(&key, "x").is_err());
+        assert_eq!(cache.stats().stores, 0);
+    }
+
     #[test]
     fn next_tmp_seq_is_monotonic() {
         let a = next_tmp_seq();
@@ -854,5 +1093,105 @@ mod tests {
         let c = next_tmp_seq();
         assert!(b > a);
         assert!(c > b);
+    }
+
+    #[test]
+    fn generic_unix_cache_dir_joins_expected_components() {
+        // On macOS the `#[cfg(target_os = "macos")]` branch in
+        // `default_cache_dir` always intercepts before this generic
+        // Linux/BSD fallback can be reached at runtime whenever `HOME`
+        // is set, so the underlying logic is tested directly here
+        // instead of through `default_cache_dir` itself.
+        assert_eq!(
+            generic_unix_cache_dir("/home/alice"),
+            PathBuf::from("/home/alice")
+                .join(".cache")
+                .join("ssg")
+                .join("llm")
+        );
+    }
+
+    #[test]
+    fn llm_cache_debug_impl_includes_type_name() {
+        let (_d, cache) = cache_for_test();
+        let debug = format!("{cache:?}");
+        assert!(debug.contains("LlmCache"));
+    }
+
+    #[test]
+    fn cache_stats_debug_impl_includes_type_name() {
+        let stats = CacheStats::default();
+        let debug = format!("{stats:?}");
+        assert!(debug.contains("CacheStats"));
+    }
+
+    // ── Fault injection (feature-gated) ──────────────────────────
+    //
+    // `fs::File` exposes no safe way to make an already-open handle's
+    // `metadata()`/`modified()` calls fail, and `LlmCache::entry_path`
+    // always produces a path with a parent component, so these three
+    // branches are otherwise practically unreachable from a test.
+
+    #[cfg(feature = "test-fault-injection")]
+    mod fault {
+        use super::*;
+        use serial_test::serial;
+
+        #[test]
+        #[serial]
+        fn entry_is_expired_treats_metadata_error_as_not_expired() {
+            let (_d, cache) = cache_for_test();
+            let key = LlmCache::compute_key("e", "m", "metadata-err", 1);
+            cache.set(&key, "x").unwrap();
+
+            fail::cfg("llm_cache::get-metadata-err", "return").unwrap();
+            let hit = cache.get(&key);
+            let _ = fail::cfg("llm_cache::get-metadata-err", "off");
+
+            assert_eq!(
+                hit.as_deref(),
+                Some("x"),
+                "metadata() failure must fall back to 'not expired', not a miss"
+            );
+        }
+
+        #[test]
+        #[serial]
+        fn entry_is_expired_treats_modified_error_as_not_expired() {
+            let (_d, cache) = cache_for_test();
+            let key = LlmCache::compute_key("e", "m", "modified-err", 1);
+            cache.set(&key, "y").unwrap();
+
+            fail::cfg("llm_cache::get-modified-err", "return").unwrap();
+            let hit = cache.get(&key);
+            let _ = fail::cfg("llm_cache::get-modified-err", "off");
+
+            assert_eq!(
+                hit.as_deref(),
+                Some("y"),
+                "modified() failure must fall back to 'not expired', not a miss"
+            );
+        }
+
+        #[test]
+        #[serial]
+        fn set_skips_mkdir_when_parent_forced_to_none() {
+            let (_d, cache) = cache_for_test();
+            let key = LlmCache::compute_key("e", "m", "no-parent", 1);
+
+            fail::cfg("llm_cache::set-no-parent", "return").unwrap();
+            let result = cache.set(&key, "z");
+            let _ = fail::cfg("llm_cache::set-no-parent", "off");
+
+            // The shard directory was never created (mkdir was
+            // skipped), so the temp-file creation that follows fails
+            // with NotFound — proving `ensure_parent_dir` really did
+            // take the "no parent" arm rather than silently
+            // succeeding via the normal path.
+            assert!(
+                result.is_err(),
+                "set() should fail when the parent directory was never created"
+            );
+        }
     }
 }

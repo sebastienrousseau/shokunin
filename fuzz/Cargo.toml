@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# cargo-fuzz harness for ssg / ssg-core (v0.0.47 plan §3 item 2.1,
+# issue #566). Detached from the parent workspace (empty [workspace]
+# table below) so `forbid(unsafe_code)`, MSRV, and the workspace lint
+# tables are unaffected — libFuzzer instrumentation requires nightly
+# `-Z sanitizer` flags that the main workspace must never depend on.
+#
+# Run (requires nightly + cargo-fuzz):
+#   cargo install cargo-fuzz --locked
+#   cargo +nightly fuzz run fuzz_frontmatter -- -max_total_time=60
+
+[package]
+name = "ssg-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.ssg-core]
+path = "../crates/ssg-core"
+
+[dependencies.ssg]
+# Default features kept on: the lib currently fails to type-check under
+# --no-default-features (seo_plugin.rs feature-gating gap), and the
+# fuzzed entry points (shortcodes, html_rewriter) are unconditional
+# modules either way.
+path = ".."
+
+# Detach from the parent workspace (cargo-fuzz convention).
+[workspace]
+
+[[bin]]
+name = "fuzz_frontmatter"
+path = "fuzz_targets/fuzz_frontmatter.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_markdown"
+path = "fuzz_targets/fuzz_markdown.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_shortcodes"
+path = "fuzz_targets/fuzz_shortcodes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_html_rewrite"
+path = "fuzz_targets/fuzz_html_rewrite.rs"
+test = false
+doc = false
+bench = false

@@ -60,8 +60,14 @@ pub fn format(report: &AuditReport) -> String {
     // serde_json::Value. The `Result<String>` path is impossible to
     // exercise in safe Rust, which is why we don't surface one to
     // callers.
-    serde_json::to_string_pretty(&doc)
-        .unwrap_or_else(|_| String::from("{\"version\":\"2.1.0\",\"runs\":[]}"))
+    stringify(serde_json::to_string_pretty(&doc))
+}
+
+/// Unwraps the serialised document, degrading to a minimal (but
+/// schema-valid) empty SARIF document on the impossible-in-practice
+/// serialisation failure.
+fn stringify(res: Result<String, serde_json::Error>) -> String {
+    res.unwrap_or_else(|_| String::from("{\"version\":\"2.1.0\",\"runs\":[]}"))
 }
 
 /// Builds the per-run SARIF object: tool descriptor + rules + results.
@@ -117,6 +123,7 @@ fn describe_gate(name: &str) -> String {
         "feeds"         => "RSS / Atom / JSON Feed schema validity.".to_string(),
         "images"        => "Responsive <picture>, alt text presence, modern format coverage.".to_string(),
         "search_index"  => "ssg-search artefacts: embeddings.bin, model.bin, tokenizer.bin, manifest.json.".to_string(),
+        "lang_consistency" => "JSON-LD inLanguage vs <html lang> base-language consistency.".to_string(),
         other            => format!("ssg audit gate `{other}` (third-party).") ,
     }
 }
@@ -417,6 +424,16 @@ mod tests {
             v["runs"][0]["results"][0]["message"]["text"],
             "<img> missing alt"
         );
+    }
+
+    #[test]
+    fn stringify_falls_back_to_minimal_document_on_error() {
+        let err = serde_json::from_str::<serde_json::Value>("{")
+            .expect_err("truncated JSON must fail");
+        let s = stringify(Err(err));
+        let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["version"], "2.1.0");
+        assert!(v["runs"].as_array().unwrap().is_empty());
     }
 
     #[test]

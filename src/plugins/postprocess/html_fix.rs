@@ -170,11 +170,12 @@ fn href_is_present_and_non_empty(lower_tag: &str) -> bool {
         return false;
     };
     let rest = rest.trim_start();
+    // NB: `trim_start` above means the next char can never be
+    // whitespace, so no dedicated whitespace arm is needed.
     match rest.chars().next() {
         None | Some('>') => false,
         Some('"') => rest.len() > 1 && !rest.starts_with("\"\""),
         Some('\'') => rest.len() > 1 && !rest.starts_with("''"),
-        Some(c) if c.is_whitespace() => false,
         Some(_) => true,
     }
 }
@@ -429,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_html_fix_upgrades_jsonld_context() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
 
         let html = r#"<html><head>
@@ -438,11 +439,9 @@ mod tests {
 </script>
 </head><body></body></html>"#;
 
-        let result = HtmlFixPlugin.transform_html(
-            html,
-            Path::new("index.html"),
-            &ctx,
-        )?;
+        let result = HtmlFixPlugin
+            .transform_html(html, Path::new("index.html"), &ctx)
+            .unwrap();
         assert!(result.contains("\"https://schema.org\""));
         assert!(!result.contains("\"http://schema.org/\""));
         Ok(())
@@ -450,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_html_fix_converts_jsonld_dates() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
 
         let html = r#"<html><head>
@@ -459,11 +458,9 @@ mod tests {
 </script>
 </head><body></body></html>"#;
 
-        let result = HtmlFixPlugin.transform_html(
-            html,
-            Path::new("article.html"),
-            &ctx,
-        )?;
+        let result = HtmlFixPlugin
+            .transform_html(html, Path::new("article.html"), &ctx)
+            .unwrap();
         assert!(
             result.contains("\"datePublished\":\"2026-04-11"),
             "Expected ISO date, got: {result}"
@@ -852,5 +849,114 @@ mod tests {
         let len = html2.len();
         inject_class_attr(&mut html2, len, "foo");
         assert_eq!(html2, "<img class=\"existing\"> some text");
+
+        // A `>` exists before `pos` but has no matching `<` before it
+        // (malformed/truncated markup) — the inner `rfind('<')` must
+        // return `None` and the function must leave the string alone.
+        let mut html3 = "> stray text".to_string();
+        let len3 = html3.len();
+        inject_class_attr(&mut html3, len3, "foo");
+        assert_eq!(html3, "> stray text");
+    }
+
+    // -----------------------------------------------------------------
+    // apply_html_fixes: routing gates for each fixer
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_apply_html_fixes_routes_broken_img_repair() {
+        let html = r#"<img alt="x" <p src="/pic.png"> tail"#;
+        let out = apply_html_fixes(html);
+        assert!(
+            out.contains(r#"<img alt="x" src="/pic.png" />"#),
+            "broken img must be repaired via the apply pipeline: {out}"
+        );
+    }
+
+    #[test]
+    fn test_apply_html_fixes_routes_class_syntax_repair() {
+        let html = r#"<div>.class="hero"</div>"#;
+        let out = apply_html_fixes(html);
+        assert!(
+            !out.contains(".class="),
+            "literal class syntax must be removed via the apply pipeline: {out}"
+        );
+    }
+
+    #[test]
+    fn test_apply_html_fixes_routes_empty_preload_removal() {
+        let html = r#"<head><link rel="preload" href="" as="style"><link rel="stylesheet" href="/a.css"></head>"#;
+        let out = apply_html_fixes(html);
+        assert!(
+            !out.contains("rel=\"preload\""),
+            "empty-href preload must be dropped via the apply pipeline: {out}"
+        );
+        assert!(out.contains("/a.css"), "real links survive: {out}");
+    }
+
+    // -----------------------------------------------------------------
+    // fix_jsonld_dates: RFC-2822-shaped but unparseable value
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_fix_jsonld_dates_keeps_unparseable_rfc_shaped_date() {
+        let html = r#"{"datePublished":"Mon, not a real date"}"#;
+        let out = fix_jsonld_dates(html);
+        assert_eq!(out, html, "unparseable date passes through verbatim");
+    }
+
+    // -----------------------------------------------------------------
+    // fix_broken_img_tags: unterminated src attribute bails out
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_fix_broken_img_tags_unterminated_src_bails_out() {
+        let html = r#"<img alt="x" <p src="never-closes"#;
+        let out = fix_broken_img_tags(html);
+        assert_eq!(out, html, "unterminated src must not loop or rewrite");
+    }
+
+    // -----------------------------------------------------------------
+    // inject_class_attr: preceding tag already has a class
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_fix_literal_class_syntax_keeps_existing_class_attr() {
+        let html = r#"<div class="old">.class="new"</div>"#;
+        let out = fix_literal_class_syntax(html);
+        assert!(out.contains(r#"class="old""#), "existing class kept: {out}");
+        assert!(
+            !out.contains(r#"class="new""#),
+            "no second class attribute injected: {out}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // inject_modern_meta_into_head fallbacks
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_inject_meta_falls_back_when_head_close_is_escaped_only() {
+        // `</head>` appears only as text with no real head element, so
+        // the lol_html pass injects nothing and we fall through to the
+        // prepend fallback.
+        let html = "no real head here </head>";
+        let out = inject_mobile_web_app_capable_meta(html);
+        assert!(
+            out.starts_with("<meta name=\"mobile-web-app-capable\""),
+            "prepend fallback used: {out}"
+        );
+    }
+
+    #[test]
+    fn test_inject_meta_after_open_head_when_no_close_tag() {
+        let html = "<head><meta charset=\"utf-8\">";
+        let out = inject_mobile_web_app_capable_meta(html);
+        assert!(
+            out.starts_with(
+                "<head><meta name=\"mobile-web-app-capable\" content=\"yes\">"
+            ),
+            "meta injected right after <head>: {out}"
+        );
     }
 }

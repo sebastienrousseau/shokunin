@@ -544,7 +544,19 @@ pub fn execute_build_pipeline_with(
             )?;
         }
     } else {
-        compile_site(build_dir, content_dir, site_dir, template_dir)?;
+        // Spec A2/B1 (plan §2 item 1.2, issue #586): thread the site's
+        // base URL into the compile so the content stager can inject a
+        // derived `permalink:` for pages that don't declare one —
+        // mirroring how the postprocess plugins source `base_url` from
+        // the plugin context's config.
+        let base_url = ctx.config.as_ref().map(|c| c.base_url.clone());
+        compile_site_with_base_url(
+            build_dir,
+            content_dir,
+            site_dir,
+            template_dir,
+            base_url.as_deref(),
+        )?;
     }
 
     // Cache HTML file list once — shared by all after_compile plugins,
@@ -623,6 +635,11 @@ pub fn depgraph_cache_root(site_dir: &Path) -> PathBuf {
 
 /// Compiles the static site from source directories.
 ///
+/// Convenience wrapper over [`compile_site_with_base_url`] with no
+/// base URL — no `permalink:` derivation happens on staged content.
+/// The full build pipeline calls [`compile_site_with_base_url`] with
+/// the configured `base_url` instead (spec A2/B1, plan §2 item 1.2).
+///
 /// # Examples
 ///
 /// ```no_run
@@ -642,6 +659,52 @@ pub fn compile_site(
     site_dir: &Path,
     template_dir: &Path,
 ) -> Result<(), SsgError> {
+    compile_site_with_base_url(
+        build_dir,
+        content_dir,
+        site_dir,
+        template_dir,
+        None,
+    )
+}
+
+/// Compiles the static site, deriving a `permalink:` for every staged
+/// markdown page that declares neither `permalink` nor `url` when
+/// `base_url` is provided (spec A2/B1, plan §2 item 1.2, issue #586).
+///
+/// The derived value is [`crate::urls::derive_permalink`] applied to
+/// `(base_url, content_rel_path)` —
+/// i.e. the pretty directory URL of the page's compiled output — so
+/// the injected permalink, the canonical `<link>`, and the feed
+/// `<link>` all come from one code path
+/// ([`crate::urls::derive_page_url`]). This makes `rss-gen`'s
+/// "channel.link is missing" hard-fail unreachable for pages without
+/// author-specified permalinks.
+///
+/// Passing `base_url: None` (or an empty string) skips the permalink
+/// derivation entirely and behaves like [`compile_site`].
+///
+/// # Examples
+///
+/// ```no_run
+/// use ssg::pipeline::compile_site_with_base_url;
+/// use std::path::Path;
+///
+/// // Real call requires populated content/template trees; only the
+/// // signature is exercised here.
+/// let _ = compile_site_with_base_url(
+///     Path::new("build"), Path::new("content"),
+///     Path::new("site"), Path::new("templates"),
+///     Some("https://example.com"),
+/// );
+/// ```
+pub fn compile_site_with_base_url(
+    build_dir: &Path,
+    content_dir: &Path,
+    site_dir: &Path,
+    template_dir: &Path,
+    base_url: Option<&str>,
+) -> Result<(), SsgError> {
     // v0.0.46: `staticdatagen 0.0.10` (closes upstream #67, #68, #69,
     // #70, #71) handles missing layout keys, absent aux files
     // (`main.js`/`sw.js`), absent tags-page templates, nested locale
@@ -649,7 +712,7 @@ pub fn compile_site(
     // stager shims were retired in this release. The two surviving
     // shims:
     //
-    //   * `collect_template_vars` + `stage_content_with_template_defaults`
+    //   * `collect_template_vars` + `stage_content_with_site_defaults`
     //     pre-fill empty `key: ""` frontmatter entries for every
     //     `{{ var }}` reference the templates make. staticweaver
     //     0.0.3 has `with_lax_undefined(true)` (closes upstream
@@ -664,15 +727,21 @@ pub fn compile_site(
     //
     // Once those two upstream follow-ups land, the residual shim
     // collapses to ~50 LOC.
+    //
+    // The same staging pass also threads `base_url` through so the
+    // stager can inject a derived `permalink:` for pages that declare
+    // neither `permalink` nor `url` (spec A2/B1, plan §2 item 1.2,
+    // issue #586).
     let template_vars =
         crate::content_stager::collect_template_vars(template_dir)
             .map_err(|e| SsgError::io(e, template_dir))?;
 
     let staged_content =
-        crate::content_stager::stage_content_with_template_defaults(
+        crate::content_stager::stage_content_with_site_defaults(
             content_dir,
             build_dir,
             &template_vars,
+            base_url,
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
@@ -754,6 +823,12 @@ pub fn register_default_plugins(
 
     // AI readiness
     plugins.register(ai::AiPlugin);
+
+    // Agent JSON API (#586 port 3): /api/agents/{index,posts,topics,
+    // person}.json. Default-on like AiPlugin; programmatic opt-out via
+    // AgentApiPlugin::disabled(). (The oEmbed emitter — port 4 — is
+    // opt-in and therefore NOT registered here; see crate::oembed.)
+    plugins.register(crate::agent_api::AgentApiPlugin::default());
 
     // Taxonomy and pagination
     plugins.register(taxonomy::TaxonomyPlugin);
@@ -1101,6 +1176,28 @@ mod tests {
     }
 
     #[test]
+    fn test_run_options_from_matches_incremental_no_llm_cache_isr_flags() {
+        // `from_matches`'s `incremental` / `no_llm_cache` / `isr` fields
+        // each short-circuit on `try_contains_id`; the legacy `Cli`
+        // defines all three ids, so this drives the true-arm of every
+        // `&&` (the id is present *and* the flag was actually passed).
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec![
+                "ssg",
+                "--incremental",
+                "--no-llm-cache",
+                "--isr",
+            ])
+            .unwrap();
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.incremental);
+        assert!(opts.no_llm_cache);
+        assert!(opts.isr);
+    }
+
+    #[test]
     fn test_run_options_debug() {
         use crate::cmd::Cli;
         let cli = Cli::build();
@@ -1138,10 +1235,10 @@ mod tests {
         register_default_plugins(&mut pm, &config, false, None);
 
         // We expect a substantial number of default plugins
+        let count = pm.len();
         assert!(
-            pm.len() >= 15,
-            "expected at least 15 default plugins, got {}",
-            pm.len()
+            count >= 15,
+            "expected at least 15 default plugins, got {count}"
         );
     }
 
@@ -1235,5 +1332,565 @@ mod tests {
         assert!(!plugins.is_empty());
         assert_ne!(build_dir, site_dir);
         assert_eq!(ctx.content_dir, temp.path().join("content"));
+    }
+
+    // -----------------------------------------------------------------
+    // RunOptions::from_subcommand_matches — populated values
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_run_options_from_subcommand_reads_max_memory() {
+        use crate::cmd::Cli;
+        let matches = Cli::subcommand_app().get_matches_from(vec![
+            "ssg",
+            "build",
+            "--max-memory",
+            "64",
+        ]);
+        let sub_m = matches.subcommand_matches("build").unwrap();
+        let opts = RunOptions::from_subcommand_matches(sub_m);
+        assert_eq!(opts.max_memory_mb, Some(64));
+    }
+
+    // -----------------------------------------------------------------
+    // build_pipeline — env export, ISR registration
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_pipeline_no_llm_cache_exports_env_flag() {
+        // Serialised env-var scoping (mirrors the llm.rs pattern).
+        use std::sync::Mutex;
+        static ENV_LOCK: Mutex<()> = Mutex::new(());
+        let _guard = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let prev = std::env::var("SSG_NO_LLM_CACHE").ok();
+        std::env::remove_var("SSG_NO_LLM_CACHE");
+
+        let config = SsgConfig::default();
+        let opts = RunOptions {
+            no_llm_cache: true,
+            ..RunOptions::default()
+        };
+        let (plugins, _ctx, _build, _site) = build_pipeline(&config, &opts);
+        let seen = std::env::var("SSG_NO_LLM_CACHE").ok();
+
+        // Restore machine state before asserting.
+        match prev {
+            Some(v) => std::env::set_var("SSG_NO_LLM_CACHE", v),
+            None => std::env::remove_var("SSG_NO_LLM_CACHE"),
+        }
+        assert_eq!(seen.as_deref(), Some("1"));
+        assert!(!plugins.is_empty());
+    }
+
+    #[test]
+    fn test_register_isr_plugins_appends_isr_pair() {
+        use crate::plugin::PluginManager;
+        let mut pm = PluginManager::new();
+        register_isr_plugins(&mut pm);
+        assert_eq!(pm.len(), 2, "ISR manifest + RPC schema plugins");
+    }
+
+    #[test]
+    fn test_build_pipeline_isr_flag_appends_plugins() {
+        let config = SsgConfig::default();
+        let base = build_pipeline(&config, &RunOptions::default()).0.len();
+        let opts = RunOptions {
+            isr: true,
+            ..RunOptions::default()
+        };
+        let with_isr = build_pipeline(&config, &opts).0.len();
+        assert_eq!(with_isr, base + 2);
+    }
+
+    // -----------------------------------------------------------------
+    // register_default_plugins — conditional registrations
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_register_default_plugins_multi_locale_adds_i18n() {
+        use crate::plugin::PluginManager;
+        let mut config = SsgConfig::default();
+        config.i18n = Some(i18n::I18nConfig {
+            default_locale: "en".to_string(),
+            locales: vec!["en".to_string(), "fr".to_string()],
+            url_prefix: Default::default(),
+        });
+
+        let mut pm = PluginManager::new();
+        register_default_plugins(&mut pm, &config, false, None);
+        assert!(
+            pm.names().contains(&"i18n"),
+            "two locales must register the i18n plugin: {:?}",
+            pm.names()
+        );
+    }
+
+    #[test]
+    fn test_register_default_plugins_single_locale_skips_i18n() {
+        use crate::plugin::PluginManager;
+        let mut config = SsgConfig::default();
+        config.i18n = Some(i18n::I18nConfig::default());
+
+        let mut pm = PluginManager::new();
+        register_default_plugins(&mut pm, &config, false, None);
+        assert!(!pm.names().contains(&"i18n"));
+    }
+
+    #[test]
+    fn test_register_default_plugins_transitions_opt_in() {
+        use crate::plugin::PluginManager;
+        let mut config = SsgConfig::default();
+        config.transitions = true;
+
+        let mut pm = PluginManager::new();
+        register_default_plugins(&mut pm, &config, false, None);
+        assert!(pm.names().contains(&"view-transitions"));
+    }
+
+    // -----------------------------------------------------------------
+    // depgraph_cache_root — no-target fallback
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[serial_test::serial(cwd)]
+    fn test_depgraph_cache_root_falls_back_without_target_dir() {
+        // From a cwd without a `target/` directory the cache root
+        // lands under the site dir.
+        let tmp = tempfile::tempdir().unwrap();
+        let prev = std::env::current_dir().expect("read current dir");
+        std::env::set_current_dir(tmp.path()).expect("pushd");
+
+        let root = depgraph_cache_root(Path::new("/tmp/site"));
+
+        std::env::set_current_dir(&prev).expect("popd");
+        assert_eq!(root, Path::new("/tmp/site").join(".ssg-cache"));
+    }
+
+    // -----------------------------------------------------------------
+    // compile_site_with_base_url — template-collection failure
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn test_compile_maps_unreadable_template_dir_to_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let content = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        let site = tmp.path().join("public");
+        let templates = tmp.path().join("templates");
+        std::fs::create_dir_all(&content).unwrap();
+        std::fs::create_dir_all(&templates).unwrap();
+        std::fs::set_permissions(
+            &templates,
+            std::fs::Permissions::from_mode(0o000),
+        )
+        .unwrap();
+
+        let res = compile_site_with_base_url(
+            &build, &content, &site, &templates, None,
+        );
+
+        let _ = std::fs::set_permissions(
+            &templates,
+            std::fs::Permissions::from_mode(0o755),
+        );
+        // Root bypasses permissions on some CI runners, so tolerate Ok.
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    // -----------------------------------------------------------------
+    // execute_build_pipeline_with — plugin failures, streaming,
+    // incremental fast path, and non-fatal cache warnings
+    // -----------------------------------------------------------------
+
+    /// Minimal compilable site fixture (mirrors
+    /// tests/core/pipeline.rs): two pages + one template.
+    fn build_fixture() -> (tempfile::TempDir, PathBuf, PathBuf, PathBuf, PathBuf)
+    {
+        crate::test_support::init_logger();
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let content = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        let site = tmp.path().join("public");
+        let templates = tmp.path().join("templates");
+        std::fs::create_dir_all(&content).expect("mkdir content");
+        std::fs::create_dir_all(&templates).expect("mkdir templates");
+        std::fs::create_dir_all(&build).expect("mkdir build");
+        std::fs::write(
+            content.join("index.md"),
+            "---\ntitle: \"Home\"\ndescription: \"home\"\n\
+             permalink: \"https://example.com/\"\n---\nhome body",
+        )
+        .expect("write index.md");
+        std::fs::write(
+            content.join("about.md"),
+            "---\ntitle: \"About\"\ndescription: \"about\"\n\
+             permalink: \"https://example.com/about/\"\n---\nabout body",
+        )
+        .expect("write about.md");
+        std::fs::write(
+            templates.join("page.html"),
+            "<!doctype html><html><body>{{ content }}</body></html>",
+        )
+        .expect("write template");
+        (tmp, content, build, site, templates)
+    }
+
+    /// Test plugin that fails in exactly one pipeline phase.
+    #[derive(Debug)]
+    struct FailingPlugin {
+        phase: &'static str,
+    }
+
+    impl plugin::Plugin for FailingPlugin {
+        fn name(&self) -> &'static str {
+            "failing-test-plugin"
+        }
+        fn before_compile(
+            &self,
+            _ctx: &plugin::PluginContext,
+        ) -> Result<(), SsgError> {
+            if self.phase == "before" {
+                return Err(SsgError::Validation {
+                    field: "test".to_string(),
+                    message: "injected before_compile failure".to_string(),
+                });
+            }
+            Ok(())
+        }
+        fn after_compile(
+            &self,
+            _ctx: &plugin::PluginContext,
+        ) -> Result<(), SsgError> {
+            if self.phase == "after" {
+                return Err(SsgError::Validation {
+                    field: "test".to_string(),
+                    message: "injected after_compile failure".to_string(),
+                });
+            }
+            Ok(())
+        }
+        fn has_transform(&self) -> bool {
+            self.phase == "transform"
+        }
+        fn transform_html(
+            &self,
+            _html: &str,
+            _path: &Path,
+            _ctx: &plugin::PluginContext,
+        ) -> Result<String, SsgError> {
+            Err(SsgError::Validation {
+                field: "test".to_string(),
+                message: "injected transform failure".to_string(),
+            })
+        }
+    }
+
+    /// Test plugin that sabotages the site dir *after* compile, so
+    /// the post-build cache bookkeeping hits its non-fatal error arms
+    /// (the compile step recreates the site dir wholesale, so
+    /// obstructions must be planted from inside the pipeline).
+    #[derive(Debug)]
+    struct SabotagePlugin {
+        mode: &'static str,
+    }
+
+    impl plugin::Plugin for SabotagePlugin {
+        fn name(&self) -> &'static str {
+            "sabotage-test-plugin"
+        }
+        fn after_compile(
+            &self,
+            ctx: &plugin::PluginContext,
+        ) -> Result<(), SsgError> {
+            if self.mode == "block-plugin-cache" {
+                let _ = std::fs::create_dir_all(
+                    ctx.site_dir.join(".ssg-plugin-cache.json"),
+                );
+            }
+            #[cfg(unix)]
+            if self.mode == "lock-subdir" {
+                use std::os::unix::fs::PermissionsExt;
+                let locked = ctx.site_dir.join("locked");
+                let _ = std::fs::create_dir_all(&locked);
+                let _ = std::fs::set_permissions(
+                    &locked,
+                    std::fs::Permissions::from_mode(0o000),
+                );
+            }
+            Ok(())
+        }
+    }
+
+    fn run_fixture_with_plugins(
+        pm: &plugin::PluginManager,
+        incremental: bool,
+    ) -> (tempfile::TempDir, PathBuf, Result<(), SsgError>) {
+        let (tmp, content, build, site, templates) = build_fixture();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let res = execute_build_pipeline_with(
+            pm,
+            &ctx,
+            &build,
+            &content,
+            &site,
+            &templates,
+            true,
+            incremental,
+        );
+        (tmp, site, res)
+    }
+
+    #[test]
+    fn test_pipeline_propagates_before_compile_failure() {
+        let mut pm = plugin::PluginManager::new();
+        pm.register(FailingPlugin { phase: "before" });
+        let (_tmp, _site, res) = run_fixture_with_plugins(&pm, false);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn test_pipeline_propagates_after_compile_failure() {
+        let mut pm = plugin::PluginManager::new();
+        pm.register(FailingPlugin { phase: "after" });
+        let (_tmp, _site, res) = run_fixture_with_plugins(&pm, false);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn test_pipeline_propagates_transform_failure() {
+        let mut pm = plugin::PluginManager::new();
+        pm.register(FailingPlugin { phase: "transform" });
+        let (_tmp, _site, res) = run_fixture_with_plugins(&pm, false);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_pipeline_streams_when_budget_explicitly_set() {
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let mut ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        // An explicit budget forces the streaming/batched compile.
+        ctx.memory_budget = Some(streaming::MemoryBudget::from_mb(1));
+
+        let pm = plugin::PluginManager::new();
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, false,
+        )
+        .expect("streamed build should succeed");
+
+        assert!(
+            site.join("about").join("index.html").exists(),
+            "batched compile must emit the page outputs"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial(cwd, ssg_cache, stager_fp)]
+    fn test_pipeline_incremental_fast_path_and_delete_sweep() {
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let pm = plugin::PluginManager::new();
+
+        // Fresh cache root so a previous test's graph can't leak in.
+        let cache_root = depgraph_cache_root(&site);
+        let _ = std::fs::remove_file(
+            cache_root.join(crate::depgraph::DEP_GRAPH_FILE),
+        );
+
+        // Run 1: cold cache — full build, graph persisted.
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, false, true,
+        )
+        .expect("cold incremental build should succeed");
+        let about_out = site.join("about").join("index.html");
+        assert!(about_out.exists());
+
+        // Run 2: nothing changed — the fast path must skip the
+        // compile entirely, so a marker planted in the output
+        // survives verbatim.
+        std::fs::write(&about_out, "MARKER").unwrap();
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, false, true,
+        )
+        .expect("warm incremental build should succeed");
+        assert_eq!(
+            std::fs::read_to_string(&about_out).unwrap(),
+            "MARKER",
+            "fast path must not recompile unchanged sources"
+        );
+
+        // Run 3: delete a source — its stale output is swept and the
+        // site is rebuilt without it.
+        std::fs::remove_file(content.join("about.md")).unwrap();
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, false, true,
+        )
+        .expect("incremental rebuild after delete should succeed");
+        assert!(!about_out.exists(), "deleted source's output must be swept");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_pipeline_warns_but_succeeds_when_populate_fails() {
+        // A dangling .md symlink survives staging (symlinks are
+        // skipped) but makes depgraph::populate fail post-compile —
+        // the build must still succeed with a warning.
+        let (_tmp, content, build, site, templates) = build_fixture();
+        std::os::unix::fs::symlink(
+            content.join("nowhere.md"),
+            content.join("ghost.md"),
+        )
+        .unwrap();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let pm = plugin::PluginManager::new();
+
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, false,
+        )
+        .expect("populate failure must be non-fatal");
+    }
+
+    #[test]
+    #[serial_test::serial(cwd, ssg_cache, stager_fp)]
+    fn test_pipeline_warns_but_succeeds_when_graph_save_fails() {
+        // A directory squatting on the graph's tmp path makes
+        // DepGraph::save fail — the build must still succeed.
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let pm = plugin::PluginManager::new();
+
+        let cache_root = depgraph_cache_root(&site);
+        let blocker =
+            cache_root.join(format!("{}.tmp", crate::depgraph::DEP_GRAPH_FILE));
+        std::fs::create_dir_all(&blocker).unwrap();
+        std::fs::write(blocker.join("keep.txt"), "x").unwrap();
+
+        let res = execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, false,
+        );
+
+        let blocked = blocker.is_dir();
+        let _ = std::fs::remove_dir_all(&blocker);
+        res.expect("graph-save failure must be non-fatal");
+        assert!(blocked, "blocker must have survived the build");
+    }
+
+    #[test]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_pipeline_warns_but_succeeds_when_plugin_cache_save_fails() {
+        // The sabotage plugin plants a directory on the
+        // `.ssg-plugin-cache.json` path after compile, so
+        // PluginCache::save fails — the build must still succeed.
+        let mut pm = plugin::PluginManager::new();
+        pm.register(SabotagePlugin {
+            mode: "block-plugin-cache",
+        });
+        let (_tmp, site, res) = run_fixture_with_plugins(&pm, false);
+        res.expect("plugin-cache save failure must be non-fatal");
+        assert!(
+            site.join(".ssg-plugin-cache.json").is_dir(),
+            "blocker must be present for the warn arm to have fired"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_execute_build_pipeline_with_config_derives_base_url_for_non_streaming_compile(
+    ) {
+        // `ctx.config` is only ever `Some(..)` when built through
+        // `PluginContext::with_config` (as `build_pipeline` wires it
+        // up); the fixture-based tests elsewhere in this module use
+        // `PluginContext::new`, which leaves it `None` and never runs
+        // the `ctx.config.as_ref().map(|c| c.base_url.clone())` closure
+        // in the non-streaming branch of `execute_build_pipeline_with`.
+        use crate::cmd::SsgConfig;
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let config = SsgConfig {
+            base_url: "https://example.com".to_string(),
+            ..SsgConfig::default()
+        };
+        let ctx = plugin::PluginContext::with_config(
+            &content, &build, &site, &templates, config,
+        );
+        let pm = plugin::PluginManager::new();
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, false,
+        )
+        .expect("build with a configured base_url should succeed");
+        assert!(
+            site.join("about").join("index.html").exists(),
+            "compile must still emit page outputs when config carries a base_url"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::serial(cwd, ssg_cache, stager_fp)]
+    fn test_pipeline_incremental_propagates_current_hashes_failure() {
+        // `current_hashes(content_dir, template_dir)?` is the first
+        // thing the incremental fast path does. Walking an existing
+        // but unreadable content dir makes `fs::read_dir` fail inside
+        // `walk_files_bounded_depth`, so the `?` here propagates —
+        // a branch none of the other incremental tests exercise since
+        // they all use a normally-readable fixture.
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let pm = plugin::PluginManager::new();
+
+        std::fs::set_permissions(
+            &content,
+            std::fs::Permissions::from_mode(0o000),
+        )
+        .unwrap();
+
+        let res = execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, true,
+        );
+
+        let _ = std::fs::set_permissions(
+            &content,
+            std::fs::Permissions::from_mode(0o755),
+        );
+        assert!(
+            res.is_err(),
+            "unreadable content_dir must fail current_hashes and propagate"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_pipeline_tolerates_unwalkable_site_dir() {
+        // The sabotage plugin plants an unreadable subdirectory in
+        // the site dir after compile, so the post-build HTML walk
+        // fails; the cache-update block skips silently and the build
+        // still succeeds.
+        use std::os::unix::fs::PermissionsExt;
+        let mut pm = plugin::PluginManager::new();
+        pm.register(SabotagePlugin {
+            mode: "lock-subdir",
+        });
+        let (_tmp, site, res) = run_fixture_with_plugins(&pm, false);
+
+        let locked = site.join("locked");
+        let was_locked = locked.is_dir();
+        let _ = std::fs::set_permissions(
+            &locked,
+            std::fs::Permissions::from_mode(0o755),
+        );
+        res.expect("unwalkable site dir must be non-fatal");
+        assert!(was_locked, "sabotage dir must have survived the build");
     }
 }

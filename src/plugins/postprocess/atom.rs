@@ -3,7 +3,8 @@
 
 //! Atom 1.0 feed plugin.
 
-use super::helpers::{parse_rfc2822_lenient, read_meta_sidecars, xml_escape};
+use super::helpers::{read_meta_sidecars, xml_escape};
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
@@ -62,7 +63,15 @@ impl Plugin for AtomFeedPlugin {
         };
 
         let mut articles = collect_atom_entries(&meta_entries, &base_url);
-        articles.sort_by(|a, b| b.0.cmp(&a.0));
+        // Sort by date descending, then by `id` ascending as a
+        // deterministic tiebreaker. `read_meta_sidecars` walks the
+        // filesystem tree, whose entry order is OS-dependent (ext4 vs
+        // APFS) — without a tiebreaker, pages sharing a date (common
+        // in synthetic fixtures) retain that non-deterministic order
+        // through the stable sort, failing the cross-OS determinism
+        // gate.
+        articles
+            .sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.id.cmp(&b.1.id)));
         articles.truncate(50);
 
         if articles.is_empty() {
@@ -128,8 +137,22 @@ fn build_atom_entry(
         format!("{base_url}/{rel_path}/")
     };
 
-    let rfc3339 = parse_rfc2822_lenient(&pub_date)
-        .map_or_else(|| pub_date.clone(), |dt| dt.to_rfc3339());
+    // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible date
+    // chain — RFC 2822, long-form, and ISO 8601 inputs all normalise
+    // to the RFC 3339 shape Atom requires; unparseable values pass
+    // through verbatim (previous behaviour) with a warning naming the
+    // failing field.
+    let rfc3339 = match parse_flexible_date(&pub_date) {
+        Ok(dt) => dt.to_rfc3339(),
+        Err(err) => {
+            if !pub_date.is_empty() {
+                log::warn!(
+                    "[atom-feed] 'item_pub_date' for '{rel_path}': {err}"
+                );
+            }
+            pub_date.clone()
+        }
+    };
 
     Some((
         rfc3339.clone(),
@@ -368,7 +391,7 @@ mod tests {
     ) {
         let page_dir = dir.join(slug);
         fs::create_dir_all(&page_dir).expect("create page dir");
-        let meta_path = page_dir.join("page.meta.json");
+        let meta_path = page_dir.join("index.meta.json");
         let json = serde_json::to_string(meta).expect("serialize meta");
         fs::write(&meta_path, json).expect("write meta");
     }
@@ -391,6 +414,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -403,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_valid_namespace_and_elements() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Hello World".to_string());
@@ -417,12 +441,12 @@ mod tests {
         write_meta_sidecar(tmp.path(), "hello", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = tmp.path().join("atom.xml");
         assert!(atom_path.exists(), "atom.xml should be created");
 
-        let content = fs::read_to_string(&atom_path)?;
+        let content = fs::read_to_string(&atom_path).unwrap();
         assert!(
             content.contains("xmlns=\"http://www.w3.org/2005/Atom\""),
             "Missing Atom namespace"
@@ -445,7 +469,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_entry_count_matches() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         for i in 0..5 {
             let mut meta = HashMap::new();
@@ -460,9 +484,9 @@ mod tests {
         }
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         let entry_count = content.matches("<entry>").count();
         assert_eq!(entry_count, 5, "Expected 5 entries, got {entry_count}");
         Ok(())
@@ -470,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_dates_are_rfc3339() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Date Test".to_string());
@@ -484,9 +508,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "datepost", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(
             content.contains("2026-04-11T06:06:06+00:00"),
             "Expected RFC 3339 date in atom.xml, got:\n{content}"
@@ -496,7 +520,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Idempotent".to_string());
@@ -509,11 +533,11 @@ mod tests {
         write_meta_sidecar(tmp.path(), "idem", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
-        let first = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
+        let first = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
 
-        AtomFeedPlugin.after_compile(&ctx)?;
-        let second = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
+        let second = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
 
         assert_eq!(first, second, "Atom feed should be idempotent");
         Ok(())
@@ -521,7 +545,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_injects_link_into_html() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Link Test".to_string());
@@ -537,12 +561,13 @@ mod tests {
         fs::write(
             &html_path,
             "<html><head><title>Test</title></head><body></body></html>",
-        )?;
+        )
+        .unwrap();
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let html = fs::read_to_string(&html_path)?;
+        let html = fs::read_to_string(&html_path).unwrap();
         assert!(
             html.contains("application/atom+xml"),
             "HTML should have atom link tag"
@@ -561,7 +586,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_sorts_descending() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta_old = HashMap::new();
         let _ = meta_old.insert("title".to_string(), "Old Post".to_string());
@@ -584,9 +609,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "new-post", &meta_new);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         let first_entry_pos = content.find("<entry>").unwrap();
         let new_title_pos = content.find("New Post").unwrap();
         let old_title_pos = content.find("Old Post").unwrap();
@@ -603,7 +628,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_empty_author_shows_unknown() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "No Author".to_string());
@@ -615,9 +640,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "no-author", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(
             content.contains("<name>Unknown</name>"),
             "Empty author should show 'Unknown': {content}"
@@ -627,7 +652,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_skips_empty_title() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), String::new());
@@ -639,7 +664,7 @@ mod tests {
         write_meta_sidecar(tmp.path(), "no-title", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = tmp.path().join("atom.xml");
         assert!(
@@ -651,7 +676,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_xml_escapes_content() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta
@@ -666,9 +691,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "escape-test", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(content.contains("Tom &amp; Jerry"), "& should be escaped");
         assert!(
             content.contains("&lt;friends&gt;"),
@@ -733,16 +758,17 @@ mod tests {
 
     #[test]
     fn test_inject_atom_link_adds_tag() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_path = tmp.path().join("page.html");
         fs::write(
             &html_path,
             "<html><head><title>Test</title></head><body></body></html>",
-        )?;
+        )
+        .unwrap();
 
-        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml").unwrap();
 
-        let result = fs::read_to_string(&html_path)?;
+        let result = fs::read_to_string(&html_path).unwrap();
         assert!(
             result.contains("application/atom+xml"),
             "Should inject atom link: {result}"
@@ -756,18 +782,19 @@ mod tests {
 
     #[test]
     fn test_inject_atom_link_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_path = tmp.path().join("page.html");
         fs::write(
             &html_path,
             "<html><head><title>Test</title></head><body></body></html>",
-        )?;
+        )
+        .unwrap();
 
-        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
-        let first = fs::read_to_string(&html_path)?;
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml").unwrap();
+        let first = fs::read_to_string(&html_path).unwrap();
 
-        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
-        let second = fs::read_to_string(&html_path)?;
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml").unwrap();
+        let second = fs::read_to_string(&html_path).unwrap();
 
         assert_eq!(first, second, "inject_atom_link should be idempotent");
         assert_eq!(
@@ -780,13 +807,13 @@ mod tests {
 
     #[test]
     fn test_inject_atom_link_no_head() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_path = tmp.path().join("nohead.html");
-        fs::write(&html_path, "<html><body>No head</body></html>")?;
+        fs::write(&html_path, "<html><body>No head</body></html>").unwrap();
 
-        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml").unwrap();
 
-        let result = fs::read_to_string(&html_path)?;
+        let result = fs::read_to_string(&html_path).unwrap();
         assert!(
             !result.contains("application/atom+xml"),
             "Should not inject when there is no </head>"
@@ -824,10 +851,10 @@ mod tests {
 
     #[test]
     fn test_atom_feed_empty_site_dir() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         // No sidecars, no rss.xml, nothing
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = tmp.path().join("atom.xml");
         assert!(
@@ -843,7 +870,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_falls_back_to_rss_xml() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         // No sidecars, but an rss.xml exists
         let rss_content = r#"<?xml version="1.0"?>
 <rss version="2.0">
@@ -858,14 +885,14 @@ mod tests {
 </item>
 </channel>
 </rss>"#;
-        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+        fs::write(tmp.path().join("rss.xml"), rss_content).unwrap();
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = tmp.path().join("atom.xml");
         assert!(atom_path.exists(), "Should create atom.xml from rss.xml");
-        let content = fs::read_to_string(&atom_path)?;
+        let content = fs::read_to_string(&atom_path).unwrap();
         assert!(
             content.contains("From RSS"),
             "Should contain entry from rss.xml"
@@ -875,7 +902,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_rss_multiple_items() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let rss_content = r#"<?xml version="1.0"?>
 <rss version="2.0">
 <channel>
@@ -894,12 +921,12 @@ mod tests {
 </item>
 </channel>
 </rss>"#;
-        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+        fs::write(tmp.path().join("rss.xml"), rss_content).unwrap();
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(content.contains("Post A"));
         assert!(content.contains("Post B"));
         let entry_count = content.matches("<entry>").count();
@@ -909,7 +936,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_rss_with_cdata() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let rss_content = r#"<?xml version="1.0"?>
 <rss version="2.0">
 <channel>
@@ -922,12 +949,12 @@ mod tests {
 </item>
 </channel>
 </rss>"#;
-        fs::write(tmp.path().join("rss.xml"), rss_content)?;
+        fs::write(tmp.path().join("rss.xml"), rss_content).unwrap();
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(content.contains("CDATA Title"), "Should unwrap CDATA");
         Ok(())
     }
@@ -1120,6 +1147,51 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_atom_entry_iso_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO Date".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+
+        let result = build_atom_entry("isodate", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.updated, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.published, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_build_atom_entry_long_form_date() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long Form".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+
+        let result = build_atom_entry("longform", &meta, "https://example.com");
+        let (date_key, entry) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T00:00:00+00:00");
+        assert_eq!(entry.updated, "2026-07-01T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_build_atom_entry_iso_datetime_normalised() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO DT".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "2026-07-01T07:07:07Z".to_string(),
+        );
+
+        let result = build_atom_entry("isodt", &meta, "https://example.com");
+        let (date_key, _) = result.unwrap();
+        assert_eq!(date_key, "2026-07-01T07:07:07+00:00");
+    }
+
+    // -----------------------------------------------------------------
     // collect_atom_entries
     // -----------------------------------------------------------------
 
@@ -1260,7 +1332,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_untitled_site() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Post".to_string());
@@ -1288,6 +1360,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1297,9 +1370,9 @@ mod tests {
             config,
         );
 
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         assert!(
             content.contains("<title>Untitled</title>"),
             "Empty site_name should produce 'Untitled'"
@@ -1309,7 +1382,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_no_config() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Post".to_string());
@@ -1328,16 +1401,15 @@ mod tests {
             Path::new("templates"),
         );
 
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = tmp.path().join("atom.xml");
-        if atom_path.exists() {
-            let content = fs::read_to_string(&atom_path)?;
-            assert!(
-                content.contains("<title>Untitled</title>"),
-                "No config should produce 'Untitled'"
-            );
-        }
+        assert!(atom_path.exists(), "atom.xml must be generated");
+        let content = fs::read_to_string(&atom_path).unwrap();
+        assert!(
+            content.contains("<title>Untitled</title>"),
+            "No config should produce 'Untitled'"
+        );
         Ok(())
     }
 
@@ -1375,7 +1447,7 @@ mod tests {
 
     #[test]
     fn test_atom_feed_truncates_at_50() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         for i in 0..60 {
             let mut meta = HashMap::new();
@@ -1394,9 +1466,9 @@ mod tests {
         }
 
         let ctx = make_atom_ctx(tmp.path());
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
-        let content = fs::read_to_string(tmp.path().join("atom.xml"))?;
+        let content = fs::read_to_string(tmp.path().join("atom.xml")).unwrap();
         let entry_count = content.matches("<entry>").count();
         assert_eq!(
             entry_count, 50,
@@ -1411,18 +1483,19 @@ mod tests {
 
     #[test]
     fn test_inject_atom_link_multiple_files() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         for name in ["index.html", "about.html", "contact.html"] {
             fs::write(
                 tmp.path().join(name),
                 "<html><head><title>T</title></head><body></body></html>",
-            )?;
+            )
+            .unwrap();
         }
 
-        inject_atom_link(tmp.path(), "https://example.com/atom.xml")?;
+        inject_atom_link(tmp.path(), "https://example.com/atom.xml").unwrap();
 
         for name in ["index.html", "about.html", "contact.html"] {
-            let content = fs::read_to_string(tmp.path().join(name))?;
+            let content = fs::read_to_string(tmp.path().join(name)).unwrap();
             assert!(
                 content.contains("application/atom+xml"),
                 "{name} should have atom link"
@@ -1471,16 +1544,16 @@ mod tests {
 
     #[test]
     fn test_atom_feed_falls_back_to_build_meta_dir() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let site_dir = tmp.path().join("site");
         let build_dir = tmp.path().join("build");
         let meta_dir = build_dir.join(".meta");
-        fs::create_dir_all(&site_dir)?;
-        fs::create_dir_all(&meta_dir)?;
+        fs::create_dir_all(&site_dir).unwrap();
+        fs::create_dir_all(&meta_dir).unwrap();
 
         // Put sidecar in build/.meta instead of site_dir
         let page_dir = meta_dir.join("fallback-post");
-        fs::create_dir_all(&page_dir)?;
+        fs::create_dir_all(&page_dir).unwrap();
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Fallback".to_string());
         let _ = meta
@@ -1490,7 +1563,7 @@ mod tests {
             "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
         );
         let json = serde_json::to_string(&meta).unwrap();
-        fs::write(page_dir.join("page.meta.json"), json)?;
+        fs::write(page_dir.join("index.meta.json"), json).unwrap();
 
         let config = crate::cmd::SsgConfig {
             base_url: "https://example.com".to_string(),
@@ -1508,6 +1581,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         let ctx = PluginContext::with_config(
             Path::new("content"),
@@ -1517,15 +1591,111 @@ mod tests {
             config,
         );
 
-        AtomFeedPlugin.after_compile(&ctx)?;
+        AtomFeedPlugin.after_compile(&ctx).unwrap();
 
         let atom_path = site_dir.join("atom.xml");
         assert!(
             atom_path.exists(),
             "Should create atom.xml from build/.meta"
         );
-        let content = fs::read_to_string(&atom_path)?;
+        let content = fs::read_to_string(&atom_path).unwrap();
         assert!(content.contains("Fallback"));
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths: write/read failures propagate as SsgError
+    // -----------------------------------------------------------------
+
+    fn sidecar_meta(title: &str) -> HashMap<String, String> {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), title.to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        meta
+    }
+
+    #[test]
+    fn test_after_compile_errors_when_atom_xml_is_a_directory() {
+        let tmp = tempdir().unwrap();
+        write_meta_sidecar(tmp.path(), "post", &sidecar_meta("Post"));
+        // A directory named atom.xml makes fs::write fail (EISDIR).
+        fs::create_dir_all(tmp.path().join("atom.xml")).unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        let err = AtomFeedPlugin.after_compile(&ctx).unwrap_err();
+        assert!(
+            format!("{err}").contains("atom.xml"),
+            "error names the path"
+        );
+    }
+
+    #[test]
+    fn test_after_compile_propagates_unreadable_html_error() {
+        let tmp = tempdir().unwrap();
+        write_meta_sidecar(tmp.path(), "post", &sidecar_meta("Post"));
+        // Invalid UTF-8 makes read_to_string fail inside inject_atom_link.
+        fs::write(tmp.path().join("bad.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        let err = AtomFeedPlugin.after_compile(&ctx).unwrap_err();
+        assert!(
+            format!("{err}").contains("bad.html"),
+            "error names the file"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_inject_atom_link_write_failure_on_readonly_html() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let html_path = tmp.path().join("index.html");
+        fs::write(
+            &html_path,
+            "<html><head><title>T</title></head><body></body></html>",
+        )
+        .unwrap();
+        fs::set_permissions(&html_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let result = inject_atom_link(tmp.path(), "https://x.example/atom.xml");
+        let _ =
+            fs::set_permissions(&html_path, fs::Permissions::from_mode(0o644));
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("index.html"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_inject_atom_link_walk_failure_on_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = inject_atom_link(tmp.path(), "https://x.example/atom.xml");
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        assert!(result.is_err(), "expected an error from the locked path");
+    }
+
+    // -----------------------------------------------------------------
+    // extract_xml_tag: malformed attribute-form tags
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_xml_tag_attr_form_without_closing_bracket() {
+        // `<title ` matches the attribute form, but the tag never
+        // closes with `>`, so extraction bails out.
+        assert_eq!(extract_xml_tag("<title attr=x no-gt", "title"), None);
+    }
+
+    #[test]
+    fn test_extract_xml_tag_missing_end_tag() {
+        assert_eq!(extract_xml_tag("<title>abc", "title"), None);
     }
 }

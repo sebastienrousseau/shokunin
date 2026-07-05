@@ -183,18 +183,28 @@ pub(super) fn extract_canonical(html: &str) -> String {
 }
 
 /// Extract the content of a specific meta tag by name or property.
+///
+/// Attribute-based matching: tolerant of attribute order, quoting style
+/// (double, single, unquoted), and case — minified HTML emits forms
+/// like `<meta content=x name=twitter:image>` that literal prefix
+/// matching misses.
 pub(super) fn extract_existing_meta(html: &str, attr: &str) -> String {
-    for prefix in &[
-        format!("<meta name=\"{attr}\" content=\""),
-        format!("<meta property=\"{attr}\" content=\""),
-        format!("<meta name='{attr}' content='"),
-        format!("<meta property='{attr}' content='"),
-    ] {
-        if let Some(pos) = html.find(prefix.as_str()) {
-            let after = &html[pos + prefix.len()..];
-            let delim = if prefix.ends_with('\'') { '\'' } else { '"' };
-            if let Some(end) = after.find(delim) {
-                let value = after[..end].trim();
+    use crate::audit::gates::{find_tag_end, hreflang_attr};
+
+    let lower = html.to_ascii_lowercase();
+    let mut cursor = 0;
+    while let Some(rel) = lower[cursor..].find("<meta") {
+        let abs = cursor + rel;
+        let end = find_tag_end(html, abs);
+        let tag = &html[abs..end];
+        cursor = end;
+        let matches = ["name", "property"].iter().any(|key| {
+            hreflang_attr(tag, key)
+                .is_some_and(|v| v.eq_ignore_ascii_case(attr))
+        });
+        if matches {
+            if let Some(content) = hreflang_attr(tag, "content") {
+                let value = content.trim();
                 if !value.is_empty() {
                     return value.to_string();
                 }
@@ -319,6 +329,46 @@ mod tests {
     fn extract_title_from_html() {
         let html = "<html><head><title>Test Page</title></head></html>";
         assert_eq!(extract_title(html), "Test Page");
+    }
+
+    #[test]
+    fn extract_existing_meta_minified_unquoted_and_reordered() {
+        // Regression: minified HTML emits unquoted values with
+        // `content` before `name`/`property`.
+        let html = "<head><meta content=https://ex.test/img.png \
+                    name=twitter:image></head>";
+        assert_eq!(
+            extract_existing_meta(html, "twitter:image"),
+            "https://ex.test/img.png"
+        );
+        let html2 =
+            "<head><meta content=\"https://ex.test/og.png\" property=og:image></head>";
+        assert_eq!(
+            extract_existing_meta(html2, "og:image"),
+            "https://ex.test/og.png"
+        );
+    }
+
+    #[test]
+    fn extract_existing_meta_quoted_forms_still_work() {
+        let html = r#"<meta name="author" content="Alice">"#;
+        assert_eq!(extract_existing_meta(html, "author"), "Alice");
+        let html2 = r#"<meta property='og:image' content='/x.png'>"#;
+        assert_eq!(extract_existing_meta(html2, "og:image"), "/x.png");
+    }
+
+    #[test]
+    fn extract_existing_meta_absent_returns_empty() {
+        let html = "<head><meta name=viewport content=width=device-width>\
+                    </head>";
+        assert_eq!(extract_existing_meta(html, "og:image"), "");
+    }
+
+    #[test]
+    fn extract_existing_meta_skips_empty_content_and_keeps_scanning() {
+        let html = "<meta name=author content=\"\">\
+                    <meta name=author content=\"Bea\">";
+        assert_eq!(extract_existing_meta(html, "author"), "Bea");
     }
 
     #[test]
@@ -495,5 +545,75 @@ mod tests {
             extract_date_from_html("<html></html>", "datePublished"),
             None
         );
+    }
+
+    #[test]
+    fn extract_existing_meta_skips_tag_without_content_attribute() {
+        // A matching meta tag that carries no `content` attribute at
+        // all must be skipped (scanning continues past it).
+        let html = "<meta name=\"author\">\
+                    <meta name=\"author\" content=\"Cid\">";
+        assert_eq!(extract_existing_meta(html, "author"), "Cid");
+    }
+
+    #[test]
+    fn extract_existing_meta_no_content_anywhere_returns_empty() {
+        let html = "<meta name=\"author\">";
+        assert_eq!(extract_existing_meta(html, "author"), "");
+    }
+
+    #[test]
+    fn extract_first_content_image_src_without_closing_quote() {
+        // `src="` opened but never closed before the tag ends — the
+        // extractor must fall through to the empty result.
+        let html = "<main><img src=\"broken.png</main>";
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    #[test]
+    fn extract_first_content_image_img_without_src_attribute() {
+        let html = "<main><img alt=\"decorative\"></main>";
+        assert_eq!(extract_first_content_image(html), "");
+    }
+
+    #[test]
+    fn extract_meta_author_byline_with_empty_name_returns_empty() {
+        // `class="author">` immediately followed by a closing tag —
+        // the byline text is empty and must not be returned.
+        let html = "<html><body><span class=\"author\"></span></body></html>";
+        assert_eq!(extract_meta_author(html), "");
+    }
+
+    #[test]
+    fn extract_meta_author_byline_without_following_tag_returns_empty() {
+        // Pattern matches at the very end of the document, so there is
+        // no `<` terminating the byline text.
+        let html = "<span class=\"author\">Dana";
+        assert_eq!(extract_meta_author(html), "");
+    }
+
+    #[test]
+    fn extract_date_from_html_empty_date_returns_none() {
+        let html = r#"{"datePublished":""}"#;
+        assert_eq!(extract_date_from_html(html, "datePublished"), None);
+    }
+
+    #[test]
+    fn extract_date_from_html_unterminated_value_returns_none() {
+        // Opening quote never closed — no closing `"` after the value.
+        let html = r#"{"datePublished":"2026-01-01"#;
+        assert_eq!(extract_date_from_html(html, "datePublished"), None);
+    }
+
+    #[test]
+    fn extract_meta_date_empty_datetime_returns_none() {
+        let html = r#"<time datetime="">x</time>"#;
+        assert_eq!(extract_meta_date(html), None);
+    }
+
+    #[test]
+    fn extract_meta_date_unterminated_datetime_returns_none() {
+        let html = r#"<time datetime="2026-01-01"#;
+        assert_eq!(extract_meta_date(html), None);
     }
 }

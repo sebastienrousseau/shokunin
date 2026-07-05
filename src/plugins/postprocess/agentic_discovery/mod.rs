@@ -543,4 +543,46 @@ mod tests {
         assert_eq!(default_plugin.name(), "agentic-discovery");
         assert!(format!("{a:?}").contains("AgenticDiscoveryPlugin"));
     }
+
+    // -----------------------------------------------------------------
+    // Emitter failures propagate through the coordinator
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn agents_txt_failure_propagates() {
+        let dir = tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("agents.txt")).unwrap();
+        let agents = AgentsConfig {
+            agents_txt: true,
+            ..AgentsConfig::default()
+        };
+        let ctx = ctx_with_config(dir.path(), agents);
+        let err = AgenticDiscoveryPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("agents.txt"));
+    }
+
+    #[test]
+    fn ai_plugin_failure_propagates() {
+        let dir = tempdir().unwrap();
+        // A file named .well-known blocks create_dir_all.
+        std::fs::write(dir.path().join(".well-known"), "file").unwrap();
+        let agents = AgentsConfig {
+            ai_plugin: true,
+            ..AgentsConfig::default()
+        };
+        let ctx = ctx_with_config(dir.path(), agents);
+        let err = AgenticDiscoveryPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains(".well-known"));
+    }
+
+    #[test]
+    fn mcp_failure_propagates() {
+        let dir = tempdir().unwrap();
+        std::fs::write(dir.path().join(".well-known"), "file").unwrap();
+        let mut agents = AgentsConfig::default();
+        agents.mcp.enabled = true;
+        let ctx = ctx_with_config(dir.path(), agents);
+        let err = AgenticDiscoveryPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains(".well-known"));
+    }
 }

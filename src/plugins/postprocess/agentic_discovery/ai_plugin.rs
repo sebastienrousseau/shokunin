@@ -64,10 +64,22 @@ pub fn write_ai_plugin_json(
     fs::create_dir_all(&well_known).with_path(&well_known)?;
     let path = well_known.join("ai-plugin.json");
     let manifest = build_manifest(cfg);
-    let body = serde_json::to_string_pretty(&manifest)
-        .map_err(|e| SsgError::io(e, &path))?;
+    let body =
+        serialize_ai_plugin(&manifest).map_err(|e| SsgError::io(e, &path))?;
     fs::write(&path, body).with_path(&path)?;
     Ok(())
+}
+
+/// Serialize the manifest with a fault-injection hook so tests can
+/// drive the error-mapping branch (pretty-printing a `Value` cannot
+/// fail in practice).
+fn serialize_ai_plugin(manifest: &Value) -> serde_json::Result<String> {
+    fail_point!("postprocess::ai-plugin-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::ai-plugin-serialize"
+        )
+    ));
+    serde_json::to_string_pretty(manifest)
 }
 
 /// Pure-function manifest builder — split from `write_ai_plugin_json`
@@ -186,7 +198,10 @@ fn host_from_url(url: &str) -> Option<String> {
     let without_scheme = url
         .strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))?;
-    let host = without_scheme.split('/').next()?;
+    // `split` always yields at least one segment, so this cannot be
+    // empty-handed; `unwrap_or_default` keeps the expression total
+    // without an unreachable `None` branch.
+    let host = without_scheme.split('/').next().unwrap_or_default();
     if host.is_empty() {
         None
     } else {
@@ -254,6 +269,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         }
     }
 
@@ -364,9 +380,11 @@ mod tests {
             desc.contains("Use this plugin"),
             "synthesised description should hint at when to invoke, got {desc:?}"
         );
+        // Non-short-circuiting `|` so both operands are evaluated.
+        let mentions_site = desc.contains(c.site_title.as_str())
+            | desc.contains(c.site_name.as_str());
         assert!(
-            desc.contains(c.site_title.as_str())
-                || desc.contains(c.site_name.as_str()),
+            mentions_site,
             "synthesised description should mention the site, got {desc:?}"
         );
     }
@@ -414,5 +432,102 @@ mod tests {
         let model = m["description_for_model"].as_str().unwrap();
         assert!(!h.is_empty());
         assert!(!model.is_empty());
+    }
+
+    #[test]
+    fn host_from_url_empty_host_returns_none() {
+        // Scheme present but nothing after it → empty host → None.
+        assert_eq!(host_from_url("https://"), None);
+        assert_eq!(host_from_url("https:///path"), None);
+    }
+
+    #[test]
+    fn name_for_model_truncates_to_fifty_chars() {
+        let long = "a".repeat(60);
+        let slug = slugify_for_model(&long);
+        assert_eq!(slug.len(), 50);
+        assert!(slug.chars().all(|c| c == 'a'));
+    }
+
+    #[test]
+    fn write_ai_plugin_json_errors_when_well_known_is_a_file() {
+        use crate::plugin::PluginContext;
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join(".well-known"), "file").unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = write_ai_plugin_json(&ctx, &cfg()).unwrap_err();
+        assert!(format!("{err}").contains(".well-known"));
+    }
+
+    #[test]
+    #[serial_test::parallel]
+    fn write_ai_plugin_json_errors_when_target_is_a_directory() {
+        use crate::plugin::PluginContext;
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join(".well-known/ai-plugin.json"))
+            .unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = write_ai_plugin_json(&ctx, &cfg()).unwrap_err();
+        assert!(format!("{err}").contains("ai-plugin.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn cfg() -> SsgConfig {
+        SsgConfig {
+            site_name: "Example Site".to_string(),
+            site_title: "Example".to_string(),
+            site_description: "A demo".to_string(),
+            base_url: "https://example.com".to_string(),
+            language: "en".to_string(),
+            content_dir: std::path::PathBuf::from("content"),
+            output_dir: std::path::PathBuf::from("build"),
+            template_dir: std::path::PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+            cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn write_ai_plugin_json_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::ai-plugin-serialize");
+        fail::cfg("postprocess::ai-plugin-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempfile::tempdir().unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = write_ai_plugin_json(&ctx, &cfg())
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("ai-plugin.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::ai-plugin-serialize"),
+            "got: {msg}"
+        );
     }
 }

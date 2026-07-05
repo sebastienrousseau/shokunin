@@ -3,7 +3,8 @@
 
 //! News sitemap fix plugin.
 
-use super::helpers::{read_meta_sidecars, rfc2822_to_iso8601, xml_escape};
+use super::helpers::{read_meta_sidecars, xml_escape};
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::fs;
@@ -98,16 +99,35 @@ fn build_news_entry(
         return None;
     }
 
+    // Issue #586 / plan §2 item 1.4 (spec A4): shared flexible date
+    // chain for <news:publication_date> — RFC 2822, long-form, and
+    // ISO 8601 inputs all normalise to a W3C datetime now. This is
+    // the ssg-side half of the chain that retires the upstream
+    // "'day' component could not be parsed" warning spam.
     let pub_date = meta
         .get("item_pub_date")
-        .map(|d| rfc2822_to_iso8601(d))
+        .map(|d| match parse_flexible_date(d) {
+            Ok(dt) => dt.to_w3c_date(),
+            Err(err) => {
+                if !d.is_empty() {
+                    log::warn!(
+                        "[news-sitemap-fix] 'item_pub_date' for \
+                         '{rel_path}': {err}"
+                    );
+                }
+                d.clone()
+            }
+        })
         .unwrap_or_default();
 
-    let loc = if base_url.is_empty() {
-        format!("{rel_path}/index.html")
-    } else {
-        format!("{base_url}/{rel_path}/index.html")
-    };
+    // Spec A2/B1 (plan §2 item 1.2): `<loc>` goes through the shared
+    // page-URL derivation so news-sitemap, sitemap, canonical `<link>`
+    // and feed `<link>` all publish the same directory-URL convention
+    // (`{base}/{rel_path}/`, never `…/index.html`).
+    let loc = crate::urls::derive_page_url(
+        base_url,
+        &format!("{rel_path}/index.html"),
+    );
 
     let keywords = meta
         .get("keywords")
@@ -156,7 +176,7 @@ mod tests {
     ) {
         let page_dir = dir.join(slug);
         fs::create_dir_all(&page_dir).expect("create page dir");
-        let meta_path = page_dir.join("page.meta.json");
+        let meta_path = page_dir.join("index.meta.json");
         let json = serde_json::to_string(meta).expect("serialize meta");
         fs::write(&meta_path, json).expect("write meta");
     }
@@ -179,6 +199,7 @@ mod tests {
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -201,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_with_keywords() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         fs::write(
@@ -220,7 +241,8 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Breaking News".to_string());
@@ -237,9 +259,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "breaking", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert!(
             result.contains(
                 "<news:keywords>rust, programming, web</news:keywords>"
@@ -267,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_with_tags_fallback() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         fs::write(
@@ -282,7 +304,8 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let mut meta = HashMap::new();
         let _ = meta.insert("title".to_string(), "Tagged Post".to_string());
@@ -295,9 +318,9 @@ mod tests {
         write_meta_sidecar(tmp.path(), "tagged", &meta);
 
         let ctx = make_atom_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert!(
             result.contains("<news:keywords>tech, science</news:keywords>"),
             "Should fall back to tags for keywords: {result}"
@@ -307,7 +330,7 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_skips_when_no_placeholders() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         let news_path = tmp.path().join("news-sitemap.xml");
         let original = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -319,12 +342,12 @@ mod tests {
   </news:news>
 </url>
 </urlset>"#;
-        fs::write(&news_path, original)?;
+        fs::write(&news_path, original).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert_eq!(
             result, original,
             "Should not modify well-formed news sitemap"
@@ -363,11 +386,86 @@ mod tests {
         let entry =
             build_news_entry("my-article", &meta, "https://example.com")
                 .expect("valid metadata should produce an entry");
-        assert!(entry
-            .contains("<loc>https://example.com/my-article/index.html</loc>"));
+        // Directory-URL convention shared with canonical/feed/sitemap
+        // (plan §2 item 1.2, `urls::derive_page_url`).
+        assert!(entry.contains("<loc>https://example.com/my-article/</loc>"));
         assert!(entry.contains("<news:name>Author</news:name>"));
         assert!(entry.contains("<news:title>My Article</news:title>"));
         assert!(entry.contains("<news:language>en</news:language>"));
+    }
+
+    // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_news_entry_rfc2822_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "RFC".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        let entry = build_news_entry("rfc", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-04-11T06:06:06+00:00\
+                 </news:publication_date>"
+            ),
+            "RFC 2822 input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_iso_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "ISO".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+        let entry = build_news_entry("iso", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-07-01T00:00:00+00:00\
+                 </news:publication_date>"
+            ),
+            "ISO input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_long_form_date_is_w3c() {
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Long".to_string());
+        let _ = meta
+            .insert("item_pub_date".to_string(), "July 1, 2026".to_string());
+        let entry = build_news_entry("long", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>2026-07-01T00:00:00+00:00\
+                 </news:publication_date>"
+            ),
+            "long-form input should produce a W3C datetime: {entry}"
+        );
+    }
+
+    #[test]
+    fn test_build_news_entry_unparseable_date_passes_through() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Bad".to_string());
+        let _ =
+            meta.insert("item_pub_date".to_string(), "not-a-date".to_string());
+        let entry = build_news_entry("bad", &meta, "https://example.com")
+            .expect("valid entry");
+        assert!(
+            entry.contains(
+                "<news:publication_date>not-a-date</news:publication_date>"
+            ),
+            "unparseable input keeps previous passthrough behaviour: {entry}"
+        );
     }
 
     #[test]
@@ -378,8 +476,9 @@ mod tests {
         let entry = build_news_entry("post", &meta, "")
             .expect("should produce entry without base_url");
         assert!(
-            entry.contains("<loc>post/index.html</loc>"),
-            "loc should use relative path when base_url is empty: {entry}"
+            entry.contains("<loc>/post/</loc>"),
+            "loc should be a rooted directory URL when base_url is \
+             empty: {entry}"
         );
         assert!(
             entry.contains("<news:name>Writer</news:name>"),
@@ -389,30 +488,87 @@ mod tests {
 
     #[test]
     fn test_news_sitemap_no_file_is_noop() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("news-sitemap.xml").exists());
         Ok(())
     }
 
     #[test]
     fn test_news_sitemap_empty_entries_no_rebuild() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let news_path = tmp.path().join("news-sitemap.xml");
         // Has placeholder but no meta sidecars to rebuild from
         let original = r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset><url><loc></loc><news:news><news:title>Untitled Article</news:title></news:news></url></urlset>"#;
-        fs::write(&news_path, original)?;
+        fs::write(&news_path, original).unwrap();
 
         let ctx = test_ctx(tmp.path());
-        NewsSitemapFixPlugin.after_compile(&ctx)?;
+        NewsSitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&news_path)?;
+        let result = fs::read_to_string(&news_path).unwrap();
         assert_eq!(
             result, original,
             "should not modify when no meta entries produce valid news entries"
         );
         Ok(())
+    }
+
+    // -----------------------------------------------------------------
+    // build_news_entry: empty item_pub_date parses to nothing silently
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_build_news_entry_with_empty_pub_date() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "T".to_string());
+        let _ = meta.insert("item_pub_date".to_string(), String::new());
+        let entry =
+            build_news_entry("post", &meta, "https://example.com").unwrap();
+        assert!(
+            entry.contains("<news:publication_date></news:publication_date>"),
+            "empty date passes through empty: {entry}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_on_invalid_utf8_news_sitemap() {
+        let tmp = tempdir().unwrap();
+        let news_path = tmp.path().join("news-sitemap.xml");
+        fs::write(&news_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = NewsSitemapFixPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("news-sitemap.xml"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_after_compile_write_failure_on_readonly_news_sitemap() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let news_path = tmp.path().join("news-sitemap.xml");
+        fs::write(
+            &news_path,
+            "<urlset><url><news:title>Untitled Article</news:title></url></urlset>",
+        )
+        .unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Real Title".to_string());
+        write_meta_sidecar(tmp.path(), "post", &meta);
+        fs::set_permissions(&news_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = make_atom_ctx(tmp.path());
+        let result = NewsSitemapFixPlugin.after_compile(&ctx);
+        let _ =
+            fs::set_permissions(&news_path, fs::Permissions::from_mode(0o644));
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("news-sitemap.xml"));
     }
 }

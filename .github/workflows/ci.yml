@@ -363,3 +363,52 @@ jobs:
         # `--locked` matches our cargo-deny convention and refuses
         # unexpected lock-file drift on PRs.
         run: cargo vet --locked
+      - name: Exemption ratchet (count may only go down)
+        # The exemption count in supply-chain/config.toml is a ratchet:
+        # it may only decrease, never increase. The baseline lives in
+        # supply-chain/exemptions-baseline.txt and is updated in the
+        # same PR that burns exemptions down (see supply-chain/README.md
+        # "544 to Zero" trajectory). Adding a new dependency must go
+        # through `cargo vet certify` or an imported trust set — a new
+        # [[exemptions.*]] entry without a matching baseline reduction
+        # elsewhere fails this gate.
+        run: |
+          baseline="$(tr -d '[:space:]' < supply-chain/exemptions-baseline.txt)"
+          count="$(grep -c '^\[\[exemptions\.' supply-chain/config.toml)"
+          echo "exemptions: ${count} (baseline: ${baseline})"
+          if [ "${count}" -gt "${baseline}" ]; then
+            echo "::error file=supply-chain/config.toml::Exemption count ${count} exceeds the ratchet baseline ${baseline}. Audit the new dependency (cargo vet certify) instead of exempting it, or justify the exemption and still burn one down elsewhere. The baseline only moves downward."
+            exit 1
+          fi
+          if [ "${count}" -lt "${baseline}" ]; then
+            echo "::notice file=supply-chain/exemptions-baseline.txt::Exemption count ${count} is below the baseline ${baseline} — ratchet it down: echo ${count} > supply-chain/exemptions-baseline.txt"
+          fi
+
+  # ── Phase 2f: API semver gate (v0.0.47 plan §3 item 2.6) ────────────
+  # cargo-semver-checks diffs the public API of every published crate
+  # against its latest crates.io release, so breaking changes become
+  # visible pre-merge instead of post-publish (two of the last three
+  # releases were breaking). ssg-rpc-macro is excluded — proc-macro
+  # crates expose no rustdoc-diffable API surface.
+  semver-checks:
+    name: cargo-semver-checks
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: semver-checks
+      - name: Install cargo-semver-checks
+        run: cargo install cargo-semver-checks --locked
+      - name: Check public API against crates.io baseline
+        run: |
+          cargo semver-checks \
+            --package ssg \
+            --package ssg-core \
+            --package ssg-rpc \
+            --package ssg-search

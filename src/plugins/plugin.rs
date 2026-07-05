@@ -40,7 +40,7 @@
 use crate::cmd::SsgConfig;
 use crate::error::{PathErrorExt, SsgError};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fmt, fs,
     path::{Path, PathBuf},
     sync::Arc,
@@ -59,7 +59,7 @@ const CACHE_FILENAME: &str = ".ssg-plugin-cache.json";
 /// `.ssg-plugin-cache.json` in the site directory.
 #[derive(Debug, Clone, Default)]
 pub struct PluginCache {
-    entries: HashMap<PathBuf, u64>,
+    entries: BTreeMap<PathBuf, u64>,
 }
 
 impl PluginCache {
@@ -75,9 +75,9 @@ impl PluginCache {
     /// assert!(c.has_changed(Path::new("any.path")));
     /// ```
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: BTreeMap::new(),
         }
     }
 
@@ -105,7 +105,7 @@ impl PluginCache {
         let Ok(content) = fs::read_to_string(&path) else {
             return Self::new();
         };
-        let Ok(map) = serde_json::from_str::<HashMap<String, u64>>(&content)
+        let Ok(map) = serde_json::from_str::<BTreeMap<String, u64>>(&content)
         else {
             return Self::new();
         };
@@ -131,12 +131,12 @@ impl PluginCache {
     /// ```
     pub fn save(&self, site_dir: &Path) -> Result<(), SsgError> {
         let path = site_dir.join(CACHE_FILENAME);
-        let serialisable: HashMap<String, u64> = self
+        let serialisable: BTreeMap<String, u64> = self
             .entries
             .iter()
             .map(|(k, v)| (k.to_string_lossy().into_owned(), *v))
             .collect();
-        // Infallible: HashMap<String, u64> is always serialisable to
+        // Infallible: BTreeMap<String, u64> is always serialisable to
         // JSON. We keep the `map_err` for clippy::expect_used (which is
         // denied in lib); the closure body is dark but harmless.
         let json =
@@ -695,6 +695,12 @@ impl PluginManager {
         let html_files = ctx.get_html_files();
         let transformed = std::sync::atomic::AtomicUsize::new(0);
 
+        // Writer pool (issue #569 phase 1): rayon workers hand changed
+        // files to dedicated writer threads instead of blocking a CPU
+        // slot on `fs::write`. Unchanged files are skipped entirely —
+        // on a no-op rebuild this pass writes zero files.
+        let io_pool = crate::io_pool::IoPool::new();
+
         html_files
             .par_iter()
             .try_for_each(|path| -> Result<(), SsgError> {
@@ -706,12 +712,20 @@ impl PluginManager {
                 }
 
                 if html != original {
-                    fs::write(path, &html).with_path(path)?;
+                    io_pool.write(path, html.into_bytes())?;
                     let _ = transformed
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 }
                 Ok(())
             })?;
+
+        // Barrier: everything after this pass (dep-graph repopulation
+        // and the plugin content-hash cache rebuild in
+        // `pipeline::compile_with_plugins`, dev-server reads, audits)
+        // re-reads the transformed files from disk, so all queued
+        // writes must be durably complete — and any write failure
+        // surfaced — before this function returns.
+        io_pool.flush()?;
 
         let count = transformed.load(std::sync::atomic::Ordering::Relaxed);
         if count > 0 {
@@ -913,10 +927,15 @@ mod tests {
         pm.register(FailPlugin { hook: "before" });
         let ctx = test_ctx();
         let err = pm.run_before_compile(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("before_compile failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("before_compile failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -925,10 +944,15 @@ mod tests {
         pm.register(FailPlugin { hook: "after" });
         let ctx = test_ctx();
         let err = pm.run_after_compile(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("after_compile failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("after_compile failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -937,10 +961,15 @@ mod tests {
         pm.register(FailPlugin { hook: "serve" });
         let ctx = test_ctx();
         let err = pm.run_on_serve(&ctx).unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { source, .. } = err {
-            assert!(source.to_string().contains("on_serve failed"));
-        }
+        // Debug output carries both the variant and the source message,
+        // asserting the same facts as a `matches!` + field check without
+        // an uncoverable fallthrough arm.
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        assert!(
+            dbg.contains("on_serve failed"),
+            "source message expected: {dbg}"
+        );
     }
 
     #[test]
@@ -1250,6 +1279,7 @@ mod tests {
     #[test]
     fn test_needs_all_files_can_be_overridden() {
         assert!(!PerFilePlugin.needs_all_files());
+        assert_eq!(PerFilePlugin.name(), "per-file");
     }
 
     #[test]
@@ -1258,6 +1288,7 @@ mod tests {
 
         // FailPlugin("before") should succeed on after_compile and on_serve
         let p = FailPlugin { hook: "before" };
+        assert_eq!(p.name(), "fail-plugin");
         assert!(p.after_compile(&ctx).is_ok());
         assert!(p.on_serve(&ctx).is_ok());
 
@@ -1270,5 +1301,344 @@ mod tests {
         let p = FailPlugin { hook: "serve" };
         assert!(p.before_compile(&ctx).is_ok());
         assert!(p.after_compile(&ctx).is_ok());
+    }
+
+    /// Transform plugin that returns the input unchanged (but as a
+    /// fresh `String`, like real plugins that found nothing to do).
+    #[derive(Debug)]
+    struct IdentityTransformPlugin;
+    impl Plugin for IdentityTransformPlugin {
+        fn name(&self) -> &'static str {
+            "identity-transform"
+        }
+        fn transform_html(
+            &self,
+            html: &str,
+            _path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Ok(html.to_string())
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    /// Transform plugin that rewrites a marker when present.
+    #[derive(Debug)]
+    struct MarkerRewritePlugin;
+    impl Plugin for MarkerRewritePlugin {
+        fn name(&self) -> &'static str {
+            "marker-rewrite"
+        }
+        fn transform_html(
+            &self,
+            html: &str,
+            _path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Ok(html.replace("CHANGE-ME", "CHANGED"))
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    /// Makes `path` read-only so any attempted rewrite fails loudly.
+    #[allow(clippy::permissions_set_readonly_false)] // test cleanup only
+    fn set_readonly(path: &Path, readonly: bool) {
+        let mut perms = fs::metadata(path).unwrap().permissions();
+        perms.set_readonly(readonly);
+        fs::set_permissions(path, perms).unwrap();
+    }
+
+    #[test]
+    fn test_fused_noop_chain_rewrites_zero_files() {
+        // Plan §4 3.2: on a no-op rebuild the transform pass must
+        // write 0 files. The files are made read-only, so if the
+        // pass attempted any write it would surface as an Err from
+        // the IoPool flush barrier.
+        let dir = tempfile::tempdir().unwrap();
+        let files: Vec<_> = (0..3)
+            .map(|i| {
+                let f = dir.path().join(format!("p{i}.html"));
+                fs::write(&f, format!("<p>page {i}</p>")).unwrap();
+                set_readonly(&f, true);
+                f
+            })
+            .collect();
+
+        assert_eq!(IdentityTransformPlugin.name(), "identity-transform");
+        assert_eq!(MarkerRewritePlugin.name(), "marker-rewrite");
+
+        let mut pm = PluginManager::new();
+        pm.register(IdentityTransformPlugin);
+        pm.register(MarkerRewritePlugin); // no marker present ⇒ no-op
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        // Zero writes ⇒ Ok even though every file is read-only.
+        pm.run_fused_transforms(&ctx).unwrap();
+
+        for (i, f) in files.iter().enumerate() {
+            assert_eq!(
+                fs::read_to_string(f).unwrap(),
+                format!("<p>page {i}</p>")
+            );
+            set_readonly(f, false); // restore for tempdir cleanup
+        }
+    }
+
+    #[test]
+    fn test_fused_modifying_chain_writes_exactly_changed_files() {
+        // The file containing the marker is rewritten; the untouched
+        // file stays byte-identical AND is read-only — proving the
+        // pass wrote exactly the changed set.
+        let dir = tempfile::tempdir().unwrap();
+        let changed = dir.path().join("changed.html");
+        let untouched = dir.path().join("untouched.html");
+        fs::write(&changed, "<p>CHANGE-ME</p>").unwrap();
+        fs::write(&untouched, "<p>static</p>").unwrap();
+        set_readonly(&untouched, true);
+
+        let mut pm = PluginManager::new();
+        pm.register(MarkerRewritePlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        pm.run_fused_transforms(&ctx).unwrap();
+
+        // Barrier semantics: the rewritten bytes are visible on disk
+        // immediately after run_fused_transforms returns.
+        assert_eq!(fs::read_to_string(&changed).unwrap(), "<p>CHANGED</p>");
+        assert_eq!(fs::read_to_string(&untouched).unwrap(), "<p>static</p>");
+        set_readonly(&untouched, false);
+    }
+
+    #[test]
+    fn test_fused_transform_write_failure_surfaces_at_flush() {
+        // A rewrite aimed at a read-only file must produce an error,
+        // not silently drop the write (IoPool flush barrier).
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("locked.html");
+        fs::write(&f, "<p>CHANGE-ME</p>").unwrap();
+        set_readonly(&f, true);
+
+        let mut pm = PluginManager::new();
+        pm.register(MarkerRewritePlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("write to read-only file must surface");
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+        set_readonly(&f, false);
+    }
+
+    // -----------------------------------------------------------------
+    // PluginCache — degraded-input branches
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_load_unreadable_file_yields_empty_cache() {
+        // Invalid UTF-8 bytes: the file exists but read_to_string fails,
+        // taking the `let Ok(content) = … else` fallback.
+        let tmp = tempfile::tempdir().unwrap();
+        let cache_path = tmp.path().join(CACHE_FILENAME);
+        fs::write(&cache_path, [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let loaded = PluginCache::load(tmp.path());
+        assert!(
+            loaded.entries.is_empty(),
+            "unreadable cache file should yield an empty cache"
+        );
+    }
+
+    #[test]
+    fn test_cache_save_write_failure_returns_io_error() {
+        // A directory squatting on the cache filename makes fs::write fail.
+        let tmp = tempfile::tempdir().unwrap();
+        fs::create_dir(tmp.path().join(CACHE_FILENAME)).unwrap();
+
+        let err = PluginCache::new()
+            .save(tmp.path())
+            .expect_err("write over a directory must fail");
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("Io"), "expected Io variant, got: {dbg}");
+    }
+
+    // -----------------------------------------------------------------
+    // PluginContext::cache_html_files — missing site_dir branch
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_cache_html_files_missing_site_dir_leaves_cache_unset() {
+        let tmp = tempfile::tempdir().unwrap();
+        let missing = tmp.path().join("missing-site");
+        let mut ctx =
+            PluginContext::new(tmp.path(), tmp.path(), &missing, tmp.path());
+        ctx.cache_html_files();
+        assert!(
+            ctx.html_files.is_none(),
+            "missing site_dir must not populate the html cache"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_cache_html_files_walk_error_yields_empty_cached_list() {
+        // `site_dir` exists (so the `exists()` guard passes) but a
+        // nested unreadable subdirectory makes `walk::walk_files`
+        // return `Err`, exercising the `unwrap_or_default()` failure
+        // arm rather than the empty-dir success arm covered elsewhere.
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let mut ctx =
+            PluginContext::new(tmp.path(), tmp.path(), &site, tmp.path());
+        ctx.cache_html_files();
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert_eq!(
+            ctx.html_files.as_deref(),
+            Some(&Vec::new()),
+            "walk error must degrade to an empty cached list, not panic"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_html_files_walk_error_returns_empty_uncached() {
+        // Same failure as above but taken through `get_html_files()`'s
+        // own `unwrap_or_default()` fallback (the `html_files` cache
+        // was never populated, so it re-walks and must degrade
+        // gracefully rather than propagating the error or panicking).
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = PluginContext::new(tmp.path(), tmp.path(), &site, tmp.path());
+        let files = ctx.get_html_files();
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(files.is_empty(), "walk error must yield an empty Vec");
+    }
+
+    // -----------------------------------------------------------------
+    // Plugin trait — default transform_html implementation
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_default_transform_html_returns_input_unchanged() {
+        let ctx = test_ctx();
+        let out = NoopPlugin
+            .transform_html("<p>as-is</p>", Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, "<p>as-is</p>");
+    }
+
+    // -----------------------------------------------------------------
+    // run_fused_transforms — early-return + error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_fused_without_transform_plugins_is_trivial_ok() {
+        // NoopPlugin has has_transform() == false, so the pass exits
+        // before touching the filesystem.
+        let mut pm = PluginManager::new();
+        pm.register(NoopPlugin);
+        let ctx = test_ctx();
+        pm.run_fused_transforms(&ctx).unwrap();
+    }
+
+    #[test]
+    fn test_fused_read_failure_on_invalid_utf8_surfaces() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("broken.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let mut pm = PluginManager::new();
+        pm.register(IdentityTransformPlugin);
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("invalid UTF-8 html must surface a read error");
+        let dbg = format!("{err:?}");
+        assert!(dbg.contains("broken.html"), "path context expected: {dbg}");
+    }
+
+    /// Transform plugin whose hook always fails.
+    #[derive(Debug)]
+    struct FailingTransformPlugin;
+    impl Plugin for FailingTransformPlugin {
+        fn name(&self) -> &'static str {
+            "failing-transform"
+        }
+        fn transform_html(
+            &self,
+            _html: &str,
+            path: &Path,
+            _ctx: &PluginContext,
+        ) -> Result<String, SsgError> {
+            Err(SsgError::Io {
+                path: path.to_path_buf(),
+                source: std::io::Error::other("transform_html failed"),
+            })
+        }
+        fn has_transform(&self) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn test_fused_transform_error_stops_the_pass() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("page.html"), "<p>x</p>").unwrap();
+
+        let mut pm = PluginManager::new();
+        pm.register(FailingTransformPlugin);
+        assert_eq!(FailingTransformPlugin.name(), "failing-transform");
+
+        let mut ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        ctx.cache_html_files();
+
+        let err = pm
+            .run_fused_transforms(&ctx)
+            .expect_err("failing transform plugin must surface its error");
+        let dbg = format!("{err:?}");
+        assert!(
+            dbg.contains("transform_html failed"),
+            "plugin error expected: {dbg}"
+        );
+        // The file is untouched.
+        assert_eq!(
+            fs::read_to_string(dir.path().join("page.html")).unwrap(),
+            "<p>x</p>"
+        );
     }
 }

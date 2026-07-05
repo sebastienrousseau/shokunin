@@ -43,6 +43,8 @@
 //! * `group_plugins_postprocess_edge_headers` — Cloudflare / Netlify / Vercel
 //! * `group_plugins_view_transitions`
 //! * `group_plugins_misc`       — everything else under `src/plugins/`
+//! * `group_plugins_agent_surfaces` — `agent_api` / `oembed` / vector
+//!   search / taxonomy (v0.0.47 agent-facing surfaces)
 //! * `group_util`               — `src/util/head_dom.rs`, `html_rewriter.rs`
 //! * `group_server`             — `src/server/`
 //! * `group_ssg_core`           — `crates/ssg-core`
@@ -132,9 +134,9 @@ pub fn bench_audit_gates(c: &mut Criterion) {
         ai_discovery::AiDiscoveryGate, broken_links::BrokenLinksGate,
         csp_sri::CspSriGate, feeds::FeedsGate, hreflang::HreflangGate,
         html5::Html5Gate, images::ImagesGate, jsonld::JsonLdGate,
-        markdownlint::MarkdownlintGate, metadata::MetadataGate,
-        performance::PerformanceGate, pqc_tls::PqcTlsGate,
-        search_index::SearchIndexGate, wcag::WcagGate,
+        lang_consistency::LangConsistencyGate, markdownlint::MarkdownlintGate,
+        metadata::MetadataGate, performance::PerformanceGate,
+        pqc_tls::PqcTlsGate, search_index::SearchIndexGate, wcag::WcagGate,
     };
     use ssg::audit::{AuditGate, AuditOptions};
 
@@ -158,6 +160,7 @@ pub fn bench_audit_gates(c: &mut Criterion) {
     gate!("gates::html5", Html5Gate);
     gate!("gates::images", ImagesGate);
     gate!("gates::jsonld", JsonLdGate);
+    gate!("gates::lang_consistency", LangConsistencyGate);
     gate!("gates::markdownlint", MarkdownlintGate);
     gate!("gates::metadata", MetadataGate);
     gate!("gates::performance", PerformanceGate);
@@ -391,6 +394,55 @@ pub fn bench_cmd(c: &mut Criterion) {
     let edge = ssg::cmd::EdgeHeadersConfig::default();
     c.bench_function("cmd::EdgeHeadersConfig::is_enabled", |b| {
         b.iter(|| black_box(edge.is_enabled()));
+    });
+
+    // SriAlgorithm (v0.0.47, `[security]` config) — prefix token and
+    // full SRI `integrity=` digest for all three variants.
+    use ssg::cmd::SriAlgorithm;
+    c.bench_function("cmd::SriAlgorithm::prefix (all variants)", |b| {
+        b.iter(|| {
+            black_box(SriAlgorithm::Sha256.prefix());
+            black_box(SriAlgorithm::Sha384.prefix());
+            black_box(SriAlgorithm::Sha512.prefix())
+        });
+    });
+    let sri_payload: &[u8] = b"console.log('bench');";
+    c.bench_function("cmd::SriAlgorithm::integrity (sha256)", |b| {
+        b.iter(|| {
+            black_box(SriAlgorithm::Sha256.integrity(black_box(sri_payload)))
+        });
+    });
+    c.bench_function("cmd::SriAlgorithm::integrity (sha384)", |b| {
+        b.iter(|| {
+            black_box(SriAlgorithm::Sha384.integrity(black_box(sri_payload)))
+        });
+    });
+    c.bench_function("cmd::SriAlgorithm::integrity (sha512)", |b| {
+        b.iter(|| {
+            black_box(SriAlgorithm::Sha512.integrity(black_box(sri_payload)))
+        });
+    });
+
+    // SecurityConfig lands via the `[security]` block of `ssg.toml`,
+    // deserialized through SsgConfig's public `FromStr` impl.
+    const SECURITY_TOML: &str = r#"
+site_name = "bench"
+content_dir = "content"
+output_dir = "public"
+template_dir = "templates"
+base_url = "https://example.com"
+site_title = "t"
+site_description = "d"
+language = "en-GB"
+
+[security]
+sri_algorithm = "sha512"
+"#;
+    c.bench_function("cmd::SsgConfig::from_str ([security] block)", |b| {
+        b.iter(|| {
+            let cfg = black_box(SECURITY_TOML).parse::<SsgConfig>();
+            black_box(cfg.map(|c| c.security.sri_algorithm))
+        });
     });
 
     // cmd::validation public free functions (re-exported from cmd::).
@@ -833,6 +885,11 @@ pub fn bench_core(c: &mut Criterion) {
     //          compile_site / register_default_plugins / ErrorMessage::* /
     //          RunOptions::* — drive the full build pipeline; benched
     //          end-to-end in benches/bench_site_generation.rs.
+    // SKIPPED: pipeline::compile_site_with_base_url (v0.0.47) — same
+    //          shape as compile_site (which it now backs); there is no
+    //          compile_site precedent in this harness to mirror, and
+    //          both drive the full staticdatagen build. Covered
+    //          end-to-end in benches/bench_site_generation.rs.
 
     // TemplateEngine — feature-gated on `templates`.
     #[cfg(feature = "templates")]
@@ -869,6 +926,148 @@ pub fn bench_core(c: &mut Criterion) {
         // SKIPPED: template_engine::TemplateEngine::render_page — needs a
         //          real template file on disk; covered by integration tests.
     }
+
+    // dates (v0.0.47) — flexible date parsing + the four formatters.
+    use ssg::dates::{days_in_month, is_leap_year, parse_flexible_date};
+    c.bench_function("dates::parse_flexible_date (rfc2822)", |b| {
+        b.iter(|| {
+            black_box(parse_flexible_date(black_box(
+                "Wed, 01 Jul 2026 07:07:07 +0000",
+            )))
+        });
+    });
+    c.bench_function("dates::parse_flexible_date (long form)", |b| {
+        b.iter(|| black_box(parse_flexible_date(black_box("July 1, 2026"))));
+    });
+    c.bench_function("dates::parse_flexible_date (iso8601)", |b| {
+        b.iter(|| {
+            black_box(parse_flexible_date(black_box("2026-07-01T07:07:07Z")))
+        });
+    });
+    let flex = parse_flexible_date("2026-07-01T07:07:07Z").unwrap();
+    c.bench_function("dates::FlexibleDate::to_rfc2822", |b| {
+        b.iter(|| black_box(flex.to_rfc2822()));
+    });
+    c.bench_function("dates::FlexibleDate::to_rfc3339", |b| {
+        b.iter(|| black_box(flex.to_rfc3339()));
+    });
+    c.bench_function("dates::FlexibleDate::to_w3c_date", |b| {
+        b.iter(|| black_box(flex.to_w3c_date()));
+    });
+    c.bench_function("dates::FlexibleDate::to_iso_date", |b| {
+        b.iter(|| black_box(flex.to_iso_date()));
+    });
+    c.bench_function("dates::is_leap_year", |b| {
+        b.iter(|| black_box(is_leap_year(black_box(2026))));
+    });
+    c.bench_function("dates::days_in_month", |b| {
+        b.iter(|| black_box(days_in_month(black_box(2026), black_box(2))));
+    });
+    let date_err = parse_flexible_date("not a date").unwrap_err();
+    c.bench_function("dates::DateParseError::attempted_formats+input", |b| {
+        b.iter(|| {
+            black_box(date_err.attempted_formats());
+            black_box(date_err.input())
+        });
+    });
+
+    // urls (v0.0.47) — permalink / output-path derivation helpers.
+    use ssg::urls::{
+        derive_output_rel_path, derive_page_url, derive_permalink,
+    };
+    c.bench_function("urls::derive_page_url", |b| {
+        b.iter(|| {
+            black_box(derive_page_url(
+                black_box("https://example.com"),
+                black_box("posts/foo/index.html"),
+            ))
+        });
+    });
+    c.bench_function("urls::derive_output_rel_path", |b| {
+        b.iter(|| black_box(derive_output_rel_path(black_box("posts/foo.md"))));
+    });
+    c.bench_function("urls::derive_permalink", |b| {
+        b.iter(|| {
+            black_box(derive_permalink(
+                black_box("https://example.com"),
+                black_box("posts/foo.md"),
+            ))
+        });
+    });
+
+    // io_pool (v0.0.47) — write+flush cycle against a shared pool. The
+    // pool and tempdir are built once outside the timed closure; each
+    // iteration enqueues 32 × 1 KiB jobs and barriers on flush().
+    use ssg::io_pool::IoPool;
+    let io_dir = tempfile::tempdir().unwrap();
+    let io_pool = IoPool::new();
+    let io_payload = vec![0u8; 1024];
+    c.bench_function("io_pool::IoPool::write+flush (32x1KiB)", |b| {
+        b.iter(|| {
+            for i in 0..32 {
+                io_pool
+                    .write(
+                        io_dir.path().join(format!("f{i}.bin")),
+                        io_payload.clone(),
+                    )
+                    .unwrap();
+            }
+            black_box(io_pool.flush())
+        });
+    });
+    c.bench_function("io_pool::IoPool::completed_writes", |b| {
+        b.iter(|| black_box(io_pool.completed_writes()));
+    });
+    c.bench_function("io_pool::IoPool::threads", |b| {
+        b.iter(|| black_box(io_pool.threads()));
+    });
+    // SKIPPED: io_pool::IoPool::new / with_threads / default — spawn
+    //          and join OS writer threads per iteration (Drop joins),
+    //          which measures thread lifecycle, not pool behaviour;
+    //          the constructor path is exercised by the shared pool
+    //          above.
+
+    // content_stager (v0.0.47 additions) — permalink-injecting stage
+    // pass over a 3-file content tree + the pure injection helper.
+    use ssg::content_stager::{
+        inject_permalink_if_missing, stage_content_with_site_defaults,
+    };
+    let cs_tmp = tempfile::tempdir().unwrap();
+    let cs_src = cs_tmp.path().join("content");
+    std::fs::create_dir_all(&cs_src).unwrap();
+    std::fs::write(cs_src.join("index.md"), "---\ntitle: Home\n---\nbody")
+        .unwrap();
+    std::fs::write(cs_src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
+    std::fs::write(cs_src.join("b.md"), "---\ntitle: B\n---\nbody").unwrap();
+    let cs_build = cs_tmp.path().join("build");
+    let cs_keys: &[String] = &[];
+    c.bench_function(
+        "content_stager::stage_content_with_site_defaults (3 files)",
+        |b| {
+            b.iter(|| {
+                black_box(stage_content_with_site_defaults(
+                    black_box(&cs_src),
+                    black_box(&cs_build),
+                    black_box(cs_keys),
+                    black_box(Some("https://example.com")),
+                ))
+            });
+        },
+    );
+    c.bench_function("content_stager::inject_permalink_if_missing", |b| {
+        b.iter(|| {
+            black_box(inject_permalink_if_missing(
+                black_box("---\ntitle: A\n---\nbody"),
+                black_box("https://example.com/a/"),
+            ))
+        });
+    });
+    // SKIPPED: content_stager::stage_content_with_template_defaults —
+    //          thin delegate to stage_content_with_site_defaults with
+    //          base_url: None; identical code path benched above.
+    // SKIPPED: content_stager::collect_template_vars /
+    //          inject_missing_keys — pre-v0.0.47 surface, covered by
+    //          the staging pass above and unit tests.
 }
 
 // ====================================================================
@@ -1161,6 +1360,33 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
         });
     });
 
+    // csp v0.0.47 additions — per-page hash-strict policy pipeline.
+    // SAMPLE_HTML carries an inline JSON-LD <script>, so every helper
+    // below does real hashing work.
+    use ssg::csp::{
+        page_inline_hashes, page_policy, render_policy_template,
+        DEFAULT_CSP_POLICY_TEMPLATE,
+    };
+    c.bench_function("csp::page_inline_hashes", |b| {
+        b.iter(|| black_box(page_inline_hashes(black_box(SAMPLE_HTML))));
+    });
+    let csp_hashes = page_inline_hashes(SAMPLE_HTML);
+    c.bench_function("csp::PageCspHashes::is_empty", |b| {
+        b.iter(|| black_box(csp_hashes.is_empty()));
+    });
+    c.bench_function("csp::render_policy_template", |b| {
+        b.iter(|| {
+            black_box(render_policy_template(
+                black_box(DEFAULT_CSP_POLICY_TEMPLATE),
+                black_box(&csp_hashes.scripts),
+                black_box(&csp_hashes.styles),
+            ))
+        });
+    });
+    c.bench_function("csp::page_policy", |b| {
+        b.iter(|| black_box(page_policy(black_box(SAMPLE_HTML))));
+    });
+
     // drafts
     use ssg::drafts::DraftPlugin;
     c.bench_function("drafts::DraftPlugin::new", |b| {
@@ -1415,22 +1641,28 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
         });
     });
 
-    // template_plugin.
-    use ssg::template_plugin::TemplatePlugin;
-    let tdir = tempfile::tempdir().unwrap();
-    c.bench_function(
-        "template_plugin::TemplatePlugin::from_template_dir",
-        |b| {
-            b.iter(|| {
-                black_box(TemplatePlugin::from_template_dir(black_box(
-                    tdir.path(),
-                )))
-            });
-        },
-    );
+    // template_plugin. The `ssg::template_plugin` re-export is gated
+    // behind the `templates` feature, so the whole section must be
+    // cfg-gated or `--no-default-features` fails to type-check this
+    // bench (v0.0.47 plan, W1-E gating fix). cargo-hack's
+    // feature-powerset job checks with `--no-dev-deps` (lib/bins
+    // only), so this gate is what keeps `cargo check --all-targets
+    // --no-default-features` green locally.
     #[cfg(feature = "templates")]
     {
         use ssg::template_engine::TemplateConfig;
+        use ssg::template_plugin::TemplatePlugin;
+        let tdir = tempfile::tempdir().unwrap();
+        c.bench_function(
+            "template_plugin::TemplatePlugin::from_template_dir",
+            |b| {
+                b.iter(|| {
+                    black_box(TemplatePlugin::from_template_dir(black_box(
+                        tdir.path(),
+                    )))
+                });
+            },
+        );
         c.bench_function("template_plugin::TemplatePlugin::new", |b| {
             b.iter(|| {
                 black_box(TemplatePlugin::new(TemplateConfig::default()))
@@ -1592,6 +1824,180 @@ pub fn bench_plugins_misc(c: &mut Criterion) {
 
     // SKIPPED: plugins::ProgressBar / progress::* — terminal UI helpers
     //          covered by their own unit tests.
+}
+
+// ====================================================================
+// group_plugins_agent_surfaces — agent_api / oembed / vector search /
+// taxonomy (v0.0.47 agent-facing surfaces)
+// ====================================================================
+
+/// Builds a small compiled-site fixture: three HTML pages with
+/// `.meta.json` sidecars both next to the HTML (the layout
+/// `agent_api::collect_posts` falls back to) and under
+/// `<site>/.meta/` (the sidecar tree `agent_api` and taxonomy prefer).
+/// Returns the `TempDir` plus a `PluginContext` carrying a config
+/// with a real `base_url`.
+fn build_agent_site_fixture() -> (TempDir, ssg::plugin::PluginContext) {
+    let tmp = tempfile::tempdir().expect("tempdir");
+    let root = tmp.path();
+    let content = root.join("content");
+    let build = root.join("build");
+    let site = root.join("site");
+    let templates = root.join("templates");
+    for d in [&content, &build, &site, &templates] {
+        std::fs::create_dir_all(d).unwrap();
+    }
+    let meta_dir = site.join(".meta");
+    std::fs::create_dir_all(&meta_dir).unwrap();
+
+    for (stem, title) in
+        [("alpha", "Alpha"), ("beta", "Beta"), ("gamma", "Gamma")]
+    {
+        std::fs::write(site.join(format!("{stem}.html")), SAMPLE_HTML).unwrap();
+        let sidecar = format!(
+            r#"{{"title":"{title}","description":"About {title}.",
+"date":"2026-07-01","tags":["rust","ssg"],"categories":["bench"],
+"author":"jane@example.com (Jane Doe)"}}"#
+        );
+        std::fs::write(
+            site.join(format!("{stem}.meta.json")),
+            sidecar.as_bytes(),
+        )
+        .unwrap();
+        std::fs::write(
+            meta_dir.join(format!("{stem}.meta.json")),
+            sidecar.as_bytes(),
+        )
+        .unwrap();
+    }
+
+    let cfg = ssg::cmd::SsgConfig::builder()
+        .site_name("bench".into())
+        .base_url("https://example.com".into())
+        .build()
+        .expect("valid config");
+    let ctx = ssg::plugin::PluginContext::with_config(
+        &content, &build, &site, &templates, cfg,
+    );
+    (tmp, ctx)
+}
+
+#[allow(unreachable_pub)]
+pub fn bench_plugins_agent_surfaces(c: &mut Criterion) {
+    use ssg::agent_api::{
+        collect_posts, jsonld_word_count, parse_author, AgentApiPlugin,
+    };
+    use ssg::oembed::{build_oembed, OembedPlugin};
+    use ssg::plugin::Plugin as _;
+    use ssg::search_index::VectorSearchPlugin;
+    use ssg::taxonomy::{TaxonomyPlugin, TaxonomyTerm};
+
+    let (_tmp, ctx) = build_agent_site_fixture();
+
+    // agent_api — constructors + sidecar collection + after_compile
+    // (writes the four /api/agents/*.json documents each iteration).
+    c.bench_function("agent_api::AgentApiPlugin::new", |b| {
+        b.iter(|| black_box(AgentApiPlugin::new()));
+    });
+    c.bench_function("agent_api::AgentApiPlugin::disabled", |b| {
+        b.iter(|| black_box(AgentApiPlugin::disabled()));
+    });
+    let agent_plugin = AgentApiPlugin::new();
+    c.bench_function("agent_api::AgentApiPlugin::after_compile (3p)", |b| {
+        b.iter(|| {
+            let _ = black_box(agent_plugin.after_compile(black_box(&ctx)));
+        });
+    });
+    let agent_disabled = AgentApiPlugin::disabled();
+    c.bench_function(
+        "agent_api::AgentApiPlugin::after_compile (disabled)",
+        |b| {
+            b.iter(|| {
+                let _ =
+                    black_box(agent_disabled.after_compile(black_box(&ctx)));
+            });
+        },
+    );
+    c.bench_function("agent_api::collect_posts", |b| {
+        b.iter(|| black_box(collect_posts(black_box(&ctx))));
+    });
+    let jsonld_html = r#"<script type="application/ld+json">
+      {"@type":"BlogPosting","wordCount":321}
+    </script>"#;
+    c.bench_function("agent_api::jsonld_word_count", |b| {
+        b.iter(|| black_box(jsonld_word_count(black_box(jsonld_html))));
+    });
+    c.bench_function("agent_api::parse_author", |b| {
+        b.iter(|| {
+            black_box(parse_author(black_box("jane@example.com (Jane Doe)")))
+        });
+    });
+
+    // oembed — after_compile writes the *.oembed.json siblings, and
+    // transform_html injects the discovery <link> (the sibling exists
+    // after the first after_compile pass below).
+    let oembed = OembedPlugin;
+    c.bench_function("oembed::OembedPlugin::after_compile (3p)", |b| {
+        b.iter(|| {
+            let _ = black_box(oembed.after_compile(black_box(&ctx)));
+        });
+    });
+    oembed.after_compile(&ctx).unwrap();
+    let oembed_page = ctx.site_dir.join("alpha.html");
+    c.bench_function("oembed::OembedPlugin::transform_html", |b| {
+        b.iter(|| {
+            let _ = black_box(oembed.transform_html(
+                black_box(SAMPLE_HTML),
+                black_box(&oembed_page),
+                black_box(&ctx),
+            ));
+        });
+    });
+    c.bench_function("oembed::build_oembed", |b| {
+        b.iter(|| {
+            black_box(build_oembed(
+                black_box("Alpha"),
+                black_box(Some("jane@example.com (Jane Doe)")),
+                black_box(Some("bench")),
+                black_box(Some("https://example.com")),
+            ))
+        });
+    });
+
+    // search_index::VectorSearchPlugin — builds the SearchIndex over
+    // the three fixture pages, embeds them, and writes the four
+    // <site>/search/ artifacts per iteration.
+    let vector = VectorSearchPlugin;
+    c.bench_function(
+        "search_index::VectorSearchPlugin::after_compile (3p)",
+        |b| {
+            b.iter(|| {
+                let _ = black_box(vector.after_compile(black_box(&ctx)));
+            });
+        },
+    );
+
+    // taxonomy — per-term landing pages (#586 port 5). Runs last so
+    // the generated /tags/... pages don't inflate the vector-search
+    // bench above. TaxonomyTerm is the new public value type.
+    c.bench_function("taxonomy::TaxonomyTerm (construct)", |b| {
+        b.iter(|| {
+            black_box(TaxonomyTerm {
+                name: "rust".into(),
+                slug: "rust".into(),
+                pages: vec![(
+                    "Alpha".into(),
+                    "https://example.com/alpha.html".into(),
+                )],
+            })
+        });
+    });
+    let taxonomy = TaxonomyPlugin;
+    c.bench_function("taxonomy::TaxonomyPlugin::after_compile (3p)", |b| {
+        b.iter(|| {
+            let _ = black_box(taxonomy.after_compile(black_box(&ctx)));
+        });
+    });
 }
 
 // ====================================================================
@@ -2325,6 +2731,7 @@ criterion_group!(
     bench_plugins_view_transitions
 );
 criterion_group!(group_plugins_misc, bench_plugins_misc);
+criterion_group!(group_plugins_agent_surfaces, bench_plugins_agent_surfaces);
 criterion_group!(group_util, bench_util);
 criterion_group!(group_server, bench_server);
 criterion_group!(group_ssg_core, bench_ssg_core);
@@ -2344,6 +2751,7 @@ criterion_main!(
     group_plugins_postprocess_edge_headers,
     group_plugins_view_transitions,
     group_plugins_misc,
+    group_plugins_agent_surfaces,
     group_util,
     group_server,
     group_ssg_core,

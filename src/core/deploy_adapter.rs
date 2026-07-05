@@ -98,11 +98,13 @@ impl Target {
             Self::GithubPages => "github-pages",
             Self::S3 => "s3",
             Self::None => "none",
-            // Defensive: future variants fall through to a placeholder
-            // so we don't accidentally break the build when a new
-            // target is added.
-            #[allow(unreachable_patterns)]
-            _ => "unknown",
+            // NOTE: no wildcard arm — this match is already exhaustive
+            // over every variant defined in *this* crate. `Target` is
+            // `#[non_exhaustive]` only so *downstream* crates are forced
+            // to add a wildcard; here a wildcard arm would be dead code
+            // (rustc proves it unreachable) and adding a new variant to
+            // this enum will make this match fail to compile until a
+            // real arm is added — which is what we want.
         }
     }
 }
@@ -147,10 +149,10 @@ pub fn adapter_for(target: Target) -> Box<dyn DeployAdapter> {
         Target::GithubPages => Box::new(GithubPagesAdapter),
         Target::S3 => Box::new(S3Adapter),
         Target::None => Box::new(NoneAdapter),
-        // Defensive: future variants fall back to a no-op so we don't
-        // accidentally panic on a new target before its adapter lands.
-        #[allow(unreachable_patterns)]
-        _ => Box::new(NoneAdapter),
+        // NOTE: no wildcard arm — see `Target::as_str` for why. Adding
+        // a new variant to this enum will force a compile error here
+        // until a real adapter is wired up for it, rather than silently
+        // falling back to a no-op.
     }
 }
 
@@ -311,7 +313,9 @@ mod tests {
             Target::None,
         ] {
             let a = adapter_for(t);
-            assert!(a.deploy(&dir).is_ok(), "adapter {} failed", a.name());
+            let name = a.name();
+            let result = a.deploy(&dir);
+            assert!(result.is_ok(), "adapter {name} failed");
         }
     }
 }

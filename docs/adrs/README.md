@@ -29,6 +29,8 @@ that supersedes the old one — never edit history.
 | [ADR-0005](0005-ureq-for-llm.md) | `ureq` for the local-LLM HTTP path | Accepted |
 | [ADR-0006](0006-cyclonedx-over-spdx.md) | CycloneDX 1.5 as the primary SBOM format | Accepted |
 | [ADR-0007](0007-staticdatagen-staging-shim.md) | Content-staging shim for `staticdatagen` upstream regressions | Accepted (temporary — superseded once upstream lands; see [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585)) |
+| ADR-0008 | *(reserved)* async-tungstenite HMR migration | Planned — see [#571](https://github.com/sebastienrousseau/static-site-generator/issues/571) |
+| [ADR-0009](0009-versioning-policy-0.0.x-until-0.0.999.md) | `0.0.x`-only versioning until `0.0.999` — no `0.1.0`/`1.0.0` yet | Accepted |
 
 ## Linking from code
 

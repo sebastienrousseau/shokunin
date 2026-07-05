@@ -494,4 +494,65 @@ mod tests {
         let out = remove_canonical_links(html);
         assert!(!out.contains("Canonical"));
     }
+
+    // ── lol_html failure fallbacks ──────────────────────────────────
+    //
+    // `<xmp>` inside `<select>` is a documented lol_html parsing
+    // ambiguity: the rewrite fails and every helper must fall back to
+    // returning the input unchanged.
+
+    const AMBIGUOUS: &str = "<html><head><title>T</title></head>\
+                             <body><select><xmp>x</xmp></select></body></html>";
+
+    #[test]
+    fn inject_returns_input_when_rewrite_fails() {
+        let out = inject_before_head_close(AMBIGUOUS, "<meta name=\"x\">");
+        assert_eq!(out, AMBIGUOUS);
+    }
+
+    #[test]
+    fn remove_canonical_returns_input_when_rewrite_fails() {
+        let html = "<head><link rel=\"canonical\" href=\"/old\"></head>\
+                    <select><xmp>x</xmp></select>";
+        let out = remove_canonical_links(html);
+        assert_eq!(out, html);
+    }
+
+    #[test]
+    fn replace_canonical_returns_input_when_rewrite_fails() {
+        let out = replace_canonical_link(
+            AMBIGUOUS,
+            "<link rel=\"canonical\" href=\"/new\">",
+        );
+        assert_eq!(out, AMBIGUOUS);
+    }
+
+    // ── extract_head_meta edge shapes ───────────────────────────────
+
+    #[test]
+    fn extract_title_uses_first_title_element_only() {
+        // A second <title> must not overwrite or append to the first —
+        // the `title_done` latch discards its text chunks.
+        let html = "<head><title>First</title><title>Second</title></head>";
+        let meta = extract_head_meta(html);
+        assert_eq!(meta.title, "First");
+    }
+
+    #[test]
+    fn extract_canonical_skips_link_without_href() {
+        // First canonical carries no href — the handler leaves the slot
+        // empty so the following canonical is captured instead.
+        let html = "<head><link rel=\"canonical\">\
+                    <link rel=\"canonical\" href=\"/real\"></head>";
+        let meta = extract_head_meta(html);
+        assert_eq!(meta.canonical, "/real");
+    }
+
+    #[test]
+    fn extract_canonical_keeps_first_of_multiple_hrefs() {
+        let html = "<head><link rel=\"canonical\" href=\"/first\">\
+                    <link rel=\"canonical\" href=\"/second\"></head>";
+        let meta = extract_head_meta(html);
+        assert_eq!(meta.canonical, "/first");
+    }
 }

@@ -210,4 +210,25 @@ mod tests {
         // `Path::new("")` has no parent — must be a no-op (Ok).
         ensure_parent(Path::new("")).unwrap();
     }
+
+    #[test]
+    fn after_compile_fails_when_ssg_dir_squatted_by_file() {
+        // `.ssg` exists as a file, so ensure_parent's create_dir_all
+        // fails and the Io closure fires.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(".ssg"), "not a dir").unwrap();
+        let ctx = ctx_for(dir.path());
+        let err = RpcSchemaPlugin::new().after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_dts_path_squatted_by_dir() {
+        // A directory squats `.ssg/rpc.d.ts`, so fs::write fails.
+        let dir = tempdir().unwrap();
+        fs::create_dir_all(dir.path().join(RPC_DTS_RELATIVE_PATH)).unwrap();
+        let ctx = ctx_for(dir.path());
+        let err = RpcSchemaPlugin::new().after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
 }

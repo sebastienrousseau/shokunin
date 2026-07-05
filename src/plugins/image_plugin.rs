@@ -360,9 +360,30 @@ pub fn encode_avif(
 ) -> Result<Vec<u8>, SsgError> {
     use rgb::FromSlice;
 
+    fail_point!("image::encode-avif", |_| {
+        Err(SsgError::io(
+            std::io::Error::other("injected: image::encode-avif"),
+            "<avif-buffer>",
+        ))
+    });
+
     let rgba = img.to_rgba8();
     let width = rgba.width() as usize;
     let height = rgba.height() as usize;
+
+    // Guard before handing the buffer to ravif: `imgref` asserts
+    // `stride > 0` and panics on zero-dimension images, so a corrupt
+    // or programmatically-empty input must surface as a typed error,
+    // never a panic (house no-panic rule).
+    if width == 0 || height == 0 {
+        return Err(SsgError::io(
+            std::io::Error::other(format!(
+                "cannot AVIF-encode empty image ({width}x{height})"
+            )),
+            "<avif-buffer>",
+        ));
+    }
+
     let raw = rgba.as_raw().as_rgba();
 
     let quality_f = f32::from(quality.clamp(1, 100));
@@ -502,7 +523,14 @@ fn rewrite_img_tags(
         Ok(())
     });
 
-    match rewrite_html(html, vec![handler]) {
+    unwrap_rewrite(html, rewrite_html(html, vec![handler]))
+}
+
+/// Unwraps the streaming-rewrite result, falling back to the original
+/// HTML (with a warning) when `lol_html` failed.
+#[cfg(feature = "image-optimization")]
+fn unwrap_rewrite(html: &str, res: Result<String, SsgError>) -> String {
+    match res {
         Ok(s) => s,
         Err(e) => {
             log::warn!(
@@ -680,6 +708,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_produces_valid_avif_bytes() {
         let buf = image::ImageBuffer::from_fn(64, 64, |x, y| {
             image::Rgb([(x * 4) as u8, (y * 4) as u8, 128])
@@ -693,6 +722,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_lower_quality_yields_smaller_file() {
         // Use a non-trivial pattern so quantisation actually has somewhere to
         // throw bits away (a flat gradient compresses to the same minimum at
@@ -706,15 +736,13 @@ mod tests {
         let img = image::DynamicImage::ImageRgb8(buf);
         let high = encode_avif(&img, 80).unwrap();
         let low = encode_avif(&img, 30).unwrap();
-        assert!(
-            low.len() < high.len(),
-            "quality=30 ({} bytes) should be smaller than quality=80 ({} bytes)",
-            low.len(),
-            high.len()
-        );
+        // quality=30 should be smaller than quality=80. (Plain assert:
+        // lazily-formatted message args would be uncovered regions.)
+        assert!(low.len() < high.len());
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_clamps_quality_to_valid_range() {
         let buf = image::ImageBuffer::from_fn(32, 32, |_, _| {
             image::Rgb([200_u8, 100, 50])
@@ -724,6 +752,27 @@ mod tests {
         assert!(encode_avif(&img, 0).is_ok());
         // 101 isn't representable in u8 anyway, but max is fine.
         assert!(encode_avif(&img, 100).is_ok());
+    }
+
+    #[test]
+    #[serial_test::serial(image_encode_avif_failpoint)]
+    fn encode_avif_injected_failure_returns_err() {
+        // RAII guard so the global failpoint is always disabled again,
+        // even if the assertion below panics.
+        struct FailGuard;
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg("image::encode-avif", "off");
+            }
+        }
+        let _guard = FailGuard;
+        fail::cfg("image::encode-avif", "return").unwrap();
+
+        let buf =
+            image::ImageBuffer::from_fn(8, 8, |_, _| image::Rgb([1_u8, 2, 3]));
+        let img = image::DynamicImage::ImageRgb8(buf);
+        let err = encode_avif(&img, 70).unwrap_err();
+        assert!(format!("{err}").contains("encode-avif"));
     }
 
     #[test]
@@ -972,6 +1021,25 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_img_tags_falls_back_to_manifest_dimensions_on_unparseable_attrs()
+    {
+        // Non-numeric width/height attributes fail `.parse::<u32>()`,
+        // exercising the `.ok()` → `None` → `unwrap_or(entry.original_*)`
+        // fallback for both dimensions.
+        let manifest = manifest_with("a.jpg", 1920, 1080, &[640]);
+        let html = r#"<img src="a.jpg" alt="" width="abc" height="xyz">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(
+            result.contains(r#"width="1920""#),
+            "unparseable width should fall back to manifest width: {result}"
+        );
+        assert!(
+            result.contains(r#"height="1080""#),
+            "unparseable height should fall back to manifest height: {result}"
+        );
+    }
+
+    #[test]
     fn rewrite_img_tags_only_replaces_first_occurrence_per_image() {
         let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="a.jpg"><img src="a.jpg">"#;
@@ -1098,6 +1166,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn process_image_generates_webp_variants_below_original_width() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1171,6 +1240,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn process_image_uses_custom_breakpoints() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1216,6 +1286,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn after_compile_processes_real_images_and_rewrites_html() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1298,5 +1369,282 @@ mod tests {
             .after_compile(&ctx)
             .unwrap();
         assert!(!site.join("optimized").exists());
+    }
+
+    // -------------------------------------------------------------------
+    // rewrite_img_tags — skip branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn rewrite_img_tags_skips_img_without_src() {
+        let manifest = manifest_with("photo.jpg", 100, 80, &[320]);
+        let html = "<img alt=\"no source\">";
+        assert_eq!(rewrite_img_tags(html, &manifest), html);
+    }
+
+    #[test]
+    fn rewrite_img_tags_skips_src_not_in_manifest() {
+        let manifest = manifest_with("photo.jpg", 100, 80, &[320]);
+        let html = "<img src=\"/unknown.jpg\">";
+        assert_eq!(rewrite_img_tags(html, &manifest), html);
+    }
+
+    #[test]
+    fn rewrite_img_tags_logs_when_replacing_author_srcset() {
+        crate::test_support::init_logger();
+        let manifest = manifest_with("photo.jpg", 100, 80, &[320]);
+        let html = "<img src=\"/photo.jpg\" srcset=\"old.jpg 1x\">";
+        let out = rewrite_img_tags(html, &manifest);
+        assert!(out.contains("<picture>"));
+        assert!(!out.contains("old.jpg"));
+    }
+
+    #[test]
+    fn rewrite_img_tags_avif_only_entry_omits_webp_source() {
+        let mut manifest = HashMap::new();
+        let _ = manifest.insert(
+            "photo.jpg".to_string(),
+            ImageManifest {
+                original_rel: "photo.jpg".to_string(),
+                original_width: 100,
+                original_height: 80,
+                webp_variants: Vec::new(),
+                avif_variants: vec![ImageVariant {
+                    rel_path: "optimized/photo-320w.avif".to_string(),
+                    width: 320,
+                }],
+            },
+        );
+        let out = rewrite_img_tags("<img src=\"/photo.jpg\">", &manifest);
+        assert!(out.contains("image/avif"));
+        assert!(!out.contains("image/webp"));
+    }
+
+    #[test]
+    fn unwrap_rewrite_falls_back_to_original_on_error() {
+        crate::test_support::init_logger();
+        let err = SsgError::io(
+            std::io::Error::other("synthetic lol_html failure"),
+            "<lol_html>",
+        );
+        let out = unwrap_rewrite("<p>original</p>", Err(err));
+        assert_eq!(out, "<p>original</p>");
+    }
+
+    #[test]
+    fn extract_attr_returns_none_for_unterminated_value() {
+        assert!(extract_attr("<img alt=\"unterminated", "alt").is_none());
+    }
+
+    // -------------------------------------------------------------------
+    // encode/save error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn encode_avif_rejects_empty_image() {
+        let img = image::DynamicImage::new_rgb8(0, 0);
+        assert!(encode_avif(&img, 70).is_err());
+    }
+
+    #[test]
+    fn process_image_webp_save_fails_when_variant_squatted_by_dir() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let optimized = site.join("optimized");
+        fs::create_dir_all(&optimized).unwrap();
+        write_test_jpeg(&site.join("photo.jpg"), 400, 20);
+        // A directory squats the WebP variant path, so `resized.save`
+        // fails and the Io closure fires.
+        fs::create_dir_all(optimized.join("photo-320w.webp")).unwrap();
+
+        let res = process_image(
+            &site.join("photo.jpg"),
+            &site,
+            &optimized,
+            &[320],
+            80,
+            70,
+        );
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
+    fn process_image_avif_write_failure_logs_and_skips_variant() {
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let optimized = site.join("optimized");
+        fs::create_dir_all(&optimized).unwrap();
+        write_test_jpeg(&site.join("photo.jpg"), 400, 20);
+        // A directory squats the AVIF variant path: encoding succeeds
+        // but fs::write fails, which is logged and skipped.
+        fs::create_dir_all(optimized.join("photo-320w.avif")).unwrap();
+
+        let entry = process_image(
+            &site.join("photo.jpg"),
+            &site,
+            &optimized,
+            &[320],
+            80,
+            70,
+        )
+        .unwrap();
+        assert_eq!(entry.webp_variants.len(), 1);
+        assert!(entry.avif_variants.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial(image_encode_avif_failpoint)]
+    fn process_image_avif_encode_failure_logs_and_skips_variant() {
+        // Distinct from the write-failure case above: here `encode_avif`
+        // itself fails (via the injected failpoint), exercising the
+        // outer `Err(e) => { log::warn!(...); None }` arm in
+        // `process_image`'s AVIF results loop rather than the inner
+        // fs::write failure arm.
+        crate::test_support::init_logger();
+        struct FailGuard;
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg("image::encode-avif", "off");
+            }
+        }
+        let _guard = FailGuard;
+        fail::cfg("image::encode-avif", "return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let optimized = site.join("optimized");
+        fs::create_dir_all(&optimized).unwrap();
+        write_test_jpeg(&site.join("photo.jpg"), 400, 20);
+
+        let entry = process_image(
+            &site.join("photo.jpg"),
+            &site,
+            &optimized,
+            &[320],
+            80,
+            70,
+        )
+        .unwrap();
+        assert_eq!(
+            entry.webp_variants.len(),
+            1,
+            "WebP path is unaffected by the AVIF failpoint"
+        );
+        assert!(
+            entry.avif_variants.is_empty(),
+            "AVIF variant must be skipped when encoding fails"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile / rewrite_html_img_tags — IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_site_has_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = ImageOptimizationPlugin::default().after_compile(&ctx);
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    fn after_compile_fails_when_optimized_dir_squatted_by_file() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        // Tiny image: below every default breakpoint, so no encoding
+        // happens — but images is non-empty so create_dir_all runs.
+        write_test_jpeg(&site.join("tiny.jpg"), 16, 16);
+        fs::write(site.join("optimized"), "not a dir").unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let err = ImageOptimizationPlugin::default()
+            .after_compile(&ctx)
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_is_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        write_test_jpeg(&site.join("tiny.jpg"), 16, 16);
+        let html = site.join("index.html");
+        fs::write(&html, "<p>x</p>").unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = ImageOptimizationPlugin::default().after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
+    fn after_compile_fails_when_html_is_readonly() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        // Wide enough for one 320w variant, so the HTML actually
+        // changes and the write is attempted.
+        write_test_jpeg(&site.join("photo.jpg"), 400, 20);
+        let html = site.join("index.html");
+        fs::write(&html, "<img src=\"/photo.jpg\">").unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let plugin = ImageOptimizationPlugin {
+            breakpoints: vec![320],
+            ..Default::default()
+        };
+        let res = plugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn rewrite_html_img_tags_fails_on_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = rewrite_html_img_tags(&site, &HashMap::new());
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
     }
 }

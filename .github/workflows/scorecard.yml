@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# OSSF Scorecard supply-chain posture scan (v0.0.47 plan §3 item 2.6).
+#
+# Runs the ossf/scorecard-action checks (pinned dependencies, branch
+# protection, SAST, token permissions, …) weekly and on every push to
+# main, publishes results for the public REST API / badge, and uploads
+# the SARIF to GitHub Code Scanning so findings surface in the
+# Security tab alongside the ssg-audit SARIF from ci.yml.
+
+name: Scorecard
+
+on:
+  schedule:
+    # Weekly, Monday 03:15 UTC.
+    - cron: "15 3 * * 1"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Needed to upload the SARIF to code-scanning.
+      security-events: write
+      # Needed by scorecard-action to publish signed results (OIDC).
+      id-token: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard analysis
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: scorecard.sarif
+          results_format: sarif
+          # Publish to the OSSF REST API so the README badge resolves.
+          publish_results: true
+
+      - name: Upload Scorecard SARIF artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scorecard-sarif
+          path: scorecard.sarif
+          retention-days: 7
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          sarif_file: scorecard.sarif

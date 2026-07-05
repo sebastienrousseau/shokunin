@@ -12,7 +12,7 @@
 //!   (warn).
 
 use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
-use super::hreflang_attr;
+use super::{find_tag_end, hreflang_attr};
 
 const NAME: &str = "images";
 
@@ -79,13 +79,7 @@ impl AuditGate for ImagesGate {
                 {
                     continue;
                 }
-                let candidate = if let Some(s) = img.src.strip_prefix('/') {
-                    site.root.join(s)
-                } else if let Some(parent) = path.parent() {
-                    parent.join(&img.src)
-                } else {
-                    site.root.join(&img.src)
-                };
+                let candidate = resolve_img_candidate(site, path, &img.src);
                 if let Ok(meta) = std::fs::metadata(&candidate) {
                     if meta.len() as usize > opts.image_budget {
                         findings.push(
@@ -128,6 +122,24 @@ impl AuditGate for ImagesGate {
     }
 }
 
+/// Resolves an `<img src>` value to the on-disk file it references:
+/// site-absolute paths anchor at the site root, relative paths at the
+/// containing page's directory (falling back to the root when the page
+/// path has no parent component).
+fn resolve_img_candidate(
+    site: &Site,
+    page: &std::path::Path,
+    src: &str,
+) -> std::path::PathBuf {
+    if let Some(s) = src.strip_prefix('/') {
+        site.root.join(s)
+    } else if let Some(parent) = page.parent() {
+        parent.join(src)
+    } else {
+        site.root.join(src)
+    }
+}
+
 struct ImgRef {
     src: String,
     alt: Option<String>,
@@ -137,11 +149,13 @@ struct ImgRef {
 
 fn extract_imgs(html: &str) -> Vec<ImgRef> {
     let mut out = Vec::new();
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<img") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        // Quote-aware end detection: SVG data-URIs in `src` carry raw
+        // `>` characters that a naive find('>') truncates on.
+        let end = find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
         let src = hreflang_attr(tag, "src").unwrap_or_default();
@@ -214,7 +228,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("IMG-DIMS"))
             .expect("dims finding");
-        assert!(matches!(dims.severity, Severity::Warn));
+        assert_eq!(dims.severity, Severity::Warn);
     }
 
     #[test]
@@ -252,9 +266,11 @@ mod tests {
         std::fs::write(root.join("hero.png"), vec![0u8; 10]).unwrap();
         std::fs::write(root.join("hero.avif"), vec![0u8; 5]).unwrap();
         let html_path = root.join("page.html");
+        // Second <img> lacks height: the IMG-DIMS finding keeps `f`
+        // non-empty so the suppression predicate actually evaluates.
         std::fs::write(
             &html_path,
-            r#"<html><body><img src="hero.png" alt="h" width="1" height="1"></body></html>"#,
+            r#"<html><body><img src="hero.png" alt="h" width="1" height="1"><img src="hero.png" alt="h2" width="1"></body></html>"#,
         )
         .unwrap();
         std::mem::forget(tmp);
@@ -268,8 +284,11 @@ mod tests {
 
     #[test]
     fn external_image_src_is_skipped() {
-        let html = r#"<html><body><img src="https://cdn.example/a.jpg" alt="x" width="1" height="1"></body></html>"#;
+        // Height intentionally missing: the IMG-DIMS finding keeps `f`
+        // non-empty so the not-probed predicate actually evaluates.
+        let html = r#"<html><body><img src="https://cdn.example/a.jpg" alt="x" width="1"></body></html>"#;
         let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-DIMS")));
         assert!(
             f.iter()
                 .all(|x| x.code.as_deref() != Some("IMG-OVER-BUDGET")
@@ -280,7 +299,8 @@ mod tests {
 
     #[test]
     fn data_uri_image_src_is_skipped() {
-        let html = r#"<html><body><img src="data:image/png;base64,iVBOR" alt="x" width="1" height="1"></body></html>"#;
+        // Height intentionally missing: IMG-DIMS keeps `f` non-empty.
+        let html = r#"<html><body><img src="data:image/png;base64,iVBOR" alt="x" width="1"></body></html>"#;
         let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
         assert!(f
             .iter()
@@ -289,9 +309,66 @@ mod tests {
 
     #[test]
     fn protocol_relative_image_src_is_skipped() {
-        let html = r#"<html><body><img src="//cdn.example/a.jpg" alt="x" width="1" height="1"></body></html>"#;
+        // Height intentionally missing: IMG-DIMS keeps `f` non-empty.
+        let html = r#"<html><body><img src="//cdn.example/a.jpg" alt="x" width="1"></body></html>"#;
         let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
         assert!(f.iter().all(|x| x.code.as_deref() != Some("IMG-NO-MODERN")));
+    }
+
+    #[test]
+    fn svg_data_uri_with_raw_gt_does_not_truncate_tag() {
+        // Regression: naive find('>') cut the tag at the first `>`
+        // inside the data-URI, losing alt/width/height that follow.
+        // The second <img> yields IMG-NO-MODERN so `f` is non-empty
+        // and the exemption predicate actually evaluates.
+        let html = "<html><body><img alt=\"Banner\" \
+            src=\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'>\
+            <rect width='1' height='1'/></svg>\" \
+            width=\"1440\" height=\"398\">\
+            <img src=\"plain.png\" alt=\"p\" width=\"1\" height=\"1\">\
+            </body></html>";
+        let s = site_with(html, 10);
+        std::fs::write(s.root.join("plain.png"), vec![0u8; 10]).unwrap();
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-NO-MODERN")));
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("IMG-ALT")
+                && x.code.as_deref() != Some("IMG-DIMS")),
+            "attributes after a data-URI must be seen: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_valueless_alt_counts_as_alt() {
+        // Minifiers collapse alt="" to bare `alt` on decorative images.
+        // The plain.png <img> yields IMG-NO-MODERN so the exemption
+        // predicate below actually evaluates per finding.
+        let html = "<html><body>\
+            <img alt height=33 role=presentation src=a.jpg width=100>\
+            <img src=plain.png alt=p width=1 height=1>\
+            </body></html>";
+        let s = site_with(html, 10);
+        std::fs::write(s.root.join("plain.png"), vec![0u8; 10]).unwrap();
+        let f = ImagesGate.run(&s, &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("IMG-NO-MODERN")));
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("IMG-ALT")
+                && x.code.as_deref() != Some("IMG-DIMS")),
+            "bare `alt` + unquoted dims must count: {f:?}"
+        );
+    }
+
+    #[test]
+    fn truly_missing_alt_still_flagged_on_minified_tag() {
+        // True positive preserved on unquoted minified markup.
+        let html = "<html><body>\
+            <img height=33 src=a.jpg width=100>\
+            </body></html>";
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("IMG-ALT")),
+            "missing alt must still flag: {f:?}"
+        );
     }
 
     #[test]
@@ -305,6 +382,32 @@ mod tests {
         std::mem::forget(tmp);
         let f = ImagesGate.run(&s, &AuditOptions::default());
         assert!(f.is_empty());
+    }
+
+    #[test]
+    fn site_absolute_src_resolves_from_root() {
+        let html = r#"<html><body><img src="/a.jpg" alt="a" width="10" height="10"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(
+            f.is_empty(),
+            "leading-slash src must anchor at site root: {f:?}"
+        );
+    }
+
+    #[test]
+    fn missing_local_image_file_is_not_probed() {
+        // fs::metadata fails, so budget/modern-sibling checks skip.
+        let html = r#"<html><body><img src="ghost.png" alt="g" width="1" height="1"></body></html>"#;
+        let f = ImagesGate.run(&site_with(html, 10), &AuditOptions::default());
+        assert!(f.is_empty(), "nonexistent file must be skipped: {f:?}");
+    }
+
+    #[test]
+    fn candidate_for_parentless_page_falls_back_to_root() {
+        let s = site_with("<html></html>", 10);
+        let got =
+            resolve_img_candidate(&s, std::path::Path::new(""), "pic.jpg");
+        assert_eq!(got, s.root.join("pic.jpg"));
     }
 
     #[test]

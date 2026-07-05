@@ -730,4 +730,78 @@ mod tests {
             .collect();
         assert_eq!(names, vec!["apple.json", "mango.json", "zebra.json"]);
     }
+
+    // -------------------------------------------------------------------
+    // I/O error propagation
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_walk_error_from_unreadable_meta_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let (_tmp, _site, meta, ctx) = make_layout();
+        let locked = meta.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = PaginationPlugin::default().after_compile(&ctx);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable meta subdir must be an Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_skips_unreadable_sidecar_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        // An unreadable sidecar takes the `.ok()?` None path in
+        // parse_page_entry and is silently skipped; the remaining
+        // dated posts still paginate.
+        let (_tmp, site, meta, ctx) = make_layout();
+        write_n_dated_posts(&meta, 11);
+        let locked = meta.join("locked.meta.json");
+        fs::write(&locked, r#"{"title": "L", "date": "2026-02-01"}"#).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = PaginationPlugin::default().after_compile(&ctx);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o644))
+            .unwrap();
+        result.expect("unreadable sidecar must be skipped, not fatal");
+        assert!(site.join("page/2/index.html").exists());
+        assert!(!site.join("page/3/index.html").exists());
+    }
+
+    #[test]
+    fn after_compile_create_dir_failure_when_page_is_a_file() {
+        // A regular file occupying site/page makes create_dir_all fail,
+        // which must propagate through write_pagination_page's `?`.
+        let (_tmp, site, meta, ctx) = make_layout();
+        write_n_dated_posts(&meta, 11);
+        fs::write(site.join("page"), "not a directory").unwrap();
+
+        let err = PaginationPlugin::default()
+            .after_compile(&ctx)
+            .expect_err("create_dir_all over a file must fail");
+        let msg = format!("{err:?}");
+        assert!(msg.contains("Io"), "expected Io error, got: {msg}");
+    }
+
+    #[test]
+    fn after_compile_write_failure_when_index_html_is_a_directory() {
+        // page/2/index.html pre-created as a directory: create_dir_all
+        // succeeds (page/2 exists) but the fs::write must fail.
+        let (_tmp, site, meta, ctx) = make_layout();
+        write_n_dated_posts(&meta, 11);
+        fs::create_dir_all(site.join("page/2/index.html")).unwrap();
+
+        let err = PaginationPlugin::default()
+            .after_compile(&ctx)
+            .expect_err("write over a directory must fail");
+        let msg = format!("{err:?}");
+        assert!(msg.contains("index.html"), "path context expected: {msg}");
+    }
 }

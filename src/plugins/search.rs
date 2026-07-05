@@ -74,27 +74,50 @@ impl SearchIndex {
 
         let entries: Vec<SearchEntry> = capped
             .par_iter()
-            .map(|path| -> Result<SearchEntry, SsgError> {
-                let html = fs::read_to_string(path).with_path(path)?;
+            .map_init(
+                // Per-thread scratch buffer reused across files, so each
+                // rayon worker amortises one HTML-sized allocation over
+                // its whole share of the corpus instead of allocating a
+                // fresh `String` per file (issue #578, plan §4 3.1).
+                String::new,
+                |buf, path| -> Result<SearchEntry, SsgError> {
+                    buf.clear();
+                    let mut file = fs::File::open(path).with_path(path)?;
+                    let _ = std::io::Read::read_to_string(&mut file, buf)
+                        .with_path(path)?;
+                    let html: &str = buf;
 
-                let rel_url = path
-                    .strip_prefix(site_dir)
-                    .unwrap_or(path)
-                    .to_string_lossy()
-                    .replace('\\', "/");
+                    // Build `/{rel}` with backslashes normalised in one
+                    // pass — replaces the `to_string_lossy().replace()`
+                    // double allocation (issue #578, plan §4 3.1).
+                    let rel = path.strip_prefix(site_dir).unwrap_or(path);
+                    let rel_lossy = rel.to_string_lossy();
+                    let mut url = String::with_capacity(rel_lossy.len() + 1);
+                    url.push('/');
+                    for ch in rel_lossy.chars() {
+                        url.push(if ch == '\\' { '/' } else { ch });
+                    }
 
-                let title = extract_title(&html);
-                let headings = extract_headings(&html);
-                let content = extract_text(&html);
+                    let title = extract_title(html);
+                    let headings = extract_headings(html);
+                    let content = extract_text(html);
 
-                Ok(SearchEntry {
-                    title,
-                    url: format!("/{rel_url}"),
-                    content: truncate(&content, MAX_CONTENT_LENGTH),
-                    headings,
-                })
-            })
+                    Ok(SearchEntry {
+                        title,
+                        url,
+                        content: truncate(&content, MAX_CONTENT_LENGTH),
+                        headings,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, SsgError>>()?;
+
+        // Deterministic output (determinism.yml CI gate): the walker's
+        // directory-iteration order is filesystem-dependent, so
+        // search-index.json would differ across OSes without a stable
+        // sort. URLs are unique per page — an unambiguous key.
+        let mut entries = entries;
+        entries.sort_by(|a, b| a.url.cmp(&b.url));
 
         Ok(Self { entries })
     }
@@ -113,7 +136,7 @@ impl SearchIndex {
     /// assert!(dir.path().join("search-index.json").exists());
     /// ```
     pub fn write(&self, site_dir: &Path) -> Result<(), SsgError> {
-        let json = serde_json::to_string(self).map_err(|e| SsgError::Io {
+        let json = serialize_search_index(self).map_err(|e| SsgError::Io {
             path: site_dir.join("search-index.json"),
             source: std::io::Error::other(e),
         })?;
@@ -155,6 +178,18 @@ impl SearchIndex {
     pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+}
+
+/// Serialize the search index with a fault-injection hook so tests can
+/// drive the error branch (serializing `SearchIndex` — plain owned
+/// `String`/`Vec<String>` fields — cannot fail in practice).
+fn serialize_search_index(index: &SearchIndex) -> serde_json::Result<String> {
+    fail_point!("search::serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: search::serialize"
+        )
+    ));
+    serde_json::to_string(index)
 }
 
 /// Localizable strings shown in the search widget UI.
@@ -817,6 +852,33 @@ mod tests {
     }
 
     #[test]
+    fn build_entries_are_sorted_by_url_for_determinism() {
+        // determinism.yml gate: walker order is filesystem-dependent,
+        // so search-index.json must be sorted to hash identically
+        // across OSes.
+        let dir = tempdir().unwrap();
+        for name in ["zeta", "alpha", "mid"] {
+            let d = dir.path().join(name);
+            fs::create_dir_all(&d).unwrap();
+            fs::write(
+                d.join("index.html"),
+                format!(
+                    "<html><head><title>{name}</title></head>\
+                     <body><p>{name} body</p></body></html>"
+                ),
+            )
+            .unwrap();
+        }
+        let idx = SearchIndex::build(dir.path()).unwrap();
+        let urls: Vec<&str> =
+            idx.entries.iter().map(|e| e.url.as_str()).collect();
+        let mut sorted = urls.clone();
+        sorted.sort_unstable();
+        assert_eq!(urls, sorted, "entries must be URL-sorted");
+        assert_eq!(idx.entries.len(), 3);
+    }
+
+    #[test]
     fn extract_title_from_title_tag() {
         let html =
             "<html><head><title>My Page</title></head><body></body></html>";
@@ -882,17 +944,19 @@ mod tests {
 
     #[test]
     fn search_index_build_from_directory() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         fs::write(
             tmp.path().join("index.html"),
             make_html("Home", "<p>Welcome to SSG</p>"),
-        )?;
+        )
+        .unwrap();
         fs::write(
             tmp.path().join("about.html"),
             make_html("About", "<p>About this site</p>"),
-        )?;
+        )
+        .unwrap();
 
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert_eq!(index.len(), 2);
         assert!(!index.is_empty());
 
@@ -904,8 +968,9 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn search_index_write_creates_json() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let index = SearchIndex {
             entries: vec![SearchEntry {
                 title: "Test".into(),
@@ -914,12 +979,12 @@ mod tests {
                 headings: vec!["Heading".into()],
             }],
         };
-        index.write(tmp.path())?;
+        index.write(tmp.path()).unwrap();
 
         let path = tmp.path().join("search-index.json");
         assert!(path.exists());
         let json: SearchIndex =
-            serde_json::from_str(&fs::read_to_string(&path)?)?;
+            serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(json.entries.len(), 1);
         assert_eq!(json.entries[0].title, "Test");
         Ok(())
@@ -927,33 +992,35 @@ mod tests {
 
     #[test]
     fn search_index_empty_directory() -> Result<()> {
-        let tmp = tempdir()?;
-        let index = SearchIndex::build(tmp.path())?;
+        let tmp = tempdir().unwrap();
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert!(index.is_empty());
         Ok(())
     }
 
     #[test]
     fn search_index_ignores_non_html() -> Result<()> {
-        let tmp = tempdir()?;
-        fs::write(tmp.path().join("style.css"), "body{}")?;
-        fs::write(tmp.path().join("data.json"), "{}")?;
-        let index = SearchIndex::build(tmp.path())?;
+        let tmp = tempdir().unwrap();
+        fs::write(tmp.path().join("style.css"), "body{}").unwrap();
+        fs::write(tmp.path().join("data.json"), "{}").unwrap();
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert!(index.is_empty());
         Ok(())
     }
 
     #[test]
     fn search_index_nested_directories() -> Result<()> {
-        let tmp = tempdir()?;
-        fs::create_dir_all(tmp.path().join("blog"))?;
-        fs::write(tmp.path().join("index.html"), make_html("Home", ""))?;
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("blog")).unwrap();
+        fs::write(tmp.path().join("index.html"), make_html("Home", ""))
+            .unwrap();
         fs::write(
             tmp.path().join("blog/post.html"),
             make_html("Post", "<p>Blog content</p>"),
-        )?;
+        )
+        .unwrap();
 
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert_eq!(index.len(), 2);
         let urls: Vec<&str> =
             index.entries.iter().map(|e| e.url.as_str()).collect();
@@ -963,28 +1030,29 @@ mod tests {
 
     #[test]
     fn search_entry_content_truncated() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let long_text = "word ".repeat(2000); // 10,000 chars
         fs::write(
             tmp.path().join("long.html"),
             make_html("Long", &format!("<p>{long_text}</p>")),
-        )?;
+        )
+        .unwrap();
 
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert!(index.entries[0].content.len() <= MAX_CONTENT_LENGTH);
         Ok(())
     }
 
     #[test]
     fn inject_search_ui_adds_widget() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let path = tmp.path().join("page.html");
-        fs::write(&path, "<html><body><p>Hello</p></body></html>")?;
+        fs::write(&path, "<html><body><p>Hello</p></body></html>").unwrap();
 
         let script = build_widget_script(&SearchLabels::english());
-        inject_search_ui(&path, &script)?;
+        inject_search_ui(&path, &script).unwrap();
 
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).unwrap();
         assert!(result.contains("ssg-search-widget"));
         assert!(result.contains("search-index.json"));
         assert!(result.contains("ctrlKey"));
@@ -993,16 +1061,16 @@ mod tests {
 
     #[test]
     fn inject_search_ui_idempotent() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let path = tmp.path().join("page.html");
-        fs::write(&path, "<html><body><p>Hi</p></body></html>")?;
+        fs::write(&path, "<html><body><p>Hi</p></body></html>").unwrap();
 
         let script = build_widget_script(&SearchLabels::english());
-        inject_search_ui(&path, &script)?;
-        let first = fs::read_to_string(&path)?;
+        inject_search_ui(&path, &script).unwrap();
+        let first = fs::read_to_string(&path).unwrap();
 
-        inject_search_ui(&path, &script)?;
-        let second = fs::read_to_string(&path)?;
+        inject_search_ui(&path, &script).unwrap();
+        let second = fs::read_to_string(&path).unwrap();
 
         assert_eq!(first, second); // No double injection
         Ok(())
@@ -1015,13 +1083,14 @@ mod tests {
 
     #[test]
     fn search_plugin_full_pipeline() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html_content = make_html("Home", "<p>Welcome</p>");
-        fs::write(tmp.path().join("index.html"), &html_content)?;
+        fs::write(tmp.path().join("index.html"), &html_content).unwrap();
         fs::write(
             tmp.path().join("about.html"),
             make_html("About", "<p>About us</p>"),
-        )?;
+        )
+        .unwrap();
 
         let ctx = PluginContext::new(
             Path::new("content"),
@@ -1029,17 +1098,15 @@ mod tests {
             tmp.path(),
             Path::new("templates"),
         );
-        SearchPlugin.after_compile(&ctx)?;
+        SearchPlugin.after_compile(&ctx).unwrap();
 
         // Index was written
         assert!(tmp.path().join("search-index.json").exists());
 
         // Widget was injected via transform_html
-        let output = SearchPlugin.transform_html(
-            &html_content,
-            &tmp.path().join("index.html"),
-            &ctx,
-        )?;
+        let output = SearchPlugin
+            .transform_html(&html_content, &tmp.path().join("index.html"), &ctx)
+            .unwrap();
         assert!(output.contains("ssg-search-widget"));
         Ok(())
     }
@@ -1052,7 +1119,7 @@ mod tests {
             Path::new("/nonexistent"),
             Path::new("t"),
         );
-        SearchPlugin.after_compile(&ctx)?; // Should not error
+        SearchPlugin.after_compile(&ctx).unwrap(); // Should not error
         Ok(())
     }
 
@@ -1072,8 +1139,8 @@ mod tests {
             content: "Content".into(),
             headings: vec!["H1".into()],
         };
-        let json = serde_json::to_string(&entry)?;
-        let parsed: SearchEntry = serde_json::from_str(&json)?;
+        let json = serde_json::to_string(&entry).unwrap();
+        let parsed: SearchEntry = serde_json::from_str(&json).unwrap();
         assert_eq!(entry, parsed);
         Ok(())
     }
@@ -1088,15 +1155,15 @@ mod tests {
         // site with HTML files that produce zero entries — easiest:
         // a site with only a stylesheet (collect_html_files returns
         // empty, build returns empty index).
-        let tmp = tempdir()?;
-        fs::write(tmp.path().join("style.css"), "body{}")?;
+        let tmp = tempdir().unwrap();
+        fs::write(tmp.path().join("style.css"), "body{}").unwrap();
         let ctx = PluginContext::new(
             Path::new("content"),
             Path::new("build"),
             tmp.path(),
             Path::new("templates"),
         );
-        SearchPlugin.after_compile(&ctx)?;
+        SearchPlugin.after_compile(&ctx).unwrap();
         // No search-index.json should have been written.
         assert!(!tmp.path().join("search-index.json").exists());
         Ok(())
@@ -1200,11 +1267,12 @@ mod tests {
 
     #[test]
     fn collect_html_files_respects_bound() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         for i in 0..50 {
-            fs::write(tmp.path().join(format!("p{i}.html")), "<html></html>")?;
+            fs::write(tmp.path().join(format!("p{i}.html")), "<html></html>")
+                .unwrap();
         }
-        let files = collect_html_files(tmp.path())?;
+        let files = collect_html_files(tmp.path()).unwrap();
         assert_eq!(files.len(), 50);
         Ok(())
     }
@@ -1212,10 +1280,10 @@ mod tests {
     #[test]
     fn search_index_empty_site_dir() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
 
         // Act
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
 
         // Assert
         assert!(index.is_empty());
@@ -1226,15 +1294,16 @@ mod tests {
     #[test]
     fn search_index_max_content_length_truncation() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let long_content = "a ".repeat(MAX_CONTENT_LENGTH + 1000);
         fs::write(
             tmp.path().join("long.html"),
             make_html("Long Page", &format!("<p>{long_content}</p>")),
-        )?;
+        )
+        .unwrap();
 
         // Act
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
 
         // Assert
         assert_eq!(index.len(), 1);
@@ -1248,15 +1317,16 @@ mod tests {
     #[test]
     fn search_index_unicode_content() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let unicode_body = "<p>Héllo wörld! 日本語テスト 🦀🔍 Ñoño café</p>";
         fs::write(
             tmp.path().join("unicode.html"),
             make_html("Ünïcödé Pagé 🎉", unicode_body),
-        )?;
+        )
+        .unwrap();
 
         // Act
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
 
         // Assert
         assert_eq!(index.len(), 1);
@@ -1289,16 +1359,16 @@ mod tests {
     #[test]
     fn inject_search_ui_no_body_tag() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let path = tmp.path().join("fragment.html");
-        fs::write(&path, "<html><p>No body tag here</p></html>")?;
+        fs::write(&path, "<html><p>No body tag here</p></html>").unwrap();
 
         // Act
         let script = build_widget_script(&SearchLabels::english());
-        inject_search_ui(&path, &script)?;
+        inject_search_ui(&path, &script).unwrap();
 
         // Assert
-        let result = fs::read_to_string(&path)?;
+        let result = fs::read_to_string(&path).unwrap();
         assert!(
             result.contains("ssg-search-widget"),
             "widget should be appended even without </body>"
@@ -1318,8 +1388,8 @@ mod tests {
         };
 
         // Act
-        let json = serde_json::to_string(&entry)?;
-        let deserialized: SearchEntry = serde_json::from_str(&json)?;
+        let json = serde_json::to_string(&entry).unwrap();
+        let deserialized: SearchEntry = serde_json::from_str(&json).unwrap();
 
         // Assert
         assert_eq!(entry, deserialized);
@@ -1331,7 +1401,7 @@ mod tests {
     #[test]
     fn search_index_multiple_headings() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let html = "\
             <html><head><title>Multi Heading</title></head><body>\
             <h1>Main Title</h1>\
@@ -1340,10 +1410,10 @@ mod tests {
             <h3>Subsection A1</h3>\
             <p>Content A1</p>\
             </body></html>";
-        fs::write(tmp.path().join("headings.html"), html)?;
+        fs::write(tmp.path().join("headings.html"), html).unwrap();
 
         // Act
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
 
         // Assert
         assert_eq!(index.len(), 1);
@@ -1358,23 +1428,26 @@ mod tests {
     #[test]
     fn search_index_nested_directories_deep() -> Result<()> {
         // Arrange
-        let tmp = tempdir()?;
-        fs::create_dir_all(tmp.path().join("docs/guide/advanced"))?;
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("docs/guide/advanced")).unwrap();
         fs::write(
             tmp.path().join("index.html"),
             make_html("Root", "<p>Root page</p>"),
-        )?;
+        )
+        .unwrap();
         fs::write(
             tmp.path().join("docs/overview.html"),
             make_html("Docs", "<p>Docs overview</p>"),
-        )?;
+        )
+        .unwrap();
         fs::write(
             tmp.path().join("docs/guide/advanced/tips.html"),
             make_html("Tips", "<p>Advanced tips</p>"),
-        )?;
+        )
+        .unwrap();
 
         // Act
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
 
         // Assert
         assert_eq!(index.len(), 3);
@@ -1391,7 +1464,7 @@ mod tests {
 
     #[test]
     fn search_index_build_parallel_with_many_files() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         for i in 0..10 {
             fs::write(
                 tmp.path().join(format!("page{i}.html")),
@@ -1399,10 +1472,11 @@ mod tests {
                     &format!("Page {i}"),
                     &format!("<p>Content for page {i}</p>"),
                 ),
-            )?;
+            )
+            .unwrap();
         }
 
-        let index = SearchIndex::build(tmp.path())?;
+        let index = SearchIndex::build(tmp.path()).unwrap();
         assert_eq!(index.len(), 10);
 
         // Verify all pages are indexed
@@ -1549,7 +1623,8 @@ mod tests {
             Path::new("t"),
         );
         LocalizedSearchPlugin::new(SearchLabels::default())
-            .after_compile(&ctx)?;
+            .after_compile(&ctx)
+            .unwrap();
         Ok(())
     }
 
@@ -1607,7 +1682,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let html_content =
             "<html><head><title>P</title></head><body>x</body></html>";
-        fs::write(dir.path().join("page.html"), html_content)?;
+        fs::write(dir.path().join("page.html"), html_content).unwrap();
         let ctx = PluginContext::new(
             Path::new("c"),
             Path::new("b"),
@@ -1615,12 +1690,10 @@ mod tests {
             Path::new("t"),
         );
         let plugin = LocalizedSearchPlugin::new(SearchLabels::french());
-        plugin.after_compile(&ctx)?;
-        let output = plugin.transform_html(
-            html_content,
-            &dir.path().join("page.html"),
-            &ctx,
-        )?;
+        plugin.after_compile(&ctx).unwrap();
+        let output = plugin
+            .transform_html(html_content, &dir.path().join("page.html"), &ctx)
+            .unwrap();
         // Localized button text should appear in the injected widget.
         assert!(
             output.contains("Rechercher"),
@@ -1658,6 +1731,201 @@ mod tests {
         assert!(
             matches!(err, SsgError::Io { ref path, .. } if path == &index_dir)
         );
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // coverage: build/read error paths + escaper branches
+    // ─────────────────────────────────────────────────────────────────
+
+    /// Markup that trips `lol_html`'s parsing-ambiguity bailout (a text
+    /// parsing mode switching tag inside `<select>`), forcing every
+    /// extractor onto its rewrite-failure fallback.
+    const AMBIGUOUS_HTML: &str =
+        "<select><xmp><script>x</script></xmp></select>";
+
+    #[test]
+    #[cfg(unix)]
+    fn search_index_build_propagates_unreadable_subdir_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = SearchIndex::build(tmp.path());
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable subdir must be an Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_build_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = PluginContext::new(
+            Path::new("c"),
+            Path::new("b"),
+            tmp.path(),
+            Path::new("t"),
+        );
+        let result = SearchPlugin.after_compile(&ctx);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "build error must propagate");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn search_index_build_propagates_unreadable_file_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let page = tmp.path().join("page.html");
+        fs::write(&page, make_html("T", "")).unwrap();
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let result = SearchIndex::build(tmp.path());
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o644)).unwrap();
+        let err = result.expect_err("File::open must fail on 0o000");
+        assert!(format!("{err:?}").contains("page.html"));
+    }
+
+    #[test]
+    fn search_index_build_propagates_invalid_utf8_read_error() {
+        // File::open succeeds; read_to_string fails on invalid UTF-8.
+        let tmp = tempdir().unwrap();
+        fs::write(tmp.path().join("broken.html"), [0xFF, 0xFE, 0xFD]).unwrap();
+
+        let err = SearchIndex::build(tmp.path())
+            .expect_err("invalid UTF-8 must fail the read");
+        assert!(format!("{err:?}").contains("broken.html"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn search_index_build_normalises_backslashes_in_urls() {
+        // On unix a backslash is a legal filename byte; the URL builder
+        // must still normalise it to a forward slash.
+        let tmp = tempdir().unwrap();
+        fs::write(
+            tmp.path().join("we\\ird.html"),
+            make_html("Weird", "<p>x</p>"),
+        )
+        .unwrap();
+
+        let index = SearchIndex::build(tmp.path()).unwrap();
+        assert_eq!(index.len(), 1);
+        assert_eq!(index.entries[0].url, "/we/ird.html");
+    }
+
+    #[test]
+    fn extract_title_falls_back_to_empty_on_ambiguous_markup() {
+        assert_eq!(extract_title(AMBIGUOUS_HTML), "");
+    }
+
+    #[test]
+    fn extract_headings_empty_on_ambiguous_markup() {
+        assert!(extract_headings(AMBIGUOUS_HTML).is_empty());
+    }
+
+    #[test]
+    fn extract_text_empty_on_ambiguous_markup() {
+        assert_eq!(extract_text(AMBIGUOUS_HTML), "");
+    }
+
+    #[test]
+    fn inject_search_ui_missing_file_returns_read_error() {
+        let tmp = tempdir().unwrap();
+        let missing = tmp.path().join("missing.html");
+        let err = inject_search_ui(&missing, "<script></script>")
+            .expect_err("missing file must surface a read error");
+        assert!(format!("{err:?}").contains("missing.html"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn inject_search_ui_readonly_file_returns_write_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempdir().unwrap();
+        let page = tmp.path().join("page.html");
+        fs::write(&page, "<html><body></body></html>").unwrap();
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let script = build_widget_script(&SearchLabels::english());
+        let result = inject_search_ui(&page, &script);
+        fs::set_permissions(&page, fs::Permissions::from_mode(0o644)).unwrap();
+        let err =
+            result.expect_err("read-only file must surface a write error");
+        assert!(format!("{err:?}").contains("page.html"));
+    }
+
+    #[test]
+    fn html_escape_escapes_every_special_character() {
+        assert_eq!(
+            html_escape("a & <b> \"c\" 'd'"),
+            "a &amp; &lt;b&gt; &quot;c&quot; &#39;d&#39;"
+        );
+    }
+
+    #[test]
+    fn js_escape_escapes_backslash_quotes_and_newlines() {
+        assert_eq!(
+            js_escape("back\\slash 'quote'\nnew\rline"),
+            "back\\\\slash \\'quote\\'\\nnew\\rline"
+        );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn write_maps_serialize_failure_to_io_error() {
+        // `serde_json::to_string` on `SearchIndex` (plain owned strings)
+        // cannot fail in practice, so the only way to exercise `write`'s
+        // serialize-error branch is fault injection.
+        let _guard = FailGuard("search::serialize");
+        fail::cfg("search::serialize", "return").expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        let index = SearchIndex {
+            entries: vec![SearchEntry {
+                title: "T".into(),
+                url: "/t.html".into(),
+                content: "c".into(),
+                headings: vec![],
+            }],
+        };
+        let err = index
+            .write(tmp.path())
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("search-index.json"), "got: {msg}");
+        assert!(msg.contains("injected: search::serialize"), "got: {msg}");
     }
 }
 

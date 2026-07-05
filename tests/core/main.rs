@@ -22,6 +22,8 @@
 mod cache;
 mod collections;
 mod content;
+mod content_stager;
+mod dates;
 mod depgraph;
 mod deploy;
 mod frontmatter;
@@ -36,4 +38,5 @@ mod schema;
 mod stream;
 mod streaming;
 mod template_engine;
+mod urls;
 mod walk;

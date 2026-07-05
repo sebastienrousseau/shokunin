@@ -195,10 +195,15 @@ pub fn decode_html_entities(s: &str) -> String {
         // Walk a single UTF-8 scalar; the byte index `i` always sits on
         // a char boundary because we never split inside a multi-byte
         // sequence (we only advance past `&...;` runs which are ASCII).
-        // The `next()` always yields Some because the while-loop bound
-        // (`i < bytes.len()`) means there is at least one more char.
+        // `next()` always yields `Some` because the while-loop bound
+        // (`i < bytes.len()`) guarantees at least one more byte — this
+        // is a true invariant, not a defensive/fallible branch, so it
+        // is asserted rather than handled as a distinct code path.
         let Some(ch) = s[i..].chars().next() else {
-            break;
+            // Unreachable per the invariant above; `unreachable!()`
+            // (not `.expect()`) keeps this out of `clippy::expect_used`,
+            // which this crate denies via `-D warnings` in CI.
+            unreachable!("i < bytes.len() guarantees a next char")
         };
         out.push(ch);
         i += ch.len_utf8();
@@ -315,7 +320,40 @@ mod tests {
     #[test]
     fn extract_text_with_filter_invalid_selector_errors() {
         let err = extract_text_with_filter("<p></p>", ":::").unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
+        assert!(
+            err.to_string().contains("invalid selector"),
+            "selector parse failure should surface as an Io error \
+             mentioning the selector, got: {err}"
+        );
+    }
+
+    #[test]
+    fn rewrite_html_maps_handler_failure_to_io_error() {
+        // A content handler that fails aborts the rewrite; the wrapper
+        // must map the `lol_html` error onto `SsgError::Io`.
+        let err = rewrite_html(
+            "<p>x</p>",
+            vec![element!("p", |_el| Err("boom".into()))],
+        )
+        .unwrap_err();
+        assert!(
+            err.to_string().contains("lol_html rewrite failed"),
+            "handler failure should be wrapped, got: {err}"
+        );
+    }
+
+    #[test]
+    fn extract_text_with_filter_propagates_parser_ambiguity_error() {
+        // `<xmp>` inside `<select>` is a documented lol_html parsing
+        // ambiguity — the streaming parser cannot decide whether the
+        // following bytes are raw text, so the rewrite fails and the
+        // error must propagate through `extract_text_with_filter`.
+        let html = "<h1>t</h1><select><xmp>a</xmp></select>";
+        let err = extract_text_with_filter(html, "h1").unwrap_err();
+        assert!(
+            err.to_string().contains("lol_html rewrite failed"),
+            "ambiguity should surface as a wrapped rewrite error, got: {err}"
+        );
     }
 
     #[test]
@@ -363,6 +401,16 @@ mod tests {
         assert_eq!(decode_html_entities("&#99999999999;"), "&#99999999999;");
         // 0xD800 is a surrogate — char::from_u32 returns None.
         assert_eq!(decode_html_entities("&#xD800;"), "&#xD800;");
+        // Same surrogate rejection on the *decimal* reference path.
+        assert_eq!(decode_html_entities("&#55296;"), "&#55296;");
+    }
+
+    #[test]
+    fn decode_one_entity_rejects_malformed_delimiters() {
+        // Missing leading `&` and missing trailing `;` hit the two
+        // `strip_prefix`/`strip_suffix` early-outs directly.
+        assert_eq!(decode_one_entity("amp;"), None);
+        assert_eq!(decode_one_entity("&amp"), None);
     }
 
     #[test]

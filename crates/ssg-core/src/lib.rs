@@ -123,6 +123,21 @@ pub fn compile_markdown(input: &str) -> String {
 pub fn parse_frontmatter(
     input: &str,
 ) -> (HashMap<String, serde_json::Value>, String) {
+    // Zero-copy core (issue #578, plan §4 3.1): the body is sliced out
+    // of `input` exactly once and materialised exactly once here — no
+    // per-branch `to_string()` and no metadata-map clone rebuilds.
+    let (map, body) = parse_frontmatter_borrowed(input);
+    (map, body.to_string())
+}
+
+/// Borrowed-body core of [`parse_frontmatter`].
+///
+/// Returns the metadata map by *moving* parsed entries (never cloning
+/// them) and the body as a slice of `input`, leaving the single owned
+/// materialisation to the public wrapper (issue #578, plan §4 3.1).
+fn parse_frontmatter_borrowed(
+    input: &str,
+) -> (HashMap<String, serde_json::Value>, &str) {
     let trimmed = input.trim_start();
 
     // TOML frontmatter: +++...+++
@@ -130,17 +145,14 @@ pub fn parse_frontmatter(
         if let Some(end) = after.find("+++") {
             let fm_str = &after[..end];
             let body = &after[end + 3..];
-            if let Ok(value) = toml::from_str::<serde_json::Value>(fm_str) {
-                if let Some(map) = value.as_object() {
-                    return (
-                        map.iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect(),
-                        body.to_string(),
-                    );
-                }
+            if let Ok(serde_json::Value::Object(map)) =
+                toml::from_str::<serde_json::Value>(fm_str)
+            {
+                // Move the parsed entries into the final map — the
+                // previous `(k.clone(), v.clone())` rebuild is gone.
+                return (map.into_iter().collect(), body);
             }
-            return (HashMap::new(), body.to_string());
+            return (HashMap::new(), body);
         }
     }
 
@@ -151,16 +163,16 @@ pub fn parse_frontmatter(
             let body = &after[end + 3..];
             match noyalib::from_str::<serde_json::Value>(fm_str) {
                 Ok(serde_json::Value::Object(map)) => {
-                    return (map.into_iter().collect(), body.to_string());
+                    return (map.into_iter().collect(), body);
                 }
                 Ok(_) => {
                     // Top-level non-mapping (e.g. a bare list or scalar)
                     // — preserve the body but emit no globals.
-                    return (HashMap::new(), body.to_string());
+                    return (HashMap::new(), body);
                 }
                 Err(e) => {
                     log::warn!("YAML frontmatter parse error: {e}");
-                    return (HashMap::new(), body.to_string());
+                    return (HashMap::new(), body);
                 }
             }
         }
@@ -191,12 +203,12 @@ pub fn parse_frontmatter(
                 HashMap<String, serde_json::Value>,
             >(fm_str)
             {
-                return (map, body.to_string());
+                return (map, body);
             }
         }
     }
 
-    (HashMap::new(), input.to_string())
+    (HashMap::new(), input)
 }
 
 /// Compile a complete page: parse frontmatter, render Markdown to HTML.

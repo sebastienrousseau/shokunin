@@ -74,6 +74,18 @@
           "default": {}
         }
       }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security tunables (v0.0.47 plan §3 item 2.3).",
+      "properties": {
+        "sri_algorithm": {
+          "type": "string",
+          "description": "Digest algorithm for Subresource Integrity integrity= attributes on externalized assets. CSP directive source hashes ('sha256-…' inside Content-Security-Policy values) stay SHA-256 regardless, for UA compatibility.",
+          "enum": ["sha256", "sha384", "sha512"],
+          "default": "sha384"
+        }
+      }
     }
   },
   "required": [

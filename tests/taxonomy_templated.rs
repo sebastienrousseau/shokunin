@@ -65,6 +65,7 @@ fn config_with_language(root: &Path, language: &str) -> SsgConfig {
         edge_headers: ssg::cmd::EdgeHeadersConfig::default(),
         agents: None,
         transitions: false,
+        security: ssg::cmd::SecurityConfig::default(),
     }
 }
 

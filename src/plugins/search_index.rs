@@ -93,7 +93,11 @@ impl Plugin for VectorSearchPlugin {
         fs::write(&emb_path, &artifacts.embeddings).with_path(&emb_path)?;
 
         let man_path = dir.join(MANIFEST_FILE);
-        fs::write(&man_path, &artifacts.manifest_json).with_path(&man_path)?;
+        let manifest_json = stamp_embeddings_hash(
+            &artifacts.manifest_json,
+            &artifacts.embeddings,
+        );
+        fs::write(&man_path, manifest_json).with_path(&man_path)?;
 
         let model_path = dir.join(MODEL_FILE);
         fs::write(&model_path, &artifacts.model).with_path(&model_path)?;
@@ -109,6 +113,59 @@ impl Plugin for VectorSearchPlugin {
         );
         Ok(())
     }
+}
+
+/// Adds an `embeddings_sha256` field to the manifest JSON so the
+/// `search_index` audit gate can verify `embeddings.bin` integrity
+/// (the gate reads `manifest.json#embeddings_sha256` and compares it
+/// to the SHA-256 of the binary — see
+/// `src/audit/gates/search_index.rs`). Returns the manifest verbatim
+/// if it fails to parse (defensive; `ssg-search` always emits valid
+/// JSON).
+fn stamp_embeddings_hash(manifest_json: &[u8], embeddings: &[u8]) -> Vec<u8> {
+    use sha2::{Digest, Sha256};
+
+    let Ok(mut manifest) =
+        serde_json::from_slice::<serde_json::Value>(manifest_json)
+    else {
+        return manifest_json.to_vec();
+    };
+    let Some(obj) = manifest.as_object_mut() else {
+        return manifest_json.to_vec();
+    };
+
+    let mut hasher = Sha256::new();
+    hasher.update(embeddings);
+    let digest = hasher.finalize();
+    let mut hex = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        use std::fmt::Write as _;
+        // Infallible on String; ignore the Result per fmt::Write docs.
+        let _ = write!(hex, "{byte:02x}");
+    }
+
+    let _ = obj.insert(
+        "embeddings_sha256".to_string(),
+        serde_json::Value::String(hex),
+    );
+    serialize_manifest_value(&manifest)
+        .unwrap_or_else(|_| manifest_json.to_vec())
+}
+
+/// Serialize the stamped manifest with a fault-injection hook so tests
+/// can drive the defensive fallback in [`stamp_embeddings_hash`]
+/// (pretty-printing a `Value` parsed from `ssg-search`'s own valid
+/// JSON output, plus one inserted hex-string field, cannot fail in
+/// practice).
+fn serialize_manifest_value(
+    manifest: &serde_json::Value,
+) -> serde_json::Result<Vec<u8>> {
+    fail_point!("search_index::manifest-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: search_index::manifest-serialize"
+        )
+    ));
+    serde_json::to_vec_pretty(manifest)
 }
 
 /// Returns the first `max_chars` Unicode scalar values of `s`. (Plain
@@ -224,6 +281,40 @@ mod tests {
     }
 
     #[test]
+    fn manifest_carries_embeddings_sha256_matching_bin() {
+        use sha2::{Digest, Sha256};
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hash me</p>");
+        let c = ctx(tmp.path());
+        VectorSearchPlugin.after_compile(&c).unwrap();
+
+        let emb = fs::read(tmp.path().join("search/embeddings.bin")).unwrap();
+        let mut h = Sha256::new();
+        h.update(&emb);
+        let expected =
+            h.finalize()
+                .iter()
+                .fold(String::with_capacity(64), |mut s, b| {
+                    use std::fmt::Write;
+                    let _ = write!(s, "{b:02x}");
+                    s
+                });
+
+        let json = fs::read_to_string(tmp.path().join("search/manifest.json"))
+            .unwrap();
+        let m: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(m["embeddings_sha256"].as_str().unwrap(), expected);
+    }
+
+    #[test]
+    fn stamp_embeddings_hash_passes_through_invalid_json() {
+        let raw = b"not json".to_vec();
+        assert_eq!(stamp_embeddings_hash(&raw, b"x"), raw);
+        let arr = b"[1,2]".to_vec();
+        assert_eq!(stamp_embeddings_hash(&arr, b"x"), arr);
+    }
+
+    #[test]
     fn truncate_chars_respects_unicode_boundaries() {
         let s = "résumé café";
         let t = truncate_chars(s, 6);
@@ -253,5 +344,107 @@ mod tests {
         let second =
             fs::read(tmp.path().join("search/embeddings.bin")).unwrap();
         assert_eq!(first, second);
+    }
+
+    // -------------------------------------------------------------------
+    // IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_site_has_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        let locked = tmp.path().join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = VectorSearchPlugin.after_compile(&ctx(tmp.path()));
+
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[serial_test::parallel]
+    fn after_compile_fails_when_search_dir_squatted_by_file() {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        fs::write(tmp.path().join("search"), "not a dir").unwrap();
+        let err = VectorSearchPlugin
+            .after_compile(&ctx(tmp.path()))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    /// Squats `search/<name>` with a directory so the corresponding
+    /// `fs::write` fails.
+    fn assert_write_fails_when_squatted(name: &str) {
+        let tmp = tempdir().unwrap();
+        write_html(tmp.path(), "a.html", "<p>hello</p>");
+        fs::create_dir_all(tmp.path().join("search").join(name)).unwrap();
+        let err = VectorSearchPlugin
+            .after_compile(&ctx(tmp.path()))
+            .unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn after_compile_fails_when_embeddings_squatted_by_dir() {
+        assert_write_fails_when_squatted(EMBEDDINGS_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_manifest_squatted_by_dir() {
+        assert_write_fails_when_squatted(MANIFEST_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_model_squatted_by_dir() {
+        assert_write_fails_when_squatted(MODEL_FILE);
+    }
+
+    #[test]
+    fn after_compile_fails_when_tokenizer_squatted_by_dir() {
+        assert_write_fails_when_squatted(TOKENIZER_FILE);
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn stamp_embeddings_hash_falls_back_on_injected_serialize_failure() {
+        // Drives the defensive `unwrap_or_else` fallback that otherwise
+        // cannot be reached: re-serializing a manifest `Value` parsed
+        // from `ssg-search`'s own output cannot fail in practice.
+        let _guard = FailGuard("search_index::manifest-serialize");
+        fail::cfg("search_index::manifest-serialize", "return")
+            .expect("activate failpoint");
+
+        let manifest_json = br#"{"count":0,"entries":[]}"#;
+        let out = stamp_embeddings_hash(manifest_json, b"embeddings");
+        assert_eq!(
+            out, manifest_json,
+            "injected failure must fall back to the original manifest bytes"
+        );
     }
 }

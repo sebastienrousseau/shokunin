@@ -15,7 +15,7 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.46-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.47-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
@@ -27,7 +27,7 @@
 - [Overview](#overview) -- what SSG does
 - [Architecture](#architecture) -- build pipeline diagram
 - [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.46 capability matrix
+- [Features](#features) -- v0.0.47 capability matrix
 - [The CLI](#the-cli) -- flags and usage
 - [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
 - [Examples](#examples) -- 8 branded examples
@@ -41,7 +41,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.46"
+ssg = "0.0.47"
 ```
 
 ### Prebuilt binaries
@@ -57,7 +57,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 cargo install ssg
 
 # Debian / Ubuntu
-sudo dpkg -i ssg_0.0.46_amd64.deb
+sudo dpkg -i ssg_0.0.47_amd64.deb
 
 # Arch Linux (AUR)
 yay -S ssg
@@ -107,7 +107,7 @@ SSG generates static websites from Markdown content, YAML frontmatter, and `Mini
 - **Agentic AI pipeline** -- audit, diagnose, fix, and verify content readability via local LLM
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
-- **Streaming compilation** -- configurable memory budgets for 100K+ page sites
+- **Bounded-memory batch compilation** -- configurable memory budgets for 100K+ page sites
 - **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.0.40)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
 
@@ -137,11 +137,11 @@ graph TD
 
 | Metric | Value |
 | :--- | :--- |
-| **Source** | 71,000+ lines across 6 workspace crates (`ssg`, `ssg-core`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
-| **Test suite** | 2,418 unit tests + 36 integration test suites |
+| **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
+| **Test suite** | 3,489 unit tests + 36 integration test suites |
 | **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
 | **Plugin pipeline** | 38 plugins, Rayon-parallelised |
-| **Audit gates** | 14 (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
+| **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
 | **Search** | Browser-native int8 vector embeddings via `ssg-search` (WASM, ≤2 MB gzipped budget) |
@@ -153,8 +153,8 @@ graph TD
 |-------|------|--------|
 | 100 | < 5s (CI-gated) | < 100 MB |
 | 1,000 | < 10s | < 200 MB |
-| 10,000 | Streaming batches | 512 MB budget |
-| 100,000+ | Streaming compilation | Configurable via `--max-memory` |
+| 10,000 | Bounded-memory batches | 512 MB budget |
+| 100,000+ | Bounded-memory batches | Configurable via `--max-memory` |
 
 Reproduce: `cargo bench --bench bench -- scalability`.
 
@@ -164,7 +164,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 
 | | |
 | :--- | :--- |
-| **Performance** | Parallel file operations with Rayon, fused single-pass HTML transforms, content-addressed caching (FNV-1a), dependency graph for incremental rebuilds, streaming compilation for 100K+ pages, `--jobs N` thread control, `--max-memory MB` budget |
+| **Performance** | Parallel file operations with Rayon, fused single-pass HTML transforms, content-addressed caching (FNV-1a), dependency graph for incremental rebuilds, bounded-memory batch compilation for 100K+ pages, `--jobs N` thread control, `--max-memory MB` budget |
 | **AI Pipeline** | Agentic LLM pipeline (`--ai-fix`): audit content readability, diagnose failing files, generate fixes via local LLM (Ollama), verify improvement, produce JSON report. Dry-run mode (`--ai-fix-dry-run`). Auto-generate alt text, meta descriptions, and JSON-LD via LLM |
 | **Readability** | Multilingual scoring: Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES). BCP 47 language detection from frontmatter. CI readability gate |
 | **Content** | Markdown with GFM extensions (tables, strikethrough, task lists), YAML/TOML/JSON frontmatter, typed content schemas with compile-time validation, shortcodes (youtube, gist, figure, admonition), compile-time word count + estimated reading time injected into `.meta.json` sidecars |
@@ -184,8 +184,8 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Vector search** | `ssg-search` — browser-native int8-quantised hashed-n-gram (or opt-in `model2vec-rs`) embeddings, `Float32Array` boundary, no division / sqrt at runtime, p99 < 100 ms on 1000-doc corpus (CI-gated) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge adapters with KV / Edge Config content provider, SHA-256-keyed ISR manifest, invalidation webhook, optional View Transitions client (`transitions = true`) |
 | **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
-| **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC TLS guidance (X25519+ML-KEM-768 hybrid notes) |
-| **Audit CLI** | `ssg audit` runs 14 gates (WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
+| **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC posture guidance — emits current best-practice TLS/PQC configuration guidance for your CDN (X25519+ML-KEM-768 hybrid notes); ML-DSA content-provenance signing is roadmap (#579) |
+| **Audit CLI** | `ssg audit` runs 15 gates (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
 | **Architecture Decision Records** | Six baseline ADRs under [`docs/adrs/`](docs/adrs/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
 | **Supply-chain attestation** | `cargo-vet` (v0.0.45 #561) layers per-crate audit attestation over `cargo deny`'s license + CVE checks. Imports Mozilla Firefox, Bytecode Alliance, and Google trust sets; exemption-reduction policy in [`supply-chain/README.md`](supply-chain/README.md) |
 | **Concurrency proofs** | Miri job ([`.github/workflows/miri.yml`](.github/workflows/miri.yml), v0.0.45 #560) runs `cargo miri test --lib` on a nightly schedule + `run-miri`-labelled PRs. Loom + Kani follow in v0.0.46 (#564 / #565) |
@@ -229,7 +229,7 @@ Commands:
   help       Print this message or the help of the given subcommand(s)
 ```
 
-### Build flags (v0.0.46)
+### Build flags (v0.0.45)
 
 ```text
       --incremental        Skip recompile when DepGraph diff is empty (issue #524)
@@ -437,7 +437,7 @@ fn echo(input: EchoIn) -> Result<EchoOut, ssg_rpc::DispatchError> {
 
 ```bash
 ssg audit site/ --out junit > audit.xml
-# 14 gates run: WCAG 2.2 AAA, JSON-LD, hreflang, CSP+SRI, PQC TLS,
+# 15 gates run: WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS,
 # HTML5, broken links, OG, markdown lint, perf budget, AI discovery,
 # RSS/Atom, image opt, search index integrity.
 ```
@@ -580,7 +580,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `server` | Development HTTP server |
 | `shortcodes` | youtube, gist, figure, admonition expansion |
 | `stream` | High-performance streaming file processor |
-| `streaming` | Memory-budgeted streaming compilation for large sites |
+| `streaming` | Bounded-memory batch compiler for large sites (`--max-memory` budget) |
 | `taxonomy` | Tag and category index generation |
 | `template_engine` | `MiniJinja` templating engine integration |
 | `template_plugin` | `MiniJinja` template rendering plugin |
@@ -593,7 +593,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `view_transitions` | Opt-in View Transitions API client + lazy-hydration emitter (`transitions = true`) — issue #547 |
 | `rpc_schema` | `#[ssg_rpc]` JSON-Schema → TypeScript `.d.ts` emitter — issue #548 |
 | `search_index` | Build-side emitter for `ssg-search` artifacts (`embeddings.bin`, `model.bin`, `tokenizer.bin`, `manifest.json`) — issue #545 |
-| `postprocess::edge_headers` | Per-host header emitters (Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json`) with PQC TLS guidance — issue #550 |
+| `postprocess::edge_headers` | Per-host header emitters (Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json`) with PQC posture guidance — issue #550 |
 | `postprocess::agentic_discovery` | `/agents.txt` + `/.well-known/{ai-plugin.json,mcp.json}` emitters — issue #552 |
 | `seo::jsonld::iso20022` | ISO 20022 schema.org descriptors for regulated financial sites (IBAN/BIC validators) — issue #553 |
 | `audit` | 14-gate audit runner (`ssg audit`) with JSON / `JUnit` / text output — issue #551 |

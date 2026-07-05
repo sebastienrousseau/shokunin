@@ -181,7 +181,7 @@ mod tests {
     fn absent_inputs_emit_info_skip() {
         let f = SearchIndexGate.run(&empty_site(), &AuditOptions::default());
         assert_eq!(f.len(), 1);
-        assert!(matches!(f[0].severity, Severity::Info));
+        assert_eq!(f[0].severity, Severity::Info);
         assert_eq!(f[0].code.as_deref(), Some("SEARCH-INPUT-MISSING"));
     }
 
@@ -329,7 +329,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("SEARCH-HASH-MISSING"))
             .expect("hash-missing finding");
-        assert!(matches!(hm.severity, Severity::Warn));
+        assert_eq!(hm.severity, Severity::Warn);
     }
 
     #[test]
@@ -354,6 +354,24 @@ mod tests {
         let f = SearchIndexGate.run(&site, &AuditOptions::default());
         std::mem::forget(tmp);
         assert!(f.is_empty(), "uppercase hash should match: {f:?}");
+    }
+
+    #[test]
+    fn unreadable_embeddings_bin_flags_read_error() {
+        // A directory named embeddings.bin passes the exists() probe
+        // but fails fs::read, driving the SEARCH-READ-ERROR arm.
+        let tmp = tempfile::tempdir().unwrap();
+        let search = tmp.path().join("search");
+        std::fs::create_dir_all(search.join("embeddings.bin")).unwrap();
+        let site = Site {
+            root: tmp.path().to_path_buf(),
+            html_files: Vec::new(),
+        };
+        let f = SearchIndexGate.run(&site, &AuditOptions::default());
+        std::mem::forget(tmp);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].code.as_deref(), Some("SEARCH-READ-ERROR"));
+        assert_eq!(f[0].severity, Severity::Error);
     }
 
     #[test]

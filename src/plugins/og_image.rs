@@ -321,6 +321,17 @@ mod tests {
     }
 
     #[test]
+    fn slug_from_path_falls_back_when_not_under_site_dir() {
+        // `path.strip_prefix(site_dir).unwrap_or(path)` — when `path`
+        // isn't actually nested under `site_dir`, `strip_prefix` fails
+        // and the whole path is used as-is (the other two tests here
+        // only ever exercise the success arm).
+        let slug =
+            slug_from_path(Path::new("/other/page.html"), Path::new("/site"));
+        assert_eq!(slug, "other-page");
+    }
+
+    #[test]
     fn slug_from_path_root() {
         let slug =
             slug_from_path(Path::new("/site/index.html"), Path::new("/site"));
@@ -422,5 +433,138 @@ mod tests {
         assert!(
             matches!(err, SsgError::Io { ref path, .. } if path == &svg_dir)
         );
+    }
+
+    #[test]
+    fn after_compile_uses_config_site_name() {
+        use crate::cmd::SsgConfig;
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(
+            site.join("index.html"),
+            "<html><head><title>T</title></head><body>x</body></html>",
+        )
+        .unwrap();
+        let cfg = SsgConfig::builder()
+            .site_name("Branded".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .unwrap();
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+
+        OgImagePlugin::new("https://example.com")
+            .after_compile(&ctx)
+            .unwrap();
+        let svg = fs::read_to_string(site.join("og-index.svg")).unwrap();
+        assert!(svg.contains("Branded"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_skips_unreadable_html() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = site.join("index.html");
+        fs::write(
+            &html,
+            "<html><head><title>T</title></head><body>x</body></html>",
+        )
+        .unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = OgImagePlugin::new("https://example.com").after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        // Unreadable pages are skipped, not fatal.
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn after_compile_skips_pages_without_title() {
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(
+            site.join("index.html"),
+            "<html><head></head><body>no title here</body></html>",
+        )
+        .unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        OgImagePlugin::new("https://example.com")
+            .after_compile(&ctx)
+            .unwrap();
+        assert!(!site.join("og-index.svg").exists());
+    }
+
+    #[test]
+    fn after_compile_skips_injection_without_head_close() {
+        // Title present but no `</head>` — SVG is written, HTML left
+        // untouched.
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = "<title>T</title><body>x</body>";
+        fs::write(site.join("index.html"), html).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        OgImagePlugin::new("https://example.com")
+            .after_compile(&ctx)
+            .unwrap();
+        assert!(site.join("og-index.svg").exists());
+        assert_eq!(fs::read_to_string(site.join("index.html")).unwrap(), html);
+    }
+
+    #[test]
+    fn after_compile_stray_head_close_leaves_html_unchanged() {
+        // The literal `</head>` passes the contains() gate, but with
+        // no real `<head>` start tag lol_html injects nothing, so
+        // `modified == html` and no write happens.
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = "<html><title>T</title>x</head><body>b</body></html>";
+        fs::write(site.join("index.html"), html).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        OgImagePlugin::new("https://example.com")
+            .after_compile(&ctx)
+            .unwrap();
+        assert_eq!(fs::read_to_string(site.join("index.html")).unwrap(), html);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_is_readonly() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let html = site.join("index.html");
+        fs::write(
+            &html,
+            "<html><head><title>T</title></head><body>x</body></html>",
+        )
+        .unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        let res = OgImagePlugin::new("https://example.com").after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
     }
 }

@@ -44,11 +44,7 @@ impl AuditGate for WcagGate {
             let Ok(html) = site.read(path) else { continue };
             let rel = site.rel(path);
             for issue in scan_html(&html) {
-                let sev = match issue.severity.as_str() {
-                    "error" => Severity::Error,
-                    "warning" => Severity::Warn,
-                    _ => Severity::Info,
-                };
+                let sev = severity_of(issue.severity.as_str());
                 findings.push(
                     Finding::new(
                         NAME,
@@ -73,6 +69,16 @@ struct Issue {
     criterion: String,
     severity: String,
     message: String,
+}
+
+/// Maps a scanner severity string to the audit [`Severity`] scale;
+/// unknown labels degrade to `Info`.
+fn severity_of(sev: &str) -> Severity {
+    match sev {
+        "error" => Severity::Error,
+        "warning" => Severity::Warn,
+        _ => Severity::Info,
+    }
 }
 
 fn scan_html(html: &str) -> Vec<Issue> {
@@ -101,7 +107,9 @@ fn check_img_alt(html: &str, out: &mut Vec<Issue>) {
         let abs = pos + start;
         let tag_end = find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
-        let has_alt = tag.contains("alt=\"") || tag.contains("alt='");
+        // Attribute-based lookup: minifiers collapse `alt=""` to a bare
+        // valueless `alt`, and unquoted `alt=x` is legal — both count.
+        let has_alt = super::hreflang_attr(tag, "alt").is_some();
         if !has_alt {
             push(out, "1.1.1", "error", "<img> missing alt attribute");
         }
@@ -258,11 +266,42 @@ mod tests {
     }
 
     #[test]
+    fn minified_valueless_alt_satisfies_1_1_1() {
+        // Minifiers collapse alt="" to a bare `alt` on decorative
+        // images — that still satisfies WCAG 1.1.1.
+        // The empty <a> yields a 2.4.4 warning, keeping `f` non-empty
+        // so the no-1.1.1 predicate actually evaluates.
+        let html = "<!doctype html><html lang=en><head><title>x</title></head>\
+            <body><main><h1>x</h1>\
+            <img alt height=33 role=presentation src=a.png width=100>\
+            <a href=/x></a>\
+            </main></body></html>";
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-2.4.4")));
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("WCAG-1.1.1")),
+            "bare `alt` must satisfy 1.1.1: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_img_without_alt_still_flagged_1_1_1() {
+        let html = "<!doctype html><html lang=en><head><title>x</title></head>\
+            <body><main><h1>x</h1><img src=a.png width=1 height=1>\
+            </main></body></html>";
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("WCAG-1.1.1")),
+            "missing alt must still flag: {f:?}"
+        );
+    }
+
+    #[test]
     fn missing_html_lang_flagged_3_1_1() {
         let html = r#"<!doctype html><html><head><title>x</title></head><body><main><h1>x</h1></main></body></html>"#;
         let f = WcagGate.run(&site(html), &AuditOptions::default());
         assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-3.1.1")
-            && matches!(x.severity, Severity::Error)));
+            && x.severity == Severity::Error));
     }
 
     #[test]
@@ -270,7 +309,7 @@ mod tests {
         let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><marquee>scroll</marquee></main></body></html>"#;
         let f = WcagGate.run(&site(html), &AuditOptions::default());
         assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-2.3.1")
-            && matches!(x.severity, Severity::Error)));
+            && x.severity == Severity::Error));
     }
 
     #[test]
@@ -288,7 +327,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("WCAG-1.3.1"))
             .expect("heading-hierarchy finding");
-        assert!(matches!(h.severity, Severity::Warn));
+        assert_eq!(h.severity, Severity::Warn);
     }
 
     #[test]
@@ -300,8 +339,11 @@ mod tests {
 
     #[test]
     fn link_with_aria_label_is_silent() {
-        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><a href="/x" aria-label="navigate"></a></main></body></html>"#;
+        // The alt-less <img> yields a 1.1.1 error, keeping `f`
+        // non-empty so the no-2.4.4 predicate actually evaluates.
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>x</h1><a href="/x" aria-label="navigate"></a><img src="b.png"></main></body></html>"#;
         let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(f.iter().any(|x| x.code.as_deref() == Some("WCAG-1.1.1")));
         assert!(f.iter().all(|x| x.code.as_deref() != Some("WCAG-2.4.4")));
     }
 
@@ -313,7 +355,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("WCAG-ARIA"))
             .expect("ARIA finding");
-        assert!(matches!(aria.severity, Severity::Warn));
+        assert_eq!(aria.severity, Severity::Warn);
     }
 
     #[test]
@@ -334,6 +376,90 @@ mod tests {
         std::mem::forget(tmp);
         let f = WcagGate.run(&s, &AuditOptions::default());
         assert!(f.is_empty());
+    }
+
+    #[test]
+    fn link_with_real_text_is_silent_for_2_4_4() {
+        // Inner text (including nested markup) drives the character
+        // filter in check_link_text with both kept and dropped chars.
+        let mut out = Vec::new();
+        check_link_text("<a href=\"/x\"><span>Read more</span></a>", &mut out);
+        assert!(out.is_empty(), "text-bearing link must pass 2.4.4");
+    }
+
+    #[test]
+    fn severity_mapping_covers_all_arms() {
+        assert!(matches!(severity_of("error"), Severity::Error));
+        assert!(matches!(severity_of("warning"), Severity::Warn));
+        assert!(matches!(severity_of("notice"), Severity::Info));
+    }
+
+    #[test]
+    fn fragment_without_html_tag_skips_lang_check() {
+        let mut out = Vec::new();
+        check_html_lang("<body>x</body>", &mut out);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn unclosed_anchor_stops_link_scan() {
+        let mut out = Vec::new();
+        check_link_text("<a href=\"/x\">dangling", &mut out);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn anchor_without_gt_before_close_is_skipped() {
+        let mut out = Vec::new();
+        check_link_text("<a href=\"/x\"</a>", &mut out);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn unterminated_tag_end_is_input_len() {
+        let html = "<img src='x";
+        assert_eq!(find_tag_end(html, 0), html.len());
+        let quoted = "<img alt=\"a>b\">";
+        assert_eq!(find_tag_end(quoted, 0), quoted.len());
+    }
+
+    #[test]
+    fn sequential_heading_levels_do_not_warn_1_3_1() {
+        // `h1` followed directly by `h2` is a valid, non-skipping
+        // hierarchy: `last > 0 && level > last + 1` must evaluate to
+        // false (not just short-circuit on `last > 0`), which no
+        // existing single-heading fixture exercises.
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>top</h1><h2>next</h2></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("WCAG-1.3.1")),
+            "consecutive heading levels must not warn: {f:?}"
+        );
+    }
+
+    #[test]
+    fn unterminated_html_tag_lang_check_reaches_end_of_input() {
+        // No `>` anywhere after `<html`, driving the `map_or` default
+        // (`lower.len()`) arm in `check_html_lang` instead of the
+        // `Some(gt)` arm every other fixture takes.
+        let mut out = Vec::new();
+        check_html_lang("<html", &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "unterminated <html> tag must still be checked for lang"
+        );
+        assert_eq!(out[0].criterion, "3.1.1");
+    }
+
+    #[test]
+    fn link_with_title_attr_is_silent_for_2_4_4() {
+        // `title=` alone (no `aria-label`, no inner text) must also
+        // satisfy 2.4.4 — no existing fixture isolates the `has_title`
+        // half of `!has_aria && !has_title`.
+        let mut out = Vec::new();
+        check_link_text("<a href=\"/x\" title=\"More info\"></a>", &mut out);
+        assert!(out.is_empty(), "title= alone must satisfy 2.4.4");
     }
 
     #[test]

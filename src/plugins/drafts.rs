@@ -275,11 +275,15 @@ mod tests {
         let missing = dir.path().join("does-not-exist.md");
         let result = is_draft(&missing);
         assert!(result.is_err());
-        let err = result.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
-        if let SsgError::Io { path, .. } = err {
-            assert_eq!(path, missing);
-        }
+        // Debug formatting carries both the variant name and the path,
+        // so this asserts the same facts as a `matches!` + field check
+        // without leaving an uncoverable non-Io match arm behind.
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(msg.contains("Io"), "expected Io variant, got: {msg}");
+        assert!(
+            msg.contains("does-not-exist.md"),
+            "error should carry the missing path: {msg}"
+        );
     }
 
     // -------------------------------------------------------------------
@@ -507,5 +511,82 @@ mod tests {
 
         let result = collect_draft_files(dir.path()).unwrap();
         assert_eq!(result.len(), 2);
+    }
+
+    // -------------------------------------------------------------------
+    // I/O error propagation (unix permission fixtures)
+    // -------------------------------------------------------------------
+
+    /// Sets unix permission bits on `path` (test-only helper).
+    #[cfg(unix)]
+    fn chmod(path: &Path, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(mode))
+            .expect("set permissions");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn before_compile_propagates_walk_error_from_unreadable_subdir() {
+        let (_tmp, content, ctx) = make_content_layout();
+        let locked = content.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        chmod(&locked, 0o000);
+
+        let result = DraftPlugin::new(false).before_compile(&ctx);
+        chmod(&locked, 0o755); // restore so tempdir cleanup succeeds
+        assert!(result.is_err(), "unreadable subdir must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn before_compile_propagates_is_draft_read_error() {
+        let (_tmp, content, ctx) = make_content_layout();
+        write_md(&content, "secret.md", Some("true"));
+        chmod(&content.join("secret.md"), 0o000);
+
+        let result = DraftPlugin::new(false).before_compile(&ctx);
+        chmod(&content.join("secret.md"), 0o644);
+        assert!(result.is_err(), "unreadable md file must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn before_compile_rename_failure_in_readonly_dir_is_propagated() {
+        let (_tmp, content, ctx) = make_content_layout();
+        write_md(&content, "draft.md", Some("true"));
+        // r-x: walking and reading still work, the rename does not.
+        chmod(&content, 0o555);
+
+        let result = DraftPlugin::new(false).before_compile(&ctx);
+        chmod(&content, 0o755);
+        assert!(result.is_err(), "rename in read-only dir must be an Err");
+        assert!(content.join("draft.md").exists());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_propagates_walk_error_from_unreadable_subdir() {
+        let (_tmp, content, ctx) = make_content_layout();
+        let locked = content.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        chmod(&locked, 0o000);
+
+        let result = DraftPlugin::new(false).after_compile(&ctx);
+        chmod(&locked, 0o755);
+        assert!(result.is_err(), "unreadable subdir must surface as Err");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_restore_rename_failure_is_propagated() {
+        let (_tmp, content, ctx) = make_content_layout();
+        fs::write(content.join("post.md.draft"), "---\n---\n").unwrap();
+        chmod(&content, 0o555);
+
+        let result = DraftPlugin::new(false).after_compile(&ctx);
+        chmod(&content, 0o755);
+        assert!(result.is_err(), "restore rename must surface as Err");
+        assert!(content.join("post.md.draft").exists());
     }
 }

@@ -65,7 +65,7 @@ pub enum CliInvocation {
         target: String,
     },
     /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
-    /// run the 14 native CI gates against the built site (issue #549).
+    /// run the 15 native CI gates against the built site (issue #549).
     Audit,
     /// Legacy flag-only invocation (`ssg -s public -w`). Behaves like
     /// `Dev` if `--serve` is present, otherwise like `Build`. Emits a
@@ -647,9 +647,17 @@ mod tests {
     }
 
     #[test]
+    // The whole point of this test is to call the derived `Default`
+    // impl directly, since nothing else in the crate does — clippy's
+    // suggestion to construct `Cli` directly instead would defeat that.
+    #[allow(clippy::default_constructed_unit_structs)]
     fn cli_default_is_unit_struct() {
         let _cli = Cli;
-        // Cli is a ZST — just ensure Default works.
+        // `Cli` derives `Default` and `Debug` but nothing else in the
+        // crate ever calls either derived impl — exercise both
+        // directly so they're not dead code from coverage's view.
+        let default_cli = Cli::default();
+        assert_eq!(format!("{default_cli:?}"), format!("{:?}", Cli));
     }
 
     // -----------------------------------------------------------------
@@ -669,22 +677,36 @@ mod tests {
         }
     }
 
+    /// Region-free variant of `assert!(matches!(inv, <Variant>))` —
+    /// `matches!` (or a `panic!` fallback arm) would leave a
+    /// never-taken region uncovered. `CliInvocation`'s Debug repr is
+    /// deterministic, so exact string equality is just as strict.
+    fn assert_invocation(inv: &CliInvocation, expected: &str) {
+        assert_eq!(format!("{inv:?}"), expected);
+    }
+
     #[test]
     fn parse_build_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "build"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Build));
+        assert_invocation(&inv, "Build");
     }
 
     #[test]
     fn parse_dev_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "dev"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Dev));
+        assert_invocation(&inv, "Dev");
     }
 
     #[test]
     fn parse_check_subcommand() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg", "check"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Check));
+        assert_invocation(&inv, "Check");
+    }
+
+    #[test]
+    fn parse_audit_subcommand() {
+        let (inv, _m) = Cli::parse_and_dispatch(["ssg", "audit"]).unwrap();
+        assert_invocation(&inv, "Audit");
     }
 
     #[test]
@@ -692,10 +714,7 @@ mod tests {
         let (inv, _m) =
             Cli::parse_and_dispatch(["ssg", "deploy", "--target", "netlify"])
                 .unwrap();
-        match inv {
-            CliInvocation::Deploy { target } => assert_eq!(target, "netlify"),
-            other => panic!("expected Deploy, got {other:?}"),
-        }
+        assert_invocation(&inv, "Deploy { target: \"netlify\" }");
     }
 
     #[test]
@@ -728,13 +747,21 @@ mod tests {
     fn legacy_invocation_with_flags_is_detected() {
         let (inv, _m) =
             Cli::parse_and_dispatch(["ssg", "-s", "public"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Legacy));
+        assert_invocation(&inv, "Legacy");
     }
 
     #[test]
     fn bare_invocation_routes_through_legacy_parser() {
         let (inv, _m) = Cli::parse_and_dispatch(["ssg"]).unwrap();
-        assert!(matches!(inv, CliInvocation::Legacy));
+        assert_invocation(&inv, "Legacy");
+    }
+
+    #[test]
+    fn legacy_parser_rejects_unknown_flag() {
+        // Covers the `?` propagation from the legacy try_get_matches_from.
+        let err = Cli::parse_and_dispatch(["ssg", "--definitely-not-a-flag"])
+            .unwrap_err();
+        assert_eq!(err.kind(), clap::error::ErrorKind::UnknownArgument);
     }
 
     #[test]

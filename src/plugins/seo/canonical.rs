@@ -70,15 +70,13 @@ impl Plugin for CanonicalPlugin {
         path: &Path,
         ctx: &PluginContext,
     ) -> Result<String, SsgError> {
-        let base = self.base_url.trim_end_matches('/');
-
         let rel_path = path
             .strip_prefix(&ctx.site_dir)
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
 
-        let tag = build_canonical_tag(base, &rel_path);
+        let tag = build_canonical_tag(&self.base_url, &rel_path);
         Ok(replace_canonical_link(html, &tag))
     }
 
@@ -88,8 +86,15 @@ impl Plugin for CanonicalPlugin {
 }
 
 /// Builds a `<link rel="canonical">` tag for the given base URL and path.
+///
+/// URL derivation is delegated to [`crate::urls::derive_page_url`] —
+/// the single code path shared with the content stager's `permalink:`
+/// injection — so canonical `<link>`, feed `<link>`, and injected
+/// permalinks always agree (spec A2/B1, plan §2 item 1.2, issue #586).
+/// Notably, `index.html` pages collapse to the pretty directory URL
+/// (`{base}/foo/`), matching the Atom feed entry convention.
 fn build_canonical_tag(base: &str, rel_path: &str) -> String {
-    let canonical_url = format!("{base}/{rel_path}");
+    let canonical_url = crate::urls::derive_page_url(base, rel_path);
     format!(
         "<link rel=\"canonical\" href=\"{}\">",
         escape_attr(&canonical_url)
@@ -138,6 +143,26 @@ mod tests {
         assert_eq!(
             tag,
             r#"<link rel="canonical" href="https://example.com/blog/post.html">"#
+        );
+    }
+
+    #[test]
+    fn build_canonical_tag_collapses_index_html_to_directory_url() {
+        // spec A2/B1 (plan §2 item 1.2, issue #586): canonical URLs
+        // share `urls::derive_page_url` with the stager's permalink
+        // injection and the Atom feed link convention — `index.html`
+        // collapses to the pretty directory URL.
+        let tag =
+            build_canonical_tag("https://example.com", "blog/post/index.html");
+        assert_eq!(
+            tag,
+            r#"<link rel="canonical" href="https://example.com/blog/post/">"#
+        );
+        // Root index.html → bare base URL with trailing slash.
+        let root = build_canonical_tag("https://example.com", "index.html");
+        assert_eq!(
+            root,
+            r#"<link rel="canonical" href="https://example.com/">"#
         );
     }
 

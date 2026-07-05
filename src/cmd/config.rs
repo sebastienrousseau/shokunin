@@ -107,6 +107,135 @@ impl EdgeHeadersConfig {
     }
 }
 
+/// Digest algorithm used for Subresource Integrity `integrity=`
+/// attributes on externalized assets (v0.0.47 plan §3 item 2.3).
+///
+/// Applies to the SRI attributes emitted by the fingerprint plugin
+/// (`crate::assets::FingerprintPlugin`) and the CSP inline-extraction
+/// plugin (`crate::csp::CspPlugin`). It deliberately does **not**
+/// govern CSP *directive source hashes* (the `'sha256-…'` entries
+/// inside a Content-Security-Policy header/meta value) — those stay
+/// SHA-256 for the broadest UA compatibility.
+///
+/// Serialized in `ssg.toml` as the lowercase strings `"sha256"`,
+/// `"sha384"`, and `"sha512"`; kept in lockstep with the
+/// `security.sri_algorithm` enum in `ssg.schema.json`.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::SriAlgorithm;
+///
+/// // SHA-384 is the default, matching the documented posture.
+/// assert_eq!(SriAlgorithm::default(), SriAlgorithm::Sha384);
+///
+/// // Every emitted integrity value starts with the algorithm prefix.
+/// let sri = SriAlgorithm::Sha512.integrity(b"body{margin:0}");
+/// assert!(sri.starts_with("sha512-"));
+/// ```
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum SriAlgorithm {
+    /// SHA-256 — the pre-v0.0.47 behaviour, kept for back-compat.
+    Sha256,
+    /// SHA-384 — the default; matches the README/SECURITY.md claim.
+    #[default]
+    Sha384,
+    /// SHA-512 — the strongest digest the SRI spec admits.
+    Sha512,
+}
+
+impl SriAlgorithm {
+    /// Returns the SRI prefix token for this algorithm
+    /// (`"sha256"`, `"sha384"`, or `"sha512"`).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SriAlgorithm;
+    ///
+    /// assert_eq!(SriAlgorithm::default().prefix(), "sha384");
+    /// assert_eq!(SriAlgorithm::Sha256.prefix(), "sha256");
+    /// ```
+    #[must_use]
+    pub const fn prefix(self) -> &'static str {
+        match self {
+            Self::Sha256 => "sha256",
+            Self::Sha384 => "sha384",
+            Self::Sha512 => "sha512",
+        }
+    }
+
+    /// Computes the full SRI attribute value for `data`:
+    /// `<prefix>-<base64(digest(data))>`.
+    ///
+    /// Browsers compare the `integrity` attribute against
+    /// `base64(digest(body))` per the
+    /// [W3C SRI spec](https://www.w3.org/TR/SRI/#the-integrity-attribute),
+    /// so the returned string is exactly what a UA will validate the
+    /// response body against.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SriAlgorithm;
+    ///
+    /// // SHA-384("") — well-known empty-input digest.
+    /// assert_eq!(
+    ///     SriAlgorithm::Sha384.integrity(b""),
+    ///     "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+    /// );
+    /// ```
+    #[must_use]
+    pub fn integrity(self, data: &[u8]) -> String {
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        use sha2::{Digest as _, Sha256, Sha384, Sha512};
+
+        let b64 = match self {
+            Self::Sha256 => STANDARD.encode(Sha256::digest(data)),
+            Self::Sha384 => STANDARD.encode(Sha384::digest(data)),
+            Self::Sha512 => STANDARD.encode(Sha512::digest(data)),
+        };
+        format!("{}-{}", self.prefix(), b64)
+    }
+}
+
+/// Security tunables (v0.0.47 plan §3 item 2.3). Surfaces the
+/// `[security]` section of `ssg.toml`:
+///
+/// ```toml
+/// [security]
+/// sri_algorithm = "sha384"   # "sha256" | "sha384" | "sha512"
+/// ```
+///
+/// Absent section (the default) means SHA-384 SRI, matching the
+/// documented posture in README/SECURITY.md.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::cmd::{SecurityConfig, SriAlgorithm};
+///
+/// // The default posture is SHA-384 SRI.
+/// let cfg = SecurityConfig::default();
+/// assert_eq!(cfg.sri_algorithm, SriAlgorithm::Sha384);
+///
+/// // `[security] sri_algorithm = "sha512"` in ssg.toml deserializes
+/// // into the strongest digest the SRI spec admits.
+/// let cfg: SecurityConfig =
+///     toml::from_str("sri_algorithm = \"sha512\"").unwrap();
+/// assert_eq!(cfg.sri_algorithm, SriAlgorithm::Sha512);
+/// ```
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct SecurityConfig {
+    /// Digest algorithm for `integrity=` attributes on externalized
+    /// assets. Defaults to [`SriAlgorithm::Sha384`].
+    #[serde(default)]
+    pub sri_algorithm: SriAlgorithm,
+}
+
 /// Core configuration for the static site generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SsgConfig {
@@ -160,6 +289,11 @@ pub struct SsgConfig {
     /// Defaults to `false` to keep zero-JS sites zero-JS.
     #[serde(default)]
     pub transitions: bool,
+    /// Security tunables (v0.0.47 plan §3 item 2.3): the `[security]`
+    /// section of `ssg.toml`. Currently holds the SRI digest
+    /// algorithm; absent ⇒ SHA-384.
+    #[serde(default)]
+    pub security: SecurityConfig,
 }
 
 impl Default for SsgConfig {
@@ -592,6 +726,26 @@ impl SsgConfigBuilder {
         self.config.edge_headers = edge;
         self
     }
+    /// Sets the security tunables (v0.0.47 plan §3 item 2.3).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::{SecurityConfig, SriAlgorithm, SsgConfig};
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .security(SecurityConfig {
+    ///         sri_algorithm: SriAlgorithm::Sha512,
+    ///     })
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.security.sri_algorithm, SriAlgorithm::Sha512);
+    /// ```
+    #[must_use]
+    pub const fn security(mut self, security: SecurityConfig) -> Self {
+        self.config.security = security;
+        self
+    }
     /// Enables the View Transitions + lazy-nav client (issue #547).
     ///
     /// # Examples
@@ -636,10 +790,21 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
 
+    /// Region-free variant of `assert!(matches!(err, <Variant>))` —
+    /// `matches!` would leave its never-taken false arm uncovered.
+    fn assert_err_variant<T: std::fmt::Debug>(
+        result: Result<T, CliError>,
+        variant: &str,
+    ) {
+        let err = result.expect_err("expected an error");
+        let repr = format!("{err:?}");
+        assert!(repr.starts_with(variant), "expected {variant}, got {repr}");
+    }
+
     #[test]
     fn test_config_validation() {
         let config = SsgConfig::builder().site_name(String::new()).build();
-        assert!(matches!(config, Err(CliError::ValidationError(_))));
+        assert_err_variant(config, "ValidationError");
     }
 
     #[test]
@@ -650,10 +815,10 @@ mod tests {
 
         write!(file, "{}", "x".repeat(MAX_CONFIG_SIZE + 1)).unwrap();
 
-        assert!(matches!(
+        assert_err_variant(
             SsgConfig::from_file(&config_path),
-            Err(CliError::ValidationError(_))
-        ));
+            "ValidationError",
+        );
     }
 
     #[test]
@@ -702,10 +867,7 @@ mod tests {
         let mut file = File::create(&config_path).unwrap();
         write!(file, "invalid toml content").unwrap();
 
-        assert!(matches!(
-            SsgConfig::from_file(&config_path),
-            Err(CliError::TomlError(_))
-        ));
+        assert_err_variant(SsgConfig::from_file(&config_path), "TomlError");
     }
 
     #[test]
@@ -721,16 +883,13 @@ mod tests {
             .site_name(String::new())
             .site_title(String::new())
             .build();
-        assert!(matches!(config, Err(CliError::ValidationError(_))));
+        assert_err_variant(config, "ValidationError");
     }
 
     #[test]
     fn test_config_file_not_found() {
         let non_existent = Path::new("non_existent.toml");
-        assert!(matches!(
-            SsgConfig::from_file(non_existent),
-            Err(CliError::IoError(_))
-        ));
+        assert_err_variant(SsgConfig::from_file(non_existent), "IoError");
     }
 
     #[test]
@@ -867,6 +1026,215 @@ language = "en-GB"
             .build()
             .unwrap();
         assert!(cfg.cdn_prefix.is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // [security] sri_algorithm (v0.0.47 plan §3 item 2.3)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn security_section_absent_defaults_to_sha384() {
+        let config_str = r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+    "#;
+        let cfg: SsgConfig = config_str.parse().unwrap();
+        assert_eq!(cfg.security.sri_algorithm, SriAlgorithm::Sha384);
+    }
+
+    #[test]
+    fn security_sri_algorithm_parses_all_enum_values() {
+        for (raw, expected) in [
+            ("sha256", SriAlgorithm::Sha256),
+            ("sha384", SriAlgorithm::Sha384),
+            ("sha512", SriAlgorithm::Sha512),
+        ] {
+            let config_str = format!(
+                r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+
+    [security]
+    sri_algorithm = "{raw}"
+    "#
+            );
+            let cfg: SsgConfig = config_str.parse().unwrap();
+            assert_eq!(cfg.security.sri_algorithm, expected, "raw = {raw}");
+        }
+    }
+
+    #[test]
+    fn security_sri_algorithm_rejects_unknown_value() {
+        let config_str = r#"
+    site_name = "test"
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "Test Site"
+    site_description = "Test Description"
+    language = "en-GB"
+
+    [security]
+    sri_algorithm = "md5"
+    "#;
+        let cfg: Result<SsgConfig, CliError> = config_str.parse();
+        assert_err_variant(cfg, "TomlError");
+    }
+
+    // -----------------------------------------------------------------
+    // Error-path propagation
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn from_matches_rejects_invalid_content_override() {
+        // An invalid --content path fails override_with_cli's
+        // re-validation, covering both `?` propagation sites.
+        let matches =
+            Cli::build().get_matches_from(vec!["ssg", "--content", "bad<dir"]);
+        assert_err_variant(SsgConfig::from_matches(&matches), "InvalidPath");
+    }
+
+    #[test]
+    fn from_matches_propagates_missing_config_file_error() {
+        let matches = Cli::build().get_matches_from(vec![
+            "ssg",
+            "--config",
+            "/nonexistent/ssg-test-config.toml",
+        ]);
+        assert_err_variant(SsgConfig::from_matches(&matches), "IoError");
+    }
+
+    #[test]
+    fn from_subcommand_matches_rejects_invalid_content_override() {
+        let (_inv, matches) =
+            Cli::parse_and_dispatch(["ssg", "build", "--content", "bad<dir"])
+                .unwrap();
+        let sub = matches.subcommand_matches("build").unwrap();
+        assert_err_variant(
+            SsgConfig::from_subcommand_matches(sub),
+            "InvalidPath",
+        );
+    }
+
+    #[test]
+    fn from_subcommand_matches_dev_without_serve_keeps_none() {
+        // `dev` exposes --serve; leaving it unset covers the inner
+        // `if let Some(serve_dir)` miss branch.
+        let (_inv, matches) = Cli::parse_and_dispatch(["ssg", "dev"]).unwrap();
+        let sub = matches.subcommand_matches("dev").unwrap();
+        let cfg = SsgConfig::from_subcommand_matches(sub).unwrap();
+        assert!(cfg.serve_dir.is_none());
+    }
+
+    #[test]
+    fn from_file_fails_when_path_is_a_directory() {
+        // metadata() succeeds but read_to_string() fails, covering the
+        // read error propagation distinct from the not-found case.
+        let dir = tempdir().unwrap();
+        assert_err_variant(SsgConfig::from_file(dir.path()), "IoError");
+    }
+
+    #[test]
+    fn from_file_propagates_validation_failure() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("invalid-fields.toml");
+        fs::write(
+            &path,
+            r#"
+site_name = ""
+content_dir = "./examples/content"
+output_dir = "./examples/public"
+template_dir = "./examples/templates"
+base_url = "http://example.com"
+site_title = "T"
+site_description = "D"
+language = "en-GB"
+"#,
+        )
+        .unwrap();
+        assert_err_variant(SsgConfig::from_file(&path), "ValidationError");
+    }
+
+    #[test]
+    fn from_str_propagates_validation_failure() {
+        let config_str = r#"
+    site_name = ""
+    content_dir = "./examples/content"
+    output_dir = "./examples/public"
+    template_dir = "./examples/templates"
+    base_url = "http://example.com"
+    site_title = "T"
+    site_description = "D"
+    language = "en-GB"
+    "#;
+        let cfg: Result<SsgConfig, CliError> = config_str.parse();
+        assert_err_variant(cfg, "ValidationError");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_base_url() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("ftp://example.com".to_string())
+            .build();
+        assert_err_variant(cfg, "InvalidUrl");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_content_dir() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .content_dir(PathBuf::from("bad<content"))
+            .build();
+        assert_err_variant(cfg, "InvalidPath");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_output_dir() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .output_dir(PathBuf::from("bad<output"))
+            .build();
+        assert_err_variant(cfg, "InvalidPath");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_template_dir() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .template_dir(PathBuf::from("bad<template"))
+            .build();
+        assert_err_variant(cfg, "InvalidPath");
+    }
+
+    #[test]
+    fn validate_rejects_invalid_serve_dir() {
+        let cfg = SsgConfig::builder()
+            .site_name("t".to_string())
+            .serve_dir(Some(PathBuf::from("bad<serve")))
+            .build();
+        assert_err_variant(cfg, "InvalidPath");
+    }
+
+    #[test]
+    fn builder_transitions_flag_round_trips() {
+        let on = SsgConfig::builder().transitions(true).build().unwrap();
+        assert!(on.transitions);
+        let off = SsgConfig::builder().transitions(false).build().unwrap();
+        assert!(!off.transitions);
     }
 
     // -----------------------------------------------------------------

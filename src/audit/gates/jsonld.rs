@@ -140,14 +140,11 @@ mod tests {
         let f = JsonLdGate.run(&site(html), &AuditOptions::default());
         assert!(!f.is_empty(), "expected at least one missing-field error");
         for finding in &f {
-            assert!(matches!(finding.severity, Severity::Error));
+            assert_eq!(finding.severity, Severity::Error);
+            let code = finding.code.as_deref();
             assert!(
-                finding
-                    .code
-                    .as_deref()
-                    .is_some_and(|c| c.starts_with("JSONLD-")),
-                "code should be JSONLD-prefixed, got {:?}",
-                finding.code
+                code.is_some_and(|c| c.starts_with("JSONLD-")),
+                "code should be JSONLD-prefixed, got {code:?}"
             );
         }
     }

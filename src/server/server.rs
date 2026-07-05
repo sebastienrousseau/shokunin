@@ -173,6 +173,21 @@ pub fn handle_server(
     paths: &Paths,
     serve_dir: &PathBuf,
 ) -> Result<(), SsgError> {
+    handle_server_with(log_file, date, paths, serve_dir, &HttpTransport)
+}
+
+/// Transport-injected body of [`handle_server`].
+///
+/// Extracted so tests can drive every branch (logging, serve-dir
+/// preparation, address resolution) with a recording transport instead
+/// of a blocking `http_handle::Server`.
+fn handle_server_with<T: ServeTransport>(
+    log_file: &mut fs::File,
+    date: &str,
+    paths: &Paths,
+    serve_dir: &PathBuf,
+    transport: &T,
+) -> Result<(), SsgError> {
     // Log server initialization
     writeln!(log_file, "[{date}] INFO process: Server initialization")
         .map_err(|source| SsgError::Io {
@@ -189,18 +204,26 @@ pub fn handle_server(
     println!("\nStarting server at http://{addr}");
     println!("Serving content from: {}", serve_dir.display());
 
-    let dir = serve_dir
+    let dir = serve_dir_to_string(serve_dir)?;
+    let bind = addr;
+
+    transport.start(&bind, &dir)
+}
+
+/// Converts the serve directory to the `String` root the transport
+/// expects, rejecting non-UTF-8 paths.
+///
+/// Extracted from [`handle_server_with`] so the invalid-UTF-8 branch is
+/// testable in memory — APFS refuses to create non-UTF-8 paths, so the
+/// branch can never be reached through the filesystem on macOS.
+fn serve_dir_to_string(serve_dir: &Path) -> Result<String, SsgError> {
+    serve_dir
         .to_str()
         .ok_or_else(|| SsgError::Validation {
             field: "serve_dir".to_string(),
             message: "serve dir contains invalid UTF-8".to_string(),
-        })?
-        .to_string();
-    let bind = addr;
-
-    let server = Server::new(&bind, &dir);
-    let _ = server.start();
-    Ok(())
+        })
+        .map(str::to_string)
 }
 
 /// Generates a root index.html that reads the browser's language
@@ -409,6 +432,28 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
+    fn serve_site_with_propagates_invalid_utf8_address_error() {
+        // `serve_site_with`'s own `build_serve_address(site_dir)?` call
+        // site has its own early-return branch distinct from
+        // `build_serve_address`'s unit tests — exercise it directly so
+        // the transport is never invoked when address resolution fails.
+        use std::os::unix::ffi::OsStringExt;
+        let bad =
+            PathBuf::from(std::ffi::OsString::from_vec(vec![0xff, 0xfe, 0xfd]));
+        let transport = RecordingTransport::default();
+        let err = serve_site_with(&bad, &transport).unwrap_err();
+        assert!(
+            err.to_string().contains("invalid UTF-8"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            transport.calls.lock().unwrap().is_empty(),
+            "transport must not run when address resolution fails"
+        );
+    }
+
+    #[test]
     fn http_transport_implements_serve_transport() {
         // Smoke test that HttpTransport satisfies the trait. We don't
         // actually call .start() here because that would bind a port.
@@ -568,6 +613,140 @@ mod tests {
         let res =
             handle_server(&mut log_file, "2026-06-06", &paths, &serve_dir);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn handle_server_with_drives_transport_after_preparing_dir() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("a.html"), "x").unwrap();
+        let serve = dir.path().join("serve");
+        let paths = Paths {
+            site,
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+        let mut log_file = tempfile::tempfile().unwrap();
+        let transport = RecordingTransport::default();
+        let calls = transport.calls.clone();
+
+        handle_server_with(
+            &mut log_file,
+            "2026-07-04",
+            &paths,
+            &serve,
+            &transport,
+        )
+        .unwrap();
+
+        let recorded = calls.lock().unwrap();
+        assert_eq!(recorded.len(), 1, "transport must be started once");
+        assert_eq!(recorded[0].1, serve.to_str().unwrap());
+        assert!(serve.join("a.html").exists(), "site files copied");
+    }
+
+    #[test]
+    fn handle_server_with_fails_when_prepare_serve_dir_errors() {
+        // Log write succeeds, but `paths.site` doesn't exist, so
+        // `prepare_serve_dir`'s call to `verify_and_copy_files_async`
+        // errors. This exercises `handle_server_with`'s own
+        // `prepare_serve_dir(paths, serve_dir)?` early-return branch
+        // (distinct from `prepare_serve_dir`'s own unit tests) and
+        // confirms the transport never starts.
+        let dir = tempdir().unwrap();
+        let paths = Paths {
+            site: dir.path().join("does-not-exist"),
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+        let serve = dir.path().join("serve");
+        let mut log_file = tempfile::tempfile().unwrap();
+        let transport = RecordingTransport::default();
+
+        let err = handle_server_with(
+            &mut log_file,
+            "2026-07-05",
+            &paths,
+            &serve,
+            &transport,
+        )
+        .unwrap_err();
+        assert!(
+            format!("{err}").contains("does-not-exist")
+                || format!("{err}").contains("does not exist"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            transport.calls.lock().unwrap().is_empty(),
+            "transport must not start when prepare_serve_dir fails"
+        );
+    }
+
+    #[test]
+    fn handle_server_with_fails_when_log_file_is_read_only() {
+        // A read-only handle makes the very first writeln fail,
+        // exercising the log-write error branch.
+        let dir = tempdir().unwrap();
+        let log_path = dir.path().join("server.log");
+        fs::write(&log_path, "").unwrap();
+        let mut read_only = fs::File::open(&log_path).unwrap();
+
+        let paths = Paths {
+            site: dir.path().join("site"),
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+        let serve = dir.path().join("serve");
+        let transport = RecordingTransport::default();
+
+        let err = handle_server_with(
+            &mut read_only,
+            "2026-07-04",
+            &paths,
+            &serve,
+            &transport,
+        )
+        .unwrap_err();
+        assert!(format!("{err}").contains("log"), "unexpected error: {err}");
+        assert!(
+            transport.calls.lock().unwrap().is_empty(),
+            "transport must not start when logging fails"
+        );
+    }
+
+    #[test]
+    fn serve_dir_to_string_accepts_utf8_path() {
+        let s = serve_dir_to_string(Path::new("/tmp/serve")).unwrap();
+        assert_eq!(s, "/tmp/serve");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn serve_dir_to_string_rejects_invalid_utf8_path() {
+        use std::os::unix::ffi::OsStringExt;
+        let bad =
+            PathBuf::from(std::ffi::OsString::from_vec(vec![0xff, 0xfe, 0xfd]));
+        let err = serve_dir_to_string(&bad).unwrap_err();
+        assert!(format!("{err}").contains("invalid UTF-8"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn generate_locale_redirect_fails_on_readonly_dir() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("frozen");
+        fs::create_dir_all(&site).unwrap();
+        fs::set_permissions(&site, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let res = generate_locale_redirect(&site, &["en".to_string()], "en");
+
+        let _ = fs::set_permissions(&site, fs::Permissions::from_mode(0o755));
+        assert!(res.is_err(), "write into read-only dir must fail");
     }
 
     #[test]

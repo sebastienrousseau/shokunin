@@ -81,21 +81,46 @@ impl Plugin for SbomPlugin {
         });
 
         let sbom_path = ctx.site_dir.join("sbom.cdx.json");
-        let content = serde_json::to_string_pretty(&sbom)
-            .map_err(|e| SsgError::io(e, &sbom_path))?;
+        let content =
+            serialize_sbom(&sbom).map_err(|e| SsgError::io(e, &sbom_path))?;
         fs::write(&sbom_path, content).with_path(&sbom_path)?;
 
         Ok(())
     }
 }
 
+/// Serialize the SBOM with a fault-injection hook so tests can drive
+/// the error branch (pretty-printing a `Value` cannot fail in
+/// practice).
+fn serialize_sbom(sbom: &serde_json::Value) -> serde_json::Result<String> {
+    fail_point!("postprocess::sbom-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: postprocess::sbom-serialize"
+        )
+    ));
+    serde_json::to_string_pretty(sbom)
+}
+
 fn current_timestamp() -> String {
+    // Reproducible builds (SECURITY.md convention, determinism.yml CI
+    // gate): a wall-clock timestamp makes sbom.cdx.json differ across
+    // otherwise-identical builds, so `SOURCE_DATE_EPOCH` wins when set.
+    if let Ok(epoch) = std::env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(secs) = epoch.trim().parse::<u64>() {
+            return timestamp_from_secs(secs);
+        }
+    }
     let now = std::time::SystemTime::now();
     let duration = now
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
-    let secs = duration.as_secs();
+    timestamp_from_secs(duration.as_secs())
+}
 
+/// Formats a Unix-epoch second count as `YYYY-MM-DDThh:mm:ssZ`.
+/// Split from [`current_timestamp`] so the leap-year arithmetic is
+/// testable with fixed inputs rather than depending on today's date.
+fn timestamp_from_secs(secs: u64) -> String {
     let days_since_epoch = secs / 86400;
     let seconds_of_day = secs % 86400;
 
@@ -157,16 +182,37 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(source_date_epoch)]
+    fn current_timestamp_honours_source_date_epoch() {
+        // determinism.yml gate: SOURCE_DATE_EPOCH must pin the SBOM
+        // timestamp so double builds hash identically.
+        let prev = std::env::var("SOURCE_DATE_EPOCH").ok();
+        std::env::set_var("SOURCE_DATE_EPOCH", "1700000000");
+        let pinned = current_timestamp();
+        std::env::set_var("SOURCE_DATE_EPOCH", "not-a-number");
+        let fallback = current_timestamp();
+        match prev {
+            Some(v) => std::env::set_var("SOURCE_DATE_EPOCH", v),
+            None => std::env::remove_var("SOURCE_DATE_EPOCH"),
+        }
+        assert_eq!(pinned, "2023-11-14T22:13:20Z");
+        // Unparseable epoch falls back to wall clock — assert only the
+        // shape so the test never depends on today's date.
+        assert!(fallback.ends_with('Z') && fallback.len() == 20);
+    }
+
+    #[test]
+    #[serial_test::parallel]
     fn test_sbom_plugin_generates_valid_cyclonedx_sbom() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        SbomPlugin.after_compile(&ctx)?;
+        SbomPlugin.after_compile(&ctx).unwrap();
 
         let sbom_path = tmp.path().join("sbom.cdx.json");
         assert!(sbom_path.exists());
 
-        let content = fs::read_to_string(&sbom_path)?;
-        let sbom: serde_json::Value = serde_json::from_str(&content)?;
+        let content = fs::read_to_string(&sbom_path).unwrap();
+        let sbom: serde_json::Value = serde_json::from_str(&content).unwrap();
 
         assert_eq!(sbom["bomFormat"], "CycloneDX");
         assert_eq!(sbom["specVersion"], "1.5");
@@ -181,11 +227,12 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_sbom_plugin_nonexistent_site_dir() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let non_existent = tmp.path().join("non_existent_dir");
         let ctx = test_ctx(&non_existent);
-        SbomPlugin.after_compile(&ctx)?;
+        SbomPlugin.after_compile(&ctx).unwrap();
         let sbom_path = non_existent.join("sbom.cdx.json");
         assert!(!sbom_path.exists());
         Ok(())
@@ -197,5 +244,85 @@ mod tests {
         assert!(ts.contains('T'));
         assert!(ts.ends_with('Z'));
         assert_eq!(ts.len(), 20); // YYYY-MM-DDThh:mm:ssZ is exactly 20 chars
+    }
+
+    // -----------------------------------------------------------------
+    // timestamp_from_secs: deterministic leap-year arithmetic
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_timestamp_from_secs_epoch_start() {
+        assert_eq!(timestamp_from_secs(0), "1970-01-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_timestamp_from_secs_leap_day() {
+        // 2024-02-29T12:24:56Z — exercises the leap-year month table.
+        assert_eq!(timestamp_from_secs(1_709_209_496), "2024-02-29T12:24:56Z");
+    }
+
+    #[test]
+    fn test_timestamp_from_secs_year_2000_century_leap() {
+        // 2000 is divisible by 400 → leap; 2000-03-01 lands after the
+        // 29-day February.
+        assert_eq!(timestamp_from_secs(951_868_800), "2000-03-01T00:00:00Z");
+    }
+
+    #[test]
+    fn test_timestamp_from_secs_non_leap_century() {
+        // A plain non-leap year: 2026-07-01.
+        assert_eq!(timestamp_from_secs(1_782_864_000), "2026-07-01T00:00:00Z");
+    }
+
+    // -----------------------------------------------------------------
+    // Error path: sbom.cdx.json exists as a directory
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel]
+    fn test_after_compile_errors_when_sbom_path_is_a_directory() {
+        let tmp = tempdir().unwrap();
+        fs::create_dir_all(tmp.path().join("sbom.cdx.json")).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = SbomPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("sbom.cdx.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn after_compile_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::sbom-serialize");
+        fail::cfg("postprocess::sbom-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = SbomPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("sbom.cdx.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::sbom-serialize"),
+            "got: {msg}"
+        );
     }
 }

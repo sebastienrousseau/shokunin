@@ -41,6 +41,7 @@ use crate::plugin::{Plugin, PluginContext};
 use crate::walk::walk_files_bounded_depth;
 use crate::MAX_DIR_DEPTH;
 use pulldown_cmark::{html as cmark_html, Options, Parser};
+use std::borrow::Cow;
 use std::fs;
 
 /// Plugin that expands GFM Markdown extensions in source files.
@@ -344,20 +345,32 @@ fn render_with_options(markdown: &str, extra: Options) -> String {
     let parser = Parser::new_ext(markdown, opts);
     let mut html = String::with_capacity(markdown.len() + 64);
     cmark_html::push_html(&mut html, parser);
-    html.trim_end().to_string()
+    // Trim trailing whitespace in place instead of cloning the whole
+    // rendered block (issue #578, plan §4 3.1).
+    let trimmed_len = html.trim_end().len();
+    html.truncate(trimmed_len);
+    html
 }
 
 /// Replaces `~~text~~` with `<del>text</del>` outside of inline code spans.
-fn apply_strikethrough(line: &str) -> String {
+///
+/// Single pass that only allocates when a complete `~~…~~` pair is
+/// actually replaced; lines without strikethrough are returned borrowed
+/// (issue #578, plan §4 3.1). Unchanged spans are copied slice-wise, so
+/// multi-byte UTF-8 text between replacements is preserved verbatim
+/// (the previous byte-by-byte `push(byte as char)` mangled it).
+fn apply_strikethrough(line: &str) -> Cow<'_, str> {
     let bytes = line.as_bytes();
-    let mut out = String::with_capacity(line.len());
+    // Lazily-created output buffer; `copied` tracks how much of `line`
+    // has already been flushed into it.
+    let mut out: Option<String> = None;
+    let mut copied = 0usize;
     let mut i = 0usize;
     let mut in_code = false;
 
     while i < bytes.len() {
         if bytes[i] == b'`' {
             in_code = !in_code;
-            out.push('`');
             i += 1;
             continue;
         }
@@ -368,17 +381,28 @@ fn apply_strikethrough(line: &str) -> String {
         {
             // Find closing `~~`.
             if let Some(close) = find_strike_close(line, i + 2) {
-                out.push_str("<del>");
-                out.push_str(&line[i + 2..close]);
-                out.push_str("</del>");
+                let buf = out.get_or_insert_with(|| {
+                    String::with_capacity(line.len() + 16)
+                });
+                buf.push_str(&line[copied..i]);
+                buf.push_str("<del>");
+                buf.push_str(&line[i + 2..close]);
+                buf.push_str("</del>");
                 i = close + 2;
+                copied = i;
                 continue;
             }
         }
-        out.push(bytes[i] as char);
         i += 1;
     }
-    out
+
+    match out {
+        Some(mut buf) => {
+            buf.push_str(&line[copied..]);
+            Cow::Owned(buf)
+        }
+        None => Cow::Borrowed(line),
+    }
 }
 
 /// Returns the byte offset of the next `~~` after `from`, or `None`.
@@ -594,6 +618,39 @@ mod tests {
     }
 
     #[test]
+    fn apply_strikethrough_borrows_when_no_delimiter() {
+        // Issue #578: the no-strikethrough fast path must not allocate.
+        assert!(matches!(
+            apply_strikethrough("plain line, nothing to do"),
+            Cow::Borrowed(_)
+        ));
+    }
+
+    #[test]
+    fn apply_strikethrough_preserves_multibyte_text() {
+        assert_eq!(
+            apply_strikethrough("café ~~ancien~~ nouveau — été"),
+            "café <del>ancien</del> nouveau — été"
+        );
+    }
+
+    #[test]
+    fn expand_gfm_multiline_without_strikethrough_unchanged() {
+        // Multiline body with no GFM constructs: byte-identical output.
+        let input = "# Title\n\nfirst plain line\nsecond plain line\n\nthird paragraph line\n";
+        assert_eq!(expand_gfm(input, None), input);
+    }
+
+    #[test]
+    fn expand_gfm_mixed_lines_only_transforms_strikethrough() {
+        let input = "keep this line\n~~gone~~ stays\nanother plain line\n";
+        assert_eq!(
+            expand_gfm(input, None),
+            "keep this line\n<del>gone</del> stays\nanother plain line\n"
+        );
+    }
+
+    #[test]
     fn expand_gfm_renders_table_block() {
         let input = "Intro\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nOutro\n";
         let out = expand_gfm(input, None);
@@ -659,7 +716,9 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
     fn plugin_transforms_markdown_files_in_place() {
+        crate::test_support::init_logger();
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");
         fs::create_dir_all(&content).unwrap();
@@ -797,5 +856,239 @@ mod tests {
             ),
             "![alt](data:image/png;base64,123)"
         );
+    }
+
+    #[test]
+    fn split_frontmatter_unterminated_fence_treats_all_as_body() {
+        // Opening `---\n` with no closing fence at all: both `find`
+        // branches miss and the whole input is the body.
+        let input = "---\ntitle: broken frontmatter with no closing fence";
+        let (fm, body) = split_frontmatter(input);
+        assert_eq!(fm, "");
+        assert_eq!(body, input);
+    }
+
+    #[test]
+    fn expand_gfm_without_trailing_newline_pops_added_newline() {
+        // The line-walk emits a trailing '\n'; when the source body has
+        // none, expand_gfm must pop it to stay byte-faithful.
+        let out = expand_gfm("~~a~~", None);
+        assert_eq!(out, "<del>a</del>");
+    }
+
+    #[test]
+    fn is_task_list_line_rejects_malformed_checkbox_syntax() {
+        // No space after the bullet.
+        assert!(!is_task_list_line("-[ ] task"));
+        // Invalid checkbox state character.
+        assert!(!is_task_list_line("- [y] task"));
+        // Missing closing bracket.
+        assert!(!is_task_list_line("- [x} task"));
+        // No space after the checkbox.
+        assert!(!is_task_list_line("- [x]task"));
+    }
+
+    #[test]
+    fn apply_strikethrough_skips_code_span_inside_strike_content() {
+        // The closing-delimiter scan must jump over inline code spans
+        // between the opening and closing `~~`.
+        assert_eq!(
+            apply_strikethrough("~~has `tick` inside~~"),
+            "<del>has `tick` inside</del>"
+        );
+    }
+
+    #[test]
+    fn rewrite_html_images_unterminated_src_quote_left_unchanged() {
+        // src attribute opened but never closed before `>`: the value
+        // scan finds no closing quote and the tag is left as-is.
+        let input = "<img src=\"unterminated.png>";
+        assert_eq!(rewrite_html_images(input, "https://cdn/"), input);
+    }
+
+    #[test]
+    fn rewrite_html_images_without_src_attribute_left_unchanged() {
+        let input = "<img alt=\"no source here\">";
+        assert_eq!(rewrite_html_images(input, "https://cdn/"), input);
+    }
+
+    #[test]
+    fn expand_gfm_table_ends_without_blank_line_separator() {
+        // No blank line between the table and the next paragraph: the
+        // `find_table_end` scan must stop on the non-empty,
+        // pipe-free "Outro" line via its second OR operand, not the
+        // "line is blank" operand exercised by the sibling test above.
+        let input = "Intro\n\n| a | b |\n|---|---|\n| 1 | 2 |\nOutro\n";
+        let out = expand_gfm(input, None);
+        assert!(out.contains("<table>"), "got: {out}");
+        assert!(out.contains("<td>1</td>"));
+        assert!(out.contains("Outro"));
+    }
+
+    #[test]
+    fn expand_gfm_task_list_followed_by_plain_text() {
+        // `find_task_list_end` must stop as soon as a non-task-list
+        // line is encountered, rather than only ever running off the
+        // end of the `lines` slice (as the other task-list test does).
+        let input = "- [ ] one\n- [x] two\nplain paragraph\n";
+        let out = expand_gfm(input, None);
+        assert!(out.contains("<ul>"), "got: {out}");
+        assert!(out.contains("plain paragraph"));
+    }
+
+    #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn before_compile_applies_cdn_prefix_from_config() {
+        // The cdn_prefix extraction closures in `before_compile`
+        // (`ctx.config.as_ref().and_then(..).map(..)`) are only
+        // exercised when a real `SsgConfig` with `cdn_prefix` set is
+        // threaded through the plugin context — the `expand_gfm`
+        // tests above call the free function directly and never
+        // reach this code path.
+        use crate::cmd::SsgConfig;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("post.md"), "![Alt](/images/pic.png)\n")
+            .unwrap();
+
+        let cfg = SsgConfig::builder()
+            .cdn_prefix(Some("https://cdn.example.com/".to_string()))
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &content,
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            cfg,
+        );
+        MarkdownExtPlugin.before_compile(&ctx).unwrap();
+
+        let post = fs::read_to_string(content.join("post.md")).unwrap();
+        assert!(
+            post.contains("https://cdn.example.com//images/pic.png"),
+            "got: {post}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_propagates_walk_error_from_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let locked = content.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable subdir must surface an error");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_real_read_permission_denied_returns_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let file = content.join("locked.md");
+        fs::write(&file, "# Hi").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        let err = result.expect_err("permission-denied read must surface");
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_real_write_permission_denied_returns_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let file = content.join("post.md");
+        // Content that expand_gfm rewrites, so the write site is reached.
+        fs::write(&file, "~~old~~ new\n").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        let err = result.expect_err("permission-denied write must surface");
+        assert!(!format!("{err}").is_empty());
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::{Plugin, PluginContext};
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop (mirrors the
+    /// convention in `tests/fault_injection.rs`).
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn before_compile_read_failpoint_propagates() {
+        let _guard = FailGuard("markdown_ext::read");
+        fail::cfg("markdown_ext::read", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().to_path_buf();
+        fs::write(content.join("post.md"), "# Hi").unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let err = MarkdownExtPlugin
+            .before_compile(&ctx)
+            .expect_err("injected read failure must propagate");
+        assert!(format!("{err:?}").contains("injected: markdown_ext::read"));
+    }
+
+    #[test]
+    #[serial]
+    fn before_compile_write_failpoint_propagates() {
+        let _guard = FailGuard("markdown_ext::write");
+        fail::cfg("markdown_ext::write", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().to_path_buf();
+        // Content that expand_gfm rewrites, so the write site is reached.
+        fs::write(content.join("post.md"), "~~old~~ new\n").unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let err = MarkdownExtPlugin
+            .before_compile(&ctx)
+            .expect_err("injected write failure must propagate");
+        assert!(format!("{err:?}").contains("injected: markdown_ext::write"));
     }
 }

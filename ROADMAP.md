@@ -8,7 +8,7 @@ Public digital publishing for Tier-1 corporate and financial institutions has ev
 
 The open-source Rust [static-site-generator](https://github.com/sebastienrousseau/static-site-generator) represents a paradigm shift. By moving security, accessibility audits, internationalisation, and AI content pipelines entirely to compile-time, it treats web publishing not as a design challenge, but as an auditable, secure-by-default software engineering pipeline.
 
-This strategic deep dive analyzes the current architectural state of `static-site-generator` (v0.0.41), identifies structural gaps between its documented promises and code realities, exposes what other critical enterprise features are missing, and establishes an ambitious engineering roadmap leading to a 1.0 release and beyond.
+This strategic deep dive analyzes the current architectural state of `static-site-generator` (v0.0.41), identifies structural gaps between its documented promises and code realities, exposes what other critical enterprise features are missing, and establishes an ambitious capability roadmap (see the ADR-0009 versioning note above for why this is not a "1.0 release" plan).
 
 ---
 
@@ -84,7 +84,19 @@ While the plugin pipeline is parallelized via Rayon, standard synchronous disk w
 
 ---
 
-## The Strategic 1.0 Roadmap
+## The Strategic Roadmap
+
+> **Versioning note (2026-07-04, ADR-0009):** the phase labels below
+> ("0.1.0", "1.0.0") predate a deliberate versioning-policy decision:
+> `ssg` stays on `0.0.x` — incrementing by `0.0.1` per release — through
+> `0.0.999` at the earliest, to mature the API surface and enterprise
+> adoption before making any SemVer compatibility commitment. Read
+> "Phase 2" and "Phase 3" below as **capability milestones**, not
+> version-number targets; they will ship as ordinary `0.0.x` releases
+> (see [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md)
+> for the full rationale). Many Phase 1/2 items have already shipped in
+> releases since this document's June 2026 research date — check
+> `CHANGELOG.md` before treating any item here as outstanding.
 
 The following roadmap integrates both the resolved gaps and the newly discovered enterprise-grade capabilities into a structured, chronological release framework.
 
@@ -96,7 +108,7 @@ The following roadmap integrates both the resolved gaps and the newly discovered
 4. **Automate HrefLang and Multi-Locale Mapping:** Automatically detect parallel translated pages in multilingual builds and inject standard Google-compliant `<link rel="alternate" hreflang="..." />` tags into the head of each compiled HTML file.  
 5. **JSON Feed 1.1 Support:** Ship a dedicated JSON Feed 1.1 emitter alongside standard RSS 2.0 and Atom 1.0 syndication channels.
 
-### Phase 2: 0.1.0 (The Credibility and Incremental Minor — 2-3 Months)
+### Phase 2: The Credibility and Incremental Milestone (ships as a `0.0.x` release, not `0.1.0` — see versioning note above)
 
 1. **Populate `DepGraph` and Enable `--incremental`:** Fully wire `DepGraph` to track template-to-page and markdown-to-page dependencies. Implement a cache invalidation layer and wire the `--incremental` CLI flag, targeting sub-200ms rebuilds for warm-cache environments.  
 2. **Streaming AST Rewrite via `lol_html`:** Replace fragile string rewriting in `image_plugin.rs`, `search.rs`, and CSP injections with a streaming, zero-copy HTML rewriter powered by `lol_html`.  
@@ -104,7 +116,7 @@ The following roadmap integrates both the resolved gaps and the newly discovered
 4. **Unified Command CLI:** Re-architect the compiler interface to support standard subcommands: `ssg dev`, `ssg build`, `ssg check` (accessibility/SEO audit), and `ssg deploy`.  
 5. **Deterministic Inference Cache:** Implement a content-hash caching layer for all local LLM translation, summarisation, and metadata extraction tasks.
 
-### Phase 3: 1.0.0 (The Enterprise and Production Major — 6-12 Months)
+### Phase 3: The Enterprise and Production Milestone (ships as `0.0.x` releases, not `1.0.0` — see versioning note above; no target date)
 
 1. **Zero-Trust WASM Plugin Sandboxing:** Embed a WebAssembly runtime (`wasmtime` or `wasmer`) to execute third-party plugins in a fully sandboxed environment with capability-based filesystem and network access.  
 2. **Local Semantic Vector Search (Local RAG):** Embed a local Rust-native embedding model (via `candle` or `ort`) to compile dense paragraph embeddings into a compact index, enabling private, client-side semantic search.  
@@ -116,9 +128,9 @@ The following roadmap integrates both the resolved gaps and the newly discovered
 
 ## Competitor Matrix (2026 Landscape)
 
-The following matrix compares `static-site-generator` (v1.0 target) against the leading web publishing engines of 2026:
+The following matrix compares `static-site-generator` (post-Phase-3 capability target — see the versioning note above; no `1.0` release is scheduled) against the leading web publishing engines of 2026:
 
-| Capability | static-site-generator v1.0 | Hugo v0.155+ | Zola v0.19+ | Astro 5 | Eleventy 3 |
+| Capability | static-site-generator (post-Phase-3) | Hugo v0.155+ | Zola v0.19+ | Astro 5 | Eleventy 3 |
 | :---- | :---- | :---- | :---- | :---- | :---- |
 | **Language / Runtime** | Rust (Zero Unsafe) | Go | Rust | JS (Node/V8) | JS (Node/V8) |
 | **A11y Build Gate** | Build-Time AST Validation | None | None | Post-build Linter | Post-build Linter |
@@ -131,7 +143,7 @@ The following matrix compares `static-site-generator` (v1.0 target) against the 
 
 ---
 
-## Headline Positioning at 1.0
+## Headline Positioning (Post-Phase-3 Capability Set)
 
 "The static site generator engineered as secure-by-default software infrastructure. Author content with local-first AI pipelines, compile 100,000+ pages with parallel streaming performance, enforce WCAG 2.2 AA and strict CSP/SRI build gates, and ship sandboxed dynamic islands—all within a single, memory-safe Rust binary."
 

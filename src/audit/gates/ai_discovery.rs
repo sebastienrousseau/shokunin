@@ -121,9 +121,8 @@ mod tests {
         let root = tmp.path().to_path_buf();
         for (name, body) in files {
             let p = root.join(name);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(name) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, body).unwrap();
         }
         std::mem::forget(tmp);
@@ -165,7 +164,7 @@ mod tests {
         assert!(f
             .iter()
             .any(|x| x.code.as_deref() == Some("AI-PLUGIN-JSON-INVALID")
-                && matches!(x.severity, Severity::Error)));
+                && x.severity == Severity::Error));
     }
 
     #[test]
@@ -179,7 +178,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("AI-LLMS-MISSING"))
             .expect("missing llms.txt finding");
-        assert!(matches!(llms.severity, Severity::Warn));
+        assert_eq!(llms.severity, Severity::Warn);
     }
 
     #[test]
@@ -194,7 +193,7 @@ mod tests {
             .iter()
             .find(|x| x.code.as_deref() == Some("AI-LLMS-EMPTY"))
             .expect("empty llms.txt finding");
-        assert!(matches!(empty.severity, Severity::Warn));
+        assert_eq!(empty.severity, Severity::Warn);
     }
 
     #[test]
@@ -227,6 +226,31 @@ mod tests {
         ]);
         let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
         assert!(f.is_empty(), "got {f:?}");
+    }
+
+    #[test]
+    fn unreadable_llms_txt_is_tolerated() {
+        // llms.txt exists but is a directory: read_to_string fails and
+        // the gate stays silent (presence is what the check asserts).
+        let s = site_with_files(&[
+            ("agents.txt", "# agents\n"),
+            (".well-known/ai-plugin.json", r#"{"schema_version":"v1"}"#),
+        ]);
+        std::fs::create_dir_all(s.root.join("llms.txt")).unwrap();
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "unreadable llms.txt must not panic: {f:?}");
+    }
+
+    #[test]
+    fn unreadable_ai_plugin_json_is_tolerated() {
+        let s = site_with_files(&[
+            ("llms.txt", "# llms\n"),
+            ("agents.txt", "# agents\n"),
+        ]);
+        std::fs::create_dir_all(s.root.join(".well-known/ai-plugin.json"))
+            .unwrap();
+        let f = AiDiscoveryGate.run(&s, &AuditOptions::default());
+        assert!(f.is_empty(), "unreadable plugin json must skip: {f:?}");
     }
 
     #[test]

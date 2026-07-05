@@ -173,6 +173,32 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn write_failure_is_reported_as_io_error() {
+        // Site dir exists but is read-only, so the `fs::write` at the
+        // end of `after_compile` fails and the error is surfaced with
+        // the robots.txt path attached.
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555))
+            .unwrap();
+
+        let plugin = RobotsPlugin::new("https://example.com");
+        let err = plugin
+            .after_compile(&ctx(dir.path()))
+            .expect_err("write into a read-only site dir must fail");
+        assert!(
+            err.to_string().contains("robots.txt"),
+            "error should carry the robots.txt path, got: {err}"
+        );
+
+        // Restore permissions so the tempdir can be cleaned up.
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755))
+            .unwrap();
+    }
+
     #[test]
     fn robots_txt_preserves_existing_disallow() {
         let dir = tempdir().unwrap();

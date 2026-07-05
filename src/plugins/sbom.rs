@@ -86,11 +86,10 @@ impl Plugin for SbomPlugin {
         }
         let sbom = build_sbom();
         let path = ctx.site_dir.join(Self::sbom_path());
-        let json =
-            serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
-                path: path.clone(),
-                source: std::io::Error::other(e),
-            })?;
+        let json = serialize_sbom(&sbom).map_err(|e| SsgError::Io {
+            path: path.clone(),
+            source: std::io::Error::other(e),
+        })?;
         fs::write(&path, json).with_path(&path)?;
         log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
         Ok(())
@@ -160,11 +159,33 @@ fn build_sbom() -> serde_json::Value {
     })
 }
 
+/// Serialize the SBOM with a fault-injection hook so tests can drive
+/// the error branch (pretty-printing a `Value` built from hardcoded
+/// strings and numbers cannot fail in practice).
+fn serialize_sbom(sbom: &serde_json::Value) -> serde_json::Result<String> {
+    fail_point!("sbom::serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: sbom::serialize"
+        )
+    ));
+    serde_json::to_string_pretty(sbom)
+}
+
 /// Cheap ISO 8601 timestamp without pulling in a date crate.
 /// Uses `std::time::SystemTime` and converts `UNIX_EPOCH` seconds to
 /// `YYYY-MM-DDTHH:MM:SSZ` via the proleptic Gregorian calendar.
+///
+/// Reproducible builds (SECURITY.md convention, determinism.yml CI
+/// gate): a wall-clock timestamp makes `sbom.cdx.json` differ across
+/// otherwise-identical builds, so `SOURCE_DATE_EPOCH` wins when set —
+/// same convention as `postprocess::sbom::current_timestamp`.
 fn current_iso_timestamp() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
+    if let Ok(epoch) = std::env::var("SOURCE_DATE_EPOCH") {
+        if let Ok(secs) = epoch.trim().parse::<u64>() {
+            return epoch_to_iso(secs);
+        }
+    }
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -216,6 +237,28 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(source_date_epoch)]
+    fn current_iso_timestamp_honours_source_date_epoch() {
+        // determinism.yml gate: SOURCE_DATE_EPOCH must pin this SBOM's
+        // timestamp too — crate::sbom::SbomPlugin runs after (and
+        // overwrites the output of) postprocess::SbomPlugin, so this
+        // is the timestamp that actually survives into sbom.cdx.json.
+        let prev = std::env::var("SOURCE_DATE_EPOCH").ok();
+        std::env::set_var("SOURCE_DATE_EPOCH", "1700000000");
+        let pinned = current_iso_timestamp();
+        std::env::set_var("SOURCE_DATE_EPOCH", "not-a-number");
+        let fallback = current_iso_timestamp();
+        match prev {
+            Some(v) => std::env::set_var("SOURCE_DATE_EPOCH", v),
+            None => std::env::remove_var("SOURCE_DATE_EPOCH"),
+        }
+        assert_eq!(pinned, "2023-11-14T22:13:20Z");
+        // Unparseable epoch falls back to wall clock — assert only the
+        // shape so the test never depends on today's date.
+        assert!(fallback.ends_with('Z') && fallback.len() == 20);
+    }
+
+    #[test]
     fn build_sbom_includes_required_cyclonedx_fields() {
         let sbom = build_sbom();
         assert_eq!(sbom["bomFormat"], "CycloneDX");
@@ -233,6 +276,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn sbom_plugin_writes_file_after_compile() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -273,6 +317,20 @@ mod tests {
     }
 
     #[test]
+    fn sbom_plugin_is_idempotent_with_single_quoted_attribute() {
+        // Covers the `rel='sbom'` disjunct of the idempotency check —
+        // every other test only exercises the double-quoted form.
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = r"<html><head><link rel='sbom' type='application/vnd.cyclonedx+json' href='/sbom.cdx.json'></head><body></body></html>";
+        let out = SbomPlugin
+            .transform_html(html, Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
     fn sbom_plugin_skips_pages_without_head_tag() {
         let dir = tempdir().unwrap();
         let ctx =
@@ -285,6 +343,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn sbom_plugin_after_compile_noop_when_site_missing() {
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing");
@@ -300,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_write_failure_returns_io_error() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -316,5 +376,45 @@ mod tests {
         assert!(
             matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir)
         );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn after_compile_maps_serialize_failure_to_io_error() {
+        // `serde_json::to_string_pretty` on the hardcoded `build_sbom()`
+        // literal cannot fail in practice, so the only way to exercise
+        // `after_compile`'s serialize-error branch is fault injection.
+        let _guard = FailGuard("sbom::serialize");
+        fail::cfg("sbom::serialize", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+
+        let err = SbomPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("sbom.cdx.json"), "got: {msg}");
+        assert!(msg.contains("injected: sbom::serialize"), "got: {msg}");
     }
 }

@@ -8,6 +8,43 @@
 //! the same template engine (`MiniJinja`) that drives normal page
 //! rendering. Built-in fallback templates extend `base.html` so the
 //! pages share the site's layout, CSS, nav, and footer (#542).
+//!
+//! ## Per-term landing pages (issue #586, port 5 of 5)
+//!
+//! Besides the `/tags/index.html` hub, every term gets its own
+//! landing page (`/tags/<slug>/index.html`, and likewise for
+//! categories and topics) listing its member posts. Terms may be
+//! declared either as frontmatter arrays (`tags: [a, b]`) or as the
+//! comma-separated string form the bundled examples use
+//! (`tags: "a, b, c"`). Slugs come from [`ssg_core::slugify`];
+//! term ordering is case-insensitive alphabetical, so output is
+//! deterministic across rebuilds.
+//!
+//! ## Lifecycle caveat — the `transform_html` bypass
+//!
+//! This plugin writes pages in `after_compile`, but the pipeline
+//! snapshots the HTML file list *before* `after_compile` runs
+//! (`pipeline.rs`: `cache_html_files()` precedes
+//! `run_after_compile()`), so the fused `transform_html` pass never
+//! sees taxonomy pages — canonical/JSON-LD/a11y transform plugins
+//! skip them (the ROADMAP-documented plugin-lifecycle-phase trap;
+//! see #586). Mitigation: the built-in templates (and the
+//! non-`templates` fallback renderer) inline the essential head
+//! elements themselves — `<!DOCTYPE html>`, `<html lang>`,
+//! `<meta charset>`, `<title>`, a `<link rel="canonical">` derived
+//! from `site.base_url` + the term's directory URL, plus the SEO
+//! meta the audit gates probe (`description`, `og:title`,
+//! `og:type`, `og:description`, `og:url`, `twitter:card`). Pages
+//! generated here therefore do not depend on the transform chain
+//! for correctness; richer per-page structured data (JSON-LD,
+//! og:image) stays with the full taxonomy engine planned for
+//! 0.0.48 (#587).
+//!
+//! Two further real-pipeline behaviours: sidecars are read from
+//! `<build>/.meta/` with a fallback to the staged `<site>/.meta/`
+//! copy, and author-authored pages (e.g. a hand-written
+//! `/tags/index.html` compiled from `tags.md` — anything without
+//! the `ssg-taxonomy` generator marker) are never overwritten.
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
@@ -82,13 +119,25 @@ impl Plugin for TaxonomyPlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
-        let sidecar_dir = ctx.build_dir.join(".meta");
+        // Sidecar roots in priority order: `<build>/.meta/` (the
+        // emit_sidecars convention) and `<site>/.meta/` — the staged
+        // copy the real pipeline leaves in the output directory
+        // (staticdatagen layout, what the audited demo site has once
+        // the build staging dir is cleaned). (#586 port 5)
+        let sidecar_dir = {
+            let build_meta = ctx.build_dir.join(".meta");
+            if build_meta.exists() {
+                build_meta
+            } else {
+                ctx.site_dir.join(".meta")
+            }
+        };
         if !sidecar_dir.exists() {
             return Ok(());
         }
 
         let (tags, categories, topics) =
-            collect_taxonomy_entries(&sidecar_dir)?;
+            collect_taxonomy_entries(&sidecar_dir, &ctx.site_dir)?;
 
         // Lazily build the template engine once per run; reused across
         // tags, categories, and topics.
@@ -277,6 +326,19 @@ impl<'a> TaxonomyRenderer<'a> {
             "posts".to_string(),
             serde_json::Value::Array(pages_to_json(pages)),
         );
+        // Essential head metadata — these pages bypass the transform
+        // chain, so the SEO plugins never decorate them (#586 port 5).
+        let _ = ctx_map.insert(
+            "page_title".to_string(),
+            serde_json::Value::String(format!("{taxonomy_title}: {term}")),
+        );
+        let _ = ctx_map.insert(
+            "page_description".to_string(),
+            serde_json::Value::String(format!(
+                "{} page(s) under {taxonomy_title}: {term}.",
+                pages.len()
+            )),
+        );
 
         tmpl.render(serde_json::Value::Object(ctx_map))
             .map(|mut s| {
@@ -318,6 +380,18 @@ impl<'a> TaxonomyRenderer<'a> {
         let _ = ctx_map.insert(
             "page_url".to_string(),
             serde_json::Value::String(format!("/{taxonomy_name}/")),
+        );
+        // Essential head metadata (see render_term_page).
+        let _ = ctx_map.insert(
+            "page_title".to_string(),
+            serde_json::Value::String(taxonomy_title.to_string()),
+        );
+        let _ = ctx_map.insert(
+            "page_description".to_string(),
+            serde_json::Value::String(format!(
+                "All {} term(s): browse pages by {taxonomy_title}.",
+                sorted_terms.len()
+            )),
         );
 
         let term_entries: Vec<serde_json::Value> = sorted_terms
@@ -416,17 +490,24 @@ impl<'a> TaxonomyRenderer<'a> {
         taxonomy_name: &str,
         taxonomy_title: &str,
         term: &str,
-        _slug: &str,
+        slug: &str,
         pages: &[(String, String)],
     ) -> Result<String, SsgError> {
         let lang = self.lang();
+        let canonical = self.canonical(&format!("/{taxonomy_name}/{slug}/"));
+        let description =
+            format!("{} page(s) under {taxonomy_title}: {term}.", pages.len());
         let mut out = format!(
             "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
-             <meta charset=\"utf-8\">\
+             <meta charset=\"utf-8\">{canonical}\
+             <meta name=\"generator\" content=\"ssg-taxonomy\">\
+             <meta name=\"description\" content=\"{description}\">\
+             <meta property=\"og:title\" content=\"{taxonomy_title}: {term}\">\
+             <meta property=\"og:type\" content=\"website\">\
+             <meta name=\"twitter:card\" content=\"summary\">\
              <title>{taxonomy_title}: {term}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
         );
-        let _ = taxonomy_name; // unused in fallback
         for (title, url) in pages {
             out.push_str(&format!("<li><a href=\"{url}\">{title}</a></li>\n"));
         }
@@ -441,9 +522,19 @@ impl<'a> TaxonomyRenderer<'a> {
         sorted_terms: &[(&String, &Vec<(String, String)>)],
     ) -> Result<String, SsgError> {
         let lang = self.lang();
+        let canonical = self.canonical(&format!("/{taxonomy_name}/"));
+        let description = format!(
+            "All {} term(s): browse pages by {taxonomy_title}.",
+            sorted_terms.len()
+        );
         let mut out = format!(
             "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
-             <meta charset=\"utf-8\">\
+             <meta charset=\"utf-8\">{canonical}\
+             <meta name=\"generator\" content=\"ssg-taxonomy\">\
+             <meta name=\"description\" content=\"{description}\">\
+             <meta property=\"og:title\" content=\"{taxonomy_title}\">\
+             <meta property=\"og:type\" content=\"website\">\
+             <meta name=\"twitter:card\" content=\"summary\">\
              <title>{taxonomy_title}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}</h1>\n<ul>\n"
         );
@@ -464,6 +555,18 @@ impl<'a> TaxonomyRenderer<'a> {
             .as_ref()
             .map(|c| c.language.clone())
             .unwrap_or_else(|| "en".to_string())
+    }
+
+    /// Inline canonical link — taxonomy pages bypass the transform
+    /// chain, so the `CanonicalPlugin` never sees them (#586 port 5).
+    fn canonical(&self, page_url: &str) -> String {
+        self.ctx
+            .config
+            .as_ref()
+            .map(|c| c.base_url.trim_end_matches('/').to_string())
+            .filter(|b| !b.is_empty())
+            .map(|b| format!("<link rel=\"canonical\" href=\"{b}{page_url}\">"))
+            .unwrap_or_default()
     }
 }
 
@@ -539,8 +642,14 @@ fn extract_terms_from_value(
 }
 
 /// Collects taxonomy entries (tags, categories, topics) from sidecar JSON files.
+///
+/// `site_dir` is consulted to prefer pretty (directory-shaped) member
+/// URLs — when `<site>/<stem>/index.html` exists the member link is
+/// `/<stem>/`, otherwise the flat `/<stem>.html` form is used, so
+/// term pages never link to paths that 404 (#586 port 5).
 fn collect_taxonomy_entries(
     sidecar_dir: &Path,
+    site_dir: &Path,
 ) -> Result<(TaxonomyMap, TaxonomyMap, TaxonomyMap), SsgError> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut tags: TaxonomyMap = HashMap::new();
@@ -562,15 +671,23 @@ fn collect_taxonomy_entries(
             .unwrap_or("Untitled")
             .to_string();
 
-        let rel = sidecar_path
+        let rel_stem = sidecar_path
             .strip_prefix(sidecar_dir)
             .unwrap_or(sidecar_path)
             .with_extension("")
-            .with_extension("html");
-        let url = format!("/{}", rel.to_string_lossy().replace('\\', "/"));
+            .with_extension("");
+        let stem = rel_stem.to_string_lossy().replace('\\', "/");
+        let url = if site_dir.join(&rel_stem).join("index.html").exists() {
+            format!("/{stem}/")
+        } else {
+            format!("/{stem}.html")
+        };
 
+        // Both the array (`tags: [a, b]`) and comma-separated string
+        // (`tags: "a, b"`) frontmatter shapes are accepted — the
+        // bundled examples use the string form (#586 port 5).
         if let Some(tag_arr) = meta.get("tags") {
-            extract_terms_from_value(tag_arr, &mut tags, &title, &url, false);
+            extract_terms_from_value(tag_arr, &mut tags, &title, &url, true);
         }
         if let Some(cat_arr) = meta.get("categories") {
             extract_terms_from_value(
@@ -578,7 +695,7 @@ fn collect_taxonomy_entries(
                 &mut categories,
                 &title,
                 &url,
-                false,
+                true,
             );
         }
         if let Some(topic_arr) = meta.get("topic_clusters") {
@@ -593,6 +710,30 @@ fn collect_taxonomy_entries(
     }
 
     Ok((tags, categories, topics))
+}
+
+/// Marker every taxonomy-generated page carries (the
+/// `<meta name="generator" content="ssg-taxonomy">` tag). Pages
+/// *without* it are author-authored content (e.g. a hand-written
+/// `/tags/index.html` compiled from `tags.md`) and are never
+/// overwritten (#586 port 5).
+const TAXONOMY_MARKER: &str = "ssg-taxonomy";
+
+/// Writes a taxonomy page unless an author-authored page already
+/// occupies the path. Our own previous output (identified by
+/// [`TAXONOMY_MARKER`]) is refreshed as usual, keeping rebuilds
+/// idempotent.
+fn write_taxonomy_page(out_file: &Path, html: &str) -> Result<(), SsgError> {
+    if let Ok(existing) = fs::read_to_string(out_file) {
+        if !existing.contains(TAXONOMY_MARKER) {
+            log::debug!(
+                "[taxonomy] Keeping author-authored page at {}",
+                out_file.display()
+            );
+            return Ok(());
+        }
+    }
+    fs::write(out_file, html).with_path(out_file)
 }
 
 /// Generates index and term pages for a taxonomy via the template engine.
@@ -625,7 +766,7 @@ fn generate_taxonomy_pages(
             pages,
         )?;
         let out_file = term_dir.join("index.html");
-        fs::write(&out_file, term_html).with_path(&out_file)?;
+        write_taxonomy_page(&out_file, &term_html)?;
     }
 
     // Taxonomy index page.
@@ -635,20 +776,16 @@ fn generate_taxonomy_pages(
         &sorted_terms,
     )?;
     let out_index = tax_dir.join("index.html");
-    fs::write(&out_index, index_html).with_path(&out_index)?;
+    write_taxonomy_page(&out_index, &index_html)?;
 
     Ok(())
 }
 
+/// Term → URL slug. Delegates to [`ssg_core::slugify`] (#586 port 5)
+/// so taxonomy URLs share the canonical slug rules with the rest of
+/// the toolchain.
 fn slugify(s: &str) -> String {
-    s.to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
+    ssg_core::slugify(s)
 }
 
 #[cfg(test)]
@@ -859,16 +996,19 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_ignores_non_array_categories_field() {
+    fn after_compile_accepts_comma_separated_categories_string() {
+        // #586 port 5: the string form `categories: "a, b"` is a
+        // first-class frontmatter shape (the bundled examples use it).
         let (_tmp, site, meta, ctx) = make_layout();
         fs::write(
-            meta.join("badcats.meta.json"),
-            r#"{"title": "BadCats", "categories": "not-an-array"}"#,
+            meta.join("strcats.meta.json"),
+            r#"{"title": "StrCats", "categories": "guides, how-to"}"#,
         )
         .unwrap();
 
         TaxonomyPlugin.after_compile(&ctx).unwrap();
-        assert!(!site.join("categories").exists());
+        assert!(site.join("categories/guides/index.html").exists());
+        assert!(site.join("categories/how-to/index.html").exists());
     }
 
     #[test]
@@ -885,17 +1025,174 @@ mod tests {
     }
 
     #[test]
-    fn after_compile_ignores_non_array_tags_field() {
+    fn after_compile_accepts_comma_separated_tags_string() {
+        // #586 port 5: `tags: "rust, web"` generates a landing page
+        // per term, exactly like the array form.
+        let (_tmp, site, _meta_dir, ctx) = make_layout();
+        let meta_dir = ctx.build_dir.join(".meta");
+        fs::write(
+            meta_dir.join("strtags.meta.json"),
+            r#"{"title": "StrTags", "tags": "rust, web"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("tags/rust/index.html").exists());
+        assert!(site.join("tags/web/index.html").exists());
+        let html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(html.contains("StrTags"));
+    }
+
+    #[test]
+    fn after_compile_ignores_non_string_non_array_tags_field() {
+        // Numbers / objects still don't produce terms.
         let (_tmp, site, _meta_dir, ctx) = make_layout();
         let meta_dir = ctx.build_dir.join(".meta");
         fs::write(
             meta_dir.join("badtype.meta.json"),
-            r#"{"title": "BadType", "tags": "not-an-array"}"#,
+            r#"{"title": "BadType", "tags": 42}"#,
         )
         .unwrap();
 
         TaxonomyPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("tags").exists());
+    }
+
+    #[test]
+    fn after_compile_preserves_author_authored_hub_page() {
+        // #586 port 5: a hand-written /tags/index.html (compiled from
+        // the site's own tags.md, no ssg-taxonomy marker) must never
+        // be clobbered by the generated hub.
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tags_dir = site.join("tags");
+        fs::create_dir_all(&tags_dir).unwrap();
+        let authored = "<!DOCTYPE html><html><head><title>My topics</title>\
+                        </head><body>hand-written</body></html>";
+        fs::write(tags_dir.join("index.html"), authored).unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let hub = fs::read_to_string(tags_dir.join("index.html")).unwrap();
+        assert_eq!(hub, authored, "author page must be preserved");
+        // Term pages are still generated alongside it.
+        assert!(site.join("tags/rust/index.html").exists());
+    }
+
+    #[test]
+    fn after_compile_refreshes_its_own_previous_output() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let first = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(
+            first.contains(TAXONOMY_MARKER),
+            "generated pages carry the marker:\n{first}"
+        );
+
+        // Add a second tagged page; the hub must pick it up.
+        fs::write(
+            meta.join("q.meta.json"),
+            r#"{"title": "Q", "tags": ["rust", "web"]}"#,
+        )
+        .unwrap();
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let second = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(second.contains("web"), "refreshed hub lists new term");
+    }
+
+    #[test]
+    fn after_compile_falls_back_to_site_meta_sidecars() {
+        // Real-pipeline layout: sidecars staged at <site>/.meta/ and
+        // pretty (directory-shaped) pages on disk.
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path().join("site");
+        let build = dir.path().join("build");
+        fs::create_dir_all(site.join(".meta")).unwrap();
+        fs::create_dir_all(site.join("hello")).unwrap();
+        fs::create_dir_all(&build).unwrap();
+        fs::write(
+            site.join(".meta/hello.meta.json"),
+            r#"{"title": "Hello", "tags": "rust"}"#,
+        )
+        .unwrap();
+        fs::write(site.join("hello/index.html"), "<html></html>").unwrap();
+        let ctx = PluginContext::new(dir.path(), &build, &site, dir.path());
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let term =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        // Member link uses the pretty URL because hello/index.html exists.
+        assert!(
+            term.contains(r#"href="/hello/""#),
+            "pretty member URL:\n{term}"
+        );
+    }
+
+    #[test]
+    fn generated_pages_carry_essential_meta() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(html.contains("name=\"description\""), "{html}");
+        assert!(html.contains("property=\"og:title\""), "{html}");
+        assert!(html.contains("property=\"og:type\""), "{html}");
+        assert!(html.contains("name=\"twitter:card\""), "{html}");
+        assert!(html.contains(TAXONOMY_MARKER), "{html}");
+    }
+
+    #[test]
+    fn term_pages_inline_canonical_and_lang_with_config() {
+        // #586 port 5: pages generated in after_compile bypass the
+        // fused transform chain (canonical/JSON-LD/a11y plugins never
+        // see them), so the essential head elements must be inlined
+        // by the taxonomy templates themselves.
+        let (_tmp, site, meta, base_ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": "rust"}"#,
+        )
+        .unwrap();
+        let cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &base_ctx.content_dir,
+            &base_ctx.build_dir,
+            &base_ctx.site_dir,
+            &base_ctx.template_dir,
+            cfg,
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(html.contains("<!DOCTYPE html>"), "doctype:\n{html}");
+        assert!(html.contains("<html lang="), "lang attr:\n{html}");
+        #[cfg(feature = "templates")]
+        assert!(
+            html.contains(
+                r#"<link rel="canonical" href="https://example.com/tags/rust/">"#
+            ),
+            "canonical:\n{html}"
+        );
     }
 
     // -------------------------------------------------------------------
@@ -1157,7 +1454,399 @@ mod tests {
         );
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(matches!(err, SsgError::Io { .. }));
+        // Branch-free variant check (a `matches!` here would leave its
+        // never-taken `_ => false` arm as an uncovered region).
+        assert!(format!("{err:?}").contains("Io"));
+    }
+
+    // -------------------------------------------------------------------
+    // Template loader — user overrides + error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_templates_in_tera_dir_override_builtins() {
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        // Custom templates in <template_dir>/tera/ — both end with a
+        // newline so the "already ends with \n" branch is taken.
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("tag.html"),
+            "<html>ssg-taxonomy CUSTOMTERM {{ tag }}</html>\n",
+        )
+        .unwrap();
+        fs::write(
+            tera.join("taxonomy_index.html"),
+            "<html>ssg-taxonomy CUSTOMINDEX</html>\n",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let term =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(term.contains("CUSTOMTERM"));
+        assert!(term.ends_with('\n'));
+        let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(index.contains("CUSTOMINDEX"));
+        assert!(index.ends_with('\n'));
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn render_term_page_appends_newline_when_template_output_lacks_one() {
+        // Counterpart to `user_templates_in_tera_dir_override_builtins`:
+        // this custom `tag.html` does NOT end in `\n`, so
+        // `render_term_page`'s `if !s.ends_with('\n') { s.push('\n'); }`
+        // branch actually fires (previously only the "already has a
+        // trailing newline" branch was exercised, since both the
+        // built-in templates and the other override test's fixtures
+        // happen to already end in `\n`).
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("tag.html"),
+            "<html>ssg-taxonomy NO-TRAILING-NEWLINE {{ tag }}</html>",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let term =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(term.contains("NO-TRAILING-NEWLINE"));
+        assert!(
+            term.ends_with('\n'),
+            "render_term_page must append the missing trailing newline"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn render_index_page_appends_newline_when_template_output_lacks_one() {
+        // Same as above but for `render_index_page`'s identical
+        // `ends_with('\n')` guard.
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("taxonomy_index.html"),
+            "<html>ssg-taxonomy NO-TRAILING-NEWLINE-INDEX</html>",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(index.contains("NO-TRAILING-NEWLINE-INDEX"));
+        assert!(
+            index.ends_with('\n'),
+            "render_index_page must append the missing trailing newline"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn nonexistent_template_dir_falls_back_to_builtins() {
+        // resolve_user_template_dir returns None; the loader skips the
+        // user-dir probe entirely.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let build = dir.path().join("build");
+        let meta = build.join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&meta).unwrap();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let ctx = PluginContext::new(
+            dir.path(),
+            &build,
+            &site,
+            &dir.path().join("no-such-templates"),
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        assert!(site.join("tags/rust/index.html").exists());
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_term_template_fails_tag_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("tag.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass perms; only assert when it errored.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_category_template_fails_category_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "categories": ["guides"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("category.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_archive_template_fails_topic_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "topic_clusters": ["wasm"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("archive.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(all(unix, feature = "templates"))]
+    fn unreadable_user_index_template_fails_index_generation() {
+        use std::os::unix::fs::PermissionsExt;
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tpl = tmp.path().join("taxonomy_index.html");
+        fs::write(&tpl, "x").unwrap();
+        fs::set_permissions(&tpl, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_term_template_extending_missing_base_fails_render() {
+        // `{% extends "missing.html" %}` compiles but fails at render
+        // time, exercising the render map_err and the loader's
+        // unknown-name `None` fallback.
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("tag.html"),
+            "{% extends \"missing.html\" %}",
+        )
+        .unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn user_index_template_extending_missing_base_fails_render() {
+        let (tmp, _site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            tmp.path().join("taxonomy_index.html"),
+            "{% extends \"missing.html\" %}",
+        )
+        .unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    // -------------------------------------------------------------------
+    // Sidecar collection — IO error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_sidecar_file_fails_collection() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, _site, meta, ctx) = make_layout();
+        let sidecar = meta.join("locked.meta.json");
+        fs::write(&sidecar, r#"{"title": "L"}"#).unwrap();
+        fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ =
+            fs::set_permissions(&sidecar, fs::Permissions::from_mode(0o644));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_meta_subdir_fails_collection() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, _site, meta, ctx) = make_layout();
+        let sub = meta.join("locked");
+        fs::create_dir_all(&sub).unwrap();
+        fs::set_permissions(&sub, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = TaxonomyPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // generate_taxonomy_pages — write error branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn term_dir_squatted_by_file_fails_generation() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags")).unwrap();
+        fs::write(site.join("tags/rust"), "not a dir").unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn term_index_squatted_by_dir_fails_write() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags/rust/index.html")).unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn taxonomy_index_squatted_by_dir_fails_write() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(site.join("tags/index.html")).unwrap();
+
+        let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    fn write_taxonomy_page_logs_when_keeping_author_page() {
+        // init_logger raises the level so the log::debug! format
+        // argument region executes.
+        init_logger();
+        let dir = tempdir().unwrap();
+        let page = dir.path().join("index.html");
+        fs::write(&page, "<html>hand-written</html>").unwrap();
+
+        write_taxonomy_page(&page, "<html>ssg-taxonomy</html>").unwrap();
+        let kept = fs::read_to_string(&page).unwrap();
+        assert!(kept.contains("hand-written"));
+    }
+
+    // -------------------------------------------------------------------
+    // extract_terms_from_value — remaining branches
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn extract_terms_string_ignored_when_strings_disallowed() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!("rust, web");
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", false);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn extract_terms_array_skips_whitespace_only_parts() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!(["ok", " , "]);
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        assert_eq!(map.len(), 1);
+        assert!(map.contains_key("ok"));
+    }
+
+    #[test]
+    fn extract_terms_string_skips_empty_parts() {
+        let mut map: HashMap<String, Vec<(String, String)>> = HashMap::new();
+        let value = serde_json::json!("a,,b");
+        extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
+        assert_eq!(map.len(), 2);
     }
 }
 

@@ -3,11 +3,12 @@
 
 //! Native CI audit gates (issue #549).
 //!
-//! Exposes 14 [`AuditGate`] implementations that run locally and in CI
+//! Exposes 15 [`AuditGate`] implementations that run locally and in CI
 //! to catch violations of WCAG, schema.org, hreflang reciprocity, CSP +
 //! SRI, PQC TLS readiness, HTML5 structure, broken links, OG metadata,
 //! markdown style, performance budgets, AI discovery files, RSS/Atom
-//! feeds, image optimisation, and the localised semantic search index.
+//! feeds, image optimisation, the localised semantic search index, and
+//! JSON-LD `inLanguage` vs `<html lang>` consistency.
 //!
 //! ## Surface
 //!
@@ -208,8 +209,8 @@ impl Finding {
 /// A loaded view of a built site for audit gates to consume.
 ///
 /// Walks the site directory once at construction time so each gate
-/// avoids redundant filesystem scans (the 14 gates would otherwise
-/// stat-walk the same tree 14 times).
+/// avoids redundant filesystem scans (the 15 gates would otherwise
+/// stat-walk the same tree 15 times).
 #[derive(Debug, Clone)]
 pub struct Site {
     /// Root directory of the built site (the `public/` output dir).
@@ -599,7 +600,7 @@ impl AuditReport {
 // AuditRunner
 // ---------------------------------------------------------------------
 
-/// Orchestrates dispatch across the 14 registered gates.
+/// Orchestrates dispatch across the 15 registered gates.
 pub struct AuditRunner {
     config: AuditConfig,
     gates: Vec<Box<dyn AuditGate>>,
@@ -618,14 +619,14 @@ impl std::fmt::Debug for AuditRunner {
 }
 
 impl AuditRunner {
-    /// Constructs a runner with the 14 built-in gates registered.
+    /// Constructs a runner with the 15 built-in gates registered.
     ///
     /// # Examples
     ///
     /// ```
     /// use ssg::audit::{AuditConfig, AuditRunner};
     /// let r = AuditRunner::new(AuditConfig::new());
-    /// assert_eq!(r.gate_names().len(), 14);
+    /// assert_eq!(r.gate_names().len(), 15);
     /// ```
     #[must_use]
     pub fn new(config: AuditConfig) -> Self {
@@ -676,7 +677,7 @@ impl AuditRunner {
     /// let runner = AuditRunner::new(AuditConfig::new());
     /// let site = Site { root: PathBuf::from("/nonexistent"), html_files: Vec::new() };
     /// let report = runner.run(&site);
-    /// assert_eq!(report.len(), 14);
+    /// assert_eq!(report.len(), 15);
     /// ```
     #[must_use]
     pub fn run(&self, site: &Site) -> AuditReport {
@@ -891,9 +892,9 @@ mod tests {
     }
 
     #[test]
-    fn audit_runner_registers_fourteen_gates() {
+    fn audit_runner_registers_fifteen_gates() {
         let r = AuditRunner::new(AuditConfig::new());
-        assert_eq!(r.gate_names().len(), 14, "must register exactly 14 gates");
+        assert_eq!(r.gate_names().len(), 15, "must register exactly 15 gates");
     }
 
     #[test]
@@ -982,6 +983,52 @@ mod tests {
         };
         assert!(report.should_fail(Severity::Warn));
         assert!(!report.should_fail(Severity::Error));
+    }
+
+    #[test]
+    fn report_max_severity_accumulates_across_multiple_warn_and_info_gates() {
+        // Drives the `Some(m) => m.max(...)` arm of both `map_or`
+        // closures in `max_severity` — a single gate never re-enters
+        // the accumulator, so at least two non-error gates (in either
+        // order) are required to exercise the closure bodies.
+        let report = AuditReport {
+            gates: vec![
+                GateResult {
+                    name: "a".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 1,
+                        warn: 0,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+                GateResult {
+                    name: "b".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 0,
+                        warn: 1,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+                GateResult {
+                    name: "c".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 1,
+                        warn: 0,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+            ],
+        };
+        assert_eq!(report.max_severity(), Some(Severity::Warn));
     }
 
     #[test]

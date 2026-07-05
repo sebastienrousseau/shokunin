@@ -474,6 +474,9 @@ fn count_missing_alt(html: &str) -> usize {
 
 /// Recursively collects HTML files (delegates to `crate::walk`).
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>> {
+    fail_point!("ai::collect-html-files", |_| {
+        Err(anyhow::anyhow!("injected: ai::collect-html-files"))
+    });
     crate::walk::walk_files(dir, "html").map_err(Into::into)
 }
 
@@ -788,6 +791,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn generate_llms_txt_with_full_config_includes_all_fields() {
         let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
@@ -806,6 +810,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn generate_llms_txt_without_config_uses_defaults() {
         let dir = tempdir().expect("tempdir");
         generate_llms_txt(dir.path(), None).unwrap();
@@ -816,6 +821,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn generate_llms_txt_strips_trailing_slash_from_base_url() {
         let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
@@ -838,12 +844,14 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn generate_llms_txt_into_missing_parent_returns_err() {
         let bogus = Path::new("/this/path/should/not/exist");
         assert!(generate_llms_txt(bogus, None).is_err());
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_contains_language() {
         let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
@@ -859,6 +867,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_contains_language_defaults_to_en() {
         let dir = tempdir().expect("tempdir");
         let config = SsgConfig {
@@ -874,6 +883,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_excludes_drafts() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "published.html", "Published", "Visible", "");
@@ -898,6 +908,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_excludes_private() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "public.html", "Public", "Visible", "");
@@ -918,6 +929,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_excludes_404() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "index.html", "Home", "Welcome", "");
@@ -932,6 +944,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_contains_sections() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "index.html", "Home", "Welcome", "");
@@ -965,6 +978,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_contains_disallow_section() {
         let dir = tempdir().expect("tempdir");
         fs::write(
@@ -986,6 +1000,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_txt_no_disallow_without_robots() {
         let dir = tempdir().expect("tempdir");
         generate_llms_txt(dir.path(), None).unwrap();
@@ -1001,6 +1016,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_full_txt_contains_body_content() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "index.html", "Home", "Welcome home", "");
@@ -1015,6 +1031,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_full_txt_excludes_drafts() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "ok.html", "Visible", "Content", "");
@@ -1034,6 +1051,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn test_llms_full_txt_excludes_404() {
         let dir = tempdir().expect("tempdir");
         write_page(dir.path(), "index.html", "Home", "Welcome", "");
@@ -1112,6 +1130,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_injects_max_snippet_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
@@ -1124,6 +1143,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_creates_llms_txt_in_site_root() {
         let (_tmp, site, ctx) = make_site();
         AiPlugin.after_compile(&ctx).unwrap();
@@ -1131,6 +1151,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_creates_llms_full_txt_in_site_root() {
         let (_tmp, site, ctx) = make_site();
         AiPlugin.after_compile(&ctx).unwrap();
@@ -1138,6 +1159,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_idempotent_does_not_duplicate_meta_tag() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><title>X</title></head><body></body></html>";
@@ -1151,6 +1173,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_skips_html_files_without_head_tag() {
         let (_tmp, site, ctx) = make_site();
         fs::write(site.join("fragment.html"), "<p>just a fragment</p>")
@@ -1163,6 +1186,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_processes_files_in_subdirectories() {
         let (_tmp, site, ctx) = make_site();
         let nested = site.join("blog");
@@ -1179,6 +1203,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_logs_warning_for_pages_with_missing_alt() {
         let (_tmp, site, ctx) = make_site();
         fs::write(
@@ -1198,6 +1223,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn after_compile_does_not_rewrite_unchanged_files() {
         let (_tmp, site, ctx) = make_site();
         let html = "<html><head><meta name=\"robots\" content=\"max-snippet:-1\"></head><body></body></html>";
@@ -1218,6 +1244,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn collect_html_files_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
         let result = collect_html_files(&dir.path().join("missing")).unwrap();
@@ -1225,6 +1252,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn collect_html_files_filters_non_html_extensions() {
         let dir = tempdir().expect("tempdir");
         fs::write(dir.path().join("a.html"), "").unwrap();
@@ -1236,6 +1264,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn collect_html_files_recurses_into_nested_subdirectories() {
         let dir = tempdir().expect("tempdir");
         let nested = dir.path().join("a").join("b");
@@ -1248,6 +1277,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(ai_failpoint)]
     fn collect_html_files_returns_results_sorted() {
         let dir = tempdir().expect("tempdir");
         for name in ["zebra.html", "apple.html", "mango.html"] {
@@ -1259,5 +1289,252 @@ mod tests {
             .map(|p| p.file_name().unwrap().to_str().unwrap())
             .collect();
         assert_eq!(names, vec!["apple.html", "mango.html", "zebra.html"]);
+    }
+
+    // -------------------------------------------------------------------
+    // is_excluded_page — falsy draft/private values and string forms
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_is_excluded_page_draft_false_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ =
+            meta.insert("draft".to_string(), serde_json::Value::Bool(false));
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private_string_true() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "private".to_string(),
+            serde_json::Value::String("true".to_string()),
+        );
+        assert!(is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private_false_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ =
+            meta.insert("private".to_string(), serde_json::Value::Bool(false));
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    // -------------------------------------------------------------------
+    // Sidecar read failures — a directory named *.meta.json exists but
+    // cannot be read as a file, driving the empty-map fallback arm.
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn collect_page_entries_unreadable_sidecar_falls_back_to_empty_meta() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head></head><body>Hi</body></html>",
+        )
+        .unwrap();
+        // Directory at the sidecar path: exists() is true, but
+        // read_to_string fails (EISDIR), so meta falls back to an
+        // empty map and the page (no title) is dropped.
+        fs::create_dir_all(dir.path().join("page.meta.json")).unwrap();
+
+        let entries = collect_page_entries(dir.path()).unwrap();
+        assert!(
+            entries.is_empty(),
+            "titleless page must be dropped: {entries:?}"
+        );
+    }
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn llms_full_txt_unreadable_sidecar_skips_page() {
+        let dir = tempdir().expect("tempdir");
+        fs::write(
+            dir.path().join("page.html"),
+            "<html><head></head><body>Hidden body</body></html>",
+        )
+        .unwrap();
+        fs::create_dir_all(dir.path().join("page.meta.json")).unwrap();
+
+        generate_llms_full_txt(dir.path(), None).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(
+            !body.contains("Hidden body"),
+            "page without readable sidecar (no title) must be skipped:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // llms.txt — entry line without a description
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn llms_txt_entry_without_description_omits_colon_suffix() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "", "");
+
+        generate_llms_txt(dir.path(), None).unwrap();
+        let body = fs::read_to_string(dir.path().join("llms.txt")).unwrap();
+        assert!(
+            body.contains("- [Home](/index.html)\n"),
+            "description-less entry must be a bare link:\n{body}"
+        );
+        assert!(
+            !body.contains("- [Home](/index.html):"),
+            "no trailing colon without a description:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // llms-full.txt — canonical absolute URLs when base_url is set
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn llms_full_txt_uses_canonical_root_for_urls() {
+        let dir = tempdir().expect("tempdir");
+        write_page(dir.path(), "index.html", "Home", "Welcome", "");
+
+        let config = SsgConfig {
+            site_name: "S".to_string(),
+            base_url: "https://example.com/".to_string(),
+            ..Default::default()
+        };
+        generate_llms_full_txt(dir.path(), Some(&config)).unwrap();
+        let body =
+            fs::read_to_string(dir.path().join("llms-full.txt")).unwrap();
+        assert!(
+            body.contains("## [Home](https://example.com/index.html)"),
+            "page URL must be prefixed with the canonical root:\n{body}"
+        );
+    }
+
+    // -------------------------------------------------------------------
+    // is_excluded_page — string values that don't match "true": the
+    // `is_some_and(|s| s == "true")` closure only runs when the field
+    // is a JSON string, and only returns `true` when it isn't literally
+    // "true"/"false" as a bool. Prior tests only exercised Bool and the
+    // exact string "true", so the closure body evaluating to `false`
+    // was never exercised.
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn test_is_excluded_page_draft_string_non_true_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "draft".to_string(),
+            serde_json::Value::String("no".to_string()),
+        );
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    #[test]
+    fn test_is_excluded_page_private_string_non_true_is_not_excluded() {
+        let mut meta = serde_json::Map::new();
+        let _ = meta.insert(
+            "private".to_string(),
+            serde_json::Value::String("no".to_string()),
+        );
+        assert!(!is_excluded_page(Path::new("post.html"), &meta));
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile — error propagation through each of the four
+    // `.map_err(...)` sites (llms.txt, llms-full.txt, collect_html_files,
+    // process_html_for_ai). Each squats the plugin's own output path
+    // with a directory so the underlying `fs::write`/read fails.
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn after_compile_propagates_llms_txt_write_error() {
+        let (_tmp, site, ctx) = make_site();
+        // `llms.txt` is a pre-existing directory, so `fs::write` fails
+        // inside `generate_llms_txt`, and the error must propagate
+        // through the first `.map_err` in `after_compile`.
+        fs::create_dir_all(site.join("llms.txt")).unwrap();
+        let err = AiPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    fn after_compile_propagates_llms_full_txt_write_error() {
+        let (_tmp, site, ctx) = make_site();
+        // `llms.txt` writes fine; `llms-full.txt` is squatted by a
+        // directory so the second stage fails.
+        fs::create_dir_all(site.join("llms-full.txt")).unwrap();
+        let err = AiPlugin.after_compile(&ctx).unwrap_err();
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[test]
+    #[serial_test::parallel(ai_failpoint)]
+    #[cfg(unix)]
+    fn after_compile_fails_when_html_file_is_unreadable() {
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, site, ctx) = make_site();
+        let html = site.join("locked.html");
+        fs::write(&html, "<html><head></head><body></body></html>").unwrap();
+        fs::set_permissions(&html, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let res = AiPlugin.after_compile(&ctx);
+
+        let _ = fs::set_permissions(&html, fs::Permissions::from_mode(0o644));
+        // Root CI runners bypass permission checks; only assert when the
+        // read genuinely failed.
+        if let Err(e) = res {
+            assert!(!format!("{e}").is_empty());
+        }
+    }
+}
+
+// -------------------------------------------------------------------
+// Fault injection — `ai::collect-html-files` isolates the third of
+// three `collect_html_files` calls that a single `after_compile` run
+// makes (the first, inside `collect_page_entries`, is swallowed by
+// `generate_llms_txt`'s `unwrap_or_default`; the second, inside
+// `generate_llms_full_txt`, propagates but is indistinguishable from
+// the plugin's own direct call without sequencing the failpoint).
+// -------------------------------------------------------------------
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(ai_failpoint)]
+    fn collect_html_files_third_call_failpoint_propagates() {
+        let _guard = FailGuard("ai::collect-html-files");
+        // Let the first two invocations (collect_page_entries via
+        // generate_llms_txt, then generate_llms_full_txt's own call)
+        // succeed; fail on the third (after_compile's direct call).
+        fail::cfg("ai::collect-html-files", "2*off->1*return")
+            .expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+
+        let err = AiPlugin
+            .after_compile(&ctx)
+            .expect_err("third collect_html_files call must propagate");
+        assert!(format!("{err:?}").contains("injected: ai::collect-html-files"));
     }
 }

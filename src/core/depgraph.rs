@@ -683,24 +683,25 @@ pub fn current_hashes(
     template_dir: &Path,
 ) -> Result<HashMap<PathBuf, String>, SsgError> {
     let mut out = HashMap::new();
-    let mut push = |paths: Vec<PathBuf>| -> Result<(), SsgError> {
+    // Infallible by construction: sources that disappear between the
+    // walk and the read silently drop out (see the doc comment).
+    let mut push = |paths: Vec<PathBuf>| {
         for p in paths {
             if let Ok(bytes) = fs::read(&p) {
                 let _ = out.insert(p, DepGraph::sha256_hex(&bytes));
             }
         }
-        Ok(())
     };
     push(crate::walk::walk_files_bounded_depth(
         content_dir,
         "md",
         crate::MAX_DIR_DEPTH,
-    )?)?;
+    )?);
     push(crate::walk::walk_files_bounded_depth(
         template_dir,
         "html",
         crate::MAX_DIR_DEPTH,
-    )?)?;
+    )?);
     Ok(out)
 }
 
@@ -1342,9 +1343,7 @@ mod tests {
             // On unix the error path is exercised. Some CI runners
             // run as root and bypass perms — don't fail if we did get
             // through, but assert: if it errored, the message is non-empty.
-            if let Err(e) = res {
-                assert!(!format!("{e}").is_empty());
-            }
+            assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
         }
         #[cfg(not(unix))]
         {
@@ -1378,13 +1377,361 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             let _ =
                 fs::set_permissions(&tpl, fs::Permissions::from_mode(0o644));
-            if let Err(e) = res {
-                assert!(!format!("{e}").is_empty());
-            }
+            assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
         }
         #[cfg(not(unix))]
         {
             let _ = res;
         }
+    }
+
+    // ── load — warn-branch format arguments ─────────────────────────
+
+    #[test]
+    fn load_incompatible_schema_warns_and_falls_back() {
+        // init_logger raises the max level so the `log::warn!` format
+        // arguments (line 127) execute.
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        let stale = serde_json::json!({
+            "version": 1,
+            "deps": {},
+            "outputs": {},
+            "hashes": {}
+        });
+        fs::write(dir.path().join(DEP_GRAPH_FILE), stale.to_string()).unwrap();
+
+        let g = DepGraph::load(dir.path());
+        assert_eq!(g.page_count(), 0);
+    }
+
+    #[test]
+    fn load_corrupt_json_warns_and_falls_back() {
+        // Same as above for the corrupt-JSON arm (line 134).
+        crate::test_support::init_logger();
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join(DEP_GRAPH_FILE), "{ nope").unwrap();
+
+        let g = DepGraph::load(dir.path());
+        assert_eq!(g.page_count(), 0);
+    }
+
+    // ── save — serialization and I/O error paths ────────────────────
+
+    #[test]
+    #[cfg(unix)]
+    fn save_non_utf8_path_fails_serialization() {
+        // serde's PathBuf serializer rejects non-UTF-8 paths, driving
+        // the `to_string` map_err closure (lines 166-169).
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+        let dir = tempdir().unwrap();
+        let bad = PathBuf::from(OsStr::from_bytes(&[0x66, 0xFF, 0xFE]));
+        let mut g = DepGraph::new();
+        g.add_dep(&bad, Path::new("layout.html"));
+
+        assert!(g.save(dir.path()).is_err());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn save_unwritable_cache_root_fails_tmp_write() {
+        // cache_root exists but is read-only: create_dir_all succeeds
+        // (already there), the tmp-file write fails (lines 170-173).
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let root = dir.path().join("cache");
+        fs::create_dir_all(&root).unwrap();
+        fs::set_permissions(&root, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let res = DepGraph::new().save(&root);
+
+        let _ = fs::set_permissions(&root, fs::Permissions::from_mode(0o755));
+        // Root bypasses permissions on some CI runners, so tolerate Ok.
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    fn save_rename_over_directory_fails() {
+        // A non-empty directory squatting on the final path makes the
+        // atomic rename fail (lines 174-177).
+        let dir = tempdir().unwrap();
+        let blocker = dir.path().join(DEP_GRAPH_FILE);
+        fs::create_dir_all(&blocker).unwrap();
+        fs::write(blocker.join("keep.txt"), "x").unwrap();
+
+        assert!(DepGraph::new().save(dir.path()).is_err());
+    }
+
+    // ── record_hash_from_disk — both arms ───────────────────────────
+
+    #[test]
+    fn record_hash_from_disk_reads_existing_and_skips_missing() {
+        let dir = tempdir().unwrap();
+        let p = dir.path().join("a.md");
+        fs::write(&p, "hello").unwrap();
+
+        let mut g = DepGraph::new();
+        g.record_hash_from_disk(&p);
+        // Missing files are silently ignored (the else arm).
+        g.record_hash_from_disk(&dir.path().join("missing.md"));
+
+        let current = current_hashes(dir.path(), dir.path()).unwrap();
+        assert!(g.diff(&current).is_empty());
+    }
+
+    // ── invalidated — revisit guard ─────────────────────────────────
+
+    #[test]
+    fn invalidated_deduplicates_repeated_inputs() {
+        // A duplicated changed path hits the `!seen.insert` continue.
+        let g = DepGraph::new();
+        let changed =
+            vec![PathBuf::from("content/a.md"), PathBuf::from("content/a.md")];
+        assert_eq!(
+            g.invalidated(&changed),
+            vec![PathBuf::from("content/a.md")]
+        );
+    }
+
+    // ── populate / current_hashes — walk failures ───────────────────
+
+    #[test]
+    #[cfg(unix)]
+    fn populate_propagates_unreadable_content_dir() {
+        // The walk itself fails when the content dir can't be listed
+        // (the `?` on the first walk).
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let mut g = DepGraph::new();
+        let res = populate(&mut g, &content, &templates, &dir.path().join("b"));
+
+        let _ =
+            fs::set_permissions(&content, fs::Permissions::from_mode(0o755));
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn populate_propagates_unreadable_template_dir() {
+        // Content walk succeeds; the template walk fails (the `?` on
+        // the second walk).
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::set_permissions(&templates, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let mut g = DepGraph::new();
+        let res = populate(&mut g, &content, &templates, &dir.path().join("b"));
+
+        let _ =
+            fs::set_permissions(&templates, fs::Permissions::from_mode(0o755));
+        assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn current_hashes_propagates_walk_failures_from_both_dirs() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+
+        // Unreadable content dir → first `?`.
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .unwrap();
+        let res_content = current_hashes(&content, &templates);
+        let _ =
+            fs::set_permissions(&content, fs::Permissions::from_mode(0o755));
+
+        // Unreadable template dir → second `?`.
+        fs::set_permissions(&templates, fs::Permissions::from_mode(0o000))
+            .unwrap();
+        let res_templates = current_hashes(&content, &templates);
+        let _ =
+            fs::set_permissions(&templates, fs::Permissions::from_mode(0o755));
+
+        assert!(res_content.err().is_none_or(|e| !format!("{e}").is_empty()));
+        assert!(res_templates
+            .err()
+            .is_none_or(|e| !format!("{e}").is_empty()));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn current_hashes_skips_unreadable_sources() {
+        // A dangling .md symlink is returned by the walk but fails
+        // fs::read, taking the silent-skip arm inside `push`.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(content.join("real.md"), "hi").unwrap();
+        std::os::unix::fs::symlink(
+            content.join("ghost-target.md"),
+            content.join("ghost.md"),
+        )
+        .unwrap();
+
+        let map = current_hashes(&content, &templates).unwrap();
+        assert_eq!(map.len(), 1, "only the readable file is hashed");
+    }
+
+    // ── populate — unresolved layout edge ───────────────────────────
+
+    #[test]
+    fn populate_skips_edge_when_layout_cannot_be_resolved() {
+        // `layout: ghost` with no matching template file: the
+        // resolve_template else-arm leaves the page without a
+        // template edge.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        let build = dir.path().join("build");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(content.join("page.md"), "---\nlayout: ghost\n---\nbody")
+            .unwrap();
+
+        let mut g = DepGraph::new();
+        populate(&mut g, &content, &templates, &build).unwrap();
+        // Only the self-edge is recorded.
+        let deps = g
+            .deps_for(&content.join("page.md"))
+            .expect("page must be tracked");
+        assert_eq!(deps.len(), 1);
+    }
+
+    // ── extract_layout — rejection paths ────────────────────────────
+
+    #[test]
+    fn extract_layout_rejects_malformed_frontmatter() {
+        // Non-UTF-8 bytes.
+        assert_eq!(extract_layout(&[0xFF, 0xFE, 0x00]), None);
+        // Opening fence with no closing fence.
+        assert_eq!(extract_layout(b"---\nlayout: x"), None);
+        // Empty layout value: `split_whitespace().next()` is None.
+        assert_eq!(extract_layout(b"---\nlayout:\n---\nbody"), None);
+    }
+
+    // ── output_paths_for / resolve_template — fallback arms ─────────
+
+    #[test]
+    fn output_paths_for_foreign_path_returns_empty() {
+        // A file outside content_dir fails strip_prefix.
+        let out = output_paths_for(
+            Path::new("/elsewhere/post.md"),
+            Path::new("/content"),
+            Path::new("/build"),
+        );
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn resolve_template_prefers_locale_sibling() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(content.join("fr")).unwrap();
+        fs::create_dir_all(templates.join("fr")).unwrap();
+        fs::write(templates.join("fr/post.html"), "x").unwrap();
+        fs::write(templates.join("post.html"), "x").unwrap();
+
+        let got = resolve_template(
+            &templates,
+            &content.join("fr/a.md"),
+            &content,
+            "post",
+        );
+        assert_eq!(got, Some(templates.join("fr/post.html")));
+    }
+
+    #[test]
+    fn resolve_template_falls_back_when_locale_candidate_is_missing() {
+        // `rel.components().next()` is `Some(first)` (the content path
+        // has a leading directory component) but the locale-sibling
+        // candidate doesn't exist on disk — the inner
+        // `if candidate.exists()` false arm, distinct from
+        // `resolve_template_prefers_locale_sibling` (which always hits
+        // the true arm) and from the empty/foreign-path test below
+        // (which never enters the `Some(first)` branch at all).
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(content.join("fr")).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        // No `templates/fr/post.html` — only the plain fallback exists.
+        fs::write(templates.join("post.html"), "x").unwrap();
+
+        let got = resolve_template(
+            &templates,
+            &content.join("fr/a.md"),
+            &content,
+            "post",
+        );
+        assert_eq!(got, Some(templates.join("post.html")));
+    }
+
+    #[test]
+    fn resolve_template_falls_back_for_empty_and_foreign_paths() {
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(templates.join("page.html"), "x").unwrap();
+
+        // md == content_dir: the relative path has no components.
+        assert_eq!(
+            resolve_template(&templates, &content, &content, "page"),
+            Some(templates.join("page.html"))
+        );
+        // md outside content_dir: strip_prefix fails.
+        assert_eq!(
+            resolve_template(
+                &templates,
+                Path::new("/elsewhere/a.md"),
+                &content,
+                "page"
+            ),
+            Some(templates.join("page.html"))
+        );
+        // Nothing on disk at all: fallback is None.
+        assert_eq!(
+            resolve_template(
+                &templates,
+                &content.join("a.md"),
+                &content,
+                "missing"
+            ),
+            None
+        );
+    }
+
+    // ── scan_template_refs / parse_name — edge shapes ───────────────
+
+    #[test]
+    fn scan_template_refs_handles_unclosed_and_plain_refs() {
+        // Unclosed `{{` → break arm.
+        assert!(scan_template_refs("{{#extends \"base\"").is_empty());
+        // Plain variable refs produce no names; empty extends name is
+        // filtered; duplicates are deduped.
+        let refs =
+            scan_template_refs("{{ title }}{{#extends \"\"}}{{->p}}{{->p}}");
+        assert_eq!(refs, vec!["p".to_string()]);
     }
 }

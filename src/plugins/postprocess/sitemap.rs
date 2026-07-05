@@ -3,16 +3,20 @@
 
 //! Sitemap fix plugin.
 
-use super::helpers::{
-    normalise_url_in_xml_line, read_meta_sidecars, rfc2822_to_iso_date,
-};
+use super::helpers::{normalise_url_in_xml_line, read_meta_sidecars};
+use crate::dates::parse_flexible_date;
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::collections::HashMap;
 use std::fs;
 
-/// Repairs sitemap.xml by removing duplicate XML declarations,
-/// normalising double-slash URLs, and updating per-page lastmod dates.
+/// Repairs and canonicalises the generated `sitemap.xml`.
+///
+/// Removes duplicate XML declarations, normalises double-slash URLs,
+/// rewrites `<loc>` values onto the shared directory-URL convention
+/// (`…/foo/index.html` → `…/foo/`, via
+/// [`crate::urls::derive_page_url`] — spec A2/B1, plan §2 item 1.2),
+/// and updates per-page lastmod dates.
 #[derive(Debug, Clone, Copy)]
 pub struct SitemapFixPlugin;
 
@@ -60,13 +64,28 @@ fn collect_date_map(
 }
 
 /// Extracts the best available date from a metadata map.
+///
+/// Issue #586 / plan §2 item 1.4 (spec A4): every field runs through
+/// the shared flexible date chain (RFC 2822 → long form → ISO 8601),
+/// so front matter like `date: July 1, 2026` now yields a valid
+/// `<lastmod>`. An unparseable `date` value still passes through
+/// verbatim, preserving the plugin's previous output for that case.
 fn extract_best_date(meta: &HashMap<String, String>) -> Option<String> {
-    meta.get("item_pub_date")
-        .and_then(|d| rfc2822_to_iso_date(d))
-        .or_else(|| {
-            meta.get("last_build_date")
-                .and_then(|d| rfc2822_to_iso_date(d))
-        })
+    let parse_field = |field: &str| {
+        let raw = meta.get(field)?;
+        match parse_flexible_date(raw) {
+            Ok(dt) => Some(dt.to_iso_date()),
+            Err(err) => {
+                if !raw.is_empty() {
+                    log::warn!("[sitemap-fix] '{field}': {err}");
+                }
+                None
+            }
+        }
+    };
+    parse_field("item_pub_date")
+        .or_else(|| parse_field("last_build_date"))
+        .or_else(|| parse_field("date"))
         .or_else(|| meta.get("date").cloned())
 }
 
@@ -87,10 +106,14 @@ fn strip_duplicate_xml_decls_and_fix_urls(content: &str) -> String {
             continue;
         }
 
-        let processed = if line.contains("<loc>")
-            || line.contains("<link>")
-            || line.contains("<atom:link")
-        {
+        let processed = if line.contains("<loc>") {
+            // `<loc>` values go through the shared page-URL derivation
+            // so sitemap, canonical `<link>`, feed `<link>`, and the
+            // stager's injected `permalink:` all agree on the
+            // directory-URL convention (plan §2 item 1.2: one code
+            // path — `urls::derive_page_url`).
+            canonicalise_loc_urls(&normalise_url_in_xml_line(line))
+        } else if line.contains("<link>") || line.contains("<atom:link") {
             normalise_url_in_xml_line(line)
         } else {
             line.to_string()
@@ -101,6 +124,46 @@ fn strip_duplicate_xml_decls_and_fix_urls(content: &str) -> String {
     }
 
     result
+}
+
+/// Rewrites every `<loc>…</loc>` URL on `line` onto the canonical
+/// directory-URL convention via [`crate::urls::derive_page_url`]
+/// (spec A2/B1, plan §2 item 1.2): `…/foo/index.html` collapses to
+/// `…/foo/`, the root `…/index.html` to `…/`, and non-index paths
+/// pass through unchanged. URLs without a scheme are left untouched.
+fn canonicalise_loc_urls(line: &str) -> String {
+    let Some(open_idx) = line.find("<loc>") else {
+        return line.to_string();
+    };
+    let val_start = open_idx + "<loc>".len();
+    let Some(close_rel) = line[val_start..].find("</loc>") else {
+        return line.to_string();
+    };
+    let url = &line[val_start..val_start + close_rel];
+    let canonical = canonicalise_page_url(url);
+    format!(
+        "{}{}{}",
+        &line[..val_start],
+        canonical,
+        &line[val_start + close_rel..]
+    )
+}
+
+/// Splits an absolute URL into origin + path and re-derives it through
+/// [`crate::urls::derive_page_url`]. Non-absolute values (no scheme)
+/// are returned unchanged.
+fn canonicalise_page_url(url: &str) -> String {
+    let Some(scheme_end) = url.find("://") else {
+        return url.to_string();
+    };
+    let after_scheme = &url[scheme_end + 3..];
+    let Some(path_rel) = after_scheme.find('/') else {
+        // Bare origin (`https://example.com`) — the root URL.
+        return format!("{url}/");
+    };
+    let origin = &url[..scheme_end + 3 + path_rel];
+    let rel_path = &after_scheme[path_rel + 1..];
+    crate::urls::derive_page_url(origin, rel_path)
 }
 
 /// Update `<lastmod>` values based on the preceding `<loc>` URL in each
@@ -175,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_sitemap_fix_removes_duplicate_xml_decls() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let sitemap = tmp.path().join("sitemap.xml");
         fs::write(
             &sitemap,
@@ -192,19 +255,20 @@ mod tests {
   <lastmod>2025-09-01</lastmod>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&sitemap)?;
+        let result = fs::read_to_string(&sitemap).unwrap();
         assert_eq!(result.matches("<?xml").count(), 1);
         Ok(())
     }
 
     #[test]
     fn test_sitemap_fix_normalises_double_slashes() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let sitemap = tmp.path().join("sitemap.xml");
         fs::write(
             &sitemap,
@@ -215,15 +279,83 @@ mod tests {
   <lastmod>2025-09-01</lastmod>
 </url>
 </urlset>"#,
-        )?;
+        )
+        .unwrap();
 
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
 
-        let result = fs::read_to_string(&sitemap)?;
-        assert!(result.contains("https://example.com/index.html"));
+        let result = fs::read_to_string(&sitemap).unwrap();
+        // Double slash normalised AND `<loc>` collapsed onto the
+        // shared directory-URL convention (plan §2 item 1.2): the
+        // root `index.html` publishes as the bare base URL.
+        assert!(result.contains("<loc>https://example.com/</loc>"));
         assert!(!result.contains("com//index"));
+        assert!(!result.contains("index.html"));
         Ok(())
+    }
+
+    #[test]
+    fn test_sitemap_fix_collapses_index_html_locs() -> Result<()> {
+        // Plan §2 item 1.2: sitemap `<loc>` must agree with canonical
+        // `<link>` and feed `<link>` — all derive through
+        // `urls::derive_page_url`, so `…/foo/index.html` publishes as
+        // the pretty directory URL `…/foo/`.
+        let tmp = tempdir().unwrap();
+        let sitemap = tmp.path().join("sitemap.xml");
+        fs::write(
+            &sitemap,
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+  <loc>https://example.com/posts/hello/index.html</loc>
+  <lastmod>2025-09-01</lastmod>
+</url>
+<url>
+  <loc>https://example.com/feed.xml</loc>
+  <lastmod>2025-09-01</lastmod>
+</url>
+</urlset>"#,
+        )
+        .unwrap();
+
+        let ctx = test_ctx(tmp.path());
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
+
+        let result = fs::read_to_string(&sitemap).unwrap();
+        assert!(
+            result.contains("<loc>https://example.com/posts/hello/</loc>"),
+            "index.html should collapse to the directory URL: {result}"
+        );
+        // Non-index outputs keep their file name.
+        assert!(result.contains("<loc>https://example.com/feed.xml</loc>"));
+        Ok(())
+    }
+
+    #[test]
+    fn canonicalise_loc_urls_handles_edge_shapes() {
+        // Bare origin → root URL with trailing slash.
+        assert_eq!(
+            canonicalise_loc_urls("<loc>https://example.com</loc>"),
+            "<loc>https://example.com/</loc>"
+        );
+        // Schemeless values pass through untouched.
+        assert_eq!(
+            canonicalise_loc_urls("<loc>relative/index.html</loc>"),
+            "<loc>relative/index.html</loc>"
+        );
+        // Lines without a closing tag pass through untouched.
+        assert_eq!(
+            canonicalise_loc_urls("<loc>https://example.com/a"),
+            "<loc>https://example.com/a"
+        );
+        // Indentation is preserved.
+        assert_eq!(
+            canonicalise_loc_urls(
+                "  <loc>https://example.com/a/index.html</loc>"
+            ),
+            "  <loc>https://example.com/a/</loc>"
+        );
     }
 
     #[test]
@@ -252,9 +384,9 @@ mod tests {
 
     #[test]
     fn after_compile_no_op_when_sitemap_missing() -> Result<()> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
-        SitemapFixPlugin.after_compile(&ctx)?;
+        SitemapFixPlugin.after_compile(&ctx).unwrap();
         assert!(!tmp.path().join("sitemap.xml").exists());
         Ok(())
     }
@@ -306,6 +438,51 @@ mod tests {
         assert!(extract_best_date(&meta).is_none());
     }
 
+    // -----------------------------------------------------------------
+    // Flexible date chain (issue #586 / plan §2 item 1.4, spec A4)
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn extract_best_date_parses_long_form_date_field() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("date".to_string(), "July 1, 2026".to_string());
+        let date = extract_best_date(&meta);
+        assert_eq!(date.as_deref(), Some("2026-07-01"));
+    }
+
+    #[test]
+    fn extract_best_date_parses_iso_item_pub_date() {
+        let mut meta = HashMap::new();
+        let _ =
+            meta.insert("item_pub_date".to_string(), "2026-07-01".to_string());
+        let date = extract_best_date(&meta);
+        assert_eq!(date.as_deref(), Some("2026-07-01"));
+    }
+
+    #[test]
+    fn extract_best_date_unparseable_date_passes_through() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("date".to_string(), "not-a-date".to_string());
+        // Verbatim fallback preserves the plugin's previous output.
+        let date = extract_best_date(&meta);
+        assert_eq!(date.as_deref(), Some("not-a-date"));
+    }
+
+    #[test]
+    fn extract_best_date_skips_unparseable_pub_date_for_next_field() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("item_pub_date".to_string(), "garbage".to_string());
+        let _ = meta.insert(
+            "last_build_date".to_string(),
+            "Mon, 01 Sep 2025 06:06:06 +0000".to_string(),
+        );
+        let date = extract_best_date(&meta);
+        assert_eq!(date.as_deref(), Some("2025-09-01"));
+    }
+
     #[test]
     fn collect_date_map_includes_only_pages_with_dates() {
         let mut m1 = HashMap::new();
@@ -348,5 +525,103 @@ mod tests {
         let result = update_lastmod_from_loc(xml, &map);
         assert!(result.contains("<lastmod>2025-01-01</lastmod>"));
         assert!(!result.contains("should-not-match"));
+    }
+
+    // -----------------------------------------------------------------
+    // extract_best_date: empty date fields fail parsing silently
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_extract_best_date_empty_field_yields_verbatim_date() {
+        crate::test_support::init_logger();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("item_pub_date".to_string(), String::new());
+        // The empty value fails the flexible chain without warning and
+        // falls through to the verbatim `date` fallback (also absent).
+        assert_eq!(extract_best_date(&meta), None);
+    }
+
+    // -----------------------------------------------------------------
+    // strip_duplicate_xml_decls_and_fix_urls: <atom:link> lines
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_strip_normalises_atom_link_lines() {
+        let content = "<?xml version=\"1.0\"?>\n<atom:link href=\"https://example.com//rss.xml\"/>\n";
+        let out = strip_duplicate_xml_decls_and_fix_urls(content);
+        assert!(
+            out.contains("https://example.com/rss.xml"),
+            "double slash in atom:link must be normalised: {out}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // canonicalise_loc_urls: defensive early returns
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_canonicalise_loc_urls_without_loc_tag() {
+        let line = "  <lastmod>2026-01-01</lastmod>";
+        assert_eq!(canonicalise_loc_urls(line), line);
+    }
+
+    #[test]
+    fn test_canonicalise_loc_urls_with_unclosed_loc() {
+        let line = "  <loc>https://example.com/page";
+        assert_eq!(canonicalise_loc_urls(line), line);
+    }
+
+    // -----------------------------------------------------------------
+    // update_lastmod_from_loc: unclosed <loc> keeps previous state
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_update_lastmod_ignores_unclosed_loc_line() {
+        let mut date_map = HashMap::new();
+        let _ = date_map.insert("page".to_string(), "2026-02-02".to_string());
+        let xml = "<url>\n<loc>https://example.com/page\n<lastmod>2020-01-01</lastmod>\n</url>\n";
+        let out = update_lastmod_from_loc(xml, &date_map);
+        assert!(
+            out.contains("<lastmod>2020-01-01</lastmod>"),
+            "unclosed <loc> must not update current_loc: {out}"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Error paths
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn test_after_compile_errors_on_invalid_utf8_sitemap() {
+        let tmp = tempdir().unwrap();
+        let sitemap_path = tmp.path().join("sitemap.xml");
+        fs::write(&sitemap_path, [0xFF, 0xFE, 0xFD]).unwrap();
+        let ctx = test_ctx(tmp.path());
+        let err = SitemapFixPlugin.after_compile(&ctx).unwrap_err();
+        assert!(format!("{err}").contains("sitemap.xml"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_after_compile_write_failure_on_readonly_sitemap() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempdir().unwrap();
+        let sitemap_path = tmp.path().join("sitemap.xml");
+        fs::write(
+            &sitemap_path,
+            "<?xml version=\"1.0\"?>\n<urlset></urlset>\n",
+        )
+        .unwrap();
+        fs::set_permissions(&sitemap_path, fs::Permissions::from_mode(0o444))
+            .unwrap();
+
+        let ctx = test_ctx(tmp.path());
+        let result = SitemapFixPlugin.after_compile(&ctx);
+        let _ = fs::set_permissions(
+            &sitemap_path,
+            fs::Permissions::from_mode(0o644),
+        );
+        let err = result.unwrap_err();
+        assert!(format!("{err}").contains("sitemap.xml"));
     }
 }

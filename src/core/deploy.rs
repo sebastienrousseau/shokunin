@@ -306,6 +306,26 @@ mod tests {
     }
 
     #[test]
+    fn deploy_target_every_unordered_pair_is_not_equal() {
+        // The test above only walks one adjacent cycle (4 of the 6
+        // unordered pairs over 4 variants). Exercise the two remaining
+        // pairs (Netlify/CloudflarePages and Vercel/GithubPages) too,
+        // so every branch of the derived `PartialEq` impl has actually
+        // been driven by at least one inequality comparison.
+        let variants = [
+            DeployTarget::Netlify,
+            DeployTarget::Vercel,
+            DeployTarget::CloudflarePages,
+            DeployTarget::GithubPages,
+        ];
+        for (i, a) in variants.iter().enumerate() {
+            for b in &variants[i + 1..] {
+                assert_ne!(a, b, "{a:?} should not equal {b:?}");
+            }
+        }
+    }
+
+    #[test]
     fn deploy_target_is_copy_after_move() {
         // Verifies the `Copy` derive is in effect: the binding remains
         // usable after being passed by value.
@@ -361,6 +381,16 @@ mod tests {
         let plugin = DeployPlugin::new(DeployTarget::Vercel);
         let _copy = plugin;
         assert_eq!(plugin.name(), "deploy");
+    }
+
+    #[test]
+    fn deploy_plugin_debug_format_contains_type_name() {
+        // `DeployPlugin` derives `Debug` but no existing test formats
+        // it directly (only `DeployTarget`'s `Debug` was exercised).
+        let plugin = DeployPlugin::new(DeployTarget::CloudflarePages);
+        let formatted = format!("{plugin:?}");
+        assert!(formatted.contains("DeployPlugin"), "got: {formatted}");
+        assert!(formatted.contains("CloudflarePages"), "got: {formatted}");
     }
 
     // -------------------------------------------------------------------
@@ -594,10 +624,10 @@ mod tests {
             let plugin = DeployPlugin::new(target);
             plugin
                 .after_compile(&ctx)
-                .unwrap_or_else(|e| panic!("first {target:?}: {e}"));
+                .expect("first after_compile for target should succeed");
             plugin
                 .after_compile(&ctx)
-                .unwrap_or_else(|e| panic!("second {target:?}: {e}"));
+                .expect("second after_compile for target should succeed");
         }
     }
 
@@ -631,5 +661,71 @@ mod tests {
     fn generate_github_pages_into_missing_parent_returns_err() {
         let bogus = Path::new("/this/path/should/not/exist/ssg-test");
         assert!(generate_github_pages(bogus).is_err());
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile error mapping — generator failure surfaces as
+    // SsgError::Io via the per-target `map_err` closures
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[cfg(unix)]
+    fn after_compile_maps_generator_errors_for_every_target() {
+        use std::os::unix::fs::PermissionsExt;
+        for target in [
+            DeployTarget::Netlify,
+            DeployTarget::Vercel,
+            DeployTarget::CloudflarePages,
+            DeployTarget::GithubPages,
+        ] {
+            let (_tmp, site, ctx) = make_ctx_with_site();
+            // Site dir exists but is read-only, so every generator's
+            // first write fails and the `map_err(|e| SsgError::io(..))`
+            // closure for this target runs.
+            fs::set_permissions(&site, fs::Permissions::from_mode(0o555))
+                .expect("chmod site dir");
+
+            let res = DeployPlugin::new(target).after_compile(&ctx);
+
+            let _ =
+                fs::set_permissions(&site, fs::Permissions::from_mode(0o755));
+            // Root bypasses permissions on some CI runners, so
+            // tolerate Ok; when the failure fired, the error must
+            // render non-empty.
+            assert!(
+                res.err().is_none_or(|e| !format!("{e}").is_empty()),
+                "{target:?}"
+            );
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Generator error paths — later writes in each generator
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn generate_netlify_redirects_write_failure_propagates() {
+        // `_headers` succeeds, `_redirects` fails because a directory
+        // occupies that name (line 149).
+        let dir = tempdir().expect("tempdir");
+        fs::create_dir_all(dir.path().join("_redirects")).unwrap();
+        assert!(generate_netlify(dir.path()).is_err());
+    }
+
+    #[test]
+    fn generate_netlify_toml_write_failure_propagates() {
+        // `_headers` and `_redirects` succeed, `netlify.toml` fails
+        // (line 160).
+        let dir = tempdir().expect("tempdir");
+        fs::create_dir_all(dir.path().join("netlify.toml")).unwrap();
+        assert!(generate_netlify(dir.path()).is_err());
+    }
+
+    #[test]
+    fn generate_cloudflare_redirects_write_failure_propagates() {
+        // `_headers` succeeds, `_redirects` fails (line 230).
+        let dir = tempdir().expect("tempdir");
+        fs::create_dir_all(dir.path().join("_redirects")).unwrap();
+        assert!(generate_cloudflare(dir.path()).is_err());
     }
 }

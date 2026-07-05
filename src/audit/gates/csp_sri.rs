@@ -112,22 +112,24 @@ impl AuditGate for CspSriGate {
 }
 
 fn extract_meta_csp(html: &str) -> Option<String> {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let needle = "<meta";
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find(needle) {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
-        if tag
-            .to_lowercase()
-            .contains("http-equiv=\"content-security-policy\"")
-        {
+        cursor = end;
+        // Attribute-based match: tolerant of quoting style, case, and
+        // attribute order — minifiers emit unquoted
+        // `http-equiv=Content-Security-Policy`.
+        let is_csp = super::hreflang_attr(tag, "http-equiv")
+            .is_some_and(|v| v.eq_ignore_ascii_case("content-security-policy"));
+        if is_csp {
             if let Some(c) = super::hreflang_attr(tag, "content") {
                 return Some(c);
             }
         }
-        cursor = end;
     }
     None
 }
@@ -145,7 +147,7 @@ fn extract_remote_assets(html: &str) -> Vec<RemoteAsset> {
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<script") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
         let Some(src) = super::hreflang_attr(tag, "src") else {
@@ -164,13 +166,16 @@ fn extract_remote_assets(html: &str) -> Vec<RemoteAsset> {
     let mut cursor = 0;
     while let Some(rel) = lower[cursor..].find("<link") {
         let abs = cursor + rel;
-        let end = lower[abs..].find('>').map_or(lower.len(), |e| abs + e + 1);
+        let end = super::find_tag_end(html, abs);
         let tag = &html[abs..end];
         cursor = end;
-        let lower_tag = tag.to_lowercase();
-        if !lower_tag.contains("rel=\"stylesheet\"")
-            && !lower_tag.contains("rel='stylesheet'")
-        {
+        // `rel` may be unquoted (minified) and space-separated
+        // (`rel="stylesheet preload"`).
+        let is_stylesheet = super::hreflang_attr(tag, "rel").is_some_and(|r| {
+            r.split_ascii_whitespace()
+                .any(|t| t.eq_ignore_ascii_case("stylesheet"))
+        });
+        if !is_stylesheet {
             continue;
         }
         let Some(href) = super::hreflang_attr(tag, "href") else {
@@ -206,9 +211,8 @@ mod tests {
         let mut files = Vec::new();
         for (rel, html) in pages {
             let p = root.join(rel);
-            if let Some(parent) = p.parent() {
-                std::fs::create_dir_all(parent).unwrap();
-            }
+            // root.join(rel) always has a parent directory.
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(&p, html).unwrap();
             files.push(p);
         }
@@ -352,6 +356,53 @@ mod tests {
     }
 
     #[test]
+    fn minified_unquoted_csp_meta_recognised() {
+        // Regression: minified HTML emits unquoted attribute values in
+        // original case; the gate must not report CSP-MISSING.
+        // The SRI-less remote script keeps `f` non-empty so the
+        // no-CSP-MISSING predicate actually evaluates.
+        let html = "<html><head>\
+            <meta content=\"default-src 'self'\" http-equiv=Content-Security-Policy>\
+            <script src=\"https://cdn.example/x.js\"></script>\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("CSP-MISSING")),
+            "unquoted http-equiv must count: {f:?}"
+        );
+    }
+
+    #[test]
+    fn other_http_equiv_meta_does_not_count_as_csp() {
+        // True positive preserved: a page whose only http-equiv is
+        // something else still has no CSP.
+        let html = "<html><head>\
+            <meta http-equiv=X-UA-Compatible content=\"IE=edge\">\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("CSP-MISSING")),
+            "non-CSP http-equiv must still flag: {f:?}"
+        );
+    }
+
+    #[test]
+    fn minified_unquoted_stylesheet_rel_needs_integrity() {
+        let html = "<html><head>\
+            <meta http-equiv=Content-Security-Policy content=\"default-src 'self'\">\
+            <link href=https://cdn.example/s.css rel=stylesheet>\
+        </head><body></body></html>";
+        let s = site_with(&[("index.html", html)]);
+        let f = CspSriGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("SRI-MISSING")),
+            "unquoted rel=stylesheet must be seen: {f:?}"
+        );
+    }
+
+    #[test]
     fn metadata_methods_exposed() {
         let g = CspSriGate;
         assert_eq!(g.name(), "csp_sri");
@@ -367,6 +418,22 @@ mod tests {
         let s = site_with(&[]);
         let f = CspSriGate.run(&s, &AuditOptions::default());
         assert!(f.is_empty());
+    }
+
+    #[test]
+    fn meta_csp_without_content_attr_yields_none() {
+        // http-equiv matches but there is no content= value to return;
+        // the scanner keeps looking and ends with None.
+        let html = r#"<meta http-equiv="Content-Security-Policy">"#;
+        assert_eq!(extract_meta_csp(html), None);
+    }
+
+    #[test]
+    fn stylesheet_link_without_href_is_skipped() {
+        let html = r#"<link rel="stylesheet"><link rel="stylesheet" href="https://cdn.example/a.css">"#;
+        let assets = extract_remote_assets(html);
+        assert_eq!(assets.len(), 1, "href-less link must be skipped");
+        assert_eq!(assets[0].href, "https://cdn.example/a.css");
     }
 
     #[test]
