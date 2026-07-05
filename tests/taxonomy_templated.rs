@@ -61,6 +61,7 @@ fn config_with_language(root: &Path, language: &str) -> SsgConfig {
         serve_dir: None,
         i18n: None,
         cdn_prefix: None,
+        og_image: None,
         image: ImageConfig::default(),
         edge_headers: ssg::cmd::EdgeHeadersConfig::default(),
         agents: None,

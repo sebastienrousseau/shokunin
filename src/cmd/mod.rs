@@ -138,6 +138,7 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             language: "en-GB".to_string(),
             i18n: None,
             cdn_prefix: None,
+            og_image: None,
             image: ImageConfig::default(),
             edge_headers: EdgeHeadersConfig::default(),
             agents: None,

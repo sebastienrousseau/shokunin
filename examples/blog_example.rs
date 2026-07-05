@@ -84,6 +84,21 @@ fn main() -> Result<()> {
                 .to_string(),
         )
         .language("en-GB".to_string())
+        // Site-wide og:image fallback (issue: audit's OG-IMAGE gate
+        // flagged the generated /tags/*/ pages — they bypass the
+        // per-page SeoPlugin derivation, see SsgConfig::og_image doc).
+        // Reuses the same inline gradient banner the homepage's front
+        // matter carries, so no extra asset needs to ship with the site.
+        .og_image(Some(
+            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmc\
+             vMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxNDQwIDM5OCcgcHJlc2VydmVBc3BlY3RS\
+             YXRpbz0neE1pZFlNaWQgc2xpY2UnPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0nZ\
+             ycgeDE9JzAnIHkxPScwJyB4Mj0nMScgeTI9JzEnPjxzdG9wIG9mZnNldD0nMCcgc3\
+             RvcC1jb2xvcj0nIzE2NjUzNCcvPjxzdG9wIG9mZnNldD0nMScgc3RvcC1jb2xvcj0\
+             nIzg2ZWZhYycvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPScx\
+             NDQwJyBoZWlnaHQ9JzM5OCcgZmlsbD0ndXJsKCNnKScvPjwvc3ZnPg=="
+                .to_string(),
+        ))
         .build()
         .context("Failed to build configuration")?;
 

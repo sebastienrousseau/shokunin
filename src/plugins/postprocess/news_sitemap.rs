@@ -195,6 +195,7 @@ mod tests {
             serve_dir: None,
             i18n: None,
             cdn_prefix: None,
+            og_image: None,
             image: crate::cmd::ImageConfig::default(),
             edge_headers: crate::cmd::EdgeHeadersConfig::default(),
             agents: None,
