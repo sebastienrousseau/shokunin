@@ -179,8 +179,8 @@ pub use staticdatagen;
 // Re-export everything that was previously pub in lib.rs
 pub use crate::core_group::fs_ops::{
     collect_files_recursive, copy_dir_all, copy_dir_all_async,
-    copy_dir_with_progress, is_safe_path, verify_and_copy_files,
-    verify_and_copy_files_async, verify_file_safety,
+    copy_dir_with_progress, is_path_within_root, is_safe_path,
+    verify_and_copy_files, verify_and_copy_files_async, verify_file_safety,
 };
 pub use crate::core_group::logging::{
     create_log_file, log_arguments, log_initialization,
