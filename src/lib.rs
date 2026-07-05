@@ -4565,6 +4565,50 @@ mod tests {
             let err = dispatch_invocation(inv, &matches).unwrap_err();
             assert!(format!("{err:?}").contains("injected: lib::run-on-serve"));
         }
+
+        /// `Paths::validate` can only reach `symlink_metadata_checked`'s
+        /// error arm through this failpoint: once `path.exists()` is
+        /// `true`, `Path::symlink_metadata` cannot be made to fail
+        /// deterministically from a CLI-reachable input.
+        #[test]
+        fn paths_validate_propagates_injected_symlink_metadata_failure() {
+            let _g = ssg_check_guard();
+            let _fp = FailGuard("lib::symlink-metadata");
+            fail::cfg("lib::symlink-metadata", "return").unwrap();
+
+            let tmp = tempdir().unwrap();
+            let paths = Paths {
+                site: tmp.path().to_path_buf(),
+                content: tmp.path().to_path_buf(),
+                build: tmp.path().to_path_buf(),
+                template: tmp.path().to_path_buf(),
+            };
+            let err = paths.validate().unwrap_err();
+            assert!(
+                format!("{err:?}").contains("injected: lib::symlink-metadata")
+            );
+        }
+
+        /// `create_directories`'s `is_safe_path` error arm only fires
+        /// when `Path::canonicalize` fails on an *existing* path — not
+        /// constructible deterministically from CLI-reachable inputs,
+        /// so this is only reachable through the failpoint.
+        #[test]
+        fn create_directories_propagates_injected_is_safe_path_failure() {
+            let _g = ssg_check_guard();
+            let _fp = FailGuard("lib::is-safe-path");
+            fail::cfg("lib::is-safe-path", "return").unwrap();
+
+            let tmp = tempdir().unwrap();
+            let paths = Paths {
+                site: tmp.path().join("site"),
+                content: tmp.path().join("content"),
+                build: tmp.path().join("build"),
+                template: tmp.path().join("template"),
+            };
+            let err = create_directories(&paths).unwrap_err();
+            assert!(format!("{err:?}").contains("injected: lib::is-safe-path"));
+        }
     }
 }
 

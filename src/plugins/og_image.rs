@@ -321,6 +321,17 @@ mod tests {
     }
 
     #[test]
+    fn slug_from_path_falls_back_when_not_under_site_dir() {
+        // `path.strip_prefix(site_dir).unwrap_or(path)` — when `path`
+        // isn't actually nested under `site_dir`, `strip_prefix` fails
+        // and the whole path is used as-is (the other two tests here
+        // only ever exercise the success arm).
+        let slug =
+            slug_from_path(Path::new("/other/page.html"), Path::new("/site"));
+        assert_eq!(slug, "other-page");
+    }
+
+    #[test]
     fn slug_from_path_root() {
         let slug =
             slug_from_path(Path::new("/site/index.html"), Path::new("/site"));

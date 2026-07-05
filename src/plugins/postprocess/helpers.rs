@@ -693,6 +693,46 @@ mod tests {
     }
 
     #[test]
+    fn test_read_meta_sidecars_ignores_non_sidecar_files() {
+        // A file that doesn't match the `.meta.json` suffix (e.g. the
+        // compiled `index.html` sitting right next to the sidecar)
+        // must be skipped by `sidecar_stem`'s `None` arm rather than
+        // treated as a sidecar.
+        let tmp = tempfile::tempdir().unwrap();
+        fs::write(tmp.path().join("index.html"), "<html></html>").unwrap();
+        fs::write(tmp.path().join("notes.txt"), "not a sidecar").unwrap();
+        fs::write(tmp.path().join("real.meta.json"), r#"{"title":"Real"}"#)
+            .unwrap();
+        let entries = read_meta_sidecars(tmp.path()).unwrap();
+        assert_eq!(entries.len(), 1, "only the genuine sidecar counts");
+        assert_eq!(entries[0].0, "real");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_read_meta_sidecars_unreadable_sidecar_file_is_skipped() {
+        // A sidecar whose *directory listing* succeeds but whose file
+        // contents can't be read (permission denied on the file
+        // itself, not its parent) must be silently skipped rather
+        // than erroring the whole walk — exercises the `fs::read_to_string`
+        // `Err` arm of `if let Ok(content) = ...`.
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let locked = tmp.path().join("locked.meta.json");
+        fs::write(&locked, r#"{"title":"Locked"}"#).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+        let result = read_meta_sidecars(tmp.path());
+        // Restore perms so tempdir cleanup works.
+        let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o644));
+        let entries = result.unwrap();
+        assert!(
+            entries.is_empty(),
+            "an unreadable sidecar file must be skipped, not error"
+        );
+    }
+
+    #[test]
     #[cfg(unix)]
     fn test_read_meta_sidecars_unreadable_subdir_errors() {
         use std::os::unix::fs::PermissionsExt;

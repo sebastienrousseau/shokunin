@@ -286,6 +286,18 @@ mod tests {
     }
 
     #[test]
+    fn output_to_url_strips_index_htm_suffix() {
+        // Covers the second loop iteration of the `trailing` array in
+        // `output_to_url` — a path ending in the shorter "index.htm"
+        // (no trailing "l") never matches the first `strip_suffix`
+        // check, so the loop must advance to the second entry and take
+        // its `if let Some(stripped)` branch.
+        let out = pb("build/blog/index.htm");
+        let url = output_to_url(&out, Path::new("build"));
+        assert_eq!(url, "/blog/");
+    }
+
+    #[test]
     fn output_to_url_keeps_leading_slash_when_prefix_strip_fails() {
         // An absolute output path outside `output_dir` cannot be
         // stripped; it already starts with '/' so no slash is inserted.

@@ -125,12 +125,16 @@ fn check_text(text: &str, source: &str, findings: &mut Vec<Finding>) {
         );
     }
 
-    // TLS 1.3 declared anywhere
+    // TLS 1.3 declared anywhere.
+    //
+    // Note: a `min_version = "tlsv1.3"` wrangler.toml entry is already
+    // caught by the `tlsv1.3` clause below (the former is a strict
+    // substring of the latter), so it isn't listed as its own
+    // alternative — doing so would be unreachable dead code.
     let mentions_tls13 = lower.contains("tls-1.3")
         || lower.contains("tlsv1.3")
         || lower.contains("tls13")
-        || lower.contains("\"1.3\"")
-        || lower.contains("min_version = \"tlsv1.3\"");
+        || lower.contains("\"1.3\"");
     if !mentions_tls13 {
         findings.push(
             Finding::new(
@@ -301,6 +305,26 @@ mod tests {
         assert!(f
             .iter()
             .any(|x| x.code.as_deref() == Some("PQC-HSTS-UNPARSEABLE")));
+    }
+
+    #[test]
+    fn root_without_parent_short_circuits_parent_wrangler_lookup() {
+        // `/` has no parent, so `site.root.parent()` is `None` and
+        // `parent_wrangler` is `None` — drives the `None` arm of
+        // `parent_wrangler.as_ref().is_some_and(...)` inside
+        // `has_wrangler`, which every other test (all rooted under a
+        // tempdir, which always has a parent) never reaches.
+        let s = Site {
+            root: PathBuf::from("/"),
+            html_files: Vec::new(),
+        };
+        let f = PqcTlsGate.run(&s, &AuditOptions::default());
+        if !std::path::Path::new("/_headers").exists()
+            && !std::path::Path::new("/wrangler.toml").exists()
+        {
+            assert_eq!(f.len(), 1);
+            assert_eq!(f[0].code.as_deref(), Some("PQC-INPUT-MISSING"));
+        }
     }
 
     #[test]

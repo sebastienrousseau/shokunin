@@ -238,6 +238,28 @@ mod tests {
     }
 
     #[test]
+    fn emit_sidecars_reading_time_scales_with_long_body() {
+        // Every other test body is a handful of words, so
+        // `(word_count / 200).max(1)` always takes the `1` branch.
+        // Use a body with 400+ words so the quotient itself (2) wins
+        // over the floor, exercising the other side of that
+        // computation.
+        let (_tmp, content, sidecars) = make_layout();
+        let long_body = "word ".repeat(450);
+        let md = format!("---\ntitle: Long\n---\n{long_body}");
+        fs::write(content.join("long.md"), md).unwrap();
+
+        let count = emit_sidecars(&content, &sidecars).unwrap();
+        assert_eq!(count, 1);
+
+        let body = fs::read_to_string(sidecars.join("long.meta.json")).unwrap();
+        let parsed: HashMap<String, serde_json::Value> =
+            serde_json::from_str(&body).unwrap();
+        assert_eq!(parsed.get("word_count").unwrap().as_u64().unwrap(), 450);
+        assert_eq!(parsed.get("reading_time").unwrap().as_u64().unwrap(), 2);
+    }
+
+    #[test]
     fn emit_sidecars_skips_files_without_frontmatter() {
         let (_tmp, content, sidecars) = make_layout();
         fs::write(content.join("plain.md"), "No frontmatter here.").unwrap();
@@ -388,6 +410,31 @@ mod tests {
         fs::create_dir_all(&sidecars).unwrap();
 
         let html = site.join("ghost.html");
+        fs::write(&html, "").unwrap();
+
+        let result = read_sidecar_for_html(&html, &site, &sidecars).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn read_sidecar_for_html_path_outside_site_dir_uses_fallback_rel() {
+        // `html_path.strip_prefix(site_dir).unwrap_or(html_path)` — the
+        // `unwrap_or` fallback only fires when `html_path` is *not*
+        // rooted under `site_dir`. Every other test in this module
+        // passes an `html_path` that lives under `site`, so the
+        // fallback arm itself was never driven. Pass a path from a
+        // completely unrelated tree to force `strip_prefix` to return
+        // `Err`, exercising the fallback (`rel = html_path`, which is
+        // then absolute, so both the direct and `.md` lookups miss and
+        // the function still resolves cleanly to `Ok(None)`).
+        let dir = tempdir().expect("tempdir");
+        let site = dir.path().join("site");
+        let sidecars = dir.path().join("sidecars");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let unrelated = tempdir().expect("unrelated tempdir");
+        let html = unrelated.path().join("elsewhere.html");
         fs::write(&html, "").unwrap();
 
         let result = read_sidecar_for_html(&html, &site, &sidecars).unwrap();

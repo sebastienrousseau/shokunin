@@ -986,6 +986,52 @@ mod tests {
     }
 
     #[test]
+    fn report_max_severity_accumulates_across_multiple_warn_and_info_gates() {
+        // Drives the `Some(m) => m.max(...)` arm of both `map_or`
+        // closures in `max_severity` — a single gate never re-enters
+        // the accumulator, so at least two non-error gates (in either
+        // order) are required to exercise the closure bodies.
+        let report = AuditReport {
+            gates: vec![
+                GateResult {
+                    name: "a".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 1,
+                        warn: 0,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+                GateResult {
+                    name: "b".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 0,
+                        warn: 1,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+                GateResult {
+                    name: "c".to_string(),
+                    skipped: false,
+                    skip_reason: None,
+                    severity_counts: SeverityCounts {
+                        info: 1,
+                        warn: 0,
+                        error: 0,
+                    },
+                    findings: vec![],
+                },
+            ],
+        };
+        assert_eq!(report.max_severity(), Some(Severity::Warn));
+    }
+
+    #[test]
     fn report_max_severity_returns_highest() {
         let report = AuditReport {
             gates: vec![

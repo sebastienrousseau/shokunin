@@ -199,6 +199,12 @@ impl Plugin for AgentApiPlugin {
 /// Serialises pretty JSON with a trailing newline (Git/editor friendly,
 /// byte-stable across rebuilds).
 fn to_pretty(value: &Value, path: &Path) -> Result<String, SsgError> {
+    fail_point!("agent_api::to-pretty", |_| {
+        Err(SsgError::Io {
+            path: path.to_path_buf(),
+            source: std::io::Error::other("injected: agent_api::to-pretty"),
+        })
+    });
     let mut body =
         serde_json::to_string_pretty(value).map_err(|e| SsgError::Io {
             path: path.to_path_buf(),
@@ -831,6 +837,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn emits_all_four_documents() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -848,6 +855,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn documents_end_with_newline() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "a.meta.json", r#"{"title":"A"}"#);
@@ -859,6 +867,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn output_is_byte_identical_across_runs() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -887,6 +896,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn posts_json_carries_all_tracker_fields() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -914,6 +924,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn posts_sorted_by_url() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "zeta.meta.json", r#"{"title":"Z"}"#);
@@ -936,6 +947,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn nested_sidecars_map_to_nested_urls() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "blog/deep.meta.json", r#"{"title":"Deep"}"#);
@@ -948,6 +960,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn drafts_private_unpublished_and_error_pages_excluded() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "ok.meta.json", r#"{"title":"OK"}"#);
@@ -980,6 +993,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn untitled_and_invalid_sidecars_skipped() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "no-title.meta.json", r#"{"date":"2026"}"#);
@@ -995,6 +1009,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn comma_separated_string_tags_are_split_sorted_deduped() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1011,6 +1026,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn locale_falls_back_language_then_site_then_en() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "a.meta.json", r#"{"title":"A","locale":"fr_FR"}"#);
@@ -1033,6 +1049,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn word_count_prefers_sidecar_field() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P","word_count":77}"#);
@@ -1043,6 +1060,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn word_count_lifts_from_blogposting_jsonld() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
@@ -1059,6 +1077,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn word_count_falls_back_to_stripped_html() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
@@ -1073,6 +1092,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn word_count_zero_when_html_missing() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
@@ -1101,6 +1121,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn topics_map_terms_to_sorted_member_urls() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "z.meta.json", r#"{"title":"Z","tags":["rust"]}"#);
@@ -1119,6 +1140,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn topics_include_topic_clusters() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1132,6 +1154,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn topics_keys_are_sorted() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1154,6 +1177,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn person_parses_email_paren_name_convention() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1171,6 +1195,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn person_falls_back_to_site_name_without_authors() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
@@ -1181,6 +1206,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn person_picks_most_frequent_author() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "a.meta.json", r#"{"title":"A","author":"Bob"}"#);
@@ -1231,6 +1257,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn index_carries_counts_and_absolute_links() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1255,6 +1282,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn no_config_uses_relative_links_and_en() {
         let dir = tempdir().unwrap();
         let build = dir.path().join("build");
@@ -1326,6 +1354,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn after_compile_fails_when_doc_path_squatted_by_dir() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(&ctx, "p.meta.json", r#"{"title":"P"}"#);
@@ -1402,6 +1431,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
     fn topics_map_dedupes_term_shared_by_tags_and_clusters() {
         let (_tmp, ctx) = make_ctx();
         write_sidecar(
@@ -1438,5 +1468,82 @@ mod tests {
         let (name, email) = parse_author("<>");
         assert_eq!(name.as_deref(), Some("<>"));
         assert!(email.is_none());
+    }
+
+    // -------------------------------------------------------------------
+    // resolve_page — pretty-URL branch (`<stem>/index.html` on disk)
+    // -------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(agent_api_failpoint)]
+    fn pretty_url_used_when_directory_index_html_exists() {
+        // When the compiled output is directory-shaped
+        // (`post/index.html`), the URL must be the pretty `/post/`
+        // form rather than the flat `/post.html` fallback.
+        let (_tmp, ctx) = make_ctx();
+        write_sidecar(&ctx, "post.meta.json", r#"{"title":"Post"}"#);
+        fs::create_dir_all(ctx.site_dir.join("post")).unwrap();
+        fs::write(ctx.site_dir.join("post/index.html"), "<p>hi</p>").unwrap();
+
+        AgentApiPlugin::default().after_compile(&ctx).unwrap();
+        let posts = read_doc(&ctx, "posts.json");
+        assert_eq!(
+            posts.as_array().unwrap()[0]["url"],
+            "https://example.com/post/"
+        );
+    }
+}
+
+// =========================================================================
+// Fault injection — `agent_api::to-pretty` covers the serde_json
+// serialisation error arm of `to_pretty`, which cannot fail via normal
+// data (every `Value` built by this module comes from finite numbers
+// and UTF-8 strings) and so is otherwise unreachable without fault
+// injection.
+// =========================================================================
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::cmd::SsgConfig;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(agent_api_failpoint)]
+    fn to_pretty_failpoint_propagates() {
+        let _guard = FailGuard("agent_api::to-pretty");
+        fail::cfg("agent_api::to-pretty", "return")
+            .expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        fs::create_dir_all(build.join(".meta")).unwrap();
+        fs::create_dir_all(&site).unwrap();
+        let cfg = SsgConfig::builder()
+            .site_name("Example".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            &build,
+            &site,
+            dir.path(),
+            cfg,
+        );
+
+        let err = AgentApiPlugin::default()
+            .after_compile(&ctx)
+            .expect_err("injected serialisation failure must propagate");
+        assert!(format!("{err:?}").contains("injected: agent_api::to-pretty"));
     }
 }

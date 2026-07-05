@@ -302,9 +302,10 @@ impl LlmPlugin {
             return Ok(0);
         }
 
+        let failing_count = failing.len();
         log::info!(
             "[llm] {} file(s) exceed grade {:.0}, attempting refinement",
-            failing.len(),
+            failing_count,
             config.target_grade
         );
 
@@ -1178,11 +1179,12 @@ fn generate_with_refinement(
             break;
         }
 
+        let attempt_num = attempt + 1;
         log::info!(
             "[llm] Grade {:.1} exceeds target {:.1}, refining (attempt {})",
             audit.grade_level,
             target_grade,
-            attempt + 1
+            attempt_num
         );
 
         let simplify_prompt = format!(
@@ -1337,18 +1339,7 @@ fn classify_ureq_error(
             // formatted message which is stable across versions.
             let kind = transport.kind();
             let msg = transport.to_string();
-            // Windows phrases the same underlying WSAETIMEDOUT
-            // condition as "did not properly respond ... (os error
-            // 10060)" rather than "timed out" — match the OS error
-            // code too so the classification isn't Unix-phrasing-only.
-            let looks_like_timeout = matches!(
-                kind,
-                ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
-            ) && (msg.contains("timed out")
-                || msg.contains("timeout")
-                || msg.contains("deadline")
-                || msg.contains("os error 10060"));
-            if looks_like_timeout {
+            if is_timeout_transport(kind, &msg) {
                 SsgError::LlmTimeout { duration: timeout }
             } else {
                 SsgError::LlmEndpointUnreachable {
@@ -1358,6 +1349,26 @@ fn classify_ureq_error(
             }
         }
     }
+}
+
+/// Heuristic: does this transport error look like a client-side
+/// timeout rather than a hard connection failure?
+///
+/// Extracted from [`classify_ureq_error`] as a pure function of
+/// `(kind, message)` so each OS-specific phrasing — Unix's "timed
+/// out", the generic "timeout"/"deadline" fallbacks, and Windows'
+/// WSAETIMEDOUT phrasing ("os error 10060") — is directly unit
+/// testable without depending on which OS actually produced the
+/// transport error (`ureq::Transport` has no public constructor, so
+/// synthesizing a real one in a test is not possible).
+fn is_timeout_transport(kind: ureq::ErrorKind, msg: &str) -> bool {
+    matches!(
+        kind,
+        ureq::ErrorKind::Io | ureq::ErrorKind::ConnectionFailed
+    ) && (msg.contains("timed out")
+        || msg.contains("timeout")
+        || msg.contains("deadline")
+        || msg.contains("os error 10060"))
 }
 
 impl LlmPlugin {
@@ -3348,6 +3359,38 @@ mod tests {
         assert_eq!(html, "<body><img src=\"x.jpg\"");
     }
 
+    #[test]
+    fn generate_missing_alt_text_replaces_empty_alt_attribute() {
+        // dry_run=false + a reachable mock Ollama + an `alt=""` tag
+        // drives the "replace existing empty alt" branch, as opposed
+        // to the "insert a brand-new alt attribute" branch exercised
+        // by the mixed-images test above.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("A friendly cat.").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let mut html =
+            r#"<html><body><img src="cat.jpg" alt=""></body></html>"#
+                .to_string();
+        let count = generate_missing_alt_text(
+            &mut html,
+            "llama3",
+            &url,
+            false,
+            Path::new("test.html"),
+            Path::new("."),
+        );
+        assert_eq!(count, 1);
+        assert!(
+            html.contains("alt=\"A friendly cat.\""),
+            "empty alt should be replaced: {html}"
+        );
+        assert!(
+            !html.contains("alt=\"\""),
+            "empty alt attribute must be gone"
+        );
+    }
+
     #[cfg(unix)]
     #[test]
     fn audit_all_skips_unreadable_markdown_file() {
@@ -3550,6 +3593,37 @@ mod tests {
     }
 
     #[test]
+    fn audit_and_fix_skips_failing_file_when_generation_fails() {
+        // Same setup as the `_with_report` counterpart above, but
+        // against the plain `audit_and_fix` — drives the implicit
+        // no-op arm of its own
+        // `if let Some(refined) = generate_with_refinement(..)`
+        // (generation fails, so the failing file is left untouched
+        // and `rewritten` is not incremented).
+        let dir = tempfile::tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        write_hard_file(&content);
+
+        let get_ok: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        let post_junk: &'static [u8] =
+            b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4\r\nConnection: close\r\n\r\noops";
+        let (url, _h) = spawn_routing_mock_ollama(get_ok, post_junk);
+
+        let cfg = LlmConfig {
+            endpoint: url,
+            target_grade: 8.0,
+            max_refinement_attempts: 0,
+            ..LlmConfig::default()
+        };
+        let rewritten = LlmPlugin::audit_and_fix(&content, &cfg).unwrap();
+        assert_eq!(rewritten, 0);
+        let out = fs::read_to_string(content.join("hard.md")).unwrap();
+        assert!(out.contains("procurement"), "file must be untouched");
+    }
+
+    #[test]
     fn audit_and_fix_with_report_skips_failing_file_with_empty_body() {
         let dir = tempfile::tempdir().unwrap();
         let content = dir.path().join("content");
@@ -3649,6 +3723,65 @@ mod tests {
         assert_eq!(out, AUGMENTABLE_PAGE, "dry-run must not modify files");
     }
 
+    #[test]
+    fn after_compile_no_changes_needed_when_page_already_augmented() {
+        // Ollama IS reachable, but the page already has an adequate
+        // meta description and no images at all — exercises the
+        // implicit no-op arms of `needs_meta_description` being
+        // false and of the `if augmented > 0` log guard inside
+        // `after_compile`.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("unused").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let page = r#"<html><head><title>T</title><meta name="description" content="This description is already long enough to pass the fifty character minimum threshold."></head><body><main><p>Content.</p></main></body></html>"#;
+        fs::write(site.join("index.html"), page).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(out, page, "page needed no augmentation, must be untouched");
+    }
+
+    #[test]
+    fn after_compile_skips_meta_description_when_body_too_short() {
+        // Ollama reachable, page needs a meta description (no tag at
+        // all), but the extracted body text is under the 20-char
+        // floor so `generate_meta_description` short-circuits to
+        // `None` before ever calling the LLM — exercises the
+        // implicit no-op arm of
+        // `if let Some(desc) = generate_meta_description(..)` inside
+        // `after_compile`.
+        let bytes: &'static [u8] =
+            Box::leak(mock_ollama_ok("unused").into_boxed_slice());
+        let (url, _h) = spawn_multi_shot_mock_ollama(bytes);
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let page =
+            "<html><head><title>T</title></head><body><main>Hi.</main></body></html>";
+        fs::write(site.join("index.html"), page).unwrap();
+
+        let plugin = LlmPlugin::new(LlmConfig {
+            endpoint: url,
+            ..LlmConfig::default()
+        });
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(out, page, "no meta description could be generated");
+    }
+
     // ── generate_with_refinement refinement pass ─────────────────
 
     #[test]
@@ -3713,6 +3846,64 @@ mod tests {
             matches!(err, SsgError::LlmTimeout { .. }),
             "expected LlmTimeout, got: {err}"
         );
+    }
+
+    // ── is_timeout_transport: every OS-phrasing branch ────────────
+    //
+    // `ureq::Transport` has no public constructor, so these branches
+    // (in particular the "timeout"/"deadline"/"os error 10060"
+    // fallbacks that no real Unix socket ever actually produces) are
+    // tested directly against the extracted pure predicate rather
+    // than through a live socket.
+
+    #[test]
+    fn is_timeout_transport_unix_timed_out_phrasing() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "connection timed out"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_generic_timeout_word() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::ConnectionFailed,
+            "operation timeout"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_deadline_word() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "deadline exceeded"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_windows_os_error_10060() {
+        assert!(is_timeout_transport(
+            ureq::ErrorKind::Io,
+            "did not properly respond after a period of time (os error 10060)"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_false_for_unrelated_message() {
+        assert!(!is_timeout_transport(
+            ureq::ErrorKind::ConnectionFailed,
+            "connection refused"
+        ));
+    }
+
+    #[test]
+    fn is_timeout_transport_false_when_kind_is_not_io_or_connection_failed() {
+        // Even a "timed out"-shaped message must not classify as a
+        // timeout when the transport kind is unrelated to sockets.
+        assert!(!is_timeout_transport(
+            ureq::ErrorKind::InvalidUrl,
+            "request timed out"
+        ));
     }
 
     #[test]

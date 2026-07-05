@@ -504,6 +504,17 @@ mod tests {
     }
 
     #[test]
+    fn read_title_valid_json_without_title_field_is_none() {
+        // Valid JSON that parses fine but has no "title" key: the
+        // `doc.get("title")` lookup itself must return `None` (as
+        // opposed to the parse-failure path already covered above).
+        let dir = tempdir().unwrap();
+        let f = dir.path().join("no_title.json");
+        fs::write(&f, r#"{"version":"1.0","type":"link"}"#).unwrap();
+        assert!(read_title(&f).is_none());
+    }
+
+    #[test]
     fn page_rel_path_none_when_scheme_url_has_no_path() {
         // Scheme present but no `/` after the host at all.
         assert_eq!(page_rel_path("https://example.com"), None);
@@ -539,5 +550,24 @@ mod tests {
             .transform_html(html, &site.join("p.html"), &ctx)
             .unwrap();
         assert!(out.contains("href=\"/p.oembed.json\""));
+    }
+
+    #[test]
+    fn transform_html_path_outside_site_dir_uses_full_path_as_rel() {
+        // `path.strip_prefix(&ctx.site_dir).unwrap_or(path)` — when the
+        // page path isn't actually nested under `ctx.site_dir`,
+        // `strip_prefix` fails and the fallback returns `path`
+        // unchanged. This is otherwise never exercised because every
+        // other test's page path lives under the context's site_dir.
+        let (_tmp, ctx) = make_ctx();
+        let elsewhere = tempdir().unwrap();
+        let path = elsewhere.path().join("post.html");
+        let sibling = path.with_extension("oembed.json");
+        fs::write(&sibling, r#"{"title":"Elsewhere"}"#).unwrap();
+
+        let html = "<html><head></head><body>x</body></html>";
+        let out = OembedPlugin.transform_html(html, &path, &ctx).unwrap();
+        assert!(out.contains("application/json+oembed"));
+        assert!(out.contains("title=\"Elsewhere\""));
     }
 }

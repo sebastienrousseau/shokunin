@@ -550,6 +550,15 @@ mod tests {
         assert!(extract_island_components(html).is_empty());
     }
 
+    #[test]
+    fn extract_ignores_tag_without_component_attribute() {
+        // The tag closes normally but never contains `component="`, so
+        // `tag.find(pattern)` returns `None` — a distinct branch from
+        // the empty-value and unterminated-value cases above.
+        let html = "<ssg-island hydrate=\"idle\"></ssg-island>";
+        assert!(extract_island_components(html).is_empty());
+    }
+
     // -------------------------------------------------------------------
     // after_compile — copy branches + IO errors
     // -------------------------------------------------------------------

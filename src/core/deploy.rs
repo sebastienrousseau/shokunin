@@ -306,6 +306,26 @@ mod tests {
     }
 
     #[test]
+    fn deploy_target_every_unordered_pair_is_not_equal() {
+        // The test above only walks one adjacent cycle (4 of the 6
+        // unordered pairs over 4 variants). Exercise the two remaining
+        // pairs (Netlify/CloudflarePages and Vercel/GithubPages) too,
+        // so every branch of the derived `PartialEq` impl has actually
+        // been driven by at least one inequality comparison.
+        let variants = [
+            DeployTarget::Netlify,
+            DeployTarget::Vercel,
+            DeployTarget::CloudflarePages,
+            DeployTarget::GithubPages,
+        ];
+        for (i, a) in variants.iter().enumerate() {
+            for b in &variants[i + 1..] {
+                assert_ne!(a, b, "{a:?} should not equal {b:?}");
+            }
+        }
+    }
+
+    #[test]
     fn deploy_target_is_copy_after_move() {
         // Verifies the `Copy` derive is in effect: the binding remains
         // usable after being passed by value.
@@ -361,6 +381,16 @@ mod tests {
         let plugin = DeployPlugin::new(DeployTarget::Vercel);
         let _copy = plugin;
         assert_eq!(plugin.name(), "deploy");
+    }
+
+    #[test]
+    fn deploy_plugin_debug_format_contains_type_name() {
+        // `DeployPlugin` derives `Debug` but no existing test formats
+        // it directly (only `DeployTarget`'s `Debug` was exercised).
+        let plugin = DeployPlugin::new(DeployTarget::CloudflarePages);
+        let formatted = format!("{plugin:?}");
+        assert!(formatted.contains("DeployPlugin"), "got: {formatted}");
+        assert!(formatted.contains("CloudflarePages"), "got: {formatted}");
     }
 
     // -------------------------------------------------------------------

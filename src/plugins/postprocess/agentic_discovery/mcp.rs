@@ -655,6 +655,13 @@ mod tests {
     }
 
     #[test]
+    // Failpoints are process-global: this test reaches `write_mcp_registry`
+    // (and therefore `serialize_registry`) expecting success, so it must
+    // never run concurrently with `fault_tests`'s injected
+    // `postprocess::mcp-serialize` failure — joins that test's `#[serial]`
+    // lock as `#[parallel]` on the same key (mirrors the convention in
+    // `core::cache`'s fault-injection tests).
+    #[serial_test::parallel(mcp_serialize_fp)]
     fn collect_mcp_resources_with_auto_resources_via_write_mcp_registry() {
         // End-to-end: `write_mcp_registry` with `auto_resources=true`
         // is the only public caller that reaches
@@ -775,5 +782,65 @@ mod tests {
         let agents = AgentsConfig::default();
         let err = write_mcp_registry(&ctx, &cfg(), &agents).unwrap_err();
         assert!(format!("{err}").contains("mcp.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::cmd::{ImageConfig, SsgConfig};
+    use crate::plugin::PluginContext;
+    use std::path::PathBuf;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn cfg() -> SsgConfig {
+        SsgConfig {
+            site_name: "Example".to_string(),
+            site_title: "Example Site".to_string(),
+            site_description: "A demo".to_string(),
+            base_url: "https://example.com".to_string(),
+            language: "en".to_string(),
+            content_dir: PathBuf::from("content"),
+            output_dir: PathBuf::from("build"),
+            template_dir: PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+            cdn_prefix: None,
+            image: ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(mcp_serialize_fp)]
+    fn write_mcp_registry_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::mcp-serialize");
+        fail::cfg("postprocess::mcp-serialize", "return")
+            .expect("activate failpoint");
+
+        let dir = tempfile::tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let agents = AgentsConfig::default();
+        let err = write_mcp_registry(&ctx, &cfg(), &agents)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("mcp.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::mcp-serialize"),
+            "got: {msg}"
+        );
     }
 }

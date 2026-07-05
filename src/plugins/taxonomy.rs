@@ -1500,6 +1500,70 @@ mod tests {
 
     #[test]
     #[cfg(feature = "templates")]
+    fn render_term_page_appends_newline_when_template_output_lacks_one() {
+        // Counterpart to `user_templates_in_tera_dir_override_builtins`:
+        // this custom `tag.html` does NOT end in `\n`, so
+        // `render_term_page`'s `if !s.ends_with('\n') { s.push('\n'); }`
+        // branch actually fires (previously only the "already has a
+        // trailing newline" branch was exercised, since both the
+        // built-in templates and the other override test's fixtures
+        // happen to already end in `\n`).
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("tag.html"),
+            "<html>ssg-taxonomy NO-TRAILING-NEWLINE {{ tag }}</html>",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let term =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(term.contains("NO-TRAILING-NEWLINE"));
+        assert!(
+            term.ends_with('\n'),
+            "render_term_page must append the missing trailing newline"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
+    fn render_index_page_appends_newline_when_template_output_lacks_one() {
+        // Same as above but for `render_index_page`'s identical
+        // `ends_with('\n')` guard.
+        let (tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "A", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(
+            tera.join("taxonomy_index.html"),
+            "<html>ssg-taxonomy NO-TRAILING-NEWLINE-INDEX</html>",
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(index.contains("NO-TRAILING-NEWLINE-INDEX"));
+        assert!(
+            index.ends_with('\n'),
+            "render_index_page must append the missing trailing newline"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "templates")]
     fn nonexistent_template_dir_falls_back_to_builtins() {
         // resolve_user_template_dir returns None; the loader skips the
         // user-dir probe entirely.

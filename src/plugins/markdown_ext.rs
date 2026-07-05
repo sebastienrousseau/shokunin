@@ -911,6 +911,130 @@ mod tests {
         let input = "<img alt=\"no source here\">";
         assert_eq!(rewrite_html_images(input, "https://cdn/"), input);
     }
+
+    #[test]
+    fn expand_gfm_table_ends_without_blank_line_separator() {
+        // No blank line between the table and the next paragraph: the
+        // `find_table_end` scan must stop on the non-empty,
+        // pipe-free "Outro" line via its second OR operand, not the
+        // "line is blank" operand exercised by the sibling test above.
+        let input = "Intro\n\n| a | b |\n|---|---|\n| 1 | 2 |\nOutro\n";
+        let out = expand_gfm(input, None);
+        assert!(out.contains("<table>"), "got: {out}");
+        assert!(out.contains("<td>1</td>"));
+        assert!(out.contains("Outro"));
+    }
+
+    #[test]
+    fn expand_gfm_task_list_followed_by_plain_text() {
+        // `find_task_list_end` must stop as soon as a non-task-list
+        // line is encountered, rather than only ever running off the
+        // end of the `lines` slice (as the other task-list test does).
+        let input = "- [ ] one\n- [x] two\nplain paragraph\n";
+        let out = expand_gfm(input, None);
+        assert!(out.contains("<ul>"), "got: {out}");
+        assert!(out.contains("plain paragraph"));
+    }
+
+    #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn before_compile_applies_cdn_prefix_from_config() {
+        // The cdn_prefix extraction closures in `before_compile`
+        // (`ctx.config.as_ref().and_then(..).map(..)`) are only
+        // exercised when a real `SsgConfig` with `cdn_prefix` set is
+        // threaded through the plugin context — the `expand_gfm`
+        // tests above call the free function directly and never
+        // reach this code path.
+        use crate::cmd::SsgConfig;
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        fs::write(content.join("post.md"), "![Alt](/images/pic.png)\n")
+            .unwrap();
+
+        let cfg = SsgConfig::builder()
+            .cdn_prefix(Some("https://cdn.example.com/".to_string()))
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &content,
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            cfg,
+        );
+        MarkdownExtPlugin.before_compile(&ctx).unwrap();
+
+        let post = fs::read_to_string(content.join("post.md")).unwrap();
+        assert!(
+            post.contains("https://cdn.example.com//images/pic.png"),
+            "got: {post}"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_propagates_walk_error_from_unreadable_subdir() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let locked = content.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable subdir must surface an error");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_real_read_permission_denied_returns_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let file = content.join("locked.md");
+        fs::write(&file, "# Hi").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o000)).unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        let err = result.expect_err("permission-denied read must surface");
+        assert!(!format!("{err}").is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn before_compile_real_write_permission_denied_returns_io_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        fs::create_dir_all(&content).unwrap();
+        let file = content.join("post.md");
+        // Content that expand_gfm rewrites, so the write site is reached.
+        fs::write(&file, "~~old~~ new\n").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o444)).unwrap();
+
+        let ctx =
+            PluginContext::new(&content, dir.path(), dir.path(), dir.path());
+        let result = MarkdownExtPlugin.before_compile(&ctx);
+
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).unwrap();
+        let err = result.expect_err("permission-denied write must surface");
+        assert!(!format!("{err}").is_empty());
+    }
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]

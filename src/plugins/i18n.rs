@@ -2342,6 +2342,28 @@ mod tests {
         assert_eq!(out, vec!["en", "fr"]);
     }
 
+    #[test]
+    fn parse_accept_language_missing_q_prefix_defaults_to_one() {
+        // The segment after `;` doesn't start with `q=`, so
+        // `strip_prefix("q=")` fails and quality falls back to 1.0
+        // rather than being parsed from the bare number.
+        let out = parse_accept_language("en;0.1, fr");
+        assert_eq!(out.len(), 2);
+        assert!(out.contains(&"en".to_string()));
+        assert!(out.contains(&"fr".to_string()));
+    }
+
+    #[test]
+    fn parse_accept_language_nan_quality_uses_equal_fallback_in_sort() {
+        // "nan" parses successfully via f64::from_str to NaN. NaN's
+        // partial_cmp always returns None, exercising the
+        // `unwrap_or(Ordering::Equal)` fallback in the sort comparator.
+        let out = parse_accept_language("en;q=nan, fr;q=0.5");
+        assert_eq!(out.len(), 2);
+        assert!(out.contains(&"en".to_string()));
+        assert!(out.contains(&"fr".to_string()));
+    }
+
     // ── ensure_matrix cache short-circuit ───────────────────────────
 
     #[test]

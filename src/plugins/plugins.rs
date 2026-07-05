@@ -433,7 +433,7 @@ impl Plugin for DeployPlugin {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
-    use crate::plugin::PluginContext;
+    use crate::plugin::{PluginCache, PluginContext};
     use crate::test_support::init_logger;
     use anyhow::Result;
     use std::path::Path;
@@ -474,6 +474,55 @@ mod tests {
 
         let content = fs::read_to_string(&html_path).unwrap();
         assert!(!content.contains("  "));
+        Ok(())
+    }
+
+    #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn test_minify_plugin_cache_skips_unchanged_html() -> Result<()> {
+        // `collect_minifiable_files`'s
+        // `cache.is_none_or(|c| c.has_changed(p))` closure is only
+        // ever invoked when `ctx.cache` is `Some(..)` — every other
+        // test in this file leaves it `None`, where `is_none_or`
+        // short-circuits without calling the closure at all.
+        let temp = tempdir().unwrap();
+        let html_path = temp.path().join("index.html");
+        fs::write(&html_path, "<h1>  Hello   World  </h1>").unwrap();
+
+        let mut cache = PluginCache::new();
+        cache.update(&html_path);
+
+        let mut ctx = test_ctx_with(temp.path());
+        ctx.cache = Some(cache);
+        MinifyPlugin.after_compile(&ctx).unwrap();
+
+        // Unchanged per the cache ⇒ filtered out ⇒ left untouched.
+        let content = fs::read_to_string(&html_path).unwrap();
+        assert_eq!(content, "<h1>  Hello   World  </h1>");
+        Ok(())
+    }
+
+    #[test]
+    #[cfg_attr(feature = "test-fault-injection", serial_test::serial)]
+    fn test_minify_plugin_cache_processes_changed_html() -> Result<()> {
+        // The same closure's "changed" arm: a cache entry recorded
+        // against different content means `has_changed` returns
+        // `true`, so the file is still processed.
+        let temp = tempdir().unwrap();
+        let html_path = temp.path().join("index.html");
+        fs::write(&html_path, "<h1>  Hello   World  </h1>").unwrap();
+
+        let mut cache = PluginCache::new();
+        fs::write(&html_path, "stale content").unwrap();
+        cache.update(&html_path);
+        fs::write(&html_path, "<h1>  Hello   World  </h1>").unwrap();
+
+        let mut ctx = test_ctx_with(temp.path());
+        ctx.cache = Some(cache);
+        MinifyPlugin.after_compile(&ctx).unwrap();
+
+        let content = fs::read_to_string(&html_path).unwrap();
+        assert!(!content.contains("  "), "changed file must be minified");
         Ok(())
     }
 

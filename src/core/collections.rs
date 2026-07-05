@@ -478,6 +478,28 @@ mod tests {
         assert!(result.is_err(), "nested unreadable dir must error");
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn get_entry_propagates_unreadable_root_dir_error() {
+        // `get_entry` has its own `walk_markdown(dir, &mut files)?`
+        // call site, distinct from `get_collection`'s. Region coverage
+        // is tracked per call site, so the error arm here must be
+        // exercised independently of the `get_collection` equivalent.
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("locked");
+        fs::create_dir_all(&content).unwrap();
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let result = get_entry::<Post>(&content, "whatever");
+
+        fs::set_permissions(&content, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(result.is_err(), "unreadable dir must error");
+    }
+
     #[test]
     fn get_entry_propagates_frontmatter_type_error() {
         let dir = tempdir().unwrap();

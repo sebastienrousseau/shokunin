@@ -382,8 +382,15 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn json_output_branch() {
-        // Covers `report.print_json()` arm (line ~75).
+        // Covers `report.print_json()` arm (line ~75). Tagged
+        // `#[parallel]` (default/unkeyed group) to pair with
+        // `fault_tests::json_output_propagates_serialize_error`'s
+        // unkeyed `#[serial]` lock on the shared `audit::json-format`
+        // failpoint below — otherwise this test can race the fault
+        // test and observe an injected failure that was never meant
+        // for it.
         let tmp = tempfile::tempdir().unwrap();
         let site = tmp.path().join("public");
         std::fs::create_dir_all(&site).unwrap();
@@ -673,5 +680,57 @@ fail_on = "error"
             .try_get_matches_from(["audit", "--output", site.to_str().unwrap()])
             .unwrap();
         run_and_dispatch(&matches, false).unwrap();
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+
+    /// RAII guard that disables a failpoint on drop — mirrors the
+    /// pattern used by `audit::output::json`'s own fault tests.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    /// Covers the `report.print_json()?` propagation arm in [`run`]
+    /// (the `--json` branch) — the only way to observe a non-`Ok` from
+    /// [`crate::audit::AuditReport::print_json`] without invalid UTF-8
+    /// (impossible in safe Rust). Reuses the `audit::json-format`
+    /// failpoint already defined in `audit::output::json::format`
+    /// rather than adding a new one.
+    ///
+    /// `#[serial]` (the default, unkeyed lock) pairs with
+    /// `audit::output::json`'s own `format_propagates_injected_io_error`
+    /// test, which uses the same unkeyed `#[serial]` lock — so the two
+    /// never run concurrently and race on the process-global failpoint.
+    #[test]
+    #[serial_test::serial]
+    fn json_output_propagates_serialize_error() {
+        let _guard = FailGuard("audit::json-format");
+        fail::cfg("audit::json-format", "return").expect("activate failpoint");
+
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("public");
+        std::fs::create_dir_all(&site).unwrap();
+        let cmd = build_subcommand();
+        let matches = cmd
+            .try_get_matches_from([
+                "audit",
+                "--output",
+                site.to_str().unwrap(),
+                "--json",
+            ])
+            .unwrap();
+        let err = run(&matches).unwrap_err();
+        assert!(
+            format!("{err:?}").starts_with("Io"),
+            "expected Io error, got: {err:?}"
+        );
     }
 }

@@ -708,6 +708,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_produces_valid_avif_bytes() {
         let buf = image::ImageBuffer::from_fn(64, 64, |x, y| {
             image::Rgb([(x * 4) as u8, (y * 4) as u8, 128])
@@ -721,6 +722,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_lower_quality_yields_smaller_file() {
         // Use a non-trivial pattern so quantisation actually has somewhere to
         // throw bits away (a flat gradient compresses to the same minimum at
@@ -740,6 +742,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn encode_avif_clamps_quality_to_valid_range() {
         let buf = image::ImageBuffer::from_fn(32, 32, |_, _| {
             image::Rgb([200_u8, 100, 50])
@@ -749,6 +752,27 @@ mod tests {
         assert!(encode_avif(&img, 0).is_ok());
         // 101 isn't representable in u8 anyway, but max is fine.
         assert!(encode_avif(&img, 100).is_ok());
+    }
+
+    #[test]
+    #[serial_test::serial(image_encode_avif_failpoint)]
+    fn encode_avif_injected_failure_returns_err() {
+        // RAII guard so the global failpoint is always disabled again,
+        // even if the assertion below panics.
+        struct FailGuard;
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg("image::encode-avif", "off");
+            }
+        }
+        let _guard = FailGuard;
+        fail::cfg("image::encode-avif", "return").unwrap();
+
+        let buf =
+            image::ImageBuffer::from_fn(8, 8, |_, _| image::Rgb([1_u8, 2, 3]));
+        let img = image::DynamicImage::ImageRgb8(buf);
+        let err = encode_avif(&img, 70).unwrap_err();
+        assert!(format!("{err}").contains("encode-avif"));
     }
 
     #[test]
@@ -997,6 +1021,25 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_img_tags_falls_back_to_manifest_dimensions_on_unparseable_attrs()
+    {
+        // Non-numeric width/height attributes fail `.parse::<u32>()`,
+        // exercising the `.ok()` → `None` → `unwrap_or(entry.original_*)`
+        // fallback for both dimensions.
+        let manifest = manifest_with("a.jpg", 1920, 1080, &[640]);
+        let html = r#"<img src="a.jpg" alt="" width="abc" height="xyz">"#;
+        let result = rewrite_img_tags(html, &manifest);
+        assert!(
+            result.contains(r#"width="1920""#),
+            "unparseable width should fall back to manifest width: {result}"
+        );
+        assert!(
+            result.contains(r#"height="1080""#),
+            "unparseable height should fall back to manifest height: {result}"
+        );
+    }
+
+    #[test]
     fn rewrite_img_tags_only_replaces_first_occurrence_per_image() {
         let manifest = manifest_with("a.jpg", 2000, 1000, &[640]);
         let html = r#"<img src="a.jpg"><img src="a.jpg">"#;
@@ -1123,6 +1166,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn process_image_generates_webp_variants_below_original_width() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1196,6 +1240,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn process_image_uses_custom_breakpoints() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1241,6 +1286,7 @@ mod tests {
     // -------------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn after_compile_processes_real_images_and_rewrites_html() {
         let dir = tempdir().expect("tempdir");
         let site = dir.path().join("site");
@@ -1423,6 +1469,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn process_image_avif_write_failure_logs_and_skips_variant() {
         crate::test_support::init_logger();
         let dir = tempdir().unwrap();
@@ -1445,6 +1492,50 @@ mod tests {
         .unwrap();
         assert_eq!(entry.webp_variants.len(), 1);
         assert!(entry.avif_variants.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial(image_encode_avif_failpoint)]
+    fn process_image_avif_encode_failure_logs_and_skips_variant() {
+        // Distinct from the write-failure case above: here `encode_avif`
+        // itself fails (via the injected failpoint), exercising the
+        // outer `Err(e) => { log::warn!(...); None }` arm in
+        // `process_image`'s AVIF results loop rather than the inner
+        // fs::write failure arm.
+        crate::test_support::init_logger();
+        struct FailGuard;
+        impl Drop for FailGuard {
+            fn drop(&mut self) {
+                let _ = fail::cfg("image::encode-avif", "off");
+            }
+        }
+        let _guard = FailGuard;
+        fail::cfg("image::encode-avif", "return").unwrap();
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let optimized = site.join("optimized");
+        fs::create_dir_all(&optimized).unwrap();
+        write_test_jpeg(&site.join("photo.jpg"), 400, 20);
+
+        let entry = process_image(
+            &site.join("photo.jpg"),
+            &site,
+            &optimized,
+            &[320],
+            80,
+            70,
+        )
+        .unwrap();
+        assert_eq!(
+            entry.webp_variants.len(),
+            1,
+            "WebP path is unaffected by the AVIF failpoint"
+        );
+        assert!(
+            entry.avif_variants.is_empty(),
+            "AVIF variant must be skipped when encoding fails"
+        );
     }
 
     // -------------------------------------------------------------------
@@ -1512,6 +1603,7 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
+    #[serial_test::parallel(image_encode_avif_failpoint)]
     fn after_compile_fails_when_html_is_readonly() {
         use std::os::unix::fs::PermissionsExt;
         let dir = tempdir().unwrap();

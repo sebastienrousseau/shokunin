@@ -418,6 +418,70 @@ mod tests {
     }
 
     #[test]
+    fn test_args_missing_content_argument() {
+        // Mirrors `test_args_missing_template_argument` but for the
+        // first `?` in `args()` — exercises the early-return path for
+        // a missing `content` argument specifically through `args()`
+        // (not just through `get_argument` in isolation).
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--output",
+                "output",
+                "--new",
+                "new_site",
+                "--template",
+                "template",
+            ]);
+        let result = args(&matches);
+        assert!(is_missing_argument_unit(&result, "content"));
+    }
+
+    #[test]
+    fn test_args_missing_output_argument() {
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                "content",
+                "--new",
+                "new_site",
+                "--template",
+                "template",
+            ]);
+        let result = args(&matches);
+        assert!(is_missing_argument_unit(&result, "output"));
+    }
+
+    #[test]
+    fn test_args_missing_new_argument() {
+        let matches = Command::new("test")
+            .arg(arg!(--"content" <CONTENT> "Content directory"))
+            .arg(arg!(--"output" <OUTPUT> "Output directory"))
+            .arg(arg!(--"new" <NEW> "New site directory"))
+            .arg(arg!(--"template" <TEMPLATE> "Template directory"))
+            .get_matches_from(vec![
+                "test",
+                "--content",
+                "content",
+                "--output",
+                "output",
+                "--template",
+                "template",
+            ]);
+        let result = args(&matches);
+        assert!(is_missing_argument_unit(&result, "new"));
+    }
+
+    #[test]
     fn test_args_missing_template_argument() {
         let matches = Command::new("test")
             .arg(arg!(--"content" <CONTENT> "Content directory"))

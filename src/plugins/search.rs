@@ -136,7 +136,7 @@ impl SearchIndex {
     /// assert!(dir.path().join("search-index.json").exists());
     /// ```
     pub fn write(&self, site_dir: &Path) -> Result<(), SsgError> {
-        let json = serde_json::to_string(self).map_err(|e| SsgError::Io {
+        let json = serialize_search_index(self).map_err(|e| SsgError::Io {
             path: site_dir.join("search-index.json"),
             source: std::io::Error::other(e),
         })?;
@@ -178,6 +178,18 @@ impl SearchIndex {
     pub const fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+}
+
+/// Serialize the search index with a fault-injection hook so tests can
+/// drive the error branch (serializing `SearchIndex` — plain owned
+/// `String`/`Vec<String>` fields — cannot fail in practice).
+fn serialize_search_index(index: &SearchIndex) -> serde_json::Result<String> {
+    fail_point!("search::serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: search::serialize"
+        )
+    ));
+    serde_json::to_string(index)
 }
 
 /// Localizable strings shown in the search widget UI.
@@ -956,6 +968,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn search_index_write_creates_json() -> Result<()> {
         let tmp = tempdir().unwrap();
         let index = SearchIndex {
@@ -1870,6 +1883,49 @@ mod tests {
             js_escape("back\\slash 'quote'\nnew\rline"),
             "back\\\\slash \\'quote\\'\\nnew\\rline"
         );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn write_maps_serialize_failure_to_io_error() {
+        // `serde_json::to_string` on `SearchIndex` (plain owned strings)
+        // cannot fail in practice, so the only way to exercise `write`'s
+        // serialize-error branch is fault injection.
+        let _guard = FailGuard("search::serialize");
+        fail::cfg("search::serialize", "return").expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        let index = SearchIndex {
+            entries: vec![SearchEntry {
+                title: "T".into(),
+                url: "/t.html".into(),
+                content: "c".into(),
+                headings: vec![],
+            }],
+        };
+        let err = index
+            .write(tmp.path())
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("search-index.json"), "got: {msg}");
+        assert!(msg.contains("injected: search::serialize"), "got: {msg}");
     }
 }
 

@@ -1661,6 +1661,32 @@ mod tests {
     }
 
     #[test]
+    fn resolve_template_falls_back_when_locale_candidate_is_missing() {
+        // `rel.components().next()` is `Some(first)` (the content path
+        // has a leading directory component) but the locale-sibling
+        // candidate doesn't exist on disk — the inner
+        // `if candidate.exists()` false arm, distinct from
+        // `resolve_template_prefers_locale_sibling` (which always hits
+        // the true arm) and from the empty/foreign-path test below
+        // (which never enters the `Some(first)` branch at all).
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(content.join("fr")).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        // No `templates/fr/post.html` — only the plain fallback exists.
+        fs::write(templates.join("post.html"), "x").unwrap();
+
+        let got = resolve_template(
+            &templates,
+            &content.join("fr/a.md"),
+            &content,
+            "post",
+        );
+        assert_eq!(got, Some(templates.join("post.html")));
+    }
+
+    #[test]
     fn resolve_template_falls_back_for_empty_and_foreign_paths() {
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");

@@ -1176,6 +1176,28 @@ mod tests {
     }
 
     #[test]
+    fn test_run_options_from_matches_incremental_no_llm_cache_isr_flags() {
+        // `from_matches`'s `incremental` / `no_llm_cache` / `isr` fields
+        // each short-circuit on `try_contains_id`; the legacy `Cli`
+        // defines all three ids, so this drives the true-arm of every
+        // `&&` (the id is present *and* the flag was actually passed).
+        use crate::cmd::Cli;
+        let cli = Cli::build();
+        let matches = cli
+            .try_get_matches_from(vec![
+                "ssg",
+                "--incremental",
+                "--no-llm-cache",
+                "--isr",
+            ])
+            .unwrap();
+        let opts = RunOptions::from_matches(&matches);
+        assert!(opts.incremental);
+        assert!(opts.no_llm_cache);
+        assert!(opts.isr);
+    }
+
+    #[test]
     fn test_run_options_debug() {
         use crate::cmd::Cli;
         let cli = Cli::build();
@@ -1778,6 +1800,72 @@ mod tests {
         assert!(
             site.join(".ssg-plugin-cache.json").is_dir(),
             "blocker must be present for the warn arm to have fired"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial(ssg_cache, stager_fp)]
+    fn test_execute_build_pipeline_with_config_derives_base_url_for_non_streaming_compile(
+    ) {
+        // `ctx.config` is only ever `Some(..)` when built through
+        // `PluginContext::with_config` (as `build_pipeline` wires it
+        // up); the fixture-based tests elsewhere in this module use
+        // `PluginContext::new`, which leaves it `None` and never runs
+        // the `ctx.config.as_ref().map(|c| c.base_url.clone())` closure
+        // in the non-streaming branch of `execute_build_pipeline_with`.
+        use crate::cmd::SsgConfig;
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let config = SsgConfig {
+            base_url: "https://example.com".to_string(),
+            ..SsgConfig::default()
+        };
+        let ctx = plugin::PluginContext::with_config(
+            &content, &build, &site, &templates, config,
+        );
+        let pm = plugin::PluginManager::new();
+        execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, false,
+        )
+        .expect("build with a configured base_url should succeed");
+        assert!(
+            site.join("about").join("index.html").exists(),
+            "compile must still emit page outputs when config carries a base_url"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[serial_test::serial(cwd, ssg_cache, stager_fp)]
+    fn test_pipeline_incremental_propagates_current_hashes_failure() {
+        // `current_hashes(content_dir, template_dir)?` is the first
+        // thing the incremental fast path does. Walking an existing
+        // but unreadable content dir makes `fs::read_dir` fail inside
+        // `walk_files_bounded_depth`, so the `?` here propagates —
+        // a branch none of the other incremental tests exercise since
+        // they all use a normally-readable fixture.
+        use std::os::unix::fs::PermissionsExt;
+        let (_tmp, content, build, site, templates) = build_fixture();
+        let ctx =
+            plugin::PluginContext::new(&content, &build, &site, &templates);
+        let pm = plugin::PluginManager::new();
+
+        std::fs::set_permissions(
+            &content,
+            std::fs::Permissions::from_mode(0o000),
+        )
+        .unwrap();
+
+        let res = execute_build_pipeline_with(
+            &pm, &ctx, &build, &content, &site, &templates, true, true,
+        );
+
+        let _ = std::fs::set_permissions(
+            &content,
+            std::fs::Permissions::from_mode(0o755),
+        );
+        assert!(
+            res.is_err(),
+            "unreadable content_dir must fail current_hashes and propagate"
         );
     }
 

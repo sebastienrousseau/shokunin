@@ -267,6 +267,17 @@ fn copy_tree(
                     // keys always win — see
                     // `inject_permalink_if_missing`.
                     if let Some(base) = base_url {
+                        // `strip_prefix(src)` cannot fail here: every
+                        // `src_path` in `files` was built by
+                        // `collect_entries` descending from this same
+                        // `src` via repeated `.join()` calls, so it is
+                        // always literally prefixed by `src`. The `Err`
+                        // arm is unreachable through the public API and
+                        // is kept only as defensive protection against a
+                        // future refactor of `collect_entries` /
+                        // `copy_tree`'s call graph — not covered by
+                        // tests for that reason (100% coverage
+                        // verification, v0.0.47).
                         if let Ok(rel) = src_path.strip_prefix(src) {
                             let rel = rel.to_string_lossy();
                             let permalink =
@@ -790,6 +801,19 @@ mod tests {
     }
 
     #[test]
+    fn inject_missing_keys_returns_body_unchanged_when_all_keys_present() {
+        // Covers the `if missing.is_empty() { return body.to_string(); }`
+        // arm — distinct from the no-frontmatter and unterminated-fence
+        // passthroughs above, which never reach this check at all.
+        let body = "---\ntitle: T\nauthor: A\n---\nbody";
+        let out = inject_missing_keys(
+            body,
+            &["title".to_string(), "author".to_string()],
+        );
+        assert_eq!(out, body);
+    }
+
+    #[test]
     fn find_closing_braces_returns_none_when_unterminated() {
         // Covers `find_closing_braces` walking past the end without
         // seeing `}}` — happens for malformed templates.
@@ -1061,6 +1085,62 @@ mod tests {
         assert_eq!(body.matches("layout:").count(), 0);
     }
 
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn stage_content_with_template_defaults_injects_defaults_end_to_end() {
+        // Every other test that reaches `stage_content_with_site_defaults`
+        // / `stage_content_with_template_defaults` passes an EMPTY
+        // `template_var_keys` slice, so the `if
+        // !template_var_keys.is_empty() { inject_template_defaults_recursive(...) }`
+        // branch (and everything it calls) is only ever unit-tested via
+        // a direct call to `inject_template_defaults_recursive`, never
+        // through the public staging entry point. Drive it end to end.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.md"), "---\ntitle: A\n---\nbody").unwrap();
+
+        let staged = stage_content_with_template_defaults(
+            &src,
+            &build,
+            &["author".to_string()],
+        )
+        .unwrap();
+
+        let body = fs::read_to_string(staged.join("a.md")).unwrap();
+        assert!(
+            body.contains("author: \"\""),
+            "missing template var must be injected: {body}"
+        );
+    }
+
+    #[test]
+    fn inject_template_defaults_recursive_skips_write_when_no_keys_missing() {
+        // Covers the `if staged == body { return None; }` skip-write
+        // arm inside the parallel closure — every other
+        // `inject_template_defaults_recursive` test supplies a key
+        // that's actually missing, so the write always happens there.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.md");
+        let original = "---\ntitle: T\nauthor: A\n---\nbody";
+        fs::write(&path, original).unwrap();
+        let before = fs::metadata(&path).unwrap().modified().unwrap();
+
+        inject_template_defaults_recursive(
+            &dir,
+            &["title".to_string(), "author".to_string()],
+        )
+        .unwrap();
+
+        let after_body = fs::read_to_string(&path).unwrap();
+        assert_eq!(after_body, original, "no-op write must not alter content");
+        let after = fs::metadata(&path).unwrap().modified().unwrap();
+        assert_eq!(before, after, "file must not be rewritten when unchanged");
+    }
+
     // -----------------------------------------------------------------
     // recreate_staging_dir — happy path and both failure arms
     // -----------------------------------------------------------------
@@ -1170,6 +1250,27 @@ mod tests {
         fs::create_dir_all(&src).unwrap();
         fs::create_dir_all(&dst).unwrap();
         fs::write(src.join("bad.md"), [0xFF, 0xFE, 0x00]).unwrap();
+
+        assert!(copy_tree(&src, &dst, None).is_err());
+    }
+
+    #[test]
+    fn copy_tree_reports_error_copying_non_markdown_file() {
+        // The `fs::copy(&src_path, &dst_path).map(|_| ())` arm for
+        // non-markdown files is only exercised on the success path
+        // elsewhere (`copy_tree_copies_non_markdown_files_verbatim`).
+        // Make the destination path itself an existing directory so
+        // `fs::copy` fails for the non-md file specifically (distinct
+        // from `copy_tree_fails_when_destination_subdir_is_blocked`,
+        // which fails earlier at the serial `create_dir_all` step).
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::create_dir_all(&dst).unwrap();
+        fs::write(src.join("logo.png"), b"not really a png").unwrap();
+        // Destination already occupied by a directory named like the file.
+        fs::create_dir_all(dst.join("logo.png")).unwrap();
 
         assert!(copy_tree(&src, &dst, None).is_err());
     }
@@ -1341,6 +1442,25 @@ mod tests {
         let mut found = Vec::new();
         collect_markdown_files(&dir, &mut found).unwrap();
         assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn collect_markdown_files_skips_non_markdown_regular_files() {
+        // The `else if ft.is_file() && is_markdown(&p)` arm where
+        // `is_file()` is true but `is_markdown()` is false is never
+        // exercised elsewhere — every fixture used with
+        // `collect_markdown_files` / `inject_template_defaults_recursive`
+        // only ever contains `.md` files.
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("staged");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("real.md"), "---\nt: a\n---\nx").unwrap();
+        fs::write(dir.join("notes.txt"), "not markdown").unwrap();
+        fs::write(dir.join("style.css"), "body{}").unwrap();
+
+        let mut found = Vec::new();
+        collect_markdown_files(&dir, &mut found).unwrap();
+        assert_eq!(found, vec![dir.join("real.md")]);
     }
 
     // -----------------------------------------------------------------

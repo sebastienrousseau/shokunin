@@ -432,6 +432,28 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
+    fn serve_site_with_propagates_invalid_utf8_address_error() {
+        // `serve_site_with`'s own `build_serve_address(site_dir)?` call
+        // site has its own early-return branch distinct from
+        // `build_serve_address`'s unit tests — exercise it directly so
+        // the transport is never invoked when address resolution fails.
+        use std::os::unix::ffi::OsStringExt;
+        let bad =
+            PathBuf::from(std::ffi::OsString::from_vec(vec![0xff, 0xfe, 0xfd]));
+        let transport = RecordingTransport::default();
+        let err = serve_site_with(&bad, &transport).unwrap_err();
+        assert!(
+            err.to_string().contains("invalid UTF-8"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            transport.calls.lock().unwrap().is_empty(),
+            "transport must not run when address resolution fails"
+        );
+    }
+
+    #[test]
     fn http_transport_implements_serve_transport() {
         // Smoke test that HttpTransport satisfies the trait. We don't
         // actually call .start() here because that would bind a port.
@@ -623,6 +645,44 @@ mod tests {
         assert_eq!(recorded.len(), 1, "transport must be started once");
         assert_eq!(recorded[0].1, serve.to_str().unwrap());
         assert!(serve.join("a.html").exists(), "site files copied");
+    }
+
+    #[test]
+    fn handle_server_with_fails_when_prepare_serve_dir_errors() {
+        // Log write succeeds, but `paths.site` doesn't exist, so
+        // `prepare_serve_dir`'s call to `verify_and_copy_files_async`
+        // errors. This exercises `handle_server_with`'s own
+        // `prepare_serve_dir(paths, serve_dir)?` early-return branch
+        // (distinct from `prepare_serve_dir`'s own unit tests) and
+        // confirms the transport never starts.
+        let dir = tempdir().unwrap();
+        let paths = Paths {
+            site: dir.path().join("does-not-exist"),
+            content: dir.path().join("content"),
+            build: dir.path().join("build"),
+            template: dir.path().join("templates"),
+        };
+        let serve = dir.path().join("serve");
+        let mut log_file = tempfile::tempfile().unwrap();
+        let transport = RecordingTransport::default();
+
+        let err = handle_server_with(
+            &mut log_file,
+            "2026-07-05",
+            &paths,
+            &serve,
+            &transport,
+        )
+        .unwrap_err();
+        assert!(
+            format!("{err}").contains("does-not-exist")
+                || format!("{err}").contains("does not exist"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            transport.calls.lock().unwrap().is_empty(),
+            "transport must not start when prepare_serve_dir fails"
+        );
     }
 
     #[test]

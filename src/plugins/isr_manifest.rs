@@ -455,6 +455,14 @@ mod tests {
     }
 
     #[test]
+    fn derive_url_without_md_suffix_uses_input_verbatim() {
+        // `strip_suffix(".md")` fails when there's no `.md` extension,
+        // exercising the `unwrap_or(rel)` fallback before deriving the
+        // URL from the (unstripped) input.
+        assert_eq!(derive_url("notes"), "/notes/index.html");
+    }
+
+    #[test]
     fn extract_isr_cache_yaml() {
         let text =
             "---\ntitle: Foo\nisr:\n  s_maxage: 600\n  swr: 3600\n---\n# Body";
@@ -547,6 +555,41 @@ mod tests {
         assert!(post.sources.iter().any(|s| s == "templates/index.html"));
         assert!(post.sources.iter().any(|s| s == "templates/page.html"));
         assert_eq!(post.hash.len(), 64);
+    }
+
+    #[test]
+    fn build_entry_for_markdown_falls_back_to_full_path_outside_content_dir() {
+        // `md_path.strip_prefix(content_dir)` fails when the markdown
+        // file doesn't actually live under `content_dir`, exercising
+        // the `unwrap_or(md_path)` fallback that keeps the full path
+        // as `rel` instead of erroring out.
+        let dir = tempdir().unwrap();
+        let elsewhere = dir.path().join("elsewhere");
+        fs::create_dir_all(&elsewhere).unwrap();
+        let md_path = elsewhere.join("orphan.md");
+        fs::write(&md_path, "# Orphan").unwrap();
+
+        let content_dir = dir.path().join("content");
+        let template_dir = dir.path().join("templates");
+        let site_dir = dir.path().join("site");
+        fs::create_dir_all(&content_dir).unwrap();
+        fs::create_dir_all(&template_dir).unwrap();
+        fs::create_dir_all(&site_dir).unwrap();
+
+        let (url, entry) = build_entry_for_markdown(
+            &md_path,
+            &content_dir,
+            &template_dir,
+            &site_dir,
+        )
+        .unwrap()
+        .expect("entry is always produced");
+        assert!(
+            entry.sources[0].contains("orphan.md"),
+            "source should reference the full path: {:?}",
+            entry.sources
+        );
+        assert!(url.ends_with("/index.html"));
     }
 
     #[test]

@@ -787,6 +787,22 @@ mod tests {
     }
 
     #[test]
+    fn collect_files_recursive_nonexistent_dir_returns_error() {
+        // Unlike several sibling tree-walkers in this file,
+        // `collect_files_recursive` has no explicit `!dir.exists()`
+        // guard — every other test here passes a real directory, so
+        // the `fs::read_dir(&current_dir).with_path(&current_dir)?`
+        // error path (as opposed to the depth-guard error path, which
+        // is covered separately) was never exercised.
+        let tmp = tempdir().unwrap();
+        let missing = tmp.path().join("does-not-exist");
+
+        let mut files = Vec::new();
+        let result = collect_files_recursive(&missing, &mut files);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn verify_and_copy_files_end_to_end() {
         let src = tempdir().unwrap();
         let dst = tempdir().unwrap();
@@ -817,6 +833,22 @@ mod tests {
         let fake = tmp.path().join("missing");
 
         let result = copy_dir_with_progress(&fake, tmp.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_with_progress_src_is_file_fails_at_read_dir() {
+        // `copy_dir_with_progress` has its own explicit `!src.exists()`
+        // guard, which intercepts every "missing path" test above
+        // before the loop's `fs::read_dir(&src_dir).with_path(&src_dir)?`
+        // ever runs. Pass a *file* as `src` — it passes `.exists()` but
+        // isn't a directory, so `fs::read_dir` itself fails, exercising
+        // that `?` for the first time in this function.
+        let tmp = tempdir().unwrap();
+        let file_src = tmp.path().join("plain.txt");
+        fs::write(&file_src, "x").unwrap();
+
+        let result = copy_dir_with_progress(&file_src, &tmp.path().join("dst"));
         assert!(result.is_err());
     }
 
@@ -956,6 +988,41 @@ mod tests {
         fs::write(src.path().join("sub/x.txt"), "x").unwrap();
         // A plain file occupies the destination subdirectory path.
         fs::write(dst.path().join("sub"), "blocking file").unwrap();
+
+        let result = copy_dir_all(src.path(), dst.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_all_top_level_dst_under_file_fails() {
+        // `copy_dir_all`'s own leading
+        // `fs::create_dir_all(dst).with_path(dst)?` had no dedicated
+        // failure test in this file — sibling functions
+        // (`verify_and_copy_files`, `copy_dir_all_async`,
+        // `copy_dir_with_progress`) each have one, but this one didn't.
+        let src = tempdir().unwrap();
+        let tmp = tempdir().unwrap();
+        fs::write(src.path().join("a.txt"), "x").unwrap();
+        let blocker = tmp.path().join("blocker");
+        fs::write(&blocker, "file").unwrap();
+
+        let result = copy_dir_all(src.path(), &blocker.join("dst"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn copy_dir_all_file_copy_onto_directory_fails() {
+        // `copy_files_maybe_parallel`'s `copy_file` closure calls
+        // `verify_file_safety` (already covered by the symlink tests
+        // above) and then `fs::copy(...).with_path(...)?`. No existing
+        // test makes the *copy* itself fail for `copy_dir_all` — only
+        // the subdirectory-creation failure above and the symlink
+        // safety check were covered. Make the destination *file* path
+        // already exist as a directory so `fs::copy` errors.
+        let src = tempdir().unwrap();
+        let dst = tempdir().unwrap();
+        fs::write(src.path().join("x.txt"), "x").unwrap();
+        fs::create_dir_all(dst.path().join("x.txt")).unwrap();
 
         let result = copy_dir_all(src.path(), dst.path());
         assert!(result.is_err());

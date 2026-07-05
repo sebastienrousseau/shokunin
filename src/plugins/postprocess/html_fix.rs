@@ -849,6 +849,14 @@ mod tests {
         let len = html2.len();
         inject_class_attr(&mut html2, len, "foo");
         assert_eq!(html2, "<img class=\"existing\"> some text");
+
+        // A `>` exists before `pos` but has no matching `<` before it
+        // (malformed/truncated markup) — the inner `rfind('<')` must
+        // return `None` and the function must leave the string alone.
+        let mut html3 = "> stray text".to_string();
+        let len3 = html3.len();
+        inject_class_attr(&mut html3, len3, "foo");
+        assert_eq!(html3, "> stray text");
     }
 
     // -----------------------------------------------------------------

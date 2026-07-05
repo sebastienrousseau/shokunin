@@ -148,8 +148,24 @@ fn stamp_embeddings_hash(manifest_json: &[u8], embeddings: &[u8]) -> Vec<u8> {
         "embeddings_sha256".to_string(),
         serde_json::Value::String(hex),
     );
-    serde_json::to_vec_pretty(&manifest)
+    serialize_manifest_value(&manifest)
         .unwrap_or_else(|_| manifest_json.to_vec())
+}
+
+/// Serialize the stamped manifest with a fault-injection hook so tests
+/// can drive the defensive fallback in [`stamp_embeddings_hash`]
+/// (pretty-printing a `Value` parsed from `ssg-search`'s own valid
+/// JSON output, plus one inserted hex-string field, cannot fail in
+/// practice).
+fn serialize_manifest_value(
+    manifest: &serde_json::Value,
+) -> serde_json::Result<Vec<u8>> {
+    fail_point!("search_index::manifest-serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: search_index::manifest-serialize"
+        )
+    ));
+    serde_json::to_vec_pretty(manifest)
 }
 
 /// Returns the first `max_chars` Unicode scalar values of `s`. (Plain
@@ -355,6 +371,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_fails_when_search_dir_squatted_by_file() {
         let tmp = tempdir().unwrap();
         write_html(tmp.path(), "a.html", "<p>hello</p>");
@@ -395,5 +412,39 @@ mod tests {
     #[test]
     fn after_compile_fails_when_tokenizer_squatted_by_dir() {
         assert_write_fails_when_squatted(TOKENIZER_FILE);
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn stamp_embeddings_hash_falls_back_on_injected_serialize_failure() {
+        // Drives the defensive `unwrap_or_else` fallback that otherwise
+        // cannot be reached: re-serializing a manifest `Value` parsed
+        // from `ssg-search`'s own output cannot fail in practice.
+        let _guard = FailGuard("search_index::manifest-serialize");
+        fail::cfg("search_index::manifest-serialize", "return")
+            .expect("activate failpoint");
+
+        let manifest_json = br#"{"count":0,"entries":[]}"#;
+        let out = stamp_embeddings_hash(manifest_json, b"embeddings");
+        assert_eq!(
+            out, manifest_json,
+            "injected failure must fall back to the original manifest bytes"
+        );
     }
 }

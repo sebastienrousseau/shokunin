@@ -706,6 +706,62 @@ mod tests {
         );
     }
 
+    // 25. walk() propagates strip_prefix failures via with_context.
+    // Calling the private walker directly with a `base` unrelated to
+    // `current` makes `path.strip_prefix(base)` fail for every entry
+    // found under `current` — this closure (lines ~200-202) is never
+    // exercised through the public API since `collect_files` always
+    // calls `walk(dir, dir, ...)` with equal base/current.
+    #[test]
+    #[serial_test::parallel(cache_failpoints)]
+    fn walk_errors_when_base_is_unrelated_to_current() {
+        let tmp = TempDir::new().ok().unwrap();
+        let base = tmp.path().join("unrelated-base");
+        fs::create_dir_all(&base).ok();
+        let current = tmp.path().join("current");
+        write_file(&current, "a.md", "hi");
+
+        let mut out = Vec::new();
+        let result = BuildCache::walk(&base, &current, &mut out);
+        assert!(result.is_err(), "strip_prefix should fail and propagate");
+        let msg = format!("{:?}", result.unwrap_err());
+        assert!(
+            msg.contains("strip_prefix failed"),
+            "error should contain strip_prefix context: {msg}"
+        );
+    }
+
+    // 26. save() propagates serde_json serialization failures. A
+    // non-UTF-8 PathBuf key can't be represented as a JSON object key,
+    // so `serde_json::to_string_pretty` errors and the `.context(...)`
+    // closure fires (this is distinct from the write-failure test,
+    // which covers the *later* `fs::write` context closure).
+    #[cfg(unix)]
+    #[test]
+    #[serial_test::parallel(cache_failpoints)]
+    fn save_fails_when_fingerprint_key_is_not_valid_utf8() {
+        use std::ffi::OsStr;
+        use std::os::unix::ffi::OsStrExt;
+
+        let tmp = TempDir::new().ok().unwrap();
+        let cache_path = tmp.path().join("cache.json");
+        let bad_path = PathBuf::from(OsStr::from_bytes(&[0x66, 0xFF, 0xFE]));
+
+        let mut fingerprints = HashMap::new();
+        fingerprints.insert(bad_path, "deadbeef".to_string());
+        let cache = BuildCache {
+            cache_path,
+            fingerprints,
+        };
+
+        let err = cache.save().unwrap_err();
+        let msg = format!("{:?}", err);
+        assert!(
+            msg.contains("failed to serialize cache"),
+            "error should contain serialize context: {msg}"
+        );
+    }
+
     // 16. Unchanged files do not appear in the changed list.
     #[test]
     #[serial_test::parallel(cache_failpoints)]

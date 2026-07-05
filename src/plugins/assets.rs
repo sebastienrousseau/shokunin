@@ -730,6 +730,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(assets_failpoint)]
     fn test_fingerprint_plugin() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -772,6 +773,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(assets_failpoint)]
     fn default_sri_is_sha384_with_exact_known_vector() {
         // End-to-end through the plugin with NO config: the JS body
         // survives minification byte-for-byte ("console.log(1);" has
@@ -800,6 +802,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(assets_failpoint)]
     fn sri_algorithm_config_override_emits_sha256() {
         // `[security] sri_algorithm = "sha256"` back-compat knob
         // (v0.0.47 plan §3 item 2.3): the exact SHA-256 vector for
@@ -876,6 +879,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(assets_failpoint)]
     fn after_compile_fingerprint_absolute_path_href() {
         // Covers the `old_ref_slash` variant (with leading /) in
         // rewrite_asset_refs — absolute-path stylesheet links.
@@ -1073,6 +1077,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(assets_failpoint)]
     fn after_compile_rewrites_css_url_to_fingerprinted_image() {
         // End-to-end: drop a CSS file referencing a PNG, run the
         // plugin, and confirm the produced CSS points at the
@@ -1189,6 +1194,21 @@ mod tests {
         // empty result, so the clean pass sees whitespace at i == 0
         // (prev == None).
         assert_eq!(minify_js("// c\nvar x = 1;"), "var x=1;");
+    }
+
+    #[test]
+    fn minify_css_handles_leading_and_trailing_whitespace() {
+        // Exercises the clean-up pass's `_ => false` catch-all at both
+        // ends: i == 0 (prev == None) and i == last (next == None).
+        assert_eq!(minify_css(" body { color: red; } "), "body{color:red;}");
+    }
+
+    #[test]
+    fn minify_js_trailing_space_after_word_char_is_dropped() {
+        // `prev` is a word char but `next == None` (end of input) —
+        // the specific `_ => false` catch-all arm, distinct from the
+        // ordinary "not both word chars" (Some, Some) case.
+        assert_eq!(minify_js(" var x = 1 "), "var x=1");
     }
 
     // -------------------------------------------------------------------
@@ -1460,5 +1480,54 @@ mod tests {
         let res =
             fingerprint_assets(&missing, dir.path(), SriAlgorithm::default());
         assert!(res.is_err());
+    }
+}
+
+// =========================================================================
+// Fault injection — `assets::remove-original` covers the
+// `fs::remove_file(asset_path)` failure path for minified CSS/JS
+// assets. The rename-based path (non-CSS/JS, or non-UTF-8 content)
+// uses `fs::rename` instead and can't hit this failpoint; genuinely
+// making the *original* file un-removable after it has already been
+// successfully read, minified, and rewritten to its fingerprinted
+// name is impractical to construct without fault injection (e.g. a
+// concurrent deletion race), so this is the only way to exercise it.
+// =========================================================================
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(assets_failpoint)]
+    fn remove_original_failpoint_propagates() {
+        let _guard = FailGuard("assets::remove-original");
+        fail::cfg("assets::remove-original", "return")
+            .expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let css_path = dir.path().join("style.css");
+        fs::write(&css_path, "body { color: red; }").unwrap();
+
+        let err =
+            fingerprint_file(&css_path, dir.path(), SriAlgorithm::default())
+                .expect_err("injected removal failure must propagate");
+        assert!(
+            format!("{err:?}").contains("injected: assets::remove-original")
+        );
+        // The fingerprinted file was already written before the
+        // injected failure; the original is left in place too since
+        // removal never ran.
+        assert!(css_path.exists());
     }
 }

@@ -487,6 +487,15 @@ mod tests {
     }
 
     #[test]
+    fn template_plugin_debug_output_mentions_config() {
+        // The derived `Debug` impl is otherwise never exercised (no
+        // test formats the plugin with `{:?}`).
+        let plugin = TemplatePlugin::new(TemplateConfig::default());
+        let s = format!("{plugin:?}");
+        assert!(s.contains("TemplatePlugin"), "{s}");
+    }
+
+    #[test]
     fn new_stores_supplied_config() {
         let cfg = TemplateConfig {
             template_dir: std::env::temp_dir().join("ssg_template_fake"),
@@ -689,6 +698,32 @@ mod tests {
         assert!(meta.is_empty());
     }
 
+    #[test]
+    fn read_frontmatter_for_html_path_outside_site_dir_uses_full_path_as_rel() {
+        // `html_path.strip_prefix(site_dir).unwrap_or(html_path)`: when
+        // the page path isn't actually rooted under `site_dir` (e.g. a
+        // symlinked or otherwise out-of-tree path), `strip_prefix` fails
+        // and the fallback treats the whole path as `rel`. Every other
+        // test in this file passes an in-tree path, so this branch was
+        // otherwise never taken.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let elsewhere = dir.path().join("elsewhere");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&elsewhere).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let html = elsewhere.join("post.html");
+        fs::write(&html, "").unwrap();
+
+        let meta = read_frontmatter_for_html(&html, &site, &sidecars);
+        assert!(
+            meta.is_empty(),
+            "no sidecar exists for the full out-of-tree path"
+        );
+    }
+
     // -------------------------------------------------------------------
     // collect_html_files
     // -------------------------------------------------------------------
@@ -831,6 +866,37 @@ mod tests {
         let related_p3 =
             p3_fm.get("related_posts").unwrap().as_array().unwrap();
         assert!(related_p3.is_empty());
+    }
+
+    #[test]
+    fn enrich_with_related_posts_path_outside_site_dir_uses_full_path_as_rel() {
+        // Same `strip_prefix(site_dir).unwrap_or(html_path)` fallback as
+        // `read_frontmatter_for_html`, but in `enrich_with_related_posts`'s
+        // own URL-building code — a second, independent occurrence of
+        // the same pattern that every other enrich test bypasses by
+        // always passing in-tree paths.
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let elsewhere = dir.path().join("elsewhere");
+        let sidecars = dir.path().join(".meta");
+        fs::create_dir_all(&site).unwrap();
+        fs::create_dir_all(&elsewhere).unwrap();
+        fs::create_dir_all(&sidecars).unwrap();
+
+        let html = elsewhere.join("post.html");
+        fs::write(&html, "").unwrap();
+
+        let files = vec![html.clone()];
+        let enriched = enrich_with_related_posts(&files, &site, &sidecars);
+        let fm = enriched.get(&html).unwrap();
+        // Solo page, no overlap possible — just confirm it didn't panic
+        // building the URL from the un-strippable full path.
+        assert!(fm
+            .get("related_posts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

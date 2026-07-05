@@ -836,6 +836,64 @@ mod tests {
     }
 
     #[test]
+    fn compile_batch_fails_when_merge_dir_blocked_after_successful_compile() {
+        // Every other failure test in this module fails *before*
+        // reaching the merge step (blocked temp dirs abort the copy or
+        // the compile itself). Here the compile succeeds — two real
+        // pages, one of them nested under `about/` — but the site dir
+        // already has a plain *file* named `about`, so
+        // `merge_dir(&batch_site, site_dir)?` fails on
+        // `create_dir_all` when it tries to recreate that
+        // subdirectory. This drives the `?` propagation inside the
+        // `if compile_result.is_ok()` block.
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("public");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&content).unwrap();
+        fs::create_dir_all(&build).unwrap();
+        fs::create_dir_all(&templates).unwrap();
+        fs::write(
+            content.join("index.md"),
+            "---\ntitle: \"Home\"\ndescription: \"home\"\n\
+             permalink: \"https://example.com/\"\n---\nhome body",
+        )
+        .unwrap();
+        fs::write(
+            content.join("about.md"),
+            "---\ntitle: \"About\"\ndescription: \"about\"\n\
+             permalink: \"https://example.com/about/\"\n---\nabout body",
+        )
+        .unwrap();
+        fs::write(
+            templates.join("page.html"),
+            "<!doctype html><html><body>{{ content }}</body></html>",
+        )
+        .unwrap();
+
+        // Pre-block the nested output directory with a plain file so
+        // merge_dir's `create_dir_all(&dest)` fails once compile
+        // succeeds and produces `about/index.html` in the batch output.
+        fs::create_dir_all(&site).unwrap();
+        fs::write(site.join("about"), "blocking file, not a directory")
+            .unwrap();
+
+        let result = compile_batch(
+            &[content.join("index.md"), content.join("about.md")],
+            &content,
+            &build,
+            &site,
+            &templates,
+            11,
+        );
+        assert!(
+            result.is_err(),
+            "merge_dir failure after a successful compile must propagate: {result:?}"
+        );
+    }
+
+    #[test]
     fn compile_batch_fails_when_batch_site_dir_blocked() {
         let dir = tempdir().unwrap();
         let content = dir.path().join("content");

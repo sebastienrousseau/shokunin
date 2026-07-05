@@ -86,11 +86,10 @@ impl Plugin for SbomPlugin {
         }
         let sbom = build_sbom();
         let path = ctx.site_dir.join(Self::sbom_path());
-        let json =
-            serde_json::to_string_pretty(&sbom).map_err(|e| SsgError::Io {
-                path: path.clone(),
-                source: std::io::Error::other(e),
-            })?;
+        let json = serialize_sbom(&sbom).map_err(|e| SsgError::Io {
+            path: path.clone(),
+            source: std::io::Error::other(e),
+        })?;
         fs::write(&path, json).with_path(&path)?;
         log::info!("[sbom] Wrote CycloneDX SBOM to {}", path.display());
         Ok(())
@@ -158,6 +157,18 @@ fn build_sbom() -> serde_json::Value {
             ]
         }]
     })
+}
+
+/// Serialize the SBOM with a fault-injection hook so tests can drive
+/// the error branch (pretty-printing a `Value` built from hardcoded
+/// strings and numbers cannot fail in practice).
+fn serialize_sbom(sbom: &serde_json::Value) -> serde_json::Result<String> {
+    fail_point!("sbom::serialize", |_| Err(
+        <serde_json::Error as serde::ser::Error>::custom(
+            "injected: sbom::serialize"
+        )
+    ));
+    serde_json::to_string_pretty(sbom)
 }
 
 /// Cheap ISO 8601 timestamp without pulling in a date crate.
@@ -265,6 +276,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn sbom_plugin_writes_file_after_compile() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -305,6 +317,20 @@ mod tests {
     }
 
     #[test]
+    fn sbom_plugin_is_idempotent_with_single_quoted_attribute() {
+        // Covers the `rel='sbom'` disjunct of the idempotency check —
+        // every other test only exercises the double-quoted form.
+        let dir = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), dir.path());
+        let html = r"<html><head><link rel='sbom' type='application/vnd.cyclonedx+json' href='/sbom.cdx.json'></head><body></body></html>";
+        let out = SbomPlugin
+            .transform_html(html, Path::new("x.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+
+    #[test]
     fn sbom_plugin_skips_pages_without_head_tag() {
         let dir = tempdir().unwrap();
         let ctx =
@@ -317,6 +343,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn sbom_plugin_after_compile_noop_when_site_missing() {
         let dir = tempdir().unwrap();
         let missing = dir.path().join("missing");
@@ -332,6 +359,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_write_failure_returns_io_error() {
         let dir = tempdir().unwrap();
         let site = dir.path().join("site");
@@ -348,5 +376,45 @@ mod tests {
         assert!(
             matches!(err, SsgError::Io { ref path, .. } if path == &sbom_dir)
         );
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn after_compile_maps_serialize_failure_to_io_error() {
+        // `serde_json::to_string_pretty` on the hardcoded `build_sbom()`
+        // literal cannot fail in practice, so the only way to exercise
+        // `after_compile`'s serialize-error branch is fault injection.
+        let _guard = FailGuard("sbom::serialize");
+        fail::cfg("sbom::serialize", "return").expect("activate failpoint");
+
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let ctx = PluginContext::new(dir.path(), dir.path(), &site, dir.path());
+
+        let err = SbomPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("sbom.cdx.json"), "got: {msg}");
+        assert!(msg.contains("injected: sbom::serialize"), "got: {msg}");
     }
 }

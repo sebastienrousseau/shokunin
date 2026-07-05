@@ -640,6 +640,13 @@ mod tests {
     }
 
     #[test]
+    // Failpoints are process-global: this test reaches `vercel_render`
+    // expecting success, so it must never run concurrently with
+    // `fault_tests`'s injected `postprocess::vercel-render` failure —
+    // joins that test's `#[serial]` lock as `#[parallel]` on the same
+    // key (mirrors the convention in `core::cache`'s fault-injection
+    // tests).
+    #[serial_test::parallel(vercel_render_fp)]
     fn after_compile_vercel_target_writes_json() {
         let dir = tempfile::tempdir().unwrap();
         let site = dir.path().join("site");
@@ -695,6 +702,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(vercel_render_fp)]
     fn after_compile_all_three_targets_emit_all_three_artefacts() {
         let dir = tempfile::tempdir().unwrap();
         let site = dir.path().join("site");
@@ -732,6 +740,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel(vercel_render_fp)]
     fn transform_records_page_policy_into_platform_files() {
         // spec B4 acceptance: a page with inline JSON-LD gets a
         // per-path entry carrying that block's exact sha256, in both
@@ -995,5 +1004,103 @@ mod tests {
             .transform_html(html, &site.join("index.html"), &ctx)
             .unwrap_err();
         assert!(format!("{err}").contains("_headers"));
+    }
+
+    // -----------------------------------------------------------------
+    // PAGE_CSP_REGISTRY poisoned-lock recovery
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn after_compile_and_transform_recover_from_poisoned_registry_lock() {
+        // `.lock().unwrap_or_else(PoisonError::into_inner)` is a
+        // defensive recovery arm that only runs if some other thread
+        // panicked while holding the lock — no ordinary single-threaded
+        // test reaches it. Deliberately poison the (process-global)
+        // registry from a spawned thread so both call sites
+        // (after_compile's reset, transform_html's insert) exercise
+        // their recovery branch instead of a real production bug.
+        let poisoned = std::thread::spawn(|| {
+            let _guard = PAGE_CSP_REGISTRY.lock().unwrap();
+            panic!("intentional poison for coverage of the recovery arm");
+        })
+        .join();
+        assert!(poisoned.is_err(), "spawned thread must have panicked");
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["netlify"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        let plugin = EdgeHeadersPlugin::new();
+
+        // Must not panic despite the poisoned lock.
+        plugin.after_compile(&ctx).unwrap();
+
+        let html = "<html><head><script>x=1</script></head></html>";
+        let out = plugin
+            .transform_html(html, &site.join("index.html"), &ctx)
+            .unwrap();
+        assert_eq!(out, html);
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn cfg_with_targets(targets: Vec<&str>) -> crate::cmd::SsgConfig {
+        let mut edge = EdgeHeadersConfig::default();
+        edge.targets = targets.into_iter().map(String::from).collect();
+        crate::cmd::SsgConfig::builder()
+            .site_name("t".to_string())
+            .base_url("http://example.com".to_string())
+            .edge_headers(edge)
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    #[serial_test::serial(vercel_render_fp)]
+    fn after_compile_vercel_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::vercel-render");
+        fail::cfg("postprocess::vercel-render", "return")
+            .expect("activate failpoint");
+
+        let dir = tempfile::tempdir().unwrap();
+        let site = dir.path().join("site");
+        fs::create_dir_all(&site).unwrap();
+        let cfg = cfg_with_targets(vec!["vercel"]);
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            &site,
+            dir.path(),
+            cfg,
+        );
+        let err = EdgeHeadersPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("vercel-headers.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::vercel-render"),
+            "got: {msg}"
+        );
     }
 }

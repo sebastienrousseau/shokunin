@@ -821,6 +821,18 @@ mod tests {
     }
 
     #[test]
+    fn forward_event_with_no_paths_sends_nothing() {
+        use notify::event::CreateKind;
+        // Every other propagatable-event test attaches at least one
+        // path, so the `for path in event.paths` loop always runs at
+        // least once elsewhere. Exercise the zero-iteration case too.
+        let (tx, rx) = mpsc::channel::<PathBuf>();
+        let event = Event::new(EventKind::Create(CreateKind::File));
+        forward_event(Ok(event), &tx);
+        assert!(rx.try_recv().is_err(), "no paths means nothing to send");
+    }
+
+    #[test]
     fn remaining_window_returns_time_left_inside_window() {
         assert_eq!(
             remaining_window(
@@ -864,6 +876,32 @@ mod tests {
         debounce_loop(raw_rx, batched_tx, Duration::from_millis(10), &shutdown);
 
         // Shutdown short-circuits before any batch is flushed.
+        assert!(batched_rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn debounce_loop_treats_poisoned_shutdown_lock_as_signalled() {
+        // Poison the `shutdown` mutex before debounce_loop ever locks
+        // it. `shutdown.lock().map_or(true, |g| *g)` must fall back to
+        // `true` (treat-as-shutting-down) on a poisoned lock rather
+        // than panicking or silently continuing.
+        let (raw_tx, raw_rx) = mpsc::channel::<PathBuf>();
+        let (batched_tx, batched_rx) = mpsc::channel::<ChangeBatch>();
+        let shutdown = Arc::new(Mutex::new(false));
+
+        let poison_target = Arc::clone(&shutdown);
+        let _ = thread::spawn(move || {
+            let _guard = poison_target.lock().unwrap();
+            panic!("poison shutdown for test");
+        })
+        .join();
+
+        raw_tx.send(p("a.md")).unwrap();
+        drop(raw_tx);
+        debounce_loop(raw_rx, batched_tx, Duration::from_millis(10), &shutdown);
+
+        // Poisoned lock reads as "shut down" — the loop must break
+        // immediately without flushing a batch.
         assert!(batched_rx.try_recv().is_err());
     }
 

@@ -208,6 +208,14 @@ where
     let mut count: usize = 0;
 
     for src_path in &entries {
+        // Unreachable in practice: every `src_path` comes from
+        // `collect_files_bounded(src_dir)`, which always joins onto
+        // this exact `src_dir`, so `strip_prefix` cannot fail through
+        // the public API. Exercised only via the `stream::strip-prefix`
+        // failpoint under the `test-fault-injection` feature.
+        fail_point!("stream::strip-prefix", |_| Err(anyhow::anyhow!(
+            "injected: stream::strip-prefix"
+        )));
         let rel = src_path
             .strip_prefix(src_dir)
             .with_context(|| "strip_prefix failed")?;
@@ -1188,6 +1196,46 @@ mod tests {
         assert!(duration_ms > 0.0);
         assert!(throughput.is_finite());
         assert!((throughput - 2000.0).abs() < f64::EPSILON);
+    }
+}
+
+/// Fault-injection tests for `stream.rs` failpoints. Mirrors the
+/// pattern used in `core/cache.rs` / `core/io_pool.rs`: the failpoint
+/// registry is process-global, so these live in their own `mod` and
+/// are `#[serial]` on a dedicated key.
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_injection {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard<'a>(&'a str);
+
+    impl Drop for FailGuard<'_> {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial_test::serial(stream_strip_prefix)]
+    fn process_batch_strip_prefix_failpoint_injects_error() {
+        let tmp = tempdir().unwrap();
+        let src = tmp.path().join("src");
+        let dst = tmp.path().join("dst");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("a.txt"), "x").unwrap();
+
+        let _guard = FailGuard("stream::strip-prefix");
+        fail::cfg("stream::strip-prefix", "return")
+            .expect("activate failpoint");
+        let err = process_batch(&src, &dst, stream_copy).unwrap_err();
+        assert!(
+            format!("{err:?}").contains("injected: stream::strip-prefix"),
+            "got: {err:?}"
+        );
     }
 }
 

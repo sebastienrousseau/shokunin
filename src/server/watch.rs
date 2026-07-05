@@ -448,11 +448,27 @@ pub const MAX_WATCH_ITERATIONS: usize = 1_000_000;
 /// std::fs::write(dir.path().join("a.md"), "hi").unwrap();
 /// watch_blocking(&mut watcher, |_changes| false);
 /// ```
-pub fn watch_blocking<F>(watcher: &mut FileWatcher, mut callback: F)
+pub fn watch_blocking<F>(watcher: &mut FileWatcher, callback: F)
 where
     F: FnMut(&[PathBuf]) -> bool,
 {
-    for _ in 0..MAX_WATCH_ITERATIONS {
+    watch_blocking_bounded(watcher, MAX_WATCH_ITERATIONS, callback);
+}
+
+/// Bounded body of [`watch_blocking`].
+///
+/// Extracted so tests can exercise the "iteration cap reached without
+/// the callback ever returning `false`" branch deterministically and
+/// quickly — waiting through all of [`MAX_WATCH_ITERATIONS`] real
+/// iterations would make that path untestable in practice.
+fn watch_blocking_bounded<F>(
+    watcher: &mut FileWatcher,
+    max_iterations: usize,
+    mut callback: F,
+) where
+    F: FnMut(&[PathBuf]) -> bool,
+{
+    for _ in 0..max_iterations {
         match watcher.check_for_changes() {
             Ok(changes) if !changes.is_empty() => {
                 if !callback(&changes) {
@@ -659,6 +675,34 @@ mod tests {
     }
 
     #[test]
+    fn watch_blocking_bounded_exhausts_iterations_without_early_return() {
+        // `watch_blocking`'s real iteration cap (MAX_WATCH_ITERATIONS =
+        // 1_000_000) makes the "loop exhausts without the callback
+        // ever returning false" path untestable directly — it would
+        // require a million real poll/sleep cycles. Drive the
+        // extracted, cap-parameterised `watch_blocking_bounded` helper
+        // with a tiny cap instead so that path is reachable
+        // deterministically and quickly.
+        let dir = tmp_dir("bounded_exhaust");
+        write_file(&dir.join("a.md"), "v1");
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(1));
+        let mut watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        let mut calls = 0;
+        watch_blocking_bounded(&mut watcher, 3, |_changes| {
+            calls += 1;
+            true // never stop; only the iteration cap should end the loop
+        });
+
+        // Nothing modifies the watched file during the run, so the
+        // callback should never fire and the loop must still return
+        // after exhausting the 3-iteration cap (falling off the end of
+        // the `for` loop rather than hitting `return`).
+        assert_eq!(calls, 0);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn watch_blocking_returns_after_callback_false_deterministic() {
         // Deterministic version: clear the watcher's snapshot before
         // calling watch_blocking. The next check_for_changes will
@@ -796,6 +840,28 @@ mod tests {
         // Assert
         assert_eq!(changes.len(), 1);
         assert!(changes[0].ends_with("added.md"));
+        assert_eq!(watcher.tracked_file_count(), 1);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn walk_dir_skips_entries_that_are_neither_file_nor_dir() {
+        // `DirEntry::file_type()` does not follow symlinks, so a
+        // symlink entry is neither `is_dir()` nor `is_file()` — it
+        // falls through the `if/else if` with no explicit `else`.
+        // Every other test only ever creates plain files/dirs, so this
+        // "neither" branch is otherwise never taken.
+        let dir = tmp_dir("symlink_skip");
+        write_file(&dir.join("real.md"), "content");
+        std::os::unix::fs::symlink(dir.join("real.md"), dir.join("link.md"))
+            .expect("create symlink");
+
+        let cfg = WatchConfig::new(dir.clone(), Duration::from_millis(50));
+        let watcher = FileWatcher::new(cfg).expect("new watcher");
+
+        // Only the real file is tracked; the symlink is silently
+        // skipped rather than erroring or being double-counted.
         assert_eq!(watcher.tracked_file_count(), 1);
         let _ = fs::remove_dir_all(&dir);
     }

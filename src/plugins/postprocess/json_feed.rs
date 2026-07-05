@@ -450,6 +450,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_top_level_fields() -> Result<()> {
         let tmp = tempdir().unwrap();
 
@@ -486,6 +487,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_item_required_fields() -> Result<()> {
         let tmp = tempdir().unwrap();
 
@@ -528,6 +530,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_injects_link_into_html() -> Result<()> {
         let tmp = tempdir().unwrap();
 
@@ -560,6 +563,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_empty_site_dir() -> Result<()> {
         let tmp = tempdir().unwrap();
         let ctx = make_ctx(tmp.path());
@@ -569,6 +573,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_sorts_descending_and_truncates() -> Result<()> {
         let tmp = tempdir().unwrap();
         for i in 0..60 {
@@ -602,6 +607,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_empty_author_shows_unknown() -> Result<()> {
         let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
@@ -857,6 +863,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_no_base_url() -> Result<()> {
         let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
@@ -910,6 +917,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel]
     fn test_json_feed_falls_back_to_build_meta_dir() {
         let tmp = tempdir().unwrap();
         let build = tmp.path().join("build");
@@ -1049,6 +1057,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel]
     fn test_after_compile_errors_when_feed_json_is_a_directory() {
         let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
@@ -1062,6 +1071,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_after_compile_propagates_unreadable_html_error() {
         let tmp = tempdir().unwrap();
         let mut meta = HashMap::new();
@@ -1110,5 +1120,80 @@ mod tests {
             inject_json_feed_link(tmp.path(), "https://x.example/feed.json");
         let _ = fs::set_permissions(&locked, fs::Permissions::from_mode(0o755));
         assert!(result.is_err(), "expected an error from the locked path");
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn write_meta_sidecar(
+        dir: &Path,
+        slug: &str,
+        meta: &HashMap<String, String>,
+    ) {
+        let page_dir = dir.join(slug);
+        fs::create_dir_all(&page_dir).expect("create page dir");
+        let meta_path = page_dir.join("index.meta.json");
+        let json = serde_json::to_string(meta).expect("serialize meta");
+        fs::write(&meta_path, json).expect("write meta");
+    }
+
+    /// When `serialize_feed` fails (fault-injected), `after_compile`
+    /// falls back to `Value::to_string()` (compact encoding) rather
+    /// than propagating an error — feed.json must still be produced
+    /// and remain valid JSON, just without pretty-printing.
+    #[test]
+    #[serial]
+    fn after_compile_falls_back_to_compact_encoding_on_serialize_failure() {
+        let _guard = FailGuard("postprocess::json-feed-serialize");
+        fail::cfg("postprocess::json-feed-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        let mut meta = HashMap::new();
+        let _ = meta.insert("title".to_string(), "Fallback".to_string());
+        let _ = meta.insert("description".to_string(), "x".to_string());
+        let _ = meta.insert(
+            "item_pub_date".to_string(),
+            "Thu, 11 Apr 2026 06:06:06 +0000".to_string(),
+        );
+        write_meta_sidecar(tmp.path(), "fallback-post", &meta);
+
+        crate::test_support::init_logger();
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        JsonFeedPlugin
+            .after_compile(&ctx)
+            .expect("fallback path must not surface an error");
+
+        let feed_path = tmp.path().join("feed.json");
+        let raw = fs::read_to_string(&feed_path).unwrap();
+        // Compact `Value::to_string()` output has no newlines, unlike
+        // `to_string_pretty`, proving the fallback branch ran.
+        assert!(
+            !raw.contains('\n'),
+            "expected compact fallback encoding, got: {raw}"
+        );
+        let value: Value = serde_json::from_str(&raw).unwrap();
+        assert_eq!(value["items"][0]["title"], "Fallback");
     }
 }

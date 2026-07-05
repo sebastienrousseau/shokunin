@@ -1492,6 +1492,59 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn test_cache_html_files_walk_error_yields_empty_cached_list() {
+        // `site_dir` exists (so the `exists()` guard passes) but a
+        // nested unreadable subdirectory makes `walk::walk_files`
+        // return `Err`, exercising the `unwrap_or_default()` failure
+        // arm rather than the empty-dir success arm covered elsewhere.
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let mut ctx =
+            PluginContext::new(tmp.path(), tmp.path(), &site, tmp.path());
+        ctx.cache_html_files();
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert_eq!(
+            ctx.html_files.as_deref(),
+            Some(&Vec::new()),
+            "walk error must degrade to an empty cached list, not panic"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_get_html_files_walk_error_returns_empty_uncached() {
+        // Same failure as above but taken through `get_html_files()`'s
+        // own `unwrap_or_default()` fallback (the `html_files` cache
+        // was never populated, so it re-walks and must degrade
+        // gracefully rather than propagating the error or panicking).
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let site = tmp.path().join("site");
+        let locked = site.join("locked");
+        fs::create_dir_all(&locked).unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000))
+            .unwrap();
+
+        let ctx = PluginContext::new(tmp.path(), tmp.path(), &site, tmp.path());
+        let files = ctx.get_html_files();
+
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755))
+            .unwrap();
+        assert!(files.is_empty(), "walk error must yield an empty Vec");
+    }
+
     // -----------------------------------------------------------------
     // Plugin trait — default transform_html implementation
     // -----------------------------------------------------------------

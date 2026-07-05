@@ -1689,4 +1689,128 @@ mod tests {
         });
         assert!(validate_schema_org(&v).is_empty());
     }
+
+    #[test]
+    fn schema_validator_defaults_to_unknown_when_type_field_absent() {
+        // Distinct from `..._ignores_unknown_types` above: here `@type`
+        // is missing entirely, exercising the `.unwrap_or("Unknown")`
+        // fallback (as opposed to an unrecognised *value*).
+        let v = serde_json::json!({"@context": "https://schema.org"});
+        let errs = validate_schema_org(&v);
+        assert!(errs.is_empty(), "Unknown type enforces no required fields");
+    }
+
+    // ── Derived PartialEq/Eq surfaces ───────────────────────────────
+    //
+    // These domain types are rarely compared via `==` in the tests
+    // above (assertions mostly poke at the rendered JSON), so the
+    // derived `eq` impls need their own direct exercise, including a
+    // difference in a *later* field so short-circuiting `&&` chains
+    // don't leave the tail comparisons unexecuted.
+
+    #[test]
+    fn domain_types_partial_eq_covers_equal_and_unequal_tail_fields() {
+        let a = MonetaryAmount {
+            currency: "EUR".to_string(),
+            amount: 1.0,
+        };
+        let b = MonetaryAmount {
+            currency: "EUR".to_string(),
+            amount: 1.0,
+        };
+        let c = MonetaryAmount {
+            currency: "EUR".to_string(),
+            amount: 2.0,
+        };
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+
+        let ba1 = BankAccount {
+            name: Some("N".to_string()),
+            iban: Some("I".to_string()),
+            bic: Some("B".to_string()),
+        };
+        let ba2 = ba1.clone();
+        let mut ba3 = ba1.clone();
+        ba3.bic = Some("DIFFERENT".to_string());
+        assert_eq!(ba1, ba2);
+        assert_ne!(ba1, ba3);
+
+        let pi1 = PaymentInstrument {
+            name: Some("N".to_string()),
+            instrument_type: "card".to_string(),
+            brand: Some("Visa".to_string()),
+        };
+        let mut pi2 = pi1.clone();
+        pi2.brand = Some("Other".to_string());
+        assert_eq!(pi1, pi1.clone());
+        assert_ne!(pi1, pi2);
+
+        let rfi1 = RegulatedFinancialInstitution {
+            name: "Acme".to_string(),
+            lei: Some("L".to_string()),
+            licence_id: Some("LIC".to_string()),
+            regulator: Some("FCA".to_string()),
+            url: Some("https://x".to_string()),
+        };
+        let mut rfi2 = rfi1.clone();
+        rfi2.url = Some("https://y".to_string());
+        assert_eq!(rfi1, rfi1.clone());
+        assert_ne!(rfi1, rfi2);
+
+        let fp1 = FinancialProduct {
+            name: "Bond".to_string(),
+            product_type: "deposit".to_string(),
+            issuer: Some("Acme".to_string()),
+            annual_percentage_rate: Some(1.0),
+            isin: Some("US1".to_string()),
+        };
+        let mut fp2 = fp1.clone();
+        fp2.isin = Some("US2".to_string());
+        assert_eq!(fp1, fp1.clone());
+        assert_ne!(fp1, fp2);
+
+        let ft1 = FinancialTransaction {
+            instructed_amount: Some(a.clone()),
+            debtor_account: Some(ba1.clone()),
+            creditor_account: Some(ba1.clone()),
+            execution_date: Some("2026-01-01".to_string()),
+            end_to_end_id: Some("E1".to_string()),
+        };
+        let mut ft2 = ft1.clone();
+        ft2.end_to_end_id = Some("E2".to_string());
+        assert_eq!(ft1, ft1.clone());
+        assert_ne!(ft1, ft2);
+
+        let se1 = SchemaOrgError {
+            schema_type: "BankAccount".to_string(),
+            field: "identifier".to_string(),
+            reason: "missing".to_string(),
+        };
+        let mut se2 = se1.clone();
+        se2.reason = "different".to_string();
+        assert_eq!(se1, se1.clone());
+        assert_ne!(se1, se2);
+
+        let vo1 = ValidationOutcome::Invalid {
+            reason: "x".to_string(),
+        };
+        let vo2 = ValidationOutcome::Invalid {
+            reason: "y".to_string(),
+        };
+        assert_eq!(
+            vo1,
+            ValidationOutcome::Invalid {
+                reason: "x".to_string()
+            }
+        );
+        assert_ne!(vo1, vo2);
+        assert_ne!(vo1, ValidationOutcome::Valid);
+
+        let e1 = Iso20022Entity::FinancialProduct(fp1.clone());
+        let e2 = Iso20022Entity::FinancialProduct(fp2.clone());
+        assert_eq!(e1, Iso20022Entity::FinancialProduct(fp1.clone()));
+        assert_ne!(e1, e2);
+        assert_ne!(e1, Iso20022Entity::BankAccount(ba1.clone()));
+    }
 }

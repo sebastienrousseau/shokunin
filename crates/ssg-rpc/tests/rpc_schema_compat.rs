@@ -81,19 +81,25 @@ fn current_snapshot_emission() -> String {
 #[test]
 fn ac4_emitted_snapshot_describes_input_and_output() {
     let ts = current_snapshot_emission();
+    // Interface names follow the schemars-emitted title (the struct's
+    // own name, `SnapInput`/`SnapOutput`), not the RPC method name
+    // (`snap_like`) — see `type_name_for`'s doc comment in `ts.rs`,
+    // added to keep `.d.ts` interfaces aligned with the JSON Schema
+    // `title` authors already see.
+    //
     // Input interface contains both fields, with `author` optional.
-    assert!(ts.contains("export interface SnapLikeInput"), "{ts}");
+    assert!(ts.contains("export interface SnapInput"), "{ts}");
     assert!(ts.contains("post_id: string"), "{ts}");
     assert!(
         ts.contains("author?:") || ts.contains("\"null\""),
         "expected optional author field: {ts}"
     );
     // Output interface.
-    assert!(ts.contains("export interface SnapLikeOutput"), "{ts}");
+    assert!(ts.contains("export interface SnapOutput"), "{ts}");
     assert!(ts.contains("likes: number"), "{ts}");
     // Rpc index.
     assert!(
-        ts.contains("snap_like(input: SnapLikeInput): Promise<SnapLikeOutput>"),
+        ts.contains("snap_like(input: SnapInput): Promise<SnapOutput>"),
         "{ts}"
     );
 }

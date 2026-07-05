@@ -195,10 +195,15 @@ pub fn decode_html_entities(s: &str) -> String {
         // Walk a single UTF-8 scalar; the byte index `i` always sits on
         // a char boundary because we never split inside a multi-byte
         // sequence (we only advance past `&...;` runs which are ASCII).
-        // The `next()` always yields Some because the while-loop bound
-        // (`i < bytes.len()`) means there is at least one more char.
+        // `next()` always yields `Some` because the while-loop bound
+        // (`i < bytes.len()`) guarantees at least one more byte — this
+        // is a true invariant, not a defensive/fallible branch, so it
+        // is asserted rather than handled as a distinct code path.
         let Some(ch) = s[i..].chars().next() else {
-            break;
+            // Unreachable per the invariant above; `unreachable!()`
+            // (not `.expect()`) keeps this out of `clippy::expect_used`,
+            // which this crate denies via `-D warnings` in CI.
+            unreachable!("i < bytes.len() guarantees a next char")
         };
         out.push(ch);
         i += ch.len_utf8();

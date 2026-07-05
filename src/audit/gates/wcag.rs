@@ -424,6 +424,45 @@ mod tests {
     }
 
     #[test]
+    fn sequential_heading_levels_do_not_warn_1_3_1() {
+        // `h1` followed directly by `h2` is a valid, non-skipping
+        // hierarchy: `last > 0 && level > last + 1` must evaluate to
+        // false (not just short-circuit on `last > 0`), which no
+        // existing single-heading fixture exercises.
+        let html = r#"<!doctype html><html lang="en"><head><title>x</title></head><body><main><h1>top</h1><h2>next</h2></main></body></html>"#;
+        let f = WcagGate.run(&site(html), &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("WCAG-1.3.1")),
+            "consecutive heading levels must not warn: {f:?}"
+        );
+    }
+
+    #[test]
+    fn unterminated_html_tag_lang_check_reaches_end_of_input() {
+        // No `>` anywhere after `<html`, driving the `map_or` default
+        // (`lower.len()`) arm in `check_html_lang` instead of the
+        // `Some(gt)` arm every other fixture takes.
+        let mut out = Vec::new();
+        check_html_lang("<html", &mut out);
+        assert_eq!(
+            out.len(),
+            1,
+            "unterminated <html> tag must still be checked for lang"
+        );
+        assert_eq!(out[0].criterion, "3.1.1");
+    }
+
+    #[test]
+    fn link_with_title_attr_is_silent_for_2_4_4() {
+        // `title=` alone (no `aria-label`, no inner text) must also
+        // satisfy 2.4.4 — no existing fixture isolates the `has_title`
+        // half of `!has_aria && !has_title`.
+        let mut out = Vec::new();
+        check_link_text("<a href=\"/x\" title=\"More info\"></a>", &mut out);
+        assert!(out.is_empty(), "title= alone must satisfy 2.4.4");
+    }
+
+    #[test]
     fn metadata_methods_exposed() {
         let g = WcagGate;
         assert_eq!(g.name(), "wcag");

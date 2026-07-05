@@ -640,6 +640,101 @@ mod tests {
         assert_eq!(fs::read_to_string(dir.path().join("b.txt")).unwrap(), "b");
     }
 
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn poisoned_state_lock_recovers_via_into_inner() {
+        // `PoolState::lock` recovers from a poisoned mutex instead of
+        // panicking (see its doc comment). Workers never panic while
+        // holding the lock in normal operation, so the only way to
+        // reach this branch in a test is to poison it directly.
+        let state = Arc::new(PoolState {
+            inner: Mutex::new(StateInner::default()),
+            all_done: Condvar::new(),
+        });
+        let poison_state = Arc::clone(&state);
+        let handle = std::thread::spawn(move || {
+            let _guard = poison_state.inner.lock().unwrap();
+            panic!("deliberately poison the mutex for test coverage");
+        });
+        assert!(handle.join().is_err());
+
+        // Recovers instead of panicking; state is still readable.
+        let guard = state.lock();
+        assert_eq!(guard.pending, 0);
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn flush_condvar_wait_recovers_from_poison() {
+        // `flush()`'s `all_done.wait(...).unwrap_or_else(...)` also
+        // recovers from a poisoned mutex. Reproduced directly against
+        // a bare `PoolState` (mirroring `flush`'s wait loop) since
+        // driving it through a live `IoPool` cannot deterministically
+        // poison the lock while a waiter is parked in `wait()`.
+        let state = Arc::new(PoolState {
+            inner: Mutex::new(StateInner {
+                pending: 1,
+                ..StateInner::default()
+            }),
+            all_done: Condvar::new(),
+        });
+
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel::<()>();
+        let waiter_state = Arc::clone(&state);
+        let waiter = std::thread::spawn(move || {
+            let mut inner = waiter_state.lock();
+            let _ = ready_tx.send(());
+            while inner.pending > 0 {
+                inner = waiter_state
+                    .all_done
+                    .wait(inner)
+                    .unwrap_or_else(PoisonError::into_inner);
+            }
+            inner.pending
+        });
+
+        // The waiter signals only after acquiring the lock while
+        // `pending == 1`, so it is guaranteed to call `Condvar::wait`
+        // next (which releases the mutex while parked); poll until
+        // that release is observable before poisoning it.
+        ready_rx.recv().unwrap();
+        while state.inner.try_lock().is_err() {
+            std::thread::yield_now();
+        }
+
+        let poison_state = Arc::clone(&state);
+        let poisoner = std::thread::spawn(move || {
+            let mut inner = poison_state.inner.lock().unwrap();
+            inner.pending = 0;
+            poison_state.all_done.notify_all();
+            panic!("poison the mutex while notifying the waiter");
+        });
+        assert!(poisoner.join().is_err());
+
+        let pending_after =
+            waiter.join().expect("waiter must recover, not panic");
+        assert_eq!(pending_after, 0);
+    }
+
+    #[test]
+    #[serial_test::parallel(io_pool_failpoints)]
+    fn worker_loop_receiver_lock_recovers_from_poison() {
+        // `worker_loop`'s `rx.lock().unwrap_or_else(...)` uses the same
+        // poison-recovery idiom for the receiver mutex.
+        let (tx, rx) = sync_channel::<WriteJob>(1);
+        let rx = Arc::new(Mutex::new(rx));
+        let poison_rx = Arc::clone(&rx);
+        let handle = std::thread::spawn(move || {
+            let _guard = poison_rx.lock().unwrap();
+            panic!("deliberately poison the receiver mutex");
+        });
+        assert!(handle.join().is_err());
+
+        drop(tx);
+        let guard = rx.lock().unwrap_or_else(PoisonError::into_inner);
+        assert!(guard.recv().is_err());
+    }
+
     /// Fault-injection tests. Failpoints are process-global, so every
     /// test here serialises via `serial_test` and restores the
     /// failpoint with an RAII guard (mirrors `tests/fault_injection.rs`).

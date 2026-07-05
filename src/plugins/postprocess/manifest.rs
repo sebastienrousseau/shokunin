@@ -175,6 +175,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_no_op_when_manifest_missing() -> Result<()> {
         let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
@@ -184,6 +185,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_returns_error_on_invalid_json() {
         let tmp = tempdir().unwrap();
         fs::write(tmp.path().join("manifest.json"), "not valid json").unwrap();
@@ -248,6 +250,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_drops_empty_icons_in_manifest() -> Result<()> {
         let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
@@ -265,6 +268,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_manifest_fix_repairs_truncated_description() -> Result<()> {
         let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
@@ -288,6 +292,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_manifest_fix_uses_sidecar_description() -> Result<()> {
         let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
@@ -345,6 +350,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_handles_manifest_without_description() {
         let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
@@ -365,6 +371,7 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_errors_on_invalid_utf8_manifest() {
         let tmp = tempdir().unwrap();
         let manifest_path = tmp.path().join("manifest.json");
@@ -393,5 +400,55 @@ mod tests {
         );
         let err = result.unwrap_err();
         assert!(format!("{err}").contains("manifest.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn after_compile_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::manifest-serialize");
+        fail::cfg("postprocess::manifest-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        fs::write(
+            tmp.path().join("manifest.json"),
+            r#"{"name":"X","description":"Already terminated."}"#,
+        )
+        .unwrap();
+        crate::test_support::init_logger();
+        let ctx = PluginContext::new(
+            Path::new("content"),
+            Path::new("build"),
+            tmp.path(),
+            Path::new("templates"),
+        );
+        let err = ManifestFixPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("manifest.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::manifest-serialize"),
+            "got: {msg}"
+        );
     }
 }

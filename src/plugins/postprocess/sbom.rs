@@ -202,6 +202,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_sbom_plugin_generates_valid_cyclonedx_sbom() -> Result<()> {
         let tmp = tempdir().unwrap();
         let ctx = test_ctx(tmp.path());
@@ -226,6 +227,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn test_sbom_plugin_nonexistent_site_dir() -> Result<()> {
         let tmp = tempdir().unwrap();
         let non_existent = tmp.path().join("non_existent_dir");
@@ -277,11 +279,50 @@ mod tests {
     // -----------------------------------------------------------------
 
     #[test]
+    #[serial_test::parallel]
     fn test_after_compile_errors_when_sbom_path_is_a_directory() {
         let tmp = tempdir().unwrap();
         fs::create_dir_all(tmp.path().join("sbom.cdx.json")).unwrap();
         let ctx = test_ctx(tmp.path());
         let err = SbomPlugin.after_compile(&ctx).unwrap_err();
         assert!(format!("{err}").contains("sbom.cdx.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use serial_test::serial;
+    use tempfile::tempdir;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn after_compile_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::sbom-serialize");
+        fail::cfg("postprocess::sbom-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempdir().unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = SbomPlugin
+            .after_compile(&ctx)
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("sbom.cdx.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::sbom-serialize"),
+            "got: {msg}"
+        );
     }
 }

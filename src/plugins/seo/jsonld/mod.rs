@@ -1439,6 +1439,26 @@ mod tests {
     }
 
     #[test]
+    fn validation_error_partial_eq_covers_equal_and_unequal_tail_field() {
+        // `JsonLdValidationError` derives `PartialEq`/`Eq`, but the rest
+        // of this test module only ever inspects individual fields
+        // (`e.field == "..."`), never the struct as a whole — so the
+        // derived `eq` was otherwise never exercised. Compare on a
+        // difference in the *last* field so the generated `&&` chain
+        // runs past the first two comparisons too.
+        let a = JsonLdValidationError {
+            schema_type: "Article".to_string(),
+            field: "headline".to_string(),
+            reason: "field absent".to_string(),
+        };
+        let b = a.clone();
+        let mut c = a.clone();
+        c.reason = "field is null".to_string();
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+    }
+
+    #[test]
     fn extractor_ignores_unterminated_jsonld_script() {
         // No closing </script> — the extractor must bail without
         // yielding a truncated block.

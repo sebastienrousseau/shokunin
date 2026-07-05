@@ -497,4 +497,27 @@ mod tests {
         let _copy = t;
         assert_eq!(t, HmrType::HmrHtml);
     }
+
+    #[test]
+    fn hmr_type_clone_and_debug() {
+        // `assert_eq!` only invokes `Debug::fmt` on a *failing*
+        // comparison, so the derived `Clone`/`Debug` impls need an
+        // explicit exercise to be reached at all.
+        let t = HmrType::HmrCss;
+        #[allow(clippy::clone_on_copy)]
+        let cloned = t.clone();
+        assert_eq!(cloned, t);
+        let dbg = format!("{t:?}");
+        assert!(dbg.contains("HmrCss"), "unexpected Debug output: {dbg}");
+    }
+
+    #[test]
+    fn hmr_message_clone_and_debug() {
+        let m = HmrMessage::html(vec!["/a/".into()]).with_sha("abc");
+        let cloned = m.clone();
+        assert_eq!(cloned, m);
+        let dbg = format!("{m:?}");
+        assert!(dbg.contains("HmrHtml"), "unexpected Debug output: {dbg}");
+        assert!(dbg.contains("abc"), "unexpected Debug output: {dbg}");
+    }
 }

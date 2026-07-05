@@ -647,9 +647,17 @@ mod tests {
     }
 
     #[test]
+    // The whole point of this test is to call the derived `Default`
+    // impl directly, since nothing else in the crate does — clippy's
+    // suggestion to construct `Cli` directly instead would defeat that.
+    #[allow(clippy::default_constructed_unit_structs)]
     fn cli_default_is_unit_struct() {
         let _cli = Cli;
-        // Cli is a ZST — just ensure Default works.
+        // `Cli` derives `Default` and `Debug` but nothing else in the
+        // crate ever calls either derived impl — exercise both
+        // directly so they're not dead code from coverage's view.
+        let default_cli = Cli::default();
+        assert_eq!(format!("{default_cli:?}"), format!("{:?}", Cli));
     }
 
     // -----------------------------------------------------------------

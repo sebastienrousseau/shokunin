@@ -371,6 +371,14 @@ mod tests {
     }
 
     #[test]
+    fn shortcode_plugin_debug_output_names_the_type() {
+        // The derived `Debug` impl is never otherwise exercised (no
+        // test formats the plugin with `{:?}`), so it was showing up
+        // as an uncovered function/region.
+        assert_eq!(format!("{:?}", ShortcodePlugin), "ShortcodePlugin");
+    }
+
+    #[test]
     fn before_compile_missing_content_dir_returns_ok() {
         // Line 41: `!ctx.content_dir.exists()` early return.
         let dir = tempfile::tempdir().unwrap();

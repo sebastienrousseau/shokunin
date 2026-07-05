@@ -405,6 +405,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn no_op_when_site_dir_missing() {
         let dir = tempdir().unwrap();
         SeoPlugin
@@ -563,6 +564,7 @@ mod tests {
     // ── inject_seo_tags integration via after_compile ───────────
 
     #[test]
+    #[serial_test::parallel]
     fn transform_html_injects_tags() {
         let dir = tempdir().unwrap();
         let c = ctx(dir.path());
@@ -579,6 +581,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn transform_html_uses_article_type_when_article_tag_present() {
         let dir = tempdir().unwrap();
         let c = ctx(dir.path());
@@ -600,6 +603,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn transform_html_is_idempotent() {
         let dir = tempdir().unwrap();
         let c = ctx(dir.path());
@@ -616,6 +620,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn after_compile_no_op_when_no_html_files() {
         let dir = tempdir().unwrap();
         // Site dir exists but is empty.
@@ -646,6 +651,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn og_locale_is_path_driven_on_locale_pages() {
         // The A5 signature bug: a /hi/… page carrying the site-wide
         // lang="en-GB" must emit og:locale=hi, not en_GB.
@@ -661,6 +667,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn og_locale_is_default_driven_with_underscore_form() {
         // en-GB default: og:locale uses the underscore spelling while
         // the resolver stays canonical BCP-47 (en-GB).
@@ -676,6 +683,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn og_locale_en_fallback_only_when_nothing_resolves() {
         let dir = tempdir().unwrap();
         // No config, no sidecar, no locale prefix, no <html lang>.
@@ -718,6 +726,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_title_description_banner_yield_complete_consistent_social_set() {
         // Acceptance (spec B8): a post with ONLY title + description
         // + banner gets complete, mutually consistent og:*/twitter:*.
@@ -756,6 +765,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_seo_title_beats_title_and_explicit_fields_beat_seo_title() {
         let dir = tempdir().unwrap();
         write_sidecar(
@@ -776,6 +786,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_banner_beats_image_and_og_image_beats_banner() {
         let dir = tempdir().unwrap();
         write_sidecar(
@@ -816,6 +827,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_explicit_twitter_card_wins_over_derived_default() {
         let dir = tempdir().unwrap();
         write_sidecar(
@@ -834,6 +846,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_card_defaults_to_summary_without_image_or_article() {
         let dir = tempdir().unwrap();
         let c = ctx_rooted(dir.path());
@@ -845,6 +858,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn b8_no_bleed_between_pages_differing_only_in_title() {
         // The stale-field bug class (spec B8): derived values must
         // come from THIS page's front matter, never another page's or
@@ -892,6 +906,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn transform_html_handles_html_without_head_tag() {
         let dir = tempdir().unwrap();
         let c = ctx(dir.path());
@@ -949,6 +964,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn og_locale_with_empty_declared_locale_set_uses_site_language() {
         // Zero declared locales: the helper's default-locale fallback
         // kicks in and the site language drives og:locale.

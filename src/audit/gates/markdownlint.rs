@@ -161,17 +161,17 @@ fn lint_markdown(text: &str, rel: &str, findings: &mut Vec<Finding>) {
             .or_else(|| raw_line.find("https://"))
         {
             let before = &raw_line[..idx2];
+            // `split_whitespace().next()` on a slice that itself starts
+            // at a non-whitespace byte (`idx2` points at `h`) always
+            // yields the run up to the next whitespace char (or EOF),
+            // i.e. the trailing `>` / `)` delimiter of `<https://x>` or
+            // `(https://x)` is swallowed into the token itself — so the
+            // closing delimiter only ever needs to be checked at the
+            // end of the token.
             let after_url =
                 raw_line[idx2..].split_whitespace().next().unwrap_or("");
-            // The whitespace-delimited token swallows a trailing `>` /
-            // `)` delimiter (`<https://x>` yields `https://x>`), so the
-            // closing delimiter must be looked for both at the end of
-            // the token and immediately after it.
-            let tail = &raw_line[idx2 + after_url.len()..];
-            let in_bracket = before.contains('(')
-                && (after_url.ends_with(')') || tail.starts_with(')'));
-            let in_lt = before.ends_with('<')
-                && (after_url.ends_with('>') || tail.starts_with('>'));
+            let in_bracket = before.contains('(') && after_url.ends_with(')');
+            let in_lt = before.ends_with('<') && after_url.ends_with('>');
             let in_link = before.ends_with("](");
             if !in_bracket && !in_lt && !in_link {
                 findings.push(
@@ -581,6 +581,60 @@ mod tests {
         assert!(
             f.iter().all(|x| x.code.as_deref() != Some("MD041")),
             "blank first line must not trip MD041: {f:?}"
+        );
+    }
+
+    #[test]
+    fn whitespace_only_line_is_exempt_from_md009() {
+        // A line made up entirely of spaces still `ends_with(' ')`, but
+        // `raw_line.trim().is_empty()` is also true, so MD009 must not
+        // fire for it — only genuine trailing whitespace after real
+        // content counts. The sibling trailing-ws line keeps `f`
+        // non-empty so the exemption predicate actually evaluates.
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n   \nreal trailing ws \n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        let md009_count = f
+            .iter()
+            .filter(|x| x.code.as_deref() == Some("MD009"))
+            .count();
+        assert_eq!(
+            md009_count, 1,
+            "only the real trailing-ws line should trip MD009: {f:?}"
+        );
+    }
+
+    #[test]
+    fn bare_http_url_without_s_is_flagged() {
+        // MD034 also fires for plain `http://` (not just `https://`).
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\nSee http://bare.example\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().any(|x| x.code.as_deref() == Some("MD034")),
+            "bare http:// (no s) must still trip MD034: {f:?}"
+        );
+    }
+
+    #[test]
+    fn markdown_link_with_space_before_closing_paren_is_silent() {
+        // `[text](url )` — a space before the closing paren means the
+        // whitespace-delimited URL token does not itself end in `)`,
+        // so `in_bracket` is false even though `in_link` (before ends
+        // with `](`) is true; the finding must still be suppressed by
+        // `in_link` alone.
+        let s = site_with_content(&[(
+            "doc.md",
+            "# title\n\n[text](https://example.com )\n",
+        )]);
+        let f = MarkdownlintGate.run(&s, &AuditOptions::default());
+        assert!(
+            f.iter().all(|x| x.code.as_deref() != Some("MD034")),
+            "space-before-paren markdown link must still be silent: {f:?}"
         );
     }
 

@@ -461,6 +461,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::parallel]
     fn write_ai_plugin_json_errors_when_target_is_a_directory() {
         use crate::plugin::PluginContext;
         let tmp = tempfile::tempdir().unwrap();
@@ -470,5 +471,63 @@ mod tests {
             PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
         let err = write_ai_plugin_json(&ctx, &cfg()).unwrap_err();
         assert!(format!("{err}").contains("ai-plugin.json"));
+    }
+}
+
+#[cfg(all(test, feature = "test-fault-injection"))]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod fault_tests {
+    use super::*;
+    use crate::plugin::PluginContext;
+    use serial_test::serial;
+
+    /// RAII guard that disables a failpoint on drop.
+    struct FailGuard(&'static str);
+
+    impl Drop for FailGuard {
+        fn drop(&mut self) {
+            let _ = fail::cfg(self.0, "off");
+        }
+    }
+
+    fn cfg() -> SsgConfig {
+        SsgConfig {
+            site_name: "Example Site".to_string(),
+            site_title: "Example".to_string(),
+            site_description: "A demo".to_string(),
+            base_url: "https://example.com".to_string(),
+            language: "en".to_string(),
+            content_dir: std::path::PathBuf::from("content"),
+            output_dir: std::path::PathBuf::from("build"),
+            template_dir: std::path::PathBuf::from("templates"),
+            serve_dir: None,
+            i18n: None,
+            cdn_prefix: None,
+            image: crate::cmd::ImageConfig::default(),
+            edge_headers: crate::cmd::EdgeHeadersConfig::default(),
+            agents: None,
+            transitions: false,
+            security: crate::cmd::SecurityConfig::default(),
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn write_ai_plugin_json_maps_serialize_failure_to_io_error() {
+        let _guard = FailGuard("postprocess::ai-plugin-serialize");
+        fail::cfg("postprocess::ai-plugin-serialize", "return")
+            .expect("activate failpoint");
+
+        let tmp = tempfile::tempdir().unwrap();
+        let ctx =
+            PluginContext::new(tmp.path(), tmp.path(), tmp.path(), tmp.path());
+        let err = write_ai_plugin_json(&ctx, &cfg())
+            .expect_err("injected serialize failure must propagate");
+        let msg = format!("{err}");
+        assert!(msg.contains("ai-plugin.json"), "got: {msg}");
+        assert!(
+            msg.contains("injected: postprocess::ai-plugin-serialize"),
+            "got: {msg}"
+        );
     }
 }
