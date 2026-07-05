@@ -35,10 +35,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  packages: write
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -462,6 +459,10 @@ jobs:
     # the GitHub Release or crates.io publish on it.
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write # gh release create/edit + upload assets
+      id-token: write # attest-build-provenance
+      attestations: write # attest-build-provenance
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

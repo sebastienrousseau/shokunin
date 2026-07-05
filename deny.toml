@@ -68,4 +68,5 @@ ignore = [
     # a metadata-gen release with quick-xml ≥0.41 clears the 0.40 path.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+    "RUSTSEC-2026-0173", # proc-macro-error2 (unmaintained) — via defmt-macros/defmt, an optional jiff feature
 ]
