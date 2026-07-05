@@ -255,9 +255,25 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
 /// # Security
 ///
 /// This function prevents directory traversal attacks by:
-/// * Resolving symbolic links
-/// * Checking for parent directory references (`..`)
-/// * Validating path components
+/// * Checking for parent directory references (`..`) as genuine path
+///   *components* (via [`Path::components`]), not a substring match —
+///   so a literal `..` inside a filename (e.g. `notes..final.md`)
+///   is never a false positive, and no encoding trick produces a
+///   false negative.
+/// * Rejecting any such component **unconditionally**, whether or not
+///   the path currently exists. A prior version of this check only
+///   ran for non-existent paths, so a traversal payload that happened
+///   to resolve to a real file (e.g. `../../etc/passwd`, which exists
+///   on every Unix system) skipped the traversal check entirely and
+///   fell through to `canonicalize()`, which succeeds for any real
+///   file — silently reporting a genuine traversal attempt as safe.
+/// * Resolving symbolic links for paths that do exist and pass the
+///   component check, surfacing a broken symlink as unsafe.
+///
+/// This function alone does **not** confine a path to a particular
+/// directory tree — a path with no `..` components can still resolve
+/// (via a symlink) to an arbitrary location. Callers that need that
+/// stronger guarantee should also use [`is_path_within_root`].
 ///
 /// # Examples
 ///
@@ -269,12 +285,18 @@ pub fn copy_dir_with_progress(src: &Path, dst: &Path) -> Result<(), SsgError> {
 /// assert!(!is_safe_path(Path::new("../escape")).unwrap());
 /// ```
 pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
-    // Check for traversal patterns in non-existent paths
+    use std::path::Component;
+
+    // Reject genuine parent-directory *components* unconditionally,
+    // before ever checking existence. Matching on `Component::ParentDir`
+    // (rather than a `contains("..")` substring check) means a
+    // filename that merely contains two literal dots is never
+    // mistaken for a traversal attempt.
+    if path.components().any(|c| c == Component::ParentDir) {
+        return Ok(false);
+    }
+
     if !path.exists() {
-        let path_str = path.to_string_lossy();
-        if path_str.contains("..") {
-            return Ok(false);
-        }
         return Ok(true); // Non-existent paths without traversal are safe
     }
 
@@ -284,6 +306,43 @@ pub fn is_safe_path(path: &Path) -> Result<bool, SsgError> {
     let _canonical = path.canonicalize().with_path(path)?;
 
     Ok(true)
+}
+
+/// Checks that `path` resolves to a location inside `root`.
+///
+/// Complements [`is_safe_path`]: that function only rejects paths
+/// whose *string form* contains a `..` component, so it cannot catch
+/// a path that looks innocuous but resolves elsewhere via a symlink
+/// (e.g. `content` is a symlink to `/etc`). This function canonicalizes
+/// both `path` and `root` — resolving all symlinks and `..` components
+/// — and verifies the former is a descendant of (or equal to) the
+/// latter, closing that gap.
+///
+/// `root` must exist. `path` must exist (use [`is_safe_path`] first
+/// for pre-creation checks on paths that don't exist yet).
+///
+/// # Errors
+///
+/// Returns an [`SsgError`] if either `path` or `root` cannot be
+/// canonicalized (e.g. does not exist, or a broken symlink).
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::fs_ops::is_path_within_root;
+/// use tempfile::tempdir;
+/// use std::fs;
+///
+/// let root = tempdir().unwrap();
+/// let inner = root.path().join("content");
+/// fs::create_dir(&inner).unwrap();
+///
+/// assert!(is_path_within_root(&inner, root.path()).unwrap());
+/// ```
+pub fn is_path_within_root(path: &Path, root: &Path) -> Result<bool, SsgError> {
+    let canonical_path = path.canonicalize().with_path(path)?;
+    let canonical_root = root.canonicalize().with_path(root)?;
+    Ok(canonical_path.starts_with(&canonical_root))
 }
 
 /// Verifies the safety of a file for processing.
@@ -703,14 +762,78 @@ mod tests {
     }
 
     #[test]
-    fn is_safe_path_with_dotdot_existing() {
+    fn is_safe_path_with_dotdot_existing_is_now_rejected() {
+        // Prior to the fix, `is_safe_path` only checked for `..` on
+        // non-existent paths, so an *existing* path containing `..`
+        // (even one that canonicalizes to somewhere entirely benign,
+        // like this one — `tmp/a/..` resolves right back to `tmp`)
+        // was reported safe purely because `canonicalize()` succeeds
+        // for any real file. That's the same code path a genuine
+        // traversal payload takes once it happens to resolve to a
+        // real file (e.g. `../../etc/passwd`) — see
+        // `is_safe_path_existing_traversal_to_real_file_is_rejected`
+        // below. `is_safe_path` now rejects any `..` *component*
+        // unconditionally, so this benign case is (correctly, if
+        // conservatively) rejected too. Callers that need to allow a
+        // resolved-but-in-bounds backtrack should canonicalize first
+        // and use `is_path_within_root` instead.
         let tmp = tempdir().unwrap();
-        // Create a path that exists and canonicalises cleanly
         let safe = tmp.path().join("a");
         fs::create_dir_all(&safe).unwrap();
         let dotdot_path = safe.join("..");
-        // canonicalize succeeds → safe
-        assert!(is_safe_path(&dotdot_path).unwrap());
+        assert!(!is_safe_path(&dotdot_path).unwrap());
+        // The canonicalized equivalent (no `..` component at all) is
+        // exactly what a caller should pass instead, and remains safe.
+        assert!(is_safe_path(&dotdot_path.canonicalize().unwrap()).unwrap());
+    }
+
+    /// Regression test for the exact vulnerability this fix closes:
+    /// a traversal path that happens to resolve to a real, existing
+    /// file must still be rejected. Before the fix, `is_safe_path`
+    /// only checked for `..` when the target did *not* exist, so any
+    /// traversal payload landing on something real (like `/etc`,
+    /// which exists on every Unix system) skipped the check entirely.
+    #[test]
+    fn is_safe_path_existing_traversal_to_real_file_is_rejected() {
+        // `/etc` exists on every Unix CI/dev machine this crate
+        // targets. The exact depth of `..` needed to reach it from
+        // `CARGO_MANIFEST_DIR` doesn't matter for this test — what
+        // matters is that `/etc` (an unambiguously real, existing
+        // directory) is reachable via *some* relative traversal from
+        // the crate root, and that reachability must not make the
+        // check pass.
+        let existing_via_traversal = Path::new("../etc");
+        // Only assert if this environment actually has /etc reachable
+        // one level up (true for the CI/dev environments this crate
+        // targets); this keeps the test meaningful without hardcoding
+        // a specific relative depth that could vary by checkout path.
+        if existing_via_traversal.exists() {
+            assert!(!is_safe_path(existing_via_traversal).unwrap());
+        }
+        // Directly construct a path guaranteed to both (a) contain a
+        // `..` component and (b) exist, regardless of environment:
+        // canonicalize `tmp/a`, then rebuild an equivalent
+        // `tmp/a/subdir/..` form that still resolves to the real,
+        // existing `tmp/a` directory.
+        let tmp = tempdir().unwrap();
+        let real_dir = tmp.path().join("a");
+        fs::create_dir_all(real_dir.join("subdir")).unwrap();
+        let traversal_to_real_dir = real_dir.join("subdir").join("..");
+        assert!(traversal_to_real_dir.exists());
+        assert!(!is_safe_path(&traversal_to_real_dir).unwrap());
+    }
+
+    #[test]
+    fn is_safe_path_rejects_literal_dotdot_in_filename_false_positive_check() {
+        // A filename that merely *contains* the two-character
+        // substring ".." (not a `..` path *component*) must not be
+        // rejected -- confirms the fix uses component-based matching
+        // (`Component::ParentDir`), not a fragile `contains("..")`
+        // substring check.
+        let tmp = tempdir().unwrap();
+        let odd_name = tmp.path().join("notes..final.md");
+        fs::write(&odd_name, "content").unwrap();
+        assert!(is_safe_path(&odd_name).unwrap());
     }
 
     #[test]
@@ -720,6 +843,84 @@ mod tests {
         fs::write(&file, "data").unwrap();
         // Absolute path that exists is safe
         assert!(is_safe_path(&file).unwrap());
+    }
+
+    // -----------------------------------------------------------------
+    // is_path_within_root — canonicalize-based containment checking,
+    // catches escapes `is_safe_path` structurally cannot (symlinks).
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn is_path_within_root_accepts_direct_child() {
+        let tmp = tempdir().unwrap();
+        let child = tmp.path().join("content");
+        fs::create_dir_all(&child).unwrap();
+        assert!(is_path_within_root(&child, tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn is_path_within_root_accepts_root_itself() {
+        let tmp = tempdir().unwrap();
+        assert!(is_path_within_root(tmp.path(), tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn is_path_within_root_accepts_deeply_nested_child() {
+        let tmp = tempdir().unwrap();
+        let nested = tmp.path().join("a").join("b").join("c");
+        fs::create_dir_all(&nested).unwrap();
+        assert!(is_path_within_root(&nested, tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn is_path_within_root_rejects_sibling_directory() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path().join("root");
+        let sibling = tmp.path().join("sibling");
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&sibling).unwrap();
+        assert!(!is_path_within_root(&sibling, &root).unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn is_path_within_root_rejects_symlink_escape() {
+        // The exact vulnerability class `is_safe_path` alone cannot
+        // catch: a path with *no* `..` component at all that still
+        // escapes the intended root by following a symlink. `content`
+        // looks like an innocent subdirectory name, but it's actually
+        // a symlink pointing entirely outside `root`.
+        use std::os::unix::fs::symlink;
+
+        let tmp = tempdir().unwrap();
+        let root = tmp.path().join("root");
+        let outside = tmp.path().join("outside");
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&outside).unwrap();
+
+        let escape_link = root.join("content");
+        symlink(&outside, &escape_link).unwrap();
+
+        assert!(
+            !is_path_within_root(&escape_link, &root).unwrap(),
+            "a symlink pointing outside root must not be reported as contained"
+        );
+    }
+
+    #[test]
+    fn is_path_within_root_errors_on_nonexistent_path() {
+        let tmp = tempdir().unwrap();
+        let missing = tmp.path().join("does-not-exist-yet");
+        assert!(is_path_within_root(&missing, tmp.path()).is_err());
+    }
+
+    #[test]
+    fn is_path_within_root_errors_on_nonexistent_root() {
+        let tmp = tempdir().unwrap();
+        let existing = tmp.path().join("child");
+        fs::create_dir_all(&existing).unwrap();
+        let missing_root = tmp.path().join("no-such-root");
+        assert!(is_path_within_root(&existing, &missing_root).is_err());
     }
 
     #[test]
