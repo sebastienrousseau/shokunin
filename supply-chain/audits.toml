@@ -1,4 +1,8 @@
 
 # cargo-vet audits file
 
-[audits]
+[[audits.noyalib]]
+who = "Sebastien Rousseau <sebastian.rousseau@gmail.com>"
+criteria = "safe-to-deploy"
+version = "0.0.12"
+notes = 'Same-author crate, reviewed from the published crates.io source. #![forbid(unsafe_code)] enforced at lib.rs:342 — all grep hits for the string "unsafe" are doc comments describing this guarantee, not code. build.rs runs only `rustc --version` (via the RUSTC env var) to detect a nightly toolchain for an optional SIMD feature gate; no network access, no arbitrary command execution. No unsafe FFI, no ambient file/network I/O outside the documented YAML parse/serialize surface.'

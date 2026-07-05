@@ -280,8 +280,7 @@ impl TemplateEngine {
                     }
                 },
                 "yml" | "yaml" => {
-                    match serde_yaml_ng::from_str::<serde_json::Value>(&content)
-                    {
+                    match noyalib::from_str::<serde_json::Value>(&content) {
                         Ok(v) => Some(v),
                         Err(e) => {
                             log::warn!(

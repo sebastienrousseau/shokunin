@@ -2966,6 +2966,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "noyalib"
+version = "0.0.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "903f06e76b14b388b47d651b9498b008888a9475084087e51c294731acbf16c1"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "memchr",
+ "rustc-hash 2.1.2",
+ "ryu",
+ "serde",
+ "serde_ignored",
+ "smallvec",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4615,6 +4631,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_ignored"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "115dffd5f3853e06e746965a20dcbae6ee747ae30b543d91b0e089668bb07798"
+dependencies = [
+ "serde",
+ "serde_core",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4643,19 +4669,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "serde_yaml_ng"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b4db627b98b36d4203a7b458cf3573730f2bb591b28871d916dfa9efabfd41f"
-dependencies = [
- "indexmap",
- "itoa",
- "ryu",
- "serde",
- "unsafe-libyaml",
 ]
 
 [[package]]
@@ -4886,6 +4899,7 @@ dependencies = [
  "minify-html 0.15.0",
  "minijinja",
  "notify",
+ "noyalib 0.0.12",
  "oxc_allocator",
  "oxc_codegen",
  "oxc_minifier",
@@ -4899,7 +4913,6 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_yaml_ng",
  "serial_test",
  "sha2",
  "ssg-core",
@@ -4925,10 +4938,10 @@ name = "ssg-core"
 version = "0.0.46"
 dependencies = [
  "log",
+ "noyalib 0.0.12",
  "pulldown-cmark",
  "serde",
  "serde_json",
- "serde_yaml_ng",
  "sha2",
  "tempfile",
  "toml 1.1.2+spec-1.1.0",
@@ -5675,12 +5688,6 @@ name = "unicode_categories"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
-
-[[package]]
-name = "unsafe-libyaml"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "673aac59facbab8a9007c7f6108d11f63b603f7cabff99fabf650fea5c32b861"
 
 [[package]]
 name = "untrusted"
