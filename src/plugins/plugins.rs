@@ -209,11 +209,15 @@ fn collect_minifiable_files(
 #[cfg(feature = "minify")]
 pub fn minify_html(html: &str) -> String {
     let cfg = minify_html::Cfg {
-        do_not_minify_doctype: true,
+        // minify-html 0.18 renamed/inverted these two fields; explicit
+        // here (rather than relying on `Cfg::default()`) to preserve
+        // the original "never touch the doctype, never merge attribute
+        // spaces" intent byte-for-byte across the rename.
+        minify_doctype: false, // was `do_not_minify_doctype: true`
+        allow_removing_spaces_between_attributes: false, // was `keep_spaces_between_attributes: true`
         keep_comments: false,
         keep_html_and_head_opening_tags: true,
         keep_closing_tags: true,
-        keep_spaces_between_attributes: true,
         ..minify_html::Cfg::default()
     };
     let out = minify_html::minify(html.as_bytes(), &cfg);
@@ -311,7 +315,11 @@ pub fn minify_js(js: &str) -> Option<String> {
     let allocator = Allocator::default();
     let source_type = SourceType::mjs();
     let ret = Parser::new(&allocator, js, source_type).parse();
-    if !ret.errors.is_empty() {
+    // oxc_parser 0.137 renamed `errors: Vec<_>` to `diagnostics:
+    // Diagnostics`, which can carry non-fatal warnings alongside real
+    // parse errors — `has_errors()` is the precise equivalent of the
+    // old `!errors.is_empty()` bail-out.
+    if ret.diagnostics.has_errors() {
         return None;
     }
     let mut program = ret.program;
