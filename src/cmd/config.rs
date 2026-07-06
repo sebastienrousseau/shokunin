@@ -263,6 +263,15 @@ pub struct SsgConfig {
     /// Optional CDN prefix for markdown images.
     #[serde(default)]
     pub cdn_prefix: Option<String>,
+    /// Optional site-wide fallback `og:image` (a URL or site-relative
+    /// path). Used by generated pages that have no per-page image of
+    /// their own — currently the taxonomy/tag pages emitted by
+    /// [`crate::taxonomy::TaxonomyPlugin`], which bypass the
+    /// `SeoPlugin` transform chain (#586) and so never see the
+    /// front-matter-derived `og:image` that regular content pages get.
+    /// Absent ⇒ no `og:image` tag on those pages.
+    #[serde(default)]
+    pub og_image: Option<String>,
     /// Optional image-pipeline tunables (issue #521).
     #[serde(default)]
     pub image: ImageConfig,
@@ -706,6 +715,25 @@ impl SsgConfigBuilder {
     #[must_use]
     pub fn cdn_prefix(mut self, prefix: Option<String>) -> Self {
         self.config.cdn_prefix = prefix;
+        self
+    }
+    /// Sets the site-wide fallback `og:image` used by generated
+    /// taxonomy/tag pages that have no per-page image of their own.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::cmd::SsgConfig;
+    ///
+    /// let cfg = SsgConfig::builder()
+    ///     .og_image(Some("/social/default.png".into()))
+    ///     .build()
+    ///     .unwrap();
+    /// assert_eq!(cfg.og_image.as_deref(), Some("/social/default.png"));
+    /// ```
+    #[must_use]
+    pub fn og_image(mut self, og_image: Option<String>) -> Self {
+        self.config.og_image = og_image;
         self
     }
     /// Sets the edge-headers emitter configuration (issue #550).

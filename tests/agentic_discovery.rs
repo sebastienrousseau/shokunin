@@ -51,6 +51,7 @@ fn base_cfg(agents: Option<AgentsConfig>) -> SsgConfig {
         serve_dir: None,
         i18n: None,
         cdn_prefix: None,
+        og_image: None,
         image: ImageConfig::default(),
         edge_headers: ssg::cmd::EdgeHeadersConfig::default(),
         agents,

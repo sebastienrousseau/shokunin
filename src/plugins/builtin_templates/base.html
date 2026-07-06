@@ -12,6 +12,7 @@
   <meta property="og:type" content="website">
   {% if page_description %}<meta property="og:description" content="{{ page_description }}">{% endif %}
   {% if site.base_url %}<meta property="og:url" content="{{ site.base_url | safe }}{{ page_url | default('/') | safe }}">{% endif %}
+  {% if site.og_image %}<meta property="og:image" content="{{ site.og_image | safe }}">{% endif %}
   <meta name="twitter:card" content="summary">
   {% block head_extra %}{% endblock %}
 </head>

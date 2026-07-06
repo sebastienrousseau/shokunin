@@ -458,6 +458,14 @@ impl<'a> TaxonomyRenderer<'a> {
                 "language".to_string(),
                 serde_json::Value::String(cfg.language.clone()),
             );
+            // Site-wide og:image fallback for pages with no image of
+            // their own (#587 precursor — see SsgConfig::og_image doc).
+            if let Some(og_image) = cfg.og_image.as_ref() {
+                let _ = site.insert(
+                    "og_image".to_string(),
+                    serde_json::Value::String(og_image.clone()),
+                );
+            }
         } else {
             // Sensible defaults when the plugin runs without a config
             // (tests, ad-hoc invocations).
@@ -495,6 +503,7 @@ impl<'a> TaxonomyRenderer<'a> {
     ) -> Result<String, SsgError> {
         let lang = self.lang();
         let canonical = self.canonical(&format!("/{taxonomy_name}/{slug}/"));
+        let og_image = self.og_image_tag();
         let description =
             format!("{} page(s) under {taxonomy_title}: {term}.", pages.len());
         let mut out = format!(
@@ -504,6 +513,7 @@ impl<'a> TaxonomyRenderer<'a> {
              <meta name=\"description\" content=\"{description}\">\
              <meta property=\"og:title\" content=\"{taxonomy_title}: {term}\">\
              <meta property=\"og:type\" content=\"website\">\
+             {og_image}\
              <meta name=\"twitter:card\" content=\"summary\">\
              <title>{taxonomy_title}: {term}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
@@ -523,6 +533,7 @@ impl<'a> TaxonomyRenderer<'a> {
     ) -> Result<String, SsgError> {
         let lang = self.lang();
         let canonical = self.canonical(&format!("/{taxonomy_name}/"));
+        let og_image = self.og_image_tag();
         let description = format!(
             "All {} term(s): browse pages by {taxonomy_title}.",
             sorted_terms.len()
@@ -534,6 +545,7 @@ impl<'a> TaxonomyRenderer<'a> {
              <meta name=\"description\" content=\"{description}\">\
              <meta property=\"og:title\" content=\"{taxonomy_title}\">\
              <meta property=\"og:type\" content=\"website\">\
+             {og_image}\
              <meta name=\"twitter:card\" content=\"summary\">\
              <title>{taxonomy_title}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}</h1>\n<ul>\n"
@@ -566,6 +578,20 @@ impl<'a> TaxonomyRenderer<'a> {
             .map(|c| c.base_url.trim_end_matches('/').to_string())
             .filter(|b| !b.is_empty())
             .map(|b| format!("<link rel=\"canonical\" href=\"{b}{page_url}\">"))
+            .unwrap_or_default()
+    }
+
+    /// Inline `og:image` fallback — see `SsgConfig::og_image` doc.
+    /// Absent config or unset field ⇒ empty string, so the meta tag
+    /// is omitted entirely rather than emitted with a blank `content`.
+    fn og_image_tag(&self) -> String {
+        self.ctx
+            .config
+            .as_ref()
+            .and_then(|c| c.og_image.as_ref())
+            .map(|image| {
+                format!("<meta property=\"og:image\" content=\"{image}\">")
+            })
             .unwrap_or_default()
     }
 }
@@ -1192,6 +1218,72 @@ mod tests {
                 r#"<link rel="canonical" href="https://example.com/tags/rust/">"#
             ),
             "canonical:\n{html}"
+        );
+    }
+
+    #[test]
+    fn term_pages_include_og_image_when_configured() {
+        let (_tmp, site, meta, base_ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": "rust"}"#,
+        )
+        .unwrap();
+        let cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .og_image(Some("/social/default.png".to_string()))
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &base_ctx.content_dir,
+            &base_ctx.build_dir,
+            &base_ctx.site_dir,
+            &base_ctx.template_dir,
+            cfg,
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let term_html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(
+            term_html.contains(
+                r#"<meta property="og:image" content="/social/default.png">"#
+            ),
+            "term page missing og:image:\n{term_html}"
+        );
+        let index_html =
+            fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(
+            index_html.contains(
+                r#"<meta property="og:image" content="/social/default.png">"#
+            ),
+            "index page missing og:image:\n{index_html}"
+        );
+    }
+
+    #[test]
+    fn term_pages_omit_og_image_when_not_configured() {
+        // Default config has `og_image: None` — the tag/index gates
+        // must not emit an empty/broken `og:image` meta tag.
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": "rust"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let term_html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(
+            !term_html.contains("og:image"),
+            "term page should not carry og:image:\n{term_html}"
+        );
+        let index_html =
+            fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(
+            !index_html.contains("og:image"),
+            "index page should not carry og:image:\n{index_html}"
         );
     }
 
