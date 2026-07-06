@@ -7,7 +7,7 @@
 # Built and pushed by .github/workflows/release.yml on every `v*` tag.
 
 # ── Stage 1: build ─────────────────────────────────────────────────
-FROM rust:1.88-slim AS builder
+FROM rust:1.88-slim@sha256:38bc5a86d998772d4aec2348656ed21438d20fcdce2795b56ca434cf21430d89 AS builder
 
 WORKDIR /usr/src/ssg
 
@@ -22,7 +22,7 @@ COPY . .
 RUN cargo build --release --locked --bin ssg
 
 # ── Stage 2: runtime ───────────────────────────────────────────────
-FROM debian:bookworm-slim AS runtime
+FROM debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df AS runtime
 
 LABEL org.opencontainers.image.title="static-site-generator"
 LABEL org.opencontainers.image.description="A Content-First Open Source Static Site Generator (SSG) crafted in Rust"

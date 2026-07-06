@@ -9,6 +9,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   wasm-build:
     name: Build & test ssg-core (wasm32)
@@ -21,7 +24,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --locked
 
       - name: Build ssg-core for wasm32
         run: cargo build -p ssg-core --target wasm32-unknown-unknown
@@ -33,7 +36,7 @@ jobs:
         run: wasm-pack build crates/ssg-wasm --target web --out-dir ../../pkg
 
       - name: Install Chrome for headless tests
-        uses: browser-actions/setup-chrome@latest
+        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
         with:
           chrome-version: stable
 
@@ -99,7 +102,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: cargo install wasm-pack --locked
 
       - name: Build ssg-search for wasm32 (default features)
         run: cargo build -p ssg-search --target wasm32-unknown-unknown --release
@@ -118,7 +121,7 @@ jobs:
         run: wasm-pack build crates/ssg-search --target web --release -- --features wasm
 
       - name: Install Chrome for headless tests
-        uses: browser-actions/setup-chrome@latest
+        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
         with:
           chrome-version: stable
 

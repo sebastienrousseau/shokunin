@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Ignore list for the OSV-Scanner-based checks OpenSSF Scorecard runs
+# (`.github/workflows/scorecard.yml`, "Vulnerabilities" check). Mirrors
+# `deny.toml`'s `[advisories].ignore` list exactly -- both files must be
+# updated together when a RUSTSEC advisory is added, resolved, or the
+# underlying dependency is upgraded past the affected range.
+#
+# All entries below are "unmaintained crate" informational advisories
+# (or, for the two quick-xml entries, documented low-risk build-time-only
+# findings) in transitive dependencies that cannot be resolved without
+# upstream releases. See `deny.toml` for the per-crate reasoning.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0320" # yaml-rust (unmaintained) — via syntect/comrak
+reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0436" # paste (unmaintained) — via dtt
+reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0057" # fxhash (unmaintained) — via selectors/scraper
+reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0119" # number_prefix (unmaintained) — via indicatif
+reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0141" # bincode (unmaintained) — via syntect
+reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0194"
+reason = "quick-xml <0.41 parser DoS pair, transitive + build-time only; ssg parses no untrusted XML at runtime. See deny.toml for the removal plan."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0195"
+reason = "quick-xml <0.41 parser DoS pair, transitive + build-time only; ssg parses no untrusted XML at runtime. See deny.toml for the removal plan."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0173" # proc-macro-error2 (unmaintained) — via defmt-macros/defmt, an optional jiff feature
+reason = "unmaintained transitive dep, no upstream fix available"
