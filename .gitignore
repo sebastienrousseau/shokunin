@@ -6,6 +6,7 @@ crates/serde_yml/target/
 build/
 *.build-tmp/
 .ssg-deps.json
+node_modules/
 
 # Generated output
 /docs/*
