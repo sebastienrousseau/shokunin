@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.47"                      # The version of the library
+version = "0.0.48"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -186,7 +186,7 @@ ssg-core = { path = "crates/ssg-core", version = "0.0.47" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.47" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.47" }
 thiserror = "2"
-staticdatagen = "0.0.10"
+staticdatagen = "0.0.11"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
