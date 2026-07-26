@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::cmd::Cli`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::cmd::Cli;
 
 #[test]

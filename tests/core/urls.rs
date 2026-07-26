@@ -5,6 +5,7 @@
 //! derivation feeding permalink injection, canonical `<link>`, and
 //! feed links (spec A2/B1, plan §2 item 1.2, issue #586).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::urls::{derive_output_rel_path, derive_page_url, derive_permalink};
 
 #[test]

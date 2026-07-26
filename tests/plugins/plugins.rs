@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::{MinifyPlugin, ImageOptiPlugin}`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::Plugin;
 use ssg::plugins::{ImageOptiPlugin, MinifyPlugin};
 

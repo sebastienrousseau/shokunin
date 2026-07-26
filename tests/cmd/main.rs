@@ -3,6 +3,7 @@
 
 //! Integration tests for `src/cmd/` — one binary, one submodule per source file.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod cli;
 mod config;
 mod error;

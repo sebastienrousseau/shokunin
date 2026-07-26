@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::AiPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::ai::AiPlugin;
 use ssg::plugin::Plugin;
 

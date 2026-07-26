@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::og_image`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::og_image::{generate_og_svg, OgImagePlugin};
 use ssg::plugin::Plugin;
 

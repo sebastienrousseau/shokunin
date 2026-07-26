@@ -10,6 +10,7 @@
 //! `EdgeHeadersPlugin::transform_html` (per-page CSP recording), per
 //! their registration order in `register_default_plugins`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::cmd::{EdgeHeadersConfig, SriAlgorithm, SsgConfig};
 use ssg::csp::CspPlugin;
 use ssg::plugin::{Plugin, PluginContext};

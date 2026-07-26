@@ -9,6 +9,7 @@
 //! ISO 8601), and assert round-trip equality through
 //! `parse_flexible_date`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use proptest::prelude::*;
 use ssg::dates::{
     days_in_month, parse_flexible_date, DateFormat, FlexibleDate,

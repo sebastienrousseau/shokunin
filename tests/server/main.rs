@@ -3,6 +3,7 @@
 
 //! Integration tests for `src/server/` — one binary, one submodule per source file.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod event_watch;
 mod hmr;
 mod livereload;

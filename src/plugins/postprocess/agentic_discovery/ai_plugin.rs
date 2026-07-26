@@ -117,7 +117,7 @@ pub fn build_manifest(cfg: &SsgConfig) -> Value {
     let description = if cfg.site_description.is_empty() {
         // Always emit something — empty `description_for_*` would fail
         // schema validation on the agent runtime side.
-        format!("Content from {}", &human_name)
+        format!("Content from {human_name}")
     } else {
         cfg.site_description.clone()
     };

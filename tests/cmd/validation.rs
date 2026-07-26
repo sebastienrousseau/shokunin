@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::cmd::validation`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::cmd::{is_valid_url, validate_url};
 
 #[test]

@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::i18n`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::i18n::{
     negotiate_locale, parse_accept_language, I18nConfig, I18nPlugin,
 };

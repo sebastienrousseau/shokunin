@@ -5,6 +5,7 @@
 //! surface. The module is exercised via its consumers (`atom`, `rss`,
 //! `manifest`, `sitemap`, `news_sitemap`) and their integration tests.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[test]
 fn module_present() {
     let _ = std::any::type_name::<()>();

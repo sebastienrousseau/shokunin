@@ -5,6 +5,7 @@
 //! exercises the plugin against a small fixture site the way the
 //! pipeline does.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::agent_api::AgentApiPlugin;
 use ssg::cmd::SsgConfig;
 use ssg::plugin::{Plugin, PluginContext};

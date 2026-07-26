@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::shortcodes`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::Plugin;
 use ssg::shortcodes::{expand_shortcodes, ShortcodePlugin};
 

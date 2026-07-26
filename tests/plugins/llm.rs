@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::LlmPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::llm::{LlmConfig, LlmPlugin};
 use ssg::plugin::Plugin;
 

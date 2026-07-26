@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::depgraph::DepGraph`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::path::PathBuf;
 
 use ssg::depgraph::DepGraph;

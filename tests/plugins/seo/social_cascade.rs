@@ -12,6 +12,7 @@
 //! exists (else `summary`). Explicit per-field front matter always
 //! wins, and values never bleed between pages or from global config.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::{Plugin, PluginContext};
 use ssg::seo::SeoPlugin;
 use std::fs;

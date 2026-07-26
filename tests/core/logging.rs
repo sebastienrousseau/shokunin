@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::logging`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::io::Write;
 
 use ssg::logging::{create_log_file, log_arguments, log_initialization};

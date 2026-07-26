@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::process`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::process::ensure_directory;
 use tempfile::tempdir;
 

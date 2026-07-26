@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::search`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::plugin::Plugin;

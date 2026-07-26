@@ -5,6 +5,7 @@
 //!
 //! See `tests/core/main.rs` for the canonical layout commentary.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod accessibility;
 mod agent_api;
 mod ai;

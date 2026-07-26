@@ -4,6 +4,7 @@
 //! Integration tests for `ssg::plugins::taxonomy`, including the
 //! per-term landing pages from issue #586 (port 5).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::{Plugin, PluginContext};
 use ssg::taxonomy::TaxonomyPlugin;
 use std::fs;

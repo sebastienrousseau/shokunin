@@ -315,11 +315,10 @@ fn extract_xml_tag(xml: &str, tag: &str) -> Option<String> {
 
     let (start, content_start) = if let Some(pos) = xml.find(&open_plain) {
         (pos, pos + open_plain.len())
-    } else if let Some(pos) = xml.find(&open_attr) {
+    } else {
+        let pos = xml.find(&open_attr)?;
         let gt = xml[pos..].find('>')?;
         (pos, pos + gt + 1)
-    } else {
-        return None;
     };
 
     let _ = start; // used for finding the tag

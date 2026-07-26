@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::cmd::{LanguageCode, CliError}`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::cmd::LanguageCode;
 
 #[test]

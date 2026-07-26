@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::livereload`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::livereload::{css_reload_message, LiveReloadPlugin};
 use ssg::plugin::Plugin;
 

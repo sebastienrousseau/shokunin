@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::IslandPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::islands::IslandPlugin;
 use ssg::plugin::Plugin;
 

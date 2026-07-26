@@ -3,6 +3,7 @@
 
 //! Mirror of `src/plugins/seo/`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod canonical;
 mod helpers;
 mod jsonld;

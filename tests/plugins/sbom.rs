@@ -4,6 +4,7 @@
 //! Integration tests for `ssg::plugins::sbom::SbomPlugin` (top-level
 //! `CycloneDX` SBOM emitter).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::Plugin;
 use ssg::sbom::SbomPlugin;
 

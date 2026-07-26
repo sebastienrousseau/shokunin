@@ -1,0 +1,6 @@
+# unwrap()/expect() are denied crate-wide via [workspace.lints] but are
+# idiomatic in tests and benchmarks. Integration tests and benches are
+# separate crates, so lib.rs's `#![cfg_attr(test, allow(...))]` does not
+# reach them — allow the pattern in all test/bench contexts here instead.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

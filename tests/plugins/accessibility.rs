@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::accessibility` public types.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::accessibility::{
     AccessibilityIssue, AccessibilityReport, CriterionStatus, PageReport,
 };

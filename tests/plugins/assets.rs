@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::FingerprintPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::assets::FingerprintPlugin;
 use ssg::plugin::Plugin;
 

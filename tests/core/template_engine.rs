@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::template_engine` (feature-gated `templates`).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "templates")]
 mod gated {
     use ssg::template_engine::{TemplateConfig, TemplateEngine};
