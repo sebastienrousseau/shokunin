@@ -91,6 +91,12 @@ criteria = "safe-to-deploy"
 version = "0.0.2"
 notes = "Same-author crate, reviewed from the exact published crates.io source. #![forbid(unsafe_code)]; no build.rs; zero unsafe blocks; no process spawning; no fs deletion. Network access exists only behind the non-default `remote-templates` feature (reqwest GET of a caller-supplied template URL with 10 s timeout, 1 MiB body cap, and content-type check); staticdatagen 0.0.9 consumes it with default features, so no network code is compiled into this workspace."
 
+[[trusted.anyhow]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-10-05"
+end = "2027-07-26"
+
 [[trusted.dtt]]
 criteria = "safe-to-deploy"
 user-id = 186843 # Sebastien Rousseau (sebastienrousseau)
