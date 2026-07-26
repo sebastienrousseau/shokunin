@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::fs_ops`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::error::SsgError;

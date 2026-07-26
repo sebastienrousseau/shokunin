@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::streaming`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::streaming::{should_stream, MemoryBudget};
 use tempfile::tempdir;
 

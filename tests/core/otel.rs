@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::otel` (feature-gated).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 #[cfg(feature = "otel")]
 mod gated {
     use ssg::otel::init_if_enabled;

@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::PaginationPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::pagination::PaginationPlugin;
 use ssg::plugin::Plugin;
 

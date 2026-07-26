@@ -914,6 +914,7 @@ mod tests {
     };
     use crate::server::build_serve_address;
     use log::Log;
+    use serial_test::serial;
     use std::env;
     use std::{
         fs::{self, File},
@@ -1668,6 +1669,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(env_log)]
     fn test_initialize_logging_with_custom_level() {
         env::set_var(ENV_LOG_LEVEL, "debug");
         assert!(logging::initialize_logging().is_ok());
@@ -1804,6 +1806,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(env_log)]
     fn test_log_level_from_env() {
         // Seed the variable so the restore branch at the end of the
         // test always executes, then save the current value.
@@ -1859,6 +1862,7 @@ mod tests {
 
     /// Test for default log level when environment variable is not set
     #[test]
+    #[serial(env_log)]
     fn test_default_log_level() {
         // Seed the variable so the restore branch at the end of the
         // test always executes, then save the current value.
@@ -1910,6 +1914,7 @@ mod tests {
 
     /// Test environment variable handling with cleanup
     #[test]
+    #[serial(env_log)]
     fn test_env_log_level_handling() {
         // Seed the variable so the restore branch at the end of the
         // test always executes, then save the original state.

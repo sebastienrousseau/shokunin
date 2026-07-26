@@ -9,6 +9,7 @@
 //! consumes the staged tree, making `rss-gen`'s "channel.link is
 //! missing" hard-fail unreachable.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::content_stager::{

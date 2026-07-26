@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 #![allow(
     clippy::unwrap_used,
+    clippy::doc_markdown,
+    clippy::semicolon_if_nothing_returned,
     clippy::expect_used,
     missing_docs,
     unused_results,

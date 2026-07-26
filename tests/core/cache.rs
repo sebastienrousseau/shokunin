@@ -6,6 +6,7 @@
 //! These tests drive the public API surface (the same surface a downstream
 //! crate would import) end-to-end: load, detect-changes, update, persist.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 use std::path::Path;
 

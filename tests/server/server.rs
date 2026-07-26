@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::server`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::cell::RefCell;
 use std::fs;
 

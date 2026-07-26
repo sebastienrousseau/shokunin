@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::DraftPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::drafts::DraftPlugin;
 use ssg::plugin::Plugin;
 

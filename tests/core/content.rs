@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::content` (content schemas + validation).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::content::{

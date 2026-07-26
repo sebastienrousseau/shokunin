@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::watch`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::path::Path;
 
 use ssg::watch::{classify_change, ChangeKind};

@@ -734,7 +734,10 @@ mod tests {
         fs::write(dir.path().join("visible.md"), "x").unwrap();
         let out = collect_md_files(dir.path()).unwrap();
         assert_eq!(out.len(), 1);
-        assert!(out[0].file_name().unwrap() == "visible.md");
+        assert_eq!(
+            out[0].file_name().unwrap(),
+            std::ffi::OsStr::new("visible.md")
+        );
     }
 
     #[test]

@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::{Paths, PathsBuilder}` (top-level facade).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::path::PathBuf;
 
 use ssg::error::SsgError;

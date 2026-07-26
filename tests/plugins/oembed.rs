@@ -6,6 +6,7 @@
 //! (`after_compile` for the JSON documents, `transform_html` for the
 //! discovery link) via the real `PluginManager` fused-transform path.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::oembed::OembedPlugin;
 use ssg::plugin::{Plugin, PluginContext, PluginManager};
 use std::fs;

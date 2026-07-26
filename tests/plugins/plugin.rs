@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugin::{PluginContext, PluginManager}`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::{PluginContext, PluginManager};
 use tempfile::tempdir;
 

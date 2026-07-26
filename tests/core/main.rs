@@ -19,6 +19,7 @@
 //!   * `cargo test --test core cache::` — only `cache` module tests
 //!   * `cargo test --test core -- some_fn_name` — specific test by name
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod cache;
 mod collections;
 mod content;

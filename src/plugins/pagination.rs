@@ -698,7 +698,10 @@ mod tests {
 
         let result = collect_json_files(dir.path()).unwrap();
         assert_eq!(result.len(), 1);
-        assert!(result[0].file_name().unwrap() == "a.json");
+        assert_eq!(
+            result[0].file_name().unwrap(),
+            std::ffi::OsStr::new("a.json")
+        );
     }
 
     #[test]

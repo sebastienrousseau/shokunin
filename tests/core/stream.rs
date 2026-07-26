@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::stream`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::stream::{process_batch, stream_copy, stream_hash, stream_lines};

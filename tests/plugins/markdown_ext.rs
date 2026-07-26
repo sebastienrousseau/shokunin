@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::markdown_ext`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::markdown_ext::{expand_gfm, MarkdownExtPlugin};
 use ssg::plugin::Plugin;
 

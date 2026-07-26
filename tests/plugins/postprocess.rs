@@ -3,6 +3,7 @@
 
 //! Mirror of `src/plugins/postprocess/`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 mod atom;
 mod edge_headers;
 mod helpers;

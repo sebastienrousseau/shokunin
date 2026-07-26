@@ -5,6 +5,7 @@
 //! `sbom-link` HTML rewriter — distinct from the top-level
 //! `ssg::sbom::SbomPlugin` which emits the JSON manifest itself).
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::plugin::Plugin;
 use ssg::postprocess::SbomPlugin;
 

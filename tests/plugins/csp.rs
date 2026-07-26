@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::plugins::CspPlugin`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::csp::CspPlugin;
 use ssg::plugin::Plugin;
 

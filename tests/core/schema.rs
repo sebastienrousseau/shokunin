@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::schema`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::schema::{generate_schema, write_schema};
 use tempfile::tempdir;
 

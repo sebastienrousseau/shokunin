@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::scaffold`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use ssg::scaffold::scaffold_project_at;
 use tempfile::tempdir;
 

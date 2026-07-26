@@ -614,15 +614,11 @@ fn parse_long_form(input: &str) -> Option<FlexibleDate> {
     if tokens.len() != 3 {
         return None;
     }
-    let (month, day_token) = if let Some(m) = month_from_name(tokens[0]) {
-        // "July 1, 2026"
-        (m, tokens[1])
-    } else if let Some(m) = month_from_name(tokens[1]) {
-        // "1 July 2026"
-        (m, tokens[0])
-    } else {
-        return None;
-    };
+    // "July 1, 2026" (month first) or "1 July 2026" (day first); `None` if
+    // neither leading token names a month.
+    let (month, day_token) = month_from_name(tokens[0])
+        .map(|m| (m, tokens[1]))
+        .or_else(|| month_from_name(tokens[1]).map(|m| (m, tokens[0])))?;
     if day_token.len() > 2 {
         return None;
     }

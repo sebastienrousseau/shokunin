@@ -3,6 +3,7 @@
 
 //! Integration tests for `ssg::frontmatter`.
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fs;
 
 use ssg::frontmatter::{emit_sidecars, read_sidecar, read_sidecar_for_html};
