@@ -471,14 +471,6 @@ criteria = "safe-to-deploy"
 version = "0.3.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.dtt]]
-version = "0.0.9"
-criteria = "safe-to-deploy"
-
-[[exemptions.dtt]]
-version = "0.0.10"
-criteria = "safe-to-deploy"
-
 [[exemptions.dyn-clone]]
 version = "1.0.20"
 criteria = "safe-to-deploy"
@@ -961,14 +953,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.notify-types]]
 version = "2.1.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.noyalib]]
-version = "0.0.3"
-criteria = "safe-to-deploy"
-
-[[exemptions.noyalib]]
-version = "0.0.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.num-bigint]]
@@ -1507,10 +1491,6 @@ criteria = "safe-to-deploy"
 version = "0.7.46"
 criteria = "safe-to-deploy"
 
-[[exemptions.rss-gen]]
-version = "0.0.6"
-criteria = "safe-to-deploy"
-
 [[exemptions.rustc-hash]]
 version = "2.1.2"
 criteria = "safe-to-deploy"
@@ -1691,10 +1671,6 @@ criteria = "safe-to-deploy"
 version = "1.0.3"
 criteria = "safe-to-deploy"
 
-[[exemptions.sitemap-gen]]
-version = "0.0.2"
-criteria = "safe-to-deploy"
-
 [[exemptions.slab]]
 version = "0.4.12"
 criteria = "safe-to-deploy"
@@ -1717,10 +1693,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.stable_deref_trait]]
 version = "1.2.1"
-criteria = "safe-to-deploy"
-
-[[exemptions.staticweaver]]
-version = "0.0.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.string_cache]]
