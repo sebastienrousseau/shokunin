@@ -466,6 +466,11 @@ impl LlmCache {
 /// only way to drive those (otherwise practically unreachable, since
 /// `fs::File` exposes no way to force them from safe Rust) `Err` arms
 /// in a test.
+// The `(|| { fail_point!(...); ... })()` IIFEs below are deliberate: the
+// `fail_point!` macro injects an early `return` scoped to the *closure*, so a
+// failpoint can drive the otherwise-unreachable `Err` arms without returning
+// from the whole function. Removing the closure would change control flow.
+#[allow(clippy::redundant_closure_call)]
 fn entry_is_expired(file: &fs::File, ttl: Duration) -> bool {
     let Ok(meta) = (|| {
         fail_point!("llm_cache::get-metadata-err", |_| Err(()));
@@ -495,6 +500,7 @@ fn entry_is_expired(file: &fs::File, ttl: Duration) -> bool {
 /// (a path with no parent component at all) cannot be produced that
 /// way. The failpoint lets a test drive that arm directly without a
 /// contrived root value.
+#[allow(clippy::redundant_closure_call)] // fail_point! IIFE — see entry_is_expired
 fn ensure_parent_dir(path: &Path) -> io::Result<()> {
     let parent = (|| {
         fail_point!("llm_cache::set-no-parent", |_| None);
