@@ -251,7 +251,7 @@ rgb = { version = "0.8", optional = true }
 # staticdatagen to keep the dependency graph tight.
 minify-html = { version = "0.18.1", optional = true }
 oxc_minifier = { version = "0.138.0", optional = true }
-oxc_parser = { version = "0.138.0", optional = true }
+oxc_parser = { version = "0.141.0", optional = true }
 oxc_codegen = { version = "0.138.0", optional = true }
 oxc_allocator = { version = "0.138.0", optional = true }
 oxc_span = { version = "0.138.0", optional = true }
