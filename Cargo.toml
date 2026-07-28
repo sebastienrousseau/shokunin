@@ -231,7 +231,7 @@ notify = "8"
 # to every connected dev-browser tab. No tokio — the broadcaster fans
 # out from a std::thread::spawn loop reading from a std::sync::mpsc
 # channel, matching ssg's tokio-free Rayon architecture (ADR-0001).
-tungstenite = "0.29"
+tungstenite = "0.30"
 
 
 # Optional dependencies (feature-gated)
