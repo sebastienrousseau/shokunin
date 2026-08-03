@@ -5050,7 +5050,7 @@ dependencies = [
  "oxc_codegen 0.138.0",
  "oxc_minifier 0.141.0",
  "oxc_parser 0.138.0",
- "oxc_span 0.138.0",
+ "oxc_span 0.141.0",
  "proptest",
  "pulldown-cmark",
  "ravif",
