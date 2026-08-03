@@ -194,7 +194,7 @@ toml = "1.1.2"
 # integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
 # `base64` emits the canonical base64 encoding that browsers expect.
 sha2 = "0.11"
-base64 = "0.22"
+base64 = "0.23"
 
 # adr: ADR-0005 — `ureq` is the LLM transport. See docs/adrs/0005-ureq-for-llm.md.
 # Synchronous, blocking, pure-Rust HTTP client for the local-LLM content
