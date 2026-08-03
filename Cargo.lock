@@ -3319,30 +3319,6 @@ dependencies = [
 
 [[package]]
 name = "oxc_parser"
-version = "0.138.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd79d7f27f20413eaeecada4d850aeb0220e70c821d4863d9fb0df115eae62a9"
-dependencies = [
- "bitflags 2.13.0",
- "cow-utils",
- "memchr",
- "num-bigint 0.4.6",
- "num-traits",
- "oxc_allocator 0.138.0",
- "oxc_ast 0.138.0",
- "oxc_data_structures 0.138.0",
- "oxc_diagnostics 0.138.0",
- "oxc_ecmascript 0.138.0",
- "oxc_regular_expression 0.138.0",
- "oxc_span 0.138.0",
- "oxc_str 0.138.0",
- "oxc_syntax 0.138.0",
- "rustc-hash",
- "seq-macro",
-]
-
-[[package]]
-name = "oxc_parser"
 version = "0.141.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc8f483bbfae70f4f7c9a90c4a4a3a165685c2d929e0765e35db6db1ac825c32"
@@ -5049,7 +5025,7 @@ dependencies = [
  "oxc_allocator 0.141.0",
  "oxc_codegen 0.138.0",
  "oxc_minifier 0.141.0",
- "oxc_parser 0.138.0",
+ "oxc_parser 0.141.0",
  "oxc_span 0.138.0",
  "proptest",
  "pulldown-cmark",
