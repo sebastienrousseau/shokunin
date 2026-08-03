@@ -2876,6 +2876,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_allocator"
+version = "0.142.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae912912216c33ad0fb27a544160f3833a5e92a1216d7c4b9aa79a94b39aee98"
+dependencies = [
+ "allocator-api2",
+ "hashbrown 0.17.1",
+ "oxc_data_structures 0.142.0",
+ "rustc-hash",
+]
+
+[[package]]
 name = "oxc_ast"
 version = "0.95.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3086,6 +3098,12 @@ name = "oxc_data_structures"
 version = "0.141.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "980c41eb52557e3255ebacd0d0b5406d1c8703a59cb5300938940b91de41a46f"
+
+[[package]]
+name = "oxc_data_structures"
+version = "0.142.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d7793b9a760ff426782915100e1f91b4a653873a5b681576214a6eb495d498a"
 
 [[package]]
 name = "oxc_diagnostics"
@@ -5046,7 +5064,7 @@ dependencies = [
  "minijinja",
  "notify",
  "noyalib 0.0.15",
- "oxc_allocator 0.141.0",
+ "oxc_allocator 0.142.0",
  "oxc_codegen 0.138.0",
  "oxc_minifier 0.141.0",
  "oxc_parser 0.138.0",
