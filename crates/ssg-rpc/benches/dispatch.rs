@@ -9,9 +9,10 @@
 //! native bench target at **≤ 500 µs p99** which gives a comfortable
 //! 10× headroom.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::hint::black_box;
 
 use ssg_rpc::{
     dispatch, schema_for, schema_for_result, RpcDescriptor, RpcDescriptorRef,

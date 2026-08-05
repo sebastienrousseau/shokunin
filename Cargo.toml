@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.48"                      # The version of the library
+version = "0.0.49"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -147,7 +147,7 @@ version_check = "0.9.5"                   # Ensures that a compatible Rust versi
 [dev-dependencies]
 # Dependencies required for testing and development.
 criterion = "0.8.2"                       # Benchmarking library to test performance
-serial_test = "3.2"                        # Serialise fail-rs failpoint tests so they don't race
+serial_test = "4.0"                        # Serialise fail-rs failpoint tests so they don't race
 uuid = { version = "1.23.1", features = ["v4"] }
 fail = { version = "0.5", features = ["failpoints"] }  # Fault injection for tests/fault_injection.rs
 tempfile = "3.27.0"
@@ -194,7 +194,7 @@ toml = "1.1.2"
 # integrity attributes. `sha2` is the de-facto standard SHA-2 implementation;
 # `base64` emits the canonical base64 encoding that browsers expect.
 sha2 = "0.11"
-base64 = "0.22"
+base64 = "0.23"
 
 # adr: ADR-0005 — `ureq` is the LLM transport. See docs/adrs/0005-ureq-for-llm.md.
 # Synchronous, blocking, pure-Rust HTTP client for the local-LLM content
@@ -250,11 +250,11 @@ rgb = { version = "0.8", optional = true }
 # Versions pinned to those already resolved transitively via
 # staticdatagen to keep the dependency graph tight.
 minify-html = { version = "0.18.1", optional = true }
-oxc_minifier = { version = "0.141.0", optional = true }
-oxc_parser = { version = "0.138.0", optional = true }
-oxc_codegen = { version = "0.138.0", optional = true }
-oxc_allocator = { version = "0.141.0", optional = true }
-oxc_span = { version = "0.138.0", optional = true }
+oxc_minifier = { version = "0.142.0", optional = true }
+oxc_parser = { version = "0.142.0", optional = true }
+oxc_codegen = { version = "0.142.0", optional = true }
+oxc_allocator = { version = "0.142.0", optional = true }
+oxc_span = { version = "0.142.0", optional = true }
 lightningcss = { version = "1.0.0-alpha.71", optional = true }
 walkdir = { version = "2.5", optional = true }
 
@@ -269,7 +269,7 @@ frontmatter-gen = "0.0.6"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.15"
+noyalib = "0.0.17"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

@@ -606,7 +606,7 @@ mod tests {
                     arts.embeddings[offset + 2],
                     arts.embeddings[offset + 3],
                 ]);
-                sumsq += f * f;
+                sumsq = f.mul_add(f, sumsq);
             }
             let norm = sumsq.sqrt();
             // AC5: norm within [0.999, 1.001]

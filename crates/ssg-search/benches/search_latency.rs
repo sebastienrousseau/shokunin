@@ -74,13 +74,13 @@ fn main() {
     ];
 
     // Warm-up.
-    for q in queries.iter() {
+    for q in &queries {
         let _ = engine.search(q, 10);
     }
 
     let mut samples = Vec::with_capacity(1000);
     for _ in 0..100 {
-        for q in queries.iter() {
+        for q in &queries {
             let t0 = Instant::now();
             let r = engine.search(q, 10);
             let elapsed_us = t0.elapsed().as_secs_f64() * 1e6;
