@@ -58,6 +58,23 @@ ignore = [
     "RUSTSEC-2025-0057", # fxhash (unmaintained) — via selectors/scraper
     "RUSTSEC-2025-0119", # number_prefix (unmaintained) — via indicatif
     "RUSTSEC-2025-0141", # bincode (unmaintained) — via syntect
+    # rkyv 0.7.46: insufficient archive validation allows out-of-bounds
+    # reads when deserialising an archive containing Rc/Arc. There is no
+    # patched 0.7 — 0.7.46 is the last of that line and the fix landed in
+    # 0.8 — and no upgrade path from here: it arrives via
+    # lightningcss 1.0.0-alpha.71 -> parcel_sourcemap 2.1.1 -> rkyv 0.7,
+    # and both of those are already their newest releases (alpha.72 still
+    # requires parcel_sourcemap ^2.1.1).
+    #
+    # Exposure: parcel_sourcemap uses rkyv to cache source maps for CSS
+    # that ssg itself minifies. The advisory needs an attacker-supplied
+    # rkyv *archive* to deserialise; ssg never reads third-party archives,
+    # only its own build output. Reachable only if an attacker can already
+    # write into the build directory.
+    #
+    # Remove when parcel_sourcemap moves to rkyv 0.8, or when the
+    # `minify` feature stops depending on lightningcss.
+    "RUSTSEC-2026-0235", # rkyv 0.7 OOB read — via lightningcss/parcel_sourcemap
     # quick-xml <0.41: parser DoS pair (quadratic dup-attr check; unbounded
     # ns-decl allocation). Both paths are transitive and build-time only —
     # ssg parses no untrusted XML at runtime. 0.39.4 arrives via
