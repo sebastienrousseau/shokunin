@@ -86,4 +86,12 @@ ignore = [
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
     "RUSTSEC-2026-0173", # proc-macro-error2 (unmaintained) — via defmt-macros/defmt, an optional jiff feature
+    # rkyv 0.7.46: shared-pointer validation in the checked `access` API can
+    # read out of bounds on an archive containing Rc/Arc. Fixed in 0.8.17,
+    # which is not reachable: the only path is lightningcss 1.0.0-alpha.72 →
+    # parcel_sourcemap 2.1.1 → rkyv 0.7, and lightningcss has not moved to
+    # rkyv 0.8. lightningcss uses rkyv for its own build-time sourcemap
+    # data; ssg never deserialises an rkyv archive from user input, so the
+    # unsound path is unreachable here. Revisit when lightningcss updates.
+    "RUSTSEC-2026-0235",
 ]

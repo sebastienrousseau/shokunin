@@ -64,6 +64,13 @@ user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
+[[publisher.noyalib]]
+version = "0.0.17"
+when = "2026-07-25"
+user-id = 186843
+user-login = "sebastienrousseau"
+user-name = "Sebastien Rousseau"
+
 [[publisher.rss-gen]]
 version = "0.0.8"
 when = "2026-07-24"
@@ -228,18 +235,6 @@ initialization which looks correct to me.
 [[audits.bytecodealliance.audits.hashbrown]]
 who = "Chris Fallin <chris@cfallin.org>"
 criteria = "safe-to-deploy"
-delta = "0.12.3 -> 0.13.1"
-notes = "The diff looks plausible. Much of it is low-level memory-layout code and I can't be 100% certain without a deeper dive into the implementation logic, but nothing looks actively malicious."
-
-[[audits.bytecodealliance.audits.hashbrown]]
-who = "Trevor Elliott <telliott@fastly.com>"
-criteria = "safe-to-deploy"
-delta = "0.13.1 -> 0.13.2"
-notes = "I read through the diff between v0.13.1 and v0.13.2, and verified that the changes made matched up with the changelog entries. There were very few changes between these two releases, and it was easy to verify what they did."
-
-[[audits.bytecodealliance.audits.hashbrown]]
-who = "Chris Fallin <chris@cfallin.org>"
-criteria = "safe-to-deploy"
 delta = "0.14.5 -> 0.15.2"
 
 [[audits.bytecodealliance.audits.heck]]
@@ -362,12 +357,6 @@ criteria = "safe-to-deploy"
 delta = "1.0.8 -> 1.1.3"
 notes = "Substantial updates, but nothing out of the ordinary one would expect from a serialization crate. Minor `unsafe` updates, but nothing major from what was already there."
 
-[[audits.bytecodealliance.audits.sha1]]
-who = "Andrew Brown <andrew.brown@intel.com>"
-criteria = "safe-to-deploy"
-delta = "0.10.5 -> 0.10.6"
-notes = "Only new code is some loongarch64 additions which include assembly code for that platform."
-
 [[audits.bytecodealliance.audits.sharded-slab]]
 who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
@@ -440,13 +429,6 @@ think this justifies marking this crate as `ub-risk-1`.
 
 Additional review comments can be found at https://crrev.com/c/4723145/31
 """
-aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.byteorder]]
-who = "danakj <danakj@chromium.org>"
-criteria = "safe-to-deploy"
-version = "1.5.0"
-notes = "Unsafe review in https://crrev.com/c/5838022"
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.cast]]
@@ -661,13 +643,6 @@ notes = """
 For more detailed unsafe review notes please see https://crrev.com/c/6362797
 """
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
-
-[[audits.google.audits.sha1]]
-who = "David Koloski <dkoloski@google.com>"
-criteria = "safe-to-deploy"
-version = "0.10.5"
-notes = "Reviewed on https://fxrev.dev/712371."
-aggregated-from = "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/third_party/rust_crates/supply-chain/audits.toml?format=TEXT"
 
 [[audits.google.audits.smallvec]]
 who = "Manish Goregaokar <manishearth@google.com>"
@@ -887,12 +862,6 @@ criteria = "safe-to-deploy"
 delta = "0.36.0 -> 0.37.0"
 notes = "First-party code"
 
-[[audits.mozilla.audits.cssparser-color]]
-who = "Emilio Cobos Álvarez <emilio@crisal.io>"
-criteria = "safe-to-deploy"
-version = "0.1.0"
-notes = "This code used to live in cssparser's color module. Only moved out. Mozilla-authored."
-
 [[audits.mozilla.audits.cssparser-macros]]
 who = "Emilio Cobos Álvarez <emilio@crisal.io>"
 criteria = "safe-to-deploy"
@@ -943,12 +912,6 @@ delta = "1.2.0 -> 1.2.1"
 who = "edgul <ed.guloien@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "1.2.1 -> 1.2.2"
-
-[[audits.mozilla.audits.fxhash]]
-who = "Bobby Holley <bobbyholley@gmail.com>"
-criteria = "safe-to-deploy"
-version = "0.2.1"
-notes = "Straightforward crate with no unsafe code, does what it says on the tin."
 
 [[audits.mozilla.audits.hashbrown]]
 who = "Mike Hommey <mh+mozilla@glandium.org>"
@@ -1087,12 +1050,6 @@ Fixes RUSTSEC-2026-0097 by removing `log` dependency. Removes `simd_support`
 feature. No new dependencies or unsafe code.
 """
 
-[[audits.mozilla.audits.rustc-hash]]
-who = "Bobby Holley <bobbyholley@gmail.com>"
-criteria = "safe-to-deploy"
-version = "1.1.0"
-notes = "Straightforward crate with no unsafe code, does what it says on the tin."
-
 [[audits.mozilla.audits.seahash]]
 who = "Benjamin VanderSloot <bvandersloot@mozilla.com>"
 criteria = "safe-to-deploy"
@@ -1103,27 +1060,6 @@ grabbing u64s out of the buffer for XORs. Logic looks sound,
 careful not to read over the end of the buffer, and the unsafety
 is well contained.
 """
-
-[[audits.mozilla.audits.selectors]]
-who = "Emilio Cobos Álvarez <emilio@crisal.io>"
-criteria = "safe-to-deploy"
-version = "0.22.0"
-notes = """
-This crate is basically developed in-tree. Mozilla employees have either
-reviewed or written virtually all of the code.
-"""
-
-[[audits.mozilla.audits.selectors]]
-who = "Emilio Cobos Álvarez <emilio@crisal.io>"
-criteria = "safe-to-deploy"
-delta = "0.22.0 -> 0.25.0"
-notes = "First party Mozilla code."
-
-[[audits.mozilla.audits.selectors]]
-who = "Emilio Cobos Álvarez <emilio@crisal.io>"
-criteria = "safe-to-deploy"
-delta = "0.25.0 -> 0.26.0"
-notes = "First-party code."
 
 [[audits.mozilla.audits.sharded-slab]]
 who = "Mark Hammond <mhammond@skippinet.com.au>"
