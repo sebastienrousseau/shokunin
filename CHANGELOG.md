@@ -7,6 +7,101 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.50] - 2026-08-11
+
+The themeing release. Building three real themes against v0.0.49 surfaced
+four defects that made documented features unusable — each failing silently,
+which is why none had been reported. Multi-locale sites additionally gain
+translated slugs.
+
+### Fixed
+
+- **`layout` was ignored on every page** (`src/plugins/template_plugin.rs`).
+  `before_compile` writes front-matter sidecars to `<build_dir>/.meta`, but
+  `staticdatagen` promotes `output.build-tmp` onto `output` once the compile
+  finishes and takes `.meta/` with it. `after_compile` still read the old
+  path, found nothing, and fell back to `layout = "page"` for every page — so
+  a theme whose layouts were `index`/`about`/`contact` rendered through none
+  of them, and through nothing at all without a `page.html`. The sidecar
+  directory now resolves from `build_dir` and falls back to `site_dir`.
+  `TemplateEngine::has_template` lets the plugin distinguish a real render
+  from `render_page`'s pass-through arm, which it had been counting as a
+  success — a pipeline doing nothing logged `Rendered N page(s)` exactly like
+  a working one.
+- **`content/content.schema.toml` broke the build it configures**
+  (`src/core/content_stager.rs`). The documented location for typed
+  front-matter schemas was staged as a page, and `staticdatagen` aborted with
+  `Failed to extract metadata: No valid front matter found`. Build-time
+  control files are now excluded from staging.
+- **Nested `index.md` gained a directory level**
+  (`src/core/content_stager.rs`). `fr/index.md` compiled to
+  `fr/index/index.html` rather than `fr/index.html`, so every locale home
+  page was wrong. The root cause is upstream — `staticdatagen`'s
+  `write_files_to_build_directory` compares the whole processed name against
+  `"index"` — so this is a staging-time side-step, not a fix, and it leaves
+  the file alone when both `fr.md` and `fr/index.md` are authored.
+- **Extracted CSS and JS 404'd on sub-path deployments**
+  (`src/plugins/csp.rs`). Inline blocks are externalised into fingerprinted,
+  SRI-signed `_csp/` files referenced as `/_csp/…`, which resolves against
+  the domain root. On a GitHub Pages project site the whole stylesheet was
+  lost. The prefix now derives from `base_url`'s path component; sites at the
+  domain root are unaffected.
+- **Islands never hydrated** (`src/plugins/islands.rs`,
+  `src/plugins/assets.rs`). Three independent faults, each sufficient alone:
+  the injected loader tag was root-absolute like `_csp/` above; the loader
+  resolved component bundles with a root-absolute dynamic `import()`, now
+  resolved relative to its own module URL so the runtime needs no knowledge
+  of the mount point; and the asset fingerprinter renamed `_islands/*.js`
+  without being able to rewrite a specifier built at runtime, so every bundle
+  404'd. `_islands/` is excluded from fingerprinting.
+
+### Added
+
+- **Translated slugs across locales** (`src/plugins/i18n.rs`). Pages were
+  paired across locales by identical relative path, so `about/index.html`
+  and `a-propos/index.html` were two unrelated singletons and **neither
+  received any `hreflang`** — silently, because from the plugin's view they
+  were simply untranslated. Pages now declare a `translation_key` in front
+  matter, read from the sidecars; the locale matrix inverts from
+  `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
+  key keep path matching, so existing sites are unaffected.
+- **Root-hosted default locale** (`src/plugins/i18n.rs`). Every locale
+  previously needed its own directory, including the default, which forced
+  `/en/about/` and left the site root empty. The default locale may now live
+  at the root — `/about/` alongside `/fr/a-propos/` — matching Hugo's
+  `defaultContentLanguageInSubdir = false`, Astro's `prefixDefaultLocale:
+  false` and Next.js's default.
+
+### Changed
+
+- **Alternate `hreflang` labels now describe the target document.** An
+  English page labelled its Hindi alternate `hreflang="hi"` (the locale
+  directory) while the Hindi page advertised `hreflang="hi-IN"` for itself.
+  The two sides disagreed, failing reciprocity and the `hreflang` audit gate.
+  Alternates now carry the target's resolved language. Two tests asserting
+  the old asymmetry were updated, with the reasoning recorded in their
+  bodies.
+- **`x-default` is emitted only when the default locale serves the page**,
+  rather than pointing at a URL that may not exist.
+
+## [0.0.49] - 2026-08-05
+
+Dependency maintenance only; no functional changes. Recorded here because
+the release shipped without a changelog entry.
+
+### Changed
+
+- `oxc_minifier` and `oxc_allocator` 0.138 → 0.141 (lockstep family bump)
+  ([#626](https://github.com/sebastienrousseau/static-site-generator/pull/626),
+  [#627](https://github.com/sebastienrousseau/static-site-generator/pull/627)).
+- `tungstenite` 0.29 → 0.30
+  ([#624](https://github.com/sebastienrousseau/static-site-generator/pull/624)).
+- Minor and patch group across 9 further dependencies
+  ([#631](https://github.com/sebastienrousseau/static-site-generator/pull/631)).
+- CI action bumps: `actions/checkout`, `actions/setup-node`,
+  `github/codeql-action`, `ossf/scorecard-action`,
+  `docker/setup-buildx-action`, `@playwright/test`.
+
 ## [0.0.48] - 2026-07-25
 
 ### Planned / Upcoming (deferred — not v0.0.46 scope)
