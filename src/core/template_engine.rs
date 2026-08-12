@@ -198,6 +198,35 @@ impl TemplateEngine {
             .with_context(|| format!("Failed to render template '{tmpl_name}'"))
     }
 
+    /// Reports whether `name` resolves to a loadable template.
+    ///
+    /// Callers use this to distinguish "rendered through a template"
+    /// from [`render_page`](Self::render_page)'s pass-through arm,
+    /// which hands the input back unchanged when neither the requested
+    /// template nor the `page.html` fallback exists.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::template_engine::{TemplateConfig, TemplateEngine};
+    /// use tempfile::tempdir;
+    /// use std::fs;
+    ///
+    /// let dir = tempdir().unwrap();
+    /// fs::write(dir.path().join("page.html"), "{{ page.content }}").unwrap();
+    /// let cfg = TemplateConfig {
+    ///     template_dir: dir.path().to_path_buf(),
+    ///     ..TemplateConfig::default()
+    /// };
+    /// let engine = TemplateEngine::init(cfg).unwrap().unwrap();
+    /// assert!(engine.has_template("page.html"));
+    /// assert!(!engine.has_template("missing.html"));
+    /// ```
+    #[must_use]
+    pub fn has_template(&self, name: &str) -> bool {
+        self.env.get_template(name).is_ok()
+    }
+
     /// Builds site-level globals from an `SsgConfig`.
     ///
     /// # Examples
