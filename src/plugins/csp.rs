@@ -367,9 +367,24 @@ impl Plugin for CspPlugin {
             .config
             .as_ref()
             .map_or_else(SriAlgorithm::default, |c| c.security.sri_algorithm);
-        let (rewritten, extracted) =
-            extract_inline_blocks(html, &csp_dir, &ctx.site_dir, sri_algorithm)
-                .map_err(|e| SsgError::io(e, path))?;
+        // Extracted assets are referenced root-absolutely. When the site
+        // is published under a sub-path (GitHub Pages project sites, and
+        // any reverse-proxy mount), `/_csp/…` resolves against the domain
+        // root and 404s, taking the whole stylesheet with it. Deriving the
+        // prefix from `base_url` keeps the reference correct at any mount
+        // point without the caller rewriting HTML afterwards.
+        let url_prefix = ctx
+            .config
+            .as_ref()
+            .map_or_else(String::new, |c| base_url_path_prefix(&c.base_url));
+        let (rewritten, extracted) = extract_inline_blocks(
+            html,
+            &csp_dir,
+            &ctx.site_dir,
+            sri_algorithm,
+            &url_prefix,
+        )
+        .map_err(|e| SsgError::io(e, path))?;
 
         if extracted > 0 {
             let final_html = remove_unsafe_inline_from_csp(&rewritten);
@@ -392,6 +407,28 @@ impl Plugin for CspPlugin {
     }
 }
 
+/// Returns the path component of `base_url` as a prefix for
+/// root-absolute asset references, without a trailing slash.
+///
+/// `https://example.com` and `https://example.com/` both yield `""`, so a
+/// site at the domain root keeps emitting `/_csp/…` exactly as before.
+/// `https://example.com/apex` yields `"/apex"`, making the emitted
+/// reference `/apex/_csp/…`.
+pub(crate) fn base_url_path_prefix(base_url: &str) -> String {
+    let without_scheme = base_url
+        .split_once("://")
+        .map_or(base_url, |(_, rest)| rest);
+    let path = without_scheme
+        .find('/')
+        .map_or("", |i| &without_scheme[i..]);
+    let trimmed = path.trim_end_matches('/');
+    if trimmed == "/" {
+        String::new()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 /// Extracts inline `<style>` and `<script>` blocks from HTML.
 ///
 /// Returns `(rewritten_html, count_of_extracted_blocks)`.
@@ -400,6 +437,7 @@ fn extract_inline_blocks(
     csp_dir: &Path,
     site_dir: &Path,
     sri_algorithm: SriAlgorithm,
+    url_prefix: &str,
 ) -> Result<(String, usize)> {
     let mut result = html.to_string();
     let mut count = 0;
@@ -423,8 +461,8 @@ fn extract_inline_blocks(
             .replace('\\', "/");
 
         let link_tag = format!(
-            "<link rel=\"stylesheet\" href=\"/{}\" integrity=\"{}\" crossorigin=\"anonymous\">",
-            rel_path, sri
+            "<link rel=\"stylesheet\" href=\"{}/{}\" integrity=\"{}\" crossorigin=\"anonymous\">",
+            url_prefix, rel_path, sri
         );
 
         result = format!("{before}{link_tag}{after}");
@@ -458,11 +496,11 @@ fn extract_inline_blocks(
         );
         let script_tag = if preserved.is_empty() {
             format!(
-                "<script src=\"/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
+                "<script src=\"{url_prefix}/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
             )
         } else {
             format!(
-                "<script {preserved} src=\"/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
+                "<script {preserved} src=\"{url_prefix}/{rel_path}\" integrity=\"{sri}\" crossorigin=\"anonymous\"></script>"
             )
         };
 
@@ -713,6 +751,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -737,6 +776,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -746,6 +786,52 @@ mod tests {
                 "integrity=\"sha384-BN8siYsJqlPeNsRFs2pYbTW0uiUBy9v6JVVKpHaS+KNqD0ZFotD5OFKMkI6/s6sb\""
             ),
             "expected exact SHA-384 SRI vector; got: {result}"
+        );
+    }
+
+    #[test]
+    fn base_url_path_prefix_extracts_sub_path_mount_points() {
+        assert_eq!(base_url_path_prefix("https://example.com"), "");
+        assert_eq!(base_url_path_prefix("https://example.com/"), "");
+        assert_eq!(base_url_path_prefix("https://example.com/apex"), "/apex");
+        assert_eq!(base_url_path_prefix("https://example.com/apex/"), "/apex");
+        assert_eq!(base_url_path_prefix("https://e.com/a/b/"), "/a/b");
+        // Missing scheme still yields the path component.
+        assert_eq!(base_url_path_prefix("example.com/apex"), "/apex");
+    }
+
+    /// Regression: a site published under a sub-path emitted
+    /// `href="/_csp/…"`, which resolves against the domain root and 404s,
+    /// so the extracted stylesheet never loaded on GitHub Pages project
+    /// sites.
+    #[test]
+    fn extracted_assets_are_prefixed_for_sub_path_deploys() {
+        let dir = tempdir().unwrap();
+        let site = dir.path().join("site");
+        let csp = site.join("_csp");
+        fs::create_dir_all(&csp).unwrap();
+
+        let (out, count) = extract_inline_blocks(
+            "<style>body{color:red}</style><script>var x=1;</script>",
+            &csp,
+            &site,
+            SriAlgorithm::default(),
+            "/apex",
+        )
+        .unwrap();
+
+        assert_eq!(count, 2);
+        assert!(
+            out.contains("href=\"/apex/_csp/"),
+            "stylesheet must carry the sub-path prefix: {out}"
+        );
+        assert!(
+            out.contains("src=\"/apex/_csp/"),
+            "script must carry the sub-path prefix: {out}"
+        );
+        assert!(
+            !out.contains("href=\"/_csp/"),
+            "no unprefixed root-absolute reference may survive: {out}"
         );
     }
 
@@ -798,6 +884,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -819,6 +906,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -837,6 +925,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -856,6 +945,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
 
@@ -881,6 +971,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
         assert_eq!(count, 0);
@@ -1033,6 +1124,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
         assert_eq!(count, 1);
@@ -1050,6 +1142,7 @@ mod tests {
             &csp_dir,
             dir.path(),
             SriAlgorithm::default(),
+            "",
         )
         .unwrap();
         assert_eq!(count, 1);
@@ -1281,6 +1374,7 @@ mod tests {
             &site.join("_csp"),
             &site,
             SriAlgorithm::default(),
+            "",
         );
         assert!(res.is_err());
     }
@@ -1302,6 +1396,7 @@ mod tests {
             &csp_dir,
             &site,
             SriAlgorithm::default(),
+            "",
         );
         assert!(res.is_err());
     }
@@ -1321,6 +1416,7 @@ mod tests {
             &csp_dir,
             &site,
             SriAlgorithm::default(),
+            "",
         );
         assert!(res.is_err());
     }
