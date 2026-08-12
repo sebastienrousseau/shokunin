@@ -23,5 +23,6 @@ pub mod stream;
 pub mod streaming;
 #[cfg(feature = "templates")]
 pub mod template_engine;
+pub mod theme_manifest;
 pub mod urls;
 pub mod walk;

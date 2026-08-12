@@ -77,6 +77,16 @@ translated slugs.
   matter, read from the sidecars; the locale matrix inverts from
   `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
   key keep path matching, so existing sites are unaffected.
+- **Theme compatibility is enforced** (`src/core/theme_manifest.rs`). A theme
+  declares the oldest generator it works with — `min_version` in
+  `theme.toml`, or `min_ssg_version` in `theme.json` — and nothing read it.
+  That mattered because every way a too-old generator breaks a theme is
+  silent: the `layout` named in front matter ignored, a bundled
+  `content.schema.toml` aborting the compile, extracted CSS 404ing under a
+  sub-path. The build now stops at the start with one message naming both
+  versions and the manifest that declared the floor. A theme with no
+  manifest, no `min_version`, or an unparseable one imposes no floor and
+  builds as before.
 - **Root-hosted default locale** (`src/plugins/i18n.rs`). Every locale
   previously needed its own directory, including the default, which forced
   `/en/about/` and left the site root empty. The default locale may now live

@@ -134,6 +134,7 @@ pub use crate::core_group::stream;
 pub use crate::core_group::streaming;
 #[cfg(feature = "templates")]
 pub use crate::core_group::template_engine;
+pub use crate::core_group::theme_manifest;
 pub use crate::core_group::urls;
 pub use crate::core_group::walk;
 
