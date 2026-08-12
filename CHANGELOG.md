@@ -84,6 +84,31 @@ translated slugs.
 - **`x-default` is emitted only when the default locale serves the page**,
   rather than pointing at a URL that may not exist.
 
+### Security
+
+- **js-yaml 4.3.0 → 4.3.1** in the `tests/a11y` harness
+  ([GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj),
+  high): quadratic CPU consumption resolving `!!omap`. Development-only — the
+  harness is not part of the published crate — but it was the only open
+  advisory. Both npm workspaces now report zero vulnerabilities.
+
+### Dependencies
+
+- oxc family 0.142 → 0.143 (`minifier`, `parser`, `codegen`, `allocator`,
+  `span`), bumped in lockstep as the crates require.
+- `noyalib` 0.0.17 → 0.0.18, `@playwright/test` 1.62.0 → 1.62.1, and the
+  minor/patch group across the resolved graph.
+- GitHub Actions: `github/codeql-action/*` v4.37.4 → v4.37.6,
+  `actions/attest-build-provenance` v4.1.1 → v4.2.2,
+  `Swatinem/rust-cache` to 6323deb1. `scheduled.yml` had been pinning
+  `attest-build-provenance` independently of `release.yml` and drifting
+  behind it; both now match.
+- `deny.toml`: removed five `ignore` entries that no longer match any crate
+  (RUSTSEC-2025-0057, -2025-0119, -2026-0173, -2026-0194, -2026-0195). The
+  quick-xml removal plan recorded there on 2026-07-04 has completed. Each
+  unmatched entry raises an `advisory-not-detected` warning, so the stale
+  ones were burying any real one.
+
 ## [0.0.49] - 2026-08-05
 
 Dependency maintenance only; no functional changes. Recorded here because
