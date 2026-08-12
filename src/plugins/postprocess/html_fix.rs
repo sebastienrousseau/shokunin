@@ -7,7 +7,9 @@ use super::helpers::rfc2822_to_iso8601;
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
+use crate::util::html_rewriter::rewrite_html;
 use anyhow::Result;
+use lol_html::element;
 use std::path::Path;
 
 /// Repairs HTML output:
@@ -71,7 +73,68 @@ fn apply_html_fixes(html: &str) -> String {
         modified = remove_empty_preload_links(&modified);
     }
 
+    if modified.contains("align=") {
+        modified = replace_table_align_attrs(&modified);
+    }
+
     modified
+}
+
+/// Replaces the obsolete presentational `align` attribute on table cells
+/// with an equivalent `text-*` class (issue #618).
+///
+/// Markdown column-alignment syntax (`:---`, `---:`, `:---:`) is rendered
+/// downstream as `<th align="left">` / `<td align="right">`. `align` has
+/// been obsolete since HTML5 and pa11y flags it as
+/// `WCAG2AAA.Principle1.Guideline1_3.1_3_1.H49.AlignAttr`.
+///
+/// The alignment itself is meaningful, so it is preserved rather than
+/// dropped: each cell gains `text-left` / `text-center` / `text-right`,
+/// which is the class the renderer already emits on `<td>` alongside the
+/// attribute. `<th>` previously received the attribute and no class, so
+/// this is also what makes header alignment stylable at all.
+///
+/// Uses a real parser rather than string surgery: an `align=` literal can
+/// legitimately appear inside a `<pre>` block or a comment, and only a
+/// parser knows the difference.
+fn replace_table_align_attrs(html: &str) -> String {
+    let handler = |el: &mut lol_html::html_content::Element<'_, '_>| {
+        let Some(align) = el.get_attribute("align") else {
+            return Ok(());
+        };
+        el.remove_attribute("align");
+
+        let class = match align.trim().to_ascii_lowercase().as_str() {
+            "left" => "text-left",
+            "center" | "centre" => "text-center",
+            "right" => "text-right",
+            // `justify`, `char`, or anything unrecognised: the attribute is
+            // still obsolete and must go, but inventing a class for it would
+            // be guessing at intent.
+            _ => return Ok(()),
+        };
+
+        let existing = el.get_attribute("class").unwrap_or_default();
+        if existing.split_whitespace().any(|c| c == class) {
+            return Ok(());
+        }
+        let merged = if existing.is_empty() {
+            class.to_string()
+        } else {
+            format!("{existing} {class}")
+        };
+        el.set_attribute("class", &merged)?;
+        Ok(())
+    };
+
+    rewrite_html(
+        html,
+        vec![
+            element!("th[align]", handler),
+            element!("td[align]", handler),
+        ],
+    )
+    .unwrap_or_else(|_| html.to_string())
 }
 
 /// Returns `true` if the HTML contains `http://schema.org` context that needs upgrading.
@@ -417,6 +480,82 @@ mod tests {
     use crate::plugin::PluginContext;
     use std::path::Path;
     use tempfile::tempdir;
+
+    /// Covers the *wiring*, not just the function: the unit tests above
+    /// call `replace_table_align_attrs` directly, so removing its call
+    /// from `apply_html_fixes` left them all green. This one goes through
+    /// the pipeline entry point.
+    #[test]
+    fn apply_html_fixes_strips_table_align_attrs() {
+        let out = apply_html_fixes(
+            r#"<table><tr><td align="right">7</td></tr></table>"#,
+        );
+        assert!(
+            !out.contains("align="),
+            "not wired into the pipeline: {out}"
+        );
+        assert!(out.contains("text-right"), "{out}");
+    }
+
+    /// Regression for #618: Markdown column-alignment syntax rendered
+    /// obsolete `align` attributes, which pa11y flags as
+    /// `WCAG2AAA.Principle1.Guideline1_3.1_3_1.H49.AlignAttr`.
+    #[test]
+    fn table_align_attrs_become_text_classes() {
+        let html = concat!(
+            "<table><thead><tr>",
+            r#"<th align="left">Layer</th>"#,
+            r#"<th align="center">Maturity</th>"#,
+            r#"<th align="right">Metric</th>"#,
+            "</tr></thead></table>",
+        );
+        let out = replace_table_align_attrs(html);
+
+        assert!(
+            !out.contains("align="),
+            "obsolete attribute survived: {out}"
+        );
+        assert!(out.contains("text-left"), "{out}");
+        assert!(out.contains("text-center"), "{out}");
+        assert!(out.contains("text-right"), "{out}");
+    }
+
+    /// The renderer already emits `class="text-*"` on `<td>` beside the
+    /// attribute; merging must not duplicate it.
+    #[test]
+    fn table_align_does_not_duplicate_an_existing_class() {
+        let html = r#"<td align="right" class="text-right num">7</td>"#;
+        let out = replace_table_align_attrs(html);
+
+        assert!(!out.contains("align="), "{out}");
+        assert_eq!(out.matches("text-right").count(), 1, "duplicated: {out}");
+        assert!(out.contains("num"), "existing classes dropped: {out}");
+    }
+
+    /// An `align` value with no sensible class equivalent still loses the
+    /// obsolete attribute — inventing a class would be guessing at intent.
+    #[test]
+    fn table_align_unrecognised_value_drops_attribute_without_a_class() {
+        let out = replace_table_align_attrs(r#"<td align="justify">x</td>"#);
+        assert!(!out.contains("align="), "{out}");
+        assert!(!out.contains("text-"), "invented a class: {out}");
+    }
+
+    /// `align=` inside a `<pre>` block is content, not markup, and a
+    /// string-replacement implementation would corrupt it.
+    #[test]
+    fn table_align_leaves_literal_text_in_pre_alone() {
+        let html = r#"<pre><code>&lt;td align="left"&gt;</code></pre>"#;
+        assert_eq!(replace_table_align_attrs(html), html);
+    }
+
+    /// Non-table elements keep their `align` — the fix is scoped to the
+    /// cells the Markdown renderer emits, not a blanket attribute sweep.
+    #[test]
+    fn table_align_ignores_non_cell_elements() {
+        let html = r#"<div align="center">x</div>"#;
+        assert_eq!(replace_table_align_attrs(html), html);
+    }
 
     fn test_ctx(site_dir: &Path) -> PluginContext {
         crate::test_support::init_logger();

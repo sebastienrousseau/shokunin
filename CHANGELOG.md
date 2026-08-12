@@ -46,6 +46,18 @@ translated slugs.
   the domain root. On a GitHub Pages project site the whole stylesheet was
   lost. The prefix now derives from `base_url`'s path component; sites at the
   domain root are unaffected.
+- **Markdown table alignment emitted obsolete `align` attributes**
+  (`src/plugins/postprocess/html_fix.rs`,
+  [#618](https://github.com/sebastienrousseau/static-site-generator/issues/618)).
+  Column-alignment syntax (`:---`, `---:`, `:---:`) rendered as
+  `<th align="left">` / `<td align="right">`. `align` has been obsolete
+  since HTML5 and pa11y flags it as
+  `WCAG2AAA.Principle1.Guideline1_3.1_3_1.H49.AlignAttr`. The attribute is
+  now replaced by an equivalent `text-left` / `text-center` / `text-right`
+  class, so the alignment survives — and `<th>` gains a class it never had,
+  which is what makes header alignment stylable at all. Done with a real
+  parser, since an `align=` literal inside a `<pre>` block is content, not
+  markup.
 - **Islands never hydrated** (`src/plugins/islands.rs`,
   `src/plugins/assets.rs`). Three independent faults, each sufficient alone:
   the injected loader tag was root-absolute like `_csp/` above; the loader
