@@ -89,8 +89,23 @@ translated slugs.
 - **js-yaml 4.3.0 → 4.3.1** in the `tests/a11y` harness
   ([GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj),
   high): quadratic CPU consumption resolving `!!omap`. Development-only — the
-  harness is not part of the published crate — but it was the only open
-  advisory. Both npm workspaces now report zero vulnerabilities.
+  harness is not part of the published crate.
+- **`extract-zip` 2.0.1 symlink path traversal**
+  ([GHSA-jmr9-qjv8-65gv](https://github.com/advisories/GHSA-jmr9-qjv8-65gv),
+  high) is **accepted, not fixed**. No patched version exists: the advisory
+  covers `<= 2.0.1` and upstream has published no fix. The path is
+  `pa11y → puppeteer → @puppeteer/browsers → extract-zip`; `pa11y` 9.1.1 is
+  the latest release and pins `puppeteer ^24.37.5`, which requires
+  `@puppeteer/browsers` 2.x. Forcing `@puppeteer/browsers` 3.x — which
+  replaced `extract-zip` with `modern-tar` — resolves the advisory but breaks
+  installation, because puppeteer 24.x calls the 2.x API (`downloadBrowsers`
+  fails in `puppeteer/lib/esm/puppeteer/node/install.js`). Verified, then
+  reverted.
+
+  Risk accepted on the basis that the harness is development-only and never
+  part of the published crate, and that the only archive it extracts is the
+  Chromium build downloaded from Google's CDN over HTTPS — not
+  attacker-controlled input. Revisit when `pa11y` moves to puppeteer 25.x.
 
 ### Dependencies
 
