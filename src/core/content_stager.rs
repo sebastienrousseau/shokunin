@@ -241,6 +241,7 @@ fn copy_tree(
     let mut files: Vec<(PathBuf, PathBuf, bool)> = Vec::new();
     let mut dirs: Vec<(PathBuf, PathBuf)> = Vec::new();
     collect_entries(src, dst, &mut files, &mut dirs)?;
+    flatten_nested_index_pages(dst, &mut files);
 
     // Create every directory serially (cheap; preserves order so
     // children can be written without races).
@@ -302,9 +303,94 @@ fn copy_tree(
     Ok(())
 }
 
+/// Re-targets a staged nested `index.md` onto its parent directory's
+/// name so `staticdatagen` writes it to `<parent>/index.html` instead
+/// of `<parent>/index/index.html`.
+///
+/// ## Why this exists
+///
+/// [`crate::urls::derive_output_rel_path`] documents the compiler's
+/// output convention as `about/index.md → about/index.html`, and the
+/// ISR manifest's `derive_url` repeats it. `staticdatagen 0.0.11`
+/// does not honour it:
+/// `utilities::write::write_files_to_build_directory` compares the
+/// *whole* processed name against `"index"`, so only a content-root
+/// `index.md` reaches the root-index branch. Anything nested —
+/// `fr/index.md` — falls through to `write_content_files`, which
+/// creates a directory named after the full stem (`fr/index/`) and
+/// writes `index.html` inside it. Every per-locale home page is
+/// affected.
+///
+/// `staticdatagen` is a published external dependency, so the mapping
+/// cannot be corrected in-repo. It can be side-stepped: the compiler
+/// writes `foo.md` to `foo/index.html`, so staging `fr/index.md` under
+/// the name `fr.md` produces exactly the documented output path.
+///
+/// ## Collisions
+///
+/// If the content tree already carries a file that would stage to the
+/// same destination (both `fr.md` and `fr/index.md` authored), the
+/// nested file keeps its original staged path. Flattening would
+/// silently drop one of the two pages, which is worse than the
+/// directory-level bug.
+///
+/// Directory names containing dots are appended to textually rather
+/// than through `Path::set_extension`, which would truncate `v1.2`
+/// to `v1`.
+fn flatten_nested_index_pages(
+    dst_root: &Path,
+    files: &mut [(PathBuf, PathBuf, bool)],
+) {
+    let occupied: std::collections::HashSet<PathBuf> =
+        files.iter().map(|(_, dst, _)| dst.clone()).collect();
+
+    for (_src_path, dst_path, is_md) in files.iter_mut() {
+        if !*is_md {
+            continue;
+        }
+        if dst_path.file_stem().and_then(|s| s.to_str()) != Some("index") {
+            continue;
+        }
+        // A content-root `index.md` already compiles to the site
+        // root's `index.html` — only nested ones are wrong.
+        let Some(parent) = dst_path.parent() else {
+            continue;
+        };
+        if parent == dst_root {
+            continue;
+        }
+        let (Some(grandparent), Some(dir_name)) =
+            (parent.parent(), parent.file_name())
+        else {
+            continue;
+        };
+        let ext = dst_path.extension().unwrap_or_default().to_string_lossy();
+        let renamed =
+            grandparent.join(format!("{}.{ext}", dir_name.to_string_lossy()));
+        if occupied.contains(&renamed) {
+            continue;
+        }
+        *dst_path = renamed;
+    }
+}
+
+/// Build-time control files that live *in* the content directory but are
+/// inputs to `ssg` itself, not pages to compile.
+///
+/// `content.schema.toml` is the documented location for typed front-matter
+/// schemas (see the "Content schema validation" section of the README).
+/// It is read by [`crate::core_group::content`] before the compile, and it
+/// must not then be handed to `staticdatagen`, which treats every staged
+/// file as a page and aborts the whole build with
+/// `Failed to extract metadata: No valid front matter found`.
+const CONTENT_CONTROL_FILES: &[&str] = &["content.schema.toml"];
+
 /// Walks `src` and partitions entries into directories (to create
 /// before parallel writes) and files (with their destination path
 /// and a markdown flag).
+///
+/// Entries named in [`CONTENT_CONTROL_FILES`] are skipped: they configure
+/// the build rather than describing a page.
 fn collect_entries(
     src: &Path,
     dst: &Path,
@@ -321,6 +407,12 @@ fn collect_entries(
             dirs.push((src_path.clone(), dst_path.clone()));
             collect_entries(&src_path, &dst_path, files, dirs)?;
         } else if file_type.is_file() {
+            if CONTENT_CONTROL_FILES
+                .iter()
+                .any(|name| file_name.as_encoded_bytes() == name.as_bytes())
+            {
+                continue;
+            }
             let is_md = is_markdown(&src_path);
             files.push((src_path, dst_path, is_md));
         }
@@ -1007,6 +1099,10 @@ mod tests {
         // `about/index.md` publishes at `about/index.html` →
         // permalink `{base}/about/` (index.html collapses to the
         // directory URL, matching the Atom feed convention).
+        //
+        // The staged file is named `about.md`, not `about/index.md` —
+        // see `flatten_nested_index_pages`. The permalink is derived
+        // from the AUTHORED path, so the value is unaffected.
         let tmp = tempfile::tempdir().unwrap();
         let src = tmp.path().join("content");
         let build = tmp.path().join("build");
@@ -1021,11 +1117,141 @@ mod tests {
             Some("https://example.com/"),
         )
         .unwrap();
-        let body = fs::read_to_string(staged.join("about/index.md")).unwrap();
+        let body = fs::read_to_string(staged.join("about.md")).unwrap();
         assert!(
             body.contains("permalink: \"https://example.com/about/\""),
             "trailing-slash base + nested index.md: {body}"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // Nested `index.md` flattening (staticdatagen output-path gap)
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn stage_flattens_nested_index_md_to_parent_named_file() {
+        // `crate::urls::derive_output_rel_path` documents (and asserts)
+        // `about/index.md → about/index.html`, but
+        // `staticdatagen::utilities::write::write_files_to_build_directory`
+        // only special-cases the exact processed name `"index"`, so a
+        // nested `fr/index.md` lands at `fr/index/index.html` and every
+        // locale home page gains a directory level.
+        //
+        // Staging the file as `fr.md` restores the documented mapping:
+        // the compiler writes `<build>/fr/index.html` for it.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(src.join("fr")).unwrap();
+        fs::create_dir_all(src.join("fr/blog")).unwrap();
+        fs::write(src.join("index.md"), "---\ntitle: Home\n---\nen").unwrap();
+        fs::write(src.join("fr/index.md"), "---\ntitle: Accueil\n---\nfr")
+            .unwrap();
+        fs::write(src.join("fr/blog/index.md"), "---\ntitle: Blog\n---\nb")
+            .unwrap();
+        fs::write(src.join("fr/a-propos.md"), "---\ntitle: A\n---\nap")
+            .unwrap();
+
+        let staged =
+            stage_content_with_template_defaults(&src, &build, &[]).unwrap();
+
+        assert!(
+            staged.join("index.md").exists(),
+            "root index.md is already correct and must stay put"
+        );
+        assert!(
+            staged.join("fr.md").exists(),
+            "fr/index.md must stage as fr.md so it compiles to fr/index.html"
+        );
+        assert!(
+            !staged.join("fr/index.md").exists(),
+            "the nested original must not also be staged"
+        );
+        assert!(
+            staged.join("fr/blog.md").exists(),
+            "deeper nesting flattens one level too"
+        );
+        assert!(
+            !staged.join("fr/blog/index.md").exists(),
+            "the nested original must not also be staged"
+        );
+        assert!(
+            staged.join("fr/a-propos.md").exists(),
+            "non-index siblings are untouched"
+        );
+    }
+
+    #[test]
+    #[serial_test::parallel(stager_fp)]
+    fn stage_keeps_nested_index_md_when_parent_named_file_exists() {
+        // `fr.md` and `fr/index.md` both authored: flattening would
+        // silently drop one page, so the nested file keeps its path
+        // and the pre-existing (wrong but non-destructive) layout.
+        let tmp = tempfile::tempdir().unwrap();
+        let src = tmp.path().join("content");
+        let build = tmp.path().join("build");
+        fs::create_dir_all(src.join("fr")).unwrap();
+        fs::write(src.join("fr.md"), "---\ntitle: FR\n---\nsection").unwrap();
+        fs::write(src.join("fr/index.md"), "---\ntitle: Accueil\n---\nfr")
+            .unwrap();
+
+        let staged =
+            stage_content_with_template_defaults(&src, &build, &[]).unwrap();
+
+        assert!(staged.join("fr.md").exists());
+        assert!(
+            staged.join("fr/index.md").exists(),
+            "collision must not clobber the authored fr.md"
+        );
+        assert!(
+            fs::read_to_string(staged.join("fr.md"))
+                .unwrap()
+                .contains("title: FR"),
+            "the authored fr.md must survive verbatim"
+        );
+    }
+
+    #[test]
+    fn flatten_nested_index_pages_keeps_dotted_directory_names_intact() {
+        // `set_extension` on `v1.2` would truncate it to `v1.md`;
+        // the implementation appends the extension textually instead.
+        let dst = Path::new("/staged");
+        let mut files = vec![(
+            PathBuf::from("/src/v1.2/index.md"),
+            PathBuf::from("/staged/v1.2/index.md"),
+            true,
+        )];
+        flatten_nested_index_pages(dst, &mut files);
+        assert_eq!(files[0].1, PathBuf::from("/staged/v1.2.md"));
+    }
+
+    #[test]
+    fn flatten_nested_index_pages_ignores_non_markdown_and_root_files() {
+        let dst = Path::new("/staged");
+        let mut files = vec![
+            // Non-markdown `index.html` asset — not a compiled page.
+            (
+                PathBuf::from("/src/fr/index.html"),
+                PathBuf::from("/staged/fr/index.html"),
+                false,
+            ),
+            // Root index.md — already compiles to the site root.
+            (
+                PathBuf::from("/src/index.md"),
+                PathBuf::from("/staged/index.md"),
+                true,
+            ),
+            // Nested non-index page — untouched.
+            (
+                PathBuf::from("/src/fr/about.md"),
+                PathBuf::from("/staged/fr/about.md"),
+                true,
+            ),
+        ];
+        let before = files.clone();
+        flatten_nested_index_pages(dst, &mut files);
+        assert_eq!(files, before);
     }
 
     #[test]
