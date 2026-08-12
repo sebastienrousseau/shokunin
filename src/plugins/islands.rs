@@ -62,7 +62,7 @@ impl Plugin for IslandPlugin {
         &self,
         html: &str,
         _path: &Path,
-        _ctx: &PluginContext,
+        ctx: &PluginContext,
     ) -> Result<String, SsgError> {
         if !html.contains("<ssg-island") {
             return Ok(html.to_string());
@@ -72,8 +72,15 @@ impl Plugin for IslandPlugin {
             return Ok(html.to_string()); // Already injected
         }
 
-        let script =
-            "\n<script type=\"module\" src=\"/_islands/ssg-island.js\"></script>\n";
+        // A site published under a sub-path resolves `/_islands/…` against
+        // the domain root, so the loader 404s and no island ever hydrates.
+        // Same fix as the extracted `_csp/` assets.
+        let prefix = ctx.config.as_ref().map_or_else(String::new, |c| {
+            crate::plugins_group::csp::base_url_path_prefix(&c.base_url)
+        });
+        let script = format!(
+            "\n<script type=\"module\" src=\"{prefix}/_islands/ssg-island.js\"></script>\n"
+        );
 
         let output = if let Some(pos) = html.rfind("</body>") {
             format!("{}{script}{}", &html[..pos], &html[pos..])
@@ -295,7 +302,7 @@ class SsgIsland extends HTMLElement {
     this._hydrated = true;
     try {
       const props = JSON.parse(this.getAttribute('props') || '{}');
-      const mod = await import(`/_islands/${component}.js`);
+      const mod = await import(new URL(`./${component}.js`, import.meta.url).href);
       this._module = mod;
       if (mod.default) mod.default(this, props);
       else if (mod.hydrate) mod.hydrate(this, props);
@@ -499,6 +506,73 @@ mod tests {
     // -------------------------------------------------------------------
     // transform_html — remaining branches
     // -------------------------------------------------------------------
+
+    /// Regression: the loader tag was emitted as `/_islands/…`, which
+    /// resolves against the domain root. On a site published under a
+    /// sub-path the loader 404s and no island on the site ever hydrates.
+    #[test]
+    fn loader_tag_is_prefixed_for_sub_path_deploys() {
+        use crate::cmd::SsgConfig;
+
+        let dir = tempdir().unwrap();
+        let config = SsgConfig {
+            base_url: "https://example.com/velocity".to_string(),
+            ..SsgConfig::default()
+        };
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            config,
+        );
+
+        let out = IslandPlugin::new()
+            .transform_html(
+                "<html><body><ssg-island component=\"c\"></ssg-island></body></html>",
+                Path::new("index.html"),
+                &ctx,
+            )
+            .unwrap();
+
+        assert!(
+            out.contains("src=\"/velocity/_islands/ssg-island.js\""),
+            "loader must carry the sub-path prefix: {out}"
+        );
+        assert!(
+            !out.contains("src=\"/_islands/"),
+            "no unprefixed reference may survive: {out}"
+        );
+    }
+
+    /// A site at the domain root keeps the original, unprefixed reference.
+    #[test]
+    fn loader_tag_is_unprefixed_at_the_domain_root() {
+        use crate::cmd::SsgConfig;
+
+        let dir = tempdir().unwrap();
+        let config = SsgConfig {
+            base_url: "https://example.com".to_string(),
+            ..SsgConfig::default()
+        };
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            config,
+        );
+
+        let out = IslandPlugin::new()
+            .transform_html(
+                "<html><body><ssg-island component=\"c\"></ssg-island></body></html>",
+                Path::new("index.html"),
+                &ctx,
+            )
+            .unwrap();
+
+        assert!(out.contains("src=\"/_islands/ssg-island.js\""), "{out}");
+    }
 
     #[test]
     fn transform_html_skips_when_loader_already_injected() {

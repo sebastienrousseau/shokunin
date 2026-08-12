@@ -650,8 +650,31 @@ const FINGERPRINTED_EXTENSIONS: &[&str] = &[
 ];
 
 /// Collects every fingerprintable asset from site dir.
+/// Directories whose assets must keep their authored filenames.
+///
+/// `_islands/` holds the island loader and the component bundles it pulls in
+/// with a *dynamic* `import()` built at runtime from the component name.
+/// A static rewriter cannot see that construction, so fingerprinting the
+/// bundles renamed the files without updating the only thing that resolves
+/// them — every island 404'd on hydration. The loader tag in the HTML has
+/// the same problem, since the islands plugin emits it after this pass.
+///
+/// These files are already effectively immutable per build; skipping them
+/// costs a cache-busting opportunity and buys a working feature.
+const UNFINGERPRINTED_DIRS: &[&str] = &["_islands"];
+
 fn collect_assets(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
-    crate::walk::walk_files_multi(dir, FINGERPRINTED_EXTENSIONS)
+    let all = crate::walk::walk_files_multi(dir, FINGERPRINTED_EXTENSIONS)?;
+    Ok(all
+        .into_iter()
+        .filter(|path| {
+            !path.components().any(|c| {
+                UNFINGERPRINTED_DIRS
+                    .iter()
+                    .any(|d| c.as_os_str() == std::ffi::OsStr::new(d))
+            })
+        })
+        .collect())
 }
 
 fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
