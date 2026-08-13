@@ -105,6 +105,7 @@ pub fn stage_content_with_template_defaults(
         build_dir,
         template_var_keys,
         None,
+        &[],
     )
 }
 
@@ -159,6 +160,7 @@ pub fn stage_content_with_site_defaults(
     build_dir: &Path,
     template_var_keys: &[String],
     base_url: Option<&str>,
+    locales: &[String],
 ) -> Result<PathBuf, io::Error> {
     // An empty base URL can't produce the absolute permalink rss-gen
     // validates for — treat it as "no base URL, skip injection".
@@ -175,10 +177,118 @@ pub fn stage_content_with_site_defaults(
     // release.
 
     if !template_var_keys.is_empty() {
-        inject_template_defaults_recursive(&staging_dir, template_var_keys)?;
+        inject_template_defaults_recursive(
+            &staging_dir,
+            template_var_keys,
+            base_url,
+            locales,
+        )?;
     }
 
     Ok(staging_dir)
+}
+
+/// Front-matter keys derived from `base_url` and the page's own location.
+///
+/// Two scopes, named so the call site says which one it means:
+///
+/// | Key | Value for `fr/a-propos.md` under `https://example.com/atlas` |
+/// | --- | --- |
+/// | `site_path`   | `/atlas/` |
+/// | `site_url`    | `https://example.com/atlas/` |
+/// | `locale_path` | `/atlas/fr/` |
+/// | `locale_url`  | `https://example.com/atlas/fr/` |
+///
+/// `site_*` addresses the site root, where assets, feeds, the manifest and
+/// the favicon are published — there is exactly one copy of each per site,
+/// regardless of locale. `locale_*` addresses the current locale's root,
+/// where page-to-page links live.
+///
+/// Conflating the two is not hypothetical: the previous hand-maintained
+/// `base_path` / `asset_path` pair carried no scope in either name, and a
+/// French page duly requested `/atlas/fr/styles.css`, which is never
+/// written. `{{site_path}}styles.css` and `{{locale_path}}articles/` both
+/// read correctly at the call site, and `{{locale_path}}styles.css` reads
+/// visibly wrong.
+///
+/// Every value carries a trailing slash so templates concatenate without a
+/// separator. On a single-locale site `locale_*` equals `site_*`, so a theme
+/// can use the locale forms throughout and gain locales later without
+/// editing content.
+///
+/// Author front matter always wins — these are only injected when absent.
+pub(crate) const DERIVED_PATH_KEYS: [&str; 4] =
+    ["site_path", "site_url", "locale_path", "locale_url"];
+
+/// Computes [`DERIVED_PATH_KEYS`] for one staged file.
+///
+/// `staged_rel` is the file's path relative to the staging root, e.g.
+/// `fr/a-propos.md`. A locale is recognised either as a leading directory
+/// (`fr/a-propos.md`) or, for a locale home page, as the whole stem
+/// (`fr.md` — which the nested-index flattening produces and which compiles
+/// to `fr/index.html`).
+fn derive_path_globals(
+    base_url: Option<&str>,
+    staged_rel: &Path,
+    locales: &[String],
+) -> Vec<(String, String)> {
+    let site_url = base_url.map_or_else(
+        || "/".to_string(),
+        |b| format!("{}/", b.trim_end_matches('/')),
+    );
+    let site_path = url_path_component(&site_url);
+
+    let locale = detect_locale(staged_rel, locales);
+    let (locale_url, locale_path) = match locale {
+        Some(l) => (format!("{site_url}{l}/"), format!("{site_path}{l}/")),
+        None => (site_url.clone(), site_path.clone()),
+    };
+
+    // Zipped against the const so the documented key list and the values
+    // actually injected cannot drift apart.
+    DERIVED_PATH_KEYS
+        .into_iter()
+        .map(str::to_string)
+        .zip([site_path, site_url, locale_path, locale_url])
+        .collect()
+}
+
+/// Returns the path component of an absolute URL, with a trailing slash.
+///
+/// `https://example.com/atlas/` yields `/atlas/`; a bare origin, or a value
+/// that is already a path, yields `/`.
+fn url_path_component(url: &str) -> String {
+    let after_scheme = url.split_once("://").map_or(url, |(_, rest)| rest);
+    let path = if url.starts_with('/') {
+        url
+    } else {
+        after_scheme.find('/').map_or("/", |i| &after_scheme[i..])
+    };
+    let trimmed = path.trim_matches('/');
+    if trimmed.is_empty() {
+        "/".to_string()
+    } else {
+        format!("/{trimmed}/")
+    }
+}
+
+/// Identifies which configured locale a staged file belongs to.
+fn detect_locale(staged_rel: &Path, locales: &[String]) -> Option<String> {
+    if locales.len() < 2 {
+        return None;
+    }
+    let mut comps = staged_rel.components();
+    let first = comps.next()?.as_os_str().to_string_lossy().into_owned();
+
+    // `fr/a-propos.md` — locale as a directory.
+    if comps.next().is_some() && locales.contains(&first) {
+        return Some(first);
+    }
+    // `fr.md` — a locale home page, flattened from `fr/index.md`.
+    let stem = Path::new(&first)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())?;
+    locales.contains(&stem).then_some(stem)
 }
 
 /// Recreates the staging directory from scratch so a previous build's
@@ -557,6 +667,8 @@ fn simple_var_name(inner: &str) -> Option<&str> {
 fn inject_template_defaults_recursive(
     dir: &Path,
     keys: &[String],
+    base_url: Option<&str>,
+    locales: &[String],
 ) -> Result<(), io::Error> {
     use rayon::iter::IntoParallelIterator;
     use rayon::iter::ParallelIterator;
@@ -577,7 +689,16 @@ fn inject_template_defaults_recursive(
                 Ok(b) => b,
                 Err(e) => return Some(e),
             };
-            let staged = inject_missing_keys(&body, keys);
+            // Only derive what the templates actually reference: a theme
+            // that never writes `{{site_path}}` pays nothing, and the
+            // skip-write path below stays reachable.
+            let rel = p.strip_prefix(dir).unwrap_or(&p);
+            let derived: Vec<(String, String)> =
+                derive_path_globals(base_url, rel, locales)
+                    .into_iter()
+                    .filter(|(k, _)| keys.iter().any(|want| want == k))
+                    .collect();
+            let staged = inject_missing_keys_with_values(&body, keys, &derived);
             if staged == body {
                 return None;
             }
@@ -612,6 +733,20 @@ fn collect_markdown_files(
 /// block.
 #[must_use]
 pub fn inject_missing_keys(body: &str, keys: &[String]) -> String {
+    inject_missing_keys_with_values(body, keys, &[])
+}
+
+/// As [`inject_missing_keys`], but `derived` supplies real values for the
+/// keys it names instead of the empty-string placeholder.
+///
+/// Author front matter wins: a key already present in the block is left
+/// exactly as written, so a theme can override any derived value — a locale
+/// tree served from a different origin, say — without fighting the default.
+pub fn inject_missing_keys_with_values(
+    body: &str,
+    keys: &[String],
+    derived: &[(String, String)],
+) -> String {
     let trimmed = body.trim_start_matches('\u{FEFF}');
     let Some((_lead, after_open)) = find_opening_fence(trimmed) else {
         return body.to_string();
@@ -622,17 +757,29 @@ pub fn inject_missing_keys(body: &str, keys: &[String]) -> String {
     let block = &after_open[..close_rel];
     let after_block = &after_open[close_rel..];
 
+    let derived_keys: Vec<String> =
+        derived.iter().map(|(k, _)| k.clone()).collect();
     let missing: Vec<&String> = keys
         .iter()
+        .chain(derived_keys.iter())
         .filter(|k| !frontmatter_has_key(block, k))
         .collect();
     if missing.is_empty() {
         return body.to_string();
     }
 
-    let mut additions = String::with_capacity(missing.len() * 16);
+    let mut additions = String::with_capacity(missing.len() * 24);
+    let mut seen: Vec<&str> = Vec::with_capacity(missing.len());
     for k in missing {
-        additions.push_str(&format!("{k}: \"\"\n"));
+        if seen.contains(&k.as_str()) {
+            continue;
+        }
+        seen.push(k.as_str());
+        let value = derived
+            .iter()
+            .find(|(dk, _)| dk == k)
+            .map_or("", |(_, v)| v.as_str());
+        additions.push_str(&format!("{k}: \"{value}\"\n"));
     }
 
     let mut out = String::with_capacity(body.len() + additions.len());
@@ -1047,6 +1194,7 @@ mod tests {
             &build,
             &[],
             Some("https://example.com"),
+            &[],
         )
         .unwrap();
 
@@ -1085,6 +1233,7 @@ mod tests {
             &build,
             &[],
             Some("https://example.com"),
+            &[],
         )
         .unwrap();
         let body = fs::read_to_string(staged.join("custom.md")).unwrap();
@@ -1115,6 +1264,7 @@ mod tests {
             &build,
             &[],
             Some("https://example.com/"),
+            &[],
         )
         .unwrap();
         let body = fs::read_to_string(staged.join("about.md")).unwrap();
@@ -1272,9 +1422,14 @@ mod tests {
         // Empty / whitespace-only base URL disables injection too —
         // rss-gen only accepts absolute URLs, so there is nothing
         // valid to derive.
-        let staged =
-            stage_content_with_site_defaults(&src, &build, &[], Some("   "))
-                .unwrap();
+        let staged = stage_content_with_site_defaults(
+            &src,
+            &build,
+            &[],
+            Some("   "),
+            &[],
+        )
+        .unwrap();
         let body = fs::read_to_string(staged.join("a.md")).unwrap();
         assert!(!body.contains("permalink:"));
     }
@@ -1297,6 +1452,7 @@ mod tests {
             &build,
             &[],
             Some("https://example.com"),
+            &[],
         )
         .unwrap();
         let staged = stage_content_with_site_defaults(
@@ -1304,6 +1460,7 @@ mod tests {
             &build,
             &[],
             Some("https://example.com"),
+            &[],
         )
         .unwrap();
         let body = fs::read_to_string(staged.join("a.md")).unwrap();
@@ -1341,6 +1498,111 @@ mod tests {
         );
     }
 
+    // ── derived path globals ─────────────────────────────────────────
+
+    fn locales() -> Vec<String> {
+        vec!["en".to_string(), "fr".to_string()]
+    }
+
+    fn derived_for(rel: &str, base: Option<&str>) -> Vec<(String, String)> {
+        derive_path_globals(base, Path::new(rel), &locales())
+    }
+
+    fn value_of(pairs: &[(String, String)], key: &str) -> String {
+        pairs
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
+    }
+
+    /// The distinction the old `base_path` / `asset_path` pair failed to
+    /// carry: assets live at the site root regardless of locale, pages do
+    /// not. A French page asking for `/atlas/fr/styles.css` gets a 404,
+    /// because that file is only ever written once, at the site root.
+    #[test]
+    fn derived_paths_separate_site_scope_from_locale_scope() {
+        let d =
+            derived_for("fr/a-propos.md", Some("https://example.com/atlas"));
+
+        assert_eq!(value_of(&d, "site_path"), "/atlas/");
+        assert_eq!(value_of(&d, "site_url"), "https://example.com/atlas/");
+        assert_eq!(value_of(&d, "locale_path"), "/atlas/fr/");
+        assert_eq!(value_of(&d, "locale_url"), "https://example.com/atlas/fr/");
+    }
+
+    /// A locale home page is staged as `fr.md` by the nested-index
+    /// flattening, and still belongs to `fr`.
+    #[test]
+    fn derived_paths_recognise_a_flattened_locale_home_page() {
+        let d = derived_for("fr.md", Some("https://example.com/atlas"));
+        assert_eq!(value_of(&d, "locale_path"), "/atlas/fr/");
+    }
+
+    /// Default-locale pages live at the site root, so the two scopes
+    /// coincide — a theme can use the locale forms throughout.
+    #[test]
+    fn derived_paths_collapse_for_the_root_hosted_default_locale() {
+        let d = derived_for("about.md", Some("https://example.com/atlas"));
+        assert_eq!(value_of(&d, "locale_path"), value_of(&d, "site_path"));
+        assert_eq!(value_of(&d, "locale_url"), value_of(&d, "site_url"));
+    }
+
+    /// A single-locale site never sees a locale segment, even if a
+    /// directory happens to share a locale's name.
+    #[test]
+    fn derived_paths_ignore_locales_when_only_one_is_configured() {
+        let d = derive_path_globals(
+            Some("https://example.com"),
+            Path::new("fr/a-propos.md"),
+            &["en".to_string()],
+        );
+        assert_eq!(value_of(&d, "locale_path"), "/");
+    }
+
+    /// A site at the domain root, and a build with no `base_url` at all,
+    /// both yield usable root-relative values rather than `//`.
+    #[test]
+    fn derived_paths_handle_the_domain_root_and_a_missing_base_url() {
+        let root = derived_for("about.md", Some("https://example.com"));
+        assert_eq!(value_of(&root, "site_path"), "/");
+        assert_eq!(value_of(&root, "site_url"), "https://example.com/");
+
+        let none = derived_for("about.md", None);
+        assert_eq!(value_of(&none, "site_path"), "/");
+        assert_eq!(value_of(&none, "site_url"), "/");
+    }
+
+    /// Trailing slashes are guaranteed so templates concatenate directly.
+    #[test]
+    fn derived_paths_always_end_in_a_slash() {
+        for base in [
+            Some("https://example.com/atlas/"),
+            Some("https://example.com/atlas"),
+        ] {
+            for (key, value) in derived_for("fr/x.md", base) {
+                assert!(value.ends_with('/'), "{key} = {value:?}");
+            }
+        }
+    }
+
+    /// Author front matter wins: a page that declares its own value keeps
+    /// it, so a locale served from another origin stays overridable.
+    #[test]
+    fn author_front_matter_overrides_a_derived_value() {
+        let body = "---\nlocale_path: \"/custom/\"\n---\nbody\n";
+        let out = inject_missing_keys_with_values(
+            body,
+            &["locale_path".to_string()],
+            &[("locale_path".to_string(), "/atlas/fr/".to_string())],
+        );
+        assert!(out.contains("/custom/"), "{out}");
+        assert!(
+            !out.contains("/atlas/fr/"),
+            "derived value overrode the author: {out}"
+        );
+    }
+
     #[test]
     fn inject_template_defaults_recursive_skips_write_when_no_keys_missing() {
         // Covers the `if staged == body { return None; }` skip-write
@@ -1358,6 +1620,8 @@ mod tests {
         inject_template_defaults_recursive(
             &dir,
             &["title".to_string(), "author".to_string()],
+            None,
+            &[],
         )
         .unwrap();
 
@@ -1426,7 +1690,8 @@ mod tests {
         let staging = staging_root_for("content", &build);
         fs::write(&staging, "blocker").unwrap();
 
-        let res = stage_content_with_site_defaults(&src, &build, &[], None);
+        let res =
+            stage_content_with_site_defaults(&src, &build, &[], None, &[]);
         let _ = fs::remove_file(&staging);
         assert!(res.is_err());
     }
@@ -1620,8 +1885,13 @@ mod tests {
         fs::create_dir_all(dir.join("blog")).unwrap();
         fs::write(dir.join("blog/a.md"), "---\ntitle: A\n---\nx").unwrap();
 
-        inject_template_defaults_recursive(&dir, &["author".to_string()])
-            .unwrap();
+        inject_template_defaults_recursive(
+            &dir,
+            &["author".to_string()],
+            None,
+            &[],
+        )
+        .unwrap();
 
         let body = fs::read_to_string(dir.join("blog/a.md")).unwrap();
         assert!(body.contains("author:"));
@@ -1635,7 +1905,12 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("bad.md"), [0xFF, 0xFE]).unwrap();
 
-        let res = inject_template_defaults_recursive(&dir, &["k".to_string()]);
+        let res = inject_template_defaults_recursive(
+            &dir,
+            &["k".to_string()],
+            None,
+            &[],
+        );
         assert!(res.is_err());
     }
 
@@ -1649,7 +1924,12 @@ mod tests {
         fs::create_dir_all(&sub).unwrap();
         fs::set_permissions(&sub, fs::Permissions::from_mode(0o000)).unwrap();
 
-        let res = inject_template_defaults_recursive(&dir, &["k".to_string()]);
+        let res = inject_template_defaults_recursive(
+            &dir,
+            &["k".to_string()],
+            None,
+            &[],
+        );
 
         let _ = fs::set_permissions(&sub, fs::Permissions::from_mode(0o755));
         assert!(res.err().is_none_or(|e| !format!("{e}").is_empty()));
@@ -1745,6 +2025,7 @@ mod tests {
             &build,
             &["title".to_string()],
             None,
+            &[],
         )
         .expect_err("failpoint must abort the staging pass");
         assert!(format!("{err}").contains("inject-defaults"));

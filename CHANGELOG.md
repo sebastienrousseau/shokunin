@@ -77,6 +77,25 @@ translated slugs.
   matter, read from the sidecars; the locale matrix inverts from
   `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
   key keep path matching, so existing sites are unaffected.
+- **Derived path globals** (`src/core/content_stager.rs`). Templates can
+  reference `{{site_path}}`, `{{site_url}}`, `{{locale_path}}` and
+  `{{locale_url}}`; the stager derives each from `base_url` and the page's
+  own location, so pages no longer hand-maintain them. Two scopes, named at
+  the call site: `site_*` addresses the site root, where assets, feeds, the
+  manifest and the favicon are published once regardless of locale;
+  `locale_*` addresses the current locale's root, where page links live.
+
+  Conflating them is not hypothetical — a hand-maintained pair carrying no
+  scope in either name had French pages requesting `/atlas/fr/styles.css`,
+  which is never written. `{{site_path}}styles.css` and
+  `{{locale_path}}articles/` both read correctly;
+  `{{locale_path}}styles.css` reads visibly wrong.
+
+  Values are injected only when a template actually references them, and
+  author front matter always wins. On a single-locale site `locale_*` equals
+  `site_*`, so a theme can use the locale forms throughout and gain locales
+  later without editing content. Removed 60 hand-maintained fields and 20
+  hardcoded permalinks from the reference themes.
 - **Theme compatibility is enforced** (`src/core/theme_manifest.rs`). A theme
   declares the oldest generator it works with — `min_version` in
   `theme.toml`, or `min_ssg_version` in `theme.json` — and nothing read it.

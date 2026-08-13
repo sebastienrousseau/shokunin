@@ -550,12 +550,19 @@ pub fn execute_build_pipeline_with(
         // mirroring how the postprocess plugins source `base_url` from
         // the plugin context's config.
         let base_url = ctx.config.as_ref().map(|c| c.base_url.clone());
-        compile_site_with_base_url(
+        let locales = ctx
+            .config
+            .as_ref()
+            .and_then(|c| c.i18n.as_ref())
+            .map(|i| i.locales.clone())
+            .unwrap_or_default();
+        compile_site_with_locales(
             build_dir,
             content_dir,
             site_dir,
             template_dir,
             base_url.as_deref(),
+            &locales,
         )?;
     }
 
@@ -705,6 +712,29 @@ pub fn compile_site_with_base_url(
     template_dir: &Path,
     base_url: Option<&str>,
 ) -> Result<(), SsgError> {
+    compile_site_with_locales(
+        build_dir,
+        content_dir,
+        site_dir,
+        template_dir,
+        base_url,
+        &[],
+    )
+}
+
+/// As [`compile_site_with_base_url`], plus the configured locales so the
+/// content stager can derive `locale_path` / `locale_url` per page.
+///
+/// Separate from the public entry point so that signature stays stable for
+/// embedders; the pipeline itself always calls this one.
+pub fn compile_site_with_locales(
+    build_dir: &Path,
+    content_dir: &Path,
+    site_dir: &Path,
+    template_dir: &Path,
+    base_url: Option<&str>,
+    locales: &[String],
+) -> Result<(), SsgError> {
     // v0.0.46: `staticdatagen 0.0.10` (closes upstream #67, #68, #69,
     // #70, #71) handles missing layout keys, absent aux files
     // (`main.js`/`sw.js`), absent tags-page templates, nested locale
@@ -742,6 +772,7 @@ pub fn compile_site_with_base_url(
             build_dir,
             &template_vars,
             base_url,
+            &locales,
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
