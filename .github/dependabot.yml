@@ -60,3 +60,7 @@ updates:
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "chore(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
