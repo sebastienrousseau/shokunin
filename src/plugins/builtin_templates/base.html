@@ -29,6 +29,15 @@
       font: inherit; text-decoration: none;
     }
     :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+    /* A standalone link in a list is a target in its own right, so WCAG
+       2.5.8's exception for links inside a sentence does not apply to it.
+       At default styling these rows are about 19px tall and fail the 24x24
+       minimum, so give every list link a real box. */
+    nav a, li a {
+      display: inline-flex; align-items: center;
+      min-height: 24px; padding: 0.25rem 0;
+    }
+    li { margin-block: 0.25rem; }
   </style>
 </head>
 <body>
@@ -38,7 +47,7 @@
   {% block header %}
   <header role="banner">
     <nav aria-label="Main navigation">
-      <a href="/">{{ site.name | default('Home') }}</a>
+      <a href="{{ url_prefix | safe }}/">{{ site.name | default('Home') }}</a>
     </nav>
   </header>
   {% endblock %}
