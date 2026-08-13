@@ -46,6 +46,20 @@ translated slugs.
   the domain root. On a GitHub Pages project site the whole stylesheet was
   lost. The prefix now derives from `base_url`'s path component; sites at the
   domain root are unaffected.
+- **Markdown tables broke reflow on every phone width**
+  (`src/plugins/postprocess/html_fix.rs`). A table cannot reflow — its
+  columns have a minimum width — so a five-column Markdown table pushed the
+  document to 588px inside a 320px viewport, failing WCAG 1.4.10. Tables are
+  now wrapped in a focusable, labelled scroll container, which is the
+  accepted remedy. Applied in the generator because Markdown-generated
+  tables have no wrapper a theme could style.
+- **The injected search trigger sat on top of theme header controls**
+  (`src/plugins/search.rs`). It is pinned to the top-right, which is exactly
+  where a themed site puts its own controls; measured across a 13-viewport
+  matrix it overlapped the navigation toggle, the theme toggle and the
+  language switcher at every phone width, so a tap landed on whichever won
+  the z-order. Below 48rem it now sits as a 44px circle in the bottom
+  corner — the conventional mobile affordance, and out of the header's way.
 - **Markdown table alignment emitted obsolete `align` attributes**
   (`src/plugins/postprocess/html_fix.rs`,
   [#618](https://github.com/sebastienrousseau/static-site-generator/issues/618)).

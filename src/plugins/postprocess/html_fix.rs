@@ -77,7 +77,52 @@ fn apply_html_fixes(html: &str) -> String {
         modified = replace_table_align_attrs(&modified);
     }
 
+    if modified.contains("<table") {
+        modified = wrap_tables_for_reflow(&modified);
+    }
+
     modified
+}
+
+/// Wraps every `<table>` in a horizontally scrollable container.
+///
+/// A table is the one element that legitimately cannot reflow: its columns
+/// have a minimum width, and below that the table pushes the document
+/// wider than the viewport. That is a WCAG 1.4.10 (Reflow) failure, and it
+/// is what a Markdown table does on a phone — measured at 320px, a
+/// five-column table made the document 588px wide.
+///
+/// Scrolling *inside* a container is the accepted fix, so the table gets
+/// its own scroll context and the page stops scrolling sideways. Applied
+/// here rather than in a theme because Markdown-generated tables have no
+/// wrapper to style: only a post-process pass can reach them.
+///
+/// `role="region"` plus a label makes the scrollable area focusable and
+/// announced, which is what lets a keyboard user reach the overflowed
+/// columns at all.
+fn wrap_tables_for_reflow(html: &str) -> String {
+    use lol_html::html_content::ContentType;
+
+    let already = "ssg-table-scroll";
+    if html.contains(already) {
+        return html.to_string();
+    }
+
+    rewrite_html(
+        html,
+        vec![element!("table", move |el| {
+            el.before(
+                &format!(
+                    "<div class=\"table-wrap {already}\" role=\"region\" \
+                     aria-label=\"Table, scrollable horizontally\" tabindex=\"0\">"
+                ),
+                ContentType::Html,
+            );
+            el.after("</div>", ContentType::Html);
+            Ok(())
+        })],
+    )
+    .unwrap_or_else(|_| html.to_string())
 }
 
 /// Replaces the obsolete presentational `align` attribute on table cells
