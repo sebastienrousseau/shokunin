@@ -53,6 +53,11 @@ translated slugs.
   now wrapped in a focusable, labelled scroll container, which is the
   accepted remedy. Applied in the generator because Markdown-generated
   tables have no wrapper a theme could style.
+- **Generated taxonomy pages had no skip link** and no focus styling
+  (`src/plugins/builtin_templates/base.html`). Every authored page opened
+  with one; the generated ones dropped a keyboard user straight into the
+  navigation. These pages link no theme stylesheet, so the link carries its
+  own rules, using system colours so it survives forced-colours mode.
 - **The injected search trigger sat on top of theme header controls**
   (`src/plugins/search.rs`). It is pinned to the top-right, which is exactly
   where a themed site puts its own controls; measured across a 13-viewport

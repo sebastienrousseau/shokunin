@@ -19,8 +19,22 @@
   {% if site.og_image %}<meta property="og:image" content="{{ site.og_image | safe }}">{% endif %}
   <meta name="twitter:card" content="summary">
   {% block head_extra %}{% endblock %}
+  <style>
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem;
+      display: inline-flex; align-items: center; min-height: 2.75rem;
+      padding: 0.6rem 1rem; border-radius: 8px;
+      background: Canvas; color: CanvasText; border: 2px solid CanvasText;
+      font: inherit; text-decoration: none;
+    }
+    :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+  </style>
 </head>
 <body>
+  <!-- Generated pages get the same first tab stop as authored ones; without
+       it a keyboard user lands in the navigation on every taxonomy page. -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   {% block header %}
   <header role="banner">
     <nav aria-label="Main navigation">
