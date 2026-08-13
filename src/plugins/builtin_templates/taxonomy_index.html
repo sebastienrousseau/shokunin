@@ -10,7 +10,7 @@
   </header>
   <ul class="taxonomy-term-list">
     {% for entry in terms %}
-    <li><a href="/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.name }}</a> ({{ entry.count }})</li>
+    <li><a href="{{ url_prefix | safe }}/{{ taxonomy_name }}/{{ entry.slug }}/">{{ entry.name }}</a> ({{ entry.count }})</li>
     {% endfor %}
   </ul>
 </article>

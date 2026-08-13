@@ -77,6 +77,22 @@ translated slugs.
   matter, read from the sidecars; the locale matrix inverts from
   `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
   key keep path matching, so existing sites are unaffected.
+- **Taxonomy pages work for the first time** (`src/plugins/taxonomy.rs`).
+  `resolve_user_template_dir` fell back to `<template_dir>` itself when no
+  `tera/` existed, so MiniJinja was handed the theme's StaticWeaver
+  `base.html` and aborted the **whole build** with
+  `syntax error: unexpected character (in base.html:26)`, attributed to
+  `tag.html` — a file the author never wrote. Taxonomy was therefore
+  unusable for any theme using the default page-layout engine. User
+  templates now come from `tera/` only; a theme without one gets the
+  built-in fallbacks and a site that builds.
+
+  Three further fixes on top: term-page URLs and the index's term links are
+  prefixed from `base_url`, so they resolve on a sub-path deployment rather
+  than 404ing; the built-in base template emits a Content-Security-Policy,
+  which generated pages previously lacked while every authored page had one;
+  and the index's term links are marked `| safe`, since autoescape was
+  rendering `/` as `&#x2f;`.
 - **Derived path globals** (`src/core/content_stager.rs`). Templates can
   reference `{{site_path}}`, `{{site_url}}`, `{{locale_path}}` and
   `{{locale_url}}`; the stager derives each from `base_url` and the page's

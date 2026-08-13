@@ -136,8 +136,11 @@ impl Plugin for TaxonomyPlugin {
             return Ok(());
         }
 
+        let url_prefix = ctx.config.as_ref().map_or_else(String::new, |c| {
+            crate::plugins_group::csp::base_url_path_prefix(&c.base_url)
+        });
         let (tags, categories, topics) =
-            collect_taxonomy_entries(&sidecar_dir, &ctx.site_dir)?;
+            collect_taxonomy_entries(&sidecar_dir, &ctx.site_dir, &url_prefix)?;
 
         // Lazily build the template engine once per run; reused across
         // tags, categories, and topics.
@@ -436,6 +439,12 @@ impl<'a> TaxonomyRenderer<'a> {
     /// Builds the `{ site: { name, title, language, ... } }` context
     /// shared by every taxonomy page.
     fn base_context(&self) -> serde_json::Map<String, serde_json::Value> {
+        // Same sub-path prefix the term-page URLs use, so the index links
+        // to pages that actually exist on a project-site deployment.
+        let url_prefix =
+            self.ctx.config.as_ref().map_or_else(String::new, |c| {
+                crate::plugins_group::csp::base_url_path_prefix(&c.base_url)
+            });
         let mut site = serde_json::Map::new();
         if let Some(cfg) = self.ctx.config.as_ref() {
             let _ = site.insert(
@@ -478,6 +487,8 @@ impl<'a> TaxonomyRenderer<'a> {
         let mut ctx_map = serde_json::Map::new();
         let _ =
             ctx_map.insert("site".to_string(), serde_json::Value::Object(site));
+        let _ =
+            ctx_map.insert("url_prefix".to_string(), url_prefix.clone().into());
         ctx_map
     }
 }
@@ -601,14 +612,21 @@ impl<'a> TaxonomyRenderer<'a> {
 /// `<template_dir>/` if `tera/` is absent.
 #[cfg(feature = "templates")]
 fn resolve_user_template_dir(ctx: &PluginContext) -> Option<PathBuf> {
+    // Only `<template_dir>/tera`, never `<template_dir>` itself.
+    //
+    // Taxonomy pages render through MiniJinja, but page layouts render
+    // through StaticWeaver — two engines, and historically one directory.
+    // Falling back to the layouts directory therefore fed a StaticWeaver
+    // `base.html` to MiniJinja, which failed to parse it and aborted the
+    // *whole build* with `syntax error: unexpected character (in
+    // base.html:26)` while naming `tag.html`, a file the author never
+    // wrote. Taxonomy was unusable for any theme using the default engine.
+    //
+    // `tera/` is the documented home for MiniJinja templates. A theme that
+    // wants to restyle its taxonomy pages puts them there; a theme that
+    // does not gets the built-in fallbacks and a site that builds.
     let tera = ctx.template_dir.join("tera");
-    if tera.is_dir() {
-        return Some(tera);
-    }
-    if ctx.template_dir.is_dir() {
-        return Some(ctx.template_dir.clone());
-    }
-    None
+    tera.is_dir().then_some(tera)
 }
 
 /// Converts a list of (title, url) pairs into JSON page objects with
@@ -676,6 +694,7 @@ fn extract_terms_from_value(
 fn collect_taxonomy_entries(
     sidecar_dir: &Path,
     site_dir: &Path,
+    url_prefix: &str,
 ) -> Result<(TaxonomyMap, TaxonomyMap, TaxonomyMap), SsgError> {
     let sidecars = collect_json_files(sidecar_dir)?;
     let mut tags: TaxonomyMap = HashMap::new();
@@ -703,10 +722,14 @@ fn collect_taxonomy_entries(
             .with_extension("")
             .with_extension("");
         let stem = rel_stem.to_string_lossy().replace('\\', "/");
+        // Prefixed from `base_url`, like the extracted `_csp/` assets and
+        // the islands loader: a site published under a sub-path resolves a
+        // bare `/articles/` against the domain root, so every link on every
+        // taxonomy page would 404.
         let url = if site_dir.join(&rel_stem).join("index.html").exists() {
-            format!("/{stem}/")
+            format!("{url_prefix}/{stem}/")
         } else {
-            format!("/{stem}.html")
+            format!("{url_prefix}/{stem}.html")
         };
 
         // Both the array (`tags: [a, b]`) and comma-separated string
@@ -1460,6 +1483,37 @@ mod tests {
     // collect_json_files — recursion + filtering
     // -------------------------------------------------------------------
 
+    /// Regression: a theme whose page layouts are StaticWeaver (the
+    /// default engine) put a `base.html` in `template_dir` that MiniJinja
+    /// cannot parse. Falling back to that directory aborted the entire
+    /// build with `syntax error: unexpected character (in base.html:26)`,
+    /// attributed to `tag.html` — a file the author never wrote.
+    #[test]
+    fn user_templates_come_only_from_the_tera_subdirectory() {
+        let dir = tempdir().expect("tempdir");
+        let templates = dir.path().join("templates");
+        fs::create_dir_all(&templates).unwrap();
+        // A StaticWeaver layout, which is not valid MiniJinja.
+        fs::write(
+            templates.join("base.html"),
+            "{{#extends \"base\"}}{{#block \"main\"}}{{!content}}{{/block}}",
+        )
+        .unwrap();
+
+        let ctx =
+            PluginContext::new(dir.path(), dir.path(), dir.path(), &templates);
+        assert_eq!(
+            resolve_user_template_dir(&ctx),
+            None,
+            "layouts dir must not be offered to MiniJinja"
+        );
+
+        // A real `tera/` directory is still honoured.
+        let tera = templates.join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        assert_eq!(resolve_user_template_dir(&ctx), Some(tera));
+    }
+
     #[test]
     fn collect_json_files_returns_empty_for_missing_directory() {
         let dir = tempdir().expect("tempdir");
@@ -1782,11 +1836,14 @@ mod tests {
             r#"{"title": "A", "tags": ["rust"]}"#,
         )
         .unwrap();
-        fs::write(
-            tmp.path().join("tag.html"),
-            "{% extends \"missing.html\" %}",
-        )
-        .unwrap();
+        // User templates now live in `tera/` only — a StaticWeaver
+        // layout sitting in the flat template dir must never reach
+        // MiniJinja. The intent of this test is unchanged: a *user*
+        // template whose parent is missing still fails the render.
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
+        fs::write(tera.join("tag.html"), "{% extends \"missing.html\" %}")
+            .unwrap();
 
         let err = TaxonomyPlugin.after_compile(&ctx).unwrap_err();
         assert!(!format!("{err}").is_empty());
@@ -1801,8 +1858,14 @@ mod tests {
             r#"{"title": "A", "tags": ["rust"]}"#,
         )
         .unwrap();
+        // User templates now live in `tera/` only — a StaticWeaver
+        // layout sitting in the flat template dir must never reach
+        // MiniJinja. The intent of this test is unchanged: a *user*
+        // template whose parent is missing still fails the render.
+        let tera = tmp.path().join("tera");
+        fs::create_dir_all(&tera).unwrap();
         fs::write(
-            tmp.path().join("taxonomy_index.html"),
+            tera.join("taxonomy_index.html"),
             "{% extends \"missing.html\" %}",
         )
         .unwrap();
