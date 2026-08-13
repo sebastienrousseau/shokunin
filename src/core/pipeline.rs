@@ -772,7 +772,7 @@ pub fn compile_site_with_locales(
             build_dir,
             &template_vars,
             base_url,
-            &locales,
+            locales,
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 

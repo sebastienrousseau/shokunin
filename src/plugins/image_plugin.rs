@@ -754,6 +754,7 @@ mod tests {
         assert!(encode_avif(&img, 100).is_ok());
     }
 
+    #[cfg(feature = "test-fault-injection")]
     #[test]
     #[serial_test::serial(image_encode_avif_failpoint)]
     fn encode_avif_injected_failure_returns_err() {
@@ -1494,6 +1495,7 @@ mod tests {
         assert!(entry.avif_variants.is_empty());
     }
 
+    #[cfg(feature = "test-fault-injection")]
     #[test]
     #[serial_test::serial(image_encode_avif_failpoint)]
     fn process_image_avif_encode_failure_logs_and_skips_variant() {

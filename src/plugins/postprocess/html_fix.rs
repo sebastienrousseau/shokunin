@@ -77,11 +77,46 @@ fn apply_html_fixes(html: &str) -> String {
         modified = replace_table_align_attrs(&modified);
     }
 
+    if modified.contains("<th") {
+        modified = add_table_header_scope(&modified);
+    }
+
     if modified.contains("<table") {
         modified = wrap_tables_for_reflow(&modified);
     }
 
     modified
+}
+
+/// Gives every `<th>` a `scope`.
+///
+/// Markdown emits bare `<th>` elements. Without `scope`, a screen reader
+/// has to guess which cells a header governs, and on anything wider than
+/// two columns it guesses wrong — WCAG 1.3.1, technique H63.
+///
+/// A header inside `<thead>` labels its column; one inside `<tbody>` is a
+/// row header, which is the shape Markdown produces for a leading label
+/// column. An author-supplied `scope` is never overwritten.
+fn add_table_header_scope(html: &str) -> String {
+    rewrite_html(
+        html,
+        vec![
+            element!("thead th:not([scope])", |el| {
+                el.set_attribute("scope", "col")?;
+                Ok(())
+            }),
+            element!("tbody th:not([scope])", |el| {
+                el.set_attribute("scope", "row")?;
+                Ok(())
+            }),
+            // A `<th>` in neither section still governs its column.
+            element!("table > tr th:not([scope])", |el| {
+                el.set_attribute("scope", "col")?;
+                Ok(())
+            }),
+        ],
+    )
+    .unwrap_or_else(|_| html.to_string())
 }
 
 /// Wraps every `<table>` in a horizontally scrollable container.
@@ -540,6 +575,47 @@ mod tests {
             "not wired into the pipeline: {out}"
         );
         assert!(out.contains("text-right"), "{out}");
+    }
+
+    /// Markdown emits bare `<th>`. Without `scope` a screen reader guesses
+    /// which cells a header governs, and gets it wrong on anything wider
+    /// than two columns (WCAG 1.3.1, technique H63).
+    #[test]
+    fn table_headers_gain_a_scope() {
+        let out = add_table_header_scope(concat!(
+            "<table><thead><tr><th>Plan</th></tr></thead>",
+            "<tbody><tr><th>Starter</th><td>Free</td></tr></tbody></table>",
+        ));
+        assert!(out.contains(r#"<th scope="col">Plan"#), "{out}");
+        assert!(out.contains(r#"<th scope="row">Starter"#), "{out}");
+    }
+
+    /// An author who scoped a header deliberately keeps their value.
+    #[test]
+    fn table_header_scope_does_not_overwrite_an_author_value() {
+        let out = add_table_header_scope(
+            r#"<table><thead><tr><th scope="rowgroup">X</th></tr></thead></table>"#,
+        );
+        assert!(out.contains(r#"scope="rowgroup""#), "{out}");
+        assert_eq!(out.matches("scope=").count(), 1, "{out}");
+    }
+
+    /// The wrapper is what stops a table widening the page; it must be
+    /// reachable by keyboard, or the overflowed columns are unreachable.
+    #[test]
+    fn tables_are_wrapped_in_a_focusable_scroll_region() {
+        let out = wrap_tables_for_reflow("<table><tr><td>x</td></tr></table>");
+        assert!(out.contains("table-wrap"), "{out}");
+        assert!(out.contains(r#"role="region""#), "{out}");
+        assert!(out.contains(r#"tabindex="0""#), "{out}");
+        assert!(out.contains("aria-label"), "{out}");
+    }
+
+    /// Wrapping twice would nest scroll containers on a rebuild.
+    #[test]
+    fn table_wrapping_is_idempotent() {
+        let once = wrap_tables_for_reflow("<table><tr><td>x</td></tr></table>");
+        assert_eq!(wrap_tables_for_reflow(&once), once);
     }
 
     /// Regression for #618: Markdown column-alignment syntax rendered
