@@ -461,6 +461,20 @@ pub trait Plugin: fmt::Debug + Send + Sync {
         false
     }
 
+    /// Returns `true` if this plugin's `after_compile` work must run
+    /// *after* the fused transform pass rather than before it.
+    ///
+    /// Every `after_compile` hook normally runs before any
+    /// `transform_html`, which is wrong for anything that rewrites final
+    /// markup. Minification is the case that matters: it strips HTML
+    /// comments, so running it first destroyed the
+    /// `<!-- ssg:lang-switcher -->` marker before the i18n plugin's
+    /// transform could replace it, and the language switcher silently
+    /// vanished from every page the minifier reached.
+    fn runs_after_transforms(&self) -> bool {
+        false
+    }
+
     /// Returns `true` if this plugin must always observe the full
     /// `cache.html_files()` list — even during `--incremental`
     /// rebuilds that only invalidated a handful of pages.
@@ -654,6 +668,25 @@ impl PluginManager {
         ctx: &PluginContext,
     ) -> Result<(), SsgError> {
         for plugin in &self.plugins {
+            if plugin.runs_after_transforms() {
+                continue;
+            }
+            plugin.after_compile(ctx)?;
+        }
+        Ok(())
+    }
+
+    /// Runs `after_compile` for the plugins that opted into
+    /// [`Plugin::runs_after_transforms`], once the fused transform pass
+    /// has produced final markup.
+    pub fn run_after_transforms(
+        &self,
+        ctx: &PluginContext,
+    ) -> Result<(), SsgError> {
+        for plugin in &self.plugins {
+            if !plugin.runs_after_transforms() {
+                continue;
+            }
             plugin.after_compile(ctx)?;
         }
         Ok(())

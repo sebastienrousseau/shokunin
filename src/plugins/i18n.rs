@@ -1004,7 +1004,9 @@ fn inject_lang_switcher(
     strategy: &UrlPrefixStrategy,
     root_locale: Option<&str>,
 ) -> String {
-    if !html.contains(LANG_SWITCHER_MARKER) {
+    let has_comment = html.contains(LANG_SWITCHER_MARKER);
+    let element = find_lang_switcher_element(html);
+    if !has_comment && element.is_none() {
         return html.to_string();
     }
     let switcher = generate_lang_switcher_html_with_self_lang(
@@ -1015,12 +1017,63 @@ fn inject_lang_switcher(
         strategy,
         root_locale,
     );
-    html.replace(LANG_SWITCHER_MARKER, &switcher)
+    let out = if let Some((start, end)) = element {
+        let mut s = String::with_capacity(html.len() + switcher.len());
+        s.push_str(&html[..start]);
+        s.push_str(&switcher);
+        s.push_str(&html[end..]);
+        s
+    } else {
+        html.to_string()
+    };
+    out.replace(LANG_SWITCHER_MARKER, &switcher)
 }
 
 /// Marker comment embedded in templates where the language switcher
 /// should be injected. Kept invisible in single-locale sites.
+///
+/// Prefer the element form below. HTML minifiers strip comments, and
+/// `html-generator` minifies some pages during generation — before any
+/// plugin runs — so a comment marker on those pages is gone by the time
+/// this plugin looks for it. That is not a hypothetical: it silently
+/// removed the language switcher from every minified page.
 const LANG_SWITCHER_MARKER: &str = "<!-- ssg:lang-switcher -->";
+
+/// Attribute that marks an element as the language-switcher placeholder.
+/// Survives minification, because a minifier may reformat an element but
+/// will not delete it.
+const LANG_SWITCHER_ATTR: &str = "data-ssg-lang-switcher";
+
+/// Finds the placeholder element carrying [`LANG_SWITCHER_ATTR`] and
+/// returns its byte range, including the closing tag.
+///
+/// Deliberately not a regex: this crate has no regex dependency, and the
+/// shape being matched is a single empty element, not a grammar.
+fn find_lang_switcher_element(html: &str) -> Option<(usize, usize)> {
+    let attr_at = html.find(LANG_SWITCHER_ATTR)?;
+    // Walk back to the '<' that opens this element.
+    let start = html[..attr_at].rfind('<')?;
+    let name_start = start + 1;
+    let name_end = html[name_start..]
+        .find(|c: char| !c.is_ascii_alphanumeric())
+        .map(|i| name_start + i)?;
+    let name = &html[name_start..name_end];
+    if name.is_empty() {
+        return None;
+    }
+    // The attribute must belong to this tag, not to a later one.
+    let open_end = html[start..].find('>')? + start + 1;
+    if attr_at > open_end {
+        return None;
+    }
+    let close = format!("</{name}>");
+    let close_at = html[open_end..].find(&close)? + open_end;
+    // Only an *empty* placeholder is replaced; anything else is content.
+    if !html[open_end..close_at].trim().is_empty() {
+        return None;
+    }
+    Some((start, close_at + close.len()))
+}
 
 /// Build the hreflang `<link>` block for a single page.
 ///
@@ -2927,6 +2980,53 @@ mod tests {
     }
 
     // ── inject_lang_switcher (replace marker path) ──────────────────
+
+    /// html-generator minifies some pages during generation, before any
+    /// plugin runs, and minification strips comments — so the comment
+    /// marker was gone by the time the switcher was injected, and the
+    /// switcher silently vanished from every minified page. The element
+    /// form survives.
+    #[test]
+    fn lang_switcher_element_marker_is_found_and_replaced() {
+        let html =
+            r#"<html><body><div data-ssg-lang-switcher></div></body></html>"#;
+        let found = find_lang_switcher_element(html).expect("element found");
+        assert_eq!(
+            &html[found.0..found.1],
+            "<div data-ssg-lang-switcher></div>"
+        );
+    }
+
+    /// Minifiers reformat attributes and drop whitespace; the marker has
+    /// to survive both.
+    #[test]
+    fn lang_switcher_element_marker_survives_reformatting() {
+        for html in [
+            r#"<nav data-ssg-lang-switcher></nav>"#,
+            r#"<div class=x data-ssg-lang-switcher ></div>"#,
+            "<div data-ssg-lang-switcher>\n  </div>",
+        ] {
+            assert!(
+                find_lang_switcher_element(html).is_some(),
+                "should match: {html}"
+            );
+        }
+    }
+
+    /// A non-empty element is content, not a placeholder — replacing it
+    /// would destroy the author's markup.
+    #[test]
+    fn lang_switcher_element_marker_ignores_non_empty_elements() {
+        let html = r#"<div data-ssg-lang-switcher>keep me</div>"#;
+        assert!(find_lang_switcher_element(html).is_none());
+    }
+
+    /// The attribute must belong to the tag it was found inside.
+    #[test]
+    fn lang_switcher_element_marker_ignores_a_bare_mention() {
+        let html = "<p>use data-ssg-lang-switcher in your template</p>";
+        assert!(find_lang_switcher_element(html).is_none());
+    }
 
     #[test]
     fn inject_lang_switcher_replaces_marker_when_present() {

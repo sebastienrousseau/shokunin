@@ -576,6 +576,12 @@ pub fn execute_build_pipeline_with(
     // transform plugins → write once. Eliminates redundant I/O.
     plugins.run_fused_transforms(&ctx)?;
 
+    // Minification and anything else that must see final markup. Its own
+    // registration comment has always said "must be last content
+    // transform"; running it in the normal `after_compile` phase put it
+    // first instead.
+    plugins.run_after_transforms(&ctx)?;
+
     // Rebuild the dep graph from scratch on a successful compile so
     // the next `--incremental` invocation sees a consistent snapshot.
     let mut new_graph = crate::depgraph::DepGraph::new();
