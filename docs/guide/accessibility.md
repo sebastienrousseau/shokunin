@@ -56,32 +56,25 @@ Issues include:
 - **severity** — `"error"` or `"warning"`
 - **message** — human-readable description
 
-## pa11y CI Integration
+## axe-core CI Integration
 
-SSG includes a `make a11y` target that runs [pa11y](https://pa11y.org/) against the generated site for more comprehensive accessibility auditing.
+SSG includes a `make a11y` target that runs [axe-core](https://github.com/dequelabs/axe-core)
+against the generated site for more comprehensive accessibility auditing.
 
-The CI workflow (`.github/workflows/`) runs pa11y on every push:
+`scheduled.yml` runs the same audit weekly:
 
-1. Builds the example site with `cargo run`
-2. Starts the dev server
-3. Runs pa11y against all pages
-4. Fails the build if any WCAG 2.2 AA violations are found
+1. Builds the example site
+2. Serves it over HTTP
+3. Runs axe-core against the root page and every top-level section
 
-### Running Locally
-
-```sh
-# Build the example site
-ssg -c content -o public -t templates
-
-# Run pa11y (requires Node.js)
-npx pa11y-ci --config .pa11yci.json
-```
-
-Or use the Makefile:
-
-```sh
+```bash
+# Run the audit locally (requires Node.js)
 make a11y
 ```
+
+This replaced pa11y, whose Puppeteer-based browser stack was the source of
+several unpatched high-severity advisories. The axe-core audit also checks
+colour contrast, which the pa11y configuration had suppressed.
 
 ## Best Practices
 

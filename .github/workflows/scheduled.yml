@@ -8,7 +8,7 @@
 # Holds the heavier checks that aren't worth the latency on every PR:
 #   - Multi-OS × multi-toolchain build matrix (macOS, Windows, MSRV)
 #   - Static musl release binary build
-#   - WCAG 2.1 AA pa11y audit against generated example sites
+#   - WCAG 2.1 AA axe-core audit against generated example sites
 #   - CycloneDX SBOM generation + provenance attestation
 
 name: Scheduled
@@ -172,9 +172,9 @@ jobs:
             exit 1
           fi
 
-  # ── WCAG 2.1 AA audit (pa11y) ───────────────────────────────────────
+  # ── WCAG 2.1 AA audit (axe-core) ───────────────────────────────────
   a11y:
-    name: WCAG 2.1 AA · pa11y
+    name: WCAG 2.1 AA · axe-core
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -188,12 +188,17 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
-      - name: Install pa11y
-        # Pinned via tests/a11y/package.json + package-lock.json (npm
-        # ci verifies the lockfile's integrity hashes) rather than an
-        # unpinned `npm install -g` -- see #611.
-        working-directory: tests/a11y
-        run: npm ci
+
+      # Was pa11y, pinned in tests/a11y. That pulled puppeteer ->
+      # @puppeteer/browsers -> extract-zip, the source of five high-severity
+      # Dependabot alerts, one with no patched release in existence. axe-core
+      # runs on the @axe-core/playwright that tests/visual already used, so
+      # the vulnerable subtree left the repo without adding a dependency.
+      - name: Install audit tooling
+        working-directory: tests/visual
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
 
       - name: Build SSG
         run: cargo build --locked
@@ -211,53 +216,14 @@ jobs:
           set -euo pipefail
           python3 -m http.server 8787 --directory /tmp/a11y-site &
           SERVER_PID=$!
-          sleep 1
-
-          urls=""
-          for html in /tmp/a11y-site/*/index.html /tmp/a11y-site/index.html; do
-            [ -f "$html" ] || continue
-            rel="${html#/tmp/a11y-site/}"
-            urls="$urls http://localhost:8787/$rel"
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8787/ && break
+            sleep 1
           done
-
-          cat > /tmp/pa11y-config.json << 'CONF'
-          {
-            "standard": "WCAG2AA",
-            "chromeLaunchConfig": {
-              "args": ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
-            },
-            "ignore": [
-              "WCAG2AA.Principle1.Guideline1_4.1_4_3.G18.Fail",
-              "WCAG2AA.Principle1.Guideline1_4.1_4_3.G145.Fail"
-            ]
-          }
-          CONF
-
-          violations=0
-          for url in $urls; do
-            page=$(echo "$url" | sed 's|http://localhost:8787/||;s|/index.html||;s|index.html|home|')
-            echo "::group::$page"
-            tests/a11y/node_modules/.bin/pa11y --config /tmp/pa11y-config.json "$url" > /tmp/out.txt 2>&1 \
-              && rc=0 || rc=$?
-            cat /tmp/out.txt
-            if [ "$rc" -eq 0 ]; then
-              echo "✓ $page passed"
-            elif grep -q 'Error:' /tmp/out.txt; then
-              echo "⚠ $page — pa11y error (skipped)"
-            else
-              violations=$((violations + 1))
-              echo "::error::WCAG 2.1 AA violations in $page"
-            fi
-            echo "::endgroup::"
-          done
-
-          kill $SERVER_PID 2>/dev/null || true
-
-          if [ "$violations" -gt 0 ]; then
-            echo "::error::$violations page(s) with accessibility violations"
-            exit 1
-          fi
-          echo "All pages pass WCAG 2.1 AA."
+          node tests/visual/audit-site.mjs \
+            --base http://localhost:8787 \
+            --dir /tmp/a11y-site
 
   # ── CycloneDX + SPDX SBOM (issue #533) ──────────────────────────────
   # Dual-format SBOM emission:

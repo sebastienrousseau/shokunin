@@ -22,7 +22,7 @@ Comprehensive guides for the Static Site Generator (SSG).
 - [Plugins](plugins.md) — Lifecycle hooks, 22 built-in plugins, custom examples
 - [Plugin API](plugin-api.md) — Plugin trait, PluginContext, PluginCache, testing
 - [SEO](seo.md) — Open Graph, Twitter Cards, JSON-LD, canonical URLs, sitemaps, feeds
-- [Accessibility](accessibility.md) — WCAG 2.1 AA, ARIA, pa11y CI
+- [Accessibility](accessibility.md) — WCAG 2.1 AA, ARIA, axe-core CI
 - [Images](images.md) — Responsive `<picture>`, AVIF/WebP, srcset, lazy loading
 - [Search](search.md) — Client-side search index, 28 locales, keyboard shortcut
 - [Internationalisation](i18n.md) — Hreflang, x-default, locale sitemaps, lang switcher

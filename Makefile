@@ -56,13 +56,18 @@ wasm-size: ## Build crates/ssg-wasm and assert it stays ≤ 2 MB gzipped.
 
 # Run automated accessibility checks against generated HTML.
 .PHONY: a11y
-a11y: build ## Run pa11y accessibility audit on example site.
+a11y: build ## Run axe-core WCAG 2.1 AA audit on example site.
 	@echo "Generating example site..."
 	@cargo run --release -- -c examples/content/en -o /tmp/ssg-a11y -t examples/templates
-	@echo "Running pa11y (WCAG 2.1 AA)..."
-	@for f in /tmp/ssg-a11y/*/index.html /tmp/ssg-a11y/index.html; do \
-		[ -f "$$f" ] && npx pa11y --standard WCAG2AA "file://$$f" || true; \
-	done
+	@echo "Running axe-core (WCAG 2.1 AA)..."
+	@npm --prefix tests/visual install --no-audit --no-fund --silent
+	@python3 -m http.server 8787 --directory /tmp/ssg-a11y > /dev/null 2>&1 & \
+		SERVER_PID=$$!; \
+		sleep 2; \
+		node tests/visual/audit-site.mjs --base http://localhost:8787 --dir /tmp/ssg-a11y; \
+		rc=$$?; \
+		kill $$SERVER_PID 2>/dev/null || true; \
+		exit $$rc
 
 # Generate and open API documentation locally.
 .PHONY: doc
