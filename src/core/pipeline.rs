@@ -1806,11 +1806,33 @@ mod tests {
             plugin::PluginContext::new(&content, &build, &site, &templates);
         let pm = plugin::PluginManager::new();
 
+        // `depgraph_cache_root` returns `target/<CACHE_DIRNAME>` when a
+        // `target/` directory exists relative to the *current* working
+        // directory, and falls back to `site_dir/.ssg-cache` otherwise.
+        // The build clears the site directory, so under the fallback the
+        // blocker is swept away and the scenario this test exists to
+        // cover cannot be constructed at all.
+        //
+        // Which branch is taken therefore depends on whether the
+        // developer's cargo writes into `./target` — a global
+        // `build.target-dir` in ~/.cargo/config.toml is enough to flip
+        // it, and CI runners always have `./target`. Pin it here so the
+        // test means the same thing everywhere.
+        let cwd_tmp = tempfile::tempdir().expect("cwd tempdir");
+        std::fs::create_dir_all(cwd_tmp.path().join("target"))
+            .expect("create target dir");
+        let prev_cwd = std::env::current_dir().expect("read current dir");
+        std::env::set_current_dir(cwd_tmp.path()).expect("pushd");
+
         let cache_root = depgraph_cache_root(&site);
         let blocker =
             cache_root.join(format!("{}.tmp", crate::depgraph::DEP_GRAPH_FILE));
         std::fs::create_dir_all(&blocker).unwrap();
         std::fs::write(blocker.join("keep.txt"), "x").unwrap();
+        assert!(
+            !blocker.starts_with(&site),
+            "cache root must sit outside the site dir the build clears"
+        );
 
         let res = execute_build_pipeline_with(
             &pm, &ctx, &build, &content, &site, &templates, true, false,
@@ -1818,6 +1840,7 @@ mod tests {
 
         let blocked = blocker.is_dir();
         let _ = std::fs::remove_dir_all(&blocker);
+        std::env::set_current_dir(&prev_cwd).expect("popd");
         res.expect("graph-save failure must be non-fatal");
         assert!(blocked, "blocker must have survived the build");
     }

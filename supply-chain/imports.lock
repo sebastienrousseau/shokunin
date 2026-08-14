@@ -357,6 +357,12 @@ criteria = "safe-to-deploy"
 delta = "1.0.8 -> 1.1.3"
 notes = "Substantial updates, but nothing out of the ordinary one would expect from a serialization crate. Minor `unsafe` updates, but nothing major from what was already there."
 
+[[audits.bytecodealliance.audits.semver]]
+who = "Pat Hickey <phickey@fastly.com>"
+criteria = "safe-to-deploy"
+version = "1.0.17"
+notes = "plenty of unsafe pointer and vec tricks, but in well-structured and commented code that appears to be correct"
+
 [[audits.bytecodealliance.audits.sharded-slab]]
 who = "Pat Hickey <phickey@fastly.com>"
 criteria = "safe-to-deploy"
@@ -558,6 +564,31 @@ and there were no hits.
 
 `heck` (version `0.3.3`) has been added to Chromium in
 https://source.chromium.org/chromium/chromium/src/+/28841c33c77833cc30b286f9ae24c97e7a8f4057
+"""
+aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
+
+[[audits.google.audits.indexmap]]
+who = "Lukasz Anforowicz <lukasza@chromium.org>"
+criteria = "safe-to-deploy"
+version = "2.7.1"
+notes = '''
+Grepped for `-i cipher`, `-i crypto`, `'\bfs\b'`, `'\bnet\b'`
+and there were no hits.
+
+There is a little bit of `unsafe` Rust code - the audit can be found at
+https://chromium-review.googlesource.com/c/chromium/src/+/6187726/2
+'''
+aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
+
+[[audits.google.audits.indexmap]]
+who = "Lukasz Anforowicz <lukasza@chromium.org>"
+criteria = "safe-to-deploy"
+delta = "2.7.1 -> 2.8.0"
+notes = """
+No `unsafe` introduced or affected in:
+* `indexmap_with_default!` and `indexset_with_default!` macros
+* New `PartialEq` implementations
+* `fn slice_eq` in `util.rs`
 """
 aggregated-from = "https://chromium.googlesource.com/chromium/src/+/main/third_party/rust/chromium_crates_io/supply-chain/audits.toml?format=TEXT"
 
@@ -944,6 +975,22 @@ who = "Erich Gubler <erichdongubler@gmail.com>"
 criteria = "safe-to-deploy"
 delta = "0.17.0 -> 0.17.1"
 
+[[audits.mozilla.audits.indexmap]]
+who = "Erich Gubler <erichdongubler@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "2.8.0 -> 2.11.4"
+
+[[audits.mozilla.audits.indexmap]]
+who = "Ben Dean-Kawamura <bdk@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "2.11.4 -> 2.14.0"
+notes = "Mostly internal refactorings.  No new unsafe code."
+
+[[audits.mozilla.audits.itertools]]
+who = "Erich Gubler <erichdongubler@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "0.14.0 -> 0.15.0"
+
 [[audits.mozilla.audits.linked-hash-map]]
 who = "Aria Beingessner <a.beingessner@gmail.com>"
 criteria = "safe-to-deploy"
@@ -1061,6 +1108,29 @@ careful not to read over the end of the buffer, and the unsafety
 is well contained.
 """
 
+[[audits.mozilla.audits.semver]]
+who = "Ben Dean-Kawamura <bdk@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.16 -> 1.0.28"
+notes = "Very few changes, mostly removes support for older Rust versions.  Some unsafe code refactored, but it seemed to be functionally equivalent to me."
+
+[[audits.mozilla.audits.semver]]
+who = "Bobby Holley <bobbyholley@gmail.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.17 -> 1.0.16"
+
+[[audits.mozilla.audits.serde_spanned]]
+who = "Ben Dean-Kawamura <bdk@mozilla.com>"
+criteria = "safe-to-deploy"
+version = "1.0.3"
+notes = "Relatively simple Serde trait implementations.  No IO or unsafe code."
+
+[[audits.mozilla.audits.serde_spanned]]
+who = "Ben Dean-Kawamura <bdk@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.3 -> 1.1.1"
+notes = "No code changes, just dependency updates."
+
 [[audits.mozilla.audits.sharded-slab]]
 who = "Mark Hammond <mhammond@skippinet.com.au>"
 criteria = "safe-to-deploy"
@@ -1085,3 +1155,19 @@ delta = "0.10.0 -> 0.11.1"
 who = "Drew Willcoxon <adw@mozilla.com>"
 criteria = "safe-to-deploy"
 delta = "0.1.0 -> 0.1.1"
+
+[[audits.mozilla.audits.zmij]]
+who = "Benjamin VanderSloot <bvandersloot@mozilla.com>"
+criteria = "safe-to-deploy"
+version = "1.0.20"
+notes = """
+A lot of unsafe code here, included as a dependency of serde_json.
+The testing is very thorough, validating all 32-bit floats, and 100m
+random 64-bit floats. No unsafe imports.
+"""
+
+[[audits.mozilla.audits.zmij]]
+who = "Ben Dean-Kawamura <bdk@mozilla.com>"
+criteria = "safe-to-deploy"
+delta = "1.0.20 -> 1.0.21"
+notes = "Almost no code changes.  No new unsafe code."

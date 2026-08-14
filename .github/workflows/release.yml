@@ -112,7 +112,7 @@ jobs:
       - if: matrix.musl
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3 # v2
         with:
           shared-key: release-${{ matrix.target }}
           save-if: false
