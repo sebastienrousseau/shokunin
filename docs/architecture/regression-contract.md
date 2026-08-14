@@ -24,7 +24,7 @@ contract, it must explicitly update both the test and this document.
 |---|---|---|
 | Example output validators | `tests/example_outputs.rs` | Every shipped example (`basic`, `blog`, `docs`, `landing`, `multilingual`, `plugins`, `portfolio`, `quickstart`) builds without panic and produces HTML that passes 8 hand-curated regression checks (preload `href`, mobile-menu CSS, manifest icons, etc.). |
 | **Universal HTML core invariants** | **`tests/element_presence.rs::core_invariants_hold_for_every_page`** | **Every page emitted by every example satisfies 8 core invariants**: `<html lang>`, non-empty `<title>`, non-empty `<meta name=description>`, `<main>` landmark, charset declared, `<link rel=canonical>`, full Open Graph chain (`og:title`/`og:description`/`og:type`), Twitter Card meta. Any new page or template change failing one of these is a CI block. |
-| Aspirational HTML invariants | `tests/element_presence.rs::every_built_example_page_satisfies_universal_invariants` (`#[ignore]`) | Adds `<h1>`-exactly-once and viewport meta on top of the core set. Currently `#[ignore]`d because the shipped example templates omit these on some taxonomy/index pages. Reviewers can opt in via `cargo test --test element_presence -- --ignored` to see the gap; the path forward is template-level fixes. |
+| **Universal HTML invariants** | **`tests/element_presence.rs::every_built_example_page_satisfies_universal_invariants`** | **Adds `<h1>`-exactly-once and `<meta name=viewport>` on top of the core set, across every page of every built example.** Formerly `#[ignore]`d because some shipped taxonomy and index templates omitted them; those template gaps are closed, so the gate is always-on and a regression is a CI block. |
 | JSON-LD validation | `tests/jsonld_validation.rs` | Every `<script type="application/ld+json">` block in every example output parses and contains the schema.org-required fields for its `@type`. |
 | Golden files | `tests/golden_files.rs` | Specific deterministic artifacts byte-match a checked-in golden after normalisation (timestamps, hashes, SRI stripped). Currently seeded with `scaffold_config_toml.golden`; expanding incrementally per #466. |
 
@@ -106,7 +106,7 @@ explicit reviewer attention:
 
 Last reviewed: 2026-05-10. Branch: `feat/v0.0.39`. PR #493.
 
-The current state is **7 hard gates + 1 informational gate active**:
+The current state is **8 hard gates active**:
 core HTML invariants (`tests/element_presence.rs`), end-to-end build
 budgets (`tests/perf_budgets.rs`), JSON-LD validation
 (`tests/jsonld_validation.rs`), reproducible build
@@ -114,7 +114,8 @@ budgets (`tests/perf_budgets.rs`), JSON-LD validation
 internal Markdown link integrity (`tests/doc_links.rs`), and the
 1,685+ lib test suite.
 
-The aspirational HTML invariants gate is `#[ignore]`d pending
-example-template fixes (see §2). End-to-end build budgets currently
+The universal HTML invariants gate (§2) is no longer `#[ignore]`d — the
+example-template gaps it was waiting on are closed, so it now blocks CI
+like the rest. End-to-end build budgets currently
 verify 10-page < 100 ms and 100-page < 500 ms on every PR; the
 500-page < 2 s gate is opt-in via `--ignored` to keep PR runtime low.
