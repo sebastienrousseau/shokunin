@@ -501,7 +501,7 @@ make lint         # lint with Clippy
 make format       # format with rustfmt
 make deny         # supply-chain audit
 make doc          # build API documentation
-make a11y         # run pa11y accessibility audit
+make a11y         # run axe-core accessibility audit
 make clean        # remove build artifacts
 ```
 
@@ -512,7 +512,7 @@ make clean        # remove build artifacts
 | `ci.yml` | push, PR | fmt, clippy, test (3 OS), coverage (95% floor), cargo-deny |
 | `document.yml` | push to main | Build and deploy API docs to GitHub Pages |
 | `release.yml` | tag `v*` | Cross-platform binaries, GHCR container, crates.io, AUR |
-| `scheduled.yml` | weekly, tag | Multi-OS portability, pa11y a11y, `CycloneDX` SBOM, benchmarks |
+| `scheduled.yml` | weekly, tag | Multi-OS portability, axe-core a11y, `CycloneDX` SBOM, benchmarks |
 | `visual.yml` | PR | Playwright screenshots (3 viewports) + axe-core WCAG 2.2 AA |
 | `wasm.yml` | push, PR | Build and test ssg-core + ssg-wasm for wasm32 |
 | `readability-gate.yml` | PR | Flesch-Kincaid audit on docs and content |
