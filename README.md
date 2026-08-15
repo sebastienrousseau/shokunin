@@ -138,7 +138,7 @@ graph TD
 | Metric | Value |
 | :--- | :--- |
 | **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
-| **Test suite** | 3,536 unit tests + 36 integration test suites |
+| **Test suite** | 3,566 unit tests (`cargo test --lib`) + 51 integration test targets |
 | **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
 | **Plugin pipeline** | 38 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
@@ -172,7 +172,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Structured Data** | JSON-LD Article/WebPage with datePublished, dateModified, author, image, inLanguage, `BreadcrumbList` |
 | **Syndication** | RSS 2.0 with enclosures and categories, Atom 1.0, Google News sitemap |
 | **Accessibility** | WCAG 2.2 AA validation on every build (1.1.1, 1.3.1, 2.3.1, 2.4.4, 2.4.13, 2.5.8, 3.1.1, 3.2.6), axe-core Playwright CI, decorative image detection, heading hierarchy, ARIA landmarks; emits `wcag-compliance.json` matrix ([WCAG 2.2 + EAA guide](docs/guide/wcag-compliance.md)) |
-| **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML |
+| **i18n** | Hreflang injection, `x-default` support, per-locale sitemaps, language switcher HTML. Translated slugs — pages pair across locales by a `translation_key` front-matter field rather than by identical path, so `/about/` and `/fr/a-propos/` are reciprocal alternates; pages without a key keep pairing by path. The default locale may serve from the site root (`/about/` alongside `/fr/a-propos/`), matching Hugo, Astro and Next.js ([i18n guide](docs/guide/i18n.md)) |
 | **Images** | Responsive `<picture>` with WebP sources, `srcset` at 320/640/1024/1440, lazy loading, CLS prevention, optional `cdn_prefix` for serving local image assets from a CDN host |
 | **Templates** | `MiniJinja` engine with inheritance, loops, conditionals, custom filters |
 | **Search** | Client-side full-text search with modal UI, 28 locale translations, `Ctrl+K` / `Cmd+K` |
@@ -460,6 +460,7 @@ cargo run --example blog
 | `basic` | Minimal site with SEO, search, and fused transforms |
 | `quickstart` | Scaffold and build in 10 lines |
 | `multilingual` | Multi-locale site with hreflang and per-locale sitemaps |
+| `multilingual_full` | Nested `content/<lang>/` layout, plus translated slugs paired by `translation_key` (`/en/about/` ↔ `/fr/a-propos/` ↔ `/de/ueber-uns/`). Asserts reciprocity, not just that pages rendered |
 | `plugins` | Full plugin pipeline demo with `DepGraph` API |
 | `blog` | EAA-compliant accessibility-first blog with dual feeds |
 | `docs` | Documentation portal with schema validation and syntax highlighting |

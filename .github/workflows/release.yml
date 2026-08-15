@@ -37,6 +37,14 @@ on:
 permissions:
   contents: read
 
+# A release must never be silently superseded. `cancel-in-progress:
+# false` means a second tag push queues behind the first rather than
+# killing a run that may already have published sub-crates to
+# crates.io — a partially-published release is not re-runnable.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
@@ -251,8 +259,18 @@ jobs:
           tags: |
             ghcr.io/sebastienrousseau/static-site-generator:${{ github.ref_name }}
             ghcr.io/sebastienrousseau/static-site-generator:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Cache lives in GHCR, not the GitHub Actions Cache service.
+          # `type=gha` is what failed the v0.0.48 release: the image
+          # itself built for 126.9s and then the run died with
+          # `ERROR: not_found` while "exporting to GitHub Actions
+          # Cache", so a green build produced no container image.
+          #
+          # `ignore-error=true` is the belt to that braces. A cache
+          # export is an optimisation; it must never be able to fail a
+          # release. With it set, a registry hiccup costs the next run
+          # some time instead of costing this run the image.
+          cache-from: type=registry,ref=ghcr.io/sebastienrousseau/static-site-generator:buildcache
+          cache-to: type=registry,ref=ghcr.io/sebastienrousseau/static-site-generator:buildcache,mode=max,ignore-error=true
 
   # ── GPG sign all release artifacts ──────────────────────────────
   gpg-sign:
@@ -586,7 +604,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - name: Publish workspace sub-crates to crates.io (dep order)
+      - name: Publish workspace to crates.io (dep order)
         # `cargo publish -p ssg` fails if ssg-core / ssg-rpc-macro /
         # ssg-rpc / ssg-search / ssg-a11y at the matching version don't
         # already exist on crates.io (path deps are verified against
@@ -597,41 +615,71 @@ jobs:
         #   ssg-rpc          (depends on ssg-rpc-macro)
         #   ssg-search       (no internal deps)
         #   ssg-a11y         (no internal deps)
+        #   ssg             (depends on all of the above)
         #
         # ssg-wasm is deliberately excluded: it carries `publish = false`
         # in its own Cargo.toml and is not a dependency of `ssg`.
         #
-        # crates.io's index needs ~30s after each publish before the
-        # next crate can depend on the freshly-published version, so
-        # we sleep between calls. `--no-verify` skips the rebuild
-        # against the registry (we already built + tested in earlier
-        # CI phases) and shaves a few minutes off the wall clock.
+        # Every publishable crate must therefore carry the SAME version
+        # as the tag. When they drift — sub-crates sat at 0.0.47 while
+        # the root moved to 0.0.48 — the first `cargo publish` hits
+        # "already exists on crates.io index" and the release stops.
+        # `tests/release_versions.rs` fails the build long before the
+        # tag if that drift reappears.
         #
         # Idempotent retry: if a version is already on crates.io
-        # (e.g. previous release run already published the sub-crate
+        # (e.g. a previous release run already published the sub-crate
         # and the workflow is being re-run), don't fail the build.
+        #
+        # The "already published" case is detected by reading cargo's
+        # own diagnostic, not by probing the crates.io HTTP API. The
+        # previous implementation curl'd
+        # `https://crates.io/api/v1/crates/$c/$ver` and treated any
+        # non-200 as "not published"; that request failed from the
+        # runner during the v0.0.48 release (it returns 200 from a
+        # developer machine), so the guard reported a crate that WAS on
+        # crates.io as missing, exited 1, and skipped the `ssg` publish
+        # below. Parsing stderr needs no network and cannot produce a
+        # false negative from a transient registry or CDN fault.
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
-          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y; do
-            echo "::group::cargo publish -p $c"
-            if cargo publish -p "$c" --locked --no-verify; then
-              echo "✓ $c published"
-            else
-              ver=$(grep '^version = ' "crates/$c/Cargo.toml" | head -1 | cut -d'"' -f2)
-              if curl -fsS "https://crates.io/api/v1/crates/$c/$ver" >/dev/null 2>&1; then
-                echo "✓ $c $ver already on crates.io — continuing"
-              else
-                echo "::error::cargo publish -p $c failed and version not on crates.io"
-                exit 1
-              fi
-            fi
+
+          # Publish one crate. Returns 0 if it is on crates.io at the
+          # expected version afterwards — whether this run put it
+          # there or a previous one did.
+          publish() {
+            local crate="$1" manifest="$2" ver log rc=0
+            # Sub-crates pass --no-verify: they were already built and
+            # tested in earlier CI phases, and the rebuild costs
+            # minutes each. The root crate verifies, because that is
+            # the packaged artefact users actually consume.
+            shift 2
+            ver=$(grep -m1 '^version = ' "$manifest" | cut -d'"' -f2)
+            log=$(mktemp)
+            echo "::group::cargo publish -p $crate ($ver)"
+            cargo publish -p "$crate" --locked "$@" 2>&1 | tee "$log" || rc=$?
             echo "::endgroup::"
-            sleep 30
+            if [ "$rc" -eq 0 ]; then
+              echo "✓ $crate $ver published"
+              # crates.io's index needs a moment before the next crate
+              # can resolve a dependency on this one.
+              sleep 30
+              return 0
+            fi
+            if grep -qE 'already (exists on crates\.io index|uploaded)' "$log"; then
+              echo "✓ $crate $ver already on crates.io — continuing"
+              return 0
+            fi
+            echo "::error::cargo publish -p $crate $ver failed (exit $rc) — see the group above"
+            return 1
+          }
+
+          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y; do
+            publish "$c" "crates/$c/Cargo.toml" --no-verify
           done
 
-      - name: Publish ssg to crates.io
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p ssg --locked
+          # Same idempotency contract for the root crate, so a re-run
+          # after a partial release is a no-op rather than a failure.
+          publish ssg Cargo.toml

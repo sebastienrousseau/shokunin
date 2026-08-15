@@ -2,8 +2,15 @@
 #
 # Scheduled & on-demand workloads. Runs:
 #   - weekly  Monday 06:00 UTC (full surface check)
-#   - on tag  v*                (release-gating coverage)
 #   - manual  workflow_dispatch (anytime)
+#
+# Deliberately NOT triggered by `v*` tags. It used to be, described as
+# "release-gating coverage", but nothing in `release.yml` waited on the
+# result — so a tag push started two heavyweight runs side by side and
+# gated nothing. That collision is what left v0.0.49 cancelled with no
+# artefacts. Pre-release coverage is CI on `main` plus the release
+# build matrix itself; run this manually against a tag if the full
+# multi-OS surface is wanted before shipping.
 #
 # Holds the heavier checks that aren't worth the latency on every PR:
 #   - Multi-OS × multi-toolchain build matrix (macOS, Windows, MSRV)
@@ -16,8 +23,6 @@ name: Scheduled
 on:
   schedule:
     - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
-  push:
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:

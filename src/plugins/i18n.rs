@@ -19,6 +19,56 @@
 //!
 //! The injection is **idempotent** — pages that already contain hreflang
 //! links are skipped.
+//!
+//! ## Pairing pages across locales
+//!
+//! Before anything can be injected, the plugin has to decide which
+//! pages in different locales are translations of one another. It
+//! builds a matrix of `key -> {locale -> path}` and treats every page
+//! sharing a key as one document.
+//!
+//! A page's key is its `translation_key` front-matter value when it
+//! declares one, and its locale-relative path otherwise:
+//!
+//! ```yaml
+//! ---
+//! title: "À propos"
+//! translation_key: "about"
+//! ---
+//! ```
+//!
+//! Path matching alone cannot pair `/about/` with `/fr/a-propos/` —
+//! the paths differ, so each is a singleton and **neither receives any
+//! hreflang at all**. Because that failure is silent, it is easy to
+//! ship. A shared `translation_key` pairs them regardless of slug.
+//!
+//! Pages without a key keep pairing by path, so a site with no
+//! `translation_key` anywhere produces exactly the matrix it produced
+//! before the field existed.
+//!
+//! The value is read from the front-matter sidecars written by
+//! [`crate::frontmatter::emit_sidecars`], because the plugin runs
+//! after compilation and can no longer see the source front matter.
+//!
+//! ## Where the default locale lives
+//!
+//! The default locale may occupy the site root, with only the other
+//! locales taking a URL segment (`/about/` alongside
+//! `/fr/a-propos/`) — the default in Hugo, Astro and Next.js. This is
+//! detected, not configured — the root locale is used when the default
+//! locale has no output directory of its own and HTML exists outside
+//! the other locale directories.
+//!
+//! ## Reciprocity
+//!
+//! Each alternate link is labelled with the resolved language of the
+//! document it points *at*, not with the bare locale directory name.
+//! Labelling by directory lets the two halves of a pair disagree — an
+//! English page calling its Hindi alternate `hi` while the Hindi page
+//! calls itself `hi-IN` — which fails Google's reciprocity requirement
+//! and the `hreflang` audit gate with it. An authored locale code is
+//! preserved byte-for-byte (`zh-tw` stays `zh-tw`); a resolved
+//! language replaces it only on a genuine front-matter override.
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
