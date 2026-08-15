@@ -520,6 +520,12 @@ impl Plugin for ContentValidationPlugin {
     }
 
     fn before_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        // Runs first so a theme that needs a newer generator says so once,
+        // clearly, instead of producing a silently wrong site.
+        crate::core_group::theme_manifest::check_theme_compatibility(
+            &ctx.template_dir,
+        )?;
+
         let schema_path = ctx.content_dir.join("content.schema.toml");
         let schemas = load_schemas(&schema_path)
             .map_err(|e| SsgError::io(e, &schema_path))?;

@@ -7,6 +7,217 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.50] - 2026-08-11
+
+The themeing release. Building three real themes against v0.0.49 surfaced
+four defects that made documented features unusable — each failing silently,
+which is why none had been reported. Multi-locale sites additionally gain
+translated slugs.
+
+### Fixed
+
+- **`layout` was ignored on every page** (`src/plugins/template_plugin.rs`).
+  `before_compile` writes front-matter sidecars to `<build_dir>/.meta`, but
+  `staticdatagen` promotes `output.build-tmp` onto `output` once the compile
+  finishes and takes `.meta/` with it. `after_compile` still read the old
+  path, found nothing, and fell back to `layout = "page"` for every page — so
+  a theme whose layouts were `index`/`about`/`contact` rendered through none
+  of them, and through nothing at all without a `page.html`. The sidecar
+  directory now resolves from `build_dir` and falls back to `site_dir`.
+  `TemplateEngine::has_template` lets the plugin distinguish a real render
+  from `render_page`'s pass-through arm, which it had been counting as a
+  success — a pipeline doing nothing logged `Rendered N page(s)` exactly like
+  a working one.
+- **`content/content.schema.toml` broke the build it configures**
+  (`src/core/content_stager.rs`). The documented location for typed
+  front-matter schemas was staged as a page, and `staticdatagen` aborted with
+  `Failed to extract metadata: No valid front matter found`. Build-time
+  control files are now excluded from staging.
+- **Nested `index.md` gained a directory level**
+  (`src/core/content_stager.rs`). `fr/index.md` compiled to
+  `fr/index/index.html` rather than `fr/index.html`, so every locale home
+  page was wrong. The root cause is upstream — `staticdatagen`'s
+  `write_files_to_build_directory` compares the whole processed name against
+  `"index"` — so this is a staging-time side-step, not a fix, and it leaves
+  the file alone when both `fr.md` and `fr/index.md` are authored.
+- **Extracted CSS and JS 404'd on sub-path deployments**
+  (`src/plugins/csp.rs`). Inline blocks are externalised into fingerprinted,
+  SRI-signed `_csp/` files referenced as `/_csp/…`, which resolves against
+  the domain root. On a GitHub Pages project site the whole stylesheet was
+  lost. The prefix now derives from `base_url`'s path component; sites at the
+  domain root are unaffected.
+- **Markdown tables broke reflow on every phone width**
+  (`src/plugins/postprocess/html_fix.rs`). A table cannot reflow — its
+  columns have a minimum width — so a five-column Markdown table pushed the
+  document to 588px inside a 320px viewport, failing WCAG 1.4.10. Tables are
+  now wrapped in a focusable, labelled scroll container, which is the
+  accepted remedy. Applied in the generator because Markdown-generated
+  tables have no wrapper a theme could style.
+- **Generated taxonomy pages had no skip link** and no focus styling
+  (`src/plugins/builtin_templates/base.html`). Every authored page opened
+  with one; the generated ones dropped a keyboard user straight into the
+  navigation. These pages link no theme stylesheet, so the link carries its
+  own rules, using system colours so it survives forced-colours mode.
+- **The injected search trigger sat on top of theme header controls**
+  (`src/plugins/search.rs`). It is pinned to the top-right, which is exactly
+  where a themed site puts its own controls; measured across a 13-viewport
+  matrix it overlapped the navigation toggle, the theme toggle and the
+  language switcher at every phone width, so a tap landed on whichever won
+  the z-order. Below 48rem it now sits as a 44px circle in the bottom
+  corner — the conventional mobile affordance, and out of the header's way.
+- **Markdown table alignment emitted obsolete `align` attributes**
+  (`src/plugins/postprocess/html_fix.rs`,
+  [#618](https://github.com/sebastienrousseau/static-site-generator/issues/618)).
+  Column-alignment syntax (`:---`, `---:`, `:---:`) rendered as
+  `<th align="left">` / `<td align="right">`. `align` has been obsolete
+  since HTML5 and pa11y flags it as
+  `WCAG2AAA.Principle1.Guideline1_3.1_3_1.H49.AlignAttr`. The attribute is
+  now replaced by an equivalent `text-left` / `text-center` / `text-right`
+  class, so the alignment survives — and `<th>` gains a class it never had,
+  which is what makes header alignment stylable at all. Done with a real
+  parser, since an `align=` literal inside a `<pre>` block is content, not
+  markup.
+- **Islands never hydrated** (`src/plugins/islands.rs`,
+  `src/plugins/assets.rs`). Three independent faults, each sufficient alone:
+  the injected loader tag was root-absolute like `_csp/` above; the loader
+  resolved component bundles with a root-absolute dynamic `import()`, now
+  resolved relative to its own module URL so the runtime needs no knowledge
+  of the mount point; and the asset fingerprinter renamed `_islands/*.js`
+  without being able to rewrite a specifier built at runtime, so every bundle
+  404'd. `_islands/` is excluded from fingerprinting.
+
+### Added
+
+- **Translated slugs across locales** (`src/plugins/i18n.rs`). Pages were
+  paired across locales by identical relative path, so `about/index.html`
+  and `a-propos/index.html` were two unrelated singletons and **neither
+  received any `hreflang`** — silently, because from the plugin's view they
+  were simply untranslated. Pages now declare a `translation_key` in front
+  matter, read from the sidecars; the locale matrix inverts from
+  `rel_path -> {locale}` to `key -> {locale -> rel_path}`. Pages without a
+  key keep path matching, so existing sites are unaffected.
+- **Taxonomy pages work for the first time** (`src/plugins/taxonomy.rs`).
+  `resolve_user_template_dir` fell back to `<template_dir>` itself when no
+  `tera/` existed, so MiniJinja was handed the theme's StaticWeaver
+  `base.html` and aborted the **whole build** with
+  `syntax error: unexpected character (in base.html:26)`, attributed to
+  `tag.html` — a file the author never wrote. Taxonomy was therefore
+  unusable for any theme using the default page-layout engine. User
+  templates now come from `tera/` only; a theme without one gets the
+  built-in fallbacks and a site that builds.
+
+  Three further fixes on top: term-page URLs and the index's term links are
+  prefixed from `base_url`, so they resolve on a sub-path deployment rather
+  than 404ing; the built-in base template emits a Content-Security-Policy,
+  which generated pages previously lacked while every authored page had one;
+  and the index's term links are marked `| safe`, since autoescape was
+  rendering `/` as `&#x2f;`.
+- **Derived path globals** (`src/core/content_stager.rs`). Templates can
+  reference `{{site_path}}`, `{{site_url}}`, `{{locale_path}}` and
+  `{{locale_url}}`; the stager derives each from `base_url` and the page's
+  own location, so pages no longer hand-maintain them. Two scopes, named at
+  the call site: `site_*` addresses the site root, where assets, feeds, the
+  manifest and the favicon are published once regardless of locale;
+  `locale_*` addresses the current locale's root, where page links live.
+
+  Conflating them is not hypothetical — a hand-maintained pair carrying no
+  scope in either name had French pages requesting `/atlas/fr/styles.css`,
+  which is never written. `{{site_path}}styles.css` and
+  `{{locale_path}}articles/` both read correctly;
+  `{{locale_path}}styles.css` reads visibly wrong.
+
+  Values are injected only when a template actually references them, and
+  author front matter always wins. On a single-locale site `locale_*` equals
+  `site_*`, so a theme can use the locale forms throughout and gain locales
+  later without editing content. Removed 60 hand-maintained fields and 20
+  hardcoded permalinks from the reference themes.
+- **Theme compatibility is enforced** (`src/core/theme_manifest.rs`). A theme
+  declares the oldest generator it works with — `min_version` in
+  `theme.toml`, or `min_ssg_version` in `theme.json` — and nothing read it.
+  That mattered because every way a too-old generator breaks a theme is
+  silent: the `layout` named in front matter ignored, a bundled
+  `content.schema.toml` aborting the compile, extracted CSS 404ing under a
+  sub-path. The build now stops at the start with one message naming both
+  versions and the manifest that declared the floor. A theme with no
+  manifest, no `min_version`, or an unparseable one imposes no floor and
+  builds as before.
+- **Root-hosted default locale** (`src/plugins/i18n.rs`). Every locale
+  previously needed its own directory, including the default, which forced
+  `/en/about/` and left the site root empty. The default locale may now live
+  at the root — `/about/` alongside `/fr/a-propos/` — matching Hugo's
+  `defaultContentLanguageInSubdir = false`, Astro's `prefixDefaultLocale:
+  false` and Next.js's default.
+
+### Changed
+
+- **Alternate `hreflang` labels now describe the target document.** An
+  English page labelled its Hindi alternate `hreflang="hi"` (the locale
+  directory) while the Hindi page advertised `hreflang="hi-IN"` for itself.
+  The two sides disagreed, failing reciprocity and the `hreflang` audit gate.
+  Alternates now carry the target's resolved language. Two tests asserting
+  the old asymmetry were updated, with the reasoning recorded in their
+  bodies.
+- **`x-default` is emitted only when the default locale serves the page**,
+  rather than pointing at a URL that may not exist.
+
+### Security
+
+- **js-yaml 4.3.0 → 4.3.1** in the `tests/a11y` harness
+  ([GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj),
+  high): quadratic CPU consumption resolving `!!omap`. Development-only — the
+  harness is not part of the published crate.
+- **`extract-zip` 2.0.1 symlink path traversal**
+  ([GHSA-jmr9-qjv8-65gv](https://github.com/advisories/GHSA-jmr9-qjv8-65gv),
+  high) is **accepted, not fixed**. No patched version exists: the advisory
+  covers `<= 2.0.1` and upstream has published no fix. The path is
+  `pa11y → puppeteer → @puppeteer/browsers → extract-zip`; `pa11y` 9.1.1 is
+  the latest release and pins `puppeteer ^24.37.5`, which requires
+  `@puppeteer/browsers` 2.x. Forcing `@puppeteer/browsers` 3.x — which
+  replaced `extract-zip` with `modern-tar` — resolves the advisory but breaks
+  installation, because puppeteer 24.x calls the 2.x API (`downloadBrowsers`
+  fails in `puppeteer/lib/esm/puppeteer/node/install.js`). Verified, then
+  reverted.
+
+  Risk accepted on the basis that the harness is development-only and never
+  part of the published crate, and that the only archive it extracts is the
+  Chromium build downloaded from Google's CDN over HTTPS — not
+  attacker-controlled input. Revisit when `pa11y` moves to puppeteer 25.x.
+
+### Dependencies
+
+- oxc family 0.142 → 0.143 (`minifier`, `parser`, `codegen`, `allocator`,
+  `span`), bumped in lockstep as the crates require.
+- `noyalib` 0.0.17 → 0.0.18, `@playwright/test` 1.62.0 → 1.62.1, and the
+  minor/patch group across the resolved graph.
+- GitHub Actions: `github/codeql-action/*` v4.37.4 → v4.37.6,
+  `actions/attest-build-provenance` v4.1.1 → v4.2.2,
+  `Swatinem/rust-cache` to 6323deb1. `scheduled.yml` had been pinning
+  `attest-build-provenance` independently of `release.yml` and drifting
+  behind it; both now match.
+- `deny.toml`: removed five `ignore` entries that no longer match any crate
+  (RUSTSEC-2025-0057, -2025-0119, -2026-0173, -2026-0194, -2026-0195). The
+  quick-xml removal plan recorded there on 2026-07-04 has completed. Each
+  unmatched entry raises an `advisory-not-detected` warning, so the stale
+  ones were burying any real one.
+
+## [0.0.49] - 2026-08-05
+
+Dependency maintenance only; no functional changes. Recorded here because
+the release shipped without a changelog entry.
+
+### Changed
+
+- `oxc_minifier` and `oxc_allocator` 0.138 → 0.141 (lockstep family bump)
+  ([#626](https://github.com/sebastienrousseau/static-site-generator/pull/626),
+  [#627](https://github.com/sebastienrousseau/static-site-generator/pull/627)).
+- `tungstenite` 0.29 → 0.30
+  ([#624](https://github.com/sebastienrousseau/static-site-generator/pull/624)).
+- Minor and patch group across 9 further dependencies
+  ([#631](https://github.com/sebastienrousseau/static-site-generator/pull/631)).
+- CI action bumps: `actions/checkout`, `actions/setup-node`,
+  `github/codeql-action`, `ossf/scorecard-action`,
+  `docker/setup-buildx-action`, `@playwright/test`.
+
 ## [0.0.48] - 2026-07-25
 
 ### Planned / Upcoming (deferred — not v0.0.46 scope)

@@ -124,12 +124,13 @@ impl Plugin for TemplatePlugin {
             );
         }
 
-        let sidecar_dir = ctx.build_dir.join(".meta");
+        let sidecar_dir = resolve_sidecar_dir(ctx);
         let html_files = collect_html_files(&ctx.site_dir)?;
         let enriched_fm_map =
             enrich_with_related_posts(&html_files, &ctx.site_dir, &sidecar_dir);
 
         let mut rendered = 0usize;
+        let mut skipped = 0usize;
         for html_path in &html_files {
             let content = fs::read_to_string(html_path).with_path(html_path)?;
 
@@ -147,6 +148,22 @@ impl Plugin for TemplatePlugin {
             let layout =
                 fm.get("layout").and_then(|v| v.as_str()).unwrap_or("page");
             let template_name = format!("{layout}.html");
+
+            // Resolving to neither the requested layout nor the
+            // `page.html` fallback means `render_page` would hand the
+            // input straight back. Counting that as a render made a
+            // no-op pipeline indistinguishable from a working one, so
+            // report it instead of inflating the success tally.
+            if !engine.has_template(&template_name)
+                && !engine.has_template("page.html")
+            {
+                log::warn!(
+                    "[templates] No template '{template_name}' (and no page.html fallback) for {}; leaving compiled output untouched",
+                    html_path.display()
+                );
+                skipped += 1;
+                continue;
+            }
 
             match engine.render_page(
                 &template_name,
@@ -170,7 +187,36 @@ impl Plugin for TemplatePlugin {
         if rendered > 0 {
             log::info!("[templates] Rendered {rendered} page(s)");
         }
+        if skipped > 0 {
+            log::warn!(
+                "[templates] Skipped {skipped} page(s) with no matching template"
+            );
+        }
         Ok(())
+    }
+}
+
+/// Resolves the directory holding the `.meta.json` frontmatter sidecars.
+///
+/// `before_compile` writes the sidecars under `<build_dir>/.meta`, but
+/// `staticdatagen` *promotes* the build directory onto `site_dir` when
+/// the two differ (the default `output.build-tmp` → `output` case), and
+/// the sidecars travel with it. Reading `<build_dir>/.meta`
+/// unconditionally therefore missed every sidecar on a default build:
+/// `layout` silently fell back to `page` for every page, so a theme
+/// whose layouts were `index`/`about`/`contact` rendered through none of
+/// them — and, absent a `page.html`, through nothing at all.
+///
+/// Prefer the build directory (it still exists for `--serve` builds,
+/// where `site_dir != output_dir` and no promotion happens) and fall
+/// back to the site directory once the promotion has taken place.
+#[cfg(feature = "templates")]
+fn resolve_sidecar_dir(ctx: &PluginContext) -> PathBuf {
+    let build_meta = ctx.build_dir.join(".meta");
+    if build_meta.is_dir() {
+        build_meta
+    } else {
+        ctx.site_dir.join(".meta")
     }
 }
 
@@ -408,6 +454,119 @@ mod tests {
             r#"{"title": "Home", "layout": "page"}"#,
         )
         .unwrap();
+    }
+
+    /// Regression: the `layout` field must still resolve after the
+    /// build directory has been promoted onto `site_dir`.
+    ///
+    /// `before_compile` writes sidecars under `<build_dir>/.meta`, but
+    /// `staticdatagen` renames `output.build-tmp` → `output` once the
+    /// compile finishes, taking `.meta/` with it. Reading
+    /// `<build_dir>/.meta` unconditionally therefore found nothing on
+    /// every default build, so `layout` fell back to `page` for every
+    /// page and a theme with `index`/`about`/`contact` layouts rendered
+    /// through none of them.
+    #[test]
+    fn layout_resolves_when_build_dir_was_promoted_to_site_dir() {
+        init_logger();
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        let templates = dir.path().join("templates/tera");
+        for d in [&content, &build, &site, &templates] {
+            fs::create_dir_all(d).unwrap();
+        }
+
+        // Two distinct templates so the assertion can tell which one ran.
+        fs::write(templates.join("page.html"), "FALLBACK-PAGE").unwrap();
+        fs::write(templates.join("custom.html"), "CUSTOM-LAYOUT").unwrap();
+        fs::write(site.join("index.html"), "<h1>compiled</h1>").unwrap();
+
+        // The promotion already happened: `.meta` lives beside the
+        // compiled HTML in `site_dir`, and `build_dir/.meta` is absent.
+        let meta_dir = site.join(".meta");
+        fs::create_dir_all(&meta_dir).unwrap();
+        fs::write(
+            meta_dir.join("index.meta.json"),
+            r#"{"title": "Home", "layout": "custom"}"#,
+        )
+        .unwrap();
+        assert!(
+            !build.join(".meta").exists(),
+            "fixture must model the promoted layout"
+        );
+
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: templates,
+            ..Default::default()
+        });
+        let config = make_config(dir.path());
+        let ctx = PluginContext::with_config(
+            &content,
+            &build,
+            &site,
+            &dir.path().join("templates"),
+            config,
+        );
+
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert!(
+            out.contains("CUSTOM-LAYOUT"),
+            "expected the `custom` layout from the sidecar, got: {out}"
+        );
+        assert!(
+            !out.contains("FALLBACK-PAGE"),
+            "must not silently fall back to page.html: {out}"
+        );
+    }
+
+    /// A layout with no template and no `page.html` fallback must be
+    /// reported rather than counted as a successful render — the
+    /// pass-through arm previously made a no-op pipeline look healthy.
+    #[test]
+    fn missing_template_leaves_output_untouched_and_is_not_counted() {
+        init_logger();
+        let dir = tempdir().unwrap();
+        let content = dir.path().join("content");
+        let build = dir.path().join("build");
+        let site = dir.path().join("site");
+        let templates = dir.path().join("templates/tera");
+        for d in [&content, &build, &site, &templates] {
+            fs::create_dir_all(d).unwrap();
+        }
+
+        // A template dir that exists but holds no `page.html` and no
+        // template matching the requested layout.
+        fs::write(templates.join("other.html"), "OTHER").unwrap();
+        fs::write(site.join("index.html"), "<h1>compiled</h1>").unwrap();
+        let meta_dir = site.join(".meta");
+        fs::create_dir_all(&meta_dir).unwrap();
+        fs::write(meta_dir.join("index.meta.json"), r#"{"layout": "nope"}"#)
+            .unwrap();
+
+        let plugin = TemplatePlugin::new(TemplateConfig {
+            template_dir: templates,
+            ..Default::default()
+        });
+        let config = make_config(dir.path());
+        let ctx = PluginContext::with_config(
+            &content,
+            &build,
+            &site,
+            &dir.path().join("templates"),
+            config,
+        );
+
+        plugin.after_compile(&ctx).unwrap();
+
+        let out = fs::read_to_string(site.join("index.html")).unwrap();
+        assert_eq!(
+            out, "<h1>compiled</h1>",
+            "compiled output must survive untouched"
+        );
     }
 
     #[test]

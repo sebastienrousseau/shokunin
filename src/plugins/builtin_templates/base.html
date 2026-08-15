@@ -7,6 +7,10 @@
   <title>{% block title %}{{ site.title | default('Site') }}{% endblock %}</title>
   {% if site.base_url %}<link rel="canonical" href="{{ site.base_url | safe }}{{ page_url | default('/') | safe }}">{% endif %}
   <meta name="generator" content="ssg-taxonomy">
+  <!-- These pages are generated, carry no script, and load only same-origin
+       styles, so the policy can be stricter than an authored page's. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'none'">
   {% if page_description %}<meta name="description" content="{{ page_description }}">{% endif %}
   <meta property="og:title" content="{{ page_title | default(site.title) | default('Site') }}">
   <meta property="og:type" content="website">
@@ -15,12 +19,35 @@
   {% if site.og_image %}<meta property="og:image" content="{{ site.og_image | safe }}">{% endif %}
   <meta name="twitter:card" content="summary">
   {% block head_extra %}{% endblock %}
+  <style>
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; }
+    .skip-link:focus {
+      left: 1rem; top: 1rem;
+      display: inline-flex; align-items: center; min-height: 2.75rem;
+      padding: 0.6rem 1rem; border-radius: 8px;
+      background: Canvas; color: CanvasText; border: 2px solid CanvasText;
+      font: inherit; text-decoration: none;
+    }
+    :focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+    /* A standalone link in a list is a target in its own right, so WCAG
+       2.5.8's exception for links inside a sentence does not apply to it.
+       At default styling these rows are about 19px tall and fail the 24x24
+       minimum, so give every list link a real box. */
+    nav a, li a {
+      display: inline-flex; align-items: center;
+      min-height: 24px; padding: 0.25rem 0;
+    }
+    li { margin-block: 0.25rem; }
+  </style>
 </head>
 <body>
+  <!-- Generated pages get the same first tab stop as authored ones; without
+       it a keyboard user lands in the navigation on every taxonomy page. -->
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   {% block header %}
   <header role="banner">
     <nav aria-label="Main navigation">
-      <a href="/">{{ site.name | default('Home') }}</a>
+      <a href="{{ url_prefix | safe }}/">{{ site.name | default('Home') }}</a>
     </nav>
   </header>
   {% endblock %}

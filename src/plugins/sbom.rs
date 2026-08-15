@@ -39,7 +39,8 @@
 //!
 //! Every HTML page emitted by the build receives a
 //! `<link rel="sbom" type="application/vnd.cyclonedx+json"
-//!  href="/sbom.cdx.json">` element in `<head>`. This is the
+//!  href="<base-url-path>/sbom.cdx.json">` element in `<head>`.
+//! This is the
 //! IANA-registered link relation for SBOM discovery (registered
 //! 2023; see <https://www.iana.org/assignments/link-relations/>).
 //!
@@ -103,15 +104,22 @@ impl Plugin for SbomPlugin {
         &self,
         html: &str,
         _path: &Path,
-        _ctx: &PluginContext,
+        ctx: &PluginContext,
     ) -> Result<String, SsgError> {
         // Idempotent: skip if an SBOM link is already present.
         if html.contains("rel=\"sbom\"") || html.contains("rel='sbom'") {
             return Ok(html.to_string());
         }
+        // The SBOM sits at the *site* root, which is only the server root
+        // when `base_url` has no path. On a project site served from a
+        // sub-path, a bare `/sbom.cdx.json` points at the domain apex and
+        // 404s, so carry the prefix across.
         let link = format!(
             "<link rel=\"sbom\" type=\"application/vnd.cyclonedx+json\" \
-             href=\"/{}\">\n",
+             href=\"{}/{}\">\n",
+            ctx.config.as_ref().map_or_else(String::new, |c| {
+                crate::plugins_group::csp::base_url_path_prefix(&c.base_url)
+            }),
             Self::sbom_path()
         );
         Ok(inject_before_head_close(html, &link))
@@ -220,6 +228,7 @@ fn epoch_to_iso(secs: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cmd::SsgConfig;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -288,6 +297,36 @@ mod tests {
         let body = fs::read_to_string(&sbom_file).unwrap();
         assert!(body.contains("\"CycloneDX\""));
         assert!(body.contains("\"specVersion\": \"1.5\""));
+    }
+
+    /// The SBOM sits at the site root, which is only the server root when
+    /// `base_url` has no path. On a project site a bare `/sbom.cdx.json`
+    /// points at the domain apex and 404s on every page that carries it.
+    #[test]
+    fn sbom_link_carries_the_base_url_path_prefix() {
+        let dir = tempdir().unwrap();
+        let config = SsgConfig::builder()
+            .base_url("https://example.com/ssg-themes.github.io/apex".into())
+            .build()
+            .unwrap();
+        let ctx = PluginContext::with_config(
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            dir.path(),
+            config,
+        );
+        let out = SbomPlugin
+            .transform_html(
+                "<html><head></head><body></body></html>",
+                Path::new("x.html"),
+                &ctx,
+            )
+            .unwrap();
+        assert!(
+            out.contains(r#"href="/ssg-themes.github.io/apex/sbom.cdx.json""#),
+            "{out}"
+        );
     }
 
     #[test]
