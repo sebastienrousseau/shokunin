@@ -1483,8 +1483,8 @@ mod tests {
     // collect_json_files — recursion + filtering
     // -------------------------------------------------------------------
 
-    /// Regression: a theme whose page layouts are StaticWeaver (the
-    /// default engine) put a `base.html` in `template_dir` that MiniJinja
+    /// Regression: a theme whose page layouts are `StaticWeaver` (the
+    /// default engine) put a `base.html` in `template_dir` that `MiniJinja`
     /// cannot parse. Falling back to that directory aborted the entire
     /// build with `syntax error: unexpected character (in base.html:26)`,
     /// attributed to `tag.html` — a file the author never wrote.

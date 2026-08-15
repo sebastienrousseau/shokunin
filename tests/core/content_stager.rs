@@ -38,7 +38,7 @@ fn three_page_fixture_without_permalinks_gets_derived_permalinks() {
     }
 
     let staged =
-        stage_content_with_site_defaults(&src, &build, &[], Some(BASE))
+        stage_content_with_site_defaults(&src, &build, &[], Some(BASE), &[])
             .unwrap();
 
     for page in pages {
@@ -64,7 +64,7 @@ fn author_specified_permalink_is_kept_verbatim() {
     .unwrap();
 
     let staged =
-        stage_content_with_site_defaults(&src, &build, &[], Some(BASE))
+        stage_content_with_site_defaults(&src, &build, &[], Some(BASE), &[])
             .unwrap();
     let body = fs::read_to_string(staged.join("pinned.md")).unwrap();
     assert!(body.contains("permalink: \"https://example.com/legacy-spot/\""));
@@ -93,6 +93,7 @@ fn index_md_convention_maps_to_directory_urls() {
         &build,
         &[],
         Some("https://example.com/"),
+        &[],
     )
     .unwrap();
 
@@ -101,10 +102,19 @@ fn index_md_convention_maps_to_directory_urls() {
         home.contains("permalink: \"https://example.com/\""),
         "root index.md → bare base URL with trailing slash: {home}"
     );
-    let docs = fs::read_to_string(staged.join("docs/index.md")).unwrap();
+    // A nested `index.md` is staged under its parent's name — `docs.md`,
+    // not `docs/index.md`. staticdatagen only recognises a *content-root*
+    // `index.md`, so leaving it nested made it write `docs/index/index.html`;
+    // staging it flat produces the documented `docs/index.html`. The URL
+    // asserted below is unchanged, which is the point.
+    let docs = fs::read_to_string(staged.join("docs.md")).unwrap();
     assert!(
         docs.contains("permalink: \"https://example.com/docs/\""),
         "nested index.md → enclosing directory URL: {docs}"
+    );
+    assert!(
+        !staged.join("docs/index.md").exists(),
+        "the nested original must not also remain, or the page is staged twice"
     );
 }
 

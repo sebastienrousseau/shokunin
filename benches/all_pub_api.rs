@@ -1052,6 +1052,7 @@ pub fn bench_core(c: &mut Criterion) {
                     black_box(&cs_build),
                     black_box(cs_keys),
                     black_box(Some("https://example.com")),
+                    black_box(&[]),
                 ))
             });
         },
