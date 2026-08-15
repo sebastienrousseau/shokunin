@@ -50,14 +50,6 @@ impl Plugin for MinifyPlugin {
         "minify"
     }
 
-    /// Minification must observe final markup: it strips HTML comments,
-    /// and the i18n plugin's `<!-- ssg:lang-switcher -->` marker is
-    /// replaced during the transform pass that would otherwise run after
-    /// this.
-    fn runs_after_transforms(&self) -> bool {
-        true
-    }
-
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
         if !ctx.site_dir.exists() {
             return Ok(());
