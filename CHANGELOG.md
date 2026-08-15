@@ -7,15 +7,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.50] - 2026-08-11
+## [0.0.50] - 2026-08-14
 
 The themeing release. Building three real themes against v0.0.49 surfaced
 four defects that made documented features unusable — each failing silently,
 which is why none had been reported. Multi-locale sites additionally gain
 translated slugs.
 
+It also repairs the release pipeline itself. Nothing had published cleanly
+since v0.0.46: crates.io was two versions behind the README's own install
+instruction, and v0.0.49 produced no artefacts at all.
+
 ### Fixed
 
+- **The release pipeline could not publish.** Three separate faults, each
+  masking the next:
+  - Workspace members were frozen at `0.0.47` while the root crate advanced
+    to `0.0.50`, so the first `cargo publish -p ssg-core` of every release
+    aborted with `already exists on crates.io index`. All six members and
+    the four root dependency pins now track the root version, and
+    `tests/release_versions.rs` fails the build if they drift again —
+    before a tag is cut rather than after.
+  - The step's own idempotency guard, which should have absorbed that,
+    probed `https://crates.io/api/v1/crates/<crate>/<version>` over HTTP.
+    That request failed from the runner during v0.0.48 (it returns 200 from
+    a developer machine), so a crate that *was* on crates.io was reported
+    missing, the step exited 1, and `Publish ssg to crates.io` never ran.
+    The guard now reads cargo's own diagnostic and needs no network.
+  - The GHCR job exported its build cache to the GitHub Actions Cache
+    service, which failed with `ERROR: not_found` after a 126.9s export —
+    a green image build that shipped no image. The cache moved to GHCR
+    itself, with `ignore-error=true` so a cache fault can never fail a
+    release again.
+- **A release tag started two heavyweight workflow runs.** `scheduled.yml`
+  triggered on `v*` tags as "release-gating coverage", but nothing in
+  `release.yml` waited on its result, so it gated nothing while doubling
+  the load. Both runs were cancelled together at v0.0.49, leaving that tag
+  with no release. The tag trigger is gone, and `release.yml` gained a
+  `concurrency` group with `cancel-in-progress: false` so a release is
+  never silently superseded mid-publish.
+- **`examples/multilingual_full` audited the pre-0.0.50 output layout.** It
+  expected each locale home page at `<lang>/index/index.html` — the extra
+  directory level this release removes — and so reported all five as
+  missing on every run. It now checks `<lang>/index.html`, and additionally
+  asserts that the translated-slug pages are *reciprocally linked* rather
+  than merely present; unpaired translations fail the example hard, in CI
+  included.
 - **`layout` was ignored on every page** (`src/plugins/template_plugin.rs`).
   `before_compile` writes front-matter sidecars to `<build_dir>/.meta`, but
   `staticdatagen` promotes `output.build-tmp` onto `output` once the compile
@@ -159,6 +196,31 @@ translated slugs.
   bodies.
 - **`x-default` is emitted only when the default locale serves the page**,
   rather than pointing at a URL that may not exist.
+
+### Documentation
+
+Translated slugs shipped with no user-facing documentation: on merge,
+`translation_key` appeared in exactly two files in the repository — the
+plugin source and this changelog. The `docs_accuracy` gate did not catch it
+because it verifies numeric claims (version strings, test counts, coverage
+floors, MSRV), not whether a feature was described anywhere.
+
+- **`docs/guide/i18n.md`** documented the identical-path pairing model this
+  release replaced, illustrated with `/en/about` ↔ `/fr/about`. Rewritten
+  against actual behaviour: a new *Page Pairing* section covering
+  `translation_key` and the path fallback, a *Root-hosted default locale*
+  section giving the three conditions detection requires, and an
+  explanation of how each `hreflang` value is chosen and why reciprocity
+  depends on it. The sitemap and language-switcher sections were corrected
+  to match — the switcher lists a locale only when a paired page exists.
+- **`docs/guide/content.md`** gained `translation_key` in the standard
+  front-matter field table, where an author would actually look for it.
+- **`src/plugins/i18n.rs`** module docs now explain pairing, root-locale
+  serving and reciprocity. The existing rustdoc was accurate but attached to
+  private items, so none of it reached docs.rs.
+- **`README.md`** describes the feature in the i18n row rather than only
+  bumping its version badge, and the examples table lists
+  `multilingual_full`, which was absent.
 
 ### Security
 

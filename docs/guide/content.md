@@ -34,6 +34,7 @@ Your content here.
 | `categories` | List | Categories for taxonomy generation |
 | `template` | String | Override the default template for this page |
 | `language` | String | Page language (BCP 47), overrides site default |
+| `translation_key` | String | Pairs this page with its translations in other locales — see [i18n](i18n.md#translated-slugs). Required only when the translated pages have different slugs |
 
 ### Frontmatter Formats
 
