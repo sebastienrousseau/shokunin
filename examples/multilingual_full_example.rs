@@ -62,6 +62,9 @@ use ssg::pipeline::compile_site;
 const LOCALES: &[&str] = &["en", "fr", "de", "es", "ja"];
 const POSTS_PER_LOCALE: usize = 5;
 
+const BASE_URL: &str = "https://example.com";
+const SITE_NAME: &str = "multilingual_full example";
+
 /// The translated-slug family: one page per locale, all sharing
 /// `translation_key: "about"` in front matter, each at a slug of its
 /// own. Path matching pairs `post-1` across locales for free because
@@ -104,14 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // (default-layout injection, template stub fill-in, etc.) so this
     // example doesn't need to wire the shim layer by hand.
     //
-    // It registers no plugins, which is why the i18n pass below is
-    // explicit. That also means the pages emitted here carry no Open
-    // Graph tags, no `twitter:card` and no charset, so they do not
-    // satisfy `tests/element_presence.rs` if that gate is pointed at
-    // them. Driving `build_pipeline` instead would fix it and is the
-    // right end state, but this example's content lacks the front
-    // matter the full pipeline's manifest / CNAME / humans templates
-    // need — separate work, tracked rather than half-done here.
+    // It registers no plugins, though, so the pass below is explicit.
     compile_site(build_dir, content_dir, site_dir, template_dir)?;
 
     // Front-matter sidecars carry `translation_key` from the source
@@ -123,22 +119,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     let sidecars = ssg::frontmatter::emit_sidecars(content_dir, &sidecar_dir)?;
     println!("multilingual_full: wrote {sidecars} front-matter sidecars");
 
-    // Inject hreflang. Without this pass the pages are built but
-    // unlinked, and the translated-slug pairing below has nothing to
-    // assert against.
+    // SEO + i18n pass.
+    //
+    // The i18n half is what makes the translated-slug assertions below
+    // meaningful — without it the pages are built but unlinked.
+    //
+    // The SEO half is what makes the pages *conformant*. `compile_site`
+    // alone emits no Open Graph tags and no `twitter:card`, so every
+    // page this example produced failed the universal HTML invariants
+    // in `tests/element_presence.rs` (issue #676). Registering the
+    // three SEO plugins is enough to close that without dragging in
+    // the postprocess chain, whose manifest / CNAME / humans templates
+    // need front matter this example's content does not carry.
     {
         use ssg::i18n::{I18nConfig, I18nPlugin, UrlPrefixStrategy};
-        use ssg::plugin::{Plugin, PluginContext};
+        use ssg::plugin::{PluginContext, PluginManager};
+        use ssg::seo::{CanonicalPlugin, JsonLdPlugin, SeoPlugin};
 
-        let plugin = I18nPlugin::new(I18nConfig {
+        let mut plugins = PluginManager::new();
+        plugins.register(SeoPlugin);
+        plugins.register(JsonLdPlugin::from_site(BASE_URL, SITE_NAME));
+        plugins.register(CanonicalPlugin::new(BASE_URL.to_string()));
+        plugins.register(I18nPlugin::new(I18nConfig {
             default_locale: "en".to_string(),
             locales: LOCALES.iter().map(|l| (*l).to_string()).collect(),
             url_prefix: UrlPrefixStrategy::SubPath,
-        });
+        }));
+
         let ctx =
             PluginContext::new(content_dir, build_dir, site_dir, template_dir);
-        plugin.after_compile(&ctx)?;
-        println!("multilingual_full: i18n pass complete — auditing output:");
+        plugins.run_after_compile(&ctx)?;
+        plugins.run_fused_transforms(&ctx)?;
+        println!("multilingual_full: SEO + i18n pass complete — auditing:");
     }
 
     let mut found = 0usize;

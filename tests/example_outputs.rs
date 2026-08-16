@@ -878,6 +878,94 @@ fn multilingual_example_per_locale_artifacts() {
     }
 }
 
+/// `multilingual_full` — nested-locale tree plus translated slugs.
+///
+/// Added for issue #676. This example was absent from the suite, so
+/// its output was never built on a runner and the universal HTML
+/// invariants gate never saw it. Building it locally produced 125
+/// violations across 31 pages on `main` — no Open Graph tags, no
+/// `twitter:card`, and an empty `charset` attribute the minifier then
+/// dropped entirely. None of that was visible in CI.
+///
+/// The reciprocity assertions matter as much as the page count: a
+/// translated-slug page that renders but pairs with nothing is the
+/// exact silent failure `translation_key` exists to prevent, and
+/// "the file exists" cannot see it.
+#[test]
+fn multilingual_full_example_pairs_translated_slugs() {
+    /// `(locale, slug)` for the pages sharing `translation_key: "about"`.
+    const ABOUT: &[(&str, &str)] = &[
+        ("en", "about"),
+        ("fr", "a-propos"),
+        ("de", "ueber-uns"),
+        ("es", "acerca-de"),
+        ("ja", "gaiyou"),
+    ];
+    const LOCALES: &[&str] = &["en", "fr", "de", "es", "ja"];
+
+    let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+    let root = workspace_root();
+    let public = root.join("examples/multilingual_full/public");
+    let _ = fs::remove_dir_all(&public);
+
+    run_example("multilingual_full", Duration::from_secs(300));
+
+    assert!(public.exists(), "multilingual_full public dir not created");
+
+    // Locale home pages land at `<lang>/index.html`. They used to gain
+    // a directory level (`<lang>/index/index.html`); v0.0.50's content
+    // stager side-steps that, and this pins the corrected shape.
+    for loc in LOCALES {
+        let idx = public.join(loc).join("index.html");
+        assert!(idx.exists(), "missing /{loc}/index.html");
+
+        for i in 1..=5 {
+            let post = public
+                .join(loc)
+                .join(format!("post-{i}"))
+                .join("index.html");
+            assert!(post.exists(), "missing /{loc}/post-{i}/index.html");
+        }
+    }
+
+    // Translated slugs: every page present, and every page carrying an
+    // `hreflang` alternate for each of the other four.
+    for (lang, slug) in ABOUT {
+        let page = public.join(lang).join(slug).join("index.html");
+        assert!(
+            page.exists(),
+            "missing translated-slug page /{lang}/{slug}/index.html"
+        );
+
+        let html = read_html(&page);
+        for (other, other_slug) in ABOUT {
+            if other == lang {
+                continue;
+            }
+            // Match the alternate link itself, not the path anywhere on
+            // the page — the generated navbar links every page in the
+            // site, so a bare `contains("/fr/a-propos")` passes even
+            // when the hreflang block is empty.
+            let needle = format!("hreflang=\"{other}\" href=\"");
+            let href = html
+                .find(&needle)
+                .map(|i| &html[i + needle.len()..])
+                .and_then(|rest| rest.find('"').map(|e| &rest[..e]));
+            let want = format!("/{other}/{other_slug}");
+            assert!(
+                href.is_some_and(|h| h.contains(&want)),
+                "/{lang}/{slug}/ has no hreflang=\"{other}\" alternate \
+                 pointing at {want} — translated-slug pairing via \
+                 `translation_key` has regressed (got {href:?})"
+            );
+        }
+    }
+
+    // Same universal HTML checks every other example is held to.
+    validate_all_html(&public);
+}
+
 // ── Negative tests: prove the validators actually catch things ──────
 
 #[test]
