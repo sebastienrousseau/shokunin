@@ -63,7 +63,6 @@ const LOCALES: &[&str] = &["en", "fr", "de", "es", "ja"];
 const POSTS_PER_LOCALE: usize = 5;
 
 const BASE_URL: &str = "https://example.com";
-const SITE_NAME: &str = "multilingual_full example";
 
 /// The translated-slug family: one page per locale, all sharing
 /// `translation_key: "about"` in front matter, each at a slug of its
@@ -134,12 +133,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         use ssg::i18n::{I18nConfig, I18nPlugin, UrlPrefixStrategy};
         use ssg::plugin::{PluginContext, PluginManager};
-        use ssg::seo::{CanonicalPlugin, JsonLdPlugin, SeoPlugin};
+        use ssg::seo::{CanonicalPlugin, SeoPlugin};
 
         let mut plugins = PluginManager::new();
         plugins.register(SeoPlugin);
-        plugins.register(JsonLdPlugin::from_site(BASE_URL, SITE_NAME));
         plugins.register(CanonicalPlugin::new(BASE_URL.to_string()));
+        // `JsonLdPlugin` is deliberately absent: `examples/templates`
+        // already emits a `WebPage` block of its own, and the plugin
+        // skips a page that has one. Registering it here produced no
+        // second block and no behavioural difference — an example
+        // should not wire up a plugin that demonstrably does nothing.
         plugins.register(I18nPlugin::new(I18nConfig {
             default_locale: "en".to_string(),
             locales: LOCALES.iter().map(|l| (*l).to_string()).collect(),

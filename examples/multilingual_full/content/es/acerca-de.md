@@ -14,6 +14,7 @@ logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9
 logo_alt: "multilingual_full example logo"
 logo_width: "32"
 logo_height: "32"
+name: "Acerca de"
 ---
 
 # Acerca de
