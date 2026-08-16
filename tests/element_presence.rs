@@ -433,14 +433,26 @@ fn check_core_invariants(
         fail("charset", format!("page {rel}: no charset declared"));
     }
 
-    // meta-description, canonical, og:* chain, twitter:card are
-    // SEO-recommended but not part of the always-on gate. The
-    // bundled `examples/basic` template is intentionally minimal
-    // (single-page demo) and omits them; the other 7 examples
-    // have them via the shared SEO plugins. Reviewers can opt into
-    // the strict check via `cargo test --test element_presence
-    // -- --ignored`, which exercises the full 10-invariant set
-    // including these.
+    // meta-description, canonical, the og:* chain and twitter:card
+    // are deliberately absent from *this* function. They are checked —
+    // always, not opt-in — by [`check_invariants`], which
+    // `every_built_example_page_satisfies_universal_invariants` runs
+    // over the same pages minus [`is_exempt`]. Splitting them this way
+    // keeps `core_invariants_hold_for_every_page` reporting the
+    // structural failures (missing `<h1>`, no `<main>`, no charset)
+    // without burying them under SEO noise.
+    //
+    // `examples/basic` is exempt from the SEO half because its bundled
+    // template is a deliberately minimal single-page demo; every other
+    // example gets those tags from the shared SEO plugins.
+    //
+    // This comment used to end by telling reviewers to opt into a
+    // stricter run with `cargo test --test element_presence --
+    // --ignored`. That command matches nothing: there is no `#[ignore]`
+    // in this file, so it reports `0 passed; 6 filtered out` and looks
+    // like a clean run. The instruction outlived the `#[ignore]` it
+    // referred to. #668 corrected the same claim in
+    // `docs/architecture/regression-contract.md` and missed this copy.
 }
 
 #[test]
