@@ -472,7 +472,24 @@ jobs:
   # ── GitHub Release + crates.io publish ──────────────────────────
   publish:
     name: github release · crates.io
-    needs: [build]
+    # `gpg-sign` is here so its detached signatures exist BEFORE this job
+    # downloads artifacts. Without it the two ran concurrently: this job
+    # takes every artifact present at that instant, so the `.asc` files
+    # usually lost the race and never reached the release — while
+    # SECURITY.md and the generated release notes both told users to run
+    # `gpg --verify`. Configuring the GPG secrets alone would not have
+    # fixed that.
+    #
+    # `gpg-sign` is itself conditional on the GPG secret existing, and a
+    # skipped dependency skips its dependents by default — which would
+    # mean no secret, no release at all. Hence the explicit result check
+    # below: proceed when it succeeded OR was skipped, fail only when it
+    # actually failed.
+    needs: [build, gpg-sign]
+    if: >-
+      !cancelled() &&
+      needs.build.result == 'success' &&
+      (needs.gpg-sign.result == 'success' || needs.gpg-sign.result == 'skipped')
     # GHCR is best-effort (multi-arch builds can be flaky); don't gate
     # the GitHub Release or crates.io publish on it.
     runs-on: ubuntu-latest
