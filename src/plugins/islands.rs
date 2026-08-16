@@ -150,7 +150,6 @@ impl Plugin for IslandPlugin {
 /// Extracts component names from `<ssg-island component="...">` elements.
 fn extract_island_components(html: &str) -> BTreeSet<String> {
     let mut components = BTreeSet::new();
-    let pattern = "component=\"";
 
     let mut search_from = 0;
     while let Some(tag_start) = html[search_from..].find("<ssg-island") {
@@ -159,13 +158,9 @@ fn extract_island_components(html: &str) -> BTreeSet<String> {
 
         if let Some(tag_end) = rest.find('>') {
             let tag = &rest[..tag_end];
-            if let Some(comp_start) = tag.find(pattern) {
-                let value_start = comp_start + pattern.len();
-                if let Some(value_end) = tag[value_start..].find('"') {
-                    let component = &tag[value_start..value_start + value_end];
-                    if !component.is_empty() {
-                        let _ = components.insert(component.to_string());
-                    }
+            if let Some(component) = attr_value(tag, "component") {
+                if !component.is_empty() {
+                    let _ = components.insert(component);
                 }
             }
             search_from = abs_start + tag_end;
@@ -175,6 +170,47 @@ fn extract_island_components(html: &str) -> BTreeSet<String> {
     }
 
     components
+}
+
+/// Reads an attribute value out of a start tag, accepting all three forms
+/// the HTML syntax allows: `a="v"`, `a='v'` and bare `a=v`.
+///
+/// The bare form is not exotic. `html-generator` minifies pages during
+/// generation and strips quotes it does not need, so a page that authored
+/// `component="pricing-toggle"` reaches this function as
+/// `component=pricing-toggle`. Matching only the double-quoted form meant
+/// every island on a minified page was dropped: no bundle was copied, the
+/// component never reached the manifest, and the page silently served its
+/// static fallback for ever. Nothing errored, which is why it went
+/// unnoticed.
+fn attr_value(tag: &str, name: &str) -> Option<String> {
+    let mut from = 0;
+    loop {
+        let at = tag[from..].find(name)? + from;
+        let before_ok = at == 0
+            || tag[..at]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_whitespace());
+        let after = &tag[at + name.len()..];
+        // Guard against matching a longer attribute that merely starts with
+        // this name (`component-id=`), and against a value containing it.
+        if before_ok && after.starts_with('=') {
+            let value = &after[1..];
+            return Some(match value.chars().next()? {
+                q @ ('"' | '\'') => {
+                    value[1..].find(q).map(|e| value[1..1 + e].to_string())?
+                }
+                _ => value
+                    .find(|c: char| c.is_whitespace() || c == '>')
+                    .map_or_else(
+                        || value.to_string(),
+                        |e| value[..e].to_string(),
+                    ),
+            });
+        }
+        from = at + name.len();
+    }
 }
 
 #[cfg(test)]
@@ -334,6 +370,48 @@ document.addEventListener('ssg:after-swap', () => {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    /// `html-generator` minifies pages during generation and drops quotes
+    /// it does not need, so an authored `component="x"` can arrive as
+    /// `component=x`. Matching only the double-quoted form silently
+    /// dropped every island on a minified page.
+    #[test]
+    fn island_components_are_found_whatever_the_quoting() {
+        for html in [
+            r#"<ssg-island component="feature-tabs"></ssg-island>"#,
+            r#"<ssg-island component='feature-tabs'></ssg-island>"#,
+            r#"<ssg-island component=feature-tabs></ssg-island>"#,
+            r#"<ssg-island props='{"a":1}' component=feature-tabs hydrate=visible>"#,
+        ] {
+            let got = extract_island_components(html);
+            assert!(
+                got.contains("feature-tabs"),
+                "missed the component in: {html}"
+            );
+        }
+    }
+
+    /// A longer attribute that merely starts with the name must not be
+    /// mistaken for it.
+    #[test]
+    fn island_component_lookup_is_not_fooled_by_a_prefix_match() {
+        let html =
+            r#"<ssg-island component-id=nope component=real></ssg-island>"#;
+        let got = extract_island_components(html);
+        assert!(got.contains("real"), "{got:?}");
+        assert!(!got.contains("nope"), "{got:?}");
+    }
+
+    /// Several islands on one page all reach the manifest.
+    #[test]
+    fn island_components_collect_across_a_page() {
+        let html = concat!(
+            "<ssg-island component=feature-tabs></ssg-island>",
+            r#"<ssg-island component="pricing-toggle"></ssg-island>"#,
+        );
+        let got = extract_island_components(html);
+        assert_eq!(got.len(), 2, "{got:?}");
+    }
 
     #[test]
     fn extract_components_finds_all() {
