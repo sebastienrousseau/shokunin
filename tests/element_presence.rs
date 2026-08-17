@@ -45,6 +45,39 @@
 
 use std::{fs, path::Path};
 
+/// Handles the "nothing to scan" case for a gate that reads built
+/// example output.
+///
+/// Locally this is a convenience: `cargo test --test element_presence`
+/// on a fresh clone should say what to run rather than fail. Under
+/// `CI` it is a failure, because a gate that scans zero pages and
+/// reports `ok` is indistinguishable from one that scanned everything
+/// and found nothing wrong.
+///
+/// That distinction is not hypothetical. `examples/multilingual_full`
+/// carried 125 invariant violations for months while this suite
+/// reported success on every run, because nothing in CI populated its
+/// `public/` directory (#676). The gate was green and blind.
+///
+/// Returns `true` when the caller should return early.
+fn bail_on_empty(gate: &str, count: usize) -> bool {
+    if count > 0 {
+        return false;
+    }
+    let msg = format!(
+        "[{gate}] no built example output found under examples/*/public \
+         — run `cargo build --examples && cargo test --test \
+         example_outputs` first to populate."
+    );
+    assert!(
+        std::env::var_os("CI").is_none(),
+        "{msg}\n\nThis is a hard failure under CI: a gate that scans \
+         nothing must not report success."
+    );
+    eprintln!("{msg} Skipping (local run).");
+    true
+}
+
 fn collect_html(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
@@ -292,12 +325,7 @@ fn every_built_example_page_satisfies_universal_invariants() {
         }
     }
 
-    if html_files.is_empty() {
-        eprintln!(
-            "[element_presence] no built example output found under \
-             examples/*/public — run `cargo build --examples && cargo \
-             test --test example_outputs` first to populate. Skipping."
-        );
+    if bail_on_empty("element_presence", html_files.len()) {
         return;
     }
 
@@ -470,11 +498,7 @@ fn core_invariants_hold_for_every_page() {
         }
     }
 
-    if html_files.is_empty() {
-        eprintln!(
-            "[element_presence] no built example output found — \
-             skipping core invariants. Run example_outputs first."
-        );
+    if bail_on_empty("element_presence/core", html_files.len()) {
         return;
     }
 

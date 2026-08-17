@@ -49,13 +49,22 @@ fn every_jsonld_block_in_built_examples_is_valid() {
         }
     }
 
+    // Locally a convenience; under CI a failure. A gate that validates
+    // zero documents and reports `ok` looks exactly like one that
+    // validated everything. `examples/multilingual_full` shipped 37
+    // invalid `WebPage` blocks past this very test for months, because
+    // nothing in CI populated its `public/` directory (#676).
     if html_files.is_empty() {
-        eprintln!(
-            "[jsonld_validation] no built example output found under \
-             examples/*/public — run `cargo build --examples && \
-             cargo test --test example_outputs` first to populate. \
-             Skipping (this is not a failure)."
+        let msg = "[jsonld_validation] no built example output found \
+                   under examples/*/public — run `cargo build \
+                   --examples && cargo test --test example_outputs` \
+                   first to populate.";
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "{msg}\n\nThis is a hard failure under CI: a gate that \
+             validates nothing must not report success."
         );
+        eprintln!("{msg} Skipping (local run).");
         return;
     }
 
