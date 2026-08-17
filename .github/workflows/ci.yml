@@ -295,6 +295,20 @@ jobs:
           cargo llvm-cov --lib --features test-fault-injection \
             --ignore-filename-regex "$IGNORE" \
             --no-report --quiet
+          # Second pass with default features off.
+          #
+          # `#[cfg(not(feature = "templates"))]` code never compiles into
+          # the pass above, so llvm-cov cannot observe it and every line
+          # in it counts as uncovered on a diff. That made
+          # `codecov/patch` structurally unpassable for any change to
+          # those paths — the `TaxonomyRenderer` fallback renderer being
+          # the case that surfaced it.
+          #
+          # `--no-report` accumulates profraw data, so the `report` calls
+          # below merge both feature configurations into one figure.
+          cargo llvm-cov --lib --no-default-features \
+            --ignore-filename-regex "$IGNORE" \
+            --no-report --quiet
           cargo llvm-cov report --summary-only \
             --ignore-filename-regex "$IGNORE"
           cargo llvm-cov report --lcov --output-path coverage.lcov \

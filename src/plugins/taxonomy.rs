@@ -1718,6 +1718,8 @@ mod tests {
     /// cannot parse. Falling back to that directory aborted the entire
     /// build with `syntax error: unexpected character (in base.html:26)`,
     /// attributed to `tag.html` — a file the author never wrote.
+    // `resolve_user_template_dir` only exists with `templates` on.
+    #[cfg(feature = "templates")]
     #[test]
     fn user_templates_come_only_from_the_tera_subdirectory() {
         let dir = tempdir().expect("tempdir");
@@ -2285,6 +2287,101 @@ mod tests {
         let value = serde_json::json!("a,,b");
         extract_terms_from_value(&value, &mut map, "T", "/t.html", true);
         assert_eq!(map.len(), 2);
+    }
+
+    // -------------------------------------------------------------------
+    // Fallback renderer — locale handling without the `templates` feature
+    // -------------------------------------------------------------------
+    //
+    // These only compile with default features off, which is the whole
+    // point: that renderer is a separate implementation and used to
+    // ignore `locale` entirely, so a French tree emitted the site's
+    // default language and an un-prefixed canonical. Nothing caught it,
+    // because nothing tested this configuration.
+    //
+    // The coverage job runs a second `--no-default-features` pass so
+    // these are measured rather than counted as dead lines on a diff.
+    #[cfg(not(feature = "templates"))]
+    mod no_templates_renderer {
+        use super::*;
+
+        fn cfg_ctx(base: &PluginContext) -> PluginContext {
+            let cfg = crate::cmd::SsgConfig::builder()
+                .site_name("Example".to_string())
+                .base_url("https://example.com".to_string())
+                .build()
+                .expect("config");
+            PluginContext::with_config(
+                &base.content_dir,
+                &base.build_dir,
+                &base.site_dir,
+                &base.template_dir,
+                cfg,
+            )
+        }
+
+        #[test]
+        fn default_locale_keeps_the_site_language_and_bare_canonical() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx);
+
+            assert_eq!(renderer.locale_path_segment(), "");
+            assert_eq!(
+                renderer.canonical("/tags/rust/"),
+                r#"<link rel="canonical" href="https://example.com/tags/rust/">"#
+            );
+        }
+
+        #[test]
+        fn scoped_locale_overrides_language_and_prefixes_canonical() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let ctx = cfg_ctx(&base);
+            let renderer = TaxonomyRenderer::new(&ctx).for_locale(
+                Some("fr"),
+                "/fr",
+                "/fr",
+            );
+
+            assert_eq!(renderer.lang(), "fr");
+            assert_eq!(renderer.locale_path_segment(), "/fr");
+            assert_eq!(
+                renderer.canonical("/tags/rust/"),
+                r#"<link rel="canonical" href="https://example.com/fr/tags/rust/">"#,
+                "canonical must point at the file actually written"
+            );
+        }
+
+        #[test]
+        fn locale_without_a_language_keeps_the_site_tag() {
+            // `None` marks the default locale. Substituting the bare
+            // locale code here is what turned `en-GB` into `en`.
+            let (_tmp, _site, _meta, base) = make_layout();
+            let cfg = crate::cmd::SsgConfig::builder()
+                .site_name("Example".to_string())
+                .base_url("https://example.com".to_string())
+                .language("en-GB".to_string())
+                .build()
+                .expect("config");
+            let ctx = PluginContext::with_config(
+                &base.content_dir,
+                &base.build_dir,
+                &base.site_dir,
+                &base.template_dir,
+                cfg,
+            );
+            let renderer = TaxonomyRenderer::new(&ctx).for_locale(None, "", "");
+
+            assert_eq!(renderer.lang(), "en-GB");
+        }
+
+        #[test]
+        fn lang_falls_back_to_en_without_a_config() {
+            let (_tmp, _site, _meta, base) = make_layout();
+            let renderer = TaxonomyRenderer::new(&base);
+            assert_eq!(renderer.lang(), "en");
+            assert_eq!(renderer.canonical("/tags/rust/"), "");
+        }
     }
 }
 
