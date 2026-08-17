@@ -7,6 +7,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.51] - 2026-08-16
+
+The follow-through release. Every item below was found by building real
+sites against v0.0.50 rather than by reading the code, and several were
+silent — producing wrong output with no error at all.
+
+### Fixed
+
+- **Taxonomy was locale-blind** (#680). Every locale's pages were collected
+  into one index at `tags/`, so an English-language tag page listed French
+  pages beside English ones, and a French reader had no tag index at all.
+  Entries now group by locale, inferred from the first path segment of each
+  page's URL. The default locale keeps the root path, so existing links and
+  sitemaps do not move; other locales get their own prefix (`fr/tags/`).
+  Each tree renders through a locale-scoped renderer in both the MiniJinja
+  and no-templates paths: `site.language` follows the tree, navigation uses
+  a locale-scoped prefix, and `page_url` carries the locale segment so a
+  canonical points at the file actually written. Single-locale sites are
+  unaffected.
+- **Islands vanished from minified pages** (#680). `extract_island_components`
+  matched the literal `component="`, but `html-generator` minifies some
+  pages during generation and strips quotes it does not need, so
+  `component=feature-tabs` matched nothing. The bundle was never copied, the
+  component never reached `_islands/manifest.json`, and the page served its
+  static fallback for ever without erroring. The extractor now accepts
+  `a="v"`, `a='v'` and bare `a=v`, and refuses to match a longer attribute
+  that merely starts with the name.
+- **GPG signatures never reached the release** (#678).
+- **`multilingual_full` failed the HTML invariants gate** (#677).
+
+### Added
+
+- **`site_prefix` in taxonomy templates** (#680). `url_prefix` is
+  locale-scoped; assets are not. A template building asset URLs from the
+  scoped prefix asked for `/atlas/fr/styles.css`, which does not exist.
+- **Coverage now measures both feature configurations** (#683). The job ran
+  only with default features, so `#[cfg(not(feature = "templates"))]` code
+  never entered the coverage binary and counted as uncovered on every diff.
+  A second `--no-default-features` pass is accumulated into the same report.
+- **3,446 library tests that had never been compiled** (#683).
+  `cargo test --lib --no-default-features` did not build: `src/core/lang.rs`
+  imported `HashMap` behind the `templates` feature while its test module
+  used it ungated, and a taxonomy test called a templates-only function. The
+  feature-powerset job runs `cargo check`, which does not build test code,
+  so nothing had ever compiled them.
+- **CI gates that scan nothing now fail** (#681), and Miri failures break
+  the build rather than being reported and ignored.
+
+### Changed
+
+- **Minification's ordering is documented accurately** (#682). Two comments
+  claimed it "must be last content transform". It is registered last, but
+  `MinifyPlugin` only implements `after_compile`, and every `after_compile`
+  hook runs before any `transform_html` — so it rewrites markup that later
+  transforms then read. The comments now say so, and record that
+  `html-generator` minifies some pages before any plugin runs at all, which
+  no plugin ordering can affect.
+
+### Notes
+
+`v0.0.50` was published from a commit predating the two fixes above, so a
+site using taxonomy or islands should move to `0.0.51`. Themes pinning
+`min_version = "0.0.50"` continue to work; the floor is unchanged.
+
 ## [0.0.50] - 2026-08-14
 
 The themeing release. Building three real themes against v0.0.49 surfaced
