@@ -56,9 +56,14 @@ jobs:
     # the v0.0.45 lift pushed the lib suite to ~2500 tests. 180-minute
     # cap leaves head-room for future test growth without re-tuning.
     timeout-minutes: 180
-    # Advisory window: first 30 days after #560 lands. Drop this once
-    # the `.miri-skip` allowlist stabilises and Miri is reliably green.
-    continue-on-error: true
+    # `continue-on-error` used to sit here as an advisory window for the
+    # first 30 days after #560 landed, to be dropped "once the
+    # `.miri-skip` allowlist stabilises and Miri is reliably green".
+    # #560 shipped in the v0.0.45 cycle, so the window closed months
+    # ago, and the last 60 runs contain 6 successes, 8 concurrency
+    # cancellations and zero failures. Left in place it would have made
+    # this job permanently advisory by accident — a UB detector that
+    # cannot fail the build reports nothing.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
