@@ -597,7 +597,7 @@ impl<'a> TaxonomyRenderer<'a> {
                     serde_json::Value::String(language.clone()),
                 );
             }
-            url_prefix = locale_prefix.clone();
+            url_prefix.clone_from(locale_prefix);
         }
 
         let mut ctx_map = serde_json::Map::new();
