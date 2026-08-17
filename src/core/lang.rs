@@ -133,7 +133,14 @@ pub(crate) fn normalize_bcp47(raw: &str) -> Option<String> {
     Some(out)
 }
 
-#[cfg(test)]
+// Gated on `templates` to match the items under test: `HashMap` is
+// imported behind that feature (line 41) and `resolve_render_lang` is
+// defined behind it, so without the gate this module does not compile
+// with default features off. It never had one, and nothing noticed —
+// the feature-powerset job runs `cargo check`, which does not build
+// test code, so `cargo test --lib --no-default-features` had simply
+// never been compiled.
+#[cfg(all(test, feature = "templates"))]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
