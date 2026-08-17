@@ -49,7 +49,7 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs,
     path::{Path, PathBuf},
 };
@@ -146,43 +146,96 @@ impl Plugin for TaxonomyPlugin {
         // tags, categories, and topics.
         let renderer = TaxonomyRenderer::new(ctx);
 
-        if !tags.is_empty() {
-            generate_taxonomy_pages(
-                &ctx.site_dir,
-                "tags",
-                "Tags",
-                &tags,
-                TaxonomyKind::Tag,
-                &renderer,
-            )?;
-            log::info!("[taxonomy] Generated {} tag page(s)", tags.len());
-        }
+        // A multi-locale site gets one taxonomy tree per locale. Without
+        // this every locale's pages share a single index, so an
+        // English-language tag page lists French pages beside English ones
+        // and a French reader has no tag index at all.
+        let (locales, default_locale) = ctx.config.as_ref().map_or_else(
+            || (Vec::new(), String::new()),
+            |c| {
+                c.i18n.as_ref().map_or_else(
+                    || (Vec::new(), String::new()),
+                    |i| (i.locales.clone(), i.default_locale.clone()),
+                )
+            },
+        );
+        let multi_locale = locales.len() > 1;
 
-        if !categories.is_empty() {
-            generate_taxonomy_pages(
-                &ctx.site_dir,
+        for (name, title, map, kind) in [
+            ("tags", "Tags", &tags, TaxonomyKind::Tag),
+            (
                 "categories",
                 "Categories",
                 &categories,
                 TaxonomyKind::Category,
-                &renderer,
-            )?;
-            log::info!(
-                "[taxonomy] Generated {} category page(s)",
-                categories.len()
-            );
-        }
-
-        if !topics.is_empty() {
-            generate_taxonomy_pages(
-                &ctx.site_dir,
-                "topics",
-                "Topics",
-                &topics,
-                TaxonomyKind::Archive,
-                &renderer,
-            )?;
-            log::info!("[taxonomy] Generated {} topic page(s)", topics.len());
+            ),
+            ("topics", "Topics", &topics, TaxonomyKind::Archive),
+        ] {
+            if map.is_empty() {
+                continue;
+            }
+            if multi_locale {
+                let by_locale = split_map_by_locale(
+                    map,
+                    &locales,
+                    &default_locale,
+                    &url_prefix,
+                );
+                for (locale, scoped) in &by_locale {
+                    // The default locale keeps the root path so existing
+                    // links and sitemaps do not move.
+                    let dir = if *locale == default_locale {
+                        ctx.site_dir.join(name)
+                    } else {
+                        ctx.site_dir.join(locale).join(name)
+                    };
+                    // The default locale keeps the bare prefix; others
+                    // get their own, so Home and term links stay inside
+                    // the locale a reader is already in.
+                    let is_default = *locale == default_locale;
+                    let locale_prefix = if is_default {
+                        url_prefix.clone()
+                    } else {
+                        format!("{url_prefix}/{locale}")
+                    };
+                    let segment = if is_default {
+                        String::new()
+                    } else {
+                        format!("/{locale}")
+                    };
+                    let scoped_renderer = renderer.for_locale(
+                        if is_default {
+                            None
+                        } else {
+                            Some(locale.as_str())
+                        },
+                        &locale_prefix,
+                        &segment,
+                    );
+                    generate_taxonomy_pages_at(
+                        &dir,
+                        name,
+                        title,
+                        scoped,
+                        kind,
+                        &scoped_renderer,
+                    )?;
+                    log::info!(
+                        "[taxonomy] Generated {} {name} page(s) for {locale}",
+                        scoped.len()
+                    );
+                }
+            } else {
+                generate_taxonomy_pages(
+                    &ctx.site_dir,
+                    name,
+                    title,
+                    map,
+                    kind,
+                    &renderer,
+                )?;
+                log::info!("[taxonomy] Generated {} {name} page(s)", map.len());
+            }
         }
 
         Ok(())
@@ -237,6 +290,20 @@ struct TaxonomyRenderer<'a> {
     #[cfg(feature = "templates")]
     env: minijinja::Environment<'static>,
     ctx: &'a PluginContext,
+    /// Locale of the tree currently being rendered, as
+    /// `(language, url_prefix, path_segment)`. `None` on a single-locale
+    /// site.
+    ///
+    /// `language` is `None` for the default locale, which keeps the
+    /// site's configured tag — overriding it with the bare locale code
+    /// turned `en-GB` into `en`. `path_segment` is `""` for the default
+    /// locale and `/fr` for others, and prefixes `page_url` so the
+    /// canonical points at the page that was actually written.
+    ///
+    /// Without any of this every tree inherited the site's default
+    /// language, so the French tag index declared `lang="en-GB"` and
+    /// linked Home to the English home page.
+    locale: Option<(Option<String>, String, String)>,
 }
 
 #[cfg(feature = "templates")]
@@ -278,7 +345,30 @@ impl<'a> TaxonomyRenderer<'a> {
             },
         );
 
-        Self { env, ctx }
+        Self {
+            env,
+            ctx,
+            locale: None,
+        }
+    }
+
+    /// Returns a renderer scoped to one locale, so its pages declare that
+    /// language and link within that locale's URL prefix.
+    fn for_locale(
+        &self,
+        language: Option<&str>,
+        url_prefix: &str,
+        path_segment: &str,
+    ) -> Self {
+        Self {
+            env: self.env.clone(),
+            ctx: self.ctx,
+            locale: Some((
+                language.map(str::to_string),
+                url_prefix.to_string(),
+                path_segment.to_string(),
+            )),
+        }
     }
 
     /// Renders a term page (e.g. `/tags/rust/index.html`).
@@ -323,7 +413,10 @@ impl<'a> TaxonomyRenderer<'a> {
         );
         let _ = ctx_map.insert(
             "page_url".to_string(),
-            serde_json::Value::String(format!("/{taxonomy_name}/{slug}/")),
+            serde_json::Value::String(format!(
+                "{}/{taxonomy_name}/{slug}/",
+                self.locale_path_segment()
+            )),
         );
         let _ = ctx_map.insert(
             "posts".to_string(),
@@ -382,7 +475,10 @@ impl<'a> TaxonomyRenderer<'a> {
         );
         let _ = ctx_map.insert(
             "page_url".to_string(),
-            serde_json::Value::String(format!("/{taxonomy_name}/")),
+            serde_json::Value::String(format!(
+                "{}/{taxonomy_name}/",
+                self.locale_path_segment()
+            )),
         );
         // Essential head metadata (see render_term_page).
         let _ = ctx_map.insert(
@@ -436,6 +532,14 @@ impl<'a> TaxonomyRenderer<'a> {
             })
     }
 
+    /// The locale's URL segment (`""` for the default locale, `/fr`
+    /// otherwise), used to prefix `page_url`.
+    fn locale_path_segment(&self) -> String {
+        self.locale
+            .as_ref()
+            .map_or_else(String::new, |(_, _, seg)| seg.clone())
+    }
+
     /// Builds the `{ site: { name, title, language, ... } }` context
     /// shared by every taxonomy page.
     fn base_context(&self) -> serde_json::Map<String, serde_json::Value> {
@@ -484,11 +588,30 @@ impl<'a> TaxonomyRenderer<'a> {
             );
         }
 
+        let site_prefix = url_prefix.clone();
+        let mut url_prefix = url_prefix;
+        if let Some((language, locale_prefix, _)) = self.locale.as_ref() {
+            if let Some(language) = language {
+                let _ = site.insert(
+                    "language".to_string(),
+                    serde_json::Value::String(language.clone()),
+                );
+            }
+            url_prefix.clone_from(locale_prefix);
+        }
+
         let mut ctx_map = serde_json::Map::new();
         let _ =
             ctx_map.insert("site".to_string(), serde_json::Value::Object(site));
+        // `url_prefix` is locale-scoped, for links that should keep a
+        // reader inside their locale. Assets are not per-locale, so a
+        // template linking a stylesheet needs the unscoped prefix too —
+        // otherwise a French page asks for /atlas/fr/styles.css, which
+        // does not exist.
         let _ =
             ctx_map.insert("url_prefix".to_string(), url_prefix.clone().into());
+        let _ = ctx_map
+            .insert("site_prefix".to_string(), site_prefix.clone().into());
         ctx_map
     }
 }
@@ -500,7 +623,24 @@ impl<'a> TaxonomyRenderer<'a> {
 #[cfg(not(feature = "templates"))]
 impl<'a> TaxonomyRenderer<'a> {
     fn new(ctx: &'a PluginContext) -> Self {
-        Self { ctx }
+        Self { ctx, locale: None }
+    }
+
+    /// Locale-scoped renderer; see the `templates` implementation.
+    fn for_locale(
+        &self,
+        language: Option<&str>,
+        url_prefix: &str,
+        path_segment: &str,
+    ) -> Self {
+        Self {
+            ctx: self.ctx,
+            locale: Some((
+                language.map(str::to_string),
+                url_prefix.to_string(),
+                path_segment.to_string(),
+            )),
+        }
     }
 
     fn render_term_page(
@@ -572,7 +712,26 @@ impl<'a> TaxonomyRenderer<'a> {
         Ok(out)
     }
 
+    /// The locale's URL segment (`""` for the default locale, `/fr`
+    /// otherwise), used to prefix `page_url`. Mirrors the `templates`
+    /// implementation so both paths address the same page.
+    fn locale_path_segment(&self) -> String {
+        self.locale
+            .as_ref()
+            .map_or_else(String::new, |(_, _, seg)| seg.clone())
+    }
+
+    /// The tree's language.
+    ///
+    /// A locale-scoped tree carries its own language and it wins over
+    /// the site default — that override is the whole point of
+    /// splitting the trees. `None` means the default locale, which
+    /// deliberately keeps the site's configured tag: replacing it with
+    /// the bare locale code turned `en-GB` into `en`.
     fn lang(&self) -> String {
+        if let Some((Some(language), _, _)) = self.locale.as_ref() {
+            return language.clone();
+        }
         self.ctx
             .config
             .as_ref()
@@ -582,13 +741,22 @@ impl<'a> TaxonomyRenderer<'a> {
 
     /// Inline canonical link — taxonomy pages bypass the transform
     /// chain, so the `CanonicalPlugin` never sees them (#586 port 5).
+    ///
+    /// `page_url` is locale-prefixed here rather than by the caller, so
+    /// the canonical points at the file that was actually written
+    /// (`/fr/tags/rust/`) instead of the default locale's copy.
     fn canonical(&self, page_url: &str) -> String {
+        let segment = self.locale_path_segment();
         self.ctx
             .config
             .as_ref()
             .map(|c| c.base_url.trim_end_matches('/').to_string())
             .filter(|b| !b.is_empty())
-            .map(|b| format!("<link rel=\"canonical\" href=\"{b}{page_url}\">"))
+            .map(|b| {
+                format!(
+                    "<link rel=\"canonical\" href=\"{b}{segment}{page_url}\">"
+                )
+            })
             .unwrap_or_default()
     }
 
@@ -691,6 +859,47 @@ fn extract_terms_from_value(
 /// URLs — when `<site>/<stem>/index.html` exists the member link is
 /// `/<stem>/`, otherwise the flat `/<stem>.html` form is used, so
 /// term pages never link to paths that 404 (#586 port 5).
+/// Splits a taxonomy map into one map per locale.
+///
+/// A page's locale is the first path segment of its staged stem when that
+/// segment is a configured locale (`fr/a-propos` -> `fr`); everything else
+/// belongs to the default locale. The stem is not available here, so the
+/// URL is used instead — it carries the same segment after `url_prefix`.
+///
+/// ## Why this exists
+///
+/// Taxonomy was locale-blind. Every locale's pages landed in one index at
+/// `tags/`, so an English-language tag page listed French pages beside
+/// English ones, and a French reader had no tag index at all. Grouping by
+/// locale means each index lists only pages a reader of that locale can
+/// actually read.
+fn split_map_by_locale(
+    map: &TaxonomyMap,
+    locales: &[String],
+    default_locale: &str,
+    url_prefix: &str,
+) -> BTreeMap<String, TaxonomyMap> {
+    let mut out: BTreeMap<String, TaxonomyMap> = BTreeMap::new();
+    for (term, entries) in map {
+        for entry in entries {
+            let (_, url) = entry;
+            let rest = url.strip_prefix(url_prefix).unwrap_or(url);
+            let seg =
+                rest.trim_start_matches('/').split('/').next().unwrap_or("");
+            let locale = locales
+                .iter()
+                .find(|l| l.as_str() == seg && l.as_str() != default_locale)
+                .map_or(default_locale, String::as_str);
+            out.entry(locale.to_string())
+                .or_default()
+                .entry(term.clone())
+                .or_default()
+                .push(entry.clone());
+        }
+    }
+    out
+}
+
 fn collect_taxonomy_entries(
     sidecar_dir: &Path,
     site_dir: &Path,
@@ -794,7 +1003,28 @@ fn generate_taxonomy_pages(
     kind: TaxonomyKind,
     renderer: &TaxonomyRenderer<'_>,
 ) -> Result<(), SsgError> {
-    let tax_dir = site_dir.join(taxonomy_name);
+    generate_taxonomy_pages_at(
+        &site_dir.join(taxonomy_name),
+        taxonomy_name,
+        taxonomy_title,
+        terms,
+        kind,
+        renderer,
+    )
+}
+
+/// As [`generate_taxonomy_pages`], but writes into an explicit directory
+/// so a multi-locale site can place each locale's tree under its own
+/// prefix (`fr/tags/`) instead of sharing one at the site root.
+fn generate_taxonomy_pages_at(
+    tax_dir: &Path,
+    taxonomy_name: &str,
+    taxonomy_title: &str,
+    terms: &HashMap<String, Vec<(String, String)>>,
+    kind: TaxonomyKind,
+    renderer: &TaxonomyRenderer<'_>,
+) -> Result<(), SsgError> {
+    let tax_dir = tax_dir.to_path_buf();
     fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
 
     let mut sorted_terms: Vec<_> = terms.iter().collect();
@@ -1642,6 +1872,59 @@ mod tests {
         let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
         assert!(index.contains("CUSTOMINDEX"));
         assert!(index.ends_with('\n'));
+    }
+
+    /// Taxonomy was locale-blind: every locale's pages landed in one
+    /// index, so an English tag page listed French pages beside English
+    /// ones and a French reader had no tag index at all.
+    #[test]
+    fn split_map_by_locale_groups_pages_by_their_url_segment() {
+        let mut map: TaxonomyMap = HashMap::new();
+        let _ = map.insert(
+            "editorial".to_string(),
+            vec![
+                ("About".to_string(), "/atlas/about/".to_string()),
+                ("À propos".to_string(), "/atlas/fr/a-propos/".to_string()),
+            ],
+        );
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        let out = split_map_by_locale(&map, &locales, "en", "/atlas");
+
+        assert_eq!(out.len(), 2, "one map per locale: {out:?}");
+        assert_eq!(out["en"]["editorial"].len(), 1);
+        assert_eq!(out["en"]["editorial"][0].0, "About");
+        assert_eq!(out["fr"]["editorial"].len(), 1);
+        assert_eq!(out["fr"]["editorial"][0].0, "À propos");
+    }
+
+    /// A page whose first segment is not a locale belongs to the default
+    /// locale, not to a phantom one named after the segment.
+    #[test]
+    fn split_map_by_locale_assigns_unprefixed_pages_to_the_default() {
+        let mut map: TaxonomyMap = HashMap::new();
+        let _ = map.insert(
+            "method".to_string(),
+            vec![("Papers".to_string(), "/atlas/papers/".to_string())],
+        );
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        let out = split_map_by_locale(&map, &locales, "en", "/atlas");
+
+        assert_eq!(out.keys().collect::<Vec<_>>(), vec!["en"], "{out:?}");
+    }
+
+    /// The default locale keeps the bare prefix, so a directory sharing
+    /// its name is not mistaken for a locale-prefixed tree.
+    #[test]
+    fn split_map_by_locale_does_not_treat_the_default_locale_as_a_prefix() {
+        let mut map: TaxonomyMap = HashMap::new();
+        let _ = map.insert(
+            "t".to_string(),
+            vec![("EN dir".to_string(), "/atlas/en/thing/".to_string())],
+        );
+        let locales = vec!["en".to_string(), "fr".to_string()];
+        let out = split_map_by_locale(&map, &locales, "en", "/atlas");
+
+        assert_eq!(out.keys().collect::<Vec<_>>(), vec!["en"], "{out:?}");
     }
 
     #[test]
