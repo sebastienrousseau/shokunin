@@ -790,7 +790,10 @@ pub fn compile_site_with_locales(
 /// Plugins execute in registration order. The ordering is:
 /// 1. SEO plugins (meta tags, canonical URLs, robots.txt)
 /// 2. Search index generation
-/// 3. HTML minification (must be last content transform)
+/// 3. HTML minification — last in registration order, but note that
+///    `after_compile` hooks all run *before* any `transform_html`, so
+///    minification precedes the fused transform pass rather than
+///    following it (see the note at its registration below)
 /// 4. Live reload (`on_serve` only)
 ///
 /// # Examples
@@ -903,7 +906,26 @@ pub fn register_default_plugins(
     // Asset fingerprinting + SRI (after all content transforms)
     plugins.register(assets::FingerprintPlugin);
 
-    // Minification (must be last content transform)
+    // Minification. Registered last, but that does not make it run last:
+    // MinifyPlugin only implements `after_compile`, and every
+    // `after_compile` hook runs before any `transform_html`, so it
+    // rewrites markup that later transforms then read.
+    //
+    // Two consequences worth knowing before relying on ordering here:
+    //
+    //   - Without the `minify` feature the walk is top-level only, so
+    //     nested pages are untouched and the two halves of a site are
+    //     minified inconsistently.
+    //   - `html-generator` minifies some pages during generation, before
+    //     any plugin runs at all, which no plugin ordering can affect.
+    //     That is why the i18n language-switcher marker is an element
+    //     rather than a comment: comments do not survive it.
+    //
+    // Moving it into a post-transform phase was tried and reverted: it
+    // changes the observable behaviour of the public `run_after_compile`,
+    // which silently stopped minifying for every caller outside this
+    // function. Doing it properly needs its own change with a migration
+    // note.
     plugins.register(plugins_mod::MinifyPlugin);
 
     // Edge-runtime header emitter (issue #550). Opt-in via the
