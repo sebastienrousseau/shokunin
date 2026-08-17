@@ -712,7 +712,26 @@ impl<'a> TaxonomyRenderer<'a> {
         Ok(out)
     }
 
+    /// The locale's URL segment (`""` for the default locale, `/fr`
+    /// otherwise), used to prefix `page_url`. Mirrors the `templates`
+    /// implementation so both paths address the same page.
+    fn locale_path_segment(&self) -> String {
+        self.locale
+            .as_ref()
+            .map_or_else(String::new, |(_, _, seg)| seg.clone())
+    }
+
+    /// The tree's language.
+    ///
+    /// A locale-scoped tree carries its own language and it wins over
+    /// the site default — that override is the whole point of
+    /// splitting the trees. `None` means the default locale, which
+    /// deliberately keeps the site's configured tag: replacing it with
+    /// the bare locale code turned `en-GB` into `en`.
     fn lang(&self) -> String {
+        if let Some((Some(language), _, _)) = self.locale.as_ref() {
+            return language.clone();
+        }
         self.ctx
             .config
             .as_ref()
@@ -722,13 +741,22 @@ impl<'a> TaxonomyRenderer<'a> {
 
     /// Inline canonical link — taxonomy pages bypass the transform
     /// chain, so the `CanonicalPlugin` never sees them (#586 port 5).
+    ///
+    /// `page_url` is locale-prefixed here rather than by the caller, so
+    /// the canonical points at the file that was actually written
+    /// (`/fr/tags/rust/`) instead of the default locale's copy.
     fn canonical(&self, page_url: &str) -> String {
+        let segment = self.locale_path_segment();
         self.ctx
             .config
             .as_ref()
             .map(|c| c.base_url.trim_end_matches('/').to_string())
             .filter(|b| !b.is_empty())
-            .map(|b| format!("<link rel=\"canonical\" href=\"{b}{page_url}\">"))
+            .map(|b| {
+                format!(
+                    "<link rel=\"canonical\" href=\"{b}{segment}{page_url}\">"
+                )
+            })
             .unwrap_or_default()
     }
 
