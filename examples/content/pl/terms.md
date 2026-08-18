@@ -42,7 +42,7 @@ subtitle: "Twórz wspaniałe witryny minimalnym nakładem pracy dzięki szablono
 tags: "warunki użytkowania, kaishi, static site generator, generator stron statycznych, własność intelektualna, strony powiązane, odpowiedzialność, prywatność, prawo właściwe, zmiany, kontakt" ## Tagi witryny. (maks. 160 znaków)
 theme-color: "143, 250, 113" ## Kolor motywu witryny.
 title: "Warunki użytkowania" ## Tytuł strony. (maks. 64 znaki)
-url: "https://kaishi.pl" ## Adres URL witryny.
+url: "https://example.com/pl/index.html" ## Adres URL witryny.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport witryny.
 
 # News - Metadane News SiteMap (YAML).

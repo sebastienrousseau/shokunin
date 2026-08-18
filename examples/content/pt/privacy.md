@@ -42,7 +42,7 @@ subtitle: "Crie sítios incríveis com o mínimo de esforço usando os modelos i
 tags: "política de privacidade, kaishi, gerador de sítios estáticos, gerador de sites estáticos, dados do utilizador, google analytics, microsoft clarity, ferramentas de rastreio, informações pessoais, direitos, alterações" ## As etiquetas do site. (máx. 160 caracteres)
 theme-color: "143, 250, 113" ## A cor do tema do site.
 title: "Kaishi, um modelo inicial de gerador de sítios estáticos" ## O título da página. (máx. 64 caracteres)
-url: "https://kaishi.pt" ## O URL do site.
+url: "https://example.com/pt/index.html" ## O URL do site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport do site.
 
 # News - Front matter do mapa de notícias (YAML).

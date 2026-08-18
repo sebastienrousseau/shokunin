@@ -43,7 +43,7 @@ subtitle: "오늘 무엇을 도와드릴까요?" ## 페이지의 부제. (최대
 tags: "문의하기, 문의 양식, 연락처, 문의 페이지, 연락 정보, 고객 서비스, 지원, 피드백, 질문, 문의, 도움말" ## 사이트의 태그. (최대 160자)
 theme-color: "143, 250, 113" ## 사이트의 테마 색상.
 title: "문의하기" ## 페이지의 제목. (최대 64자)
-url: "https://kaishi.kr" ## 사이트의 URL.
+url: "https://example.com/ko/index.html" ## 사이트의 URL.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 사이트의 뷰포트.
 
 # News - 뉴스 사이트맵 프론트 매터 (YAML).

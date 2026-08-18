@@ -42,7 +42,7 @@ subtitle: "Kaishi স্টার্টার টেমপ্লেট ব্য
 tags: "অফলাইন, স্টার্টার, টেমপ্লেট, স্ট্যাটিক, সাইট, জেনারেটর, rust, ssg, kaishi" ## সাইটের ট্যাগ। (কমা-বিভক্ত, সর্বাধিক ১০ ট্যাগ)
 theme-color: "143, 250, 113" ## সাইটের থিম রঙ।
 title: "Kaishi, একটি স্ট্যাটিক সাইট জেনারেটর স্টার্টার টেমপ্লেট" ## পৃষ্ঠার শিরোনাম। (সর্বাধিক ৬৪ অক্ষর)
-url: "https://kaishi.bd" ## সাইটের url।
+url: "https://example.com/bn/index.html" ## সাইটের url।
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## সাইটের viewport।
 
 # News - News SiteMap ফ্রন্ট ম্যাটার (YAML)।

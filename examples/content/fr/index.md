@@ -42,7 +42,7 @@ subtitle: "Créez des sites incroyables avec un minimum d'effort grâce aux mod�
 theme-color: "214, 171, 133" ## La couleur du thème du site.
 tags: "kaishi, SSG, modèle de site minimaliste, modèle de site moderne, modèle de site responsive, modèle de site de démarrage, freelance créatif, fondateur de startup, propriétaire de petite entreprise, présence en ligne" ## Les tags du site. (séparés par des virgules, max 10 tags)
 title: "Kaishi, un modèle de démarrage pour le Static Site Generator" ## Le titre de la page. (max 64 caractères)
-url: "https://kaishi.fr" ## L'URL du site.
+url: "https://example.com/fr/index.html" ## L'URL du site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport du site.
 
 # News - Les métadonnées SiteMap News (YAML).

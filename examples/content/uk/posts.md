@@ -42,7 +42,7 @@ subtitle: "Створюйте чудові сайти з мінімальним�
 tags: "стартові шаблони kaishi, генератор статичних сайтів, static site generator, стартові шаблони, bootstrap, bootstrap css, bootstrap javascript, політика безпеки контенту, метатеги open graph, адаптивна навігаційна панель, метатеги schema.org" ## Теги сайту. (макс. 160 символів)
 theme-color: "143, 250, 113" ## Колір теми сайту.
 title: "Записи" ## Заголовок сторінки. (макс. 64 символи)
-url: "https://kaishi.ua" ## URL сайту.
+url: "https://example.com/uk/index.html" ## URL сайту.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайту.
 
 # News - Метадані News SiteMap (YAML).

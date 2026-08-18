@@ -42,7 +42,7 @@ subtitle: "Construiți site-uri web uimitoare cu efort minim folosind șabloanel
 tags: "șabloane de bază kaishi, generator de site-uri statice, generator de site-uri statice, șabloane de bază, bootstrap, bootstrap css, bootstrap javascript, politică de securitate a conținutului, metaetichete open graph, bară de navigare responsivă, metaetichete schema.org" ## Etichetele site-ului. (max. 160 de caractere)
 theme-color: "143, 250, 113" ## Culoarea temei site-ului.
 title: "Funcționalități" ## Titlul paginii. (max. 64 de caractere)
-url: "https://kaishi.ro" ## URL-ul site-ului.
+url: "https://example.com/ro/index.html" ## URL-ul site-ului.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul site-ului.
 
 # News - Metadatele News SiteMap (YAML).

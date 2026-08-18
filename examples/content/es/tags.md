@@ -42,7 +42,7 @@ subtitle: "Crea sitios web increíbles con un mínimo esfuerzo usando las planti
 tags: "condiciones de uso, kaishi, generador de sitios estáticos, propiedad intelectual, sitios enlazados, responsabilidad, privacidad, ley aplicable, cambios, contáctanos" ## Las etiquetas del sitio. (máx. 160 caracteres)
 theme-color: "232, 97, 86" ## El color del tema del sitio.
 title: "Explorar por etiqueta" ## El título de la página. (máx. 64 caracteres)
-url: "https://kaishi.es" ## La URL del sitio.
+url: "https://example.com/es/index.html" ## La URL del sitio.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## La ventana gráfica del sitio.
 
 # News - Los metadatos del SiteMap de Noticias (YAML).

@@ -42,7 +42,7 @@ subtitle: "สร้างเว็บไซต์ที่น่าทึ่ง
 theme-color: "143, 250, 113" ## สีธีมของเว็บไซต์
 tags: "kaishi, static site generator, static site generator, เทมเพลตเว็บไซต์มินิมอล, เทมเพลตเว็บไซต์สมัยใหม่, เทมเพลตเว็บไซต์รองรับทุกอุปกรณ์, เทมเพลตเริ่มต้นเว็บไซต์, นักสร้างสรรค์อิสระ, ผู้ก่อตั้งสตาร์ทอัพ, เจ้าของธุรกิจขนาดเล็ก, การปรากฏตัวออนไลน์" ## แท็กของเว็บไซต์ (คั่นด้วยจุลภาค สูงสุด 10 แท็ก)
 title: "Kaishi เทมเพลตเริ่มต้นสำหรับ Static Site Generator" ## ชื่อเรื่องของหน้า (สูงสุด 64 ตัวอักษร)
-url: "https://kaishi.co.th" ## URL ของเว็บไซต์
+url: "https://example.com/th/index.html" ## URL ของเว็บไซต์
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport ของเว็บไซต์
 
 # News - ข้อมูล News SiteMap (YAML)

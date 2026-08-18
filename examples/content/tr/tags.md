@@ -42,7 +42,7 @@ subtitle: "Kaishi Başlangıç Şablonları ile Az Çabayla Harika Web Siteleri 
 tags: "kullanım koşulları, kaishi, statik site oluşturucu, statik site üreticisi, fikri mülkiyet, bağlantılı siteler, sorumluluk, gizlilik, geçerli hukuk, değişiklikler, bize ulaşın" ## Sitenin etiketleri. (en fazla 160 karakter)
 theme-color: "143, 250, 113" ## Sitenin tema rengi.
 title: "Etikete göre keşfedin" ## Sayfanın başlığı. (en fazla 64 karakter)
-url: "https://kaishi.com.tr" ## Sitenin URL'si.
+url: "https://example.com/tr/index.html" ## Sitenin URL'si.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Sitenin viewport değeri.
 
 # News - News SiteMap ön bilgileri (YAML).

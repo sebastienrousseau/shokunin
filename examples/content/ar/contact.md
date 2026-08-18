@@ -43,7 +43,7 @@ subtitle: "كيف يمكننا مساعدتك اليوم؟" ## العنوان ا
 tags: "اتصل بنا, نموذج الاتصال, تواصل, صفحة الاتصال, معلومات الاتصال, خدمة العملاء, الدعم, الملاحظات, الأسئلة, الاستفسارات, المساعدة" ## وسوم الموقع. (بحد أقصى 160 حرفًا)
 theme-color: "143, 250, 113" ## لون السمة للموقع.
 title: "اتصل بنا" ## عنوان الصفحة. (بحد أقصى 64 حرفًا)
-url: "https://kaishi.sa" ## عنوان URL للموقع.
+url: "https://example.com/ar/index.html" ## عنوان URL للموقع.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## منفذ العرض للموقع.
 
 # News - The News SiteMap front matter (YAML).

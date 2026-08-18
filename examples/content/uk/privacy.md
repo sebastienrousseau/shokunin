@@ -42,7 +42,7 @@ subtitle: "Створюйте чудові сайти з мінімальним�
 tags: "політика конфіденційності, kaishi, генератор статичних сайтів, static site generator, дані користувачів, google analytics, microsoft clarity, інструменти відстеження, особиста інформація, права, зміни" ## Теги сайту. (макс. 160 символів)
 theme-color: "143, 250, 113" ## Колір теми сайту.
 title: "Kaishi, стартовий шаблон для генератора статичних сайтів" ## Заголовок сторінки. (макс. 64 символи)
-url: "https://kaishi.ua" ## URL сайту.
+url: "https://example.com/uk/index.html" ## URL сайту.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайту.
 
 # News - Метадані News SiteMap (YAML).

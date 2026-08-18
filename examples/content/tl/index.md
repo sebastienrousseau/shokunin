@@ -42,7 +42,7 @@ subtitle: "Gumawa ng kahanga-hangang Website nang may Kaunting Pagsisikap gamit 
 theme-color: "143, 250, 113" ## Ang theme color ng site.
 tags: "kaishi, static site generator, static site generator, minimalist na website template, modernong website template, responsive na website template, website starter template, freelance na malikhain, tagapagtatag ng startup, may-ari ng maliit na negosyo, presensya online" ## Ang mga tag ng site. (comma separated, max 10 tags)
 title: "Kaishi, isang Starter Template para sa Static Site Generator" ## Ang pamagat ng pahina. (max 64 na karakter)
-url: "https://kaishi.ph" ## Ang url ng site.
+url: "https://example.com/tl/index.html" ## Ang url ng site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Ang viewport ng site.
 
 # News - Ang News SiteMap front matter (YAML).

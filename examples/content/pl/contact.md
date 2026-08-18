@@ -43,7 +43,7 @@ subtitle: "Jak możemy Ci dziś pomóc?" ## Podtytuł strony. (maks. 64 znaki)
 tags: "skontaktuj się z nami, formularz kontaktowy, napisz do nas, strona kontaktowa, informacje kontaktowe, obsługa klienta, wsparcie, opinie, pytania, zapytania, pomoc" ## Tagi witryny. (maks. 160 znaków)
 theme-color: "143, 250, 113" ## Kolor motywu witryny.
 title: "Skontaktuj się z nami" ## Tytuł strony. (maks. 64 znaki)
-url: "https://kaishi.pl" ## Adres URL witryny.
+url: "https://example.com/pl/index.html" ## Adres URL witryny.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport witryny.
 
 # News - Metadane News SiteMap (YAML).

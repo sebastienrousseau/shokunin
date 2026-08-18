@@ -42,7 +42,7 @@ subtitle: "Kaishi स्टार्टर टेम्पलेट से न�
 tags: "गोपनीयता नीति, kaishi, स्थैतिक साइट जनरेटर, स्थैतिक साइट जनरेटर, उपयोगकर्ता डेटा, google analytics, microsoft clarity, ट्रैकिंग टूल, व्यक्तिगत जानकारी, अधिकार, परिवर्तन" ## साइट के टैग। (अधिकतम 160 वर्ण)
 theme-color: "143, 250, 113" ## साइट का theme color।
 title: "Kaishi, एक स्थैतिक साइट जनरेटर स्टार्टर टेम्पलेट" ## पृष्ठ का शीर्षक। (अधिकतम 64 वर्ण)
-url: "https://kaishi.in" ## साइट का URL।
+url: "https://example.com/hi/index.html" ## साइट का URL।
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## साइट का viewport।
 
 # News - News SiteMap फ्रंट मैटर (YAML)।

@@ -42,7 +42,7 @@ subtitle: "בנו אתרים מרהיבים במאמץ מזערי בעזרת ת�
 tags: "מדיניות פרטיות, kaishi, מחולל אתרים סטטיים, נתוני משתמשים, Google Analytics, Microsoft Clarity, כלי מעקב, מידע אישי, זכויות, שינויים" ## התגיות של האתר. (עד 160 תווים)
 theme-color: "143, 250, 113" ## צבע ערכת הנושא של האתר.
 title: "Kaishi, תבנית התחלה למחולל אתרים סטטיים" ## כותרת העמוד. (עד 64 תווים)
-url: "https://kaishi.co.il" ## כתובת האתר.
+url: "https://example.com/he/index.html" ## כתובת האתר.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## ה-viewport של האתר.
 
 # News - מטא-נתוני מפת ה-News (YAML).

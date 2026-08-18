@@ -42,7 +42,7 @@ subtitle: "使用 Kaishi 入门模板,轻松打造令人惊艳的网站" ## 页�
 tags: "隐私政策, kaishi, 静态网站生成器, 静态网站生成器, 用户数据, google analytics, microsoft clarity, 跟踪工具, 个人信息, 权利, 变更" ## 网站标签。(最多 160 个字符)
 theme-color: "143, 250, 113" ## 网站主题颜色。
 title: "Kaishi,一个静态网站生成器入门模板" ## 页面标题。(最多 64 个字符)
-url: "https://kaishi.cn" ## 网站网址。
+url: "https://example.com/zh/index.html" ## 网站网址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 网站视口。
 
 # News - 新闻站点地图前置元数据(YAML)。

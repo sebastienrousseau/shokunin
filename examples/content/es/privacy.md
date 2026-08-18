@@ -42,7 +42,7 @@ subtitle: "Crea sitios web increíbles con un mínimo esfuerzo usando las planti
 tags: "política de privacidad, kaishi, generador de sitios estáticos, datos del usuario, google analytics, microsoft clarity, herramientas de seguimiento, información personal, derechos, cambios" ## Las etiquetas del sitio. (máx. 160 caracteres)
 theme-color: "232, 97, 86" ## El color del tema del sitio.
 title: "Kaishi, una plantilla de inicio para generadores de sitios estáticos" ## El título de la página. (máx. 64 caracteres)
-url: "https://kaishi.es" ## La URL del sitio.
+url: "https://example.com/es/index.html" ## La URL del sitio.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## La ventana gráfica del sitio.
 
 # News - Los metadatos del SiteMap de Noticias (YAML).

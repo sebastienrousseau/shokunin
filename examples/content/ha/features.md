@@ -42,7 +42,7 @@ subtitle: "Gina Shafukan Yanar Gizo Masu Ban Mamaki Tare da Karamin Kokari ta Am
 tags: "samfuran farko na kaishi, static site generator, mai samar da shafuka masu tsaye, samfuran farko, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, responsive navigation bar, schema.org meta tags" ## Tags na shafin. (iyakar 160)
 theme-color: "143, 250, 113" ## Launin jigo na shafin.
 title: "Abubuwan da ke ciki" ## Take na shafin. (iyakar haruffa 64)
-url: "https://kaishi.ng" ## URL na shafin.
+url: "https://example.com/ha/index.html" ## URL na shafin.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport na shafin.
 
 # News - Bayanan News SiteMap (YAML).

@@ -42,7 +42,7 @@ subtitle: "Bouw geweldige websites met minimale inspanning met Kaishi-starttempl
 tags: "gebruiksvoorwaarden, kaishi, statische sitegenerator, static site generator, intellectueel eigendom, gekoppelde sites, aansprakelijkheid, privacy, toepasselijk recht, wijzigingen, contact" ## De tags van de site. (max 160 tekens)
 theme-color: "143, 250, 113" ## De themakleur van de site.
 title: "Verken op tag" ## De titel van de pagina. (max 64 tekens)
-url: "https://kaishi.nl" ## De URL van de site.
+url: "https://example.com/nl/index.html" ## De URL van de site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## De viewport van de site.
 
 # News - The News SiteMap front matter (YAML).

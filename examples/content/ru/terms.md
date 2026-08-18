@@ -42,7 +42,7 @@ subtitle: "Создавайте потрясающие сайты с миним�
 tags: "условия использования, kaishi, генератор статических сайтов, Static Site Generator, интеллектуальная собственность, связанные сайты, ответственность, конфиденциальность, применимое право, изменения, свяжитесь с нами" ## Теги сайта. (макс. 160 символов)
 theme-color: "143, 250, 113" ## Цвет темы сайта.
 title: "Условия использования" ## Заголовок страницы. (макс. 64 символа)
-url: "https://kaishi.ru" ## URL сайта.
+url: "https://example.com/ru/index.html" ## URL сайта.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайта.
 
 # News - Метаданные News SiteMap (YAML).

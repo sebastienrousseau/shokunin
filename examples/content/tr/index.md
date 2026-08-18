@@ -42,7 +42,7 @@ subtitle: "Kaishi Başlangıç Şablonları ile Az Çabayla Harika Web Siteleri 
 theme-color: "143, 250, 113" ## Sitenin tema rengi.
 tags: "kaishi, statik site oluşturucu, statik site üreticisi, minimalist web sitesi şablonu, modern web sitesi şablonu, duyarlı web sitesi şablonu, web sitesi başlangıç şablonu, serbest çalışan yaratıcı, girişim kurucusu, küçük işletme sahibi, çevrimiçi varlık" ## Sitenin etiketleri. (virgülle ayrılmış, en fazla 10 etiket)
 title: "Kaishi, Statik Site Oluşturucu Başlangıç Şablonu" ## Sayfanın başlığı. (en fazla 64 karakter)
-url: "https://kaishi.com.tr" ## Sitenin URL'si.
+url: "https://example.com/tr/index.html" ## Sitenin URL'si.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Sitenin viewport değeri.
 
 # News - News SiteMap ön bilgileri (YAML).

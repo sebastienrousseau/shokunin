@@ -42,7 +42,7 @@ subtitle: "בנו אתרים מרהיבים במאמץ מזערי בעזרת ת�
 tags: "תנאי שימוש, kaishi, מחולל אתרים סטטיים, קניין רוחני, אתרים מקושרים, אחריות, פרטיות, דין חל, שינויים, צור קשר" ## התגיות של האתר. (עד 160 תווים)
 theme-color: "143, 250, 113" ## צבע ערכת הנושא של האתר.
 title: "עיון לפי תגית" ## כותרת העמוד. (עד 64 תווים)
-url: "https://kaishi.co.il" ## כתובת האתר.
+url: "https://example.com/he/index.html" ## כתובת האתר.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## ה-viewport של האתר.
 
 # News - מטא-נתוני מפת ה-News (YAML).

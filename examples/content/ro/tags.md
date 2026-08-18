@@ -42,7 +42,7 @@ subtitle: "Construiți site-uri web uimitoare cu efort minim folosind șabloanel
 tags: "termeni de utilizare, kaishi, generator de site-uri statice, generator de site-uri statice, proprietate intelectuală, site-uri externe, răspundere, confidențialitate, lege aplicabilă, modificări, contactați-ne" ## Etichetele site-ului. (max. 160 de caractere)
 theme-color: "143, 250, 113" ## Culoarea temei site-ului.
 title: "Explorați după etichetă" ## Titlul paginii. (max. 64 de caractere)
-url: "https://kaishi.ro" ## URL-ul site-ului.
+url: "https://example.com/ro/index.html" ## URL-ul site-ului.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul site-ului.
 
 # News - Metadatele News SiteMap (YAML).

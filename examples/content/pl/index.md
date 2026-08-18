@@ -42,7 +42,7 @@ subtitle: "Twórz wspaniałe witryny minimalnym nakładem pracy dzięki szablono
 theme-color: "143, 250, 113" ## Kolor motywu witryny.
 tags: "kaishi, static site generator, generator stron statycznych, minimalistyczny szablon strony, nowoczesny szablon strony, responsywny szablon strony, szablon startowy strony, freelancer kreatywny, założyciel startupu, właściciel małej firmy, obecność online" ## Tagi witryny. (oddzielone przecinkami, maks. 10 tagów)
 title: "Kaishi, szablon startowy dla Static Site Generator" ## Tytuł strony. (maks. 64 znaki)
-url: "https://kaishi.pl" ## Adres URL witryny.
+url: "https://example.com/pl/index.html" ## Adres URL witryny.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport witryny.
 
 # News - Metadane News SiteMap (YAML).

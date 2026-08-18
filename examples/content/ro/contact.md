@@ -43,7 +43,7 @@ subtitle: "Cu ce vă putem ajuta astăzi?" ## Subtitlul paginii. (max. 64 de car
 tags: "contactați-ne, formular de contact, luați legătura, pagină de contact, informații de contact, serviciu clienți, asistență, feedback, întrebări, solicitări, ajutor" ## Etichetele site-ului. (max. 160 de caractere)
 theme-color: "143, 250, 113" ## Culoarea temei site-ului.
 title: "Contactați-ne" ## Titlul paginii. (max. 64 de caractere)
-url: "https://kaishi.ro" ## URL-ul site-ului.
+url: "https://example.com/ro/index.html" ## URL-ul site-ului.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul site-ului.
 
 # News - Metadatele News SiteMap (YAML).

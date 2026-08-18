@@ -42,7 +42,7 @@ subtitle: "Gumawa ng kahanga-hangang Website nang may Kaunting Pagsisikap gamit 
 tags: "mga tuntunin ng paggamit, kaishi, static site generator, static site generator, intelektwal na pag-aari, mga naka-link na site, pananagutan, privacy, namamahalang batas, mga pagbabago, makipag-ugnayan sa amin" ## Ang mga tag ng site. (max 160 na karakter)
 theme-color: "143, 250, 113" ## Ang theme color ng site.
 title: "Mga Tuntunin ng Paggamit" ## Ang pamagat ng pahina. (max 64 na karakter)
-url: "https://kaishi.ph" ## Ang url ng site.
+url: "https://example.com/tl/index.html" ## Ang url ng site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Ang viewport ng site.
 
 # News - Ang News SiteMap front matter (YAML).

@@ -42,7 +42,7 @@ subtitle: "Kaishi Başlangıç Şablonları ile Az Çabayla Harika Web Siteleri 
 tags: "çevrimdışı, başlangıç, şablonlar, statik, site, oluşturucu, rust, ssg, kaishi" ## Sitenin etiketleri. (virgülle ayrılmış, en fazla 10 etiket)
 theme-color: "143, 250, 113" ## Sitenin tema rengi.
 title: "Kaishi, Statik Site Oluşturucu Başlangıç Şablonu" ## Sayfanın başlığı. (en fazla 64 karakter)
-url: "https://kaishi.com.tr" ## Sitenin URL'si.
+url: "https://example.com/tr/index.html" ## Sitenin URL'si.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Sitenin viewport değeri.
 
 # News - News SiteMap ön bilgileri (YAML).

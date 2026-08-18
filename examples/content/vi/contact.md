@@ -43,7 +43,7 @@ subtitle: "Hôm nay chúng tôi có thể giúp gì cho bạn?" ## Phụ đề c
 tags: "liên hệ với chúng tôi, biểu mẫu liên hệ, kết nối, trang liên hệ, thông tin liên hệ, dịch vụ khách hàng, hỗ trợ, phản hồi, câu hỏi, yêu cầu, trợ giúp" ## Thẻ của trang. (tối đa 160 ký tự)
 theme-color: "143, 250, 113" ## Màu chủ đề của trang.
 title: "Liên hệ với chúng tôi" ## Tiêu đề của trang. (tối đa 64 ký tự)
-url: "https://kaishi.vn" ## URL của trang.
+url: "https://example.com/vi/index.html" ## URL của trang.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Khung nhìn của trang.
 
 # News - Phần đầu trang News SiteMap (YAML).

@@ -42,7 +42,7 @@ subtitle: "Створюйте чудові сайти з мінімальним�
 tags: "умови використання, kaishi, генератор статичних сайтів, static site generator, інтелектуальна власність, пов'язані сайти, відповідальність, конфіденційність, чинне законодавство, зміни, зв'яжіться з нами" ## Теги сайту. (макс. 160 символів)
 theme-color: "143, 250, 113" ## Колір теми сайту.
 title: "Умови використання" ## Заголовок сторінки. (макс. 64 символи)
-url: "https://kaishi.ua" ## URL сайту.
+url: "https://example.com/uk/index.html" ## URL сайту.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайту.
 
 # News - Метадані News SiteMap (YAML).

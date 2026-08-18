@@ -42,7 +42,7 @@ subtitle: "Crea sitios web increíbles con un mínimo esfuerzo usando las planti
 tags: "plantillas de inicio kaishi, generador de sitios estáticos, plantillas de inicio, bootstrap, bootstrap css, bootstrap javascript, política de seguridad de contenido, metaetiquetas open graph, barra de navegación adaptable, metaetiquetas schema.org" ## Las etiquetas del sitio. (máx. 160 caracteres)
 theme-color: "232, 97, 86" ## El color del tema del sitio.
 title: "Artículos" ## El título de la página. (máx. 64 caracteres)
-url: "https://kaishi.es" ## La URL del sitio.
+url: "https://example.com/es/index.html" ## La URL del sitio.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## La ventana gráfica del sitio.
 
 # News - Los metadatos del SiteMap de Noticias (YAML).

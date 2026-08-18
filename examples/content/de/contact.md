@@ -43,7 +43,7 @@ subtitle: "Wie können wir Ihnen heute helfen?" ## Der Untertitel der Seite. (ma
 tags: "Kontakt, Kontaktformular, Kontakt aufnehmen, Kontaktseite, Kontaktinformationen, Kundenservice, Support, Feedback, Fragen, Anfragen, Hilfe" ## Die Tags der Website. (max. 160 Zeichen)
 theme-color: "143, 250, 113" ## Die Themenfarbe der Website.
 title: "Kontakt" ## Der Titel der Seite. (max. 64 Zeichen)
-url: "https://kaishi.de" ## Die URL der Website.
+url: "https://example.com/de/index.html" ## Die URL der Website.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Der Viewport der Website.
 
 # News - Die News-SiteMap-Metadaten (YAML).

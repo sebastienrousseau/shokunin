@@ -42,7 +42,7 @@ subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templ
 tags: "terms of use, kaishi, static site generator, static site generator, intellectual property, linked sites, liability, privacy, governing law, changes, contact us" ## The tags of the site. (max 160 characters)
 theme-color: "143, 250, 113" ## The theme color of the site.
 title: "Terms of Use" ## The title of the page. (max 64 characters)
-url: "https://kaishi.one" ## The url of the site.
+url: "https://example.com/en/index.html" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # News - The News SiteMap front matter (YAML).

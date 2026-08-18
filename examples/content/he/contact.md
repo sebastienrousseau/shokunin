@@ -43,7 +43,7 @@ subtitle: "כיצד נוכל לעזור לכם היום?" ## כותרת המשנ
 tags: "צור קשר, טופס יצירת קשר, יצירת קשר, עמוד יצירת קשר, פרטי התקשרות, שירות לקוחות, תמיכה, משוב, שאלות, פניות, עזרה" ## התגיות של האתר. (עד 160 תווים)
 theme-color: "143, 250, 113" ## צבע ערכת הנושא של האתר.
 title: "צור קשר" ## כותרת העמוד. (עד 64 תווים)
-url: "https://kaishi.co.il" ## כתובת האתר.
+url: "https://example.com/he/index.html" ## כתובת האתר.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## ה-viewport של האתר.
 
 # News - מטא-נתוני מפת ה-News (YAML).

@@ -41,7 +41,7 @@ subtitle: "Vous semblez être hors ligne, veuillez vérifier votre connexion" ##
 tags: "hors ligne, modèle de démarrage, sites statiques, générateur, rust, ssg, kaishi" ## Les tags du site. (séparés par des virgules, max 10 tags)
 theme-color: "214, 171, 133" ## La couleur du thème du site.
 title: "Kaishi, un modèle de démarrage pour Static Site Generator" ## Le titre de la page. (max 64 caractères)
-url: "https://kaishi.fr" ## L'URL du site.
+url: "https://example.com/fr/index.html" ## L'URL du site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport du site.
 
 # News - Les métadonnées SiteMap News (YAML)

@@ -17,7 +17,7 @@ description: "您可以透過下方的聯絡表單與我們聯繫。" ## 網站�
 download: "" ## 產品的下載網址。
 format-detection: "telephone=no" ## 網站的格式偵測設定。
 form-id: "https://formspree.io/f/meqwylbe" ## 網站的表單 ID。
-hreflang: "zh-TW" ## 網站的 hreflang。(預設:en-gb)
+hreflang: "zh-tw" ## 網站的 hreflang。(預設:en-gb)
 icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## 網站的 SVG 圖示。
 id: "https://kaishi.tw" ## 網站的 ID。
 image_alt: "Kaishi 標誌,一套靜態網站入門範本" ## 網站圖片的替代文字。
@@ -43,7 +43,7 @@ subtitle: "今天我們能為您提供什麼協助?" ## 頁面的副標題。(�
 tags: "聯絡我們, 聯絡表單, 取得聯繫, 聯絡頁面, 聯絡資訊, 客戶服務, 支援, 意見回饋, 問題, 詢問, 協助" ## 網站的標籤。(最多 160 個字元)
 theme-color: "143, 250, 113" ## 網站的主題色彩。
 title: "聯絡我們" ## 頁面的標題。(最多 64 個字元)
-url: "https://kaishi.tw" ## 網站的網址。
+url: "https://example.com/zh-tw/index.html" ## 網站的網址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 網站的視窗設定。
 
 # News - The News SiteMap front matter (YAML).

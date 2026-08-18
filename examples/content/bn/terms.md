@@ -42,7 +42,7 @@ subtitle: "Kaishi স্টার্টার টেমপ্লেট ব্য
 tags: "ব্যবহারের শর্তাবলী, kaishi, স্ট্যাটিক সাইট জেনারেটর, স্ট্যাটিক সাইট জেনারেটর, মেধাসম্পত্তি, লিঙ্কযুক্ত সাইট, দায়বদ্ধতা, গোপনীয়তা, প্রযোজ্য আইন, পরিবর্তন, আমাদের সাথে যোগাযোগ করুন" ## সাইটের ট্যাগ। (সর্বাধিক ১৬০ অক্ষর)
 theme-color: "143, 250, 113" ## সাইটের থিম রঙ।
 title: "ব্যবহারের শর্তাবলী" ## পৃষ্ঠার শিরোনাম। (সর্বাধিক ৬৪ অক্ষর)
-url: "https://kaishi.bd" ## সাইটের url।
+url: "https://example.com/bn/index.html" ## সাইটের url।
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## সাইটের viewport।
 
 # News - News SiteMap ফ্রন্ট ম্যাটার (YAML)।

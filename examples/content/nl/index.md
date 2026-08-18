@@ -42,7 +42,7 @@ subtitle: "Bouw geweldige websites met minimale inspanning met Kaishi-starttempl
 theme-color: "143, 250, 113" ## De themakleur van de site.
 tags: "kaishi, statische sitegenerator, static site generator, minimalistische websitetemplate, moderne websitetemplate, responsieve websitetemplate, website-starttemplate, freelance creatief, startup-oprichter, kleine ondernemer, online aanwezigheid" ## De tags van de site. (kommagescheiden, max 10 tags)
 title: "Kaishi, een starttemplate voor een statische sitegenerator" ## De titel van de pagina. (max 64 tekens)
-url: "https://kaishi.nl" ## De URL van de site.
+url: "https://example.com/nl/index.html" ## De URL van de site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## De viewport van de site.
 
 # News - The News SiteMap front matter (YAML).

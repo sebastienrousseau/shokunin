@@ -41,7 +41,7 @@ subtitle: "Créez des sites incroyables avec un minimum d'effort grâce aux mod�
 tags: "modèles de démarrage Kaishi, Static Site Generator, générateur de sites statiques, modèles de démarrage, bootstrap, bootstrap css, bootstrap javascript, politique de sécurité de contenu, balises méta open graph, barre de navigation responsive, balises méta schema.org" ## Les tags du site. (max 160 caractères)
 theme-color: "214, 171, 133" ## La couleur du thème du site.
 title: "Articles" ## Le titre de la page. (max 64 caractères)
-url: "https://kaishi.fr" ## L'URL du site.
+url: "https://example.com/fr/index.html" ## L'URL du site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Le viewport du site.
 
 # News - Les métadonnées SiteMap News (YAML)

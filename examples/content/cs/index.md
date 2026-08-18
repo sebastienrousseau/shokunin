@@ -42,7 +42,7 @@ subtitle: "Vytvářejte úžasné weby s minimálním úsilím díky startovací
 theme-color: "143, 250, 113" ## Barva motivu webu.
 tags: "kaishi, generátor statických webů, generátor statických stránek, minimalistická šablona webu, moderní šablona webu, responzivní šablona webu, startovací šablona webu, kreativec na volné noze, zakladatel startupu, majitel malé firmy, online prezentace" ## Štítky webu. (oddělené čárkami, max. 10 štítků)
 title: "Kaishi, startovací šablona pro generátor statických webů" ## Titulek stránky. (max. 64 znaků)
-url: "https://kaishi.cz" ## URL webu.
+url: "https://example.com/cs/index.html" ## URL webu.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport webu.
 
 # News - Front matter News SiteMap (YAML).

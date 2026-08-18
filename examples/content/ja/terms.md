@@ -42,7 +42,7 @@ subtitle: "Kaishi スターターテンプレートで最小限の労力で素�
 tags: "利用規約, kaishi, static site generator, 静的サイトジェネレーター, 知的財産, リンク先サイト, 責任, プライバシー, 準拠法, 変更, お問い合わせ" ## サイトのタグ。(最大160文字)
 theme-color: "143, 250, 113" ## サイトのテーマカラー。
 title: "利用規約" ## ページのタイトル。(最大64文字)
-url: "https://kaishi.jp" ## サイトのURL。
+url: "https://example.com/ja/index.html" ## サイトのURL。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## サイトのビューポート。
 
 # News - ニュースサイトマップのフロントマター (YAML)。

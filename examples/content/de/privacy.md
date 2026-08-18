@@ -42,7 +42,7 @@ subtitle: "Erstellen Sie beeindruckende Websites mit minimalem Aufwand dank der 
 tags: "Datenschutzerklärung, Kaishi, Static Site Generator, statischer Website-Generator, Nutzerdaten, Google Analytics, Microsoft Clarity, Tracking-Tools, personenbezogene Daten, Rechte, Änderungen" ## Die Tags der Website. (max. 160 Zeichen)
 theme-color: "143, 250, 113" ## Die Themenfarbe der Website.
 title: "Kaishi, eine Starter-Vorlage für den Static Site Generator" ## Der Titel der Seite. (max. 64 Zeichen)
-url: "https://kaishi.de" ## Die URL der Website.
+url: "https://example.com/de/index.html" ## Die URL der Website.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Der Viewport der Website.
 
 # News - Die News-SiteMap-Metadaten (YAML).
