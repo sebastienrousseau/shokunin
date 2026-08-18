@@ -42,7 +42,7 @@ subtitle: "Kaishi スターターテンプレートで最小限の労力で素�
 tags: "プライバシーポリシー, kaishi, static site generator, 静的サイトジェネレーター, ユーザーデータ, Google Analytics, Microsoft Clarity, トラッキングツール, 個人情報, 権利, 変更" ## サイトのタグ。(最大160文字)
 theme-color: "143, 250, 113" ## サイトのテーマカラー。
 title: "Kaishi、静的サイトジェネレーターのスターターテンプレート" ## ページのタイトル。(最大64文字)
-url: "https://kaishi.jp" ## サイトのURL。
+url: "https://example.com/ja/index.html" ## サイトのURL。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## サイトのビューポート。
 
 # News - ニュースサイトマップのフロントマター (YAML)。

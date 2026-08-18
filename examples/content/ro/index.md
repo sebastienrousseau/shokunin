@@ -42,7 +42,7 @@ subtitle: "Construiți site-uri web uimitoare cu efort minim folosind șabloanel
 theme-color: "143, 250, 113" ## Culoarea temei site-ului.
 tags: "kaishi, generator de site-uri statice, generator de site-uri statice, șablon minimalist de site, șablon modern de site, șablon de site responsiv, șablon de bază pentru site, creativ independent, fondator de startup, mic antreprenor, prezență online" ## Etichetele site-ului. (separate prin virgulă, max. 10 etichete)
 title: "Kaishi, un șablon de bază pentru generatorul de site-uri statice" ## Titlul paginii. (max. 64 de caractere)
-url: "https://kaishi.ro" ## URL-ul site-ului.
+url: "https://example.com/ro/index.html" ## URL-ul site-ului.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewportul site-ului.
 
 # News - Metadatele News SiteMap (YAML).

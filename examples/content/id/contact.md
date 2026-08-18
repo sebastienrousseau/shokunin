@@ -43,7 +43,7 @@ subtitle: "Bagaimana kami dapat membantu Anda hari ini?" ## Subjudul halaman. (m
 tags: "hubungi kami, formulir kontak, hubungi, halaman kontak, informasi kontak, layanan pelanggan, dukungan, umpan balik, pertanyaan, pertanyaan, bantuan" ## Tag situs. (maks. 160 karakter)
 theme-color: "143, 250, 113" ## Warna tema situs.
 title: "Hubungi Kami" ## Judul halaman. (maks. 64 karakter)
-url: "https://kaishi.id" ## URL situs.
+url: "https://example.com/id/index.html" ## URL situs.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport situs.
 
 # News - Metadata News SiteMap (YAML).

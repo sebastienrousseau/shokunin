@@ -42,7 +42,7 @@ subtitle: "สร้างเว็บไซต์ที่น่าทึ่ง
 tags: "นโยบายความเป็นส่วนตัว, kaishi, static site generator, static site generator, ข้อมูลผู้ใช้, google analytics, microsoft clarity, เครื่องมือติดตาม, ข้อมูลส่วนบุคคล, สิทธิ, การเปลี่ยนแปลง" ## แท็กของเว็บไซต์ (สูงสุด 160 ตัวอักษร)
 theme-color: "143, 250, 113" ## สีธีมของเว็บไซต์
 title: "Kaishi เทมเพลตเริ่มต้นสำหรับ Static Site Generator" ## ชื่อเรื่องของหน้า (สูงสุด 64 ตัวอักษร)
-url: "https://kaishi.co.th" ## URL ของเว็บไซต์
+url: "https://example.com/th/index.html" ## URL ของเว็บไซต์
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport ของเว็บไซต์
 
 # News - ข้อมูล News SiteMap (YAML)

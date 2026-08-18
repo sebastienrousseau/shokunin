@@ -42,7 +42,7 @@ subtitle: "使用 Kaishi 入门模板,轻松打造令人惊艳的网站" ## 页�
 tags: "离线, 入门, 模板, 静态, 网站, 生成器, rust, ssg, kaishi" ## 网站标签。(逗号分隔,最多 10 个)
 theme-color: "143, 250, 113" ## 网站主题颜色。
 title: "Kaishi,一个静态网站生成器入门模板" ## 页面标题。(最多 64 个字符)
-url: "https://kaishi.cn" ## 网站网址。
+url: "https://example.com/zh/index.html" ## 网站网址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 网站视口。
 
 # News - 新闻站点地图前置元数据(YAML)。

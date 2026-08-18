@@ -43,7 +43,7 @@ subtitle: "Como podemos ajudá-lo hoje?" ## O subtítulo da página. (máx. 64 c
 tags: "contacte-nos, formulário de contacto, entre em contacto, página de contacto, informações de contacto, apoio ao cliente, suporte, comentários, perguntas, pedidos, ajuda" ## As etiquetas do site. (máx. 160 caracteres)
 theme-color: "143, 250, 113" ## A cor do tema do site.
 title: "Contacte-nos" ## O título da página. (máx. 64 caracteres)
-url: "https://kaishi.pt" ## O URL do site.
+url: "https://example.com/pt/index.html" ## O URL do site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport do site.
 
 # News - Front matter do mapa de notícias (YAML).

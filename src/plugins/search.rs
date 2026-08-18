@@ -724,8 +724,15 @@ const SEARCH_WIDGET_SCRIPT: &str = r#"
 <div id="ssg-search-widget">
 <style>
 /* ── Trigger button (always visible) ── */
-#ssg-search-btn{position:fixed;top:16px;right:16px;z-index:9998;min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#595960;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s}
-@media(max-width:47.999rem){#ssg-search-btn{top:auto;bottom:16px;right:16px;width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;box-shadow:0 4px 14px rgba(0,0,0,.18)}#ssg-search-btn kbd,#ssg-search-btn span{display:none}}
+/* The trigger is `position: fixed` over the page, not a child of the
+   site header, so it cannot inherit the header's vertical centring. The
+   hardcoded `top: 16px` therefore sat 4-6px below every other header
+   control on all four bundled themes. A theme knows its own header height
+   and this plugin cannot, so the offsets are custom properties with the
+   previous values as defaults: setting `--ssg-search-top` is all a theme
+   needs, and a theme that sets nothing behaves exactly as before. */
+#ssg-search-btn{position:fixed;top:var(--ssg-search-top,16px);right:var(--ssg-search-right,16px);z-index:9998;min-height:44px;display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#595960;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:border-color .15s,box-shadow .15s}
+@media(max-width:47.999rem){#ssg-search-btn{top:auto;bottom:var(--ssg-search-bottom,16px);right:var(--ssg-search-right,16px);width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;box-shadow:0 4px 14px rgba(0,0,0,.18)}#ssg-search-btn kbd,#ssg-search-btn span{display:none}}
 #ssg-search-btn:hover{border-color:#595960;box-shadow:0 2px 6px rgba(0,0,0,.12)}
 #ssg-search-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #ssg-search-btn kbd{font-family:inherit;font-size:11px;padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;color:#595960;margin-left:4px}

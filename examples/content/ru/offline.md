@@ -42,7 +42,7 @@ subtitle: "Создавайте потрясающие сайты с миним�
 tags: "офлайн, стартовые, шаблоны, статические, сайт, генератор, rust, ssg, kaishi" ## Теги сайта. (через запятую, макс. 10 тегов)
 theme-color: "143, 250, 113" ## Цвет темы сайта.
 title: "Kaishi, стартовый шаблон для генератора статических сайтов" ## Заголовок страницы. (макс. 64 символа)
-url: "https://kaishi.ru" ## URL сайта.
+url: "https://example.com/ru/index.html" ## URL сайта.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport сайта.
 
 # News - Метаданные News SiteMap (YAML).

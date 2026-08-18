@@ -43,7 +43,7 @@ subtitle: "Jak vám dnes můžeme pomoci?" ## Podtitul stránky. (max. 64 znaků
 tags: "kontaktujte nás, kontaktní formulář, spojte se s námi, kontaktní stránka, kontaktní informace, zákaznický servis, podpora, zpětná vazba, otázky, dotazy, pomoc" ## Štítky webu. (max. 160 znaků)
 theme-color: "143, 250, 113" ## Barva motivu webu.
 title: "Kontaktujte nás" ## Titulek stránky. (max. 64 znaků)
-url: "https://kaishi.cz" ## URL webu.
+url: "https://example.com/cs/index.html" ## URL webu.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport webu.
 
 # News - Front matter News SiteMap (YAML).

@@ -42,7 +42,7 @@ subtitle: "Kaishi 스타터 템플릿으로 최소한의 노력으로 멋진 웹
 tags: "개인정보 처리방침, kaishi, 정적 사이트 생성기, 정적 사이트 생성기, 사용자 데이터, Google Analytics, Microsoft Clarity, 추적 도구, 개인정보, 권리, 변경" ## 사이트의 태그. (최대 160자)
 theme-color: "143, 250, 113" ## 사이트의 테마 색상.
 title: "Kaishi, 정적 사이트 생성기 스타터 템플릿" ## 페이지의 제목. (최대 64자)
-url: "https://kaishi.kr" ## 사이트의 URL.
+url: "https://example.com/ko/index.html" ## 사이트의 URL.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 사이트의 뷰포트.
 
 # News - 뉴스 사이트맵 프론트 매터 (YAML).

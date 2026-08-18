@@ -42,7 +42,7 @@ subtitle: "Crie sítios incríveis com o mínimo de esforço usando os modelos i
 tags: "termos de utilização, kaishi, gerador de sítios estáticos, gerador de sites estáticos, propriedade intelectual, sítios ligados, responsabilidade, privacidade, lei aplicável, alterações, contacte-nos" ## As etiquetas do site. (máx. 160 caracteres)
 theme-color: "143, 250, 113" ## A cor do tema do site.
 title: "Termos de utilização" ## O título da página. (máx. 64 caracteres)
-url: "https://kaishi.pt" ## O URL do site.
+url: "https://example.com/pt/index.html" ## O URL do site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport do site.
 
 # News - Front matter do mapa de notícias (YAML).

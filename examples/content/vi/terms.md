@@ -42,7 +42,7 @@ subtitle: "Xây dựng trang web tuyệt vời với nỗ lực tối thiểu nh
 tags: "điều khoản sử dụng, kaishi, trình tạo trang tĩnh, trình tạo trang tĩnh, sở hữu trí tuệ, các trang liên kết, trách nhiệm pháp lý, quyền riêng tư, luật áp dụng, thay đổi, liên hệ với chúng tôi" ## Thẻ của trang. (tối đa 160 ký tự)
 theme-color: "143, 250, 113" ## Màu chủ đề của trang.
 title: "Điều khoản sử dụng" ## Tiêu đề của trang. (tối đa 64 ký tự)
-url: "https://kaishi.vn" ## URL của trang.
+url: "https://example.com/vi/index.html" ## URL của trang.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Khung nhìn của trang.
 
 # News - Phần đầu trang News SiteMap (YAML).

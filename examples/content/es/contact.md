@@ -43,7 +43,7 @@ subtitle: "¿En qué podemos ayudarte hoy?" ## El subtítulo de la página. (má
 tags: "contáctanos, formulario de contacto, ponte en contacto, página de contacto, información de contacto, servicio al cliente, soporte, comentarios, preguntas, consultas, ayuda" ## Las etiquetas del sitio. (máx. 160 caracteres)
 theme-color: "232, 97, 86" ## El color del tema del sitio.
 title: "Contáctanos" ## El título de la página. (máx. 64 caracteres)
-url: "https://kaishi.es" ## La URL del sitio.
+url: "https://example.com/es/index.html" ## La URL del sitio.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## La ventana gráfica del sitio.
 
 # News - Los metadatos del SiteMap de Noticias (YAML).

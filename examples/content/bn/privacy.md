@@ -42,7 +42,7 @@ subtitle: "Kaishi স্টার্টার টেমপ্লেট ব্য
 tags: "গোপনীয়তা নীতি, kaishi, স্ট্যাটিক সাইট জেনারেটর, স্ট্যাটিক সাইট জেনারেটর, ব্যবহারকারীর ডেটা, Google Analytics, Microsoft Clarity, ট্র্যাকিং টুল, ব্যক্তিগত তথ্য, অধিকার, পরিবর্তন" ## সাইটের ট্যাগ। (সর্বাধিক ১৬০ অক্ষর)
 theme-color: "143, 250, 113" ## সাইটের থিম রঙ।
 title: "Kaishi, একটি স্ট্যাটিক সাইট জেনারেটর স্টার্টার টেমপ্লেট" ## পৃষ্ঠার শিরোনাম। (সর্বাধিক ৬৪ অক্ষর)
-url: "https://kaishi.bd" ## সাইটের url।
+url: "https://example.com/bn/index.html" ## সাইটের url।
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## সাইটের viewport।
 
 # News - News SiteMap ফ্রন্ট ম্যাটার (YAML)।

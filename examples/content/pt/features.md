@@ -42,7 +42,7 @@ subtitle: "Crie sítios incríveis com o mínimo de esforço usando os modelos i
 tags: "modelos iniciais kaishi, gerador de sítios estáticos, gerador de sites estáticos, modelos iniciais, bootstrap, bootstrap css, bootstrap javascript, política de segurança de conteúdo, meta tags open graph, barra de navegação responsiva, meta tags schema.org" ## As etiquetas do site. (máx. 160 caracteres)
 theme-color: "143, 250, 113" ## A cor do tema do site.
 title: "Funcionalidades" ## O título da página. (máx. 64 caracteres)
-url: "https://kaishi.pt" ## O URL do site.
+url: "https://example.com/pt/index.html" ## O URL do site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport do site.
 
 # News - Front matter do mapa de notícias (YAML).

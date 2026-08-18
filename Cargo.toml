@@ -5,7 +5,7 @@
 [package]
 # General project metadata
 name = "ssg"                            # The name of the library
-version = "0.0.50"                      # The version of the library
+version = "0.0.51"                      # The version of the library
 authors = ["SSG Contributors"]     # The authors of the library
 edition = "2021"                        # The edition of the library
 rust-version = "1.88.0"                 # Minimum supported Rust version (set by time-macros, staticdatagen, oxc_*)
@@ -181,12 +181,12 @@ pulldown-cmark = { version = "0.13", default-features = false, features = ["html
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.50" }
-ssg-core = { path = "crates/ssg-core", version = "0.0.50" }
-ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.50" }
-ssg-search = { path = "crates/ssg-search", version = "0.0.50" }
+ssg-a11y = { path = "crates/ssg-a11y", version = "0.0.51" }
+ssg-core = { path = "crates/ssg-core", version = "0.0.51" }
+ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.51" }
+ssg-search = { path = "crates/ssg-search", version = "0.0.51" }
 thiserror = "2"
-staticdatagen = "0.0.11"
+staticdatagen = "0.0.12"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
@@ -451,6 +451,21 @@ path = "examples/agent_api_example.rs"
 [lints]
 workspace = true
 
+# Dependencies are built optimised even in dev/test builds.
+#
+# Profiling the 500-page budget showed 94% of wall-clock inside
+# `staticdatagen::compile` — a dependency — with our own staging at ~6%.
+# In an unoptimised dev build that third-party code runs at roughly a
+# quarter of its real speed, so `cargo test` was measuring a slowness no
+# user ever experiences: `ssg` ships from the release profile.
+#
+# Optimising only `*` (dependencies) keeps our own crate unoptimised, so
+# backtraces, debug-assertions and step-debugging in ssg code are
+# unaffected. The cost is a one-off longer dependency compile, cached
+# thereafter.
+[profile.dev.package."*"]
+opt-level = 2
+
 [profile.dev]
 # Development profile configuration for fast builds and debugging.
 codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
@@ -659,5 +674,6 @@ literal_string_with_formatting_args = "allow" # Test data containing `{n}` shoul
 [workspace.lints.rustdoc]
 broken_intra_doc_links = "deny"
 private_intra_doc_links = "deny"
+
 
 

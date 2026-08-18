@@ -42,7 +42,7 @@ subtitle: "Bangun Situs Web Menakjubkan dengan Usaha Minimal menggunakan Templat
 tags: "kebijakan privasi, kaishi, static site generator, generator situs statis, data pengguna, google analytics, microsoft clarity, alat pelacakan, informasi pribadi, hak, perubahan" ## Tag situs. (maks. 160 karakter)
 theme-color: "143, 250, 113" ## Warna tema situs.
 title: "Kaishi, Templat Awal Static Site Generator" ## Judul halaman. (maks. 64 karakter)
-url: "https://kaishi.id" ## URL situs.
+url: "https://example.com/id/index.html" ## URL situs.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport situs.
 
 # News - Metadata News SiteMap (YAML).

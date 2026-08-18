@@ -42,7 +42,7 @@ subtitle: "Kọ́ Ojú Òpó Wẹ́ẹ̀bù Alárinrin pẹ̀lú Ìsapá Kéker�
 tags: "àwòṣe ìbẹ̀rẹ̀ kaishi, Static Site Generator, àwòṣe ìbẹ̀rẹ̀, bootstrap, bootstrap css, bootstrap javascript, content security policy, open graph meta tags, àká ìrìnkiri responsive, schema.org meta tags"
 theme-color: "143, 250, 113"
 title: "Àwọn Ìfiránṣẹ́"
-url: "https://kaishi.com.ng"
+url: "https://example.com/yo/index.html"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
 # News - Àwọn àkọsílẹ̀ News SiteMap (YAML).

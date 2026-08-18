@@ -43,7 +43,7 @@ subtitle: "आज हम आपकी क्या सहायता कर स
 tags: "हमसे संपर्क करें, संपर्क फ़ॉर्म, संपर्क में रहें, संपर्क पृष्ठ, संपर्क जानकारी, ग्राहक सेवा, सहायता, प्रतिक्रिया, प्रश्न, पूछताछ, सहायता" ## साइट के टैग। (अधिकतम 160 वर्ण)
 theme-color: "143, 250, 113" ## साइट का theme color।
 title: "हमसे संपर्क करें" ## पृष्ठ का शीर्षक। (अधिकतम 64 वर्ण)
-url: "https://kaishi.in" ## साइट का URL।
+url: "https://example.com/hi/index.html" ## साइट का URL।
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## साइट का viewport।
 
 # News - News SiteMap फ्रंट मैटर (YAML)।

@@ -42,7 +42,7 @@ subtitle: "Kaishi 스타터 템플릿으로 최소한의 노력으로 멋진 웹
 tags: "kaishi 스타터 템플릿, 정적 사이트 생성기, 정적 사이트 생성기, 스타터 템플릿, bootstrap, bootstrap css, bootstrap javascript, 콘텐츠 보안 정책, 오픈 그래프 메타 태그, 반응형 내비게이션 바, schema.org 메타 태그" ## 사이트의 태그. (최대 160자)
 theme-color: "143, 250, 113" ## 사이트의 테마 색상.
 title: "기능" ## 페이지의 제목. (최대 64자)
-url: "https://kaishi.kr" ## 사이트의 URL.
+url: "https://example.com/ko/index.html" ## 사이트의 URL.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 사이트의 뷰포트.
 
 # News - 뉴스 사이트맵 프론트 매터 (YAML).

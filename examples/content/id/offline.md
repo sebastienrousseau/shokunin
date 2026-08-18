@@ -42,7 +42,7 @@ subtitle: "Bangun Situs Web Menakjubkan dengan Usaha Minimal menggunakan Templat
 tags: "offline, awal, templat, statis, situs, generator, rust, ssg, kaishi" ## Tag situs. (dipisahkan koma, maks. 10 tag)
 theme-color: "143, 250, 113" ## Warna tema situs.
 title: "Kaishi, Templat Awal Static Site Generator" ## Judul halaman. (maks. 64 karakter)
-url: "https://kaishi.id" ## URL situs.
+url: "https://example.com/id/index.html" ## URL situs.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport situs.
 
 # News - Metadata News SiteMap (YAML).

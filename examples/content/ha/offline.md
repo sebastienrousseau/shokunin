@@ -42,7 +42,7 @@ subtitle: "Gina Shafukan Yanar Gizo Masu Ban Mamaki Tare da Karamin Kokari ta Am
 tags: "offline, farko, samfura, static, shafi, generator, rust, ssg, kaishi" ## Tags na shafin. (ana raba su da waƙafi, iyakar 10)
 theme-color: "143, 250, 113" ## Launin jigo na shafin.
 title: "Kaishi, Samfurin Farko na Static Site Generator" ## Take na shafin. (iyakar haruffa 64)
-url: "https://kaishi.ng" ## URL na shafin.
+url: "https://example.com/ha/index.html" ## URL na shafin.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport na shafin.
 
 # News - Bayanan News SiteMap (YAML).

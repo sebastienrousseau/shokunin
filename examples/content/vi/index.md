@@ -42,7 +42,7 @@ subtitle: "Xây dựng trang web tuyệt vời với nỗ lực tối thiểu nh
 theme-color: "143, 250, 113" ## Màu chủ đề của trang.
 tags: "kaishi, trình tạo trang tĩnh, trình tạo trang tĩnh, mẫu trang web tối giản, mẫu trang web hiện đại, mẫu trang web đáp ứng, mẫu khởi đầu trang web, sáng tạo tự do, người sáng lập startup, chủ doanh nghiệp nhỏ, hiện diện trực tuyến" ## Thẻ của trang. (cách nhau bằng dấu phẩy, tối đa 10 thẻ)
 title: "Kaishi, một mẫu khởi đầu cho trình tạo trang tĩnh" ## Tiêu đề của trang. (tối đa 64 ký tự)
-url: "https://kaishi.vn" ## URL của trang.
+url: "https://example.com/vi/index.html" ## URL của trang.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Khung nhìn của trang.
 
 # News - Phần đầu trang News SiteMap (YAML).

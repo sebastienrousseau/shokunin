@@ -42,7 +42,7 @@ subtitle: "Vytvářejte úžasné weby s minimálním úsilím díky startovací
 tags: "startovací šablony kaishi, generátor statických webů, generátor statických stránek, startovací šablony, bootstrap, bootstrap css, bootstrap javascript, zásady zabezpečení obsahu, meta značky open graph, responzivní navigační lišta, meta značky schema.org" ## Štítky webu. (max. 160 znaků)
 theme-color: "143, 250, 113" ## Barva motivu webu.
 title: "Funkce" ## Titulek stránky. (max. 64 znaků)
-url: "https://kaishi.cz" ## URL webu.
+url: "https://example.com/cs/index.html" ## URL webu.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport webu.
 
 # News - Front matter News SiteMap (YAML).

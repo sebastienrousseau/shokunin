@@ -42,7 +42,7 @@ subtitle: "使用 Kaishi 入门模板,轻松打造令人惊艳的网站" ## 页�
 theme-color: "143, 250, 113" ## 网站主题颜色。
 tags: "kaishi, 静态网站生成器, 静态网站生成器, 极简网站模板, 现代网站模板, 响应式网站模板, 网站入门模板, 自由创意工作者, 初创公司创始人, 小企业主, 在线影响力" ## 网站标签。(逗号分隔,最多 10 个)
 title: "Kaishi,一个静态网站生成器入门模板" ## 页面标题。(最多 64 个字符)
-url: "https://kaishi.cn" ## 网站网址。
+url: "https://example.com/zh/index.html" ## 网站网址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 网站视口。
 
 # News - 新闻站点地图前置元数据(YAML)。

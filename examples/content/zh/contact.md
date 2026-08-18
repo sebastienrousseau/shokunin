@@ -43,7 +43,7 @@ subtitle: "今天我们能为您做些什么?" ## 页面副标题。(最多 64 �
 tags: "联系我们, 联系表单, 取得联系, 联系页面, 联系方式, 客户服务, 支持, 反馈, 问题, 咨询, 帮助" ## 网站标签。(最多 160 个字符)
 theme-color: "143, 250, 113" ## 网站主题颜色。
 title: "联系我们" ## 页面标题。(最多 64 个字符)
-url: "https://kaishi.cn" ## 网站网址。
+url: "https://example.com/zh/index.html" ## 网站网址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 网站视口。
 
 # News - 新闻站点地图前置元数据(YAML)。

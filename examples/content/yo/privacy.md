@@ -42,7 +42,7 @@ subtitle: "Kọ́ Ojú Òpó Wẹ́ẹ̀bù Alárinrin pẹ̀lú Ìsapá Kéker�
 tags: "ìlànà ìpamọ́ ìkọ̀kọ̀, kaishi, Static Site Generator, dátà olùbàṣepọ̀, Google Analytics, Microsoft Clarity, àwọn irinṣẹ́ ìtọpinpin, àlàyé ara ẹni, ẹ̀tọ́, àyípadà"
 theme-color: "143, 250, 113"
 title: "Kaishi, Àwòṣe Ìbẹ̀rẹ̀ fún Static Site Generator"
-url: "https://kaishi.com.ng"
+url: "https://example.com/yo/index.html"
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no"
 
 # News - Àwọn àkọsílẹ̀ News SiteMap (YAML).

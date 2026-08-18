@@ -42,7 +42,7 @@ subtitle: "Erstellen Sie beeindruckende Websites mit minimalem Aufwand dank der 
 tags: "Nutzungsbedingungen, Kaishi, Static Site Generator, statischer Website-Generator, geistiges Eigentum, verlinkte Websites, Haftung, Datenschutz, anwendbares Recht, Änderungen, Kontakt" ## Die Tags der Website. (max. 160 Zeichen)
 theme-color: "143, 250, 113" ## Die Themenfarbe der Website.
 title: "Nach Tag erkunden" ## Der Titel der Seite. (max. 64 Zeichen)
-url: "https://kaishi.de" ## Die URL der Website.
+url: "https://example.com/de/index.html" ## Die URL der Website.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Der Viewport der Website.
 
 # News - Die News-SiteMap-Metadaten (YAML).

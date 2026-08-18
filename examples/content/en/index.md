@@ -42,7 +42,7 @@ subtitle: "Build Amazing Websites with Minimal Effort using Kaishi Starter Templ
 theme-color: "143, 250, 113" ## The theme color of the site.
 tags: "kaishi, static site generator, static site generator, minimalist website template, modern website template, responsive website template, website starter template, freelance creative, startup founder, small business owner, online presence" ## The tags of the site. (comma separated, max 10 tags)
 title: "Kaishi, a Static Site Generator Starter Template" ## The title of the page. (max 64 characters)
-url: "https://kaishi.one" ## The url of the site.
+url: "https://example.com/en/index.html" ## The url of the site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## The viewport of the site.
 
 # News - The News SiteMap front matter (YAML).

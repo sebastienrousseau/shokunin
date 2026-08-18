@@ -42,7 +42,7 @@ subtitle: "Crie sítios incríveis com o mínimo de esforço usando os modelos i
 theme-color: "143, 250, 113" ## A cor do tema do site.
 tags: "kaishi, gerador de sítios estáticos, gerador de sites estáticos, modelo de site minimalista, modelo de site moderno, modelo de site responsivo, modelo inicial de site, criativo freelancer, fundador de startup, pequeno empresário, presença online" ## As etiquetas do site. (separadas por vírgula, máx. 10 etiquetas)
 title: "Kaishi, um modelo inicial de gerador de sítios estáticos" ## O título da página. (máx. 64 caracteres)
-url: "https://kaishi.pt" ## O URL do site.
+url: "https://example.com/pt/index.html" ## O URL do site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## O viewport do site.
 
 # News - Front matter do mapa de notícias (YAML).

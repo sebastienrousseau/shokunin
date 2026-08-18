@@ -43,7 +43,7 @@ subtitle: "Hur kan vi hjälpa dig idag?" ## Sidans underrubrik. (max 64 tecken)
 tags: "kontakta oss, kontaktformulär, ta kontakt, kontaktsida, kontaktinformation, kundtjänst, support, feedback, frågor, förfrågningar, hjälp" ## Webbplatsens taggar. (max 160 tecken)
 theme-color: "143, 250, 113" ## Webbplatsens temafärg.
 title: "Kontakta oss" ## Sidans titel. (max 64 tecken)
-url: "https://kaishi.se" ## Webbplatsens URL.
+url: "https://example.com/sv/index.html" ## Webbplatsens URL.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Webbplatsens viewport.
 
 # News - Metadata för News SiteMap (YAML).

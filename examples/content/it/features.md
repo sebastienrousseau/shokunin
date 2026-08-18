@@ -42,7 +42,7 @@ subtitle: "Costruisci siti web straordinari con il minimo sforzo grazie ai templ
 tags: "template di partenza kaishi, generatore di siti statici, template di partenza, bootstrap, bootstrap css, bootstrap javascript, content security policy, meta tag open graph, barra di navigazione responsive, meta tag schema.org" ## I tag del sito. (max 160 caratteri)
 theme-color: "143, 250, 113" ## Il colore del tema del sito.
 title: "Funzionalità" ## Il titolo della pagina. (max 64 caratteri)
-url: "https://kaishi.it" ## L'URL del sito.
+url: "https://example.com/it/index.html" ## L'URL del sito.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Il viewport del sito.
 
 # News - Front matter SiteMap News (YAML).

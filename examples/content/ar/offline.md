@@ -42,7 +42,7 @@ subtitle: "أنشئ مواقع ويب مذهلة بأقل جهد باستخدا�
 tags: "غير متصل, بداية, قوالب, ثابت, موقع, منشئ, rust, ssg, kaishi" ## وسوم الموقع. (مفصولة بفواصل، بحد أقصى 10 وسوم)
 theme-color: "143, 250, 113" ## لون السمة للموقع.
 title: "Kaishi، قالب بداية لمنشئ المواقع الثابتة" ## عنوان الصفحة. (بحد أقصى 64 حرفًا)
-url: "https://kaishi.sa" ## عنوان URL للموقع.
+url: "https://example.com/ar/index.html" ## عنوان URL للموقع.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## منفذ العرض للموقع.
 
 # News - The News SiteMap front matter (YAML).

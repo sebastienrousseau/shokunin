@@ -43,7 +43,7 @@ subtitle: "Báwo ni a ṣe lè ràn yín lọ́wọ́ lónìí?" ## Àkọlé k�
 tags: "ẹ bá wa sọ̀rọ̀, fọ́ọ̀mù ìkànsí, kàn sí wa, ojú ewé ìkànsí, ìròyìn ìkànsí, ìránṣẹ́ oníbàárà, àtìlẹ́yìn, èsì, àwọn ìbéèrè, àwọn ìbéwò, ìrànlọ́wọ́" ## Àwọn tag ojú òpó. (ó pọ̀jùlọ 160 lẹ́tà)
 theme-color: "143, 250, 113" ## Àwọ̀ àyíká ojú òpó.
 title: "Ẹ Bá Wa Sọ̀rọ̀" ## Àkọlé ojú ewé náà. (ó pọ̀jùlọ 64 lẹ́tà)
-url: "https://kaishi.com.ng" ## URL ojú òpó.
+url: "https://example.com/yo/index.html" ## URL ojú òpó.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Viewport ojú òpó.
 
 # News - Àwọn àkọsílẹ̀ News SiteMap (YAML).

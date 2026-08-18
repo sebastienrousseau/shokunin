@@ -16,7 +16,7 @@ date: "2025 年 1 月 1 日"
 description: "使用 Kaishi 這套靜態網站產生器入門範本,打造優美的網站。" ## 網站的說明。(最多 160 個字元)
 download: "" ## 產品的下載網址。
 format-detection: "telephone=no" ## 網站的格式偵測設定。
-hreflang: "zh-TW" ## 網站的 hreflang。(預設:en-gb)
+hreflang: "zh-tw" ## 網站的 hreflang。(預設:en-gb)
 icon: "https://cloudcdn.pro/kaishi/v1/logos/kaishi.svg" ## 網站的 SVG 圖示。
 id: "https://kaishi.tw" ## 網站的 ID。
 image_alt: "Kaishi 標誌,一套靜態網站入門範本" ## 網站圖片的替代文字。
@@ -42,7 +42,7 @@ subtitle: "使用 Kaishi 入門範本,以最少的心力打造令人驚豔的網
 tags: "使用條款, kaishi, 靜態網站產生器, 智慧財產權, 外部連結, 責任, 隱私權, 適用法律, 變更, 聯絡我們" ## 網站的標籤。(最多 160 個字元)
 theme-color: "143, 250, 113" ## 網站的主題色彩。
 title: "使用條款" ## 頁面的標題。(最多 64 個字元)
-url: "https://kaishi.tw" ## 網站的網址。
+url: "https://example.com/zh-tw/index.html" ## 網站的網址。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## 網站的視窗設定。
 
 # News - The News SiteMap front matter (YAML).

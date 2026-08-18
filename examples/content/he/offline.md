@@ -42,7 +42,7 @@ subtitle: "בנו אתרים מרהיבים במאמץ מזערי בעזרת ת�
 tags: "לא מקוון, תבניות התחלה, סטטי, אתר, מחולל, rust, ssg, kaishi" ## התגיות של האתר. (מופרדות בפסיקים, עד 10 תגיות)
 theme-color: "143, 250, 113" ## צבע ערכת הנושא של האתר.
 title: "Kaishi, תבנית התחלה למחולל אתרים סטטיים" ## כותרת העמוד. (עד 64 תווים)
-url: "https://kaishi.co.il" ## כתובת האתר.
+url: "https://example.com/he/index.html" ## כתובת האתר.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## ה-viewport של האתר.
 
 # News - מטא-נתוני מפת ה-News (YAML).

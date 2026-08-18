@@ -42,7 +42,7 @@ subtitle: "Xây dựng trang web tuyệt vời với nỗ lực tối thiểu nh
 tags: "chính sách quyền riêng tư, kaishi, trình tạo trang tĩnh, trình tạo trang tĩnh, dữ liệu người dùng, google analytics, microsoft clarity, công cụ theo dõi, thông tin cá nhân, quyền lợi, thay đổi" ## Thẻ của trang. (tối đa 160 ký tự)
 theme-color: "143, 250, 113" ## Màu chủ đề của trang.
 title: "Kaishi, một mẫu khởi đầu cho trình tạo trang tĩnh" ## Tiêu đề của trang. (tối đa 64 ký tự)
-url: "https://kaishi.vn" ## URL của trang.
+url: "https://example.com/vi/index.html" ## URL của trang.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Khung nhìn của trang.
 
 # News - Phần đầu trang News SiteMap (YAML).

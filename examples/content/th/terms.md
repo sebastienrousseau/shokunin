@@ -42,7 +42,7 @@ subtitle: "สร้างเว็บไซต์ที่น่าทึ่ง
 tags: "ข้อกำหนดการใช้งาน, kaishi, static site generator, static site generator, ทรัพย์สินทางปัญญา, เว็บไซต์ที่เชื่อมโยง, ความรับผิด, ความเป็นส่วนตัว, กฎหมายที่ใช้บังคับ, การเปลี่ยนแปลง, ติดต่อเรา" ## แท็กของเว็บไซต์ (สูงสุด 160 ตัวอักษร)
 theme-color: "143, 250, 113" ## สีธีมของเว็บไซต์
 title: "ข้อกำหนดการใช้งาน" ## ชื่อเรื่องของหน้า (สูงสุด 64 ตัวอักษร)
-url: "https://kaishi.co.th" ## URL ของเว็บไซต์
+url: "https://example.com/th/index.html" ## URL ของเว็บไซต์
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## viewport ของเว็บไซต์
 
 # News - ข้อมูล News SiteMap (YAML)

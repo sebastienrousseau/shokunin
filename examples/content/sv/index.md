@@ -42,7 +42,7 @@ subtitle: "Bygg fantastiska webbplatser med minimal ansträngning med Kaishi sta
 theme-color: "143, 250, 113" ## Webbplatsens temafärg.
 tags: "kaishi, statisk webbplatsgenerator, statisk webbplatsgenerator, minimalistisk webbmall, modern webbmall, responsiv webbmall, startmall för webbplats, frilansande kreatör, startup-grundare, småföretagare, närvaro online" ## Webbplatsens taggar. (kommaseparerade, max 10 taggar)
 title: "Kaishi, en startmall för statisk webbplatsgenerator" ## Sidans titel. (max 64 tecken)
-url: "https://kaishi.se" ## Webbplatsens URL.
+url: "https://example.com/sv/index.html" ## Webbplatsens URL.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Webbplatsens viewport.
 
 # News - Metadata för News SiteMap (YAML).

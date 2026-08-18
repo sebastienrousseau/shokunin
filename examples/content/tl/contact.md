@@ -43,7 +43,7 @@ subtitle: "Paano namin kayo matutulungan ngayon?" ## Ang subtitle ng pahina. (ma
 tags: "makipag-ugnayan, contact form, makipag-ugnayan sa amin, contact page, impormasyon ng kontak, customer service, suporta, feedback, mga tanong, mga katanungan, tulong" ## Ang mga tag ng site. (max 160 na karakter)
 theme-color: "143, 250, 113" ## Ang theme color ng site.
 title: "Makipag-ugnayan sa Amin" ## Ang pamagat ng pahina. (max 64 na karakter)
-url: "https://kaishi.ph" ## Ang url ng site.
+url: "https://example.com/tl/index.html" ## Ang url ng site.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Ang viewport ng site.
 
 # News - Ang News SiteMap front matter (YAML).

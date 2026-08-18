@@ -42,7 +42,7 @@ subtitle: "Xây dựng trang web tuyệt vời với nỗ lực tối thiểu nh
 tags: "mẫu khởi đầu kaishi, trình tạo trang tĩnh, trình tạo trang tĩnh, mẫu khởi đầu, bootstrap, bootstrap css, bootstrap javascript, chính sách bảo mật nội dung, thẻ meta open graph, thanh điều hướng đáp ứng, thẻ meta schema.org" ## Thẻ của trang. (tối đa 160 ký tự)
 theme-color: "143, 250, 113" ## Màu chủ đề của trang.
 title: "Bài viết" ## Tiêu đề của trang. (tối đa 64 ký tự)
-url: "https://kaishi.vn" ## URL của trang.
+url: "https://example.com/vi/index.html" ## URL của trang.
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## Khung nhìn của trang.
 
 # News - Phần đầu trang News SiteMap (YAML).

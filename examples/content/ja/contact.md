@@ -43,7 +43,7 @@ subtitle: "本日はどのようなご用件でしょうか？" ## ページの�
 tags: "お問い合わせ, お問い合わせフォーム, ご連絡, コンタクトページ, 連絡先情報, カスタマーサービス, サポート, フィードバック, 質問, お問い合わせ, ヘルプ" ## サイトのタグ。(最大160文字)
 theme-color: "143, 250, 113" ## サイトのテーマカラー。
 title: "お問い合わせ" ## ページのタイトル。(最大64文字)
-url: "https://kaishi.jp" ## サイトのURL。
+url: "https://example.com/ja/index.html" ## サイトのURL。
 viewport: "width=device-width, initial-scale=1, shrink-to-fit=no" ## サイトのビューポート。
 
 # News - ニュースサイトマップのフロントマター (YAML)。
