@@ -27,7 +27,7 @@
 use crate::error::SsgError;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -59,14 +59,14 @@ pub struct DepGraph {
     #[serde(default = "default_version")]
     version: u32,
     /// `consumer → set<dependency>` (forward edges).
-    deps: HashMap<PathBuf, HashSet<PathBuf>>,
+    deps: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
     /// `source → set<output>`. Used by [`DepGraph::stale_outputs`] to
     /// sweep orphaned output files when a source is deleted (AC5).
     #[serde(default)]
-    outputs: HashMap<PathBuf, HashSet<PathBuf>>,
+    outputs: BTreeMap<PathBuf, BTreeSet<PathBuf>>,
     /// `path → sha256(content)`. The freshness key.
     #[serde(default)]
-    hashes: HashMap<PathBuf, String>,
+    hashes: BTreeMap<PathBuf, String>,
 }
 
 const fn default_version() -> u32 {
@@ -87,12 +87,12 @@ impl DepGraph {
     /// assert_eq!(g.page_count(), 0);
     /// ```
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             version: SCHEMA_VERSION,
-            deps: HashMap::new(),
-            outputs: HashMap::new(),
-            hashes: HashMap::new(),
+            deps: BTreeMap::new(),
+            outputs: BTreeMap::new(),
+            hashes: BTreeMap::new(),
         }
     }
 
@@ -306,7 +306,7 @@ impl DepGraph {
     /// assert!(g.deps_for(Path::new("none")).is_none());
     /// ```
     #[must_use]
-    pub fn deps_for(&self, consumer: &Path) -> Option<&HashSet<PathBuf>> {
+    pub fn deps_for(&self, consumer: &Path) -> Option<&BTreeSet<PathBuf>> {
         self.deps.get(consumer)
     }
 
@@ -323,7 +323,7 @@ impl DepGraph {
     /// assert_eq!(g.outputs_for(Path::new("a.md")).map(|s| s.len()), Some(1));
     /// ```
     #[must_use]
-    pub fn outputs_for(&self, source: &Path) -> Option<&HashSet<PathBuf>> {
+    pub fn outputs_for(&self, source: &Path) -> Option<&BTreeSet<PathBuf>> {
         self.outputs.get(source)
     }
 

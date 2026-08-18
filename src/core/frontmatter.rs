@@ -9,7 +9,7 @@
 
 use anyhow::{Context, Result};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
@@ -100,7 +100,7 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
 /// ```
 pub fn read_sidecar(
     html_path: &Path,
-) -> Result<Option<HashMap<String, serde_json::Value>>> {
+) -> Result<Option<BTreeMap<String, serde_json::Value>>> {
     let sidecar = html_path.with_extension("meta.json");
     if !sidecar.exists() {
         return Ok(None);
@@ -109,7 +109,7 @@ pub fn read_sidecar(
     let content = fs::read_to_string(&sidecar).with_context(|| {
         format!("Failed to read sidecar {}", sidecar.display())
     })?;
-    let meta: HashMap<String, serde_json::Value> =
+    let meta: BTreeMap<String, serde_json::Value> =
         serde_json::from_str(&content)?;
     Ok(Some(meta))
 }
@@ -134,7 +134,7 @@ pub fn read_sidecar_for_html(
     html_path: &Path,
     site_dir: &Path,
     sidecar_dir: &Path,
-) -> Result<Option<HashMap<String, serde_json::Value>>> {
+) -> Result<Option<BTreeMap<String, serde_json::Value>>> {
     let rel = html_path.strip_prefix(site_dir).unwrap_or(html_path);
     let sidecar_path = sidecar_dir.join(rel).with_extension("meta.json");
     if !sidecar_path.exists() {
@@ -148,11 +148,11 @@ pub fn read_sidecar_for_html(
     read_sidecar(&sidecar_path.with_extension("").with_extension(""))
 }
 
-/// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible `HashMap`.
+/// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible `BTreeMap`.
 pub(crate) fn frontmatter_to_json(
     fm: &frontmatter_gen::Frontmatter,
-) -> HashMap<String, serde_json::Value> {
-    let mut map = HashMap::new();
+) -> BTreeMap<String, serde_json::Value> {
+    let mut map = BTreeMap::new();
     for (key, value) in &fm.0 {
         let _ = map.insert(key.clone(), fm_value_to_json(value));
     }
@@ -230,7 +230,7 @@ mod tests {
 
         let body =
             fs::read_to_string(sidecars.join("index.meta.json")).unwrap();
-        let parsed: HashMap<String, serde_json::Value> =
+        let parsed: BTreeMap<String, serde_json::Value> =
             serde_json::from_str(&body).unwrap();
         assert!(parsed.contains_key("title"));
         assert_eq!(parsed.get("word_count").unwrap().as_u64().unwrap(), 2);
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(count, 1);
 
         let body = fs::read_to_string(sidecars.join("long.meta.json")).unwrap();
-        let parsed: HashMap<String, serde_json::Value> =
+        let parsed: BTreeMap<String, serde_json::Value> =
             serde_json::from_str(&body).unwrap();
         assert_eq!(parsed.get("word_count").unwrap().as_u64().unwrap(), 450);
         assert_eq!(parsed.get("reading_time").unwrap().as_u64().unwrap(), 2);
@@ -495,7 +495,7 @@ mod tests {
         // Construct a `Value::Object(Box<Frontmatter>)` directly —
         // `Frontmatter` is a tuple struct wrapping `HashMap<String, Value>`,
         // so we can build one by hand. Covers lines 119-124.
-        let mut inner = HashMap::new();
+        let mut inner = std::collections::HashMap::new();
         let _ = inner.insert(
             "k".to_string(),
             frontmatter_gen::Value::String("v".to_string()),
