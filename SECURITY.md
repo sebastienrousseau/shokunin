@@ -148,7 +148,8 @@ To verify a release binary:
 # Verify checksum
 sha256sum -c ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256
 
-# Verify GPG signature
+# Verify GPG signature (import the release-signing key first — see below)
+gpg --import KEYS.asc
 gpg --verify ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz.asc \
              ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz
 
@@ -162,6 +163,30 @@ slsa-verifier verify-artifact ssg-vX.Y.Z-x86_64-unknown-linux-gnu.tar.gz \
   --source-uri github.com/sebastienrousseau/static-site-generator \
   --source-tag vX.Y.Z
 ```
+
+### Release-signing key
+
+The `gpg --verify` step above needs the public key. It is committed to
+this repository as [`KEYS.asc`](KEYS.asc), and the fingerprint is:
+
+```text
+4B7F16C909C7A8EE9BED338A4F047EDF5F90F638
+```
+
+`Sebastien Rousseau <sebastian.rousseau@gmail.com>`, ed25519,
+signing-only, expires 2028-08-16.
+
+Verify the fingerprint out of band before trusting it. A key fetched
+over the same channel as the artefact it signs proves nothing on its
+own — which is why the Sigstore attestation and SLSA provenance above
+remain the stronger checks. The detached signature exists for consumers
+who need an offline check with the `gpg` their distribution already
+ships.
+
+Releases before v0.0.51 carry no `.asc`: the signing job was gated on a
+secret that had not been configured, and a job-ordering bug meant the
+signatures it did produce never reached the release
+(fixed in #678).
 
 The full downstream verification guide — including the regulatory
 cross-reference to EO 14028, the EU CRA, and FedRAMP — lives at
