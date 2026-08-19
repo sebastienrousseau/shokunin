@@ -7,6 +7,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.52] - 2026-08-19
+
+Two tag-handling defects and one capability, all found by building a
+35-locale site against v0.0.50 and v0.0.51.
+
+### ⚠️ Behaviour change
+
+**Tag lists now split on non-ASCII separators.** If any post's `tags:`,
+`categories:` or `topics:` field separates terms with `،` (Arabic comma),
+`，` or `、` (CJK) or `;`, those terms were previously collected as **one**
+term whose name was the entire list. They are now split correctly, so the
+generated tag tree changes shape on upgrade: more terms, each shorter, and
+the old combined term disappears.
+
+This is the fix rather than a regression, but it is a visible output change:
+existing URLs under `tags/` derived from a mis-split term will not be
+regenerated. Sites that publish only ASCII-separated tags are unaffected.
+
+### Fixed
+
+- **A multilingual tag list could kill the build** (#695). Term lists were
+  split on ASCII `,` alone, so a post written in Arabic — which separates
+  with `،` (U+060C) — had its whole list collected as a single term. That
+  term then slugified into one enormous path component: 230 characters, but
+  **348 UTF-8 bytes**, because `is_alphanumeric` is Unicode-aware and
+  non-Latin scripts survive at 2–4 bytes per character. ext4 caps a path
+  component at 255 *bytes*, so the build aborted with
+  `File name too long (os error 36)`. APFS caps at 255 *characters*, so the
+  same site built cleanly on macOS and only Linux CI failed — which is how
+  it shipped. `split_terms` in `ssg-core` now recognises `,` `،` `，` `、`
+  and `;`, and the four call sites that each open-coded `split(',')` share
+  one definition.
+- **`slugify` had no length cap** (#695). Fixed independently of the
+  separator bug, because it is reachable without it: any sufficiently long
+  legitimate term hits the same 255-byte wall. Slugs are now truncated to
+  200 bytes on a character boundary — byte-slicing a multi-byte sequence
+  panics — with a dangling separator trimmed from the cut.
+
+### Added
+
+- **`--no-tag-pages` / `SSG_NO_TAG_PAGES`** (#696), with a
+  `no_taxonomy_pages` config field. Skips taxonomy page generation entirely,
+  for sites that curate their own vocabulary. One 35-locale site declares
+  825 distinct raw tags in English alone and collapses them to a canonical
+  53 with a ≥3-article threshold before a term earns a landing page; ssg
+  cannot know that decision exists and emitted ~7,172 pages against 6,856
+  real content pages, roughly doubling the URL surface with the thin half.
+  **The default is unchanged** — the flag only ever turns generation off, so
+  no existing build changes behaviour by upgrading. Verified byte-identical
+  output with the flag absent.
+
 ## [0.0.51] - 2026-08-16
 
 The follow-through release. Every item below was found by building real
