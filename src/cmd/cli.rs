@@ -163,6 +163,15 @@ impl Cli {
                     .value_parser(clap::value_parser!(String)),
             )
             .arg(
+                Arg::new("no_tag_pages")
+                    .help(
+                        "Skip taxonomy (tag/category/topic) page generation",
+                    )
+                    .long("no-tag-pages")
+                    .env("SSG_NO_TAG_PAGES")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
                 Arg::new("validate")
                     .help("Validate content schemas without building")
                     .long("validate")

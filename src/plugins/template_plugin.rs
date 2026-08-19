@@ -411,6 +411,7 @@ mod tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         }
     }
 
@@ -598,6 +599,7 @@ mod tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         };
 
         let content_dir = config.content_dir.clone();

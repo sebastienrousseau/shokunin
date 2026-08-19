@@ -143,6 +143,8 @@ pub fn default_config() -> &'static Arc<SsgConfig> {
             edge_headers: EdgeHeadersConfig::default(),
             agents: None,
             transitions: false,
+            // Default: generate taxonomy pages, as before.
+            no_taxonomy_pages: false,
             security: SecurityConfig::default(),
         })
     })

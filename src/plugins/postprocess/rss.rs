@@ -331,6 +331,7 @@ mod tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         };
         PluginContext::with_config(
             Path::new("content"),
@@ -999,6 +1000,7 @@ mod tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         };
         let ctx = PluginContext::with_config(
             Path::new("c"),
