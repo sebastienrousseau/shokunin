@@ -829,25 +829,19 @@ fn extract_terms_from_value(
     if let Some(arr) = value.as_array() {
         for item in arr {
             if let Some(s) = item.as_str() {
-                for part in s.split(',') {
-                    let trimmed = part.trim();
-                    if !trimmed.is_empty() {
-                        map.entry(trimmed.to_string())
-                            .or_default()
-                            .push((title.to_string(), url.to_string()));
-                    }
+                for term in ssg_core::split_terms(s) {
+                    map.entry(term)
+                        .or_default()
+                        .push((title.to_string(), url.to_string()));
                 }
             }
         }
     } else if allow_string {
         if let Some(s) = value.as_str() {
-            for part in s.split(',') {
-                let trimmed = part.trim();
-                if !trimmed.is_empty() {
-                    map.entry(trimmed.to_string())
-                        .or_default()
-                        .push((title.to_string(), url.to_string()));
-                }
+            for term in ssg_core::split_terms(s) {
+                map.entry(term)
+                    .or_default()
+                    .push((title.to_string(), url.to_string()));
             }
         }
     }
