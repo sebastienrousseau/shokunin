@@ -345,8 +345,9 @@ const TERM_SEPARATORS: [char; 5] = [
 
 /// Splits a front-matter term list into trimmed, non-empty terms.
 ///
-/// Accepts every separator in [`TERM_SEPARATORS`], so a tag list keeps its
-/// terms whatever script it was written in.
+/// Accepts a comma or semicolon, plus the Arabic comma (`،`), fullwidth
+/// comma (`，`) and ideographic comma (`、`), so a tag list keeps its terms
+/// whatever script it was written in.
 ///
 /// # Examples
 ///
@@ -382,8 +383,8 @@ const MAX_SLUG_BYTES: usize = 200;
 ///
 /// Lowercases ASCII letters, replaces non-alphanumeric runs with a
 /// single `-`, and trims leading/trailing separators. The result is
-/// truncated to [`MAX_SLUG_BYTES`] bytes on a character boundary, so a
-/// slug is always a legal path component on Linux filesystems.
+/// truncated to 200 bytes on a character boundary, so a slug is always a
+/// legal path component on Linux filesystems.
 ///
 /// # Examples
 ///
