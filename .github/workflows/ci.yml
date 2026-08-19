@@ -147,12 +147,20 @@ jobs:
     name: test · ${{ matrix.os }}
     needs: lint
     runs-on: ${{ matrix.os }}
-    # Bumped from 8 → 15 in v0.0.42 because the new tests (ravif AVIF
-    # encoding in particular — ~1.2s per 1024×768 image on the runner)
-    # push lib-test wall-time past the prior ceiling on ubuntu/windows.
-    # macos-latest happens to be on a faster M-series runner and stayed
-    # under 8m. Long-term: triage slow tests behind a `slow` feature flag.
-    timeout-minutes: 15
+    # Bumped 8 → 15 in v0.0.42 (ravif AVIF encoding, ~1.2s per 1024×768
+    # image on the runner) and 15 → 20 after windows-latest started being
+    # cancelled at exactly 15m00s.
+    #
+    # Almost all of that is compilation, not tests: on the run that hit
+    # the ceiling, Windows finished 3,491 lib tests in 35s having already
+    # spent ~14m50s building. A cancelled job therefore says nothing
+    # about the code, which is the worst kind of red — it reads as a test
+    # failure and is not one.
+    #
+    # Observed Windows wall-time is 9-10m on a warm cache and 14-15m cold,
+    # so 15 left no margin for ordinary variance. 20 absorbs that while
+    # still failing a genuinely hung job.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

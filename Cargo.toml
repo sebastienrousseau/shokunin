@@ -451,21 +451,6 @@ path = "examples/agent_api_example.rs"
 [lints]
 workspace = true
 
-# Dependencies are built optimised even in dev/test builds.
-#
-# Profiling the 500-page budget showed 94% of wall-clock inside
-# `staticdatagen::compile` — a dependency — with our own staging at ~6%.
-# In an unoptimised dev build that third-party code runs at roughly a
-# quarter of its real speed, so `cargo test` was measuring a slowness no
-# user ever experiences: `ssg` ships from the release profile.
-#
-# Optimising only `*` (dependencies) keeps our own crate unoptimised, so
-# backtraces, debug-assertions and step-debugging in ssg code are
-# unaffected. The cost is a one-off longer dependency compile, cached
-# thereafter.
-[profile.dev.package."*"]
-opt-level = 2
-
 [profile.dev]
 # Development profile configuration for fast builds and debugging.
 codegen-units = 16                          # Balance between compile speed and disk usage (256 creates massive target dirs)
