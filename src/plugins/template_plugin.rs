@@ -266,11 +266,8 @@ fn enrich_with_related_posts(
                     }
                 }
             } else if let Some(s) = tags_val.as_str() {
-                for part in s.split(',') {
-                    let trimmed = part.trim();
-                    if !trimmed.is_empty() {
-                        let _ = terms.insert(trimmed.to_string());
-                    }
+                for term in ssg_core::split_terms(s) {
+                    let _ = terms.insert(term);
                 }
             }
         }
@@ -282,11 +279,8 @@ fn enrich_with_related_posts(
                     }
                 }
             } else if let Some(s) = cats_val.as_str() {
-                for part in s.split(',') {
-                    let trimmed = part.trim();
-                    if !trimmed.is_empty() {
-                        let _ = terms.insert(trimmed.to_string());
-                    }
+                for term in ssg_core::split_terms(s) {
+                    let _ = terms.insert(term);
                 }
             }
         }

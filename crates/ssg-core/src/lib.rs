@@ -327,10 +327,63 @@ pub fn reading_time(text: &str) -> usize {
     (text.split_whitespace().count() / 200).max(1)
 }
 
+/// Separators recognised when splitting a front-matter term list.
+///
+/// ASCII `,` plus the comma each writing system actually uses. A locale
+/// post written in Arabic separates its tags with `،` (U+060C) and one in
+/// Japanese with `、` (U+3001); splitting on ASCII alone collapses the whole
+/// list into a single term, which then slugifies into one enormous path
+/// component. Recognising the others costs nothing for ASCII input and makes
+/// a multilingual corpus behave the way its authors wrote it.
+const TERM_SEPARATORS: [char; 5] = [
+    ',',        // ASCII
+    '\u{060C}', // ، Arabic comma
+    '\u{FF0C}', // ， fullwidth comma (CJK)
+    '\u{3001}', // 、 ideographic comma (CJK enumeration)
+    ';',        // occasionally used in hand-authored lists
+];
+
+/// Splits a front-matter term list into trimmed, non-empty terms.
+///
+/// Accepts every separator in [`TERM_SEPARATORS`], so a tag list keeps its
+/// terms whatever script it was written in.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(ssg_core::split_terms("a, b,c"), vec!["a", "b", "c"]);
+/// // Arabic comma — one list of three, not one term.
+/// assert_eq!(ssg_core::split_terms("أ، ب، ج").len(), 3);
+/// assert!(ssg_core::split_terms(" , ,").is_empty());
+/// ```
+#[must_use]
+pub fn split_terms(input: &str) -> Vec<String> {
+    input
+        .split(TERM_SEPARATORS)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+/// Maximum slug length in **bytes**.
+///
+/// Slugs become path components, and the common Linux filesystems (ext4,
+/// btrfs, xfs) cap a single component at 255 *bytes*. `is_alphanumeric` is
+/// Unicode-aware, so non-Latin scripts survive slugification at 2-4 bytes per
+/// character: a 230-character Arabic term is 348 bytes and the build dies with
+/// ENAMETOOLONG. macOS (APFS) counts *characters*, so the same input succeeds
+/// there — which is how this reaches CI without any contributor seeing it.
+///
+/// 200 leaves headroom for the extensions and suffixes callers append.
+const MAX_SLUG_BYTES: usize = 200;
+
 /// Converts a string to a URL-safe slug.
 ///
 /// Lowercases ASCII letters, replaces non-alphanumeric runs with a
-/// single `-`, and trims leading/trailing separators.
+/// single `-`, and trims leading/trailing separators. The result is
+/// truncated to [`MAX_SLUG_BYTES`] bytes on a character boundary, so a
+/// slug is always a legal path component on Linux filesystems.
 ///
 /// # Examples
 ///
@@ -338,10 +391,12 @@ pub fn reading_time(text: &str) -> usize {
 /// assert_eq!(ssg_core::slugify("Hello World!"), "hello-world");
 /// assert_eq!(ssg_core::slugify("Rust & Web"), "rust-web");
 /// assert_eq!(ssg_core::slugify("--leading--"), "leading");
+/// // Long terms are capped in bytes, not characters.
+/// assert!(ssg_core::slugify(&"ا".repeat(400)).len() <= 200);
 /// ```
 #[must_use]
 pub fn slugify(input: &str) -> String {
-    input
+    let slug = input
         .to_lowercase()
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { '-' })
@@ -349,13 +404,97 @@ pub fn slugify(input: &str) -> String {
         .split('-')
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
-        .join("-")
+        .join("-");
+
+    if slug.len() <= MAX_SLUG_BYTES {
+        return slug;
+    }
+
+    // Truncate on a char boundary — byte-slicing a multi-byte sequence
+    // panics — then trim any separator the cut leaves dangling.
+    let mut end = MAX_SLUG_BYTES;
+    while end > 0 && !slug.is_char_boundary(end) {
+        end -= 1;
+    }
+    slug[..end].trim_end_matches('-').to_owned()
 }
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn slugify_caps_length_in_bytes_not_characters() {
+        // The regression: a real Arabic tag list collapsed into one term is
+        // 230 characters but 348 UTF-8 bytes. ext4 caps a path component at
+        // 255 bytes, so the build died with ENAMETOOLONG; APFS counts
+        // characters, so macOS never saw it.
+        let arabic = "\u{0622}\u{0641}\u{0627}\u{0642} ".repeat(60);
+        let slug = slugify(&arabic);
+        assert!(
+            slug.len() <= MAX_SLUG_BYTES,
+            "slug is {} bytes, over the {MAX_SLUG_BYTES}-byte cap",
+            slug.len()
+        );
+        // Still a usable slug, not an empty string.
+        assert!(!slug.is_empty());
+        assert!(!slug.ends_with('-'), "cut left a dangling separator");
+    }
+
+    #[test]
+    fn slugify_truncates_on_a_char_boundary() {
+        // Byte-slicing a multi-byte sequence panics; the cut must land on a
+        // boundary for every offset a long multi-byte input can produce.
+        for n in 90..140 {
+            let slug = slugify(&"\u{3042}".repeat(n)); // hiragana A, 3 bytes
+            assert!(slug.len() <= MAX_SLUG_BYTES);
+            assert!(std::str::from_utf8(slug.as_bytes()).is_ok());
+        }
+    }
+
+    #[test]
+    fn slugify_leaves_short_slugs_untouched() {
+        assert_eq!(slugify("Hello World!"), "hello-world");
+        assert_eq!(slugify("Rust & Web"), "rust-web");
+    }
+
+    #[test]
+    fn split_terms_handles_non_ascii_separators() {
+        // Each script's own comma. Splitting on ASCII alone yields one term.
+        assert_eq!(split_terms("a, b, c").len(), 3);
+        assert_eq!(
+            split_terms("\u{0623}\u{060C} \u{0628}\u{060C} \u{062C}").len(),
+            3
+        );
+        assert_eq!(
+            split_terms("\u{3042}\u{3001}\u{3044}\u{3001}\u{3046}").len(),
+            3
+        );
+        assert_eq!(split_terms("\u{7532}\u{FF0C}\u{4E59}").len(), 2);
+        assert_eq!(split_terms("a; b").len(), 2);
+    }
+
+    #[test]
+    fn split_terms_trims_and_drops_empties() {
+        assert_eq!(split_terms("  a  ,,  b  ,"), vec!["a", "b"]);
+        assert!(split_terms(" , , ").is_empty());
+        assert!(split_terms("").is_empty());
+    }
+
+    #[test]
+    fn split_terms_then_slugify_stays_within_the_byte_cap() {
+        // The two fixes together: the real corpus shape. Each term is short,
+        // so nothing is truncated and no path component can overflow.
+        let list = "\u{0623}\u{0644}\u{0623}\u{0639}\u{0645}\u{0627}\u{0644}\u{060C} \u{0627}\u{0644}\u{062A}\u{062C}\u{0627}\u{0631}\u{0629}\u{060C} DORA";
+        let slugs: Vec<String> =
+            split_terms(list).iter().map(|t| slugify(t)).collect();
+        assert_eq!(slugs.len(), 3);
+        for s in &slugs {
+            assert!(s.len() <= MAX_SLUG_BYTES);
+            assert!(!s.is_empty());
+        }
+    }
 
     #[test]
     fn compile_markdown_basic() {
