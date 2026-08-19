@@ -298,6 +298,18 @@ pub struct SsgConfig {
     /// Defaults to `false` to keep zero-JS sites zero-JS.
     #[serde(default)]
     pub transitions: bool,
+    /// Skip generating taxonomy (tag / category / topic) pages.
+    ///
+    /// Defaults to `false`, so a build that does not ask for this is
+    /// unchanged. Sites that curate their own taxonomy — a canonical
+    /// vocabulary, a minimum-article threshold, hand-translated slugs —
+    /// need to own `/tags/` outright: emitting a page per raw
+    /// front-matter term contradicts that curation, and on a
+    /// multi-locale corpus it multiplies the URL surface with thin
+    /// pages. Opting out is cheaper and more honest than deleting the
+    /// output afterwards.
+    #[serde(default)]
+    pub no_taxonomy_pages: bool,
     /// Security tunables (v0.0.47 plan §3 item 2.3): the `[security]`
     /// section of `ssg.toml`. Currently holds the SRI digest
     /// algorithm; absent ⇒ SHA-384.
@@ -340,6 +352,13 @@ impl SsgConfig {
         // If `-s/--serve` was used
         if let Some(serve_dir) = matches.get_one::<PathBuf>("serve") {
             self.serve_dir = Some(serve_dir.clone());
+        }
+
+        // `--no-tag-pages` / SSG_NO_TAG_PAGES. Only ever turns generation
+        // off — absent means the default, so no existing build changes
+        // behaviour merely by upgrading.
+        if matches.get_flag("no_tag_pages") {
+            self.no_taxonomy_pages = true;
         }
 
         // `--watch` flag is handled by the caller (run() in lib.rs)

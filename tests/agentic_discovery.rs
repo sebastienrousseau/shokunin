@@ -57,6 +57,7 @@ fn base_cfg(agents: Option<AgentsConfig>) -> SsgConfig {
         agents,
         transitions: false,
         security: ssg::cmd::SecurityConfig::default(),
+        no_taxonomy_pages: false,
     }
 }
 

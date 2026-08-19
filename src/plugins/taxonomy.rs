@@ -119,6 +119,14 @@ impl Plugin for TaxonomyPlugin {
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
+        // Opt-out for sites that own their own taxonomy (`--no-tag-pages`
+        // / `SSG_NO_TAG_PAGES`). Checked before any work so the build does
+        // not pay for output it is about to discard. Absent ⇒ generate, so
+        // this cannot change an existing build.
+        if ctx.config.as_ref().is_some_and(|c| c.no_taxonomy_pages) {
+            return Ok(());
+        }
+
         // Sidecar roots in priority order: `<build>/.meta/` (the
         // emit_sidecars convention) and `<site>/.meta/` — the staged
         // copy the real pipeline leaves in the output directory
@@ -1228,6 +1236,69 @@ mod tests {
         TaxonomyPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("tags").exists());
         assert!(!site.join("categories").exists());
+    }
+
+    // -------------------------------------------------------------------
+    // after_compile — opt-out (`--no-tag-pages` / SSG_NO_TAG_PAGES)
+    // -------------------------------------------------------------------
+
+    /// Builds a context whose config carries `no_taxonomy_pages`.
+    fn ctx_with_opt_out(base: &PluginContext, opt_out: bool) -> PluginContext {
+        let mut cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        cfg.no_taxonomy_pages = opt_out;
+        PluginContext::with_config(
+            &base.content_dir,
+            &base.build_dir,
+            &base.site_dir,
+            &base.template_dir,
+            cfg,
+        )
+    }
+
+    #[test]
+    fn no_taxonomy_pages_suppresses_generation() {
+        let (_tmp, site, meta, base) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust", "web"], "categories": ["coding"]}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin
+            .after_compile(&ctx_with_opt_out(&base, true))
+            .unwrap();
+
+        assert!(
+            !site.join("tags").exists(),
+            "tags tree written despite opt-out"
+        );
+        assert!(!site.join("categories").exists());
+    }
+
+    #[test]
+    fn taxonomy_pages_are_generated_by_default() {
+        // The opt-out must be exactly that: absent config, or config with the
+        // flag unset, keeps the pre-existing behaviour. A site that upgrades
+        // without asking for anything sees no change.
+        let (_tmp, site, meta, base) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin
+            .after_compile(&ctx_with_opt_out(&base, false))
+            .unwrap();
+
+        assert!(
+            site.join("tags/rust/index.html").exists(),
+            "default must still generate taxonomy pages"
+        );
     }
 
     // -------------------------------------------------------------------

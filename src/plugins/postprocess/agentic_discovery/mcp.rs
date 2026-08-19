@@ -400,6 +400,7 @@ mod tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         }
     }
 
@@ -822,6 +823,7 @@ mod fault_tests {
             agents: None,
             transitions: false,
             security: crate::cmd::SecurityConfig::default(),
+            no_taxonomy_pages: false,
         }
     }
 
