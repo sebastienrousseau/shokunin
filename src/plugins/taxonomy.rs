@@ -1272,7 +1272,10 @@ mod tests {
             .after_compile(&ctx_with_opt_out(&base, true))
             .unwrap();
 
-        assert!(!site.join("tags").exists(), "tags tree written despite opt-out");
+        assert!(
+            !site.join("tags").exists(),
+            "tags tree written despite opt-out"
+        );
         assert!(!site.join("categories").exists());
     }
 
