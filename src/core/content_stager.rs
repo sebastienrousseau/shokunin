@@ -627,7 +627,7 @@ fn extract_simple_vars(
     }
 }
 
-fn find_closing_braces(s: &str) -> Option<usize> {
+const fn find_closing_braces(s: &str) -> Option<usize> {
     let bytes = s.as_bytes();
     let mut j = 0;
     while j + 1 < bytes.len() {

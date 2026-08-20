@@ -103,7 +103,7 @@ impl AuditGate for Html5Gate {
             }
 
             if let Some(start) = lower.find("<title") {
-                let close = lower[start..].find("</title>").map_or(0, |i| i);
+                let close = lower[start..].find("</title>").unwrap_or(0);
                 if close == 0 {
                     findings.push(
                         Finding::new(
