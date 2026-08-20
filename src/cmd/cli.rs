@@ -73,6 +73,22 @@ pub enum CliInvocation {
     Legacy,
 }
 
+/// Parses a boolean-ish environment value for a `SetTrue` flag.
+///
+/// clap's default bool parser accepts only `true`/`false`, but an env var is
+/// conventionally set to `1`, `yes` or `on`. Anything unrecognised is an
+/// error rather than a silent false: a typo'd `SSG_NO_TAG_PAGES=ture` should
+/// say so, not quietly generate the pages the operator asked to skip.
+fn parse_env_bool(s: &str) -> Result<bool, String> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" | "" => Ok(false),
+        other => Err(format!(
+            "expected a boolean (1/true/yes/on or 0/false/no/off), got {other:?}"
+        )),
+    }
+}
+
 impl Cli {
     /// Builds the legacy flag-style `clap::Command`.
     ///
@@ -169,6 +185,13 @@ impl Cli {
                     )
                     .long("no-tag-pages")
                     .env("SSG_NO_TAG_PAGES")
+                    // `SetTrue` parses the env var as a *value*, and its
+                    // default parser accepts only "true"/"false" — so the
+                    // conventional `SSG_NO_TAG_PAGES=1` was rejected with
+                    // `invalid value '1'`, taking the whole build down. The
+                    // flag form was unaffected, which is how this shipped
+                    // with the release notes advertising `=1`.
+                    .value_parser(parse_env_bool)
                     .action(ArgAction::SetTrue),
             )
             .arg(
@@ -568,6 +591,28 @@ impl Cli {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
+    #[test]
+    fn env_bool_accepts_conventional_truthy_values() {
+        // Regression: `SetTrue` + `.env()` parses the variable as a value,
+        // and clap's default bool parser rejects everything but true/false.
+        // `SSG_NO_TAG_PAGES=1` therefore aborted the build with
+        // `invalid value '1'` — shipped in 0.0.52 with the release notes
+        // advertising exactly that form.
+        for v in ["1", "true", "TRUE", "yes", "on", " on "] {
+            assert_eq!(parse_env_bool(v), Ok(true), "{v:?}");
+        }
+        for v in ["0", "false", "no", "off", ""] {
+            assert_eq!(parse_env_bool(v), Ok(false), "{v:?}");
+        }
+    }
+
+    #[test]
+    fn env_bool_rejects_garbage_rather_than_defaulting_false() {
+        // A typo must not silently produce the opposite of what was asked.
+        assert!(parse_env_bool("ture").is_err());
+        assert!(parse_env_bool("maybe").is_err());
+    }
 
     use super::*;
 
