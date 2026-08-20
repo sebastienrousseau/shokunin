@@ -169,11 +169,13 @@ impl VectorEngine {
         // little + 4-byte alignment guarantees we can't make from
         // arbitrary slices.)
         let mut corpus = Vec::with_capacity(count * dim);
-        for chunk in embeddings_bytes.chunks_exact(4) {
-            // chunk is always length 4 here because of chunks_exact.
-            corpus.push(f32::from_le_bytes([
-                chunk[0], chunk[1], chunk[2], chunk[3],
-            ]));
+        // `as_chunks` yields `&[u8; 4]` rather than a slice that merely
+        // happens to be four long, so the array is passed straight to
+        // `from_le_bytes` with no indexing and no length assumption to
+        // comment on. `.1` is the remainder, which a well-formed
+        // embeddings blob does not have.
+        for chunk in embeddings_bytes.as_chunks::<4>().0 {
+            corpus.push(f32::from_le_bytes(*chunk));
         }
         Ok(Self {
             encoder,
