@@ -7,6 +7,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.54] - 2026-08-20
+
+Ships the search fix from #707, which landed on `main` after 0.0.53 was
+already published and so reached no release.
+
+### Fixed
+
+- **Search fetched its index from the host root, not the site** (#707).
+  The widget requested a bare `/search-index.json`, so a site published
+  under a path — `https://example.com/apex` — asked the *host* root for an
+  index that is not its own.
+
+  It failed quietly and with plausible results. On a host where something
+  else answers at `/search-index.json`, search returned that other site's
+  entries rather than erroring: no 404, no console message, results that
+  looked real. The themes showcase was served under a domain whose root
+  does serve an index, so every theme's search had been querying unrelated
+  content. It surfaced only when the showcase moved to a host with nothing
+  at the root.
+
+  The index URL now carries the path component of `base_url`, as the
+  `_csp/` assets, islands loader, SBOM link and taxonomy home link already
+  did. A site that owns its host is unaffected.
+
+- **Eight clippy findings from Rust 1.98** (#707). The runners moved to
+  1.98 and `missing_const_for_fn` (6 sites), `chunks_exact_to_as_chunks`
+  and `map_or_identity` began firing on pre-existing code. Behaviour is
+  unchanged; `as_chunks` additionally replaces a runtime length assumption
+  with a type guarantee.
+
+### Notes
+
+Anyone publishing a site under a path — a project page, or several themes
+under one domain — should take this release: on 0.0.53 and earlier their
+search either 404s or silently returns another site's results.
+
 ## [0.0.53] - 2026-08-20
 
 A one-line fix for a defect shipped in 0.0.52.
