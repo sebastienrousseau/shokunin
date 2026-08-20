@@ -128,7 +128,7 @@ fn ensure_blog_feed() -> PathBuf {
 }
 
 /// RFC 3339 sanity check: starts with `YYYY-MM-DDTHH:MM:SS`.
-fn looks_like_rfc3339(s: &str) -> bool {
+const fn looks_like_rfc3339(s: &str) -> bool {
     if s.len() < 19 {
         return false;
     }

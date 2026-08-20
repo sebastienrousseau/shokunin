@@ -406,7 +406,7 @@ fn apply_strikethrough(line: &str) -> Cow<'_, str> {
 }
 
 /// Returns the byte offset of the next `~~` after `from`, or `None`.
-fn find_strike_close(line: &str, from: usize) -> Option<usize> {
+const fn find_strike_close(line: &str, from: usize) -> Option<usize> {
     let bytes = line.as_bytes();
     let mut j = from;
     while j + 1 < bytes.len() {

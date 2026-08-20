@@ -20,7 +20,7 @@
 /// assert_eq!(find_tag_end(html, 0), 4);
 /// ```
 #[allow(dead_code)]
-pub fn find_tag_end(html: &str, tag_start: usize) -> usize {
+pub const fn find_tag_end(html: &str, tag_start: usize) -> usize {
     let bytes = html.as_bytes();
     let mut i = tag_start;
     let mut quote: Option<u8> = None;

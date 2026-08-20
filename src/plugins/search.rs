@@ -378,9 +378,13 @@ impl Plugin for SearchPlugin {
         &self,
         html: &str,
         _path: &Path,
-        _ctx: &PluginContext,
+        ctx: &PluginContext,
     ) -> Result<String, SsgError> {
-        transform_search_html(html, &SearchLabels::english())
+        transform_search_html(
+            html,
+            &SearchLabels::english(),
+            &site_path_prefix(ctx),
+        )
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
@@ -436,9 +440,9 @@ impl Plugin for LocalizedSearchPlugin {
         &self,
         html: &str,
         _path: &Path,
-        _ctx: &PluginContext,
+        ctx: &PluginContext,
     ) -> Result<String, SsgError> {
-        transform_search_html(html, &self.labels)
+        transform_search_html(html, &self.labels, &site_path_prefix(ctx))
     }
 
     fn after_compile(&self, ctx: &PluginContext) -> Result<(), SsgError> {
@@ -470,12 +474,13 @@ fn run_search_index(ctx: &PluginContext) -> Result<(), SsgError> {
 fn transform_search_html(
     html: &str,
     labels: &SearchLabels,
+    site_prefix: &str,
 ) -> Result<String, SsgError> {
     if html.contains("ssg-search-widget") {
         return Ok(html.to_string()); // Already injected
     }
 
-    let script = build_widget_script(labels);
+    let script = build_widget_script(labels, site_prefix);
 
     let injected = if let Some(pos) = html.rfind("</body>") {
         format!("{}{}{}", &html[..pos], script, &html[pos..])
@@ -656,11 +661,27 @@ fn inject_search_ui(path: &Path, script: &str) -> Result<(), SsgError> {
     Ok(())
 }
 
+/// The path component of `base_url`, or `""` when the site owns its host.
+///
+/// The widget fetches its index with a root-absolute URL. A site published
+/// under a path — `https://example.com/apex` — therefore asked for
+/// `/search-index.json` at the *host* root, which is not its own index.
+///
+/// That failed quietly in the worst way: on a host where something else
+/// answers at `/search-index.json`, search returned results from a
+/// different site rather than erroring. It only became visible when the
+/// showcase moved to a host with nothing at the root.
+fn site_path_prefix(ctx: &PluginContext) -> String {
+    ctx.config.as_ref().map_or_else(String::new, |c| {
+        crate::plugins_group::csp::base_url_path_prefix(&c.base_url)
+    })
+}
+
 /// Render [`SEARCH_WIDGET_SCRIPT`] (a template) with the given labels.
 ///
 /// HTML attribute / text values are HTML-escaped; the `no_results` string is
 /// also JS-escaped because it ends up inside a single-quoted JS string literal.
-fn build_widget_script(labels: &SearchLabels) -> String {
+fn build_widget_script(labels: &SearchLabels, site_prefix: &str) -> String {
     let no_results_with_expr = html_escape(&labels.no_results)
         .replace("{query}", "&ldquo;\'+esc(q)+\'&rdquo;");
 
@@ -680,6 +701,7 @@ fn build_widget_script(labels: &SearchLabels) -> String {
         )
         .replace("{{SSG_FOOTER_OPEN}}", &html_escape(&labels.footer_open))
         .replace("{{SSG_NO_RESULTS}}", &js_escape(&no_results_with_expr))
+        .replace("{{SSG_SITE_PREFIX}}", site_prefix)
 }
 
 /// Minimal HTML escaper covering the characters that matter inside attribute
@@ -819,7 +841,7 @@ results=document.getElementById('ssg-search-results'),
 btn=document.getElementById('ssg-search-btn'),active=-1,
 lm=location.pathname.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//),
 lp=lm?'/'+lm[1]:'';
-function load(){if(idx)return Promise.resolve();var sp=lm?'/'+lm[1]+'/search-index.json':'/search-index.json';return fetch(sp).then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
+function load(){if(idx)return Promise.resolve();var sp=lm?'{{SSG_SITE_PREFIX}}/'+lm[1]+'/search-index.json':'{{SSG_SITE_PREFIX}}/search-index.json';return fetch(sp).then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
 function open(){load().then(function(){overlay.classList.add('active');input.value='';results.innerHTML='';input.focus();active=-1})}
 function close(){overlay.classList.remove('active');active=-1}
 function highlight(text,q){if(!q)return esc(text);var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');return esc(text).replace(re,'<mark>$1</mark>')}
@@ -857,6 +879,42 @@ mod tests {
             "<html><head><title>{title}</title></head>\
              <body><h1>{title}</h1>{body}</body></html>"
         )
+    }
+
+    /// The widget fetches its index root-absolutely, so a site published
+    /// under a path must carry that path or it asks the *host* root for an
+    /// index that is not its own.
+    ///
+    /// This failed silently rather than loudly: on a host where something
+    /// else answered at `/search-index.json`, search returned another
+    /// site's results. It only surfaced when the themes showcase moved to
+    /// a host with nothing at the root.
+    #[test]
+    fn search_index_url_carries_the_site_path_prefix() {
+        let script = build_widget_script(&SearchLabels::english(), "/apex");
+        // The non-locale branch — the one that fetched the wrong index.
+        assert!(
+            script.contains(":'/apex/search-index.json'"),
+            "default branch should be prefixed: {script}"
+        );
+        // The locale branch prefixes the locale segment, not the host root.
+        assert!(
+            script.contains("'/apex/'+lm[1]+'/search-index.json'"),
+            "locale branch should be prefixed: {script}"
+        );
+        assert!(
+            !script.contains("{{SSG_SITE_PREFIX}}"),
+            "placeholder should be substituted: {script}"
+        );
+    }
+
+    /// A site that owns its host keeps the bare path — the prefix is empty
+    /// and nothing should be doubled up.
+    #[test]
+    fn search_index_url_is_bare_without_a_prefix() {
+        let script = build_widget_script(&SearchLabels::english(), "");
+        assert!(script.contains("'/search-index.json'"), "{script}");
+        assert!(!script.contains("//search-index.json"), "{script}");
     }
 
     #[test]
@@ -1057,7 +1115,7 @@ mod tests {
         let path = tmp.path().join("page.html");
         fs::write(&path, "<html><body><p>Hello</p></body></html>").unwrap();
 
-        let script = build_widget_script(&SearchLabels::english());
+        let script = build_widget_script(&SearchLabels::english(), "");
         inject_search_ui(&path, &script).unwrap();
 
         let result = fs::read_to_string(&path).unwrap();
@@ -1073,7 +1131,7 @@ mod tests {
         let path = tmp.path().join("page.html");
         fs::write(&path, "<html><body><p>Hi</p></body></html>").unwrap();
 
-        let script = build_widget_script(&SearchLabels::english());
+        let script = build_widget_script(&SearchLabels::english(), "");
         inject_search_ui(&path, &script).unwrap();
         let first = fs::read_to_string(&path).unwrap();
 
@@ -1372,7 +1430,7 @@ mod tests {
         fs::write(&path, "<html><p>No body tag here</p></html>").unwrap();
 
         // Act
-        let script = build_widget_script(&SearchLabels::english());
+        let script = build_widget_script(&SearchLabels::english(), "");
         inject_search_ui(&path, &script).unwrap();
 
         // Assert
@@ -1655,7 +1713,7 @@ mod tests {
         let html =
             "<html><body><div id=\"ssg-search-widget\"></div></body></html>";
         let out =
-            transform_search_html(html, &SearchLabels::english()).unwrap();
+            transform_search_html(html, &SearchLabels::english(), "").unwrap();
         assert_eq!(out, html);
     }
 
@@ -1664,7 +1722,7 @@ mod tests {
         // Covers line ~448 — fallback when </body> is absent.
         let html = "<html><head></head>";
         let out =
-            transform_search_html(html, &SearchLabels::english()).unwrap();
+            transform_search_html(html, &SearchLabels::english(), "").unwrap();
         assert!(out.starts_with(html));
         assert!(out.contains("ssg-search-widget"));
     }
@@ -1869,7 +1927,7 @@ mod tests {
         fs::write(&page, "<html><body></body></html>").unwrap();
         fs::set_permissions(&page, fs::Permissions::from_mode(0o444)).unwrap();
 
-        let script = build_widget_script(&SearchLabels::english());
+        let script = build_widget_script(&SearchLabels::english(), "");
         let result = inject_search_ui(&page, &script);
         fs::set_permissions(&page, fs::Permissions::from_mode(0o644)).unwrap();
         let err =

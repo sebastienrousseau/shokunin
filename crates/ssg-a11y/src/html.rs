@@ -44,7 +44,10 @@ pub(crate) fn is_decorative_img(tag: &str) -> bool {
 /// tag that starts at `tag_start`. Skips `>` characters that occur inside
 /// double- or single-quoted attribute values so that inline SVG `data:`
 /// URLs in `src` attributes don't truncate the tag prematurely.
-pub(crate) fn find_tag_end(html: &str, tag_start: usize) -> usize {
+// `const` because clippy::missing_const_for_fn asks for it under Rust
+// 1.98, where the lint learned to see through this loop. Nothing about
+// the body changed — it was already const-compatible.
+pub(crate) const fn find_tag_end(html: &str, tag_start: usize) -> usize {
     let bytes = html.as_bytes();
     let mut i = tag_start;
     let mut quote: Option<u8> = None;

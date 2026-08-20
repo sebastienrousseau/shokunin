@@ -650,7 +650,7 @@ fn find_script_close_skipping_strings(body: &str) -> Option<usize> {
 /// Like `accessibility::find_tag_end` — returns the index just past
 /// the `>` that closes the open tag at `tag_start`, while skipping
 /// `>` characters that occur inside quoted attribute values.
-fn find_html_tag_end(html: &str, tag_start: usize) -> usize {
+const fn find_html_tag_end(html: &str, tag_start: usize) -> usize {
     let bytes = html.as_bytes();
     let mut i = tag_start;
     let mut quote: Option<u8> = None;
