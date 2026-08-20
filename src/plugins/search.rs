@@ -18,6 +18,7 @@
 
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
+use crate::util::html_rewriter::decode_html_entities;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -98,8 +99,15 @@ impl SearchIndex {
                         url.push(if ch == '\\' { '/' } else { ch });
                     }
 
-                    let title = extract_title(html);
-                    let headings = extract_headings(html);
+                    // `extract_text` already decodes; `extract_title` and
+                    // `extract_headings` did not, so one SearchEntry carried
+                    // plain-text content beside a title reading `A &amp; B`.
+                    // The index is consumed as text, not markup.
+                    let title = decode_html_entities(&extract_title(html));
+                    let headings = extract_headings(html)
+                        .iter()
+                        .map(|h| decode_html_entities(h))
+                        .collect();
                     let content = extract_text(html);
 
                     Ok(SearchEntry {

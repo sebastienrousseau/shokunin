@@ -140,12 +140,90 @@ pub(super) fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
     crate::walk::walk_files(dir, "html")
 }
 
+/// Longest HTML5 named reference (`CounterClockwiseContourIntegral`) is 31
+/// characters, so a well-formed `&name;` never exceeds 32 bytes past the `&`.
+const MAX_ENTITY_BYTES: usize = 32;
+
+/// If `bytes[start]` (a `&`) begins a well-formed character reference,
+/// return the index just past its `;`.
+///
+/// Accepts `&name;`, `&#NN;` and `&#xNN;`. The cap bounds the scan so a
+/// stray `&` in prose cannot walk the rest of the attribute.
+fn scan_existing_entity(bytes: &[u8], start: usize) -> Option<usize> {
+    let limit = bytes.len().min(start + MAX_ENTITY_BYTES);
+    let mut i = start + 1;
+    if i >= limit {
+        return None;
+    }
+    let numeric = bytes[i] == b'#';
+    if numeric {
+        i += 1;
+        if i < limit && (bytes[i] == b'x' || bytes[i] == b'X') {
+            i += 1;
+        }
+    }
+    let value_start = i;
+    while i < limit {
+        match bytes[i] {
+            b';' if i > value_start => return Some(i + 1),
+            b'0'..=b'9' => i += 1,
+            b'a'..=b'z' | b'A'..=b'Z' if !numeric => i += 1,
+            b'a'..=b'f' | b'A'..=b'F' if numeric => i += 1,
+            _ => return None,
+        }
+    }
+    None
+}
+
 /// Escape a string for safe inclusion in an HTML attribute value.
+///
+/// **Idempotent**: an already-formed character reference (`&amp;`, `&#39;`,
+/// `&#x27;`) is preserved verbatim rather than having its leading `&`
+/// re-escaped. This mirrors the contract `staticweaver` adopted for
+/// [ssg#589]; without it the two passes compose into `&amp;amp;`, because
+/// this function runs over values the template layer has already escaped.
+///
+/// That is not hypothetical — it shipped. `og:title` and `twitter:title` are
+/// built from already-escaped values, so a title containing `&` reached the
+/// page as `&amp;amp;` in 0.0.52 and 0.0.53 (see #706). The naive version
+/// looked correct in isolation and was covered by a test that only ever fed
+/// it raw characters.
+///
+/// [ssg#589]: https://github.com/sebastienrousseau/static-site-generator/issues/589
 pub(super) fn escape_attr(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('"', "&quot;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
+    let bytes = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    let mut start = 0;
+    while i < bytes.len() {
+        let replacement = match bytes[i] {
+            b'&' => {
+                if let Some(end) = scan_existing_entity(bytes, i) {
+                    // Already a character reference — copy it through.
+                    i = end;
+                    continue;
+                }
+                "&amp;"
+            }
+            b'"' => "&quot;",
+            b'<' => "&lt;",
+            b'>' => "&gt;",
+            _ => {
+                i += 1;
+                continue;
+            }
+        };
+        if start < i {
+            out.push_str(&s[start..i]);
+        }
+        out.push_str(replacement);
+        i += 1;
+        start = i;
+    }
+    if start < s.len() {
+        out.push_str(&s[start..]);
+    }
+    out
 }
 
 /// Check for an actual `<meta` tag (not just an HTML comment marker).
@@ -486,6 +564,53 @@ mod tests {
     #[test]
     fn escape_attr_special_chars() {
         assert_eq!(escape_attr("a&b<c>d\"e"), "a&amp;b&lt;c&gt;d&quot;e");
+    }
+
+    /// #706: `og:title` / `twitter:title` are built from values the template
+    /// layer already escaped. A naive pass re-escapes the `&` of `&amp;` and
+    /// ships `&amp;amp;` to the page — 1,494 pages on one real corpus.
+    #[test]
+    fn escape_attr_preserves_existing_entities() {
+        assert_eq!(escape_attr("A &amp; B"), "A &amp; B");
+        assert_eq!(escape_attr("A &lt; B"), "A &lt; B");
+        assert_eq!(escape_attr("A &#39; B"), "A &#39; B");
+        assert_eq!(escape_attr("A &#x27; B"), "A &#x27; B");
+        assert_eq!(escape_attr("&nbsp;"), "&nbsp;");
+    }
+
+    /// The property the old test could not see, because it only ever fed
+    /// `escape_attr` raw characters: escaping twice must equal escaping once.
+    #[test]
+    fn escape_attr_is_idempotent() {
+        for input in [
+            "AI, Payments & Post-Quantum Cryptography",
+            "a&b<c>d\"e",
+            "Tom & Jerry's <b>show</b>",
+            "already &amp; escaped",
+            "mixed & already &amp; both",
+            "",
+            "no metacharacters at all",
+        ] {
+            let once = escape_attr(input);
+            let twice = escape_attr(&once);
+            assert_eq!(once, twice, "not idempotent for {input:?}");
+        }
+    }
+
+    /// A bare `&` in prose is still escaped — the entity scan must not treat
+    /// arbitrary following text as a reference, or it would silently emit
+    /// invalid markup.
+    #[test]
+    fn escape_attr_still_escapes_bare_ampersands() {
+        assert_eq!(escape_attr("Tom & Jerry"), "Tom &amp; Jerry");
+        assert_eq!(escape_attr("a & b & c"), "a &amp; b &amp; c");
+        // Unterminated / malformed references are not references.
+        assert_eq!(escape_attr("&amp"), "&amp;amp");
+        assert_eq!(escape_attr("&;"), "&amp;;");
+        assert_eq!(escape_attr("&#;"), "&amp;#;");
+        // Longer than the 32-byte cap: not a reference.
+        let long = format!("&{};", "a".repeat(40));
+        assert!(escape_attr(&long).starts_with("&amp;"));
     }
 
     #[test]

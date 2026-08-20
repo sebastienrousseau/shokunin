@@ -71,6 +71,25 @@ fn workspace_root() -> PathBuf {
 /// the kill is what we validate.
 fn run_example(name: &str, timeout: Duration) {
     let root = workspace_root();
+
+    // Compile first, *untimed*. `cargo run` would otherwise make the timeout
+    // cover compilation as well as execution, and those differ by orders of
+    // magnitude: the example generates its site in ~100ms, while building it
+    // from a cold target directory takes minutes. On a cold CI cache the
+    // budget was spent before the example ever ran, and the failure surfaced
+    // as `public dir not created` — indistinguishable from a real generator
+    // bug, and not reproducible on a warm developer machine.
+    let built = Command::new("cargo")
+        .current_dir(&root)
+        .args(["build", "--quiet", "--example", name])
+        .status()
+        .unwrap_or_else(|e| {
+            panic!("failed to spawn cargo build for {name}: {e}")
+        });
+    assert!(built.success(), "{name}: example failed to compile");
+
+    // Now the timeout measures only what it claims to: how long the example
+    // takes to produce its output before its dev server blocks forever.
     let mut child = Command::new("cargo")
         .current_dir(&root)
         .args(["run", "--quiet", "--example", name])
