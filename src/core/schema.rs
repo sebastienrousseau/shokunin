@@ -68,8 +68,8 @@ pub fn generate_schema() -> Value {
             },
             "site_title": {
                 "type": "string",
-                "description": "Title of the site.",
-                "default": "My SSG Site"
+                "description": "Title of the site. The default templates append it to every page title, so it defaults to empty rather than a placeholder: an unset title brands nothing instead of branding every page \"My SSG Site\". See DEFAULT_SITE_TITLE.",
+                "default": ""
             },
             "site_description": {
                 "type": "string",
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(props["output_dir"]["default"], "public");
         assert_eq!(props["template_dir"]["default"], "templates");
         assert_eq!(props["base_url"]["default"], "http://127.0.0.1:8000");
-        assert_eq!(props["site_title"]["default"], "My SSG Site");
+        assert_eq!(props["site_title"]["default"], "");
         assert_eq!(
             props["site_description"]["default"],
             "A site built with SSG"

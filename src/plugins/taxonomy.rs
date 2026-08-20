@@ -1325,6 +1325,135 @@ mod tests {
         assert!(html.contains("Untitled"));
     }
 
+    // -------------------------------------------------------------------
+    // Placeholder defaults must never reach a rendered page
+    // -------------------------------------------------------------------
+
+    /// A config that leaves `site_title` unset must not brand the tag pages.
+    ///
+    /// This is the bug: `builtin_templates/tag.html` renders
+    /// `Tag: {{ tag }}{% if site.title %} — {{ site.title }}{% endif %}`, and
+    /// `DEFAULT_SITE_TITLE` used to be `"My SSG Site"`. Any site built without
+    /// an explicit `site_title` therefore titled every generated tag page
+    /// `Tag: <term> — My SSG Site`. On sebastienrousseau.com that shipped
+    /// 7,189 such pages, live and indexable.
+    ///
+    /// Nothing caught it because the defaults were only ever asserted equal to
+    /// their own constant — `assert_eq!(props["site_title"]["default"], "My
+    /// SSG Site")` — which pins the placeholder as correct rather than asking
+    /// whether it escapes into output.
+    #[test]
+    fn tag_page_never_renders_a_placeholder_site_title() {
+        let (_tmp, site, meta, base) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+
+        // Exactly the bug condition: a valid config that never sets
+        // site_title, so whatever DEFAULT_SITE_TITLE holds is rendered.
+        let cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &base.content_dir,
+            &base.build_dir,
+            &base.site_dir,
+            &base.template_dir,
+            cfg,
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+
+        for placeholder in ["My SSG Site", "MySsgSite", "A site built with SSG"]
+        {
+            assert!(
+                !html.contains(placeholder),
+                "generated tag page rendered the placeholder {placeholder:?}; \
+                 an unconfigured site must brand nothing.\nRendered:\n{html}"
+            );
+        }
+    }
+
+    /// The positive control: an explicitly configured title *is* rendered.
+    ///
+    /// Without this, emptying the default would "pass" even if the suffix had
+    /// been deleted from the template outright, which would silently drop a
+    /// feature configured sites rely on.
+    #[test]
+    fn tag_page_renders_a_configured_site_title() {
+        let (_tmp, site, meta, base) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+
+        let cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .site_title("Sebastien Rousseau".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &base.content_dir,
+            &base.build_dir,
+            &base.site_dir,
+            &base.template_dir,
+            cfg,
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let html =
+            fs::read_to_string(site.join("tags/rust/index.html")).unwrap();
+        assert!(
+            html.contains("Sebastien Rousseau"),
+            "a configured site_title must still reach the tag page"
+        );
+    }
+
+    /// Terms separated by a non-ASCII comma must split into separate tags.
+    ///
+    /// Splitting on ASCII `,` alone collapsed an Arabic or Japanese tag list
+    /// into one enormous term, which slugified into a single path component
+    /// long enough to hit ENAMETOOLONG on ext4 while succeeding on APFS —
+    /// a Linux-only build failure no contributor could reproduce locally.
+    #[test]
+    fn tag_lists_split_on_the_comma_of_their_own_script() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("intl.meta.json"),
+            r#"{"title": "Intl", "tags": "\u0627\u0644\u0645\u0635\u0631\u0641\u064a\u0629\u060c \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0627\u062a"}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let tags = site.join("tags");
+        let count = fs::read_dir(&tags).map(Iterator::count).unwrap_or(0);
+        assert!(
+            count >= 2,
+            "an Arabic-comma tag list must split into separate terms, got \
+             {count} director(y|ies) under {}",
+            tags.display()
+        );
+        for entry in fs::read_dir(&tags).unwrap().flatten() {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            assert!(
+                name.len() <= 200,
+                "slug {name:?} is {} bytes; path components are capped at 255 \
+                 bytes on ext4 and slugify caps at 200",
+                name.len()
+            );
+        }
+    }
+
     #[test]
     fn after_compile_ignores_non_string_tag_values() {
         let (_tmp, site, meta, ctx) = make_layout();

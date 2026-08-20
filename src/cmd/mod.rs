@@ -107,9 +107,32 @@ pub const RESERVED_NAMES: &[&str] =
 pub const MAX_CONFIG_SIZE: usize = 1024 * 1024; // 1MB limit
 
 /// Default site name for the configuration.
+///
+/// Used for the scaffold directory name (`ssg --new`), never rendered into a
+/// page. Contrast [`DEFAULT_SITE_TITLE`], which is.
 pub const DEFAULT_SITE_NAME: &str = "MySsgSite";
-/// Default site title for the configuration.
-pub const DEFAULT_SITE_TITLE: &str = "My SSG Site";
+
+/// Default site title for the configuration — deliberately empty.
+///
+/// This value **reaches rendered HTML**: the taxonomy plugin puts it in
+/// `site.title`, and `templates/tera/base.html` appends it to every page
+/// title as `<title>{page} — {site.title}</title>`.
+///
+/// It used to be `"My SSG Site"`. A site built without a config file therefore
+/// shipped that placeholder as its brand — on sebastienrousseau.com it reached
+/// 7,189 generated tag pages, each titled `Tag: <term> — My SSG Site`, live and
+/// indexable. Nothing caught it because the defaults were only ever asserted
+/// *equal to their own constant*; no test asked whether they escaped into
+/// output.
+///
+/// Empty is the safe default: `base.html` guards the suffix with
+/// `{% if site.title %}`, so an unconfigured build now renders `<title>{page}</title>`
+/// and brands nothing. Sites that want a suffix set `site_title` explicitly,
+/// and `ssg` warns when it falls back to defaults.
+///
+/// See `tests/no_placeholder_in_output.rs`, which fails if any placeholder
+/// constant appears anywhere in a rendered site.
+pub const DEFAULT_SITE_TITLE: &str = "";
 
 /// A static default configuration for the SSG site.
 pub static DEFAULT_CONFIG: OnceLock<Arc<SsgConfig>> = OnceLock::new();
