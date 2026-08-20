@@ -1435,7 +1435,7 @@ mod tests {
         TaxonomyPlugin.after_compile(&ctx).unwrap();
 
         let tags = site.join("tags");
-        let count = fs::read_dir(&tags).map(Iterator::count).unwrap_or(0);
+        let count = fs::read_dir(&tags).map_or(0, Iterator::count);
         assert!(
             count >= 2,
             "an Arabic-comma tag list must split into separate terms, got \
