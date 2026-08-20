@@ -7,6 +7,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.53] - 2026-08-20
+
+A one-line fix for a defect shipped in 0.0.52.
+
+### Fixed
+
+- **`SSG_NO_TAG_PAGES=1` aborted the build** (#702). `--no-tag-pages` used
+  `ArgAction::SetTrue` together with `.env()`. clap parses an environment
+  variable as a *value*, and its default bool parser accepts only
+  `"true"`/`"false"`, so the conventional form failed outright:
+
+      error: invalid value '1' for '--no-tag-pages'
+        [possible values: true, false]
+
+  The flag form was unaffected, which is exactly why 0.0.52 shipped this way:
+  `--no-tag-pages` was tested thoroughly and the environment variable
+  advertised alongside it was never exercised end to end. It surfaced within
+  minutes of using the feature on a real site.
+
+  The variable now accepts `1`/`true`/`yes`/`on` and `0`/`false`/`no`/`off`,
+  case- and whitespace-insensitive. An unrecognised value is an **error**
+  rather than a silent false — `SSG_NO_TAG_PAGES=ture` should say so, not
+  quietly generate the pages the operator asked to skip.
+
+  Anyone using the environment variable from 0.0.52 needs this release; the
+  `--no-tag-pages` flag works in both.
+
 ## [0.0.52] - 2026-08-19
 
 Two tag-handling defects and one capability, all found by building a
