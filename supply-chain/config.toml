@@ -159,6 +159,10 @@ criteria = "safe-to-deploy"
 version = "0.6.12"
 criteria = "safe-to-deploy"
 
+[[exemptions.bytecount]]
+version = "0.6.9"
+criteria = "safe-to-deploy"
+
 [[exemptions.bytemuck]]
 version = "1.25.2"
 criteria = "safe-to-deploy"
@@ -955,6 +959,10 @@ criteria = "safe-to-deploy"
 version = "3.0.1"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc-miette]]
+version = "4.0.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc-miette-derive]]
 version = "2.7.1"
 criteria = "safe-to-deploy"
@@ -971,12 +979,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_allocator]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_ast]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_ast]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_ast]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_ast_macros]]
@@ -987,12 +1003,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_ast_macros]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_ast_visit]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_ast_visit]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_ast_visit]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_codegen]]
@@ -1003,12 +1027,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_codegen]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_compat]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_compat]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_compat]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_data_structures]]
@@ -1019,12 +1051,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_data_structures]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_diagnostics]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_diagnostics]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_diagnostics]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_ecmascript]]
@@ -1035,12 +1075,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_ecmascript]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_estree]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_estree]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_estree]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_index]]
@@ -1059,12 +1107,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_mangler]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_minifier]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_minifier]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_minifier]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_parser]]
@@ -1075,6 +1131,10 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_parser]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_regular_expression]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
@@ -1083,12 +1143,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_regular_expression]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_semantic]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_semantic]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_semantic]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_sourcemap]]
@@ -1107,10 +1175,18 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_span]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_str]]
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_str]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_syntax]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
@@ -1119,12 +1195,20 @@ criteria = "safe-to-deploy"
 version = "0.143.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.oxc_syntax]]
+version = "0.144.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.oxc_traverse]]
 version = "0.95.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.oxc_traverse]]
 version = "0.143.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.oxc_traverse]]
+version = "0.144.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.page_size]]
