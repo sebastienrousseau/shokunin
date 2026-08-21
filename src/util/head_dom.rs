@@ -100,6 +100,36 @@ pub fn inject_before_head_close(html: &str, payload: &str) -> String {
     }
 }
 
+/// Decodes the entities an HTML escaper produces, so `title` is genuinely the
+/// plain text this module documents it to be.
+///
+/// `<title>` arrives already escaped — it came out of rendered HTML. Every
+/// consumer treats the returned value as plain text and escapes it again on
+/// the way out, so without decoding here a title containing `&` round-trips
+/// to `&amp;amp;` and renders as a literal `&amp;`.
+///
+/// That is not hypothetical: it reached 1,494 of 6,856 pages on
+/// sebastienrousseau.com, in `og:title` and `twitter:title` — every social
+/// preview of a page whose title contains an ampersand. `og:description`
+/// escaped correctly on the same pages, because `extract_description` routes
+/// through `strip_tags`, which drops entities; only the title kept them. That
+/// asymmetry is what made it look like an escaping bug rather than a decoding
+/// one.
+///
+/// `&amp;` is decoded last. Doing it first would turn `&amp;lt;` into `&lt;`
+/// and then into `<`, re-introducing the injection the escaping prevented.
+fn decode_entities(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
+}
+
 /// Extracts `{title, lang, canonical}` from `html` in a single
 /// `lol_html` pass.
 ///
@@ -169,7 +199,8 @@ pub fn extract_head_meta(html: &str) -> HeadMeta {
     );
 
     let raw_title = title_buf.borrow().clone();
-    let title = collapse_ws(strip_tags(raw_title.trim()).trim());
+    let title =
+        decode_entities(&collapse_ws(strip_tags(raw_title.trim()).trim()));
     let lang_val = lang.borrow().clone();
     let canonical_val = canonical.borrow().clone();
 
@@ -289,6 +320,54 @@ fn collapse_ws(s: &str) -> String {
         }
     }
     out.trim().to_string()
+}
+
+#[cfg(test)]
+mod entity_decode_tests {
+    use super::*;
+
+    /// The regression: a title with `&` must survive one escape, not two.
+    ///
+    /// `<title>` comes out of rendered HTML already escaped. Consumers treat
+    /// the extracted value as plain text and re-escape it, so leaving the
+    /// entity in place produced `&amp;amp;` — a literal `&amp;` on the page.
+    /// 1,494 of 6,856 pages on sebastienrousseau.com shipped that in
+    /// `og:title` and `twitter:title`.
+    #[test]
+    fn extracted_title_is_plain_text_not_escaped_markup() {
+        let html = "<html><head><title>AI, Payments &amp; Post-Quantum</title></head></html>";
+        assert_eq!(
+            extract_head_meta(html).title,
+            "AI, Payments & Post-Quantum"
+        );
+    }
+
+    /// Guards the decode order. `&amp;` must be decoded LAST: doing it first
+    /// turns `&amp;lt;` into `&lt;` and then into `<`, re-introducing exactly
+    /// the injection the escaping existed to prevent.
+    #[test]
+    fn decoding_does_not_resurrect_escaped_markup() {
+        let html =
+            "<html><head><title>Tricky &amp;lt;script&amp;gt; name</title></head></html>";
+        let title = extract_head_meta(html).title;
+        assert_eq!(title, "Tricky &lt;script&gt; name");
+        assert!(
+            !title.contains("<script>"),
+            "decoding must not turn an escaped tag back into markup: {title:?}"
+        );
+    }
+
+    #[test]
+    fn all_escaper_entities_round_trip() {
+        let html = "<html><head><title>a &lt;b&gt; &quot;c&quot; &#39;d&#39; &amp; e</title></head></html>";
+        assert_eq!(extract_head_meta(html).title, r#"a <b> "c" 'd' & e"#);
+    }
+
+    #[test]
+    fn titles_without_entities_are_untouched() {
+        let html = "<html><head><title>Plain Title</title></head></html>";
+        assert_eq!(extract_head_meta(html).title, "Plain Title");
+    }
 }
 
 #[cfg(test)]

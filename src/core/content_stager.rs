@@ -150,7 +150,7 @@ pub fn stage_content_with_template_defaults(
 /// fs::write(src.join("post.md"), "---\ntitle: A\n---\nbody").unwrap();
 ///
 /// let staged = stage_content_with_site_defaults(
-///     &src, &build, &[], Some("https://example.com"),
+///     &src, &build, &[], Some("https://example.com"), &[],
 /// ).unwrap();
 /// let out = fs::read_to_string(staged.join("post.md")).unwrap();
 /// assert!(out.contains("permalink: \"https://example.com/post/\""));
