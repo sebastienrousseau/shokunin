@@ -13,6 +13,7 @@ use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use crate::seo::helpers::{extract_title, has_meta_tag};
 use crate::util::head_dom::inject_before_head_close;
+use crate::util::html_rewriter::decode_html_entities;
 use std::{fs, path::Path};
 
 /// Plugin that auto-generates Open Graph social card images.
@@ -195,7 +196,14 @@ impl Plugin for OgImagePlugin {
                 continue;
             }
 
-            let title = extract_title(&html);
+            // `extract_title` returns the title still HTML-encoded: lol_html
+            // passes text chunks through "as-is, without unescaping", so a
+            // page titled `A & B` yields `A &amp; B`. Escaping that for SVG
+            // would emit `A &amp;amp; B` and the generated preview image
+            // would render the entity as literal text. Decode to plain text
+            // first, then let `escape_svg` do the one escape SVG needs —
+            // the same order `extract_text` already uses for the search index.
+            let title = decode_html_entities(&extract_title(&html));
             if title.is_empty() {
                 continue;
             }
@@ -307,6 +315,19 @@ mod tests {
     #[test]
     fn escape_svg_special_chars() {
         assert_eq!(escape_svg("a & b"), "a &amp; b");
+    }
+
+    /// #706 sibling: `extract_title` returns HTML-encoded text (`lol_html`
+    /// passes text chunks through without unescaping), so escaping it for
+    /// SVG without decoding first renders `&amp;` as literal text inside
+    /// the generated preview image.
+    #[test]
+    fn svg_title_round_trip_is_single_escaped() {
+        use crate::util::html_rewriter::decode_html_entities;
+        let from_page = "About: AI, Payments &amp; Post-Quantum";
+        let svg_ready = escape_svg(&decode_html_entities(from_page));
+        assert_eq!(svg_ready, "About: AI, Payments &amp; Post-Quantum");
+        assert!(!svg_ready.contains("&amp;amp;"));
         assert_eq!(escape_svg("<tag>"), "&lt;tag&gt;");
         assert_eq!(escape_svg("\"quoted\""), "&quot;quoted&quot;");
     }

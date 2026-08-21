@@ -460,7 +460,11 @@ fn sha256(input: &[u8]) -> [u8; 32] {
     }
     msg.extend_from_slice(&bit_len.to_be_bytes());
 
-    for block in msg.chunks_exact(64) {
+    // `as_chunks` yields `&[u8; 64]`, so the block length is a type
+    // guarantee rather than a runtime property. `.1` is the remainder,
+    // which is empty here because the message was padded to a multiple of
+    // 64 above.
+    for block in msg.as_chunks::<64>().0 {
         let mut w = [0u32; 64];
         for i in 0..16 {
             w[i] = u32::from_be_bytes([

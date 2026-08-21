@@ -76,7 +76,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let query = "sepa iban payment";
     let hits = engine.search(query, 3);
     println!("[search] query: {query:?} → {} hits", hits.len() / 2);
-    for pair in hits.chunks_exact(2) {
+    for pair in hits.as_chunks::<2>().0 {
         let idx = pair[0] as usize;
         let score = pair[1];
         let entry = &arts.manifest.entries[idx];

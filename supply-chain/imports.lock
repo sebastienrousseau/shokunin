@@ -72,8 +72,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.rss-gen]]
-version = "0.0.8"
-when = "2026-07-24"
+version = "0.0.11"
+when = "2026-08-10"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
@@ -86,8 +86,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.11"
-when = "2026-07-25"
+version = "0.0.13"
+when = "2026-08-21"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"

@@ -66,93 +66,40 @@ fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf()
 }
 
-/// Compiles every example once, and returns the built binary for `name`.
-///
-/// This used to be `cargo run --quiet --example <name>` inside the timed
-/// window, which made the tests unrunnable from cold. A nested `cargo run`
-/// contends for the same target-directory lock as the `cargo test` invoking
-/// it, and it has to *compile* the example before running it: measured cold,
-/// `cargo run --example basic` took over ten minutes against a 30-second
-/// budget. The child was killed mid-compile, nothing was written, and the
-/// test then failed on `public dir not created` — blaming the example for a
-/// build that never finished.
-///
-/// That is why the suite looked flaky: it passed only when the examples
-/// happened to be warm in the target dir, so a different one failed on each
-/// run (`basic`/`docs`/`portfolio`, then `plugins`, then `basic`) and CI was
-/// green purely because its build step warmed everything first.
-///
-/// Compiling is now done once, up front, untimed — a build taking minutes is
-/// normal and is not what these tests are measuring. The timeout applies only
-/// to *running* an already-built binary, which is the thing that can
-/// legitimately hang.
-fn built_examples() -> &'static BTreeMap<String, PathBuf> {
-    static BUILT: OnceLock<BTreeMap<String, PathBuf>> = OnceLock::new();
-    BUILT.get_or_init(|| {
-        let out = Command::new("cargo")
-            .current_dir(workspace_root())
-            .args(["build", "--examples", "--message-format=json"])
-            .stderr(Stdio::inherit())
-            .output()
-            .expect("failed to run cargo build --examples");
-        assert!(
-            out.status.success(),
-            "cargo build --examples failed; the example tests cannot run"
-        );
-
-        // Cargo emits one JSON object per line; compiler-artifact lines for an
-        // example carry the built path in `executable`.
-        let mut map = BTreeMap::new();
-        for line in String::from_utf8_lossy(&out.stdout).lines() {
-            let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
-                continue;
-            };
-            if v["reason"] != "compiler-artifact" {
-                continue;
-            }
-            let is_example = v["target"]["kind"]
-                .as_array()
-                .is_some_and(|k| k.iter().any(|x| x == "example"));
-            if !is_example {
-                continue;
-            }
-            if let (Some(name), Some(exe)) =
-                (v["target"]["name"].as_str(), v["executable"].as_str())
-            {
-                let _ = map.insert(name.to_string(), PathBuf::from(exe));
-            }
-        }
-        assert!(
-            !map.is_empty(),
-            "cargo reported no example binaries; cannot run the example tests"
-        );
-        map
-    })
-}
-
-/// Runs an already-built example with a hard timeout.
-///
-/// Several examples end by starting a dev server, so a timeout is expected
-/// and is not a failure — output written before the kill is what we validate.
-/// A build failure, by contrast, is fatal and is surfaced by
-/// [`built_examples`] rather than being mistaken for a missing output dir.
+/// Runs `cargo run --quiet --example <name>` with a hard timeout. The
+/// example's dev server is killed once the build phase has completed by
+/// truncating the process at the timeout — output written to disk before
+/// the kill is what we validate.
 fn run_example(name: &str, timeout: Duration) {
-    let exe = built_examples().get(name).unwrap_or_else(|| {
-        panic!(
-            "example {name:?} was not built; known examples: {:?}",
-            built_examples().keys().collect::<Vec<_>>()
-        )
-    });
+    let root = workspace_root();
 
-    let mut child = Command::new(exe)
-        .current_dir(workspace_root())
+    // Compile first, *untimed*. `cargo run` would otherwise make the timeout
+    // cover compilation as well as execution, and those differ by orders of
+    // magnitude: the example generates its site in ~100ms, while building it
+    // from a cold target directory takes minutes. On a cold CI cache the
+    // budget was spent before the example ever ran, and the failure surfaced
+    // as `public dir not created` — indistinguishable from a real generator
+    // bug, and not reproducible on a warm developer machine.
+    let built = Command::new("cargo")
+        .current_dir(&root)
+        .args(["build", "--quiet", "--example", name])
+        .status()
+        .unwrap_or_else(|e| {
+            panic!("failed to spawn cargo build for {name}: {e}")
+        });
+    assert!(built.success(), "{name}: example failed to compile");
+
+    // Now the timeout measures only what it claims to: how long the example
+    // takes to produce its output before its dev server blocks forever.
+    let mut child = Command::new("cargo")
+        .current_dir(&root)
+        .args(["run", "--quiet", "--example", name])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .unwrap_or_else(|e| {
-            panic!("failed to spawn {name} ({}): {e}", exe.display())
-        });
+        .unwrap_or_else(|e| panic!("failed to spawn cargo for {name}: {e}"));
 
+    // Poll for completion up to the timeout, then kill.
     let start = std::time::Instant::now();
     loop {
         match child.try_wait() {
@@ -163,138 +110,11 @@ fn run_example(name: &str, timeout: Duration) {
                     let _ = child.wait();
                     break;
                 }
-                std::thread::sleep(Duration::from_millis(50));
+                std::thread::sleep(Duration::from_millis(150));
             }
             Err(e) => panic!("error waiting on {name}: {e}"),
         }
     }
-}
-
-/// Every shipped example must at least run.
-///
-/// Nine of the eighteen example targets had no end-to-end test at all. Six of
-/// those have *feature* tests — `agentic_discovery.rs`, `edge_headers_emit.rs`,
-/// `isr_*.rs`, `search_index_integrity.rs`, `view_transitions_plugin.rs` — but
-/// every one of them exercises the library, not the example binary. Three
-/// (`agent_api_example`, `iso20022_example`, `rpc_example`) had nothing.
-///
-/// So an example that panicked on startup, or that stopped compiling against
-/// an API it demonstrates, could ship unnoticed. Examples are documentation
-/// that runs; documentation that does not run is worse than none, because it
-/// is confidently wrong.
-///
-/// This is deliberately a smoke test, not a battery of bespoke validators. It
-/// is driven by whatever cargo reports as an example target, so a new example
-/// is covered the moment it exists rather than when somebody remembers to add
-/// a case. The per-example output assertions above stay where the output is
-/// worth asserting in detail.
-///
-/// Contract:
-/// - exit 0 → the example completed
-/// - killed at the timeout → fine; several examples end by serving
-/// - non-zero exit → failure, reported with the example name
-#[test]
-fn every_shipped_example_runs_without_failing() {
-    let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
-
-    let mut failures: Vec<String> = Vec::new();
-    for (name, exe) in built_examples() {
-        let mut child = match Command::new(exe)
-            .current_dir(workspace_root())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                failures.push(format!(
-                    "{name}: could not spawn {}: {e}",
-                    exe.display()
-                ));
-                continue;
-            }
-        };
-
-        let timeout = Duration::from_secs(45);
-        let start = std::time::Instant::now();
-        let status = loop {
-            match child.try_wait() {
-                // Completed on its own.
-                Ok(Some(status)) => break Some(status),
-                Ok(None) if start.elapsed() >= timeout => {
-                    // Still running at the deadline: a serving example.
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    break None;
-                }
-                Ok(None) => std::thread::sleep(Duration::from_millis(50)),
-                Err(e) => {
-                    failures.push(format!("{name}: error waiting: {e}"));
-                    break None;
-                }
-            }
-        };
-
-        if let Some(status) = status {
-            if !status.success() {
-                failures.push(format!(
-                    "{name}: exited with {status} (a shipped example must not fail)"
-                ));
-            }
-        }
-    }
-
-    assert!(
-        failures.is_empty(),
-        "{} of {} shipped examples failed to run:\n  {}",
-        failures.len(),
-        built_examples().len(),
-        failures.join("\n  ")
-    );
-}
-
-/// Guards the guard: every example cargo knows about must be reachable here.
-///
-/// If `built_examples()` ever silently returns a subset — a parsing change, a
-/// cargo output-format change — the smoke test above would quietly cover less
-/// while still passing. Pin the count against cargo's own view.
-#[test]
-fn every_cargo_example_target_is_discovered() {
-    let out = Command::new("cargo")
-        .current_dir(workspace_root())
-        .args(["metadata", "--no-deps", "--format-version", "1"])
-        .output()
-        .expect("cargo metadata");
-    let meta: serde_json::Value =
-        serde_json::from_slice(&out.stdout).expect("parse cargo metadata");
-
-    let mut declared: Vec<String> = Vec::new();
-    for pkg in meta["packages"].as_array().into_iter().flatten() {
-        for target in pkg["targets"].as_array().into_iter().flatten() {
-            let is_example = target["kind"]
-                .as_array()
-                .is_some_and(|k| k.iter().any(|x| x == "example"));
-            if is_example {
-                if let Some(name) = target["name"].as_str() {
-                    declared.push(name.to_string());
-                }
-            }
-        }
-    }
-    declared.sort();
-
-    let mut discovered: Vec<String> =
-        built_examples().keys().cloned().collect();
-    discovered.sort();
-
-    assert_eq!(
-        declared,
-        discovered,
-        "cargo declares {} example targets but only {} were discovered and \
-         smoke-tested",
-        declared.len(),
-        discovered.len()
-    );
 }
 
 /// Read an HTML file, panicking with a useful path on failure.
@@ -1276,4 +1096,184 @@ fn validator_accepts_manifest_with_real_icons() {
     f.write_all(br#"{"icons":[{"src":"/icon.svg","sizes":"512x512"}]}"#)
         .unwrap();
     validate_manifest(&path); // must not panic
+}
+
+// ── Whole-fleet sweep ───────────────────────────────────────────────
+//
+// The per-example tests above assert detailed output for 7 of the 18 shipped
+// examples. These two close the gap for the other 11: one runs every example
+// cargo knows about and reports all failures together, the other pins the
+// discovered set against cargo's own view so a new example cannot go
+// untested silently.
+//
+// They build once with `--message-format=json` and execute the resulting
+// binaries directly, so the whole sweep costs a single compile. `run_example`
+// above is untouched — it does its own untimed build per example.
+
+fn built_examples() -> &'static BTreeMap<String, PathBuf> {
+    static BUILT: OnceLock<BTreeMap<String, PathBuf>> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let out = Command::new("cargo")
+            .current_dir(workspace_root())
+            .args(["build", "--examples", "--message-format=json"])
+            .stderr(Stdio::inherit())
+            .output()
+            .expect("failed to run cargo build --examples");
+        assert!(
+            out.status.success(),
+            "cargo build --examples failed; the example tests cannot run"
+        );
+
+        // Cargo emits one JSON object per line; compiler-artifact lines for an
+        // example carry the built path in `executable`.
+        let mut map = BTreeMap::new();
+        for line in String::from_utf8_lossy(&out.stdout).lines() {
+            let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+                continue;
+            };
+            if v["reason"] != "compiler-artifact" {
+                continue;
+            }
+            let is_example = v["target"]["kind"]
+                .as_array()
+                .is_some_and(|k| k.iter().any(|x| x == "example"));
+            if !is_example {
+                continue;
+            }
+            if let (Some(name), Some(exe)) =
+                (v["target"]["name"].as_str(), v["executable"].as_str())
+            {
+                let _ = map.insert(name.to_string(), PathBuf::from(exe));
+            }
+        }
+        assert!(
+            !map.is_empty(),
+            "cargo reported no example binaries; cannot run the example tests"
+        );
+        map
+    })
+}
+
+/// those have *feature* tests — `agentic_discovery.rs`, `edge_headers_emit.rs`,
+/// `isr_*.rs`, `search_index_integrity.rs`, `view_transitions_plugin.rs` — but
+/// every one of them exercises the library, not the example binary. Three
+/// (`agent_api_example`, `iso20022_example`, `rpc_example`) had nothing.
+///
+/// So an example that panicked on startup, or that stopped compiling against
+/// an API it demonstrates, could ship unnoticed. Examples are documentation
+/// that runs; documentation that does not run is worse than none, because it
+/// is confidently wrong.
+///
+/// This is deliberately a smoke test, not a battery of bespoke validators. It
+/// is driven by whatever cargo reports as an example target, so a new example
+/// is covered the moment it exists rather than when somebody remembers to add
+/// a case. The per-example output assertions above stay where the output is
+/// worth asserting in detail.
+///
+/// Contract:
+/// - exit 0 → the example completed
+/// - killed at the timeout → fine; several examples end by serving
+/// - non-zero exit → failure, reported with the example name
+#[test]
+fn every_shipped_example_runs_without_failing() {
+    let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
+
+    let mut failures: Vec<String> = Vec::new();
+    for (name, exe) in built_examples() {
+        let mut child = match Command::new(exe)
+            .current_dir(workspace_root())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                failures.push(format!(
+                    "{name}: could not spawn {}: {e}",
+                    exe.display()
+                ));
+                continue;
+            }
+        };
+
+        let timeout = Duration::from_secs(45);
+        let start = std::time::Instant::now();
+        let status = loop {
+            match child.try_wait() {
+                // Completed on its own.
+                Ok(Some(status)) => break Some(status),
+                Ok(None) if start.elapsed() >= timeout => {
+                    // Still running at the deadline: a serving example.
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    break None;
+                }
+                Ok(None) => std::thread::sleep(Duration::from_millis(50)),
+                Err(e) => {
+                    failures.push(format!("{name}: error waiting: {e}"));
+                    break None;
+                }
+            }
+        };
+
+        if let Some(status) = status {
+            if !status.success() {
+                failures.push(format!(
+                    "{name}: exited with {status} (a shipped example must not fail)"
+                ));
+            }
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "{} of {} shipped examples failed to run:\n  {}",
+        failures.len(),
+        built_examples().len(),
+        failures.join("\n  ")
+    );
+}
+
+/// Guards the guard: every example cargo knows about must be reachable here.
+///
+/// If `built_examples()` ever silently returns a subset — a parsing change, a
+/// cargo output-format change — the smoke test above would quietly cover less
+/// while still passing. Pin the count against cargo's own view.
+#[test]
+fn every_cargo_example_target_is_discovered() {
+    let out = Command::new("cargo")
+        .current_dir(workspace_root())
+        .args(["metadata", "--no-deps", "--format-version", "1"])
+        .output()
+        .expect("cargo metadata");
+    let meta: serde_json::Value =
+        serde_json::from_slice(&out.stdout).expect("parse cargo metadata");
+
+    let mut declared: Vec<String> = Vec::new();
+    for pkg in meta["packages"].as_array().into_iter().flatten() {
+        for target in pkg["targets"].as_array().into_iter().flatten() {
+            let is_example = target["kind"]
+                .as_array()
+                .is_some_and(|k| k.iter().any(|x| x == "example"));
+            if is_example {
+                if let Some(name) = target["name"].as_str() {
+                    declared.push(name.to_string());
+                }
+            }
+        }
+    }
+    declared.sort();
+
+    let mut discovered: Vec<String> =
+        built_examples().keys().cloned().collect();
+    discovered.sort();
+
+    assert_eq!(
+        declared,
+        discovered,
+        "cargo declares {} example targets but only {} were discovered and \
+         smoke-tested",
+        declared.len(),
+        discovered.len()
+    );
 }
