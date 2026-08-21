@@ -651,6 +651,22 @@ impl<'a> TaxonomyRenderer<'a> {
         }
     }
 
+    /// ` — <site title>` when one is configured, else empty.
+    ///
+    /// Mirrors `{% if site.title %} — {{ site.title }}{% endif %}` in the
+    /// bundled templates. Without this the no-templates build silently
+    /// dropped a configured title, so the same config produced differently
+    /// branded pages depending on which features the binary was built with.
+    fn site_title_suffix(&self) -> String {
+        self.ctx.config.as_ref().map_or_else(String::new, |cfg| {
+            if cfg.site_title.is_empty() {
+                String::new()
+            } else {
+                format!(" \u{2014} {}", cfg.site_title)
+            }
+        })
+    }
+
     fn render_term_page(
         &self,
         _kind: TaxonomyKind,
@@ -665,6 +681,7 @@ impl<'a> TaxonomyRenderer<'a> {
         let og_image = self.og_image_tag();
         let description =
             format!("{} page(s) under {taxonomy_title}: {term}.", pages.len());
+        let suffix = self.site_title_suffix();
         let mut out = format!(
             "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
              <meta charset=\"utf-8\">{canonical}\
@@ -674,7 +691,7 @@ impl<'a> TaxonomyRenderer<'a> {
              <meta property=\"og:type\" content=\"website\">\
              {og_image}\
              <meta name=\"twitter:card\" content=\"summary\">\
-             <title>{taxonomy_title}: {term}</title></head>\n\
+             <title>{taxonomy_title}: {term}{suffix}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}: {term}</h1>\n<ul>\n"
         );
         for (title, url) in pages {
@@ -697,6 +714,7 @@ impl<'a> TaxonomyRenderer<'a> {
             "All {} term(s): browse pages by {taxonomy_title}.",
             sorted_terms.len()
         );
+        let suffix = self.site_title_suffix();
         let mut out = format!(
             "<!DOCTYPE html>\n<html lang=\"{lang}\">\n<head>\
              <meta charset=\"utf-8\">{canonical}\
@@ -706,7 +724,7 @@ impl<'a> TaxonomyRenderer<'a> {
              <meta property=\"og:type\" content=\"website\">\
              {og_image}\
              <meta name=\"twitter:card\" content=\"summary\">\
-             <title>{taxonomy_title}</title></head>\n\
+             <title>{taxonomy_title}{suffix}</title></head>\n\
              <body>\n<main>\n<h1>{taxonomy_title}</h1>\n<ul>\n"
         );
         for (term, pages) in sorted_terms {
@@ -1415,6 +1433,71 @@ mod tests {
             html.contains("Sebastien Rousseau"),
             "a configured site_title must still reach the tag page"
         );
+    }
+
+    /// The index page carries the same branding as the term pages.
+    ///
+    /// Both renderers build the `<title>` independently, so covering only the
+    /// term page let the index drift. This runs in both feature configs, which
+    /// is the point: the `templates` build reads the suffix from the bundled
+    /// template and the fallback builds it by hand, and the two must agree.
+    #[test]
+    fn taxonomy_index_renders_a_configured_site_title() {
+        let (_tmp, site, meta, base) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+
+        let cfg = crate::cmd::SsgConfig::builder()
+            .site_name("Example".to_string())
+            .site_title("Sebastien Rousseau".to_string())
+            .base_url("https://example.com".to_string())
+            .build()
+            .expect("config");
+        let ctx = PluginContext::with_config(
+            &base.content_dir,
+            &base.build_dir,
+            &base.site_dir,
+            &base.template_dir,
+            cfg,
+        );
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+        let html = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert!(
+            html.contains("Sebastien Rousseau"),
+            "a configured site_title must reach the taxonomy index too"
+        );
+    }
+
+    /// The negative control for the suffix: no configured title means no
+    /// dangling separator left behind in the `<title>`.
+    #[test]
+    fn taxonomy_pages_omit_the_separator_without_a_site_title() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("p.meta.json"),
+            r#"{"title": "P", "tags": ["rust"]}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        for rel in ["tags/index.html", "tags/rust/index.html"] {
+            let html = fs::read_to_string(site.join(rel)).unwrap();
+            let title = html
+                .split("<title>")
+                .nth(1)
+                .and_then(|t| t.split("</title>").next())
+                .unwrap_or_default();
+            assert!(
+                !title.contains('\u{2014}'),
+                "{rel}: an unset site_title must not leave a separator, \
+                 got <title>{title}</title>"
+            );
+        }
     }
 
     /// Terms separated by a non-ASCII comma must split into separate tags.
