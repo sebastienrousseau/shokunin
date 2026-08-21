@@ -50,6 +50,16 @@
 
 mod css;
 mod html;
+
+/// Scan to the end of an HTML tag.
+///
+/// Skips `>` characters inside quoted attribute values, so an inline
+/// `data:` URL in a `src` attribute cannot truncate the tag early.
+///
+/// Exported because a standalone HTML checker is where this belongs: the
+/// host crate had grown three separate copies of it (ssg#711). Additive —
+/// nothing existing changes shape.
+pub use html::find_tag_end;
 mod report;
 mod rules;
 mod types;
