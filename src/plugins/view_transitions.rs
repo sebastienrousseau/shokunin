@@ -146,11 +146,11 @@ impl Plugin for ViewTransitionsPlugin {
 
         // Inject style into <head> when present so persistent
         // transition roots are named before paint.
-        let with_style = if let Some(pos) = html.find("</head>") {
-            format!("{}{head_block}{}", &html[..pos], &html[pos..])
-        } else {
-            html.to_string()
-        };
+        // Parser-backed: a `</head>` inside a comment or script in the head
+        // is not the head's end tag, and a byte splice cannot tell the
+        // difference (ssg#540).
+        let with_style =
+            crate::util::head_dom::inject_before_head_close(html, &head_block);
 
         // Inject script just before </body> so the DOM is ready.
         let with_script = if let Some(pos) = with_style.rfind("</body>") {

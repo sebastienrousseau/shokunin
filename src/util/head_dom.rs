@@ -373,6 +373,48 @@ mod entity_decode_tests {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
+    /// ssg#540: a `</head>` that appears inside a comment or a script in the
+    /// head is not the head's end tag. A `find("</head>")` splice takes the
+    /// first byte match and injects *inside* that comment, where the payload
+    /// is inert — silently, because the output still looks like valid HTML.
+    #[test]
+    fn injection_ignores_a_head_close_inside_a_comment() {
+        let html = concat!(
+            "<html><head>",
+            "<!-- </head> -->",
+            "<title>T</title>",
+            "</head><body></body></html>"
+        );
+        let out = inject_before_head_close(html, "<meta name=\"x\">");
+
+        let naive = html.find("</head>").unwrap();
+        let real = out.find("<meta name=\"x\">").unwrap();
+        assert!(
+            real > naive,
+            "payload landed at the commented-out tag, not the real one: {out}"
+        );
+        assert!(
+            out.contains("<meta name=\"x\"></head>"),
+            "payload should sit immediately before the real close: {out}"
+        );
+    }
+
+    /// The same hazard written as a script body rather than a comment.
+    #[test]
+    fn injection_ignores_a_head_close_inside_a_script() {
+        let html = concat!(
+            "<html><head>",
+            "<script>var s = \"</head>\";</script>",
+            "</head><body></body></html>"
+        );
+        let out = inject_before_head_close(html, "<meta name=\"y\">");
+        assert!(
+            out.contains("<meta name=\"y\"></head>"),
+            "payload should sit before the real close: {out}"
+        );
+    }
+
     use super::*;
 
     // ── inject_before_head_close ────────────────────────────────────

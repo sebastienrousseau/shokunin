@@ -142,9 +142,6 @@ impl Plugin for OembedPlugin {
         if !sibling.exists() {
             return Ok(html.to_string());
         }
-        let Some(pos) = html.find("</head>") else {
-            return Ok(html.to_string());
-        };
 
         let rel = path
             .strip_prefix(&ctx.site_dir)
@@ -169,7 +166,11 @@ impl Plugin for OembedPlugin {
             attr_escape(&href),
             attr_escape(&title),
         );
-        Ok(format!("{}{}{}", &html[..pos], link, &html[pos..]))
+        // Parser-backed injection, not a `find("</head>")` splice: the
+        // first byte match may be inside a comment or a script body in the
+        // head, and the payload would land there — inert, and silently so,
+        // because the document still parses (ssg#540).
+        Ok(crate::util::head_dom::inject_before_head_close(html, &link))
     }
 }
 
