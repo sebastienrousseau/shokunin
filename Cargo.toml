@@ -293,6 +293,12 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["env-filter
 name = "bench"
 harness = false
 
+# HTML scanning paths that moved to a parser in #539/#540/#570. Tracks the
+# throughput cost of correctness so it stays a number, not a surprise.
+[[bench]]
+name = "bench_html_scanning"
+harness = false
+
 # AVIF-vs-WebP encoder comparison (issue #521 AC3). Standalone bench
 # rather than a sibling of `plugins/og_image.rs` because criterion
 # `bench_function`s rooted at the workspace top-level are what the

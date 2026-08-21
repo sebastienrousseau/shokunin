@@ -1,0 +1,46 @@
+{
+  "$comment": [
+    "Baseline for the HTML paths that moved from byte scans to a parser in",
+    "ssg#539, #540 and #570. Committed so the throughput cost of that",
+    "correctness stays a tracked number rather than something rediscovered",
+    "by bisecting a slow build.",
+    "",
+    "Recorded on Apple Silicon (aarch64-apple-darwin), rustc 1.98.0, release",
+    "profile, criterion --warm-up-time 1 --measurement-time 2. Absolute",
+    "figures are machine-specific: compare ratios between runs on one",
+    "machine, never these numbers against a different one.",
+    "",
+    "`decoy` inputs carry a commented-out block ahead of the real one. That",
+    "is the shape the old byte scans got wrong -- a commented `<script>` was",
+    "hashed into CSP and hoisted into a real external file -- so it is the",
+    "shape worth tracking."
+  ],
+  "recorded": "2026-08-21",
+  "machine": "aarch64-apple-darwin",
+  "rustc": "1.98.0",
+  "unit": "median",
+  "benchmarks": {
+    "html_scanning::inject_before_head_close/clean": { "median_us": 5.1544, "low_us": 5.0611, "high_us": 5.2561 },
+    "html_scanning::inject_before_head_close/decoy": { "median_us": 4.7891, "low_us": 4.6736, "high_us": 4.9117 },
+    "html_scanning::extract_head_meta/clean":        { "median_us": 6.3457, "low_us": 6.2318, "high_us": 6.4722 },
+    "html_scanning::extract_head_meta/decoy":        { "median_us": 6.2503, "low_us": 6.1976, "high_us": 6.3052 },
+    "html_scanning::find_tag_end/plain":             { "median_ns": 20.130, "low_ns": 19.793, "high_ns": 20.424 },
+    "html_scanning::find_tag_end/quoted_gt":         { "median_ns": 35.809, "low_ns": 35.045, "high_ns": 36.529 }
+  },
+  "known_regression": {
+    "benchmark": "gates::csp_sri",
+    "before_us": 43.696,
+    "after_us": 51.082,
+    "delta_pct": 16.9,
+    "note": [
+      "Measured A/B on one machine, main vs this branch, confidence",
+      "intervals non-overlapping ([42.461, 45.081] vs [49.410, 52.764]),",
+      "so the effect is real rather than noise.",
+      "",
+      "This is the price of #570: collect_inline_contents went from a",
+      "memchr-backed byte scan to a real HTML parser. The parser is what",
+      "stops commented-out scripts being hashed into CSP and hoisted into",
+      "external files. Recorded as a regression, not dressed up as a win."
+    ]
+  }
+}
