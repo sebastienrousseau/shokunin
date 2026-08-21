@@ -20,25 +20,19 @@
 /// assert_eq!(find_tag_end(html, 0), 4);
 /// ```
 #[allow(dead_code)]
-pub const fn find_tag_end(html: &str, tag_start: usize) -> usize {
-    let bytes = html.as_bytes();
-    let mut i = tag_start;
-    let mut quote: Option<u8> = None;
-    while i < bytes.len() {
-        let b = bytes[i];
-        match quote {
-            Some(q) if b == q => quote = None,
-            Some(_) => {}
-            None => match b {
-                b'"' | b'\'' => quote = Some(b),
-                b'>' => return i + 1,
-                _ => {}
-            },
-        }
-        i += 1;
-    }
-    bytes.len()
-}
+/// Scan to the end of an HTML tag.
+///
+/// Skips `>` inside quoted attribute values.
+///
+/// Re-exported from `ssg-a11y`, which owns the single implementation. This
+/// crate previously carried three copies of it and `ssg-a11y` a fourth; they
+/// were byte-identical apart from visibility, and when clippy 1.98 added
+/// `missing_const_for_fn` the lint fired on each one separately — four
+/// sequential CI round-trips for one function (ssg#711).
+///
+/// The dependency already ran this way (`ssg` -> `ssg-a11y`), so sharing costs
+/// no new edge and leaves that crate standalone, as its description promises.
+pub use ssg_a11y::find_tag_end;
 
 /// Reads a single attribute value out of a tag.
 ///
