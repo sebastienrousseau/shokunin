@@ -303,6 +303,45 @@ mod tests {
         assert_eq!(v["result"]["isError"], true);
     }
 
+    /// A reader that fails mid-stream must surface the error, not truncate
+    /// the session silently. A server that stops answering looks identical
+    /// to one that finished.
+    #[test]
+    fn serve_propagates_a_reader_error() {
+        struct Failing;
+        impl std::io::Read for Failing {
+            fn read(&mut self, _: &mut [u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::other("reader exploded"))
+            }
+        }
+        let reader = std::io::BufReader::new(Failing);
+        let mut out = Vec::new();
+        let err = serve(reader, &mut out).expect_err("should propagate");
+        assert!(err.to_string().contains("reader exploded"));
+    }
+
+    /// Likewise a writer: if the client's pipe closes, the loop must stop
+    /// with an error rather than spin producing replies nobody reads.
+    #[test]
+    fn serve_propagates_a_writer_error() {
+        // Accepts the bytes, then fails the flush — so both trait methods
+        // are exercised, and the failure lands on the path `serve` actually
+        // takes after writing a reply.
+        struct Failing;
+        impl std::io::Write for Failing {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Err(std::io::Error::other("writer exploded"))
+            }
+        }
+        let input = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n";
+        let err = serve(std::io::Cursor::new(input), Failing)
+            .expect_err("should propagate");
+        assert!(err.to_string().contains("writer exploded"));
+    }
+
     #[test]
     fn serve_answers_requests_and_skips_notifications() {
         let input = concat!(
