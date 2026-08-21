@@ -7,6 +7,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.55] - 2026-08-21
+
+Four fixes. Three were shipping corrupted output while looking healthy.
+
+### Fixed
+
+- **`og:title` double-escaped `&` since 0.0.46** (#706, #708). `escape_attr`
+  was naive, and the SEO plugin applies it to values the template layer has
+  already escaped, so `&` reached the page as `&amp;amp;`. Bisecting the
+  published binaries against one identical input file puts the first bad
+  release at **0.0.46** — the release that *closed* #589, the same symptom.
+  That issue was only half-fixed: `staticweaver` was made entity-aware and
+  this call site was left alone, with no test asserting
+  `escape(escape(x)) == escape(x)`. There is one now. On a 34-locale corpus
+  this failed a no-double-encoding assertion on 1,494 pages.
+
+  Two siblings fell out of the same trace. `lol_html` passes text chunks
+  through "as-is, without unescaping", so everything built on
+  `extract_title` inherits encoded text: `og_image` escaped it again into
+  the generated preview SVG, and the search index decoded `content` but not
+  `title` or `headings`.
+
+- **Slug-colliding taxonomy terms overwrote each other** (#710). Terms were
+  ordered by `to_lowercase()` over a `HashMap`, a stable sort over a
+  randomised iteration order, so ties broke differently per process and the
+  build was not reproducible. Distinct spellings that slugify alike —
+  `SWIFT`/`Swift`, `CBPR`/`CBPR+` — rendered to one path and the survivor
+  was a coin flip, silently dropping the other spelling's pages. Measured on
+  a real corpus: 595 colliding slugs, 340 lowercase ties.
+
+- **Search results linked to the host root** (#712). 0.0.54 fixed loading
+  the index; it did not fix where a result sends you. `lp` was hardcoded to
+  `/`, so on a site served under a path prefix every result 404'd — while
+  the widget looked entirely healthy, which is why it went unnoticed.
+
+- **Structured data was requested from a fragment** (staticdatagen 0.0.13).
+  The step ran against the Markdown body, which has no `<head>` and so can
+  never carry a `<title>`; it failed on every page ever compiled and logged
+  at Error each time. Structured data is generated downstream from front
+  matter, where the values are actually known.
+
+### Changed
+
+- `tests/example_outputs.rs` compiles each example *outside* its 30-second
+  timeout. The budget previously had to cover compilation — ~100ms of work
+  behind a multi-minute cold build — so CI reported `public dir not created`,
+  indistinguishable from a generator bug and green on any warm machine.
+
 ## [0.0.54] - 2026-08-20
 
 Ships the search fix from #707, which landed on `main` after 0.0.53 was
