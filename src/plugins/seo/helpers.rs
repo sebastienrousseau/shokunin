@@ -267,29 +267,48 @@ pub(super) fn extract_canonical(html: &str) -> String {
 /// like `<meta content=x name=twitter:image>` that literal prefix
 /// matching misses.
 pub(super) fn extract_existing_meta(html: &str, attr: &str) -> String {
-    use crate::audit::gates::{find_tag_end, hreflang_attr};
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
-    let lower = html.to_ascii_lowercase();
-    let mut cursor = 0;
-    while let Some(rel) = lower[cursor..].find("<meta") {
-        let abs = cursor + rel;
-        let end = find_tag_end(html, abs);
-        let tag = &html[abs..end];
-        cursor = end;
-        let matches = ["name", "property"].iter().any(|key| {
-            hreflang_attr(tag, key)
-                .is_some_and(|v| v.eq_ignore_ascii_case(attr))
+    use lol_html::element;
+
+    use crate::util::html_rewriter::rewrite_html;
+
+    // A real parser, not a `<meta` scan. The scan matched the literal bytes
+    // wherever they appeared — including inside an HTML comment, so a
+    // commented-out `<meta name="twitter:image">` left over from an edit
+    // won the lookup over the live tag that followed it. `lol_html` never
+    // reports comment contents as elements, so the class goes away rather
+    // than being special-cased.
+    let found: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
+    let sink = Rc::clone(&found);
+    let want = attr.to_ascii_lowercase();
+
+    let handlers = vec![element!("meta", move |el| {
+        if !sink.borrow().is_empty() {
+            return Ok(());
+        }
+        // Either `name` or `property` may carry the key; both are matched
+        // case-insensitively because the parser preserves author casing.
+        let keyed = ["name", "property"].iter().any(|k| {
+            el.get_attribute(k)
+                .is_some_and(|v| v.eq_ignore_ascii_case(&want))
         });
-        if matches {
-            if let Some(content) = hreflang_attr(tag, "content") {
+        if keyed {
+            if let Some(content) = el.get_attribute("content") {
                 let value = content.trim();
                 if !value.is_empty() {
-                    return value.to_string();
+                    sink.borrow_mut().push_str(value);
                 }
             }
         }
-    }
-    String::new()
+        Ok(())
+    })];
+
+    let _ = rewrite_html(html, handlers);
+
+    let out = found.borrow().clone();
+    out
 }
 
 /// Extract the `lang` attribute from the `<html>` tag.
@@ -399,6 +418,45 @@ pub(super) fn collect_html_files_recursive(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
+    // ---- ssg#539 acceptance criteria -----------------------------------
+
+    /// AC1: a `<title>` inside an HTML comment must not win.
+    #[test]
+    fn ac1_title_ignores_commented_title() {
+        let html = "<html><head><!-- <title>Old</title> --><title>Real</title></head><body></body></html>";
+        assert_eq!(extract_title(html), "Real");
+    }
+
+    /// AC3: canonical is read from the real `<link rel=canonical>`.
+    #[test]
+    fn ac3_canonical_is_detected() {
+        let html = r#"<html><head><link rel="canonical" href="https://x"></head><body></body></html>"#;
+        assert_eq!(extract_canonical(html), "https://x");
+    }
+
+    /// A `<meta>` inside a comment must not be read as a real meta tag.
+    #[test]
+    fn ac_meta_ignores_commented_meta() {
+        let html = concat!(
+            "<html><head>",
+            "<!-- <meta name=\"twitter:image\" content=\"COMMENTED\"> -->",
+            "<meta name=\"twitter:image\" content=\"REAL\">",
+            "</head><body></body></html>"
+        );
+        assert_eq!(extract_existing_meta(html, "twitter:image"), "REAL");
+    }
+
+    /// A `<meta>` shown as escaped example text inside `<pre>` must not win.
+    #[test]
+    fn ac_meta_ignores_meta_in_pre_block() {
+        let html = concat!(
+            "<html><head><meta name=\"description\" content=\"REAL\"></head>",
+            "<body><pre>&lt;meta name=\"description\" content=\"EXAMPLE\"&gt;</pre></body></html>"
+        );
+        assert_eq!(extract_existing_meta(html, "description"), "REAL");
+    }
+
     use super::*;
     use std::fs;
     use tempfile::tempdir;
