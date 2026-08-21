@@ -9,6 +9,7 @@
 //! Findings map directly to WCAG success-criteria codes.
 
 use super::super::{AuditGate, AuditOptions, Finding, Severity, Site};
+use super::util;
 
 const NAME: &str = "wcag";
 
@@ -105,7 +106,7 @@ fn check_img_alt(html: &str, out: &mut Vec<Issue>) {
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
-        let tag_end = find_tag_end(&lower, abs);
+        let tag_end = util::find_tag_end(&lower, abs);
         let tag = &lower[abs..tag_end];
         // Attribute-based lookup: minifiers collapse `alt=""` to a bare
         // valueless `alt`, and unquoted `alt=x` is legal — both count.
@@ -197,26 +198,6 @@ fn check_aria_landmarks(html: &str, out: &mut Vec<Issue>) {
             format!("Page has {main_count} <main> elements (expected 1)"),
         );
     }
-}
-
-const fn find_tag_end(html: &str, tag_start: usize) -> usize {
-    let bytes = html.as_bytes();
-    let mut i = tag_start;
-    let mut quote: Option<u8> = None;
-    while i < bytes.len() {
-        let b = bytes[i];
-        match quote {
-            Some(q) if b == q => quote = None,
-            Some(_) => {}
-            None => match b {
-                b'"' | b'\'' => quote = Some(b),
-                b'>' => return i + 1,
-                _ => {}
-            },
-        }
-        i += 1;
-    }
-    bytes.len()
 }
 
 #[cfg(test)]
@@ -418,9 +399,9 @@ mod tests {
     #[test]
     fn unterminated_tag_end_is_input_len() {
         let html = "<img src='x";
-        assert_eq!(find_tag_end(html, 0), html.len());
+        assert_eq!(util::find_tag_end(html, 0), html.len());
         let quoted = "<img alt=\"a>b\">";
-        assert_eq!(find_tag_end(quoted, 0), quoted.len());
+        assert_eq!(util::find_tag_end(quoted, 0), quoted.len());
     }
 
     #[test]

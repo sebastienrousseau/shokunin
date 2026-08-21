@@ -8,6 +8,7 @@ use super::helpers::{
     extract_meta_author, extract_meta_date, extract_title,
 };
 use super::lang::resolve_page_lang;
+use crate::audit::gates::util::find_tag_end;
 use crate::error::SsgError;
 use crate::plugin::{Plugin, PluginContext};
 use crate::util::head_dom::inject_before_head_close;
@@ -548,7 +549,7 @@ fn extract_jsonld_blocks(html: &str) -> Vec<String> {
         // skipping any `>` characters that appear inside quoted
         // attribute values. Without this, `<script type="text/x>y">`
         // would close prematurely at the inner `>`.
-        let tag_end = find_html_tag_end(&lower, abs_open);
+        let tag_end = find_tag_end(&lower, abs_open);
         let tag = &lower[abs_open..tag_end];
         cursor = tag_end;
 
@@ -645,29 +646,6 @@ fn find_script_close_skipping_strings(body: &str) -> Option<usize> {
         i += 1;
     }
     None
-}
-
-/// Like `accessibility::find_tag_end` — returns the index just past
-/// the `>` that closes the open tag at `tag_start`, while skipping
-/// `>` characters that occur inside quoted attribute values.
-const fn find_html_tag_end(html: &str, tag_start: usize) -> usize {
-    let bytes = html.as_bytes();
-    let mut i = tag_start;
-    let mut quote: Option<u8> = None;
-    while i < bytes.len() {
-        let b = bytes[i];
-        match quote {
-            Some(q) if b == q => quote = None,
-            Some(_) => {}
-            None => match b {
-                b'"' | b'\'' => quote = Some(b),
-                b'>' => return i + 1,
-                _ => {}
-            },
-        }
-        i += 1;
-    }
-    bytes.len()
 }
 
 /// Validates a single parsed JSON-LD value (object or array).
@@ -1469,7 +1447,7 @@ mod tests {
     #[test]
     fn find_html_tag_end_without_closing_bracket_returns_len() {
         let html = "<script type=\"application/ld+json\"";
-        assert_eq!(find_html_tag_end(html, 0), html.len());
+        assert_eq!(find_tag_end(html, 0), html.len());
     }
 
     // ── validate_one: remaining shapes ──────────────────────────────
