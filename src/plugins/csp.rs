@@ -158,21 +158,22 @@ pub fn page_inline_hashes(html: &str) -> PageCspHashes {
     let hash =
         |content: &str| SriAlgorithm::Sha256.integrity(content.as_bytes());
 
-    let mut scripts = Vec::new();
-    for content in collect_inline_contents(html, "script") {
-        let h = hash(&content);
-        if !scripts.contains(&h) {
-            scripts.push(h);
-        }
-    }
+    // One parse for both tags: see `collect_inline_script_and_style`.
+    let (raw_scripts, raw_styles) = collect_inline_script_and_style(html);
 
-    let mut styles = Vec::new();
-    for content in collect_inline_contents(html, "style") {
-        let h = hash(&content);
-        if !styles.contains(&h) {
-            styles.push(h);
+    let dedup = |raw: Vec<String>| {
+        let mut out: Vec<String> = Vec::with_capacity(raw.len());
+        for content in raw {
+            let h = hash(&content);
+            if !out.contains(&h) {
+                out.push(h);
+            }
         }
-    }
+        out
+    };
+
+    let scripts = dedup(raw_scripts);
+    let styles = dedup(raw_styles);
 
     PageCspHashes { scripts, styles }
 }
@@ -257,7 +258,17 @@ pub fn page_policy(html: &str) -> Option<String> {
 /// Collects the raw inner contents of every non-empty inline
 /// `<tag>…</tag>` block, in document order. `<script>` elements with
 /// a `src=` attribute are skipped (they are external, not inline).
-fn collect_inline_contents(html: &str, tag: &str) -> Vec<String> {
+/// Inline `<script>` and `<style>` bodies, collected in **one** parse.
+///
+/// `collect_inline_contents` walks the document once per tag, so hashing a
+/// page for CSP cost two full parses — the parser is the expensive part, and
+/// paying for it twice to read one document is waste, not safety.
+///
+/// Each element accumulates into its own slot and flushes on its end tag.
+/// Text arrives in chunks and adjacent elements would otherwise concatenate,
+/// which would hash two scripts as one and silently admit a policy that
+/// matches neither.
+fn collect_inline_script_and_style(html: &str) -> (Vec<String>, Vec<String>) {
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -265,52 +276,64 @@ fn collect_inline_contents(html: &str, tag: &str) -> Vec<String> {
 
     use crate::util::html_rewriter::rewrite_html;
 
-    // A parser, not a `<script` byte scan. The scan matched those bytes
-    // wherever they appeared, so a commented-out block was collected and
-    // hashed — CSP then carried a hash for code that can never execute, and
-    // the policy no longer described the document (ssg#570).
-    //
-    // Text arrives in chunks, so each element accumulates into its own slot
-    // and is flushed on the end tag; concatenating across elements would
-    // hash two scripts as one.
-    let done: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
-    let current: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+    type Slot = Rc<RefCell<Option<String>>>;
+    type Sink = Rc<RefCell<Vec<String>>>;
 
-    let cur_el = Rc::clone(&current);
-    let cur_tx = Rc::clone(&current);
-    let done_el = Rc::clone(&done);
+    fn handlers<'a>(
+        tag: &'a str,
+        slot: &Slot,
+        sink: &Sink,
+    ) -> Vec<(
+        std::borrow::Cow<'a, lol_html::Selector>,
+        lol_html::ElementContentHandlers<'a>,
+    )> {
+        let slot_el = Rc::clone(slot);
+        let sink_el = Rc::clone(sink);
+        let slot_tx = Rc::clone(slot);
 
-    let on_el = element!(tag, move |el| {
-        // `src=` means external: there is no inline body to hash.
-        if el.get_attribute("src").is_some() {
-            *cur_el.borrow_mut() = None;
-            return Ok(());
-        }
-        *cur_el.borrow_mut() = Some(String::new());
-        let sink = Rc::clone(&done_el);
-        let slot = Rc::clone(&cur_el);
-        let _ = el.on_end_tag(end_tag!(move |_end| {
-            if let Some(body) = slot.borrow_mut().take() {
-                if !body.trim().is_empty() {
-                    sink.borrow_mut().push(body);
+        let on_el = element!(tag, move |el| {
+            // `src=` means external: there is no inline body to hash.
+            if el.get_attribute("src").is_some() {
+                *slot_el.borrow_mut() = None;
+                return Ok(());
+            }
+            *slot_el.borrow_mut() = Some(String::new());
+            let sink = Rc::clone(&sink_el);
+            let slot = Rc::clone(&slot_el);
+            let _ = el.on_end_tag(end_tag!(move |_end| {
+                if let Some(body) = slot.borrow_mut().take() {
+                    if !body.trim().is_empty() {
+                        sink.borrow_mut().push(body);
+                    }
                 }
+                Ok(())
+            }));
+            Ok(())
+        });
+
+        let on_text = text!(tag, move |chunk| {
+            if let Some(buf) = slot_tx.borrow_mut().as_mut() {
+                buf.push_str(chunk.as_str());
             }
             Ok(())
-        }));
-        Ok(())
-    });
+        });
 
-    let on_text = text!(tag, move |chunk| {
-        if let Some(buf) = cur_tx.borrow_mut().as_mut() {
-            buf.push_str(chunk.as_str());
-        }
-        Ok(())
-    });
+        vec![on_el, on_text]
+    }
 
-    let _ = rewrite_html(html, vec![on_el, on_text]);
+    let script_slot: Slot = Rc::new(RefCell::new(None));
+    let script_sink: Sink = Rc::new(RefCell::new(Vec::new()));
+    let style_slot: Slot = Rc::new(RefCell::new(None));
+    let style_sink: Sink = Rc::new(RefCell::new(Vec::new()));
 
-    let out = done.borrow().clone();
-    out
+    let mut all = handlers("script", &script_slot, &script_sink);
+    all.extend(handlers("style", &style_slot, &style_sink));
+
+    let _ = rewrite_html(html, all);
+
+    let scripts = script_sink.borrow().clone();
+    let styles = style_sink.borrow().clone();
+    (scripts, styles)
 }
 
 /// Plugin that extracts inline styles/scripts to external files with SRI.
@@ -854,7 +877,7 @@ mod tests {
             "<script>real()</script>",
             "</head><body></body></html>"
         );
-        let found = collect_inline_contents(html, "script");
+        let found = collect_inline_script_and_style(html).0;
         assert_eq!(
             found,
             vec!["real()"],
@@ -1396,7 +1419,7 @@ mod tests {
     fn collect_inline_contents_skips_prefix_tag_names() {
         // `<styles>` must not match a `<style` opener lookup.
         let html = "<styles>ignored</styles><style>a{}</style>";
-        let out = collect_inline_contents(html, "style");
+        let out = collect_inline_script_and_style(html).1;
         assert_eq!(out, vec!["a{}"]);
     }
 
@@ -1404,20 +1427,20 @@ mod tests {
     fn collect_inline_contents_accepts_slash_after_tag_name() {
         // `<style/` is still a tag boundary for the opener check.
         let html = "<style/>a{}</style>";
-        let out = collect_inline_contents(html, "style");
+        let out = collect_inline_script_and_style(html).1;
         assert_eq!(out, vec!["a{}"]);
     }
 
     #[test]
     fn collect_inline_contents_stops_when_opening_tag_unterminated() {
         let html = "<style media=all";
-        assert!(collect_inline_contents(html, "style").is_empty());
+        assert!(collect_inline_script_and_style(html).1.is_empty());
     }
 
     #[test]
     fn collect_inline_contents_stops_when_close_tag_missing() {
         let html = "<style>a{} no closing fence";
-        assert!(collect_inline_contents(html, "style").is_empty());
+        assert!(collect_inline_script_and_style(html).1.is_empty());
     }
 
     #[test]
