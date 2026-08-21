@@ -527,6 +527,7 @@ members = [
     ".",
     "crates/ssg-a11y",
     "crates/ssg-core",
+    "crates/ssg-mcp",
     "crates/ssg-rpc",
     "crates/ssg-rpc-macro",
     "crates/ssg-search",
