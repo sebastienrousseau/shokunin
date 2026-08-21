@@ -848,7 +848,7 @@ input=document.getElementById('ssg-search-input'),
 results=document.getElementById('ssg-search-results'),
 btn=document.getElementById('ssg-search-btn'),active=-1,
 lm=location.pathname.match(/^\/(en|fr|ar|bn|cs|de|es|ha|he|hi|id|it|ja|ko|nl|pl|pt|ro|ru|sv|th|tl|tr|uk|vi|yo|zh-tw|zh)\//),
-lp=lm?'/'+lm[1]:'';
+lp=lm?'{{SSG_SITE_PREFIX}}/'+lm[1]:'{{SSG_SITE_PREFIX}}';
 function load(){if(idx)return Promise.resolve();var sp=lm?'{{SSG_SITE_PREFIX}}/'+lm[1]+'/search-index.json':'{{SSG_SITE_PREFIX}}/search-index.json';return fetch(sp).then(function(r){return r.json()}).then(function(d){idx=d.entries||[]}).catch(function(){idx=[]})}
 function open(){load().then(function(){overlay.classList.add('active');input.value='';results.innerHTML='';input.focus();active=-1})}
 function close(){overlay.classList.remove('active');active=-1}
@@ -923,6 +923,37 @@ mod tests {
         let script = build_widget_script(&SearchLabels::english(), "");
         assert!(script.contains("'/search-index.json'"), "{script}");
         assert!(!script.contains("//search-index.json"), "{script}");
+    }
+
+    /// Loading the index is half the job; the other half is where a result
+    /// sends you. Entry URLs are stored site-relative (`/contact/index.html`),
+    /// so `lp` must carry the same prefix as the index URL.
+    ///
+    /// Fixing only the fetch left search visibly working and every result
+    /// leading to a 404 — a worse failure than the one it replaced, because
+    /// the widget now looked healthy.
+    #[test]
+    fn result_links_carry_the_site_path_prefix() {
+        let script = build_widget_script(&SearchLabels::english(), "/apex");
+        // Non-locale: an empty `lp` produced a host-root link.
+        assert!(
+            script.contains("lp=lm?'/apex/'+lm[1]:'/apex'"),
+            "result prefix should be the site prefix: {script}"
+        );
+        // The href is built by concatenation, so the entry's leading slash
+        // must not be doubled by the prefix.
+        assert!(
+            !script.contains("'/apex/':"),
+            "prefix must not end in a slash: {script}"
+        );
+    }
+
+    /// The same, for a site at its host root: `lp` stays empty so links
+    /// remain `/contact/index.html` rather than gaining a stray prefix.
+    #[test]
+    fn result_links_are_bare_without_a_prefix() {
+        let script = build_widget_script(&SearchLabels::english(), "");
+        assert!(script.contains("lp=lm?'/'+lm[1]:''"), "{script}");
     }
 
     #[test]
