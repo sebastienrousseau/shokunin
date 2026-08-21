@@ -49,13 +49,17 @@
 use crate::error::{PathErrorExt, SsgError};
 use crate::plugin::{Plugin, PluginContext};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
 
 /// A mapping from taxonomy term to a list of (title, URL) pairs.
 type TaxonomyMap = HashMap<String, Vec<(String, String)>>;
+
+/// One taxonomy term after slug merging: display spelling, URL slug and the
+/// member pages listed on it, as `(title, url)` pairs.
+type MergedTerm = (String, String, Vec<(String, String)>);
 
 /// A taxonomy term with its associated pages.
 #[derive(Debug, Clone)]
@@ -996,6 +1000,59 @@ fn write_taxonomy_page(out_file: &Path, html: &str) -> Result<(), SsgError> {
     fs::write(out_file, html).with_path(out_file)
 }
 
+/// Groups terms that share a URL slug into a single term.
+///
+/// Distinct spellings routinely slugify to one path — `SWIFT` and `Swift`
+/// both give `swift`, as do `CBPR` and `CBPR+`. Rendering them separately
+/// wrote two different pages to the same `index.html`, so the second write
+/// silently discarded the first, and *which* one survived depended on
+/// `HashMap` iteration order. Rust randomises that per process, which is why
+/// building the same content twice produced different sites and failed the
+/// byte-identical-rebuild gate.
+///
+/// Merging fixes both halves: the build is reproducible, and no member is
+/// dropped just because an author capitalised a tag differently. One URL now
+/// lists every page that carries any spelling of the term.
+///
+/// Ordering is a total order — lowercase first, then the term itself as the
+/// tiebreak — so the result never depends on iteration order. Groups appear
+/// in that order (preserving the previous by-lowercase listing), and the
+/// first term in a group supplies the display spelling.
+///
+/// Returns `(display term, slug, member pages)` per group.
+fn merge_terms_by_slug(
+    terms: &HashMap<String, Vec<(String, String)>>,
+) -> Vec<MergedTerm> {
+    let mut ordered: Vec<_> = terms.iter().collect();
+    ordered.sort_by(|(a, _), (b, _)| {
+        a.to_lowercase()
+            .cmp(&b.to_lowercase())
+            .then_with(|| a.cmp(b))
+    });
+
+    let mut out: Vec<MergedTerm> = Vec::new();
+    let mut index: BTreeMap<String, usize> = BTreeMap::new();
+    // Membership only — dedupe across merged spellings without changing the
+    // order members are listed in.
+    let mut members: Vec<HashSet<(String, String)>> = Vec::new();
+
+    for (term, pages) in ordered {
+        let slug = slugify(term);
+        if let Some(&i) = index.get(&slug) {
+            for page in pages {
+                if members[i].insert(page.clone()) {
+                    out[i].2.push(page.clone());
+                }
+            }
+        } else {
+            let _ = index.insert(slug.clone(), out.len());
+            members.push(pages.iter().cloned().collect());
+            out.push((term.clone(), slug, pages.clone()));
+        }
+    }
+    out
+}
+
 /// Generates index and term pages for a taxonomy via the template engine.
 fn generate_taxonomy_pages(
     site_dir: &Path,
@@ -1029,13 +1086,11 @@ fn generate_taxonomy_pages_at(
     let tax_dir = tax_dir.to_path_buf();
     fs::create_dir_all(&tax_dir).with_path(&tax_dir)?;
 
-    let mut sorted_terms: Vec<_> = terms.iter().collect();
-    sorted_terms.sort_by_key(|(name, _)| name.to_lowercase());
+    let merged = merge_terms_by_slug(terms);
 
     // Per-term pages.
-    for (term, pages) in &sorted_terms {
-        let slug = slugify(term);
-        let term_dir = tax_dir.join(&slug);
+    for (term, slug, pages) in &merged {
+        let term_dir = tax_dir.join(slug);
         fs::create_dir_all(&term_dir).with_path(&term_dir)?;
 
         let term_html = renderer.render_term_page(
@@ -1043,7 +1098,7 @@ fn generate_taxonomy_pages_at(
             taxonomy_name,
             taxonomy_title,
             term,
-            &slug,
+            slug,
             pages,
         )?;
         let out_file = term_dir.join("index.html");
@@ -1051,6 +1106,10 @@ fn generate_taxonomy_pages_at(
     }
 
     // Taxonomy index page.
+    let sorted_terms: Vec<(&String, &Vec<(String, String)>)> = merged
+        .iter()
+        .map(|(term, _, pages)| (term, pages))
+        .collect();
     let index_html = renderer.render_index_page(
         taxonomy_name,
         taxonomy_title,
@@ -1401,6 +1460,118 @@ mod tests {
 
         TaxonomyPlugin.after_compile(&ctx).unwrap();
         assert!(!site.join("tags").exists());
+    }
+
+    #[test]
+    fn slug_colliding_terms_merge_into_one_page() {
+        // `SWIFT` and `Swift` slugify to the same `swift`, so both used to
+        // render to tags/swift/index.html and the second write silently
+        // discarded the first. Whichever won depended on HashMap iteration
+        // order, which is randomised per process — so the same input built
+        // twice produced different sites. The real corpus has 595 such
+        // collisions across 34 locales (SWIFT/Swift, CBPR/CBPR+,
+        // Governance/governance).
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "Upper", "tags": ["SWIFT"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            meta.join("b.meta.json"),
+            r#"{"title": "Mixed", "tags": ["Swift"]}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let page =
+            fs::read_to_string(site.join("tags/swift/index.html")).unwrap();
+        assert!(
+            page.contains("Upper") && page.contains("Mixed"),
+            "both spellings share one URL, so one page must list both \
+             members; neither may be silently dropped. Got:\n{page}"
+        );
+    }
+
+    #[test]
+    fn slug_colliding_terms_appear_once_in_the_index() {
+        let (_tmp, site, meta, ctx) = make_layout();
+        fs::write(
+            meta.join("a.meta.json"),
+            r#"{"title": "Upper", "tags": ["SWIFT"]}"#,
+        )
+        .unwrap();
+        fs::write(
+            meta.join("b.meta.json"),
+            r#"{"title": "Mixed", "tags": ["Swift"]}"#,
+        )
+        .unwrap();
+
+        TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+        let index = fs::read_to_string(site.join("tags/index.html")).unwrap();
+        assert_eq!(
+            index.matches("/tags/swift/").count(),
+            1,
+            "one slug must be listed once, not once per spelling:\n{index}"
+        );
+    }
+
+    #[test]
+    fn taxonomy_output_is_byte_identical_across_runs() {
+        // The regression the byte-identical-rebuild CI gate caught. Ties in
+        // the term ordering were broken by HashMap iteration order, so this
+        // compares two independent runs over a corpus dense with ties.
+        //
+        // Both runs build their own HashMaps, and Rust seeds each instance
+        // differently, so an ordering that depends on iteration order will
+        // diverge here with overwhelming probability rather than by luck.
+        fn build() -> Vec<(String, String)> {
+            let (tmp, site, meta, ctx) = make_layout();
+            for (i, tags) in [
+                r#"["SWIFT", "Governance"]"#,
+                r#"["Swift", "governance"]"#,
+                r#"["CBPR", "Open Source"]"#,
+                r#"["CBPR+", "open source"]"#,
+                r#"["ISO 20022", "Payments"]"#,
+                r#"["ISO-20022", "payments"]"#,
+            ]
+            .iter()
+            .enumerate()
+            {
+                fs::write(
+                    meta.join(format!("p{i}.meta.json")),
+                    format!(r#"{{"title": "P{i}", "tags": {tags}}}"#),
+                )
+                .unwrap();
+            }
+
+            TaxonomyPlugin.after_compile(&ctx).unwrap();
+
+            let mut out = Vec::new();
+            let tags_dir = site.join("tags");
+            let mut files = crate::walk::walk_files(&tags_dir, "html").unwrap();
+            files.sort();
+            for f in files {
+                let rel = f
+                    .strip_prefix(&tags_dir)
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                out.push((rel, fs::read_to_string(&f).unwrap()));
+            }
+            drop(tmp);
+            out
+        }
+
+        let first = build();
+        let second = build();
+        assert!(!first.is_empty(), "fixture produced no taxonomy pages");
+        assert_eq!(
+            first, second,
+            "two runs over identical input must produce identical pages"
+        );
     }
 
     #[test]
