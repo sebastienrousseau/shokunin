@@ -160,7 +160,7 @@ pub fn page_inline_hashes(html: &str) -> PageCspHashes {
 
     let mut scripts = Vec::new();
     for content in collect_inline_contents(html, "script") {
-        let h = hash(content);
+        let h = hash(&content);
         if !scripts.contains(&h) {
             scripts.push(h);
         }
@@ -168,7 +168,7 @@ pub fn page_inline_hashes(html: &str) -> PageCspHashes {
 
     let mut styles = Vec::new();
     for content in collect_inline_contents(html, "style") {
-        let h = hash(content);
+        let h = hash(&content);
         if !styles.contains(&h) {
             styles.push(h);
         }
@@ -257,47 +257,59 @@ pub fn page_policy(html: &str) -> Option<String> {
 /// Collects the raw inner contents of every non-empty inline
 /// `<tag>…</tag>` block, in document order. `<script>` elements with
 /// a `src=` attribute are skipped (they are external, not inline).
-fn collect_inline_contents<'a>(html: &'a str, tag: &str) -> Vec<&'a str> {
-    let open = format!("<{tag}");
-    let close = format!("</{tag}>");
-    let mut out = Vec::new();
-    let mut from = 0;
+fn collect_inline_contents(html: &str, tag: &str) -> Vec<String> {
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
-    while let Some(pos) = html[from..].find(&open) {
-        let abs = from + pos;
-        let after_open = abs + open.len();
+    use lol_html::{element, end_tag, text};
 
-        // The opener must be a real tag boundary (`<script>` or
-        // `<script …>`), not a prefix of another name.
-        match html[after_open..].chars().next() {
-            Some(c) if c == '>' || c.is_ascii_whitespace() || c == '/' => {}
-            _ => {
-                from = after_open;
-                continue;
+    use crate::util::html_rewriter::rewrite_html;
+
+    // A parser, not a `<script` byte scan. The scan matched those bytes
+    // wherever they appeared, so a commented-out block was collected and
+    // hashed — CSP then carried a hash for code that can never execute, and
+    // the policy no longer described the document (ssg#570).
+    //
+    // Text arrives in chunks, so each element accumulates into its own slot
+    // and is flushed on the end tag; concatenating across elements would
+    // hash two scripts as one.
+    let done: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let current: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+
+    let cur_el = Rc::clone(&current);
+    let cur_tx = Rc::clone(&current);
+    let done_el = Rc::clone(&done);
+
+    let on_el = element!(tag, move |el| {
+        // `src=` means external: there is no inline body to hash.
+        if el.get_attribute("src").is_some() {
+            *cur_el.borrow_mut() = None;
+            return Ok(());
+        }
+        *cur_el.borrow_mut() = Some(String::new());
+        let sink = Rc::clone(&done_el);
+        let slot = Rc::clone(&cur_el);
+        let _ = el.on_end_tag(end_tag!(move |_end| {
+            if let Some(body) = slot.borrow_mut().take() {
+                if !body.trim().is_empty() {
+                    sink.borrow_mut().push(body);
+                }
             }
+            Ok(())
+        }));
+        Ok(())
+    });
+
+    let on_text = text!(tag, move |chunk| {
+        if let Some(buf) = cur_tx.borrow_mut().as_mut() {
+            buf.push_str(chunk.as_str());
         }
+        Ok(())
+    });
 
-        let Some(tag_end_rel) = html[abs..].find('>') else {
-            break;
-        };
-        let content_start = abs + tag_end_rel + 1;
-        let opening_tag = &html[abs..content_start];
+    let _ = rewrite_html(html, vec![on_el, on_text]);
 
-        if tag == "script" && opening_tag.contains("src=") {
-            from = content_start;
-            continue;
-        }
-
-        let Some(close_rel) = html[content_start..].find(&close) else {
-            break;
-        };
-        let content = &html[content_start..content_start + close_rel];
-        if !content.trim().is_empty() {
-            out.push(content);
-        }
-        from = content_start + close_rel + close.len();
-    }
-
+    let out = done.borrow().clone();
     out
 }
 
@@ -569,7 +581,19 @@ fn find_inline_block<'a>(
     let open = format!("<{tag}>");
     let close = format!("</{tag}>");
 
-    let start = html.find(&open)?;
+    // Same hazard as `find_inline_script`: a commented-out block would be
+    // hoisted into a real external file and the page rewritten around it.
+    let comments = comment_spans(html);
+    let mut from = 0;
+    let start = loop {
+        let rel = html[from..].find(&open)?;
+        let abs = from + rel;
+        if inside_comment(&comments, abs) {
+            from = abs + open.len();
+            continue;
+        }
+        break abs;
+    };
     let content_start = start + open.len();
     let content_end = html[content_start..].find(&close)? + content_start;
     let end = content_end + close.len();
@@ -591,13 +615,52 @@ fn find_inline_block<'a>(
 /// is the full `<script …>` including angle brackets — the caller uses
 /// it to preserve attributes such as `type=module`, `async`, `defer`,
 /// and `data-*` when rewriting the tag.
+/// Byte ranges covered by HTML comments, in document order.
+///
+/// The inline-block extractors reassemble the document by string surgery, so
+/// they cannot be swapped for a streaming parser without restructuring the
+/// whole extract-and-replace flow — on CSP/SRI code, which is not a change to
+/// make in passing. Masking the comment spans fixes the demonstrated defect
+/// exactly: a commented-out `<script>` was hoisted into a real external file
+/// and the page rewritten around it (ssg#570).
+fn comment_spans(html: &str) -> Vec<(usize, usize)> {
+    let bytes = html.as_bytes();
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while let Some(rel) = html[i..].find("<!--") {
+        let start = i + rel;
+        let after = start + 4;
+        let end = html[after..]
+            .find("-->")
+            .map_or(bytes.len(), |r| after + r + 3);
+        spans.push((start, end));
+        i = end;
+        if i >= bytes.len() {
+            break;
+        }
+    }
+    spans
+}
+
+/// True when `pos` falls inside an HTML comment.
+fn inside_comment(spans: &[(usize, usize)], pos: usize) -> bool {
+    spans.iter().any(|&(s, e)| pos >= s && pos < e)
+}
+
 fn find_inline_script(html: &str) -> Option<(String, String, String, String)> {
+    let comments = comment_spans(html);
     let mut search_from = 0;
 
     loop {
         let rest = &html[search_from..];
         let start = rest.find("<script")?;
         let abs_start = search_from + start;
+
+        // A `<script` inside a comment is not a script.
+        if inside_comment(&comments, abs_start) {
+            search_from = abs_start + "<script".len();
+            continue;
+        }
 
         // Find the end of the opening tag
         let tag_end = html[abs_start..].find('>')? + abs_start;
@@ -737,6 +800,68 @@ fn compute_sri(data: &[u8], sri_algorithm: SriAlgorithm) -> String {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+
+    /// The `<style>` extractor carries the same hazard as the script one.
+    #[test]
+    fn inline_block_extraction_skips_a_commented_block() {
+        let html = concat!(
+            "<html><head>",
+            "<!-- <style>.commented{}</style> -->",
+            "<style>.real{}</style>",
+            "</head><body></body></html>"
+        );
+        let (_, content, _) =
+            find_inline_block(html, "style").expect("real style found");
+        assert_eq!(
+            content.trim(),
+            ".real{}",
+            "a commented-out style must not be hoisted: {content:?}"
+        );
+    }
+
+    /// ssg#570, second shape: the extractors that hoist inline blocks into
+    /// external files scan for the same literal bytes. Matching a
+    /// commented-out block would hoist the comment's body into a real file
+    /// and rewrite the page around it — corrupting the document, not merely
+    /// adding a spurious hash.
+    #[test]
+    fn inline_script_extraction_skips_a_commented_block() {
+        let html = concat!(
+            "<html><head>",
+            "<!-- <script>commented()</script> -->",
+            "<script>real()</script>",
+            "</head><body></body></html>"
+        );
+        let found = find_inline_script(html);
+        assert!(found.is_some(), "the real script should still be found");
+        let (_, _, content, _) = found.unwrap();
+        assert_eq!(
+            content.trim(),
+            "real()",
+            "a commented-out script must not be hoisted: {content:?}"
+        );
+    }
+
+    /// ssg#570: a `<script>` inside an HTML comment is not a script. The
+    /// byte scan collects it anyway, so CSP gains a hash for code that can
+    /// never execute — and the policy silently drifts from the document it
+    /// is meant to describe.
+    #[test]
+    fn inline_collection_skips_a_script_inside_a_comment() {
+        let html = concat!(
+            "<html><head>",
+            "<!-- <script>commented()</script> -->",
+            "<script>real()</script>",
+            "</head><body></body></html>"
+        );
+        let found = collect_inline_contents(html, "script");
+        assert_eq!(
+            found,
+            vec!["real()"],
+            "a commented-out script must not be hashed: {found:?}"
+        );
+    }
+
     use super::*;
     use tempfile::tempdir;
 
