@@ -4309,9 +4309,9 @@ dependencies = [
 
 [[package]]
 name = "rss-gen"
-version = "0.0.9"
+version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c64240c5536a3e6bf8e0d760a4d555e14c95651ce26bb4d9a4210e181c1e9e04"
+checksum = "1c3b5748fb3d0f3e25d2464c3487f3dcf9add985563f082bdd18d6c1d8ed2f58"
 dependencies = [
  "log",
  "quick-xml",
@@ -4967,9 +4967,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4703ed55d7d9579e921929d3729ef0f370d4bd51d10a171bb9ab035a4bcf0e2"
+checksum = "0728f05e1dfa18a9dedfa7bd2d061e6ed36ec0442db1e2fc1cfbb3b7b2981998"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",
