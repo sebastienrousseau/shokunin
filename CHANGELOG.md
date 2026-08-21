@@ -7,6 +7,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.56] - 2026-08-21
+
+Three defects that only appeared in configurations nobody was checking.
+
+### Fixed
+
+- **The placeholder site title reached rendered pages** (#705). `DEFAULT_SITE_TITLE`
+  was `"My SSG Site"`, so a site that never set `site_title` shipped that string
+  in its `<title>` — 7,189 live pages on one corpus. The unit test asserting the
+  default pinned the placeholder itself (`assert_eq!(default, "My SSG Site")`), so
+  it stayed green the entire time it was wrong. The default is now empty, and the
+  templates omit the suffix rather than inventing branding.
+
+- **A configured site title was dropped without the `templates` feature** (#705).
+  `default = ["templates", ...]`, so `--no-default-features` selects the
+  hand-written renderer — and `site_title` was read only in the minijinja path.
+  The same config therefore produced differently branded pages depending on how
+  the binary was compiled. The fallback now mirrors the template exactly, and the
+  tests covering it are deliberately ungated so both renderers must agree.
+
+- **Entity-encoded `<title>` text reached consumers double-escaped** (#705).
+  `lol_html` hands text through without unescaping, so `extract_title` returns
+  encoded text; decoding is now explicit, with `&amp;` decoded last so a literal
+  `&amp;lt;` in a title does not collapse into `<`.
+
+### Testing
+
+- Every shipped example is now exercised. The per-example assertions covered 7 of
+  18; a fleet sweep runs the rest and pins the discovered set against cargo's own
+  view, so a newly added example cannot go untested silently.
+
 ## [0.0.55] - 2026-08-21
 
 Four fixes. Three were shipping corrupted output while looking healthy.
