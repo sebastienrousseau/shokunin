@@ -4905,6 +4905,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssg-mcp"
+version = "0.0.56"
+dependencies = [
+ "schemars",
+ "serde",
+ "serde_json",
+ "ssg-rpc",
+]
+
+[[package]]
 name = "ssg-rpc"
 version = "0.0.56"
 dependencies = [
