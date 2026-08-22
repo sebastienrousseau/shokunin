@@ -28,3 +28,13 @@ plugins_group::plugin::cache::persists_across_runs
 # under -Zmiri-track-stacked-borrows; exercised in the native test
 # matrix instead.
 fault_injection_failpoint_smoke
+
+# Process spawning: Miri cannot call `posix_spawnattr_init`, so any test
+# that re-invokes the test binary as a child aborts the whole run with
+# "unsupported operation" — explicitly not a UB finding. Each of these
+# asserts behaviour that is unobservable in-process (a process::exit code,
+# or a one-shot global that only a fresh process can exercise), so a child
+# is the only way to test it. Covered by the native test matrix.
+cmd::audit::tests::run_and_dispatch_fail_outcome_exits_one
+tests::apply_rayon_thread_pool_succeeds_in_fresh_process
+tests::run_exits_with_clap_error_code_in_child_process

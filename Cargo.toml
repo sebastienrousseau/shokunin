@@ -173,7 +173,7 @@ tracing-test = "0.2"
 # Required dependencies for building and running the project.
 anyhow = "1.0.102"
 clap = { version = "4.6.1", features = ["derive", "cargo", "env"] }
-http-handle = "0.0.5"
+http-handle = "0.0.7"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 # adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
@@ -186,7 +186,7 @@ ssg-core = { path = "crates/ssg-core", version = "0.0.56" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.56" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.56" }
 thiserror = "2"
-staticdatagen = "0.0.13"
+staticdatagen = "0.0.15"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
