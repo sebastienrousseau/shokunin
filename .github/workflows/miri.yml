@@ -99,10 +99,44 @@ jobs:
             done < .miri-skip
           fi
           echo "Skip list: $skip_args"
+          # Honour the module allow-list in `.miri-include`. Miri runs over
+          # those modules only — see that file for why the whole suite is not
+          # interpreted (zero unsafe crate-wide; the job is a dependency
+          # canary, and a full run does not fit in the timeout).
+          include_args=""
+          if [ -f .miri-include ]; then
+            while IFS= read -r line; do
+              entry="${line%%#*}"
+              entry="$(echo "$entry" | sed 's/^ *//; s/ *$//')"
+              [ -n "$entry" ] || continue
+              include_args="$include_args $entry"
+            done < .miri-include
+          fi
+          if [ -z "$include_args" ]; then
+            echo "::error::.miri-include is empty — refusing to run Miri over"\
+                 " the whole suite; it will exceed the job timeout"
+            exit 1
+          fi
+          echo "Include list:$include_args"
           # MIRIFLAGS:
           #   -Zmiri-disable-isolation: allow tests that read $CARGO_HOME etc.
           #   -Zmiri-permissive-provenance: ureq + smol both rely on
           #     int-to-ptr casts that strict provenance flags trip on;
           #     the operations are sound under permissive provenance.
-          export MIRIFLAGS="-Zmiri-disable-isolation -Zmiri-permissive-provenance"
-          cargo miri test --lib --features test-fault-injection -- $skip_args
+          #   -Zmiri-tree-borrows: rayon worker threads reach crossbeam-epoch,
+          #     which rebuilds a `&Local` from a pointer to an interior `Entry`
+          #     of its intrusive list (crossbeam-epoch internal.rs:562,
+          #     `&*local_ptr`). Stacked Borrows rejects that retag — a model
+          #     Miri's own diagnostic calls "still experimental" — while Tree
+          #     Borrows, the newer model, accepts it. Chosen over
+          #     -Zmiri-disable-stacked-borrows deliberately: that would silence
+          #     the report by switching the aliasing model off entirely, which
+          #     is the one thing Miri is here to do. Tree Borrows still catches
+          #     real aliasing UB.
+          #   -Zmiri-ignore-leaks: rayon's global pool is process-lifetime by
+          #     design and never joined, so Miri's "main thread terminated
+          #     without waiting for all remaining threads" fires at exit. This
+          #     flag is the documented way to permit that; it relaxes no
+          #     memory-correctness check.
+          export MIRIFLAGS="-Zmiri-disable-isolation -Zmiri-permissive-provenance -Zmiri-tree-borrows -Zmiri-ignore-leaks"
+          cargo miri test --lib --features test-fault-injection -- $include_args $skip_args

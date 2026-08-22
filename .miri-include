@@ -1,0 +1,37 @@
+# Modules Miri runs over. Each entry is a test-path prefix passed to libtest
+# as a positional filter; `.miri-skip` still applies on top.
+#
+# Why an allow-list rather than the whole suite.
+#
+# Every crate here carries `#![forbid(unsafe_code)]` and the workspace
+# contains zero `unsafe` blocks, functions or impls. Miri detects undefined
+# behaviour, which the compiler already precludes in safe Rust — so it cannot
+# find UB in this crate's own code. Its remaining value is as a DEPENDENCY
+# CANARY: catching UB inside crossbeam / rayon / ureq / smol on the paths this
+# crate actually drives. That is not hypothetical — a crossbeam-epoch retag
+# surfaced here and needed -Zmiri-tree-borrows to resolve.
+#
+# Interpreting the other ~3,500 tests costs hours to prove something the type
+# system already guarantees. Measured on this suite: 955 tests took just over
+# two hours, and the job budget is 180 minutes. So the choice was never
+# "full coverage vs partial" — it was "a canary that runs" vs "a job that
+# times out". The modules below are where the unsafe-heavy dependencies are
+# exercised.
+#
+# Adding a module here is cheap; if a new one starts driving threads, a
+# channel, or an allocator-sensitive dependency, list it.
+
+# The IoPool itself — threads, channels, and the work queue.
+core_group::io_pool
+
+# Background telemetry threads.
+core_group::otel
+
+# rayon batching over content; also the crossbeam-deque steal path.
+core_group::streaming
+
+# The plugin pipeline's rayon fan-out.
+plugins_group::plugins
+
+# Drives streaming + the plugin pipeline end to end.
+core_group::pipeline

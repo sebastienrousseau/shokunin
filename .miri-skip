@@ -15,6 +15,25 @@
 # verify/walk siblings are also FS-touching and not modelled.
 core_group::fs_ops::tests
 
+# Same std::fs::copy gap, reached through content_stager's copy_tree:
+# `fclonefileat` on macOS, `copy_file_range` on Linux — neither is shimmed.
+# Only the four copy_tree_* tests touch it; the rest of the module (e.g.
+# collect_entries_skips_symlinks_and_special_files) runs clean under Miri
+# and stays covered.
+core_group::content_stager::tests::copy_tree_
+
+# Same std::fs::copy gap again, in the three other places the crate copies
+# files. Enumerated from the call sites rather than found one failing run at
+# a time: streaming::compile_batch and streaming::merge_dir copy, pipeline
+# reaches them through the streaming path, and isr_manifest::copy_sources
+# copies the ISR sources. Only the copying tests are listed — the rest of
+# each module still runs under Miri.
+core_group::streaming::tests::compile_batch_
+core_group::streaming::tests::merge_dir_
+core_group::pipeline::tests::test_pipeline_streams_when_budget_explicitly_set
+plugins_group::isr_manifest::tests::copy_sources_
+plugins_group::isr_manifest::tests::plugin_after_compile_full_run_writes_manifest_and_copies_sources
+
 # st_mtime emulation: Miri reports a constant mtime, breaking the
 # dirstamp-invalidation contract.
 core_group::cache::tests::dirstamp
