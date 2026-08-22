@@ -170,13 +170,14 @@ where
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, JsonSchema)]
+    // Fields exist to give the schema something to describe; nothing reads
+    // them at runtime, and that is the fixture's whole purpose.
     #[allow(dead_code)]
     struct Greet {
         who: String,

@@ -535,7 +535,6 @@ fn rewrite_html_images(body: &str, cdn_prefix: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::Plugin;
@@ -1038,7 +1037,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use crate::plugin::{Plugin, PluginContext};

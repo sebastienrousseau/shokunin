@@ -164,7 +164,6 @@ fn check_atom1(text: &str, rel: &str, findings: &mut Vec<Finding>) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used, clippy::needless_collect)]
 mod tests {
     use super::*;
 
@@ -226,9 +225,12 @@ mod tests {
 </channel></rss>"#;
         let s = site_with_files(&[("rss.xml", body)]);
         let f = FeedsGate.run(&s, &AuditOptions::default());
-        let codes: Vec<_> =
-            f.iter().filter_map(|x| x.code.as_deref()).collect();
-        assert!(codes.contains(&"RSS-EMPTY"));
+        assert!(
+            f.iter()
+                .filter_map(|x| x.code.as_deref())
+                .any(|c| c == "RSS-EMPTY"),
+            "got {f:?}"
+        );
         assert!(
             f.iter().any(|x| matches!(x.severity, Severity::Warn)),
             "got {f:?}"

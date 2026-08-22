@@ -20,27 +20,58 @@
   "rustc": "1.98.0",
   "unit": "median",
   "benchmarks": {
-    "html_scanning::inject_before_head_close/clean": { "median_us": 5.1544, "low_us": 5.0611, "high_us": 5.2561 },
-    "html_scanning::inject_before_head_close/decoy": { "median_us": 4.7891, "low_us": 4.6736, "high_us": 4.9117 },
-    "html_scanning::extract_head_meta/clean":        { "median_us": 6.3457, "low_us": 6.2318, "high_us": 6.4722 },
-    "html_scanning::extract_head_meta/decoy":        { "median_us": 6.2503, "low_us": 6.1976, "high_us": 6.3052 },
-    "html_scanning::find_tag_end/plain":             { "median_ns": 20.130, "low_ns": 19.793, "high_ns": 20.424 },
-    "html_scanning::find_tag_end/quoted_gt":         { "median_ns": 35.809, "low_ns": 35.045, "high_ns": 36.529 }
+    "html_scanning::inject_before_head_close/clean": {
+      "median_us": 5.1544,
+      "low_us": 5.0611,
+      "high_us": 5.2561
+    },
+    "html_scanning::inject_before_head_close/decoy": {
+      "median_us": 4.7891,
+      "low_us": 4.6736,
+      "high_us": 4.9117
+    },
+    "html_scanning::extract_head_meta/clean": {
+      "median_us": 6.3457,
+      "low_us": 6.2318,
+      "high_us": 6.4722
+    },
+    "html_scanning::extract_head_meta/decoy": {
+      "median_us": 6.2503,
+      "low_us": 6.1976,
+      "high_us": 6.3052
+    },
+    "html_scanning::find_tag_end/plain": {
+      "median_ns": 20.13,
+      "low_ns": 19.793,
+      "high_ns": 20.424
+    },
+    "html_scanning::find_tag_end/quoted_gt": {
+      "median_ns": 35.809,
+      "low_ns": 35.045,
+      "high_ns": 36.529
+    }
   },
   "known_regression": {
     "benchmark": "gates::csp_sri",
-    "before_us": 43.696,
-    "after_us": 51.082,
-    "delta_pct": 16.9,
+    "status": "recovered",
+    "byte_scan_us": 43.696,
+    "two_pass_parser_us": 51.082,
+    "single_pass_parser_us": 42.596,
     "note": [
-      "Measured A/B on one machine, main vs this branch, confidence",
-      "intervals non-overlapping ([42.461, 45.081] vs [49.410, 52.764]),",
-      "so the effect is real rather than noise.",
+      "The first parser version walked the document once per tag, so",
+      "hashing a page cost two full parses and ran 16.9% slower than the",
+      "byte scan it replaced ([49.410, 52.764] vs [42.461, 45.081],",
+      "non-overlapping).",
       "",
-      "This is the price of #570: collect_inline_contents went from a",
-      "memchr-backed byte scan to a real HTML parser. The parser is what",
-      "stops commented-out scripts being hashed into CSP and hoisted into",
-      "external files. Recorded as a regression, not dressed up as a win."
+      "collect_inline_script_and_style now collects <script> and <style>",
+      "in a single walk: [42.004, 43.297]. That is 16.6% faster than the",
+      "two-pass version and overlaps the byte scan's interval, so against",
+      "the original it is parity or marginally better -- not a win, and",
+      "not claimed as one.",
+      "",
+      "The parser is what stops commented-out scripts being hashed into",
+      "CSP and hoisted into external files. Correctness now costs nothing",
+      "measurable, which is the outcome worth having."
     ]
   }
 }

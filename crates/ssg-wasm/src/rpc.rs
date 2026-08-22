@@ -142,7 +142,6 @@ pub const fn method_not_allowed_body() -> &'static str {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

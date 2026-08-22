@@ -191,7 +191,6 @@ pub fn run_dev_loop<F: FnMut(&[PathBuf])>(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

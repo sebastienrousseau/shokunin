@@ -141,7 +141,6 @@ pub(crate) fn normalize_bcp47(raw: &str) -> Option<String> {
 // test code, so `cargo test --lib --no-default-features` had simply
 // never been compiled.
 #[cfg(all(test, feature = "templates"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

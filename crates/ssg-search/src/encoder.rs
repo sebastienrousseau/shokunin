@@ -468,12 +468,6 @@ pub fn deserialize_projection_encoder(
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::unwrap_used,
-    clippy::expect_used,
-    clippy::float_cmp,
-    clippy::absurd_extreme_comparisons
-)]
 mod tests {
     use super::*;
 

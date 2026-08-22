@@ -371,7 +371,6 @@ mod entity_decode_tests {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
 
     /// ssg#540: a `</head>` that appears inside a comment or a script in the

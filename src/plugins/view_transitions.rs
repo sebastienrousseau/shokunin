@@ -317,7 +317,6 @@ pub const VIEW_TRANSITIONS_JS: &str = r#"// SSG View Transitions client — issu
 "#;
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;

@@ -416,7 +416,6 @@ pub(super) fn collect_html_files_recursive(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
 
     // ---- ssg#539 acceptance criteria -----------------------------------

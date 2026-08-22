@@ -384,7 +384,6 @@ pub fn benchmark_throughput(n: usize) -> Result<BatchResult> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -1215,7 +1214,6 @@ mod tests {
 /// registry is process-global, so these live in their own `mod` and
 /// are `#[serial]` on a dedicated key.
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_injection {
     use super::*;
     use std::fs;
@@ -1251,7 +1249,6 @@ mod fault_injection {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod proptests {
     use super::*;
     use proptest::prelude::*;
