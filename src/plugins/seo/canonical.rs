@@ -102,7 +102,6 @@ fn build_canonical_tag(base: &str, rel_path: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::PluginContext;

@@ -1,3 +1,4 @@
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 #![forbid(unsafe_code)]
 // `pub(crate)` on cross-module helpers (e.g. `rules::check_img_alt` used
 // from `lib.rs`) is flagged by `redundant_pub_crate` because the private
@@ -110,7 +111,6 @@ pub fn check_page(html: &str) -> Vec<AccessibilityIssue> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -211,7 +211,6 @@ pub(crate) fn first_px_value(css: &str, prop: &str) -> Option<u32> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

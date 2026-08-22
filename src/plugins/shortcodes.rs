@@ -295,7 +295,6 @@ fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -654,7 +653,6 @@ title: Test
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod proptests {
     use super::*;
     use proptest::prelude::*;

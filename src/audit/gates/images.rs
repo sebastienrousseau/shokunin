@@ -173,7 +173,6 @@ fn extract_imgs(html: &str) -> Vec<ImgRef> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

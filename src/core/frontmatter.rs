@@ -194,7 +194,6 @@ fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::fs;

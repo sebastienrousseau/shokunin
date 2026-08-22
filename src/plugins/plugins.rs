@@ -438,7 +438,6 @@ impl Plugin for DeployPlugin {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::plugin::{PluginCache, PluginContext};
@@ -981,6 +980,8 @@ mod tests {
     fn minify_plugin_copy_clone() {
         let a = MinifyPlugin;
         let b = a;
+        // Cloning a Copy type is the point: this asserts `Clone` is wired up,
+        // not that cloning is the efficient way to get a second value.
         #[allow(clippy::clone_on_copy)]
         let c = a.clone();
         assert_eq!(a.name(), b.name());
@@ -997,6 +998,8 @@ mod tests {
     fn image_opti_plugin_copy_clone() {
         let a = ImageOptiPlugin;
         let b = a;
+        // Cloning a Copy type is the point: this asserts `Clone` is wired up,
+        // not that cloning is the efficient way to get a second value.
         #[allow(clippy::clone_on_copy)]
         let c = a.clone();
         assert_eq!(a.name(), b.name());
@@ -1139,7 +1142,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use crate::plugin::PluginContext;

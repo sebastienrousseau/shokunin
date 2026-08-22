@@ -290,7 +290,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use serial_test::serial;

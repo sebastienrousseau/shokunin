@@ -267,7 +267,6 @@ pub fn collapse_whitespace(s: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use lol_html::element;

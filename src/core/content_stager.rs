@@ -1007,7 +1007,6 @@ fn find_closing_fence(after_open: &str) -> Option<usize> {
 // ---------------------------------------------------------------------
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

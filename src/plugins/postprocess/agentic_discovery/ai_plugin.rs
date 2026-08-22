@@ -246,7 +246,6 @@ fn slugify_for_model(name: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::{ImageConfig, SsgConfig};
@@ -477,7 +476,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use crate::plugin::PluginContext;

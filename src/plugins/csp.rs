@@ -821,7 +821,6 @@ fn compute_sri(data: &[u8], sri_algorithm: SriAlgorithm) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
 
     /// The `<style>` extractor carries the same hazard as the script one.

@@ -297,7 +297,6 @@ pub fn run_and_dispatch(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -684,7 +683,6 @@ fail_on = "error"
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
 

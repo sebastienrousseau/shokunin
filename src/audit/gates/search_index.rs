@@ -165,7 +165,6 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::PathBuf;

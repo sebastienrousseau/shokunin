@@ -178,12 +178,27 @@ def measure_code(cat: Category) -> None:
 
     files = _rs_files("src", "crates")
     if files:
-        allows = sum(
-            len(re.findall(r"#\[allow\(", f.read_text(errors="ignore")))
-            for f in files
+        # Counts *undocumented* suppressions, not all of them. A bare
+        # `#[allow]` hides a lint with no stated reason; one with a comment
+        # above it is a decision someone can review and reverse. Scoring
+        # them identically punishes writing the reason down, which is
+        # backwards — and this metric did exactly that until it was fixed.
+        bare = 0
+        documented = 0
+        for f in files:
+            lines = f.read_text(errors="ignore").split("\n")
+            for i, ln in enumerate(lines):
+                if "#[allow(" not in ln:
+                    continue
+                ctx = [lines[j].strip() for j in range(max(0, i - 3), i)]
+                if any(c.startswith("//") for c in ctx):
+                    documented += 1
+                else:
+                    bare += 1
+        cat.metrics[4].value = bare
+        cat.metrics[4].detail = (
+            f"{documented} documented, across {len(files)} .rs files"
         )
-        cat.metrics[4].value = allows
-        cat.metrics[4].detail = f"across {len(files)} .rs files"
 
 
 def measure_tests(cat: Category, deep: bool) -> None:
@@ -308,9 +323,9 @@ def rubric() -> list[Category]:
                    "cargo clippy --lib --tests --examples --all-features", boolean()),
             Metric("unsafe_forbid", "#![forbid(unsafe_code)]",
                    "grep src/lib.rs", boolean()),
-            Metric("allows", "#[allow(..)] suppressions",
-                   "grep -c over src/ and crates/",
-                   band([(20, 10), (50, 9), (100, 7), (200, 5), (400, 3)],
+            Metric("bare_allows", "undocumented #[allow(..)]",
+                   "grep #[allow( with no comment above it",
+                   band([(0, 10), (3, 9), (10, 7), (25, 5), (60, 3)],
                         higher_is_better=False)),
         ]),
         Category("tests", "Tests & verification", 0.22, [

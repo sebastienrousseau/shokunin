@@ -685,7 +685,6 @@ fn parse_iso8601(input: &str) -> Option<FlexibleDate> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

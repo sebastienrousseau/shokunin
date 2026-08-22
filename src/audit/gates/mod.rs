@@ -10,6 +10,9 @@
 use super::AuditGate;
 
 pub mod util;
+// Re-exported for downstream crates and the audit binary; the library
+// build alone does not reference every name, which is not the same as
+// them being unused.
 #[allow(unused_imports)]
 pub use util::{find_tag_end, hreflang_attr, strip_script_and_style};
 
