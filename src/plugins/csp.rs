@@ -1415,7 +1415,7 @@ mod tests {
     }
 
     #[test]
-    fn collect_inline_contents_skips_prefix_tag_names() {
+    fn inline_collection_skips_prefix_tag_names() {
         // `<styles>` must not match a `<style` opener lookup.
         let html = "<styles>ignored</styles><style>a{}</style>";
         let out = collect_inline_script_and_style(html).1;
@@ -1423,7 +1423,7 @@ mod tests {
     }
 
     #[test]
-    fn collect_inline_contents_accepts_slash_after_tag_name() {
+    fn inline_collection_accepts_slash_after_tag_name() {
         // `<style/` is still a tag boundary for the opener check.
         let html = "<style/>a{}</style>";
         let out = collect_inline_script_and_style(html).1;
@@ -1431,13 +1431,13 @@ mod tests {
     }
 
     #[test]
-    fn collect_inline_contents_stops_when_opening_tag_unterminated() {
+    fn inline_collection_stops_when_opening_tag_unterminated() {
         let html = "<style media=all";
         assert!(collect_inline_script_and_style(html).1.is_empty());
     }
 
     #[test]
-    fn collect_inline_contents_stops_when_close_tag_missing() {
+    fn inline_collection_stops_when_close_tag_missing() {
         let html = "<style>a{} no closing fence";
         assert!(collect_inline_script_and_style(html).1.is_empty());
     }
