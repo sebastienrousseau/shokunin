@@ -7,6 +7,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.57] - 2026-08-22
+
+Three defects that produced wrong output, one new crate, and a duplication
+that had been costing CI time for a week.
+
+### Fixed
+
+- **Commented-out blocks reached CSP and the filesystem** (#721). Three
+  functions scanned for the literal bytes `<script` / `<style>`, which match
+  inside HTML comments. `collect_inline_contents` hashed dead code into the
+  policy, so CSP stopped describing the document. Worse,
+  `find_inline_script` and `find_inline_block` *hoist* what they match into
+  external files and rewrite the page around it — a commented-out script
+  became a real file. Each was proven with a failing test before any code
+  moved.
+
+- **Meta tags were read by byte scan** (#719). A commented-out
+  `<meta name="twitter:image">` left over from an edit beat the live tag
+  that followed it.
+
+- **`<head>` injection took the first byte match** (#720). `oembed` and
+  `view_transitions` spliced at `html.find("</head>")`, so a `</head>`
+  inside a comment or script body in the head captured the payload — inert,
+  and silently, because the document still parses.
+
+### Added
+
+- **`ssg-mcp`** (#723): a Model Context Protocol stdio server over the
+  existing `#[ssg_rpc]` registry. Tools are not declared; the registry is
+  walked at runtime, so a tool added to ssg appears over MCP with no second
+  declaration. Note that `tools/list` reflects what the *host binary*
+  linked: ssg itself registers no production RPC yet, so the five tools
+  #576 names remain to be written.
+
+- Benchmarks for the HTML paths that moved to a parser, with a committed
+  criterion baseline, and `tools/quality_scorecard.py` — 25 measured
+  metrics that report `unmeasured` rather than guessing.
+
+### Changed
+
+- **One tag-end scanner instead of four** (#718). The copies were
+  byte-identical apart from visibility, and when clippy 1.98 added
+  `missing_const_for_fn` the lint fired on each separately — four
+  sequential CI round-trips for one function.
+
+- **One crate-level test lint allowance instead of 150 copies.** `src/lib.rs`
+  already granted it; the repetitions were redundant, and the six workspace
+  crates now carry the same line.
+
+### Performance
+
+- CSP hashing walked the document once per tag. `collect_inline_script_and_style`
+  does both in one pass: 51.082 µs → 42.596 µs, which recovers the cost of
+  the correctness fix and lands at parity with the byte scan it replaced.
+
 ## [0.0.56] - 2026-08-21
 
 Three defects that only appeared in configurations nobody was checking.

@@ -632,6 +632,7 @@ jobs:
         #   ssg-rpc          (depends on ssg-rpc-macro)
         #   ssg-search       (no internal deps)
         #   ssg-a11y         (no internal deps)
+        #   ssg-mcp          (depends on ssg-rpc, so it follows it)
         #   ssg             (depends on all of the above)
         #
         # ssg-wasm is deliberately excluded: it carries `publish = false`
@@ -693,7 +694,7 @@ jobs:
             return 1
           }
 
-          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y; do
+          for c in ssg-core ssg-rpc-macro ssg-rpc ssg-search ssg-a11y ssg-mcp; do
             publish "$c" "crates/$c/Cargo.toml" --no-verify
           done
 
