@@ -289,7 +289,6 @@ fn extract_last_build_date(articles: &[(String, String)]) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
 
     use super::*;

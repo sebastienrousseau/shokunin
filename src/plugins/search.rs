@@ -875,7 +875,6 @@ if(e.key==='Enter'){e.preventDefault();var items=results.querySelectorAll('.ssg-
 "#;
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::error::SsgError;
@@ -1992,7 +1991,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use serial_test::serial;
@@ -2035,7 +2033,6 @@ mod fault_tests {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod proptests {
     use super::*;
     use proptest::prelude::*;

@@ -50,7 +50,6 @@ fn serialize_error(e: serde_json::Error) -> SsgError {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::audit::{Finding, GateResult, Severity, SeverityCounts};
@@ -111,7 +110,6 @@ mod tests {
 }
 
 #[cfg(all(test, feature = "test-fault-injection"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod fault_tests {
     use super::*;
     use serial_test::serial;

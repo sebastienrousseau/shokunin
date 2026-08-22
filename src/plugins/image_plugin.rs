@@ -570,7 +570,6 @@ fn collect_html_files(dir: &Path) -> Result<Vec<PathBuf>, SsgError> {
 }
 
 #[cfg(all(test, feature = "image-optimization"))]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;

@@ -1016,7 +1016,6 @@ pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {
 // =====================================================================
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -366,7 +366,6 @@ document.addEventListener('ssg:after-swap', () => {
 "#;
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -549,6 +548,8 @@ mod tests {
     }
 
     #[test]
+    // The lint says to write the unit struct directly, which would remove
+    // the `Default::default()` call this test exists to compare against.
     #[allow(clippy::default_constructed_unit_structs)]
     fn island_plugin_new_and_default_yield_same_unit() {
         // Plugin is a unit struct — Default and new() are

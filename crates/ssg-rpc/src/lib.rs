@@ -1,6 +1,7 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 //! # ssg-rpc — Edge RPC for SSG
 //!
 //! Tracking issue: [#548] — `feat(edge): Edge RPC — JSON-over-POST
@@ -158,7 +159,6 @@ impl RpcError {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

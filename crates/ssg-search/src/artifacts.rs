@@ -536,7 +536,6 @@ fn sha256(input: &[u8]) -> [u8; 32] {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::encoder::EMBEDDING_DIM;

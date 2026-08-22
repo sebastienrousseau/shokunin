@@ -70,7 +70,6 @@ pub fn build_compliance_report(
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

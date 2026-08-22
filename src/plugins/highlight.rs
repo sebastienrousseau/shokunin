@@ -197,7 +197,6 @@ fn collect_html_files(dir: &Path) -> Result<Vec<std::path::PathBuf>, SsgError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;

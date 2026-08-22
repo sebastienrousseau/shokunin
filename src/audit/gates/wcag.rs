@@ -201,7 +201,6 @@ fn check_aria_landmarks(html: &str, out: &mut Vec<Issue>) {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use std::path::PathBuf;

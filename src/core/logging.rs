@@ -211,7 +211,6 @@ pub fn log_arguments(log_file: &mut File, date: &str) -> Result<(), SsgError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 

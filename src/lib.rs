@@ -904,7 +904,6 @@ fn apply_rayon_thread_pool(jobs: Option<usize>) -> Result<(), SsgError> {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::cmd::Cli;
@@ -4619,7 +4618,6 @@ mod tests {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod proptests {
     use proptest::prelude::*;
 

@@ -282,6 +282,8 @@ fn unwrap_ref<'a>(schema: &'a Value, root: &'a Value) -> &'a Value {
     schema
 }
 
+// One match over the JSON Schema type space. Splitting it would scatter
+// a single decision table across helpers that only ever have one caller.
 #[allow(clippy::too_many_lines)]
 fn ts_type_for(schema: &Value, root: &Value) -> String {
     let schema = unwrap_ref(schema, root);
@@ -431,7 +433,6 @@ fn escape_ts(s: &str) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use serde_json::json;
