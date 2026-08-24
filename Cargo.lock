@@ -2590,47 +2590,18 @@ dependencies = [
 
 [[package]]
 name = "noyalib"
-version = "0.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "179fb3ecf8e64246b67049033e61c739c467c7bb1d79b2c1a65c1ac13f87512a"
-dependencies = [
- "indexmap",
- "itoa",
- "memchr",
- "rustc-hash",
- "ryu",
- "serde",
- "serde_ignored",
- "smallvec",
-]
-
-[[package]]
-name = "noyalib"
-version = "0.0.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccc67d13e91577493ff12d930fcdc92a342b46e2299210089d90d2caed837f60"
-dependencies = [
- "indexmap",
- "itoa",
- "memchr",
- "rustc-hash",
- "ryu",
- "serde",
- "serde_ignored",
- "smallvec",
-]
-
-[[package]]
-name = "noyalib"
 version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d0ba37b65d8c94344cc44af197654bd0f270bf5729dad540c6eacf3447f50e0"
 dependencies = [
  "indexmap",
+ "itoa",
  "memchr",
  "rustc-hash",
+ "ryu",
  "serde",
  "serde_core",
+ "serde_ignored",
  "smallvec",
 ]
 
@@ -4847,7 +4818,7 @@ dependencies = [
  "minify-html",
  "minijinja",
  "notify",
- "noyalib 0.0.18",
+ "noyalib 0.0.19",
  "oxc_allocator 0.144.0",
  "oxc_codegen 0.144.0",
  "oxc_minifier 0.144.0",
@@ -4895,7 +4866,7 @@ name = "ssg-core"
 version = "0.0.57"
 dependencies = [
  "log",
- "noyalib 0.0.17",
+ "noyalib 0.0.19",
  "pulldown-cmark",
  "serde",
  "serde_json",
