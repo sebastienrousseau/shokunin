@@ -4880,7 +4880,7 @@ dependencies = [
  "minijinja",
  "notify",
  "noyalib 0.0.19",
- "oxc_allocator 0.144.0",
+ "oxc_allocator 0.146.0",
  "oxc_codegen 0.144.0",
  "oxc_minifier 0.144.0",
  "oxc_parser 0.144.0",
