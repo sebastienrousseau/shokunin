@@ -2618,7 +2618,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d0ba37b65d8c94344cc44af197654bd0f270bf5729dad540c6eacf3447f50e0"
 dependencies = [
  "indexmap",
+ "memchr",
+ "rustc-hash",
+ "serde",
+ "serde_core",
+ "smallvec",
+]
+
+[[package]]
+name = "noyalib"
+version = "0.0.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f075ef19fa3bcf8697c0ef96c37d5c435d339a40ab8081cae3aac3a4e7fee9a"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
  "itoa",
+ "libm",
  "memchr",
  "rustc-hash",
  "ryu",
@@ -4835,7 +4851,7 @@ dependencies = [
  "minify-html",
  "minijinja",
  "notify",
- "noyalib 0.0.19",
+ "noyalib 0.0.28",
  "oxc_allocator 0.146.0",
  "oxc_codegen 0.146.0",
  "oxc_minifier 0.146.0",
@@ -4883,7 +4899,7 @@ name = "ssg-core"
 version = "0.0.57"
 dependencies = [
  "log",
- "noyalib 0.0.19",
+ "noyalib 0.0.28",
  "pulldown-cmark",
  "serde",
  "serde_json",
@@ -5120,7 +5136,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
