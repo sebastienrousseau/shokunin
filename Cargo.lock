@@ -4965,9 +4965,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.15"
+version = "0.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f064c4e24dff9940b4cf18653d021692c2a2b8cf53f52bc989136af0047e5506"
+checksum = "97dab9eeefe34cbe46487f63f1e1eb1e5a4f05ed6a2548b8b0a2ab3f23ee1ec4"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",
@@ -5120,7 +5120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
