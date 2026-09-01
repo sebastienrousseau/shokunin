@@ -143,6 +143,7 @@ pub use crate::plugins_group::accessibility;
 pub use crate::plugins_group::agent_api;
 pub use crate::plugins_group::ai;
 pub use crate::plugins_group::assets;
+pub use crate::plugins_group::audit as audit_plugin;
 pub use crate::plugins_group::csp;
 pub use crate::plugins_group::drafts;
 pub use crate::plugins_group::highlight;

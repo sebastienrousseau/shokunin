@@ -782,7 +782,61 @@ pub fn compile_site_with_locales(
             std::io::Error::other(format!("Failed to compile site: {e:?}")),
             build_dir,
         )
-    })
+    })?;
+
+    // Copy any static assets from template_dir (e.g. styles.css, theme-init.js, favicon.ico, images)
+    // to site_dir so they are available in public/ and fingerprinted by assets plugin.
+    copy_static_template_assets(template_dir, site_dir)?;
+    if let Some(parent) = template_dir.parent() {
+        let assets_dir = parent.join("assets");
+        if assets_dir.is_dir() {
+            let site_assets = site_dir.join("assets");
+            let _ = std::fs::create_dir_all(&site_assets);
+            copy_static_template_assets(&assets_dir, &site_assets)?;
+        }
+    }
+    Ok(())
+}
+
+fn copy_static_template_assets(src: &Path, dst: &Path) -> Result<(), SsgError> {
+    if !src.is_dir() {
+        return Ok(());
+    }
+    let entries = std::fs::read_dir(src).map_err(|e| SsgError::io(e, src))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        if path.is_file() {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if matches!(
+                ext,
+                "css"
+                    | "js"
+                    | "ico"
+                    | "svg"
+                    | "png"
+                    | "jpg"
+                    | "jpeg"
+                    | "webp"
+                    | "avif"
+                    | "woff"
+                    | "woff2"
+                    | "ttf"
+                    | "json"
+                    | "map"
+            ) && !name_str.ends_with(".tera.html")
+            {
+                let target = dst.join(name);
+                let _ = std::fs::copy(&path, &target);
+            }
+        } else if path.is_dir() && name_str != "tera" && !name_str.starts_with('.') {
+            let target_dir = dst.join(name);
+            let _ = std::fs::create_dir_all(&target_dir);
+            let _ = copy_static_template_assets(&path, &target_dir);
+        }
+    }
+    Ok(())
 }
 
 /// Registers the default plugin pipeline.
@@ -873,6 +927,9 @@ pub fn register_default_plugins(
 
     // Accessibility validation
     plugins.register(accessibility::AccessibilityPlugin);
+
+    // Master Quality Gate & Compliance Audit
+    plugins.register(crate::plugins_group::audit::AuditPlugin);
 
     // Image optimization (WebP, responsive srcset)
     #[cfg(feature = "image-optimization")]

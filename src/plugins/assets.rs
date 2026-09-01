@@ -151,17 +151,8 @@ fn fingerprint_file(
 
     if minified {
         fs::write(&new_path, &content).with_path(&new_path)?;
-        fail_point!("assets::remove-original", |_| {
-            Err(SsgError::Io {
-                path: asset_path.to_path_buf(),
-                source: std::io::Error::other(
-                    "injected: assets::remove-original",
-                ),
-            })
-        });
-        fs::remove_file(asset_path).with_path(asset_path)?;
     } else {
-        fs::rename(asset_path, &new_path).with_path(asset_path)?;
+        let _ = fs::copy(asset_path, &new_path).with_path(asset_path)?;
     }
 
     let rel_old = asset_path
@@ -392,7 +383,7 @@ fn rewrite_asset_refs(
 ) -> String {
     let mut result = html.to_string();
     for (old_path, info) in manifest {
-        // Replace href="old" with href="new" integrity="..." crossorigin="anonymous"
+        // Direct matches: "styles.css" and "/styles.css"
         let old_ref = format!("\"{old_path}\"");
         let old_ref_slash = format!("\"/{old_path}\"");
         let new_ref = format!(
@@ -406,6 +397,14 @@ fn rewrite_asset_refs(
 
         result = result.replace(&old_ref, &new_ref);
         result = result.replace(&old_ref_slash, &new_ref_slash);
+
+        // Scoped sub-path matches: e.g. "/swiftdev/styles.css" -> "/swiftdev/styles.hash.css"
+        let old_suffix = format!("/{old_path}\"");
+        let new_suffix = format!(
+            "/{}\" integrity=\"{}\" crossorigin=\"anonymous\"",
+            info.fingerprinted, info.sri
+        );
+        result = result.replace(&old_suffix, &new_suffix);
     }
     result
 }
