@@ -576,6 +576,29 @@ pub fn execute_build_pipeline_with(
     // transform plugins → write once. Eliminates redundant I/O.
     plugins.run_fused_transforms(&ctx)?;
 
+    // Master Quality Gate & Compliance Audit
+    let audit_report = crate::plugins_group::audit::AuditPlugin::audit_directory(site_dir);
+    let audit_path = site_dir.join("quality-gate-report.json");
+    if let Ok(json_str) = serde_json::to_string_pretty(&audit_report) {
+        let _ = std::fs::write(&audit_path, json_str);
+    }
+    if audit_report.passed_pillars == audit_report.total_pillars {
+        log::info!(
+            "[audit] Quality Gate: {}/{} pillars passed across {} pages (0 issues)",
+            audit_report.passed_pillars,
+            audit_report.total_pillars,
+            audit_report.pages_scanned
+        );
+    } else {
+        log::warn!(
+            "[audit] Quality Gate: {}/{} pillars passed across {} pages ({} issues)",
+            audit_report.passed_pillars,
+            audit_report.total_pillars,
+            audit_report.pages_scanned,
+            audit_report.total_issues
+        );
+    }
+
     // Rebuild the dep graph from scratch on a successful compile so
     // the next `--incremental` invocation sees a consistent snapshot.
     let mut new_graph = crate::depgraph::DepGraph::new();

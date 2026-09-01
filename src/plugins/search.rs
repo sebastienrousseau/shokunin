@@ -70,8 +70,19 @@ impl SearchIndex {
     /// ```
     pub fn build(site_dir: &Path) -> Result<Self, SsgError> {
         let html_files = collect_html_files(site_dir)?;
-        let capped: Vec<_> =
-            html_files.into_iter().take(MAX_INDEX_ENTRIES).collect();
+        let capped: Vec<_> = html_files
+            .into_iter()
+            .filter(|p| {
+                let s = p.to_string_lossy().to_lowercase();
+                !s.contains("/404/")
+                    && !s.contains("/offline/")
+                    && !s.contains("/thanks/")
+                    && !s.ends_with("/404.html")
+                    && !s.ends_with("/offline.html")
+                    && !s.ends_with("/thanks.html")
+            })
+            .take(MAX_INDEX_ENTRIES)
+            .collect();
 
         let entries: Vec<SearchEntry> = capped
             .par_iter()

@@ -85,6 +85,10 @@ fn apply_html_fixes(html: &str) -> String {
         modified = wrap_tables_for_reflow(&modified);
     }
 
+    if modified.contains("&lt;div") || modified.contains("&lt;h") || modified.contains("&lt;p&gt;") {
+        modified = fix_escaped_html_entities(&modified);
+    }
+
     modified
 }
 
@@ -551,6 +555,68 @@ fn inject_class_attr(html: &mut String, pos: usize, class_value: &str) {
             }
         }
     }
+}
+
+/// Decodes HTML entities that were escaped inside markdown template bodies.
+fn fix_escaped_html_entities(html: &str) -> String {
+    let mut modified = html.to_string();
+
+    let pairs = [
+        ("&lt;div&gt;", "<div>"),
+        ("&lt;/div&gt;", "</div>"),
+        ("&lt;p&gt;", "<p>"),
+        ("&lt;/p&gt;", "</p>"),
+        ("&lt;h1&gt;", "<h1>"),
+        ("&lt;/h1&gt;", "</h1>"),
+        ("&lt;h2&gt;", "<h2>"),
+        ("&lt;/h2&gt;", "</h2>"),
+        ("&lt;h3&gt;", "<h3>"),
+        ("&lt;/h3&gt;", "</h3>"),
+        ("&lt;h4&gt;", "<h4>"),
+        ("&lt;/h4&gt;", "</h4>"),
+        ("&lt;h5&gt;", "<h5>"),
+        ("&lt;/h5&gt;", "</h5>"),
+        ("&lt;h6&gt;", "<h6>"),
+        ("&lt;/h6&gt;", "</h6>"),
+        ("&lt;ul&gt;", "<ul>"),
+        ("&lt;/ul&gt;", "</ul>"),
+        ("&lt;ol&gt;", "<ol>"),
+        ("&lt;/ol&gt;", "</ol>"),
+        ("&lt;li&gt;", "<li>"),
+        ("&lt;/li&gt;", "</li>"),
+        ("&lt;strong&gt;", "<strong>"),
+        ("&lt;/strong&gt;", "</strong>"),
+        ("&lt;em&gt;", "<em>"),
+        ("&lt;/em&gt;", "</em>"),
+        ("&lt;blockquote&gt;", "<blockquote>"),
+        ("&lt;/blockquote&gt;", "</blockquote>"),
+        ("&lt;hr&gt;", "<hr>"),
+        ("&lt;hr/&gt;", "<hr/>"),
+        ("&lt;br&gt;", "<br>"),
+        ("&lt;br/&gt;", "<br/>"),
+    ];
+
+    for (from, to) in pairs {
+        modified = modified.replace(from, to);
+    }
+
+    // Decode div wrappers with attributes
+    while let Some(start) = modified.find("&lt;div") {
+        if let Some(end_rel) = modified[start..].find("&gt;") {
+            let end = start + end_rel + 4;
+            let tag_chunk = &modified[start..end];
+            let decoded_tag = tag_chunk
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#x27;", "'");
+            modified = format!("{}{}{}", &modified[..start], decoded_tag, &modified[end..]);
+        } else {
+            break;
+        }
+    }
+
+    modified
 }
 
 #[cfg(test)]
