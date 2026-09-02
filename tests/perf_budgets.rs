@@ -157,7 +157,35 @@ fn median_of_3(n: usize) -> Option<Duration> {
     Some(samples[1])
 }
 
+/// Scales a budget for the platform it is measured on.
+///
+/// The budgets below are calibrated against the Linux runner, which is
+/// where `examples` enforces them and where the numbers in
+/// `docs/perf/baseline-100p.md` were taken. The module documentation has
+/// always said the CI budgets absorb "macOS/Windows runners ~3× slower
+/// than Linux", but nothing implemented that, and the small builds are
+/// the ones it matters for: a 10-page build is dominated by fixed
+/// filesystem overhead rather than per-page work, and Windows file
+/// operations are far more expensive than Linux ones. So
+/// `test · windows-latest` failed at 131 ms against a 100 ms ceiling
+/// while Linux passed comfortably — the runner was being measured, not
+/// the code.
+///
+/// Scaling here rather than loosening the constant keeps the sharp gate
+/// on the platform it was calibrated for. A genuine algorithmic
+/// regression blows past a 3× ceiling just as clearly as a 1× one.
+const fn platform_budget(budget: Duration) -> Duration {
+    if cfg!(target_os = "linux") {
+        budget
+    } else {
+        // Saturating by construction: every budget here is milliseconds,
+        // nowhere near overflowing.
+        Duration::from_millis(budget.as_millis() as u64 * 3)
+    }
+}
+
 fn assert_under_budget(label: &str, actual: Duration, budget: Duration) {
+    let budget = platform_budget(budget);
     assert!(
         actual <= budget,
         "{label}: {actual:.2?} exceeds budget {budget:.2?} \
