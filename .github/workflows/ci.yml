@@ -178,23 +178,20 @@ jobs:
         shell: bash
         run: cargo test --lib --features test-fault-injection
 
-      - name: Integration tests (excluding heavy examples)
+      - name: Integration tests
         shell: bash
-        run: |
-          cargo test --test regression \
-                     --test fault_injection \
-                     --test schema_validation \
-                     --test plugin_contracts \
-                     --test perf_regression \
-                     --test test_navigation \
-                     --test test_tags \
-                     --test test_manifest \
-                     --test test_human \
-                     --test test_json \
-                     --test test_uuid \
-                     --test test_file \
-                     --test test_cname \
-                     --features test-fault-injection
+        # `--tests` rather than an enumerated list of targets.
+        #
+        # The list this replaces named 13 of the 50 integration test files, so
+        # 29 of them ran nowhere in CI — including `release_versions`, which
+        # exists to catch a crate being published without a version gate, and
+        # which was failing when it finally ran. A hardcoded target list is a
+        # second inventory that has to be maintained in step with the first,
+        # and it silently was not.
+        #
+        # `tests/ci_test_coverage.rs` now asserts that every test target is
+        # reachable from a workflow, so this cannot drift back.
+        run: cargo test --tests --features test-fault-injection
 
   # ── Phase 2b: end-to-end examples (Linux only — heavy I/O) ──────────
   examples:
