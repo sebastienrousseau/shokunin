@@ -25,6 +25,9 @@ use clap::{ArgAction, Command};
 use ssg::cmd::completions::{render, Shell};
 use ssg::cmd::Cli;
 use std::collections::BTreeSet;
+// Used only by `each_script_parses_in_its_own_shell`, which is Unix-only;
+// without this gate Windows sees an unused import and CI runs -D warnings.
+#[cfg(unix)]
 use std::process::Command as Proc;
 
 fn script(shell: Shell) -> String {
@@ -262,10 +265,40 @@ fn every_shell_renders_deterministically() {
     }
 }
 
-/// Feeds each script to the real shell's parser. Skipped, with a notice,
-/// for any shell not installed on this machine — but never silently: a
-/// gate that quietly tests nothing is the failure mode this whole file
-/// exists to prevent.
+/// Feeds each script to the real shell's parser.
+///
+/// # Unix only, and why
+///
+/// bash, zsh and fish are POSIX-family shells; checking their syntax
+/// requires one of them to actually be present and usable. On Windows
+/// that assumption does not hold, and it fails in a way worth recording
+/// because the first version of this test shipped it:
+///
+///     bash rejected the generated bash completion:
+///
+/// — with nothing after the colon. The assertion prints the shell's
+/// stderr, and stderr was empty. A shell that dislikes your syntax says
+/// so; one that exits non-zero in silence was never a working shell.
+/// `bash.exe` resolves on a Windows runner (System32 ships one as the
+/// WSL launcher), so `Command::new("bash")` succeeds and tells you
+/// nothing about whether a POSIX shell is there to run.
+///
+/// The lesson generalises past this test: *a binary resolving on PATH is
+/// not evidence that it is the program you meant*. Rather than guess at
+/// which failures mean "not really a shell" — an exit code and an empty
+/// stream are far too weak a signal to branch on — the check runs where
+/// these shells genuinely live.
+///
+/// Nothing is lost by this. The other tests in this file are content
+/// gates over the generated text and run on every platform; the CI job
+/// that installs zsh, fish and mandoc is Linux; and the PowerShell
+/// script, which is the Windows-relevant one, is not covered by this
+/// test on any platform.
+///
+/// Within Unix, a shell that is genuinely absent is skipped with a
+/// notice rather than silently — a gate that quietly tests nothing is
+/// the failure mode this whole file exists to prevent.
+#[cfg(unix)]
 #[test]
 fn each_script_parses_in_its_own_shell() {
     let dir = std::env::temp_dir().join("ssg-completions-syntax");
@@ -289,15 +322,16 @@ fn each_script_parses_in_its_own_shell() {
         };
         assert!(
             out.status.success(),
-            "{bin} rejected the generated {} completion:\n{}",
+            "{bin} rejected the generated {} completion:\nstatus: {}\n{}",
             shell.name(),
+            out.status,
             String::from_utf8_lossy(&out.stderr)
         );
         checked += 1;
     }
 
-    // bash is present on every supported platform and every CI runner. If
-    // even that was skipped, the environment is wrong and this test is
+    // bash is present on every Unix platform and every Unix CI runner.
+    // If even that was skipped, the environment is wrong and this test is
     // reporting a pass it did not earn.
     assert!(
         checked > 0,
