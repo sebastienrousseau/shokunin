@@ -32,7 +32,7 @@
 - [Overview](#overview) — what SSG compiles, and from what
 - [Why this approach?](#why-this-approach) — design rationale, and what it costs
 - [Architecture](#architecture) — the build pipeline, stage by stage
-- [Benchmarks](#benchmarks) — headline figures; methodology in [`BENCHMARKS.md`](BENCHMARKS.md)
+- [Benchmarks](#benchmarks) — headline figures; methodology and the [latest nightly run](BENCHMARKS.md#latest-nightly-run) in [`BENCHMARKS.md`](BENCHMARKS.md)
 - [Features](#features) — capability matrix
 - [The CLI](#the-cli) — subcommands, build flags, legacy form
 - [Library Usage](#library-usage) — plugins, schemas, the AI pipeline
@@ -615,7 +615,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 </details>
 
 <details>
-<summary><b>All 38 modules</b></summary>
+<summary><b>All 66 modules</b></summary>
 
 | Module | Purpose |
 | :--- | :--- |
@@ -670,8 +670,21 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `postprocess::agentic_discovery` | `/agents.txt` + `/.well-known/{ai-plugin.json,mcp.json}` emitters — issue #552 |
 | `seo::jsonld::iso20022` | ISO 20022 schema.org descriptors for regulated financial sites (IBAN/BIC validators) — issue #553 |
 | `audit` | 15-gate audit runner (`ssg audit`) with JSON / `JUnit` / text output — issue #551 |
-| `head_dom` | Single-walk `lol_html`-based head metadata extractor + `</head>` injector — issue #538-540 |
-
+| `bench_corpus` | Deterministic seeded corpora for benchmarking; byte-identical across machines and releases |
+| `agent_api` | Agent JSON API emitter — issue #586 |
+| `collections` | Typed content collection API — issue #456 |
+| `content_stager` | Content staging; isolates residual upstream compiler gaps |
+| `dates` | Dependency-free date parsing shared by feeds and sitemaps |
+| `deploy_adapter` | Deploy adapter trait + per-target stubs for `ssg deploy` |
+| `dev_server` | Dev-server glue wiring `EventWatcher` → `DepGraph` — issue #526 |
+| `error` | Error types and context extension traits |
+| `io_pool` | Bounded writer-thread pool decoupling disk writes from rayon |
+| `oembed` | oEmbed 1.0 emitter — issue #586 |
+| `otel` | OpenTelemetry build-pipeline tracing scaffolding — issue #422 |
+| `sbom` | Build-time `CycloneDX` SBOM generation — issue #457 |
+| `theme_manifest` | Theme manifest compatibility check |
+| `urls` | Canonical page-URL derivation shared by staging, feeds and SEO |
+| `util` | Cross-cutting utilities, including the `lol_html` head walker |
 </details>
 
 ### Workspace crates
@@ -691,7 +704,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 
 | Document | Contents |
 | --- | --- |
-| [`BENCHMARKS.md`](BENCHMARKS.md) | Performance methodology, CI budgets, comparison tables |
+| [`BENCHMARKS.md`](BENCHMARKS.md) | Performance methodology, CI budgets, comparison tables, and the [latest nightly figures](BENCHMARKS.md#latest-nightly-run) |
 | [`SECURITY.md`](SECURITY.md) | Reporting policy, supported versions, guarantees |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and review expectations |
 | [`docs/adrs/`](docs/adrs/) | Architecture Decision Records in Nygard format |

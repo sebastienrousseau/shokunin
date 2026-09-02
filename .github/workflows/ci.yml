@@ -199,6 +199,13 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # This is the job that builds `examples/*/public`, so it is the job
+      # where a gate finding nothing to scan is a real failure rather than a
+      # missing prerequisite (#676). The example-dependent suites key on this
+      # rather than on `CI`, which fired in every job including the per-OS
+      # `test` job that never builds examples.
+      SSG_REQUIRE_EXAMPLES: "1"
     permissions:
       contents: read
       security-events: write # upload-sarif (ssg's own audit SARIF, #562)

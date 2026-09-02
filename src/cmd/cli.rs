@@ -70,6 +70,9 @@ pub enum CliInvocation {
     Plugins {
         /// Emit JSON rather than a table.
         json: bool,
+        /// Deploy target whose plugin should be included, mirroring
+        /// `ssg deploy --target`. Absent lists the plain build pipeline.
+        target: Option<String>,
     },
     /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
     /// run the 15 native CI gates against the built site (issue #549).
@@ -460,6 +463,20 @@ impl Cli {
                                     .help("Emit machine-readable JSON")
                                     .long("json")
                                     .action(ArgAction::SetTrue),
+                            )
+                            .arg(
+                                Arg::new("target")
+                                    .help(
+                                        "Include the deploy plugin for this \
+                                         target, as `ssg deploy` would register it",
+                                    )
+                                    .long("target")
+                                    .value_name("TARGET")
+                                    .value_parser(
+                                        clap::builder::PossibleValuesParser::new(
+                                            DEPLOY_TARGETS,
+                                        ),
+                                    ),
                             ),
                     ),
             )
@@ -552,11 +569,15 @@ impl Cli {
                 Some(("dev", _)) => CliInvocation::Dev,
                 Some(("check", _)) => CliInvocation::Check,
                 Some(("audit", _)) => CliInvocation::Audit,
-                Some(("plugins", sub_m)) => CliInvocation::Plugins {
-                    json: sub_m
-                        .subcommand_matches("list")
-                        .is_some_and(|m| m.get_flag("json")),
-                },
+                Some(("plugins", sub_m)) => {
+                    let list = sub_m.subcommand_matches("list");
+                    CliInvocation::Plugins {
+                        json: list.is_some_and(|m| m.get_flag("json")),
+                        target: list
+                            .and_then(|m| m.get_one::<String>("target"))
+                            .cloned(),
+                    }
+                }
                 Some(("deploy", sub_m)) => {
                     let target = sub_m
                         .get_one::<String>("target")

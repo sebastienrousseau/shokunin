@@ -5,74 +5,36 @@
 //! Scalability benchmarks: measures build time at 100, 1K, 10K, and 100K pages.
 
 use criterion::{criterion_group, BenchmarkId, Criterion, SamplingMode};
+use ssg::bench_corpus::{
+    generate_corpus as generate_corpus_seeded, CorpusSpec,
+};
 use std::fs;
 use std::hint::black_box;
 use std::path::Path;
 use tempfile::TempDir;
 
-/// Generates `n` synthetic Markdown files with realistic frontmatter.
+/// Writes `n` pages using the shared seeded corpus generator.
+///
+/// This delegates to `ssg::bench_corpus` rather than emitting its own front
+/// matter. Each bench file used to carry its own generator, so timings were
+/// only comparable within a single file: `bench_scalability` and
+/// `incremental_1000_pages` wrote different front matter and different body
+/// lengths while reporting as though they measured the same work.
 fn generate_corpus(dir: &Path, n: usize) {
-    fs::create_dir_all(dir).expect("create content dir");
-    for i in 0..n {
-        let content = format!(
-            "---\n\
-             title: \"Page {i}\"\n\
-             date: \"2026-01-15T09:00:00+00:00\"\n\
-             description: \"Benchmark page number {i} for scalability testing\"\n\
-             language: \"en-GB\"\n\
-             layout: \"page\"\n\
-             permalink: \"https://example.com/page-{i}\"\n\
-             charset: \"utf-8\"\n\
-             viewport: \"width=device-width, initial-scale=1, shrink-to-fit=no\"\n\
-             author: \"hello@example.com\"\n\
-             cdn: \"https://cloudcdn.pro\"\n\
-             copyright: \"Copyright © 2026. All rights reserved.\"\n\
-             hreflang: \"en\"\n\
-             id: \"https://example.com\"\n\
-             image: \"data:image/svg+xml;utf8,<svg></svg>\"\n\
-             logo_alt: \"Logo\"\n\
-             logo_height: \"33\"\n\
-             logo_width: \"100\"\n\
-             logo: \"\"\n\
-             name: \"Benchmark\"\n\
-             short_name: \"kaishi\"\n\
-             subtitle: \"Benchmark page number {i} for scalability testing\"\n\
-             theme-color: \"26, 58, 138\"\n\
-             url: \"https://example.com/page-{i}\"\n\
-             item_pub_date: \"2026-01-15T09:00:00+00:00\"\n\
-             last_build_date: \"2026-01-15T09:00:00+00:00\"\n\
-             primary: \"\"\n\
-             opengraph: \"\"\n\
-             apple: \"\"\n\
-             microsoft: \"\"\n\
-             twitter: \"\"\n\
-             ---\n\n\
-             # Page {i}\n\n\
-             This is benchmark content for page number {i}. \
-             The static site generator processes each page through \
-             the full pipeline including template rendering and \
-             plugin transforms.\n\n\
-             ## Features\n\n\
-             - Fast compilation with Rayon parallelism\n\
-             - Content-addressed caching for incremental builds\n\
-             - Fused transform pipeline for minimal I/O\n\n\
-             The build system handles {n} pages efficiently.\n"
-        );
-        let filename = if i == 0 {
-            "index.md".to_string()
-        } else {
-            format!("page-{i}.md")
-        };
-        fs::write(dir.join(filename), content).expect("write benchmark page");
-    }
+    let spec = CorpusSpec::new(n);
+    let _written =
+        generate_corpus_seeded(dir, &spec).expect("write benchmark corpus");
 }
 
 #[allow(unused_results)]
 fn bench_build_at_scale(c: &mut Criterion) {
+    // The tiers the elevation plan publishes figures for. 100K is included
+    // because the memory budget is asserted at that size; it is the tier the
+    // "100K pages under the configured budget" claim rests on.
     let tiers: &[(usize, &str)] = &[
-        (100, "100 pages"),
         (1_000, "1K pages"),
         (10_000, "10K pages"),
+        (100_000, "100K pages"),
     ];
 
     let mut group = c.benchmark_group("scalability");

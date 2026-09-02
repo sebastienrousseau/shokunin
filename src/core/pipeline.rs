@@ -1071,6 +1071,41 @@ mod tests {
         assert!(dupes.is_empty(), "duplicate plugin names: {dupes:?}");
     }
 
+    /// WS0.5's acceptance condition: "`ssg plugins list` shows exactly one
+    /// Deploy and one SBOM plugin".
+    ///
+    /// Without a target the deploy plugin does not register at all, which is
+    /// correct for a plain build but means the deploy stage cannot be
+    /// inspected. `--target` mirrors what `ssg deploy` would register.
+    #[test]
+    fn one_deploy_plugin_registers_when_a_target_is_given() {
+        let config = SsgConfig::default();
+
+        let mut without = plugin::PluginManager::new();
+        register_default_plugins(&mut without, &config, false, None);
+        assert!(
+            !without
+                .inventory()
+                .iter()
+                .any(|p| p.name.contains("deploy")),
+            "a plain build should register no deploy plugin"
+        );
+
+        let mut with = plugin::PluginManager::new();
+        register_default_plugins(&mut with, &config, false, Some("netlify"));
+        let deploy: Vec<_> = with
+            .inventory()
+            .into_iter()
+            .filter(|p| p.name.contains("deploy"))
+            .collect();
+        assert_eq!(
+            deploy.len(),
+            1,
+            "expected exactly one deploy plugin, got {deploy:?}"
+        );
+        assert_eq!(with.len(), without.len() + 1);
+    }
+
     /// Exactly one SBOM emitter, and it is the one that also links the
     /// document head — see `postprocess::SbomPlugin`'s deprecation note.
     #[test]

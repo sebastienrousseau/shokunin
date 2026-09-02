@@ -158,3 +158,108 @@ fn benchmarks_doc_states_the_current_version() {
         );
     }
 }
+
+#[test]
+fn readme_module_table_lists_every_public_module() {
+    // The table was headed "All 38 modules" while listing 49 rows against 63
+    // public modules — three numbers, none of them matching. Same class of
+    // drift as the plugin count, and the reason a reader cannot use the table
+    // as an index: fourteen modules were simply absent.
+    //
+    // `bench_corpus` is excluded: it is `#[cfg(any(test, feature =
+    // "benchmark"))]` and so is not part of the surface a normal build
+    // exposes.
+    let lib = fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"),
+    )
+    .expect("src/lib.rs is readable");
+
+    let mut public: Vec<String> = Vec::new();
+    let mut gated = false;
+    for line in lib.lines() {
+        let t = line.trim();
+        if t.starts_with("#[cfg(") {
+            gated = true;
+            continue;
+        }
+        // `pub use crate::a::{b, c};` re-exports items, not modules, and
+        // `pub use crate::a::b as c;` renames one. Neither names a module the
+        // table should index, so both are skipped rather than mis-parsed.
+        let name = t
+            .strip_prefix("pub mod ")
+            .and_then(|r| r.strip_suffix(';'))
+            .map(str::to_string)
+            .or_else(|| {
+                let rest =
+                    t.strip_prefix("pub use crate::")?.strip_suffix(';')?;
+                if rest.contains('{') || rest.contains(" as ") {
+                    return None;
+                }
+                rest.rsplit("::").next().map(str::to_string)
+            });
+        if let Some(name) = name {
+            if !gated {
+                public.push(name);
+            }
+        }
+        if !t.is_empty() {
+            gated = false;
+        }
+    }
+    assert!(
+        !public.is_empty(),
+        "parsed no public modules from src/lib.rs"
+    );
+
+    let text = readme();
+    let missing: Vec<&String> = public
+        .iter()
+        .filter(|m| !text.contains(&format!("| `{m}` |")))
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "these public modules are absent from the README module table:\n  {}\n\
+         The table is presented as an index; a module missing from it is \
+         undiscoverable.",
+        missing
+            .iter()
+            .map(|m| m.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  ")
+    );
+}
+
+#[test]
+fn readme_module_count_matches_the_table() {
+    // The heading is a claim about the table directly beneath it.
+    let text = readme();
+    // Count only inside the collapsed module table; the README has several
+    // other tables whose rows open the same way.
+    let start = text
+        .find("modules</b></summary>")
+        .expect("README has a module-table heading");
+    let end = text[start..]
+        .find("</details>")
+        .map_or(text.len(), |i| start + i);
+    let rows = text[start..end]
+        .lines()
+        .filter(|l| l.starts_with("| `"))
+        .count();
+
+    let heading = text
+        .lines()
+        .find(|l| l.contains("modules</b></summary>"))
+        .expect("README has a module-table heading");
+    let claimed: usize = heading
+        .chars()
+        .filter(char::is_ascii_digit)
+        .collect::<String>()
+        .parse()
+        .expect("heading states a number");
+
+    assert_eq!(
+        claimed, rows,
+        "the module table is headed {claimed} but lists {rows} rows"
+    );
+}

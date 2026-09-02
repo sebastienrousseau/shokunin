@@ -27,13 +27,11 @@
 //! # Examples
 //!
 //! ```rust
-//! # #[cfg(feature = "benchmark")] {
 //! use ssg::bench_corpus::{generate_corpus, CorpusSpec};
 //! let dir = tempfile::tempdir().unwrap();
 //! let spec = CorpusSpec::new(64);
 //! let written = generate_corpus(dir.path(), &spec).unwrap();
 //! assert_eq!(written, 64);
-//! # }
 //! ```
 
 use std::fs;
@@ -83,13 +81,11 @@ const TAGS: &[&str] = &[
 /// # Examples
 ///
 /// ```rust
-/// # #[cfg(feature = "benchmark")] {
 /// use ssg::bench_corpus::CorpusSpec;
 /// // The published sizes: 1K, 10K, 100K.
 /// let spec = CorpusSpec::new(1_000);
 /// assert_eq!(spec.pages, 1_000);
 /// assert_eq!(spec.seed, CorpusSpec::DEFAULT_SEED);
-/// # }
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CorpusSpec {
@@ -170,12 +166,10 @@ impl Rng {
 /// # Examples
 ///
 /// ```rust
-/// # #[cfg(feature = "benchmark")] {
 /// use ssg::bench_corpus::{generate_corpus, CorpusSpec};
 /// let dir = tempfile::tempdir().unwrap();
 /// generate_corpus(dir.path(), &CorpusSpec::new(4)).unwrap();
 /// assert!(dir.path().join("page-0000.md").is_file());
-/// # }
 /// ```
 pub fn generate_corpus(dir: &Path, spec: &CorpusSpec) -> io::Result<usize> {
     fs::create_dir_all(dir)?;

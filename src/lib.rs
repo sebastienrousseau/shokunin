@@ -113,7 +113,6 @@ pub mod util;
 pub use error::{PathErrorExt, SsgError};
 
 // Re-export core modules for public API compatibility
-#[cfg(any(test, feature = "benchmark"))]
 pub use crate::core_group::bench_corpus;
 pub use crate::core_group::cache;
 pub use crate::core_group::collections;
@@ -641,7 +640,9 @@ fn dispatch_invocation(
         CliInvocation::Check => run_check(matches),
         CliInvocation::Audit => run_audit(matches),
         CliInvocation::Deploy { target } => run_deploy(matches, &target),
-        CliInvocation::Plugins { json } => run_plugins(matches, json),
+        CliInvocation::Plugins { json, target } => {
+            run_plugins(json, target.as_deref())
+        }
     }
 }
 
@@ -651,18 +652,17 @@ fn dispatch_invocation(
 /// build uses, so the listing cannot drift from what actually runs — which is
 /// the point: the README's plugin count is generated from this, and the count
 /// had already gone stale once (33 registered, "38 plugins" documented).
-fn run_plugins(matches: &clap::ArgMatches, json: bool) -> Result<(), SsgError> {
+fn run_plugins(json: bool, target: Option<&str>) -> Result<(), SsgError> {
     // Which plugins register depends on configuration — the edge-headers
     // emitter only appears when a target is set, for instance — so the real
     // config is used when one can be found. A project without one still gets
     // an accurate listing for the defaults rather than an error.
-    let _ = matches;
     let config = SsgConfig::discover_config_file()
         .and_then(|path| SsgConfig::from_file(&path).ok())
         .unwrap_or_default();
 
     let mut plugins = plugin::PluginManager::new();
-    pipeline::register_default_plugins(&mut plugins, &config, false, None);
+    pipeline::register_default_plugins(&mut plugins, &config, false, target);
     let inventory = plugins.inventory();
 
     if json {

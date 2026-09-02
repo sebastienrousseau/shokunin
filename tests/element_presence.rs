@@ -69,10 +69,19 @@ fn bail_on_empty(gate: &str, count: usize) -> bool {
          — run `cargo build --examples && cargo test --test \
          example_outputs` first to populate."
     );
+    // `SSG_REQUIRE_EXAMPLES` rather than `CI`.
+    //
+    // The intent of #676 stands: a gate that scans nothing must not report
+    // success in the job that exists to run it. But keying on `CI` alone
+    // meant the target hard-failed in *every* CI job, including the
+    // per-OS `test` job, which does not build the examples and never
+    // claimed to. The examples job sets this variable; everywhere else the
+    // target skips, which is honest rather than green-and-blind because
+    // the job that owns the check still enforces it.
     assert!(
-        std::env::var_os("CI").is_none(),
-        "{msg}\n\nThis is a hard failure under CI: a gate that scans \
-         nothing must not report success."
+        std::env::var_os("SSG_REQUIRE_EXAMPLES").is_none(),
+        "{msg}\n\nThis is a hard failure where examples are required: a \
+         gate that scans nothing must not report success."
     );
     eprintln!("{msg} Skipping (local run).");
     true

@@ -218,6 +218,28 @@ committed; the deterministic-corpus baselines under
 
 ---
 
+## Latest nightly run
+
+The figures in this section are produced by
+[`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml), not
+typed in. The workflow runs nightly on a named runner, records the hardware
+alongside the numbers, and uploads `bench-report.md` plus the raw Criterion
+output as a build artifact.
+
+<!-- BENCHMARK-RESULTS:START -->
+_No nightly run has been recorded yet. The workflow is scheduled at 03:30 UTC
+and can be triggered from the Actions tab; the first run replaces this
+placeholder._
+<!-- BENCHMARK-RESULTS:END -->
+
+Corpora come from `ssg::bench_corpus`, a seeded generator whose output is
+byte-identical across machines and releases — page N is the same whether the
+corpus holds 1K pages or 100K, so the tiers are comparable to each other and
+to previous runs. A figure that cannot be regenerated is a claim, not a
+measurement.
+
+---
+
 ## Coverage Floors (informational)
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
