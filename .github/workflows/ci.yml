@@ -58,28 +58,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: No stray *.profraw outside target/
-        run: |
-          set -euo pipefail
-          # Mirror .gitignore exclusions so local-pre-commit reuse is sane.
-          stray=$(find . -name '*.profraw' \
-              -not -path './target/*' \
-              -not -path './.git/*' \
-              -not -path './.claude/*' || true)
-          if [ -n "$stray" ]; then
-            echo "::error::stray *.profraw outside target/ — run 'make coverage' (sets LLVM_PROFILE_FILE) and re-run:"
-            echo "$stray"
-            exit 1
-          fi
-      - name: No tracked *.profraw
-        run: |
-          set -euo pipefail
-          tracked=$(git ls-files '*.profraw' || true)
-          if [ -n "$tracked" ]; then
-            echo "::error::*.profraw tracked by git (must be ignored, never committed):"
-            echo "$tracked"
-            exit 1
-          fi
+      # Extracted to a script so `./scripts/repo-hygiene.sh` reproduces
+      # this job exactly — see DEVELOPMENT.md.
+      - name: Repository hygiene
+        run: ./scripts/repo-hygiene.sh
 
   # ── Phase 1: lint (blocks downstream) ───────────────────────────────
   lint:
@@ -129,7 +111,7 @@ jobs:
 
       - name: ADR citation graph (#557)
         # Refuses dangling `adr: ADR-NNNN` citations in tracked source.
-        # Every cited ADR must resolve to a file in docs/adrs/.
+        # Every cited ADR must resolve to a file in docs/adr/.
         run: ./tools/lint-adr.sh
 
       - name: feature powerset check (#584)
@@ -161,15 +143,15 @@ jobs:
     # so 15 left no margin for ordinary variance. 20 absorbs that while
     # still failing a genuinely hung job.
     #
-    # 20 -> 30 alongside the example-suite fix. With a 14-15m cold compile
+    # 20 → 30 alongside the example-suite fix. With a 14-15m cold compile
     # already eating most of the old ceiling, the remaining test time left
     # almost no margin: measured locally, `--tests` spends ~8m40s actually
-    # running, and three suites account for nearly all of it --
+    # running, and three suites account for nearly all of it —
     # `unittests src/lib.rs` (255s), `html_rewriter_correctness` (145s) and
     # `plugins/main.rs` (118s). Those three are legitimately slow rather
     # than accidentally heavy: they encode real JPEGs and exercise a 5 MB
     # page in a debug profile. So the honest fix is headroom, not a faster
-    # gate -- a cancelled job reads as a test failure and is not one.
+    # gate — a cancelled job reads as a test failure and is not one.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -204,6 +186,40 @@ jobs:
         # `tests/ci_test_coverage.rs` now asserts that every test target is
         # reachable from a workflow, so this cannot drift back.
         run: cargo test --tests --features test-fault-injection
+
+  # ── Phase 1b: documentation gates (REPO-STANDARD §2) ────────────────
+  # These suites also run inside `cargo test --tests`, but they fail for a
+  # different reason than a code test does — documentation drifted from
+  # code — and a reader of a red pipeline should be able to see that from
+  # the job name without opening the log. They are cheap, so the
+  # duplication costs a minute and saves a misdiagnosis.
+  docs-lint:
+    name: docs lint
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          shared-key: docs-lint
+      - name: Internal Markdown link integrity
+        run: cargo test --test doc_links
+      - name: README counts match the code
+        run: cargo test --test readme_sync
+      - name: Documented behaviour matches actual behaviour
+        run: cargo test --test docs_accuracy
+      - name: DEVELOPMENT.md matches the workflow
+        run: cargo test --test development_docs
+      - name: Man page matches the CLI definition
+        run: cargo test --test man_page
+      - name: Shell completions match the CLI definition
+        run: cargo test --test completions
+      - name: rustdoc builds with no broken intra-doc links
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg
 
   # ── Phase 2b: end-to-end examples (Linux only — heavy I/O) ──────────
   examples:
@@ -391,6 +407,42 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check
         run: cargo deny check
+
+  # ── Phase 2d: install contract (REPO-STANDARD §3) ───────────────────
+  # The standard's acceptance criterion is "`make DESTDIR=/tmp/stage
+  # install` produces a correct tree on a clean runner", so this job runs
+  # on a runner that has never built the project and checks the staged
+  # tree against the contract exactly — a file that stops being installed
+  # fails it just as loudly as one that appears unexpectedly.
+  #
+  # The job runs scripts/install-smoke.sh and nothing else, so a
+  # contributor reproduces it locally with a single command. Every red
+  # round on this branch came from a local invocation that differed from
+  # the one CI ran.
+  install-smoke:
+    name: install contract
+    needs: lint
+    runs-on: ubuntu-latest
+    # A release build of the full dependency tree on a cold cache is the
+    # bulk of this job; 20m was too close to it.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          shared-key: install-smoke
+      # zsh, fish and mandoc are the checkers, not dependencies of ssg:
+      # without them the script skips those steps and would report a pass
+      # it did not earn.
+      - name: Install shells and the roff linter
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zsh fish mandoc
+      - name: make DESTDIR=/tmp/stage install
+        run: ./scripts/install-smoke.sh /tmp/stage
 
   # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
   # cargo-vet complements cargo-deny (license + CVE) with per-crate
