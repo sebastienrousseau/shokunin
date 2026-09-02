@@ -37,10 +37,25 @@
 //!
 //! Every test creates a fresh `TempDir`, generates a deterministic
 //! corpus (`generate_corpus` mirrors the bench harness in
-//! `benches/bench_scalability.rs`), runs one warmup iteration to
-//! prime caches, then takes the median of 3 measured runs. This
-//! filters out one-off scheduler hiccups without hiding genuine
-//! regressions.
+//! `benches/bench_scalability.rs`), runs one warmup iteration to prime
+//! caches, then takes the **fastest** of five measured runs. The
+//! minimum rather than a median, because runner interference is
+//! one-sided — see `best_of`.
+//!
+//! ## Two kinds of gate
+//!
+//! The absolute ceilings in the table above are enforced on Linux only,
+//! where they were calibrated. A wall-clock ceiling measures the machine
+//! as much as the code, and on the shared Windows runner the same
+//! 10-page build produced 131.00 ms and then 323.61 ms on consecutive
+//! runs.
+//!
+//! The gate that runs everywhere is
+//! `build_cost_per_page_does_not_grow_with_corpus_size`, which compares
+//! per-page cost at two large corpus sizes. Both measurements happen on
+//! the same machine moments apart, so machine speed divides out and what
+//! remains is whether compilation still scales linearly — the regression
+//! class actually worth gating.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
@@ -144,17 +159,31 @@ fn compile_n_pages(n: usize) -> Option<Duration> {
     Some(start.elapsed())
 }
 
-/// Median of 3 measured runs after a single warmup iteration.
-fn median_of_3(n: usize) -> Option<Duration> {
-    // Warmup primes the file-system cache for the second-and-later runs.
+/// Samples taken per measurement.
+const SAMPLES: usize = 5;
+
+/// The fastest of [`SAMPLES`] runs, after a warmup iteration.
+///
+/// The minimum, not the median. Interference on a shared runner is
+/// one-sided: contention, page-cache misses and co-tenant load make a
+/// run slower and never faster, so the fastest observed run is the
+/// least-contaminated estimate of the true cost. A median still carries
+/// whatever noise the middle sample happened to pick up.
+///
+/// That is not a stylistic preference — it was measured. Switching from
+/// median-of-3 to min-of-5 moved the local 10-page figure from 128 ms to
+/// roughly 45 ms on the same machine and the same code. The old number
+/// was mostly noise, which is precisely why budgets calibrated against
+/// it kept moving.
+fn best_of(n: usize) -> Option<Duration> {
+    // Warmup primes the file-system cache for the measured runs.
     let _ = compile_n_pages(n)?;
-    let mut samples = [
-        compile_n_pages(n)?,
-        compile_n_pages(n)?,
-        compile_n_pages(n)?,
-    ];
-    samples.sort();
-    Some(samples[1])
+    let mut best = compile_n_pages(n)?;
+    for _ in 1..SAMPLES {
+        let sample = compile_n_pages(n)?;
+        best = best.min(sample);
+    }
+    Some(best)
 }
 
 /// Whether the wall-clock budgets are enforced on this platform.
@@ -188,7 +217,7 @@ fn median_of_3(n: usize) -> Option<Duration> {
 /// Off Linux the build still runs — so a panic, a hang or wrong output
 /// is still caught on every platform — and the timing is printed for
 /// information rather than asserted on.
-fn budgets_are_enforced_here() -> bool {
+const fn budgets_are_enforced_here() -> bool {
     cfg!(target_os = "linux")
 }
 
@@ -214,9 +243,89 @@ fn assert_under_budget(label: &str, actual: Duration, budget: Duration) {
 // Budget gates
 // =====================================================================
 
+/// Corpus sizes for the scaling gate. Both are large enough that fixed
+/// start-up cost has amortised, which is what makes the comparison
+/// stable — see [`build_cost_per_page_does_not_grow_with_corpus_size`].
+const SCALE_SMALL: usize = 100;
+const SCALE_LARGE: usize = 500;
+
+/// How much per-page cost may grow between the two sizes.
+///
+/// Measured growth across four runs, including two on a machine loaded
+/// by a concurrent test suite, was 0.47, 0.50, 1.14 and 1.19 — at or
+/// below parity, as linear scaling predicts once fixed cost amortises.
+///
+/// The threshold sits well clear of both ends. Above it: O(n^2) puts
+/// this at 5.0 and O(n^1.5) at 2.24, both caught; O(n log n) reaches
+/// only 1.35, correctly allowed. Below it: 1.7x headroom over the worst
+/// observed legitimate sample.
+///
+/// The noise also runs in the safe direction. Inflating the *small*
+/// measurement lowers the ratio, and the small corpus is the noisier of
+/// the two (22% spread at n=100 against 1% at n=500). A false failure
+/// needs the large, stable measurement to be inflated relative to the
+/// small, noisy one — the unlikely direction.
+const MAX_PER_PAGE_GROWTH: f64 = 2.0;
+
+/// The gate that survives a noisy runner: per-page cost must not grow
+/// as the corpus grows.
+///
+/// # Why this exists alongside the absolute budgets
+///
+/// A wall-clock ceiling measures the machine at least as much as the
+/// code. On the shared, virtualised Windows runner the same 10-page
+/// build produced 131.00 ms on one run and 323.61 ms on the next —
+/// 2.5x variance on identical code — so any ceiling loose enough never
+/// to flake there is far too loose to catch a real regression.
+///
+/// A ratio does not have that problem. Both measurements are taken on
+/// the same machine moments apart, so machine speed divides out almost
+/// entirely, and what is left is the property the suite actually cares
+/// about: whether compilation still scales linearly in the number of
+/// pages. That is the regression class worth gating — an accidental
+/// O(n^2) in a lookup, a per-page full-corpus scan — and it shows up
+/// here as a growth factor of ~5 rather than a few percent.
+///
+/// Both sizes are deliberately large. Measured spread across rounds was
+/// 26% at n=10 but 1% at n=500: fixed start-up cost and scheduler
+/// jitter are roughly constant, so they dominate a small corpus and
+/// amortise on a big one. Comparing two large corpora is what makes
+/// this stable enough to assert on every platform.
+#[test]
+fn build_cost_per_page_does_not_grow_with_corpus_size() {
+    let (Some(small), Some(large)) =
+        (best_of(SCALE_SMALL), best_of(SCALE_LARGE))
+    else {
+        eprintln!("[perf_budgets] templates missing — skipping scaling");
+        return;
+    };
+
+    let per_page_small = small.as_secs_f64() / SCALE_SMALL as f64;
+    let per_page_large = large.as_secs_f64() / SCALE_LARGE as f64;
+    let growth = per_page_large / per_page_small;
+
+    eprintln!(
+        "[perf_budgets] per-page cost: {:.3}ms at {SCALE_SMALL} pages, \
+         {:.3}ms at {SCALE_LARGE} pages (growth {growth:.2}x, \
+         limit {MAX_PER_PAGE_GROWTH:.2}x)",
+        per_page_small * 1000.0,
+        per_page_large * 1000.0,
+    );
+
+    assert!(
+        growth <= MAX_PER_PAGE_GROWTH,
+        "per-page build cost grew {growth:.2}x between {SCALE_SMALL} and \
+         {SCALE_LARGE} pages (limit {MAX_PER_PAGE_GROWTH:.2}x). Linear \
+         scaling keeps this at or below 1.0; a value near 5 means the \
+         pipeline has picked up a per-page pass over the whole corpus. \
+         This gate is machine-independent, so a shared or slow runner is \
+         not the explanation — profile it."
+    );
+}
+
 #[test]
 fn build_10_pages_within_budget() {
-    let Some(t) = median_of_3(10) else {
+    let Some(t) = best_of(10) else {
         eprintln!("[perf_budgets] templates missing — skipping 10-page");
         return;
     };
@@ -225,7 +334,7 @@ fn build_10_pages_within_budget() {
 
 #[test]
 fn build_100_pages_within_budget() {
-    let Some(t) = median_of_3(100) else {
+    let Some(t) = best_of(100) else {
         eprintln!("[perf_budgets] templates missing — skipping 100-page");
         return;
     };
@@ -243,7 +352,7 @@ fn build_100_pages_within_budget() {
 #[ignore = "500-page build is slow on cold runners; opt-in via \
             `cargo test --test perf_budgets -- --ignored`"]
 fn build_500_pages_within_budget() {
-    let Some(t) = median_of_3(500) else {
+    let Some(t) = best_of(500) else {
         eprintln!("[perf_budgets] templates missing — skipping 500-page");
         return;
     };
