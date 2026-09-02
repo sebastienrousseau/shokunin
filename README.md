@@ -169,7 +169,7 @@ times see [Benchmarks](#benchmarks).
 | CSP/SRI auto-extraction | Yes | No | No | Plugin |
 | axe-core CI gate | Yes | No | No | No |
 | WebAssembly target | Yes | No | No | N/A |
-| 95% CI coverage floors | Yes | No | No | No |
+| 98% CI coverage floors | Yes | No | No | No |
 | Zero unsafe code | Yes | Yes | Yes | N/A |
 
 ---
@@ -200,7 +200,7 @@ graph TD
 | :--- | :--- |
 | **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
 | **Test suite** | 3,566 unit tests (`cargo test --lib`) + 51 integration test targets |
-| **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
+| **Coverage** | 98% region, 98% line, 98% function (CI-gated); measured 99.31 / 99.29 / 99.24 |
 | **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
@@ -582,7 +582,7 @@ make clean        # remove build artifacts
 
 | Workflow | Trigger | Purpose |
 | :--- | :--- | :--- |
-| `ci.yml` | push, PR | fmt, clippy, test (3 OS), coverage (95% floor), cargo-deny |
+| `ci.yml` | push, PR | fmt, clippy, test (3 OS), coverage (98% floor), cargo-deny |
 | `document.yml` | push to main | Build and deploy API docs to GitHub Pages |
 | `release.yml` | tag `v*` | Cross-platform binaries, GHCR container, crates.io, AUR |
 | `scheduled.yml` | weekly, tag | Multi-OS portability, axe-core a11y, `CycloneDX` SBOM, benchmarks |

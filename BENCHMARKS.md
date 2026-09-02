@@ -150,7 +150,7 @@ captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 | Local LLM pipeline | **Yes** | No | No | No | No |
 | WASM build target | **Yes** | No | No | n/a | n/a |
 | CycloneDX SBOM | **Yes** | No | No | No | No |
-| CI coverage floor | **95.5 / 96.5 / 95.5** | None | None | None | None |
+| CI coverage floor | **98.0 / 98.0 / 98.0** | None | None | None | None |
 
 Reproduce locally:
 
@@ -224,9 +224,9 @@ CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
 | Metric | Floor | Current (v0.0.58) | Headroom |
 |---|---:|---:|---:|
-| Regions | 95.5 % | 95.71 % | 0.21 |
-| Functions | 95.5 % | 95.77 % | 0.27 |
-| Lines | 96.5 % | 96.87 % | 0.37 |
+| Regions | 98.0 % | 99.31 % | 1.31 |
+| Functions | 98.0 % | 99.24 % | 1.24 |
+| Lines | 98.0 % | 99.29 % | 1.29 |
 
 The gate runs `cargo llvm-cov --lib` (not `--tests`) so the heavy
 `tests/example_outputs.rs` integration suite stays in its own

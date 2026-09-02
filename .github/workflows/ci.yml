@@ -41,9 +41,9 @@ env:
   # Gate uses `cargo llvm-cov --lib` to keep example_outputs.rs
   # integration tests (which run real `ssg build` invocations with their
   # own timeouts in the `examples` job) out of the instrumented run.
-  COVERAGE_REGIONS_FLOOR: "95.5"
-  COVERAGE_LINES_FLOOR: "96.5"
-  COVERAGE_FUNCTIONS_FLOOR: "95.5"
+  COVERAGE_REGIONS_FLOOR: "98.0"
+  COVERAGE_LINES_FLOOR: "98.0"
+  COVERAGE_FUNCTIONS_FLOOR: "98.0"
 
 jobs:
   # ── Phase 0: repo hygiene (issue #556) ──────────────────────────────
