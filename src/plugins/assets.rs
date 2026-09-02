@@ -164,6 +164,14 @@ fn fingerprint_file(
     // Guarded against the degenerate case where the hash lands on the name
     // the file already has, which would otherwise delete the asset.
     if new_path != asset_path {
+        // The failpoint precedes the removal so an injected error exercises
+        // the same branch a real `remove_file` failure would: the
+        // fingerprinted copy is already on disk, and the original must be
+        // left in place rather than half-removed.
+        fail_point!("assets::remove-original", |_| Err(SsgError::Validation {
+            field: "assets".to_string(),
+            message: "injected: assets::remove-original".to_string(),
+        }));
         fs::remove_file(asset_path).with_path(asset_path)?;
     }
 

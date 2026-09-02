@@ -236,6 +236,15 @@ impl AuditPlugin {
             }
         }
 
+        // `fs::read_dir` yields entries in whatever order the filesystem
+        // gives, which differs between ext4 and APFS. Issues are pushed in
+        // this order, so an unsorted walk made `quality-gate-report.json`
+        // differ between Linux and macOS for identical input — the
+        // determinism gate compares the two trees and failed on exactly this
+        // one file. Sorting makes the report a function of the site, not of
+        // the machine that built it.
+        html_files.sort();
+
         if html_files.is_empty() {
             if let Some(p) = pillars.get_mut("1. Output & Essential Files") {
                 p.add_issue("No compiled HTML files found in output directory");
@@ -574,6 +583,63 @@ mod tests {
         assert!(!is_taxonomy_page("fr/a-propos/index.html"));
         // A content page that merely starts with the same letters is authored.
         assert!(!is_taxonomy_page("tagging-guide/index.html"));
+    }
+
+    /// Issues must be recorded in lexical path order, not filesystem order.
+    ///
+    /// `fs::read_dir` returns entries in whatever order the filesystem gives:
+    /// ext4 and APFS disagree, so without a sort the same input produced a
+    /// different `quality-gate-report.json` on Linux and macOS, and the
+    /// cross-OS determinism gate failed on exactly that one file.
+    ///
+    /// This asserts the ordering property directly rather than comparing two
+    /// builds. A comparison test passes vacuously on a filesystem that
+    /// happens to return entries in a stable order — which APFS does, so it
+    /// proved nothing locally while the real divergence was against Linux.
+    #[test]
+    fn issues_are_recorded_in_lexical_path_order() {
+        let temp = TempDir::new().unwrap();
+        let sdir = temp.path();
+
+        fs::write(sdir.join("robots.txt"), "User-agent: *").unwrap();
+        fs::write(sdir.join("sitemap.xml"), "<urlset></urlset>").unwrap();
+        fs::write(sdir.join("manifest.json"), "{}").unwrap();
+        fs::write(sdir.join("rss.xml"), "<rss></rss>").unwrap();
+        fs::write(sdir.join("search-index.json"), "[]").unwrap();
+
+        // Names chosen so creation order and lexical order differ.
+        for name in ["zulu", "alpha", "mike", "bravo"] {
+            let sub = sdir.join(name);
+            fs::create_dir_all(&sub).unwrap();
+            fs::write(
+                sub.join("index.html"),
+                "<html><body><p>no lang, no h1</p></body></html>",
+            )
+            .unwrap();
+        }
+
+        let report = AuditPlugin::audit_directory(sdir);
+        let pillar = report
+            .pillars
+            .get("10. Accessibility & Semantic Hierarchy")
+            .expect("accessibility pillar is always present");
+        assert!(
+            pillar.issues.len() >= 4,
+            "expected an issue per page, got {:?}",
+            pillar.issues
+        );
+
+        let paths: Vec<&str> = pillar
+            .issues
+            .iter()
+            .filter_map(|i| i.split(':').next())
+            .collect();
+        let mut sorted = paths.clone();
+        sorted.sort_unstable();
+        assert_eq!(
+            paths, sorted,
+            "issues are not in lexical path order; the file walk is unsorted"
+        );
     }
 
     #[test]
