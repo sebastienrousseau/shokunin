@@ -85,11 +85,61 @@ fn apply_html_fixes(html: &str) -> String {
         modified = wrap_tables_for_reflow(&modified);
     }
 
-    if modified.contains("&lt;div") || modified.contains("&lt;h") || modified.contains("&lt;p&gt;") {
+    if modified.contains("&lt;") {
         modified = fix_escaped_html_entities(&modified);
     }
 
+    if modified.contains("<code><") {
+        modified = escape_markup_inside_code_spans(&modified);
+    }
+
     modified
+}
+
+/// Escapes raw tags that the legacy compiler leaves inside `<code>` spans.
+///
+/// Markdown renders `` `<img>` `` as a code span whose text is the literal
+/// characters `<img>`; the correct HTML is `<code>&lt;img&gt;</code>`. The
+/// `staticdatagen` renderer escapes quotes but not angle brackets, so it emits
+/// `<code><img></code>` — a real, attribute-less element.
+///
+/// The blog example is the case that surfaced it: an accessibility checklist
+/// reading "Every `<img>` has a meaningful `alt`" shipped a page containing an
+/// `<img>` with no `alt`, which `tests/example_outputs.rs` correctly failed.
+/// Beyond the irony, any documentation quoting `<script>` in prose would have
+/// emitted a live script element.
+///
+/// `ssg_core::compile_markdown` gets this right (it uses pulldown-cmark's own
+/// HTML writer), so this repair exists only until WS1 retires the legacy
+/// compiler — at which point the guard above stops matching and the pass costs
+/// nothing.
+fn escape_markup_inside_code_spans(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+
+    while let Some(start) = rest.find("<code>") {
+        let after_open = start + "<code>".len();
+        let Some(close_rel) = rest[after_open..].find("</code>") else {
+            break;
+        };
+        let close = after_open + close_rel;
+
+        out.push_str(&rest[..after_open]);
+        // Only the span's text is escaped; the surrounding markup, including
+        // any attributes on the <code> element itself, is left untouched.
+        for ch in rest[after_open..close].chars() {
+            match ch {
+                '<' => out.push_str("&lt;"),
+                '>' => out.push_str("&gt;"),
+                other => out.push(other),
+            }
+        }
+        out.push_str("</code>");
+        rest = &rest[close + "</code>".len()..];
+    }
+
+    out.push_str(rest);
+    out
 }
 
 /// Gives every `<th>` a `scope`.
@@ -561,58 +611,66 @@ fn inject_class_attr(html: &mut String, pos: usize, class_value: &str) {
 fn fix_escaped_html_entities(html: &str) -> String {
     let mut modified = html.to_string();
 
-    let pairs = [
-        ("&lt;div&gt;", "<div>"),
-        ("&lt;/div&gt;", "</div>"),
-        ("&lt;p&gt;", "<p>"),
-        ("&lt;/p&gt;", "</p>"),
-        ("&lt;h1&gt;", "<h1>"),
-        ("&lt;/h1&gt;", "</h1>"),
-        ("&lt;h2&gt;", "<h2>"),
-        ("&lt;/h2&gt;", "</h2>"),
-        ("&lt;h3&gt;", "<h3>"),
-        ("&lt;/h3&gt;", "</h3>"),
-        ("&lt;h4&gt;", "<h4>"),
-        ("&lt;/h4&gt;", "</h4>"),
-        ("&lt;h5&gt;", "<h5>"),
-        ("&lt;/h5&gt;", "</h5>"),
-        ("&lt;h6&gt;", "<h6>"),
-        ("&lt;/h6&gt;", "</h6>"),
-        ("&lt;ul&gt;", "<ul>"),
-        ("&lt;/ul&gt;", "</ul>"),
-        ("&lt;ol&gt;", "<ol>"),
-        ("&lt;/ol&gt;", "</ol>"),
-        ("&lt;li&gt;", "<li>"),
-        ("&lt;/li&gt;", "</li>"),
-        ("&lt;strong&gt;", "<strong>"),
-        ("&lt;/strong&gt;", "</strong>"),
-        ("&lt;em&gt;", "<em>"),
-        ("&lt;/em&gt;", "</em>"),
-        ("&lt;blockquote&gt;", "<blockquote>"),
-        ("&lt;/blockquote&gt;", "</blockquote>"),
-        ("&lt;hr&gt;", "<hr>"),
-        ("&lt;hr/&gt;", "<hr/>"),
-        ("&lt;br&gt;", "<br>"),
-        ("&lt;br/&gt;", "<br/>"),
+    let tag_prefixes = [
+        "&lt;section", "&lt;/section&gt;",
+        "&lt;article", "&lt;/article&gt;",
+        "&lt;header", "&lt;/header&gt;",
+        "&lt;footer", "&lt;/footer&gt;",
+        "&lt;nav", "&lt;/nav&gt;",
+        "&lt;aside", "&lt;/aside&gt;",
+        "&lt;main", "&lt;/main&gt;",
+        "&lt;div", "&lt;/div&gt;",
+        "&lt;form", "&lt;/form&gt;",
+        "&lt;input", "&lt;/input&gt;",
+        "&lt;label", "&lt;/label&gt;",
+        "&lt;button", "&lt;/button&gt;",
+        "&lt;select", "&lt;/select&gt;",
+        "&lt;option", "&lt;/option&gt;",
+        "&lt;textarea", "&lt;/textarea&gt;",
+        "&lt;table", "&lt;/table&gt;",
+        "&lt;thead", "&lt;/thead&gt;",
+        "&lt;tbody", "&lt;/tbody&gt;",
+        "&lt;tr", "&lt;/tr&gt;",
+        "&lt;th", "&lt;/th&gt;",
+        "&lt;td", "&lt;/td&gt;",
+        "&lt;p", "&lt;/p&gt;",
+        "&lt;span", "&lt;/span&gt;",
+        "&lt;a ", "&lt;/a&gt;",
+        "&lt;img", "&lt;picture", "&lt;/picture&gt;", "&lt;source",
+        "&lt;h1", "&lt;/h1&gt;",
+        "&lt;h2", "&lt;/h2&gt;",
+        "&lt;h3", "&lt;/h3&gt;",
+        "&lt;h4", "&lt;/h4&gt;",
+        "&lt;h5", "&lt;/h5&gt;",
+        "&lt;h6", "&lt;/h6&gt;",
+        "&lt;ul", "&lt;/ul&gt;",
+        "&lt;ol", "&lt;/ol&gt;",
+        "&lt;li", "&lt;/li&gt;",
+        "&lt;strong", "&lt;/strong&gt;",
+        "&lt;em", "&lt;/em&gt;",
+        "&lt;blockquote", "&lt;/blockquote&gt;",
+        "&lt;hr", "&lt;br",
     ];
 
-    for (from, to) in pairs {
-        modified = modified.replace(from, to);
-    }
-
-    // Decode div wrappers with attributes
-    while let Some(start) = modified.find("&lt;div") {
-        if let Some(end_rel) = modified[start..].find("&gt;") {
-            let end = start + end_rel + 4;
-            let tag_chunk = &modified[start..end];
-            let decoded_tag = tag_chunk
-                .replace("&lt;", "<")
-                .replace("&gt;", ">")
-                .replace("&quot;", "\"")
-                .replace("&#x27;", "'");
-            modified = format!("{}{}{}", &modified[..start], decoded_tag, &modified[end..]);
+    for prefix in tag_prefixes {
+        if prefix.ends_with("&gt;") {
+            let clean_closing = prefix.replace("&lt;/", "</").replace("&gt;", ">");
+            modified = modified.replace(prefix, &clean_closing);
         } else {
-            break;
+            while let Some(start) = modified.find(prefix) {
+                if let Some(end_rel) = modified[start..].find("&gt;") {
+                    let end = start + end_rel + 4;
+                    let tag_chunk = &modified[start..end];
+                    let decoded_tag = tag_chunk
+                        .replace("&lt;", "<")
+                        .replace("&gt;", ">")
+                        .replace("&quot;", "\"")
+                        .replace("&#x27;", "'");
+                    modified = format!("{}{}{}", &modified[..start], decoded_tag, &modified[end..]);
+                } else {
+                    break;
+                }
+            }
         }
     }
 
@@ -621,6 +679,49 @@ fn fix_escaped_html_entities(html: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn escapes_a_tag_left_raw_inside_a_code_span() {
+        // The blog example's accessibility checklist: a page about alt text
+        // was shipping an <img> with no alt, because the code span rendered
+        // as markup.
+        let html = "<li>Every <code><img></code> has a meaningful <code>alt</code></li>";
+        let out = apply_html_fixes(html);
+        assert!(out.contains("<code>&lt;img&gt;</code>"), "got: {out}");
+        assert!(!out.contains("<code><img></code>"), "got: {out}");
+        // The neighbouring, already-correct span is untouched.
+        assert!(out.contains("<code>alt</code>"), "got: {out}");
+    }
+
+    #[test]
+    fn escaping_code_spans_leaves_surrounding_markup_alone() {
+        let html = "<p>Before</p><code><b>x</b></code><p>After <em>y</em></p>";
+        let out = apply_html_fixes(html);
+        assert!(out.contains("<code>&lt;b&gt;x&lt;/b&gt;</code>"), "got: {out}");
+        assert!(out.contains("<p>Before</p>"), "got: {out}");
+        assert!(out.contains("<em>y</em>"), "got: {out}");
+    }
+
+    #[test]
+    fn already_escaped_code_spans_are_not_double_escaped() {
+        // Idempotence matters: the pass runs on every page, and a second
+        // application must not turn &lt; into &amp;lt;.
+        let html = "<code>&lt;img&gt;</code>";
+        let once = apply_html_fixes(html);
+        let twice = apply_html_fixes(&once);
+        assert_eq!(once, twice, "pass is not idempotent");
+        assert!(!twice.contains("&amp;lt;"), "double-escaped: {twice}");
+    }
+
+    #[test]
+    fn unterminated_code_span_does_not_truncate_the_document() {
+        // A malformed document must come through unchanged rather than lose
+        // everything after the opening tag.
+        let html = "<p>keep</p><code><img>";
+        let out = apply_html_fixes(html);
+        assert!(out.contains("<p>keep</p>"), "content lost: {out}");
+    }
+
     use super::*;
     use crate::plugin::PluginContext;
     use std::path::Path;

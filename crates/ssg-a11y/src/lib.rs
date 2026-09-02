@@ -122,6 +122,49 @@ pub fn check_page(html: &str) -> Vec<AccessibilityIssue> {
 
 #[cfg(test)]
 mod tests {
+
+    /// Regression: `check_page` panicked on non-ASCII input whose lowercase
+    /// form is longer than the original.
+    ///
+    /// Found by `fuzz_a11y` within seconds of the target being added. The
+    /// rules lowercased the page to search it case-insensitively, then used
+    /// the resulting offsets to slice the *original* string. `to_lowercase`
+    /// is not length-preserving — `İ` (U+0130) becomes two chars — so every
+    /// offset past it was wrong and the next slice landed mid-character:
+    ///
+    ///     thread panicked at crates/ssg-a11y/src/rules.rs:31:47
+    ///     byte index is not a char boundary
+    ///
+    /// This runs inside `ssg build`, so the input that triggers it is
+    /// someone's own content and the symptom is a crashed build.
+    #[test]
+    fn check_page_survives_non_ascii_that_grows_when_lowercased() {
+        // The reduced crash input from the fuzzer: U+0130 before a tag whose
+        // attributes are then sliced out of the original string.
+        let html = "<!\u{130}html>\n<img src=\"a.png\" alt>";
+        let _ = check_page(html);
+
+        // A few more shapes with the same hazard.
+        for probe in [
+            "\u{130}<img src=\"x.png\">",
+            "<img alt=\"\u{130}\" src=\"y.png\">",
+            "<p>\u{130}\u{130}\u{130}</p><img>",
+            "<img src=\"\u{130}.png\">",
+        ] {
+            let _ = check_page(probe);
+        }
+    }
+
+    /// The ASCII fold must still match tags written in any case.
+    #[test]
+    fn check_page_still_matches_uppercase_tags() {
+        let issues = check_page("<IMG SRC=\"a.png\">");
+        assert!(
+            issues.iter().any(|i| i.criterion == "1.1.1"),
+            "uppercase <IMG> without alt was not detected: {issues:?}"
+        );
+    }
+
     use super::*;
 
     #[test]

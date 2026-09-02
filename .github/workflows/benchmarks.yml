@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Nightly benchmark run — WS0.4 of the v0.0.58 elevation plan.
+#
+# The README quotes throughput and build-time figures. Until this workflow
+# existed, those numbers were measured once, by hand, on an unnamed machine,
+# and then quoted indefinitely: BENCHMARKS.md still described "SSG v0.0.45"
+# while the crate was at v0.0.58. A number nobody re-measures is a claim, not
+# a measurement.
+#
+# So the figures are produced here, on a named runner, from a seeded corpus
+# (`ssg::bench_corpus`, byte-identical across runs and machines), and uploaded
+# as an artifact that anyone can download and check.
+#
+# Trigger model mirrors miri.yml: nightly on schedule, on demand via dispatch,
+# and opt-in per PR via the `run-benchmarks` label — Criterion sampling is far
+# too slow to sit on every push.
+
+name: Benchmarks
+
+on:
+  schedule:
+    # Nightly at 03:30 UTC — after Miri (02:30) so the two never contend for
+    # the same runner pool.
+    - cron: "30 3 * * *"
+  pull_request:
+    types: [labeled, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: Criterion (seeded corpus)
+    # Only run on a PR when explicitly labelled; always run on schedule and
+    # manual dispatch.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'run-benchmarks')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: benchmarks
+
+      # The hardware is part of the result. A figure without the machine it
+      # was measured on cannot be compared with anything.
+      - name: Record the environment
+        id: env
+        run: |
+          {
+            echo "## Run environment"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Date (UTC) | $(date -u +'%Y-%m-%d %H:%M') |"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Runner | ${RUNNER_OS} / ${RUNNER_ARCH} (${{ runner.name }}) |"
+            echo "| CPU | $(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs) |"
+            echo "| Cores | $(nproc) |"
+            echo "| Memory | $(free -h | awk '/^Mem:/{print $2}') |"
+            echo "| Rust | $(rustc --version) |"
+            echo "| SSG | $(grep -m1 '^version' Cargo.toml | cut -d'"' -f2) |"
+          } > bench-env.md
+          cat bench-env.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify the corpus generator is deterministic
+        # If the corpus is not reproducible the timings below mean nothing, so
+        # this gates the run rather than merely reporting.
+        run: cargo test --features benchmark --lib bench_corpus
+
+      - name: Run benchmarks
+        run: |
+          set -o pipefail
+          cargo bench --features benchmark -- --output-format bencher \
+            | tee bench-raw.txt
+
+      - name: Assemble the report
+        run: |
+          {
+            cat bench-env.md
+            echo
+            echo "## Results"
+            echo
+            echo '```'
+            cat bench-raw.txt
+            echo '```'
+          } > bench-report.md
+          cat bench-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ github.sha }}
+          path: |
+            bench-report.md
+            bench-raw.txt
+            target/criterion/**
+          retention-days: 90

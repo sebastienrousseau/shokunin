@@ -521,6 +521,24 @@ pub struct PluginManager {
     plugins: Vec<Box<dyn Plugin>>,
 }
 
+/// One row of [`PluginManager::inventory`]: a registered plugin and the
+/// optional hooks it opts into.
+///
+/// `order` is the index in registration order, which is also execution
+/// order — the property that makes the taxonomy/pagination phase bug
+/// visible rather than implicit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PluginInfo<'a> {
+    /// Position in execution order, starting at zero.
+    pub order: usize,
+    /// The plugin's stable name, as reported by [`Plugin::name`].
+    pub name: &'a str,
+    /// Whether the plugin participates in the fused HTML transform pass.
+    pub has_transform: bool,
+    /// Whether the plugin needs every file present before it runs.
+    pub needs_all_files: bool,
+}
+
 impl PluginManager {
     /// Creates a new empty plugin manager.
     ///
@@ -601,6 +619,41 @@ impl PluginManager {
     #[must_use]
     pub fn names(&self) -> Vec<&str> {
         self.plugins.iter().map(|p| p.name()).collect()
+    }
+
+    /// Returns an inventory of every registered plugin, in execution order.
+    ///
+    /// This is the single source of truth for "which plugins run, and what do
+    /// they do" — consumed by `ssg plugins list` and by the README sync check,
+    /// so a plugin added or removed cannot silently leave the documentation
+    /// claiming a stale count.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ssg::drafts::DraftPlugin;
+    /// use ssg::plugin::PluginManager;
+    ///
+    /// let mut pm = PluginManager::new();
+    /// pm.register(DraftPlugin::new(false));
+    ///
+    /// let inv = pm.inventory();
+    /// assert_eq!(inv.len(), 1);
+    /// assert_eq!(inv[0].name, "drafts");
+    /// assert_eq!(inv[0].order, 0);
+    /// ```
+    #[must_use]
+    pub fn inventory(&self) -> Vec<PluginInfo<'_>> {
+        self.plugins
+            .iter()
+            .enumerate()
+            .map(|(order, p)| PluginInfo {
+                order,
+                name: p.name(),
+                has_transform: p.has_transform(),
+                needs_all_files: p.needs_all_files(),
+            })
+            .collect()
     }
 
     /// Runs the `before_compile` hook on all registered plugins.

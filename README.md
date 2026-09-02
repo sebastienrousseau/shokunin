@@ -15,24 +15,35 @@
   <a href="https://crates.io/crates/ssg"><img src="https://img.shields.io/crates/v/ssg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.57-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.58-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
 
 ## Contents
 
-- [Install](#install) -- Cargo, Homebrew, apt, AUR, one-liner
-- [Quick Start](#quick-start) -- scaffold a site in 30 seconds
-- [Overview](#overview) -- what SSG does
-- [Architecture](#architecture) -- build pipeline diagram
-- [Benchmarks](#benchmarks) -- performance and test suite metrics
-- [Features](#features) -- v0.0.47 capability matrix
-- [The CLI](#the-cli) -- flags and usage
-- [Library Usage](#library-usage) -- plugins, schemas, AI pipeline
-- [Examples](#examples) -- 8 branded examples
-- [Development](#development) -- make targets, CI workflows
-- [Security](#security) -- safety guarantees and compliance
+**Getting started**
+
+- [Install](#install) — Cargo, Homebrew, apt, AUR, container, one-liner
+- [Quick Start](#quick-start) — scaffold, build and serve a site in five commands
+
+**Reference**
+
+- [Overview](#overview) — what SSG compiles, and from what
+- [Why this approach?](#why-this-approach) — design rationale, and what it costs
+- [Architecture](#architecture) — the build pipeline, stage by stage
+- [Benchmarks](#benchmarks) — headline figures; methodology in [`BENCHMARKS.md`](BENCHMARKS.md)
+- [Features](#features) — capability matrix
+- [The CLI](#the-cli) — subcommands, build flags, legacy form
+- [Library Usage](#library-usage) — plugins, schemas, the AI pipeline
+- [Examples](#examples) — eight runnable examples and the edge adapters
+
+**Operational**
+
+- [When not to use SSG](#when-not-to-use-ssg) — limitations, stated plainly
+- [Development](#development) — make targets, CI workflows, fuzzing
+- [Security](#security) — guarantees, supply chain, reporting
+- [Documentation](#documentation) — every reference document
 - [License](#license)
 
 ---
@@ -41,7 +52,7 @@
 
 ```toml
 [dependencies]
-ssg = "0.0.57"
+ssg = "0.0.58"
 ```
 
 ### Prebuilt binaries
@@ -101,15 +112,65 @@ ssg -c content -o public -t templates --ai-fix
 
 ## Overview
 
-SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.2 AA accessibility compliance (including the new 2.5.8, 2.4.13, 3.2.6 criteria where automatable), multilingual readability scoring, and feed generation. The 33-plugin pipeline handles the rest.
+SSG generates static websites from Markdown content, YAML frontmatter, and `MiniJinja` templates. It compiles everything into production-ready HTML with built-in SEO metadata, WCAG 2.2 AA accessibility compliance (including the new 2.5.8, 2.4.13, 3.2.6 criteria where automatable), multilingual readability scoring, and feed generation. The 32-plugin pipeline handles the rest.
 
-- **33-plugin pipeline** -- SEO, a11y, i18n, search, images, AI, CSP, JSON-LD, RSS, sitemaps
+- **32-plugin pipeline** -- SEO, a11y, i18n, search, images, AI, CSP, JSON-LD, RSS, sitemaps
 - **Agentic AI pipeline** -- audit, diagnose, fix, and verify content readability via local LLM
 - **Multilingual readability** -- Flesch-Kincaid (EN), Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV), Fernandez Huerta (ES)
 - **Incremental builds** -- content fingerprinting via FNV-1a hashing and dependency graph
 - **Bounded-memory batch compilation** -- configurable memory budgets for 100K+ page sites
 - **WCAG 2.2 AA** -- accessibility checked on every build (non-blocking by default; reports written to `accessibility-report.json` + `wcag-compliance.json`) and gated in CI by axe-core. Build-failure on a11y violations is opt-in via the `STRICT_A11Y` env var (implemented in v0.0.40)
 - **Zero unsafe code** -- `#![forbid(unsafe_code)]` across the entire codebase
+
+---
+
+## Why this approach?
+
+SSG occupies the niche Hugo, Zola and Eleventy occupy — Markdown and
+templates in, static HTML out — and differs in one respect: the checks
+most generators leave to a deployment pipeline run inside the compiler,
+on every build.
+
+Three choices follow from that, and each has a cost worth stating:
+
+1. **Accessibility and security are build stages, not CI steps.** WCAG
+   checks, CSP extraction with SRI hashing, and the 15-gate audit runner
+   execute during `ssg build`. A page that fails is reported with its
+   file and line, not discovered after deployment. The cost is build
+   time: a fully-gated build does more work than a generator that only
+   renders. `STRICT_A11Y` decides whether a violation warns or fails.
+
+2. **No async runtime.** The crate is deliberately tokio-free; parallelism
+   is Rayon over a work-stealing pool, and the LLM transport is
+   synchronous `ureq`. This keeps the dependency tree small and the
+   binary self-contained. The cost is that genuinely concurrent I/O —
+   the dev server, the HMR socket — uses threads rather than tasks, which
+   is heavier per connection than an async runtime would be. The
+   reasoning is recorded in [`docs/adrs/`](docs/adrs/).
+
+3. **`#![forbid(unsafe_code)]` workspace-wide.** No `unsafe` block exists
+   in the tree. Memory-safety review is therefore a property of the
+   compiler rather than of code review, and the Miri job
+   ([`.github/workflows/miri.yml`](.github/workflows/miri.yml)) checks the
+   dependency surface rather than our own. The cost is that a few
+   optimisations available through raw pointers are simply unavailable.
+
+### Compared with other generators
+
+The table below is a capability comparison, not a benchmark; for build
+times see [Benchmarks](#benchmarks).
+
+| Capability | SSG | Hugo | Zola | Astro |
+|---|---|---|---|---|
+| Agentic AI pipeline | Yes | No | No | No |
+| Multilingual readability | Yes | No | No | No |
+| Auto-generated OG images | Yes | No | No | Plugin |
+| Built-in WCAG validation | Yes | No | No | No |
+| CSP/SRI auto-extraction | Yes | No | No | Plugin |
+| axe-core CI gate | Yes | No | No | No |
+| WebAssembly target | Yes | No | No | N/A |
+| 95% CI coverage floors | Yes | No | No | No |
+| Zero unsafe code | Yes | Yes | Yes | N/A |
 
 ---
 
@@ -122,7 +183,7 @@ graph TD
     V --> C[Incremental Cache + `DepGraph`]
     C --> D[Compile: staticdatagen]
     D --> E[Post-Processing Fixes]
-    E --> F[Fused Transform Pipeline: 33 plugins]
+    E --> F[Fused Transform Pipeline: 32 plugins]
     F --> G[Output: HTML + RSS + Atom + Sitemap + JSON-LD]
     B --> H[File Watcher + CSS HMR]
     H -->|changed files| C
@@ -140,7 +201,7 @@ graph TD
 | **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
 | **Test suite** | 3,566 unit tests (`cargo test --lib`) + 51 integration test targets |
 | **Coverage** | 95% region, 95% line, 95% function (CI-gated) |
-| **Plugin pipeline** | 38 plugins, Rayon-parallelised |
+| **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
 | **Examples** | 8 branded sites + 2 edge-runtime adapters (Cloudflare Workers, Vercel Edge) |
 | **Edge runtimes** | Cloudflare Workers + Vercel Edge with ISR (`ssg-wasm`) |
@@ -195,22 +256,6 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **View Transitions** | Opt-in (`transitions = true`) View Transitions API client + lazy hydration; persistent `<header>` / `<footer>` get `view-transition-name` so they don't animate across boundaries; falls back to plain reload in non-supporting browsers |
 | **Islands** | Web Components with lazy hydration (visible, idle, interaction) |
 
-### Why SSG?
-
-| Capability | SSG | Hugo | Zola | Astro |
-|---|---|---|---|---|
-| Agentic AI pipeline | Yes | No | No | No |
-| Multilingual readability | Yes | No | No | No |
-| Auto-generated OG images | Yes | No | No | Plugin |
-| Built-in WCAG validation | Yes | No | No | No |
-| CSP/SRI auto-extraction | Yes | No | No | Plugin |
-| axe-core CI gate | Yes | No | No | No |
-| WebAssembly target | Yes | No | No | N/A |
-| 95% CI coverage floors | Yes | No | No | No |
-| Zero unsafe code | Yes | Yes | Yes | N/A |
-
----
-
 ## The CLI
 
 `ssg` ships with both a unified subcommand surface (introduced in v0.0.43) and the legacy bare-flag pipeline (preserved with a deprecation warning, removal in 1.0).
@@ -229,7 +274,7 @@ Commands:
   help       Print this message or the help of the given subcommand(s)
 ```
 
-### Build flags (v0.0.45)
+### Build flags
 
 ```text
       --incremental        Skip recompile when DepGraph diff is empty (issue #524)
@@ -467,7 +512,7 @@ cargo run --example blog
 | `landing` | Zero-JS landing page with CSP hardening |
 | `portfolio` | Developer portfolio with JSON-LD and Atom feed |
 
-### Edge-runtime adapters (v0.0.45)
+### Edge-runtime adapters
 
 `examples/edge-cloudflare/` and `examples/edge-vercel/` are runnable
 reference implementations of the ISR + RPC pipeline for the two target
@@ -489,6 +534,33 @@ npm install
 npm run upload:edge-config # uploads site/ to Edge Config
 vercel deploy
 ```
+
+---
+
+## When not to use SSG
+
+Stated plainly, so the answer is not discovered halfway through a migration:
+
+- **You need server-rendered, per-request pages.** SSG compiles ahead of
+  time. Islands hydrate on the client and `ssg-rpc` reaches an edge
+  function, but the page itself is a file. An application whose HTML
+  depends on the requesting user is the wrong shape for it.
+- **You want a large theme ecosystem.** The
+  [theme suite](https://themes.static-site-generator.com) ships nine
+  first-party themes. Hugo has thousands. If picking a ready-made theme
+  matters more than the build-time gates, Hugo is the better answer.
+- **Your content lives in a CMS you cannot export.** `ContentProvider`
+  abstracts the source and is used for Cloudflare KV and Vercel Edge
+  Config, but there is no turnkey adapter for a hosted CMS today; you
+  would be writing it.
+- **You need a stable plugin API right now.** The `Plugin` trait is
+  usable and documented, but it is pre-1.0 and can change between
+  releases. Third-party plugins are compiled in, so a plugin author
+  builds their own binary until the WASM runtime lands.
+- **Build time matters more than build-time checking.** Accessibility,
+  CSP extraction and the audit gates are work a renderer-only generator
+  does not do. That is the trade the design makes; if it is the wrong
+  trade for you, it is the wrong tool.
 
 ---
 
@@ -597,7 +669,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `postprocess::edge_headers` | Per-host header emitters (Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json`) with PQC posture guidance — issue #550 |
 | `postprocess::agentic_discovery` | `/agents.txt` + `/.well-known/{ai-plugin.json,mcp.json}` emitters — issue #552 |
 | `seo::jsonld::iso20022` | ISO 20022 schema.org descriptors for regulated financial sites (IBAN/BIC validators) — issue #553 |
-| `audit` | 14-gate audit runner (`ssg audit`) with JSON / `JUnit` / text output — issue #551 |
+| `audit` | 15-gate audit runner (`ssg audit`) with JSON / `JUnit` / text output — issue #551 |
 | `head_dom` | Single-walk `lol_html`-based head metadata extractor + `</head>` injector — issue #538-540 |
 
 </details>
@@ -612,6 +684,20 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `ssg-search` | Internal | Browser-native vector semantic search. Int8-quantised hashed-n-gram embedder by default (model-free, deterministic); opt-in real `model2vec-rs` encoder. |
 | `ssg-rpc` | Internal | JSON-over-POST RPC dispatch + schemars 1.2 + custom TS emitter. Paired with `#[ssg_rpc]` proc-macro for zero-config method registration. |
 | `ssg-rpc-macro` | Internal | Proc-macro for `#[ssg_rpc]` attribute. Registered into a global inventory at compile time. |
+
+---
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`BENCHMARKS.md`](BENCHMARKS.md) | Performance methodology, CI budgets, comparison tables |
+| [`SECURITY.md`](SECURITY.md) | Reporting policy, supported versions, guarantees |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and review expectations |
+| [`docs/adrs/`](docs/adrs/) | Architecture Decision Records in Nygard format |
+| [`docs/guide/`](docs/guide/) | Configuration, content, i18n, search, SEO, deployment |
+| [`supply-chain/README.md`](supply-chain/README.md) | `cargo-vet` policy and exemption burn-down |
+| [docs.rs/ssg](https://docs.rs/ssg) | Generated API reference |
 
 ---
 

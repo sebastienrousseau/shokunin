@@ -155,6 +155,18 @@ fn fingerprint_file(
         let _ = fs::copy(asset_path, &new_path).with_path(asset_path)?;
     }
 
+    // Fingerprinting is a rename, not a copy. Leaving the source in place
+    // shipped every stylesheet and script twice — once fingerprinted and
+    // minified, once not — and the unfingerprinted copy stayed reachable at
+    // a stable URL, so anything still pointing at it received content that
+    // no `integrity` attribute covered.
+    //
+    // Guarded against the degenerate case where the hash lands on the name
+    // the file already has, which would otherwise delete the asset.
+    if new_path != asset_path {
+        fs::remove_file(asset_path).with_path(asset_path)?;
+    }
+
     let rel_old = asset_path
         .strip_prefix(site_dir)
         .unwrap_or(asset_path)
@@ -495,10 +507,22 @@ fn minify_css(css: &str) -> String {
                 None
             };
 
+            // `+` counts as a word character here for one reason: CSS math
+            // functions require whitespace around `+` and `-`, and dropping it
+            // does not merely lengthen the output, it invalidates the
+            // declaration. `clamp(2.07rem, 1.75rem + 1.6vw, 3.13rem)` became
+            // `clamp(2.07rem,1.75rem+1.6vw,3.13rem)`, which every browser
+            // rejects — so every fluid type step in every theme silently fell
+            // back and headings rendered at the body size.
+            //
+            // `-` was already in both sets and so was never affected; `*` and
+            // `/` need no surrounding space and stay collapsible. Keeping the
+            // space in a `.a + .b` selector too costs two bytes and is valid.
             let is_needed = match (prev, next) {
                 (Some(p), Some(n)) => {
                     let is_p_word = p.is_alphanumeric()
                         || p == '-'
+                        || p == '+'
                         || p == '_'
                         || p == '#'
                         || p == '.'
@@ -507,6 +531,7 @@ fn minify_css(css: &str) -> String {
                         || p == '$';
                     let is_n_word = n.is_alphanumeric()
                         || n == '-'
+                        || n == '+'
                         || n == '_'
                         || n == '#'
                         || n == '.'
@@ -1186,6 +1211,40 @@ mod tests {
     // -------------------------------------------------------------------
     // Minifier edge branches
     // -------------------------------------------------------------------
+
+    #[test]
+    fn minify_css_keeps_whitespace_around_plus_in_math() {
+        // CSS math requires whitespace around `+`. Collapsing it does not
+        // shorten the declaration, it voids it: browsers drop the whole
+        // value, so every heading fell back to the inherited size.
+        let css = "h1 { font-size: clamp(2.07rem, 1.75rem + 1.6vw, 3.13rem); }";
+        let out = minify_css(css);
+        assert!(
+            out.contains("1.75rem + 1.6vw"),
+            "whitespace around `+` was dropped: {out}"
+        );
+    }
+
+    #[test]
+    fn minify_css_keeps_whitespace_around_minus_in_math() {
+        let css = "a { width: calc(100% - 2rem); }";
+        let out = minify_css(css);
+        assert!(out.contains("100% - 2rem"), "got: {out}");
+    }
+
+    #[test]
+    fn minify_css_still_collapses_ordinary_whitespace() {
+        let out = minify_css("body   {   color :  red ;  }");
+        assert!(!out.contains("  "), "double space survived: {out}");
+        assert!(out.contains("red"), "got: {out}");
+    }
+
+    #[test]
+    fn minify_css_keeps_space_before_negative_value_in_a_list() {
+        // `margin: 0 -1px` must not become `0-1px`.
+        let out = minify_css("p { margin: 0 -1px; }");
+        assert!(out.contains("0 -1px"), "got: {out}");
+    }
 
     #[test]
     fn minify_css_handles_escaped_quote_inside_string() {

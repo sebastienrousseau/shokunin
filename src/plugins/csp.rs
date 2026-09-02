@@ -720,8 +720,87 @@ fn find_inline_script(html: &str) -> Option<(String, String, String, String)> {
 }
 
 /// Removes `'unsafe-inline'` from CSP `<meta>` tags in HTML.
+///
+/// Scoped to the policy value itself. A plain `html.replace` matched the token
+/// anywhere on the page, so a document that quoted `'unsafe-inline'` while
+/// explaining a policy — exactly what a security or documentation page does —
+/// had the words silently deleted from its prose.
+///
+/// The token is removed together with the whitespace that separated it. Only
+/// dropping the text turned `'self' 'unsafe-inline' 'unsafe-eval'` into
+/// `'self'  'unsafe-eval'`, and the old `"  ;" -> " ;"` pass tidied just the
+/// case where the token ended a directive.
 fn remove_unsafe_inline_from_csp(html: &str) -> String {
-    html.replace("'unsafe-inline'", "").replace("  ;", " ;")
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+
+    while let Some(start) = find_csp_meta_content(rest) {
+        let (before, from_quote) = rest.split_at(start);
+        let Some(quote) = from_quote.chars().next() else {
+            break;
+        };
+        let Some(end_rel) = from_quote[1..].find(quote) else {
+            break;
+        };
+        let value = &from_quote[1..=end_rel];
+
+        out.push_str(before);
+        out.push(quote);
+        out.push_str(&strip_unsafe_inline_token(value));
+        out.push(quote);
+
+        rest = &from_quote[end_rel + 2..];
+    }
+
+    out.push_str(rest);
+    out
+}
+
+/// Removes the `'unsafe-inline'` source expression from one policy string,
+/// collapsing the separator it leaves behind.
+fn strip_unsafe_inline_token(policy: &str) -> String {
+    policy
+        .split(';')
+        .map(|directive| {
+            let kept: Vec<&str> = directive
+                .split_whitespace()
+                .filter(|t| *t != "'unsafe-inline'")
+                .collect();
+            if kept.is_empty() {
+                String::new()
+            } else {
+                // These policies are written with one space after each `;`,
+                // so keeping it means only the removed token changes.
+                let lead = if directive.starts_with(' ') { " " } else { "" };
+                format!("{lead}{}", kept.join(" "))
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(";")
+}
+
+/// Locates the opening quote of a CSP `<meta>` tag's `content` attribute.
+///
+/// Returns an index into `html` pointing at the quote character itself, so the
+/// caller can read the value without re-parsing the tag.
+fn find_csp_meta_content(html: &str) -> Option<usize> {
+    let mut search_from = 0usize;
+    loop {
+        let tag_rel = html[search_from..].find("<meta")?;
+        let tag_start = search_from + tag_rel;
+        let tag_end = html[tag_start..].find('>').map(|i| tag_start + i)?;
+        let tag = &html[tag_start..tag_end];
+
+        if tag.to_ascii_lowercase().contains("content-security-policy") {
+            if let Some(attr_rel) = tag.find("content=") {
+                let after = tag_start + attr_rel + "content=".len();
+                if matches!(html.as_bytes().get(after), Some(b'"' | b'\'')) {
+                    return Some(after);
+                }
+            }
+        }
+        search_from = tag_end;
+    }
 }
 
 /// Inserts a `<meta http-equiv="Content-Security-Policy" content="...">`
@@ -1102,9 +1181,44 @@ mod tests {
 
     #[test]
     fn removes_unsafe_inline_from_csp() {
-        let html = r#"<meta content="script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">"#;
+        let html = r#"<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'">"#;
         let result = remove_unsafe_inline_from_csp(html);
         assert!(!result.contains("unsafe-inline"));
+    }
+
+    #[test]
+    fn removing_unsafe_inline_leaves_no_double_space() {
+        // The token sits between two others, so dropping just the text used to
+        // leave `'self'  'unsafe-eval'` behind in every built page.
+        let html = r#"<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://example.com">"#;
+        let result = remove_unsafe_inline_from_csp(html);
+        assert!(!result.contains("  "), "double space in {result}");
+        assert!(result.contains("script-src 'self' 'unsafe-eval';"));
+        assert!(result.contains("style-src 'self' https://example.com"));
+    }
+
+    #[test]
+    fn leaves_prose_mentioning_unsafe_inline_alone() {
+        // A page explaining a policy quotes the token in its own text. The
+        // previous whole-document replace deleted it from the prose.
+        let html = concat!(
+            r#"<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline'">"#,
+            r#"<p>Set <code>script-src 'self' 'unsafe-inline'</code> to allow it.</p>"#
+        );
+        let result = remove_unsafe_inline_from_csp(html);
+        assert!(
+            result.contains("<code>script-src 'self' 'unsafe-inline'</code>"),
+            "prose was rewritten: {result}"
+        );
+        // ...while the policy itself is still stripped.
+        let meta_end = result.find("<p>").expect("prose follows the meta");
+        assert!(!result[..meta_end].contains("unsafe-inline"));
+    }
+
+    #[test]
+    fn leaves_documents_without_a_csp_meta_untouched() {
+        let html = r#"<p>The token 'unsafe-inline' weakens a policy.</p>"#;
+        assert_eq!(remove_unsafe_inline_from_csp(html), html);
     }
 
     #[test]

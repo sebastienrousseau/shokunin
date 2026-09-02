@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.45**.
+Reproducible performance methodology and CI gates for SSG **v0.0.58**.
 
 This document is **load-bearing**: the docs-accuracy gate
 (`tests/docs_accuracy.rs`) parses the tables below for the
@@ -138,7 +138,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.45 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.58 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -222,7 +222,7 @@ committed; the deterministic-corpus baselines under
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.45) | Headroom |
+| Metric | Floor | Current (v0.0.58) | Headroom |
 |---|---:|---:|---:|
 | Regions | 95.5 % | 95.71 % | 0.21 |
 | Functions | 95.5 % | 95.77 % | 0.27 |

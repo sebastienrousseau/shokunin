@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# ClusterFuzzLite / OSS-Fuzz project definition for the SSG ecosystem.
+#
+# The same file shape OSS-Fuzz expects upstream in google/oss-fuzz under
+# projects/static-site-generator/. Keeping it in-tree means the fuzzing
+# configuration is reviewed alongside the code it fuzzes.
+homepage: "https://static-site-generator.com"
+language: rust
+primary_contact: "sebastienrousseau@gmail.com"
+main_repo: "https://github.com/sebastienrousseau/static-site-generator"
+
+# Rust fuzzers run under AddressSanitizer. MemorySanitizer needs every
+# dependency instrumented, which is not tractable for this tree, and
+# UndefinedBehaviorSanitizer adds little for a `forbid(unsafe_code)` crate.
+sanitizers:
+  - address
+
+architectures:
+  - x86_64
+
+fuzzing_engines:
+  - libfuzzer

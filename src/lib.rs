@@ -130,6 +130,8 @@ pub use crate::core_group::pipeline;
 pub use crate::core_group::process;
 pub use crate::core_group::scaffold;
 pub use crate::core_group::schema;
+#[cfg(any(test, feature = "benchmark"))]
+pub use crate::core_group::bench_corpus;
 pub use crate::core_group::stream;
 pub use crate::core_group::streaming;
 #[cfg(feature = "templates")]
@@ -639,7 +641,65 @@ fn dispatch_invocation(
         CliInvocation::Check => run_check(matches),
         CliInvocation::Audit => run_audit(matches),
         CliInvocation::Deploy { target } => run_deploy(matches, &target),
+        CliInvocation::Plugins { json } => run_plugins(matches, json),
     }
+}
+
+/// Reports the plugin pipeline without building anything.
+///
+/// The manager is populated through the same `register_default_plugins` the
+/// build uses, so the listing cannot drift from what actually runs — which is
+/// the point: the README's plugin count is generated from this, and the count
+/// had already gone stale once (33 registered, "38 plugins" documented).
+fn run_plugins(matches: &clap::ArgMatches, json: bool) -> Result<(), SsgError> {
+    // Which plugins register depends on configuration — the edge-headers
+    // emitter only appears when a target is set, for instance — so the real
+    // config is used when one can be found. A project without one still gets
+    // an accurate listing for the defaults rather than an error.
+    let _ = matches;
+    let config = SsgConfig::discover_config_file()
+        .and_then(|path| SsgConfig::from_file(&path).ok())
+        .unwrap_or_default();
+
+    let mut plugins = plugin::PluginManager::new();
+    pipeline::register_default_plugins(&mut plugins, &config, false, None);
+    let inventory = plugins.inventory();
+
+    if json {
+        let rows: Vec<_> = inventory
+            .iter()
+            .map(|p| {
+                serde_json::json!({
+                    "order": p.order,
+                    "name": p.name,
+                    "has_transform": p.has_transform,
+                    "needs_all_files": p.needs_all_files,
+                })
+            })
+            .collect();
+        let doc = serde_json::json!({
+            "count": inventory.len(),
+            "plugins": rows,
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&doc).unwrap_or_else(|_| "{}".into())
+        );
+        return Ok(());
+    }
+
+    println!("{} plugin(s), in execution order:\n", inventory.len());
+    println!("  {:>3}  {:<28} {:>9}  {:>9}", "#", "NAME", "TRANSFORM", "ALL-FILES");
+    for p in &inventory {
+        println!(
+            "  {:>3}  {:<28} {:>9}  {:>9}",
+            p.order,
+            p.name,
+            if p.has_transform { "yes" } else { "-" },
+            if p.needs_all_files { "yes" } else { "-" },
+        );
+    }
+    Ok(())
 }
 
 /// Fault-injectable wrapper around [`logging::initialize_logging`].

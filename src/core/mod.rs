@@ -15,6 +15,8 @@ pub mod io_pool;
 pub(crate) mod lang;
 pub mod logging;
 pub mod otel;
+#[cfg(any(test, feature = "benchmark"))]
+pub mod bench_corpus;
 pub mod pipeline;
 pub mod process;
 pub mod scaffold;

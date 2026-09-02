@@ -16,6 +16,14 @@ on:
     # Nightly at 02:30 UTC — offset from scheduled.yml to avoid
     # stacking runner load.
     - cron: "30 2 * * *"
+  pull_request:
+    # Only the cheap `oss-fuzz-build` job runs here (see its `if`); the
+    # long libFuzzer runs stay nightly.
+    paths:
+      - "fuzz/**"
+      - ".clusterfuzzlite/**"
+      - "src/**"
+      - ".github/workflows/fuzz.yml"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +35,10 @@ env:
 jobs:
   fuzz:
     name: fuzz · ${{ matrix.target }}
+    # The long runs stay nightly / on demand. Adding `pull_request` to the
+    # triggers above is for `oss-fuzz-build` only; without this guard every PR
+    # would spawn four 60-minute libFuzzer jobs.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -72,3 +84,57 @@ jobs:
           path: fuzz/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore
           retention-days: 30
+
+  # Proves the OSS-Fuzz entry point still builds every declared target, and
+  # that the assets libFuzzer reads at runtime are well-formed.
+  #
+  # Both halves are here because both have failed silently. A malformed
+  # dictionary makes libFuzzer print one line and exit 0, so a nightly run
+  # goes green having fuzzed nothing; and the build script's own success
+  # message was once derived from the target list rather than the artefacts,
+  # so it reported "built 4 fuzzer(s)" with an empty output directory.
+  oss-fuzz-build:
+    name: OSS-Fuzz build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # nightly
+        with:
+          toolchain: nightly
+
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          key: oss-fuzz-build
+
+      - name: Validate fuzzing assets
+        # Stable toolchain is fine here; this reads files, it does not build
+        # instrumented binaries.
+        run: cargo test --test fuzz_assets
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Build every target through the OSS-Fuzz entry point
+        env:
+          OUT: ${{ runner.temp }}/fuzz-out
+          SANITIZER: address
+        run: bash fuzz/oss-fuzz-build.sh
+
+      - name: Smoke-run each fuzzer
+        # A binary that links but exits immediately is not a fuzzer. Ten
+        # seconds each is enough to prove the dictionary parses and the
+        # target reaches its entry point.
+        env:
+          OUT: ${{ runner.temp }}/fuzz-out
+        run: |
+          set -euo pipefail
+          cd "$OUT"
+          for bin in fuzz_*; do
+            [[ -x "$bin" && "$bin" != *.dict && "$bin" != *.zip ]] || continue
+            echo "==> $bin"
+            ./"$bin" -max_total_time=10 -print_final_stats=1 2>&1 | tail -3
+          done

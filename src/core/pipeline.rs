@@ -915,7 +915,12 @@ pub fn register_default_plugins(
     plugins.register(postprocess::JsonFeedPlugin);
     plugins.register(postprocess::ManifestFixPlugin);
     plugins.register(postprocess::HtmlFixPlugin);
-    plugins.register(postprocess::SbomPlugin);
+    // `postprocess::SbomPlugin` ("sbom-generator") is deliberately not
+    // registered. It wrote the same `sbom.cdx.json` as `crate::sbom::SbomPlugin`
+    // ("sbom"), which registers later and therefore overwrote it — the build
+    // serialised the dependency tree twice and threw one copy away. The
+    // surviving plugin is the more complete of the two: it also injects the
+    // `<link rel="sbom">` into every document head.
 
     // Agentic discovery (#552): agents.txt + .well-known/ai-plugin.json
     // + .well-known/mcp.json. No-op when `[agents]` is absent from
@@ -1037,6 +1042,58 @@ pub fn register_default_plugins(
 
 #[cfg(test)]
 mod tests {
+
+    /// The default pipeline must register each plugin name once. Two
+    /// `SbomPlugin` implementations were both registered before 0.0.58: they
+    /// wrote the same `sbom.cdx.json`, so the later one silently overwrote the
+    /// earlier and the dependency tree was serialised twice per build.
+    #[test]
+    fn default_plugins_have_no_duplicate_names() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let mut seen = std::collections::BTreeMap::new();
+        for info in plugins.inventory() {
+            *seen.entry(info.name).or_insert(0usize) += 1;
+        }
+        let dupes: Vec<_> =
+            seen.iter().filter(|(_, n)| **n > 1).map(|(k, _)| *k).collect();
+        assert!(dupes.is_empty(), "duplicate plugin names: {dupes:?}");
+    }
+
+    /// Exactly one SBOM emitter, and it is the one that also links the
+    /// document head — see `postprocess::SbomPlugin`'s deprecation note.
+    #[test]
+    fn exactly_one_sbom_plugin_is_registered() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let sbom: Vec<_> = plugins
+            .inventory()
+            .into_iter()
+            .filter(|p| p.name.contains("sbom"))
+            .collect();
+        assert_eq!(sbom.len(), 1, "expected one SBOM plugin, got {sbom:?}");
+        assert_eq!(sbom[0].name, "sbom");
+    }
+
+    /// The inventory is ordered, and that order is execution order — the
+    /// property `ssg plugins list` reports and the README count derives from.
+    #[test]
+    fn inventory_is_in_registration_order() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let inv = plugins.inventory();
+        assert!(!inv.is_empty());
+        for (i, info) in inv.iter().enumerate() {
+            assert_eq!(info.order, i);
+        }
+        assert_eq!(inv.len(), plugins.len());
+    }
     use super::*;
 
     #[test]

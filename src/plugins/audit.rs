@@ -326,8 +326,8 @@ impl AuditPlugin {
             }
 
             // E. Navbar & Footer Hygiene
-            if !rel.starts_with("tags/") {
-                if !html.contains("navbar") || !html.contains("navbar-brand") {
+            if !is_taxonomy_page(&rel) {
+                if !has_responsive_navbar(&html) {
                     if let Some(p) = pillars.get_mut("6. Apple HIG Navbar & Footer Hygiene") {
                         p.add_issue(format!("{rel}: Missing responsive navbar"));
                     }
@@ -342,7 +342,15 @@ impl AuditPlugin {
             }
 
             // F. Forms integrity on contact page
-            if rel.to_lowercase().contains("contact") && !html.contains("http-equiv=\"refresh\"") {
+            //
+            // Taxonomy pages are excluded: a site tagging articles "contact"
+            // emits `tags/contact/index.html`, which the substring match read
+            // as the contact page and then failed for carrying no form. The
+            // tag index is generated and never has one.
+            if rel.to_lowercase().contains("contact")
+                && !is_taxonomy_page(&rel)
+                && !html.contains("http-equiv=\"refresh\"")
+            {
                 if !html.contains("<form") || !html.contains("action=") {
                     if let Some(p) = pillars.get_mut("8. Forms & Link Integrity") {
                         p.add_issue(format!("{rel}: Contact page missing functional form action"));
@@ -382,6 +390,63 @@ impl AuditPlugin {
     }
 }
 
+/// Whether a path is a generated taxonomy page rather than an authored one.
+///
+/// Tag indexes are emitted by the taxonomy plugin, so the navbar and footer
+/// hygiene rules do not apply to them. Matching only a leading `tags/` missed
+/// every translated copy: with `url_prefix = "sub_path"` the French set is
+/// emitted under `fr/tags/`, so a bilingual site failed the pillar on exactly
+/// the pages an English-only one was excused. Allow one leading locale segment
+/// before the taxonomy root.
+fn is_taxonomy_page(rel: &str) -> bool {
+    if rel.starts_with("tags/") {
+        return true;
+    }
+    // The locale segment is only considered second: `tags` is itself short and
+    // alphabetic, so stripping a leading segment first would consume the very
+    // directory being looked for and report `tags/index.html` as authored.
+    match rel.split_once('/') {
+        // A locale segment is short and alphabetic: `fr/`, `en/`, `pt-br/`.
+        Some((first, rest))
+            if (2..=5).contains(&first.len())
+                && first
+                    .chars()
+                    .all(|c| c.is_ascii_alphabetic() || c == '-') =>
+        {
+            rest.starts_with("tags/")
+        }
+        _ => false,
+    }
+}
+
+/// Whether a page exposes a responsive navigation bar carrying a brand link.
+///
+/// The pillar this backs is about structure, not about any one CSS framework.
+/// Matching on the literal `navbar`/`navbar-brand` class pair only recognised
+/// Bootstrap-shaped markup, so themes that ship a semantic `<nav>` landmark
+/// with a `class="brand"` home link — which is the more accessible form, and
+/// what every first-party theme uses — were reported as having no navbar at
+/// all. Accept either spelling: the legacy class pair, or a `<nav>` landmark
+/// combined with a recognisable brand link.
+fn has_responsive_navbar(html: &str) -> bool {
+    let bootstrap = html.contains("navbar") && html.contains("navbar-brand");
+
+    let has_nav_landmark = html.contains("<nav")
+        || html.contains("role=\"navigation\"")
+        || html.contains("role='navigation'");
+
+    // A brand link is the site identity anchored in the header: a `brand`
+    // class, or an explicit home relation.
+    let has_brand = html.contains("class=\"brand\"")
+        || html.contains("class='brand'")
+        || html.contains("navbar-brand")
+        || html.contains("class=\"site-title\"")
+        || html.contains("rel=\"home\"")
+        || html.contains("rel='home'");
+
+    bootstrap || (has_nav_landmark && has_brand)
+}
+
 impl Plugin for AuditPlugin {
     fn name(&self) -> &'static str {
         "audit"
@@ -408,6 +473,66 @@ mod tests {
         let data = b"console.log('hello world');";
         let sri = AuditPlugin::compute_sri(data);
         assert!(sri.starts_with("sha384-"));
+    }
+
+    #[test]
+    fn test_taxonomy_page_matches_plain_tags_root() {
+        assert!(is_taxonomy_page("tags/index.html"));
+        assert!(is_taxonomy_page("tags/method/index.html"));
+    }
+
+    #[test]
+    fn test_taxonomy_page_matches_locale_prefixed_tags() {
+        // `url_prefix = "sub_path"` emits the translated set under the locale,
+        // which the pillar must excuse exactly as it does the default one.
+        assert!(is_taxonomy_page("fr/tags/index.html"));
+        assert!(is_taxonomy_page("fr/tags/editorial/index.html"));
+        assert!(is_taxonomy_page("pt-br/tags/index.html"));
+    }
+
+    #[test]
+    fn test_taxonomy_page_rejects_authored_pages() {
+        assert!(!is_taxonomy_page("index.html"));
+        assert!(!is_taxonomy_page("about/index.html"));
+        assert!(!is_taxonomy_page("fr/a-propos/index.html"));
+        // A content page that merely starts with the same letters is authored.
+        assert!(!is_taxonomy_page("tagging-guide/index.html"));
+    }
+
+    #[test]
+    fn test_navbar_accepts_bootstrap_class_pair() {
+        let html = r#"<nav class="navbar"><a class="navbar-brand" href="/">Home</a></nav>"#;
+        assert!(has_responsive_navbar(html));
+    }
+
+    #[test]
+    fn test_navbar_accepts_semantic_nav_with_brand() {
+        // The shape every first-party theme ships: a `<nav>` landmark and a
+        // `brand` home link, with no Bootstrap class names anywhere.
+        let html = r#"<header><a class="brand" href="/">Lucid</a>
+  <nav aria-label="Main"><ul><li><a href="/install/">Install</a></li></ul></nav>
+</header>"#;
+        assert!(has_responsive_navbar(html));
+    }
+
+    #[test]
+    fn test_navbar_accepts_navigation_role_with_home_rel() {
+        let html = r#"<div role="navigation"><a rel="home" href="/">Site</a></div>"#;
+        assert!(has_responsive_navbar(html));
+    }
+
+    #[test]
+    fn test_navbar_rejects_page_without_navigation() {
+        let html = r#"<header><h1>Just a title</h1></header><main><p>Body</p></main>"#;
+        assert!(!has_responsive_navbar(html));
+    }
+
+    #[test]
+    fn test_navbar_rejects_nav_landmark_without_brand() {
+        // A bare nav with no site identity is still an incomplete header, so
+        // the pillar should keep flagging it.
+        let html = r#"<nav aria-label="Main"><ul><li><a href="/a/">A</a></li></ul></nav>"#;
+        assert!(!has_responsive_navbar(html));
     }
 
     #[test]

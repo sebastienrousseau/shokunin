@@ -423,6 +423,46 @@ pub fn slugify(input: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// A code span containing HTML must be escaped, not emitted as markup.
+    ///
+    /// The blog example carries an accessibility checklist whose second item
+    /// is "Every `<img>` has a meaningful `alt`". Rendered through the legacy
+    /// `staticdatagen` compiler that sentence produces a real, attribute-less
+    /// `<img>` element — so a page about alt text ships an image without one,
+    /// and `tests/example_outputs.rs` fails on it.
+    ///
+    /// `compile_markdown` is the replacement path (WS1 of the v0.0.58 plan
+    /// retires `staticdatagen`). This pins the correct behaviour so the fix
+    /// arrives with the migration and cannot regress afterwards.
+    #[test]
+    fn code_spans_escape_html_tags() {
+        let html = compile_markdown(
+            "Every `<img>` has a meaningful `alt` (or `alt=\"\"`).",
+        );
+        assert!(
+            html.contains("<code>&lt;img&gt;</code>"),
+            "code span was not escaped: {html}"
+        );
+        assert!(
+            !html.contains("<code><img></code>"),
+            "code span emitted a real <img> element: {html}"
+        );
+    }
+
+    #[test]
+    fn fenced_blocks_escape_html_tags() {
+        let html = compile_markdown("```\n<script>alert(1)</script>\n```\n");
+        assert!(
+            html.contains("&lt;script&gt;"),
+            "fenced block was not escaped: {html}"
+        );
+        assert!(
+            !html.contains("<script>alert(1)</script>"),
+            "fenced block emitted executable markup: {html}"
+        );
+    }
+
     use super::*;
 
     #[test]
