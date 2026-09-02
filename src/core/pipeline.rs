@@ -577,7 +577,8 @@ pub fn execute_build_pipeline_with(
     plugins.run_fused_transforms(&ctx)?;
 
     // Master Quality Gate & Compliance Audit
-    let audit_report = crate::plugins_group::audit::AuditPlugin::audit_directory(site_dir);
+    let audit_report =
+        crate::plugins_group::audit::AuditPlugin::audit_directory(site_dir);
     let audit_path = site_dir.join("quality-gate-report.json");
     if let Ok(json_str) = serde_json::to_string_pretty(&audit_report) {
         let _ = std::fs::write(&audit_path, json_str);
@@ -799,13 +800,15 @@ pub fn compile_site_with_locales(
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
-    compile(build_dir, &staged_content, site_dir, template_dir).map_err(|e| {
-        eprintln!("    Error compiling site: {e:?}");
-        SsgError::io(
-            std::io::Error::other(format!("Failed to compile site: {e:?}")),
-            build_dir,
-        )
-    })?;
+    compile(build_dir, &staged_content, site_dir, template_dir).map_err(
+        |e| {
+            eprintln!("    Error compiling site: {e:?}");
+            SsgError::io(
+                std::io::Error::other(format!("Failed to compile site: {e:?}")),
+                build_dir,
+            )
+        },
+    )?;
 
     // Copy any static assets from template_dir (e.g. styles.css, theme-init.js, favicon.ico, images)
     // to site_dir so they are available in public/ and fingerprinted by assets plugin.
@@ -853,7 +856,10 @@ fn copy_static_template_assets(src: &Path, dst: &Path) -> Result<(), SsgError> {
                 let target = dst.join(name);
                 let _ = std::fs::copy(&path, &target);
             }
-        } else if path.is_dir() && name_str != "tera" && !name_str.starts_with('.') {
+        } else if path.is_dir()
+            && name_str != "tera"
+            && !name_str.starts_with('.')
+        {
             let target_dir = dst.join(name);
             let _ = std::fs::create_dir_all(&target_dir);
             let _ = copy_static_template_assets(&path, &target_dir);
@@ -1057,8 +1063,11 @@ mod tests {
         for info in plugins.inventory() {
             *seen.entry(info.name).or_insert(0usize) += 1;
         }
-        let dupes: Vec<_> =
-            seen.iter().filter(|(_, n)| **n > 1).map(|(k, _)| *k).collect();
+        let dupes: Vec<_> = seen
+            .iter()
+            .filter(|(_, n)| **n > 1)
+            .map(|(k, _)| *k)
+            .collect();
         assert!(dupes.is_empty(), "duplicate plugin names: {dupes:?}");
     }
 

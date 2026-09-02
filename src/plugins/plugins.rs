@@ -448,6 +448,10 @@ impl Plugin for DeployPlugin {
 
 #[cfg(test)]
 mod tests {
+    // These tests exercise the deprecated plugin deliberately: it is
+    // still shipped for one release, and this is what keeps it working
+    // until removal.
+    #![allow(deprecated)]
     use super::*;
     use crate::plugin::{PluginCache, PluginContext};
     use crate::test_support::init_logger;

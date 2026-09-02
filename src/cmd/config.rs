@@ -967,7 +967,8 @@ mod tests {
     #[test]
     fn discovery_falls_back_to_config_toml() {
         let dir = tempdir().unwrap();
-        fs::write(dir.path().join("config.toml"), "site_name = \"x\"\n").unwrap();
+        fs::write(dir.path().join("config.toml"), "site_name = \"x\"\n")
+            .unwrap();
 
         let found = SsgConfig::discover_config_file_in(dir.path());
         assert_eq!(found, Some(dir.path().join("config.toml")));
@@ -977,7 +978,8 @@ mod tests {
     fn discovery_prefers_ssg_toml_over_config_toml() {
         let dir = tempdir().unwrap();
         fs::write(dir.path().join("ssg.toml"), "site_name = \"a\"\n").unwrap();
-        fs::write(dir.path().join("config.toml"), "site_name = \"b\"\n").unwrap();
+        fs::write(dir.path().join("config.toml"), "site_name = \"b\"\n")
+            .unwrap();
 
         let found = SsgConfig::discover_config_file_in(dir.path());
         assert_eq!(found, Some(dir.path().join("ssg.toml")));

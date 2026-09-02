@@ -87,7 +87,10 @@ fn dictionaries_use_only_supported_escapes() {
                          only \\\\, \\\" and \\xAB: {line}",
                         entry.display(),
                         n + 1,
-                        other.map_or_else(|| "<eol>".to_string(), |c| c.to_string()),
+                        other.map_or_else(
+                            || "<eol>".to_string(),
+                            |c| c.to_string()
+                        ),
                     ),
                 }
             }
@@ -156,7 +159,10 @@ fn oss_fuzz_build_script_is_executable_and_sets_shell_flags() {
     {
         use std::os::unix::fs::PermissionsExt;
         let mode = fs::metadata(&script).expect("stat").permissions().mode();
-        assert!(mode & 0o111 != 0, "fuzz/oss-fuzz-build.sh is not executable");
+        assert!(
+            mode & 0o111 != 0,
+            "fuzz/oss-fuzz-build.sh is not executable"
+        );
     }
 }
 
@@ -188,7 +194,11 @@ fn dictionary_files() -> Vec<PathBuf> {
         .filter(|p| p.extension().is_some_and(|e| e == "dict"))
         .collect();
     out.sort();
-    assert!(!out.is_empty(), "no dictionaries found in {}", dir.display());
+    assert!(
+        !out.is_empty(),
+        "no dictionaries found in {}",
+        dir.display()
+    );
     out
 }
 

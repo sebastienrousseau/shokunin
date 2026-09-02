@@ -612,49 +612,90 @@ fn fix_escaped_html_entities(html: &str) -> String {
     let mut modified = html.to_string();
 
     let tag_prefixes = [
-        "&lt;section", "&lt;/section&gt;",
-        "&lt;article", "&lt;/article&gt;",
-        "&lt;header", "&lt;/header&gt;",
-        "&lt;footer", "&lt;/footer&gt;",
-        "&lt;nav", "&lt;/nav&gt;",
-        "&lt;aside", "&lt;/aside&gt;",
-        "&lt;main", "&lt;/main&gt;",
-        "&lt;div", "&lt;/div&gt;",
-        "&lt;form", "&lt;/form&gt;",
-        "&lt;input", "&lt;/input&gt;",
-        "&lt;label", "&lt;/label&gt;",
-        "&lt;button", "&lt;/button&gt;",
-        "&lt;select", "&lt;/select&gt;",
-        "&lt;option", "&lt;/option&gt;",
-        "&lt;textarea", "&lt;/textarea&gt;",
-        "&lt;table", "&lt;/table&gt;",
-        "&lt;thead", "&lt;/thead&gt;",
-        "&lt;tbody", "&lt;/tbody&gt;",
-        "&lt;tr", "&lt;/tr&gt;",
-        "&lt;th", "&lt;/th&gt;",
-        "&lt;td", "&lt;/td&gt;",
-        "&lt;p", "&lt;/p&gt;",
-        "&lt;span", "&lt;/span&gt;",
-        "&lt;a ", "&lt;/a&gt;",
-        "&lt;img", "&lt;picture", "&lt;/picture&gt;", "&lt;source",
-        "&lt;h1", "&lt;/h1&gt;",
-        "&lt;h2", "&lt;/h2&gt;",
-        "&lt;h3", "&lt;/h3&gt;",
-        "&lt;h4", "&lt;/h4&gt;",
-        "&lt;h5", "&lt;/h5&gt;",
-        "&lt;h6", "&lt;/h6&gt;",
-        "&lt;ul", "&lt;/ul&gt;",
-        "&lt;ol", "&lt;/ol&gt;",
-        "&lt;li", "&lt;/li&gt;",
-        "&lt;strong", "&lt;/strong&gt;",
-        "&lt;em", "&lt;/em&gt;",
-        "&lt;blockquote", "&lt;/blockquote&gt;",
-        "&lt;hr", "&lt;br",
+        "&lt;section",
+        "&lt;/section&gt;",
+        "&lt;article",
+        "&lt;/article&gt;",
+        "&lt;header",
+        "&lt;/header&gt;",
+        "&lt;footer",
+        "&lt;/footer&gt;",
+        "&lt;nav",
+        "&lt;/nav&gt;",
+        "&lt;aside",
+        "&lt;/aside&gt;",
+        "&lt;main",
+        "&lt;/main&gt;",
+        "&lt;div",
+        "&lt;/div&gt;",
+        "&lt;form",
+        "&lt;/form&gt;",
+        "&lt;input",
+        "&lt;/input&gt;",
+        "&lt;label",
+        "&lt;/label&gt;",
+        "&lt;button",
+        "&lt;/button&gt;",
+        "&lt;select",
+        "&lt;/select&gt;",
+        "&lt;option",
+        "&lt;/option&gt;",
+        "&lt;textarea",
+        "&lt;/textarea&gt;",
+        "&lt;table",
+        "&lt;/table&gt;",
+        "&lt;thead",
+        "&lt;/thead&gt;",
+        "&lt;tbody",
+        "&lt;/tbody&gt;",
+        "&lt;tr",
+        "&lt;/tr&gt;",
+        "&lt;th",
+        "&lt;/th&gt;",
+        "&lt;td",
+        "&lt;/td&gt;",
+        "&lt;p",
+        "&lt;/p&gt;",
+        "&lt;span",
+        "&lt;/span&gt;",
+        "&lt;a ",
+        "&lt;/a&gt;",
+        "&lt;img",
+        "&lt;picture",
+        "&lt;/picture&gt;",
+        "&lt;source",
+        "&lt;h1",
+        "&lt;/h1&gt;",
+        "&lt;h2",
+        "&lt;/h2&gt;",
+        "&lt;h3",
+        "&lt;/h3&gt;",
+        "&lt;h4",
+        "&lt;/h4&gt;",
+        "&lt;h5",
+        "&lt;/h5&gt;",
+        "&lt;h6",
+        "&lt;/h6&gt;",
+        "&lt;ul",
+        "&lt;/ul&gt;",
+        "&lt;ol",
+        "&lt;/ol&gt;",
+        "&lt;li",
+        "&lt;/li&gt;",
+        "&lt;strong",
+        "&lt;/strong&gt;",
+        "&lt;em",
+        "&lt;/em&gt;",
+        "&lt;blockquote",
+        "&lt;/blockquote&gt;",
+        "&lt;hr",
+        "&lt;br",
     ];
 
     for prefix in tag_prefixes {
         if prefix.ends_with("&gt;") {
-            let clean_closing = prefix.replace("&lt;/", "</").replace("&gt;", ">");
+            let clean_closing =
+                prefix.replace("&lt;/", "</").replace("&gt;", ">");
             modified = modified.replace(prefix, &clean_closing);
         } else {
             while let Some(start) = modified.find(prefix) {
@@ -666,7 +707,12 @@ fn fix_escaped_html_entities(html: &str) -> String {
                         .replace("&gt;", ">")
                         .replace("&quot;", "\"")
                         .replace("&#x27;", "'");
-                    modified = format!("{}{}{}", &modified[..start], decoded_tag, &modified[end..]);
+                    modified = format!(
+                        "{}{}{}",
+                        &modified[..start],
+                        decoded_tag,
+                        &modified[end..]
+                    );
                 } else {
                     break;
                 }
@@ -697,7 +743,10 @@ mod tests {
     fn escaping_code_spans_leaves_surrounding_markup_alone() {
         let html = "<p>Before</p><code><b>x</b></code><p>After <em>y</em></p>";
         let out = apply_html_fixes(html);
-        assert!(out.contains("<code>&lt;b&gt;x&lt;/b&gt;</code>"), "got: {out}");
+        assert!(
+            out.contains("<code>&lt;b&gt;x&lt;/b&gt;</code>"),
+            "got: {out}"
+        );
         assert!(out.contains("<p>Before</p>"), "got: {out}");
         assert!(out.contains("<em>y</em>"), "got: {out}");
     }

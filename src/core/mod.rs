@@ -1,6 +1,8 @@
 // Copyright © 2023 - 2026 Static Site Generator (SSG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+#[cfg(any(test, feature = "benchmark"))]
+pub mod bench_corpus;
 pub mod cache;
 pub mod collections;
 pub mod content;
@@ -15,8 +17,6 @@ pub mod io_pool;
 pub(crate) mod lang;
 pub mod logging;
 pub mod otel;
-#[cfg(any(test, feature = "benchmark"))]
-pub mod bench_corpus;
 pub mod pipeline;
 pub mod process;
 pub mod scaffold;

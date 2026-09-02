@@ -14,7 +14,7 @@
 //! 6. Apple HIG Navbar & Footer Hygiene (valid navbar links, "Made with SSG" in footer, not in top navbar)
 //! 7. Theme, Search & Lightbox Engines (search index excludes utility pages; client runtime presence)
 //! 8. Forms & Link Integrity (functional form actions on contact pages)
-//! 9. CloudCDN Asset Resolution (valid CDN paths)
+//! 9. `CloudCDN` Asset Resolution (valid CDN paths)
 //! 10. Accessibility & Semantic Hierarchy (`lang` attribute, `<h1>` heading, no empty headings)
 //!
 //! Emits `quality-gate-report.json` in the build output directory.
@@ -136,7 +136,8 @@ impl AuditPlugin {
         ];
         for rf in req_files {
             if !site_dir.join(rf).is_file() {
-                if let Some(p) = pillars.get_mut("1. Output & Essential Files") {
+                if let Some(p) = pillars.get_mut("1. Output & Essential Files")
+                {
                     p.add_issue(format!("Missing essential file: {rf}"));
                 }
             }
@@ -146,7 +147,9 @@ impl AuditPlugin {
         let sindex_path = site_dir.join("search-index.json");
         if sindex_path.is_file() {
             if let Ok(content) = fs::read_to_string(&sindex_path) {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Ok(val) =
+                    serde_json::from_str::<serde_json::Value>(&content)
+                {
                     let entries = if let Some(arr) = val.as_array() {
                         Some(arr)
                     } else {
@@ -155,7 +158,10 @@ impl AuditPlugin {
 
                     if let Some(entries) = entries {
                         for entry in entries {
-                            if let Some(url) = entry.get("url").and_then(serde_json::Value::as_str) {
+                            if let Some(url) = entry
+                                .get("url")
+                                .and_then(serde_json::Value::as_str)
+                            {
                                 let u_lower = url.to_lowercase();
                                 if u_lower.contains("/404")
                                     || u_lower.contains("/offline")
@@ -164,7 +170,9 @@ impl AuditPlugin {
                                     || u_lower.contains("offline.html")
                                     || u_lower.contains("thanks.html")
                                 {
-                                    if let Some(p) = pillars.get_mut("7. Theme, Search & Lightbox Engines") {
+                                    if let Some(p) = pillars.get_mut(
+                                        "7. Theme, Search & Lightbox Engines",
+                                    ) {
                                         p.add_issue(format!(
                                             "search-index.json contains utility page: {url}"
                                         ));
@@ -187,7 +195,10 @@ impl AuditPlugin {
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_dir() {
-                        let name = path.file_name().unwrap_or_default().to_string_lossy();
+                        let name = path
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy();
                         if !name.starts_with('.')
                             && name != "_layouts"
                             && name != "templates"
@@ -196,7 +207,10 @@ impl AuditPlugin {
                             stack.push(path);
                         }
                     } else if path.is_file() {
-                        let ext = path.extension().unwrap_or_default().to_string_lossy();
+                        let ext = path
+                            .extension()
+                            .unwrap_or_default()
+                            .to_string_lossy();
                         if ext == "html" {
                             html_files.push(path);
                         } else if ext == "js" || ext == "css" {
@@ -212,7 +226,8 @@ impl AuditPlugin {
                                     .unwrap_or(&path)
                                     .to_string_lossy()
                                     .replace('\\', "/");
-                                let _ = asset_hashes.insert(format!("/{rel}"), hash.clone());
+                                let _ = asset_hashes
+                                    .insert(format!("/{rel}"), hash.clone());
                                 let _ = asset_hashes.insert(fname, hash);
                             }
                         }
@@ -247,13 +262,23 @@ impl AuditPlugin {
                         || head_txt.contains("<p")
                         || head_txt.contains("<span")
                     {
-                        if let Some(p) = pillars.get_mut("2. Meta Leaks & Content Hygiene") {
-                            p.add_issue(format!("{rel}: Unescaped HTML container inside <head>"));
+                        if let Some(p) =
+                            pillars.get_mut("2. Meta Leaks & Content Hygiene")
+                        {
+                            p.add_issue(format!(
+                                "{rel}: Unescaped HTML container inside <head>"
+                            ));
                         }
                     }
-                    if head_txt.contains("&lt;div") || head_txt.contains("&lt;h") {
-                        if let Some(p) = pillars.get_mut("2. Meta Leaks & Content Hygiene") {
-                            p.add_issue(format!("{rel}: Leaked escaped entity in <head>"));
+                    if head_txt.contains("&lt;div")
+                        || head_txt.contains("&lt;h")
+                    {
+                        if let Some(p) =
+                            pillars.get_mut("2. Meta Leaks & Content Hygiene")
+                        {
+                            p.add_issue(format!(
+                                "{rel}: Leaked escaped entity in <head>"
+                            ));
                         }
                     }
                 }
@@ -261,8 +286,12 @@ impl AuditPlugin {
 
             // Body hygiene
             if html.contains(".class=\"") || html.contains(".class=\\\"") {
-                if let Some(p) = pillars.get_mut("2. Meta Leaks & Content Hygiene") {
-                    p.add_issue(format!("{rel}: Leaked .class= template artifact"));
+                if let Some(p) =
+                    pillars.get_mut("2. Meta Leaks & Content Hygiene")
+                {
+                    p.add_issue(format!(
+                        "{rel}: Leaked .class= template artifact"
+                    ));
                 }
             }
             if html.contains("&lt;div")
@@ -270,19 +299,31 @@ impl AuditPlugin {
                 || html.contains("&lt;p&gt;")
                 || html.contains("&lt;img")
             {
-                if let Some(p) = pillars.get_mut("2. Meta Leaks & Content Hygiene") {
-                    p.add_issue(format!("{rel}: Escaped HTML entities leaked in body content"));
+                if let Some(p) =
+                    pillars.get_mut("2. Meta Leaks & Content Hygiene")
+                {
+                    p.add_issue(format!(
+                        "{rel}: Escaped HTML entities leaked in body content"
+                    ));
                 }
             }
 
             // B. CSP Integrity
             if !html.to_lowercase().contains("content-security-policy") {
-                if let Some(p) = pillars.get_mut("3. CSP & Security Integrity") {
-                    p.add_issue(format!("{rel}: Missing Content-Security-Policy meta tag"));
+                if let Some(p) = pillars.get_mut("3. CSP & Security Integrity")
+                {
+                    p.add_issue(format!(
+                        "{rel}: Missing Content-Security-Policy meta tag"
+                    ));
                 }
-            } else if !html.contains("script-src") && !html.contains("default-src") {
-                if let Some(p) = pillars.get_mut("3. CSP & Security Integrity") {
-                    p.add_issue(format!("{rel}: CSP missing essential directives"));
+            } else if !html.contains("script-src")
+                && !html.contains("default-src")
+            {
+                if let Some(p) = pillars.get_mut("3. CSP & Security Integrity")
+                {
+                    p.add_issue(format!(
+                        "{rel}: CSP missing essential directives"
+                    ));
                 }
             }
 
@@ -293,17 +334,29 @@ impl AuditPlugin {
                         let rem = &line[src_start + 5..];
                         if let Some(src_end) = rem.find('"') {
                             let src = &rem[..src_end];
-                            if !src.starts_with("http://") && !src.starts_with("https://") {
-                                if let Some(int_start) = line.find("integrity=\"") {
+                            if !src.starts_with("http://")
+                                && !src.starts_with("https://")
+                            {
+                                if let Some(int_start) =
+                                    line.find("integrity=\"")
+                                {
                                     let irem = &line[int_start + 11..];
                                     if let Some(int_end) = irem.find('"') {
                                         let int_val = &irem[..int_end];
                                         let expected = asset_hashes
                                             .get(src)
-                                            .or_else(|| asset_hashes.get(src.trim_start_matches('/')));
+                                            .or_else(|| {
+                                                asset_hashes.get(
+                                                    src.trim_start_matches('/'),
+                                                )
+                                            });
                                         if let Some(exp) = expected {
                                             if exp != int_val {
-                                                if let Some(p) = pillars.get_mut("4. SRI Hashes Sync") {
+                                                if let Some(p) = pillars
+                                                    .get_mut(
+                                                        "4. SRI Hashes Sync",
+                                                    )
+                                                {
                                                     p.add_issue(format!(
                                                         "{rel}: SRI mismatch for {src}"
                                                     ));
@@ -319,24 +372,38 @@ impl AuditPlugin {
             }
 
             // D. Hero banner subpage isolation
-            if rel != "index.html" && html.contains("class=\"hero-banner-container\"") {
-                if let Some(p) = pillars.get_mut("5. Hero Banner Subpage Isolation") {
-                    p.add_issue(format!("{rel}: Subpage has full-screen hero banner"));
+            if rel != "index.html"
+                && html.contains("class=\"hero-banner-container\"")
+            {
+                if let Some(p) =
+                    pillars.get_mut("5. Hero Banner Subpage Isolation")
+                {
+                    p.add_issue(format!(
+                        "{rel}: Subpage has full-screen hero banner"
+                    ));
                 }
             }
 
             // E. Navbar & Footer Hygiene
             if !is_taxonomy_page(&rel) {
                 if !has_responsive_navbar(&html) {
-                    if let Some(p) = pillars.get_mut("6. Apple HIG Navbar & Footer Hygiene") {
-                        p.add_issue(format!("{rel}: Missing responsive navbar"));
+                    if let Some(p) =
+                        pillars.get_mut("6. Apple HIG Navbar & Footer Hygiene")
+                    {
+                        p.add_issue(format!(
+                            "{rel}: Missing responsive navbar"
+                        ));
                     }
                 }
 
                 // Check footer contains Made with SSG
                 if html.contains("<footer") && !html.contains("made-with-ssg") {
-                    if let Some(p) = pillars.get_mut("6. Apple HIG Navbar & Footer Hygiene") {
-                        p.add_issue(format!("{rel}: Footer missing 'Made with SSG' link"));
+                    if let Some(p) =
+                        pillars.get_mut("6. Apple HIG Navbar & Footer Hygiene")
+                    {
+                        p.add_issue(format!(
+                            "{rel}: Footer missing 'Made with SSG' link"
+                        ));
                     }
                 }
             }
@@ -350,9 +417,12 @@ impl AuditPlugin {
             if rel.to_lowercase().contains("contact")
                 && !is_taxonomy_page(&rel)
                 && !html.contains("http-equiv=\"refresh\"")
+                && (!html.contains("<form") || !html.contains("action="))
             {
-                if !html.contains("<form") || !html.contains("action=") {
-                    if let Some(p) = pillars.get_mut("8. Forms & Link Integrity") {
+                {
+                    if let Some(p) =
+                        pillars.get_mut("8. Forms & Link Integrity")
+                    {
                         p.add_issue(format!("{rel}: Contact page missing functional form action"));
                     }
                 }
@@ -360,18 +430,25 @@ impl AuditPlugin {
 
             // G. Accessibility & Semantic Hierarchy
             if !html.contains("lang=") {
-                if let Some(p) = pillars.get_mut("10. Accessibility & Semantic Hierarchy") {
+                if let Some(p) =
+                    pillars.get_mut("10. Accessibility & Semantic Hierarchy")
+                {
                     p.add_issue(format!("{rel}: Missing html lang attribute"));
                 }
             }
             if !html.contains("<h1") {
-                if let Some(p) = pillars.get_mut("10. Accessibility & Semantic Hierarchy") {
-                    p.add_issue(format!("{rel}: Missing first-level <h1> heading"));
+                if let Some(p) =
+                    pillars.get_mut("10. Accessibility & Semantic Hierarchy")
+                {
+                    p.add_issue(format!(
+                        "{rel}: Missing first-level <h1> heading"
+                    ));
                 }
             }
         }
 
-        let total_issues: usize = pillars.values().map(|p| p.issues.len()).sum();
+        let total_issues: usize =
+            pillars.values().map(|p| p.issues.len()).sum();
         let passed_pillars: usize = pillars.values().filter(|p| p.pass).count();
         let pass_rate = if pillars.is_empty() {
             0.0
@@ -517,13 +594,15 @@ mod tests {
 
     #[test]
     fn test_navbar_accepts_navigation_role_with_home_rel() {
-        let html = r#"<div role="navigation"><a rel="home" href="/">Site</a></div>"#;
+        let html =
+            r#"<div role="navigation"><a rel="home" href="/">Site</a></div>"#;
         assert!(has_responsive_navbar(html));
     }
 
     #[test]
     fn test_navbar_rejects_page_without_navigation() {
-        let html = r#"<header><h1>Just a title</h1></header><main><p>Body</p></main>"#;
+        let html =
+            r#"<header><h1>Just a title</h1></header><main><p>Body</p></main>"#;
         assert!(!has_responsive_navbar(html));
     }
 
@@ -579,6 +658,8 @@ mod tests {
         let report = AuditPlugin::audit_directory(sdir);
         assert_eq!(report.passed_pillars, 10);
         assert_eq!(report.total_issues, 0);
-        assert_eq!(report.pass_rate, 100.0);
+        // `pass_rate` is a computed f64; compare within epsilon rather
+        // than with `==`, which is what clippy::float_cmp guards.
+        assert!((report.pass_rate - 100.0).abs() < f64::EPSILON);
     }
 }

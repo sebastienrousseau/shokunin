@@ -113,6 +113,8 @@ pub mod util;
 pub use error::{PathErrorExt, SsgError};
 
 // Re-export core modules for public API compatibility
+#[cfg(any(test, feature = "benchmark"))]
+pub use crate::core_group::bench_corpus;
 pub use crate::core_group::cache;
 pub use crate::core_group::collections;
 pub use crate::core_group::content;
@@ -130,8 +132,6 @@ pub use crate::core_group::pipeline;
 pub use crate::core_group::process;
 pub use crate::core_group::scaffold;
 pub use crate::core_group::schema;
-#[cfg(any(test, feature = "benchmark"))]
-pub use crate::core_group::bench_corpus;
 pub use crate::core_group::stream;
 pub use crate::core_group::streaming;
 #[cfg(feature = "templates")]
@@ -689,7 +689,10 @@ fn run_plugins(matches: &clap::ArgMatches, json: bool) -> Result<(), SsgError> {
     }
 
     println!("{} plugin(s), in execution order:\n", inventory.len());
-    println!("  {:>3}  {:<28} {:>9}  {:>9}", "#", "NAME", "TRANSFORM", "ALL-FILES");
+    println!(
+        "  {:>3}  {:<28} {:>9}  {:>9}",
+        "#", "NAME", "TRANSFORM", "ALL-FILES"
+    );
     for p in &inventory {
         println!(
             "  {:>3}  {:<28} {:>9}  {:>9}",

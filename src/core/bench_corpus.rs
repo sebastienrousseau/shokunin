@@ -45,10 +45,28 @@ use std::path::Path;
 /// A fixed vocabulary keeps the compressed size of the corpus stable, which
 /// matters because the page-weight gate measures compressed bytes.
 const LEXICON: &[&str] = &[
-    "compiler", "pipeline", "markdown", "template", "static", "render",
-    "accessible", "contrast", "locale", "sitemap", "canonical", "manifest",
-    "fingerprint", "integrity", "streaming", "incremental", "corpus",
-    "benchmark", "throughput", "latency", "deterministic", "artefact",
+    "compiler",
+    "pipeline",
+    "markdown",
+    "template",
+    "static",
+    "render",
+    "accessible",
+    "contrast",
+    "locale",
+    "sitemap",
+    "canonical",
+    "manifest",
+    "fingerprint",
+    "integrity",
+    "streaming",
+    "incremental",
+    "corpus",
+    "benchmark",
+    "throughput",
+    "latency",
+    "deterministic",
+    "artefact",
 ];
 
 /// Tags assigned to pages, so taxonomy generation has real work to do.
@@ -118,10 +136,14 @@ struct Rng(u64);
 impl Rng {
     const fn new(seed: u64) -> Self {
         // A zero state is a fixed point for xorshift, so it is never allowed.
-        Self(if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed })
+        Self(if seed == 0 {
+            0x9E37_79B9_7F4A_7C15
+        } else {
+            seed
+        })
     }
 
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.0;
         x ^= x >> 12;
         x ^= x << 25;
@@ -130,7 +152,7 @@ impl Rng {
         x.wrapping_mul(0x2545_F491_4F6C_DD1D)
     }
 
-    fn pick<'a, T>(&mut self, items: &'a [T]) -> &'a T {
+    const fn pick<'a, T>(&mut self, items: &'a [T]) -> &'a T {
         let idx = (self.next() % items.len() as u64) as usize;
         &items[idx]
     }
@@ -162,7 +184,8 @@ pub fn generate_corpus(dir: &Path, spec: &CorpusSpec) -> io::Result<usize> {
         // Seeding per page rather than streaming one sequence means page N is
         // identical whether the corpus holds 1K pages or 100K — so the 1K and
         // 10K runs share a prefix and are genuinely comparable.
-        let mut rng = Rng::new(spec.seed ^ (i as u64).wrapping_mul(0x9E37_79B9));
+        let mut rng =
+            Rng::new(spec.seed ^ (i as u64).wrapping_mul(0x9E37_79B9));
 
         let words: Vec<&str> = (0..spec.words_per_page)
             .map(|_| *rng.pick(LEXICON))
@@ -212,8 +235,8 @@ mod tests {
         let b = tempfile::tempdir().unwrap();
         let spec = CorpusSpec::new(16);
 
-        generate_corpus(a.path(), &spec).unwrap();
-        generate_corpus(b.path(), &spec).unwrap();
+        let _written = generate_corpus(a.path(), &spec).unwrap();
+        let _written = generate_corpus(b.path(), &spec).unwrap();
 
         for i in 0..16 {
             let name = format!("page-{i:04}.md");
@@ -231,8 +254,10 @@ mod tests {
         // published figures measure different inputs.
         let small = tempfile::tempdir().unwrap();
         let large = tempfile::tempdir().unwrap();
-        generate_corpus(small.path(), &CorpusSpec::new(8)).unwrap();
-        generate_corpus(large.path(), &CorpusSpec::new(64)).unwrap();
+        let _written =
+            generate_corpus(small.path(), &CorpusSpec::new(8)).unwrap();
+        let _written =
+            generate_corpus(large.path(), &CorpusSpec::new(64)).unwrap();
 
         for i in 0..8 {
             let name = format!("page-{i:04}.md");
@@ -248,8 +273,10 @@ mod tests {
     fn different_seeds_produce_different_corpora() {
         let a = tempfile::tempdir().unwrap();
         let b = tempfile::tempdir().unwrap();
-        generate_corpus(a.path(), &CorpusSpec::new(8)).unwrap();
-        generate_corpus(b.path(), &CorpusSpec::new(8).with_seed(1)).unwrap();
+        let _written = generate_corpus(a.path(), &CorpusSpec::new(8)).unwrap();
+        let _written =
+            generate_corpus(b.path(), &CorpusSpec::new(8).with_seed(1))
+                .unwrap();
 
         let name = "page-0000.md";
         assert_ne!(
@@ -261,9 +288,9 @@ mod tests {
     #[test]
     fn pages_carry_frontmatter_and_structure() {
         let dir = tempfile::tempdir().unwrap();
-        generate_corpus(dir.path(), &CorpusSpec::new(1)).unwrap();
-        let page =
-            fs::read_to_string(dir.path().join("page-0000.md")).unwrap();
+        let _written =
+            generate_corpus(dir.path(), &CorpusSpec::new(1)).unwrap();
+        let page = fs::read_to_string(dir.path().join("page-0000.md")).unwrap();
 
         assert!(page.starts_with("---\n"), "missing front matter");
         assert!(page.contains("permalink: \"https://example.com/page-0\""));
@@ -277,9 +304,10 @@ mod tests {
         // Xorshift has a fixed point at zero; an unguarded seed of 0 would
         // emit the same word for every position.
         let dir = tempfile::tempdir().unwrap();
-        generate_corpus(dir.path(), &CorpusSpec::new(1).with_seed(0)).unwrap();
-        let page =
-            fs::read_to_string(dir.path().join("page-0000.md")).unwrap();
+        let _written =
+            generate_corpus(dir.path(), &CorpusSpec::new(1).with_seed(0))
+                .unwrap();
+        let page = fs::read_to_string(dir.path().join("page-0000.md")).unwrap();
 
         let body: Vec<&str> = page
             .split("---\n")

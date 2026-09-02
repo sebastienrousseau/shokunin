@@ -7,6 +7,10 @@
 //! Covers every public module and function through integration-level
 //! tests that exercise the full API surface end-to-end.
 
+// `DeployPlugin` / `SbomPlugin` are deprecated but still shipped for one
+// release, and these tests are what keep them working until removal.
+#![allow(deprecated)]
+
 use anyhow::Result;
 use ssg::cache::BuildCache;
 use ssg::cmd::{

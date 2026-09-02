@@ -179,6 +179,10 @@ fn timestamp_from_secs(secs: u64) -> String {
 
 #[cfg(test)]
 mod tests {
+    // These tests exercise the deprecated plugin deliberately: it is
+    // still shipped for one release, and this is what keeps it working
+    // until removal.
+    #![allow(deprecated)]
     use super::*;
     use anyhow::Result;
     use tempfile::tempdir;
@@ -302,6 +306,9 @@ mod tests {
 
 #[cfg(all(test, feature = "test-fault-injection"))]
 mod fault_tests {
+    // Same rationale as the module above: the deprecated plugin is still
+    // shipped for one release and these tests keep it honest.
+    #![allow(deprecated)]
     use super::*;
     use serial_test::serial;
     use tempfile::tempdir;

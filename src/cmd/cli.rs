@@ -21,8 +21,9 @@ use std::path::PathBuf;
 /// Subcommand names recognised by the unified CLI. Used to discriminate
 /// between subcommand-style invocations (`ssg dev`, `ssg build …`) and
 /// the legacy flag-only form (`ssg -s public`).
-pub const SUBCOMMANDS: &[&str] =
-    &["build", "dev", "check", "deploy", "audit", "plugins", "help"];
+pub const SUBCOMMANDS: &[&str] = &[
+    "build", "dev", "check", "deploy", "audit", "plugins", "help",
+];
 
 /// Deployment targets accepted by `ssg deploy --target …`.
 ///
