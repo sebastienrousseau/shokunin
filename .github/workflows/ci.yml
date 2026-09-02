@@ -160,7 +160,17 @@ jobs:
     # Observed Windows wall-time is 9-10m on a warm cache and 14-15m cold,
     # so 15 left no margin for ordinary variance. 20 absorbs that while
     # still failing a genuinely hung job.
-    timeout-minutes: 20
+    #
+    # 20 -> 30 alongside the example-suite fix. With a 14-15m cold compile
+    # already eating most of the old ceiling, the remaining test time left
+    # almost no margin: measured locally, `--tests` spends ~8m40s actually
+    # running, and three suites account for nearly all of it --
+    # `unittests src/lib.rs` (255s), `html_rewriter_correctness` (145s) and
+    # `plugins/main.rs` (118s). Those three are legitimately slow rather
+    # than accidentally heavy: they encode real JPEGs and exercise a 5 MB
+    # page in a debug profile. So the honest fix is headroom, not a faster
+    # gate -- a cancelled job reads as a test failure and is not one.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -174,11 +184,13 @@ jobs:
         with:
           shared-key: test-${{ matrix.os }}
 
-      - name: Lib unit tests
-        shell: bash
-        run: cargo test --lib --features test-fault-injection
-
-      - name: Integration tests
+      # NOTE: there is deliberately no separate `--lib` step. `--tests`
+      # already builds and runs `unittests src/lib.rs` — the same binary,
+      # verified with `cargo test --tests --no-run`, which lists
+      # `Executable unittests src/lib.rs`. Running both meant the 3722
+      # library unit tests executed twice, about four minutes wasted on
+      # each of three platforms, in the job that was hitting its timeout.
+      - name: Unit and integration tests
         shell: bash
         # `--tests` rather than an enumerated list of targets.
         #
@@ -222,6 +234,15 @@ jobs:
       - name: Validator regression suite
         # `--test-threads=1` because examples bind 127.0.0.1:3000.
         run: cargo test --test example_outputs -- --test-threads=1
+      - name: JSON Feed 1.1 compliance
+        # Runs here, after the step above has built the blog example, so
+        # it reuses that output instead of building it again. The suite
+        # is gated on SSG_REQUIRE_EXAMPLES (set for this job) and skips
+        # elsewhere: two test binaries both running
+        # `cargo run --example blog` contend for cargo's build lock and
+        # for port 3000, and their serialising mutexes are process-local
+        # so neither sees the other.
+        run: cargo test --test json_feed_compliance
       - name: JSON-LD schema validation
         # Walks every examples/*/public HTML produced above, extracts
         # all <script type="application/ld+json"> blocks, and validates

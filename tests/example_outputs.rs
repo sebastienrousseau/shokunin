@@ -51,6 +51,46 @@ use std::{
     time::Duration,
 };
 
+/// True when the caller should skip: this run is not the job that owns
+/// the example suite.
+///
+/// # Why this guard exists
+///
+/// This file holds two suites with very different costs. The eleven
+/// `validator_*` tests are pure functions over HTML strings — microseconds,
+/// no I/O — and run everywhere. The other eleven each build and run a
+/// shipped example, and they are serialised by [`example_lock`] because
+/// every example binds `127.0.0.1:3000`. Serialised, they take about
+/// thirteen minutes.
+///
+/// That is affordable in the dedicated `examples` job, which does nothing
+/// else and budgets for it. It is not affordable in the per-OS `test` job:
+/// once that job moved to `cargo test --tests` (so no target could be
+/// silently skipped), this suite came with it, and `test · ubuntu`,
+/// `test · macos` and `test · windows` all hit the 20-minute timeout —
+/// six red jobs whose logs showed tests "running for over 60 seconds",
+/// which is what a test blocked on [`example_lock`] looks like.
+///
+/// So the expensive half runs where the examples are actually built and
+/// nowhere else, which is also where it ran before `--tests`. The cheap
+/// half keeps running everywhere, because skipping it would buy nothing
+/// and lose real coverage.
+///
+/// The variable is the same one `tests/element_presence.rs` and
+/// `tests/jsonld_validation.rs` key on: the `examples` job sets it, and it
+/// means "this is the job where examples exist".
+fn skip_unless_examples_job() -> bool {
+    if std::env::var_os("SSG_REQUIRE_EXAMPLES").is_some() {
+        return false;
+    }
+    eprintln!(
+        "skipping: the example suite runs in the `examples` job. To run          it locally:\n  cargo build --examples \\\n    && \
+         SSG_REQUIRE_EXAMPLES=1 cargo test --test example_outputs \
+         -- --test-threads=1"
+    );
+    true
+}
+
 /// Global mutex serialising the per-example tests. Each example binds
 /// `127.0.0.1:3000` for its dev server, so they cannot run concurrently
 /// under `cargo test`'s default parallel scheduler.
@@ -607,6 +647,9 @@ fn test_example(
     must_have: &[&str],
     timeout_secs: u64,
 ) {
+    if skip_unless_examples_job() {
+        return;
+    }
     let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
 
     let root = workspace_root();
@@ -771,6 +814,9 @@ fn plugins_example_clean_output() {
 
 #[test]
 fn multilingual_example_per_locale_artifacts() {
+    if skip_unless_examples_job() {
+        return;
+    }
     let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
 
     let root = workspace_root();
@@ -923,6 +969,9 @@ fn multilingual_full_example_pairs_translated_slugs() {
     ];
     const LOCALES: &[&str] = &["en", "fr", "de", "es", "ja"];
 
+    if skip_unless_examples_job() {
+        return;
+    }
     let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
 
     let root = workspace_root();
@@ -1176,6 +1225,9 @@ fn built_examples() -> &'static BTreeMap<String, PathBuf> {
 /// - non-zero exit → failure, reported with the example name
 #[test]
 fn every_shipped_example_runs_without_failing() {
+    if skip_unless_examples_job() {
+        return;
+    }
     let _guard = example_lock().lock().unwrap_or_else(|p| p.into_inner());
 
     let mut failures: Vec<String> = Vec::new();
@@ -1241,6 +1293,11 @@ fn every_shipped_example_runs_without_failing() {
 /// while still passing. Pin the count against cargo's own view.
 #[test]
 fn every_cargo_example_target_is_discovered() {
+    // Compares cargo's declared example targets against what is actually
+    // built under target/debug/examples, so it needs them built.
+    if skip_unless_examples_job() {
+        return;
+    }
     let out = Command::new("cargo")
         .current_dir(workspace_root())
         .args(["metadata", "--no-deps", "--format-version", "1"])
