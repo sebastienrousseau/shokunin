@@ -27,6 +27,26 @@ impl Plugin for ManifestFixPlugin {
         let content =
             fs::read_to_string(&manifest_path).with_path(&manifest_path)?;
 
+        if content.trim().is_empty() {
+            let meta_entries =
+                read_meta_sidecars(&ctx.site_dir).unwrap_or_default();
+            let mut manifest = serde_json::json!({
+                "name": "Static Site",
+                "short_name": "Site",
+                "start_url": "/",
+                "display": "standalone"
+            });
+            if let Some(desc) = find_full_description(&meta_entries) {
+                let truncated = truncate_at_word(&desc, 200);
+                manifest["description"] = serde_json::Value::String(truncated);
+            }
+            let output = serialize_manifest(&manifest)
+                .map_err(|e| SsgError::io(e, &manifest_path))?;
+            fs::write(&manifest_path, output).with_path(&manifest_path)?;
+            log::info!("[manifest-fix] Generated manifest.json from metadata");
+            return Ok(());
+        }
+
         let mut manifest: serde_json::Value = serde_json::from_str(&content)
             .map_err(|e| SsgError::io(e, &manifest_path))?;
 
