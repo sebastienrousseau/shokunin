@@ -7,6 +7,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Repository-standard Phases 1 and 2: the developer entry point, and the
+Unix install contract.
+
+### Added
+
+- **Generated man page and shell completions** — `ssg.1` plus bash, zsh,
+  fish and PowerShell scripts, all walked out of the clap definition
+  (`src/cmd/man.rs`, `src/cmd/completions.rs`) rather than hand-written,
+  so `man ssg` cannot drift from `ssg --help`. Neither uses a crate:
+  `clap_complete` and `roff` are both unaudited against this
+  repository's `cargo vet` policy, whose exemption ratchet may only move
+  downward, so a narrow in-tree emitter costs less than the audit it
+  avoids. Exemptions stay at 506.
+
+- **`GNUmakefile`** — `make install` / `make uninstall` honouring
+  `PREFIX` (default `/usr/local`) and `DESTDIR`, installing to FHS
+  paths. Developer targets stay in `Makefile` and are forwarded, because
+  GNU make reads `GNUmakefile` *instead of* `Makefile` and would
+  otherwise hide them.
+
+- **`DEVELOPMENT.md`** — the single developer entry point, built around a
+  table mapping every CI job to the exact command that reproduces it.
+  `tests/development_docs.rs` gates the table against `ci.yml` in both
+  directions, because a stale reproduction table is worse than none: a
+  contributor runs it, sees green, and pushes red.
+
+- **`install contract` and `docs lint` CI jobs**, plus
+  `scripts/install-smoke.sh` and `scripts/repo-hygiene.sh`, which CI runs
+  verbatim so local and CI share one path rather than two that resemble
+  each other.
+
+### Fixed
+
+- **Completions marked every option as a bare flag.** `get_num_args()`
+  is `None` for every argument in this parser, so reading it as "takes no
+  value" dropped `-r` from the fish specs and `:DIR:_files` from the zsh
+  ones — the shell offered the next option where a path belonged. The
+  signal is `get_action()`.
+
+### Changed
+
+- **`docs/adrs/` is now `docs/adr/`**, per the repository standard, with
+  every reference across eleven files moved with it.
+
 ## [0.0.57] - 2026-08-22
 
 Three defects that produced wrong output, one new crate, and a duplication
@@ -753,7 +799,7 @@ landed with measured evidence. Implements the
   comment (clippy `doc_markdown`).
 
 ### Versioning policy
-- [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md):
+- [ADR-0009](docs/adr/0009-versioning-policy-0.0.x-until-0.0.999.md):
   `ssg` stays on `0.0.x` versioning — incrementing by `0.0.1` per release —
   through `0.0.999` at the earliest, to mature the API surface and
   enterprise adoption before any `0.1.0`/`1.0.0` SemVer commitment.
@@ -799,7 +845,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ### Added
 - **Hygiene + correctness + supply-chain attestation baseline.** PR [#583](https://github.com/sebastienrousseau/static-site-generator/pull/583) closed 15 issues:
   - **#556** profraw hygiene + `repo-hygiene` CI gate; `make coverage` pins `LLVM_PROFILE_FILE` to `target/coverage/`.
-  - **#557** Six baseline ADRs in [`docs/adrs/`](docs/adrs/) + `lint-adr` CI gate enforcing the `adr: ADR-NNNN` citation graph.
+  - **#557** Six baseline ADRs in [`docs/adr/`](docs/adr/) + `lint-adr` CI gate enforcing the `adr: ADR-NNNN` citation graph.
   - **#558** No-shellout regression lint (`tools/lint-no-shellout.sh`).
   - **#559 + #494** `BENCHMARKS.md` expanded 83 → 245 lines; `tools/seed-bench-corpus.sh` generates deterministic 10/100/1K/10K corpora.
   - **#560** Miri workflow — nightly schedule + `run-miri`-labelled PR trigger, 180-min timeout.
@@ -813,10 +859,10 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   - **#22** README v0.0.45 sync + workspace version bump 0.0.44 → 0.0.45.
   - **#23 / #24 / #25** [`docs/features-coverage.md`](docs/features-coverage.md) + `features_matrix_is_exhaustive` test gate.
 
-- **Content-staging shim** ([`src/core/content_stager.rs`](src/core/content_stager.rs), [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md)) — works around five `staticdatagen 0.0.9` / `staticweaver 0.0.2` / `metadata-gen 0.0.4` brittleness points so 2,371-file real-world user sites build again. Upstream fixes filed and tracked in [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585).
+- **Content-staging shim** ([`src/core/content_stager.rs`](src/core/content_stager.rs), [ADR-0007](docs/adr/0007-staticdatagen-staging-shim.md)) — works around five `staticdatagen 0.0.9` / `staticweaver 0.0.2` / `metadata-gen 0.0.4` brittleness points so 2,371-file real-world user sites build again. Upstream fixes filed and tracked in [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585).
 
 ### Fixed
-- **Site-build regression on user sites without `layout:` frontmatter**, missing `main.js`/`sw.js`, no `tags.md`, multi-line YAML scalars, or template references to keys content omits. Detailed root-cause in [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md). Validated against `sebastienrousseau/sebastienrousseau.github.io` — 102 root pages, 6.40s build, all 102 a11y-passing.
+- **Site-build regression on user sites without `layout:` frontmatter**, missing `main.js`/`sw.js`, no `tags.md`, multi-line YAML scalars, or template references to keys content omits. Detailed root-cause in [ADR-0007](docs/adr/0007-staticdatagen-staging-shim.md). Validated against `sebastienrousseau/sebastienrousseau.github.io` — 102 root pages, 6.40s build, all 102 a11y-passing.
 
 ### Changed
 - **CI coverage floors raised** from 95.0 → 95.5 / 96.5 / 95.5 (regions / lines / functions). Coverage gate uses `cargo llvm-cov --lib` to keep the heavy `example_outputs.rs` integration suite in its own job.

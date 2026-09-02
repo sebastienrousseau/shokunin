@@ -93,7 +93,7 @@ While the plugin pipeline is parallelized via Rayon, standard synchronous disk w
 > adoption before making any SemVer compatibility commitment. Read
 > "Phase 2" and "Phase 3" below as **capability milestones**, not
 > version-number targets; they will ship as ordinary `0.0.x` releases
-> (see [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md)
+> (see [ADR-0009](docs/adr/0009-versioning-policy-0.0.x-until-0.0.999.md)
 > for the full rationale). Many Phase 1/2 items have already shipped in
 > releases since this document's June 2026 research date — check
 > `CHANGELOG.md` before treating any item here as outstanding.

@@ -15,7 +15,7 @@
 //! # Design constraints
 //!
 //! - **std-only, tokio-free** — per
-//!   [ADR-0001](../../docs/adrs/0001-tokio-free.md), `ssg` runs one
+//!   [ADR-0001](../../docs/adr/0001-tokio-free.md), `ssg` runs one
 //!   scheduler (rayon) plus plain OS threads; no async executor is
 //!   introduced here.
 //! - **`io_uring` is out of scope** — that is phase 2 of issue #569

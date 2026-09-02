@@ -24,7 +24,7 @@
 
 **Getting started**
 
-- [Install](#install) — Cargo, Homebrew, apt, AUR, container, one-liner
+- [Install](#install) — Cargo, Homebrew, apt, AUR, container, one-liner, `make install`
 - [Quick Start](#quick-start) — scaffold, build and serve a site in five commands
 
 **Reference**
@@ -41,7 +41,7 @@
 **Operational**
 
 - [When not to use SSG](#when-not-to-use-ssg) — limitations, stated plainly
-- [Development](#development) — make targets, CI workflows, fuzzing
+- [Development](#development) — make targets, CI workflows, fuzzing; full guide in [`DEVELOPMENT.md`](DEVELOPMENT.md)
 - [Security](#security) — guarantees, supply chain, reporting
 - [Documentation](#documentation) — every reference document
 - [License](#license)
@@ -86,6 +86,21 @@ make          # check + clippy + test
 ```
 
 Requires **Rust 1.88.0+**. Tested on Linux, macOS, and Windows.
+
+### System install (packagers)
+
+```bash
+make install                      # to /usr/local
+make PREFIX=/usr install          # to /usr
+make DESTDIR=/tmp/stage install   # staged, for packaging
+make uninstall                    # exact inverse of install
+```
+
+Installs the binary, the `ssg.1` man page and bash, zsh and fish
+completions to their FHS locations. The man page and completions are
+**generated from the CLI definition** at build time, so `man ssg` cannot
+drift from `ssg --help`; CI asserts that on every push. PowerShell
+completions are generated too, and installed when `PWSHCOMPDIR` is set.
 
 ---
 
@@ -146,7 +161,7 @@ Three choices follow from that, and each has a cost worth stating:
    binary self-contained. The cost is that genuinely concurrent I/O —
    the dev server, the HMR socket — uses threads rather than tasks, which
    is heavier per connection than an async runtime would be. The
-   reasoning is recorded in [`docs/adrs/`](docs/adrs/).
+   reasoning is recorded in [`docs/adr/`](docs/adr/).
 
 3. **`#![forbid(unsafe_code)]` workspace-wide.** No `unsafe` block exists
    in the tree. Memory-safety review is therefore a property of the
@@ -247,7 +262,7 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 | **Edge RPC** | `#[ssg_rpc]` proc-macro, JSON-over-POST dispatch, schemars 1.2 + custom JSON-Schema → TypeScript emitter, golden `.d.ts` test |
 | **Edge headers** | Per-host emitters for Cloudflare `_headers`, Netlify `_headers`, Vercel `vercel.json` with PQC posture guidance — emits current best-practice TLS/PQC configuration guidance for your CDN (X25519+ML-KEM-768 hybrid notes); ML-DSA content-provenance signing is roadmap (#579) |
 | **Audit CLI** | `ssg audit` runs 15 gates (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity); JSON / `JUnit` / **SARIF v2.1.0** / text outputs (v0.0.45 #562, GitHub Code Scanning ingestible) |
-| **Architecture Decision Records** | Six baseline ADRs under [`docs/adrs/`](docs/adrs/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
+| **Architecture Decision Records** | Six baseline ADRs under [`docs/adr/`](docs/adr/) in Nygard format documenting the tokio-free architecture, Rayon orchestration, `lol_html` selection, sync `tungstenite` HMR, `ureq` LLM transport, and CycloneDX-over-SPDX SBOM choice. CI-enforced `adr: ADR-NNNN` citation graph (v0.0.45 #557) |
 | **Supply-chain attestation** | `cargo-vet` (v0.0.45 #561) layers per-crate audit attestation over `cargo deny`'s license + CVE checks. Imports Mozilla Firefox, Bytecode Alliance, and Google trust sets; exemption-reduction policy in [`supply-chain/README.md`](supply-chain/README.md) |
 | **Concurrency proofs** | Miri job ([`.github/workflows/miri.yml`](.github/workflows/miri.yml), v0.0.45 #560) runs `cargo miri test --lib` on a nightly schedule + `run-miri`-labelled PRs. Loom + Kani follow in v0.0.46 (#564 / #565) |
 | **Feature-matrix CI** | `cargo hack check --feature-powerset --depth 2` (v0.0.45 #584) exercises every reachable subset of `{ai, benchmark, cli, image-optimization, minify, otel, templates, test-fault-injection}` on every PR — catches cfg-gating gaps before they merge |
@@ -582,7 +597,7 @@ make clean        # remove build artifacts
 
 | Workflow | Trigger | Purpose |
 | :--- | :--- | :--- |
-| `ci.yml` | push, PR | fmt, clippy, test (3 OS), coverage (98% floor), cargo-deny |
+| `ci.yml` | push, PR | fmt, clippy, test (3 OS), docs lint, install contract, coverage (98% floor), cargo-deny, cargo-vet |
 | `document.yml` | push to main | Build and deploy API docs to GitHub Pages |
 | `release.yml` | tag `v*` | Cross-platform binaries, GHCR container, crates.io, AUR |
 | `scheduled.yml` | weekly, tag | Multi-OS portability, axe-core a11y, `CycloneDX` SBOM, benchmarks |
@@ -590,7 +605,11 @@ make clean        # remove build artifacts
 | `wasm.yml` | push, PR | Build and test ssg-core + ssg-wasm for wasm32 |
 | `readability-gate.yml` | PR | Flesch-Kincaid audit on docs and content |
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for signed commits and PR guidelines.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the full developer guide —
+notably the table mapping every CI job to the exact command that
+reproduces it locally, which is CI-checked against the workflow. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for signed commits and PR
+guidelines.
 
 ---
 
@@ -705,9 +724,10 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | Document | Contents |
 | --- | --- |
 | [`BENCHMARKS.md`](BENCHMARKS.md) | Performance methodology, CI budgets, comparison tables, and the [latest nightly figures](BENCHMARKS.md#latest-nightly-run) |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Toolchain setup, running every CI gate locally, test layout, release model |
 | [`SECURITY.md`](SECURITY.md) | Reporting policy, supported versions, guarantees |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and review expectations |
-| [`docs/adrs/`](docs/adrs/) | Architecture Decision Records in Nygard format |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records in Nygard format |
 | [`docs/guide/`](docs/guide/) | Configuration, content, i18n, search, SEO, deployment |
 | [`supply-chain/README.md`](supply-chain/README.md) | `cargo-vet` policy and exemption burn-down |
 | [docs.rs/ssg](https://docs.rs/ssg) | Generated API reference |

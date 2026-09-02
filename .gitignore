@@ -11,7 +11,7 @@ node_modules/
 # Generated output
 /docs/*
 !/docs/README.md
-!/docs/adrs/
+!/docs/adr/
 !/docs/features-coverage.md
 !/docs/guide/
 !/docs/whitepaper/

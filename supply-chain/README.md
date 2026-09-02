@@ -140,5 +140,5 @@ Adding a new dep that triggers a vet failure: run
 ## See also
 
 - `deny.toml` — license + CVE gating (`cargo deny check`)
-- `docs/adrs/0006-cyclonedx-over-spdx.md` — SBOM format decision
+- `docs/adr/0006-cyclonedx-over-spdx.md` — SBOM format decision
 - `SECURITY.md` — overall threat model and security defaults

@@ -5,7 +5,7 @@
 **Issue:** [#427](https://github.com/sebastienrousseau/static-site-generator/issues/427)
 · **Target:** Prepare the public surface for eventual stabilisation
   (no `1.0.0` — or `0.1.0` — is scheduled; see
-  [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md).
+  [ADR-0009](../adr/0009-versioning-policy-0.0.x-until-0.0.999.md).
   This audit's tiering still stands on its own merits: it documents the
   right stability posture for each item regardless of which `0.0.x`
   release it lands in.)
@@ -179,7 +179,7 @@ Each lands as its own commit so blame stays readable.
 
 ## Defer until warranted (breaking pass — no version-milestone gate)
 
-Per [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md),
+Per [ADR-0009](../adr/0009-versioning-policy-0.0.x-until-0.0.999.md),
 `ssg` does not target `1.0.0-rc.1` on any horizon — every `0.0.x`
 release is already free to ship breaking changes under SemVer. These
 items are deferred by *readiness*, not by a release milestone; land
@@ -214,5 +214,5 @@ each in whichever `0.0.x` release is ready to absorb it, with its own
 Total public types audited: **79 structs/enums + 1 trait + 30+
 functions**. After this PR's actions land, the breaking-pass set is
 pre-staged for whichever future `0.0.x` release is ready to absorb it
-(see [ADR-0009](../adrs/0009-versioning-policy-0.0.x-until-0.0.999.md)
+(see [ADR-0009](../adr/0009-versioning-policy-0.0.x-until-0.0.999.md)
 — no `1.0.0-rc.1` is scheduled).

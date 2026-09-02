@@ -177,7 +177,7 @@ http-handle = "0.0.7"
 log = { version = "0.4.29", features = ["std"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 # adr: ADR-0002 — Rayon is the build-pipeline CPU scheduler.
-# See docs/adrs/0002-rayon-orchestration.md.
+# See docs/adr/0002-rayon-orchestration.md.
 rayon = "1.12.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
@@ -196,7 +196,7 @@ toml = "1.1.2"
 sha2 = "0.11"
 base64 = "0.23"
 
-# adr: ADR-0005 — `ureq` is the LLM transport. See docs/adrs/0005-ureq-for-llm.md.
+# adr: ADR-0005 — `ureq` is the LLM transport. See docs/adr/0005-ureq-for-llm.md.
 # Synchronous, blocking, pure-Rust HTTP client for the local-LLM content
 # pipeline (`LlmPlugin`). Replaces the previous `curl` subprocess shellout
 # (issue #520) so the AI plugin works on Windows runners without `curl.exe`,
@@ -207,7 +207,7 @@ base64 = "0.23"
 ureq = { version = "2", default-features = false, features = ["json", "tls"] }
 
 # adr: ADR-0003 — `lol_html` for all plugin HTML rewriting. See
-# docs/adrs/0003-lol_html-over-html5ever.md.
+# docs/adr/0003-lol_html-over-html5ever.md.
 # Cloudflare's streaming HTML rewriter (issue #525). Pure Rust, zero-copy,
 # CSS-selector driven — replaces the fragile `str::find` / `str::rfind`
 # rewriting that previously lived in the image, search, CSP, and html-fix
@@ -225,7 +225,7 @@ lol_html = "3.0.0"
 notify = "8"
 
 # adr: ADR-0004 — sync `tungstenite` for HMR fan-out (supersession planned
-# in v0.0.48 #571). See docs/adrs/0004-sync-tungstenite-for-hmr.md.
+# in v0.0.48 #571). See docs/adr/0004-sync-tungstenite-for-hmr.md.
 # Sync WebSocket implementation for the HMR broadcaster (issue #526).
 # Used by `HmrBroadcaster` to push hmr-html / hmr-css / reload frames
 # to every connected dev-browser tab. No tokio — the broadcaster fans
@@ -357,6 +357,13 @@ path = "tests/cmd/main.rs"
 # -----------------------------------------------------------------------------
 # Examples
 # -----------------------------------------------------------------------------
+[[example]]
+# Packaging artefacts derived from the CLI definition: the man page and a
+# completion script per shell. Consumed by `make man`, `make completions`
+# and `make install`.
+name = "gen-artifacts"                    # Name of the example
+path = "examples/gen_artifacts.rs"        # Path to the example file
+
 [[example]]
 # Basic example configuration for showcasing the library.
 name = "basic"                            # Name of the example

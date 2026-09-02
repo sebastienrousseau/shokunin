@@ -76,7 +76,7 @@ name.
 |---|---|---|
 | `repo-hygiene` (no stray profraw, no tracked profraw) | [`ci.yml`](../.github/workflows/ci.yml) | #556 |
 | `no-shellout` lint (`Command::new("curl"\|"wget"\|…)` in `src/`) | [`ci.yml`](../.github/workflows/ci.yml) | #558 |
-| `ADR citation graph` (every `adr: ADR-NNNN` resolves to `docs/adrs/`) | [`ci.yml`](../.github/workflows/ci.yml) | #557 |
+| `ADR citation graph` (every `adr: ADR-NNNN` resolves to `docs/adr/`) | [`ci.yml`](../.github/workflows/ci.yml) | #557 |
 | `feature powerset` (`cargo hack check --feature-powerset --depth 2`) | [`ci.yml`](../.github/workflows/ci.yml) | #584 |
 | `cargo-vet` | [`ci.yml`](../.github/workflows/ci.yml) | #561 |
 | `Miri` (schedule + `run-miri` label) | [`miri.yml`](../.github/workflows/miri.yml) | #560 |
@@ -86,6 +86,6 @@ name.
 ## See also
 
 - [`BENCHMARKS.md`](../BENCHMARKS.md) — perf-gate budgets + cross-SSG comparison
-- [`docs/adrs/`](adrs/) — Architecture Decision Records
+- [`docs/adr/`](adr/) — Architecture Decision Records
 - [`supply-chain/README.md`](../supply-chain/README.md) — `cargo-vet` policy
 - [`SECURITY.md`](../SECURITY.md) — threat model + security defaults
