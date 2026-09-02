@@ -484,13 +484,45 @@ rpath = false                               # Disable rpath generation
 strip = "symbols"                           # Strip symbols for smaller binary size
 
 [profile.bench]
-# Cargo's `bench` profile inherits any unset key from `[profile.release]`
-# by default — including `panic = "abort"`. Criterion's `--test` smoke
-# run (and the libtest harness generally) needs unwind semantics, so
-# leaving this unset makes every `cargo bench -- --test` invocation fail
-# with a panic-strategy mismatch against upstream unwind-compiled rlibs.
-# Override just the one key; everything else still inherits release's
-# optimisation settings.
+# DO NOT REMOVE the `panic` key below, and do not "fix" the warning it
+# produces on every build:
+#
+#     warning: Cargo.toml: `panic` setting is ignored for `bench` profile
+#
+# That warning is false for the case that matters. It is true only of the
+# bench *target*, which Cargo always builds unwinding. It is not true of
+# the *dependencies* compiled under this profile: those take `panic`
+# straight from the profile, and this profile inherits every unset key
+# from `[profile.release]`, which sets `panic = "abort"`.
+#
+# So without this line the `ssg` rlib is built with abort while the
+# harness is built with unwind, and the link fails as a missing crate
+# rather than as the mismatch it actually is:
+#
+#     error[E0463]: can't find crate for `ssg`
+#
+# Measured on cargo 1.98.0 (797e8a9bc 2026-08-05) by inspecting the real
+# rustc invocations with `cargo bench --bench bench --no-run -v`:
+#
+#   | this key            | warns | flags passed | result             |
+#   |---------------------|-------|--------------|--------------------|
+#   | absent (inherits)   | no    | 2x abort     | E0463              |
+#   | "unwind"            | YES   | none *       | builds             |
+#   | "abort" (explicit)  | YES   | 3x abort     | E0463              |
+#
+#   * none, because unwind is rustc's default and Cargo omits the flag
+#     when the value matches it. The absent flag is not evidence that
+#     Cargo dropped the key — the third row proves it did not.
+#
+# The warning therefore tracks the key's *presence*; the build tracks its
+# *value*. Cargo's manifest linter and its graph resolver disagree, and
+# the resolver is the one that compiles your code.
+#
+# The only way to silence this honestly is to drop `panic = "abort"` from
+# `[profile.release]`, which is a deliberate size/overhead choice for
+# shipped binaries. Trading that for a cosmetic warning is not worth it.
+#
+# Everything else here still inherits release's optimisation settings.
 panic = "unwind"
 
 [profile.test]
