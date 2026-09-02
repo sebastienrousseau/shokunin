@@ -263,3 +263,45 @@ fn readme_module_count_matches_the_table() {
         "the module table is headed {claimed} but lists {rows} rows"
     );
 }
+
+#[test]
+fn readme_install_snippets_name_the_current_version() {
+    // The `.deb` snippet said 0.0.47 against a 0.0.58 crate — eleven releases
+    // stale, in the one line a reader copies and runs. The elevation plan
+    // calls this out by name; the repo standard requires install-snippet
+    // versions to be CI-checked against the manifest.
+    //
+    // Any `x.y.z` appearing in an install command must be the crate version.
+    let version = env!("CARGO_PKG_VERSION");
+    let text = readme();
+
+    let mut stale = Vec::new();
+    for line in text.lines() {
+        let t = line.trim();
+        let is_install = t.starts_with("sudo dpkg")
+            || t.starts_with("sudo rpm")
+            || t.starts_with("cargo install")
+            || t.starts_with("brew install")
+            || t.contains("releases/download/");
+        if !is_install {
+            continue;
+        }
+        // Pull out anything shaped like a version and compare.
+        for tok in t.split(|c: char| !(c.is_ascii_digit() || c == '.')) {
+            if tok.matches('.').count() == 2
+                && tok.split('.').all(|p| {
+                    !p.is_empty() && p.chars().all(|c| c.is_ascii_digit())
+                })
+                && tok != version
+            {
+                stale.push(format!("{t}  (found {tok}, crate is {version})"));
+            }
+        }
+    }
+
+    assert!(
+        stale.is_empty(),
+        "install snippets name a version other than the crate's:\n  {}",
+        stale.join("\n  ")
+    );
+}

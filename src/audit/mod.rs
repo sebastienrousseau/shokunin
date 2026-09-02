@@ -246,8 +246,16 @@ impl Site {
         })
     }
 
-    /// Returns a relative path string for `path` against the site root.
-    /// Falls back to the absolute path if the strip fails.
+    /// Returns a relative path string for `path` against the site root,
+    /// always using `/` as the separator.
+    ///
+    /// The separator is normalised because these strings are compared against
+    /// URL paths taken from the HTML — `hreflang` targets, canonical hrefs,
+    /// sitemap entries. On Windows the native separator made
+    /// `en\index.html` the key while the document said `/en/index.html`, so
+    /// no reciprocal pair ever matched and the hreflang gate reported both a
+    /// false negative and a false positive. A path used as a URL has one
+    /// separator, whatever the filesystem underneath calls it.
     ///
     /// # Examples
     ///
@@ -259,10 +267,11 @@ impl Site {
     /// ```
     #[must_use]
     pub fn rel(&self, path: &Path) -> String {
-        path.strip_prefix(&self.root)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .into_owned()
+        let rel = path.strip_prefix(&self.root).unwrap_or(path);
+        // `MAIN_SEPARATOR` is `/` on unix, so this is a no-op there rather
+        // than a platform branch.
+        rel.to_string_lossy()
+            .replace(std::path::MAIN_SEPARATOR, "/")
     }
 
     /// Reads the contents of `path` as UTF-8.
@@ -843,6 +852,34 @@ impl AuditTomlConfig {
 
 #[cfg(test)]
 mod tests {
+
+    /// `rel` is compared against URL paths from the HTML, so it must use `/`
+    /// on every platform.
+    ///
+    /// The hreflang gate keys its reciprocity index on this value and looks
+    /// it up by the `href` written in the document. On Windows the native
+    /// separator produced `en\\index.html` against a document saying
+    /// `/en/index.html`, so `hreflang_positive_reciprocal_pair_is_clean` and
+    /// `hreflang_negative_missing_reciprocal_flagged` both failed — and had
+    /// been failing unnoticed, because `tests/audit_gates.rs` was one of the
+    /// 29 targets CI never ran.
+    #[test]
+    fn rel_always_uses_forward_slashes() {
+        use std::path::PathBuf;
+        let root = PathBuf::from("site");
+        let site = Site {
+            root: root.clone(),
+            html_files: Vec::new(),
+        };
+
+        // Built with `join` so the input carries the platform separator.
+        let nested = root.join("en").join("index.html");
+        assert_eq!(site.rel(&nested), "en/index.html");
+        assert!(
+            !site.rel(&nested).contains('\\'),
+            "a backslash survived into a URL-compared path"
+        );
+    }
     use super::*;
 
     #[test]

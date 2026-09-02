@@ -505,8 +505,38 @@ fn minify_css(css: &str) -> String {
     let mut clean = String::with_capacity(result.len());
     let chars: Vec<char> = result.chars().collect();
     let mut i = 0;
+    // Quote state is tracked here too. The first pass copies string contents
+    // verbatim, but this pass then walked the same buffer without knowing
+    // where strings were, so `content: "  two  spaces  "` came out as
+    // `content:"twospaces"` — the minifier rewriting authored text.
+    let mut in_string: Option<char> = None;
     while i < chars.len() {
         let ch = chars[i];
+
+        if let Some(q) = in_string {
+            clean.push(ch);
+            // A quote closes the string unless it is backslash-escaped.
+            if ch == q {
+                let mut back = 0usize;
+                let mut k = i;
+                while k > 0 && chars[k - 1] == '\\' {
+                    back += 1;
+                    k -= 1;
+                }
+                if back.is_multiple_of(2) {
+                    in_string = None;
+                }
+            }
+            i += 1;
+            continue;
+        }
+        if ch == '\'' || ch == '"' {
+            in_string = Some(ch);
+            clean.push(ch);
+            i += 1;
+            continue;
+        }
+
         if ch == ' ' {
             let prev = if i > 0 { Some(chars[i - 1]) } else { None };
             let next = if i + 1 < chars.len() {
@@ -526,30 +556,43 @@ fn minify_css(css: &str) -> String {
             // `-` was already in both sets and so was never affected; `*` and
             // `/` need no surrounding space and stay collapsible. Keeping the
             // space in a `.a + .b` selector too costs two bytes and is valid.
-            let is_needed = match (prev, next) {
-                (Some(p), Some(n)) => {
-                    let is_p_word = p.is_alphanumeric()
-                        || p == '-'
-                        || p == '+'
-                        || p == '_'
-                        || p == '#'
-                        || p == '.'
-                        || p == '@'
-                        || p == '%'
-                        || p == '$';
-                    let is_n_word = n.is_alphanumeric()
-                        || n == '-'
-                        || n == '+'
-                        || n == '_'
-                        || n == '#'
-                        || n == '.'
-                        || n == '@'
-                        || n == '%'
-                        || n == '$';
-                    is_p_word && is_n_word
-                }
+            // Media and support queries put a required space either side of
+            // their combinators: `@media (a) and (b)` collapsed to
+            // `@media(a)and(b)`, which is invalid and silently disables the
+            // whole query. Only single-condition queries are in the themes
+            // today, so nothing shipped broken — but the first compound query
+            // anyone wrote would have.
+            let joins_prelude_tokens = match (prev, next) {
+                (Some(')'), Some(n)) => n.is_ascii_alphabetic(),
+                (Some(p), Some('(')) => p.is_ascii_alphabetic(),
                 _ => false,
             };
+
+            let is_needed = joins_prelude_tokens
+                || match (prev, next) {
+                    (Some(p), Some(n)) => {
+                        let is_p_word = p.is_alphanumeric()
+                            || p == '-'
+                            || p == '+'
+                            || p == '_'
+                            || p == '#'
+                            || p == '.'
+                            || p == '@'
+                            || p == '%'
+                            || p == '$';
+                        let is_n_word = n.is_alphanumeric()
+                            || n == '-'
+                            || n == '+'
+                            || n == '_'
+                            || n == '#'
+                            || n == '.'
+                            || n == '@'
+                            || n == '%'
+                            || n == '$';
+                        is_p_word && is_n_word
+                    }
+                    _ => false,
+                };
             if is_needed {
                 clean.push(' ');
             }
@@ -1219,6 +1262,95 @@ mod tests {
     // -------------------------------------------------------------------
     // Minifier edge branches
     // -------------------------------------------------------------------
+
+    /// Everything this minifier emits must still parse as CSS.
+    ///
+    /// This is the gate that was missing when `clamp(2.07rem, 1.75rem + 1.6vw,
+    /// 3.13rem)` became `clamp(...,1.75rem+1.6vw,...)`: valid-looking output,
+    /// rejected by every browser, and every heading in nine themes silently
+    /// fell back to the body size. `tests/minification_correctness.rs`
+    /// round-trips the *other* minifier — the `lightningcss` one behind the
+    /// `minify` feature — but this one runs unconditionally in the fingerprint
+    /// path and nothing parsed its output.
+    ///
+    /// Requires the `minify` feature only because that is what pulls in a CSS
+    /// parser; CI runs `--all-features`.
+    #[cfg(feature = "minify")]
+    #[test]
+    fn minified_css_always_reparses() {
+        use lightningcss::stylesheet::{ParserOptions, StyleSheet};
+
+        // Constructs chosen because each has a whitespace or delimiter rule
+        // that a naive collapser gets wrong.
+        let corpus = [
+            "h1 { font-size: clamp(2.07rem, 1.75rem + 1.6vw, 3.13rem); }",
+            "a { width: calc(100% - 2rem); height: calc(10px*2); }",
+            "p { margin: 0 -1px 0 -1px; }",
+            "@media (min-width: 48rem) and (max-width: 64rem) { .a { color: red } }",
+            ".g { grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); }",
+            ".s { background: url(\"a b.png\"); content: \"a { b } c\"; }",
+            ":root { --x: 1px; --y: calc(var(--x) + 2px); }",
+            "@supports (display: grid) { .h { display: grid } }",
+            ".t { transition: color .2s ease-in-out, background .3s; }",
+            "@font-face { font-family: \"X\"; src: url(x.woff2) format(\"woff2\"); }",
+            ".n:not(.a, .b) > .c ~ .d + .e { color: #fff }",
+            ".u { inset: 0 auto auto 0; aspect-ratio: 16 / 9; }",
+        ];
+
+        for css in corpus {
+            let out = minify_css(css);
+            assert!(
+                StyleSheet::parse(&out, ParserOptions::default()).is_ok(),
+                "minified output does not parse as CSS\n  in:  {css}\n  out: {out}"
+            );
+        }
+    }
+
+    /// Minifying twice must equal minifying once.
+    ///
+    /// A non-idempotent pass is a latent corruption: assets are re-minified
+    /// on rebuilds, and each pass would degrade the file a little further.
+    #[test]
+    fn minify_css_is_idempotent() {
+        let corpus = [
+            "h1 { font-size: clamp(2.07rem, 1.75rem + 1.6vw, 3.13rem); }",
+            "a { width: calc(100% - 2rem); }",
+            "p { margin: 0 -1px; }",
+            "/* c */ .x { color: red } /* d */",
+            ".s { content: \"a { b } c\"; }",
+        ];
+        for css in corpus {
+            let once = minify_css(css);
+            let twice = minify_css(&once);
+            assert_eq!(once, twice, "not idempotent for: {css}");
+        }
+    }
+
+    /// The same for JavaScript: two passes must agree.
+    #[test]
+    fn minify_js_is_idempotent() {
+        let corpus = [
+            "const a = 1; // trailing\nconst b = a / 2;",
+            "let s = \"a // not a comment\";",
+            "function f() { return 1 /* mid */ + 2; }",
+            "const re = /ab+c/g;",
+        ];
+        for js in corpus {
+            let once = minify_js(js);
+            let twice = minify_js(&once);
+            assert_eq!(once, twice, "not idempotent for: {js}");
+        }
+    }
+
+    /// Minification must never invent or destroy a string literal's contents.
+    #[test]
+    fn minify_css_preserves_string_literals_verbatim() {
+        let out = minify_css(".a::after { content: \"  two  spaces  \"; }");
+        assert!(
+            out.contains("\"  two  spaces  \""),
+            "string literal was rewritten: {out}"
+        );
+    }
 
     #[test]
     fn minify_css_keeps_whitespace_around_plus_in_math() {
