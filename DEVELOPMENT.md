@@ -23,6 +23,9 @@ from the one CI runs, most often `cargo clippy --lib` where CI runs
 - [Release model](#release-model)
 - [Common failure modes](#common-failure-modes)
 
+Architecture — how the pipeline actually fits together — is in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
 ## Toolchain
 
 | Requirement | Value | Enforced by |
