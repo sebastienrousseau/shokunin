@@ -87,7 +87,10 @@ Icon?
 # Legacy cache locations (cache now lives under target/.ssg-cache/)
 /.ssg-cache.json
 /.ssg-plugins-cache.json
-.claude/worktrees/
+# Claude Code session artefacts. `scheduled_tasks.lock` was committed
+# by accident in v0.0.47 and carried a dead PID and session id ever
+# since; nothing in this directory is source.
+.claude/
 tests/visual/a11y-reports/
 tests/visual/test-results/
 

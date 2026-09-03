@@ -16,6 +16,9 @@
   <a href="https://docs.rs/ssg"><img src="https://img.shields.io/badge/docs.rs-ssg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/static-site-generator?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
   <a href="https://lib.rs/crates/ssg"><img src="https://img.shields.io/badge/lib.rs-v0.0.58-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg?style=for-the-badge" alt="License: MIT OR Apache-2.0" /></a>
+  <a href="#minimum-supported-rust-version"><img src="https://img.shields.io/badge/MSRV-1.88.0-dea584.svg?style=for-the-badge&logo=rust" alt="MSRV 1.88.0" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/static-site-generator"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/static-site-generator?style=for-the-badge&label=openssf%20scorecard" alt="OpenSSF Scorecard" /></a>
 </p>
 
 ---
@@ -40,6 +43,8 @@
 
 **Operational**
 
+- [Stability guarantees](#stability-guarantees) — what a version bump promises
+- [Minimum supported Rust version](#minimum-supported-rust-version) — the policy, not just the number
 - [When not to use SSG](#when-not-to-use-ssg) — limitations, stated plainly
 - [Development](#development) — make targets, CI workflows, fuzzing; full guide in [`DEVELOPMENT.md`](DEVELOPMENT.md)
 - [Security](#security) — guarantees, supply chain, reporting
@@ -549,6 +554,87 @@ npm install
 npm run upload:edge-config # uploads site/ to Edge Config
 vercel deploy
 ```
+
+---
+
+## Stability guarantees
+
+### What a version bump promises
+
+This project is `0.0.x` until `0.0.999`
+([ADR-0009](docs/adr/0009-versioning-policy-0.0.x-until-0.0.999.md)).
+Under Cargo's semantic-versioning rules every `0.0.z` release is its own
+compatibility island, so **any release may contain a breaking change**.
+That is stated plainly rather than implied: pin an exact version if you
+need stability, and read the CHANGELOG before upgrading.
+
+What the project does instead of a promise it cannot yet keep:
+
+- `cargo-semver-checks` runs on every push against the published
+  baseline, so an accidental API break is caught and has to be
+  deliberate.
+- Every breaking change is called out in [`CHANGELOG.md`](CHANGELOG.md)
+  under the release that made it, with the migration.
+
+### The output-stability rule
+
+For a generator the public API is not only the Rust signatures — it is
+**what the tool emits**. A change to generated HTML, a meta tag, a
+sitemap, a feed or a JSON-LD block is a breaking change even when no
+function signature moves, because it lands in someone's deployed site
+and their diff.
+
+So output changes are treated as breaking:
+
+- They are listed in the CHANGELOG like any other break.
+- `tests/golden_files.rs` pins generated artefacts against checked-in
+  snapshots, so an unintended change to output fails CI rather than
+  shipping.
+- Refresh a snapshot deliberately with `UPDATE_GOLDEN=1`; the diff is
+  then part of the review.
+
+### Deprecation window
+
+A deprecated flag, config key or API keeps working for **two releases**
+after the one that deprecates it, and warns when used, naming its
+replacement. Removal happens no earlier than the third release and is
+listed in the CHANGELOG.
+
+The legacy top-level CLI flags are the current example: still accepted,
+still tested, and warning via `LEGACY_DEPRECATION_WARNING`.
+
+---
+
+## Minimum supported Rust version
+
+**Rust 1.88.0.**
+
+### The policy
+
+The MSRV is a *floor set by dependencies*, not a target chosen
+independently. It currently comes from `time-macros`, `staticdatagen`
+and the `oxc_*` crates.
+
+- It may rise in **any release**, because a `0.0.z` release carries no
+  compatibility promise (see above).
+- It rises only when a dependency this project already needs requires
+  it, or when a language feature removes real complexity — never
+  incidentally.
+- Each rise is recorded in the CHANGELOG for that release, with the
+  reason and the crate that forced it.
+- The floor is CI-enforced: `scheduled.yml` builds against
+  `[stable, 1.88]`, so a change that quietly needs a newer compiler
+  fails rather than being discovered by a user.
+
+### On distro compatibility
+
+This project does **not** claim compatibility with any distribution's
+packaged Rust. That claim would need a table mapping current distro
+toolchains to this floor, kept current — and an unverified claim there
+is worse than none, because it is exactly what a packager would rely on.
+If you need SSG on a distro toolchain, check `rust-version` in
+`Cargo.toml` against your `rustc --version`, then build from source or
+use a prebuilt binary.
 
 ---
 

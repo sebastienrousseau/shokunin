@@ -217,6 +217,12 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20.0.0
       - name: docs/ files are not hidden by .gitignore
         run: ./scripts/check-docs-tracked.sh
+      # REUSE checks that every file's licensing is machine-readable.
+      # This repository carries SPDX headers rather than a .reuse/dep5,
+      # so the lint proves the headers are actually complete rather than
+      # merely present on the files someone remembered.
+      - name: REUSE / SPDX compliance
+        uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5.0.0
       - name: Internal Markdown link integrity
         run: cargo test --test doc_links
       - name: README counts match the code
