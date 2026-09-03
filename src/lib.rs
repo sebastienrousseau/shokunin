@@ -755,6 +755,21 @@ fn run_audit(matches: &clap::ArgMatches) -> Result<(), SsgError> {
 
 /// Legacy code path: behaves exactly like 0.0.42 `ssg` did.
 fn run_legacy(matches: &clap::ArgMatches) -> Result<(), SsgError> {
+    // `--new NAME` scaffolds a project and stops. The flag has been
+    // declared on this parser since 0.0.42 and was never dispatched:
+    // `ssg --new mysite` parsed it, ignored it, and went on to build the
+    // current directory — failing with "I/O error at 'content'" on a
+    // machine where no project existed yet. A flag that parses and does
+    // nothing is worse than an unknown one, which at least errors.
+    if let Some(name) = matches.get_one::<String>("new") {
+        return scaffold::scaffold_project_at(name, Path::new(".")).map_err(
+            |e| SsgError::Validation {
+                field: "new".to_string(),
+                message: e.to_string(),
+            },
+        );
+    }
+
     let config =
         SsgConfig::from_matches(matches).map_err(|e| SsgError::Validation {
             field: "config".to_string(),

@@ -55,6 +55,7 @@ pub fn scaffold_project_at(name: &str, base: &Path) -> Result<()> {
     write_config_file(name, &root)?;
     write_content_files(name, &root)?;
     write_template_files(&root)?;
+    write_root_templates(&root)?;
     write_static_assets(&root)?;
     write_data_files(&root)?;
 
@@ -206,6 +207,84 @@ Edit this file at `content/blog/first-post.md`.
 /// `TemplateEngine::render_page` in `core/template_engine.rs`), so a
 /// page with front-matter `language: hi` renders `<html lang="hi">`
 /// even when the site default is `en-GB`.
+/// The `StaticWeaver` templates the compile step requires at the template
+/// directory root.
+///
+/// # Why there are two template sets
+///
+/// A build runs in two stages. `compile_site` delegates markdown → HTML
+/// to `staticdatagen`/`StaticWeaver`, which reads `{{variable}}` templates
+/// from the *root* of the template directory. The plugin pipeline then
+/// post-processes, and one of those plugins renders `MiniJinja` templates
+/// from `templates/tera/`.
+///
+/// Scaffolding only the `MiniJinja` set left `ssg new` producing a project
+/// that `ssg` could not build: the first stage failed before the plugin
+/// that would have used them ever ran, with an opaque
+/// `I/O error at 'public.build-tmp' ... No such file or directory` that
+/// named the output staging directory rather than the missing template
+/// (issue #752).
+///
+/// Four files are required — `template.html`, `index.html`, `page.html`
+/// and `post.html`. That was measured by adding them one at a time to a
+/// scaffolded project: three of the four still fails, and the auxiliary
+/// files ADR-0007 once needed (`main.js`, `sw.js`) make no difference
+/// since `staticdatagen 0.0.10` stopped requiring them.
+///
+/// These are deliberately minimal rather than copies of
+/// `examples/templates/en/*` — those are 262-line demonstrations with a
+/// CDN host baked in, which is not what a new project should start
+/// from. Undeclared `{{ var }}` references are pre-filled by
+/// `content_stager::stage_content_with_site_defaults`, so a template can
+/// reference more than the front matter declares without failing the
+/// build.
+fn write_root_templates(root: &Path) -> Result<()> {
+    fail_point!("scaffold::write-root-template", |_| {
+        anyhow::bail!("injected: scaffold::write-root-template")
+    });
+
+    // The shell every page shares. `{{!content}}` is unescaped: the body
+    // is already HTML by the time it lands here.
+    const BASE: &str = r##"<!DOCTYPE html>
+<html lang="{{language}}">
+<head>
+  <meta charset="{{charset}}" />
+  <meta name="viewport" content="{{viewport}}" />
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}" />
+  <link rel="canonical" href="{{permalink}}" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <header role="banner">
+    <nav aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/about/">About</a>
+    </nav>
+  </header>
+  <main id="main-content" role="main">
+    {{!content}}
+  </main>
+  <footer role="contentinfo">
+    <p>Built with <a href="https://static-site-generator.one">SSG</a>.</p>
+  </footer>
+</body>
+</html>
+"##;
+
+    for (rel, label) in [
+        ("templates/template.html", "templates/template.html"),
+        ("templates/index.html", "templates/index.html"),
+        ("templates/page.html", "templates/page.html"),
+        ("templates/post.html", "templates/post.html"),
+    ] {
+        write_scaffold_file(&root.join(rel), BASE, label)?;
+    }
+
+    Ok(())
+}
+
 fn write_template_files(root: &Path) -> Result<()> {
     fail_point!("scaffold::write-base", |_| {
         anyhow::bail!("injected: scaffold::write-base")
@@ -218,7 +297,12 @@ fn write_template_files(root: &Path) -> Result<()> {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
-  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  {# `page` is absent on taxonomy pages, which render through this
+     same base with `tag`/`posts` in scope instead. Without the
+     `is defined` guard the whole build aborts with
+     `undefined value (in base.html:7)` while naming `tag.html`,
+     a file the author never wrote. #}
+  {% if page is defined and page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
   <link rel="stylesheet" href="/css/style.css">
   {% block head_extra %}{% endblock %}
 </head>
