@@ -39,7 +39,17 @@ extend-exclude = [
 # entry names why, because an unexplained allow-list is how a spell
 # check stops catching real typos.
 
-# Spellings this codebase uses consistently.
+# Not a spelling preference — an output contract.
+#
+# `PQC-HSTS-UNPARSEABLE` is an audit diagnostic code and `"Unparseable"`
+# is a JSON-LD `schema_type` value. Both appear in what the tool emits:
+# SARIF reports, audit output, validation errors that users grep for.
+#
+# The README's output-stability rule says a change to what the tool
+# emits is breaking even when no API signature moves, so renaming these
+# to the dictionary's preferred "unparsable" would be a breaking change
+# across 42 occurrences to satisfy a linter's preference between two
+# spellings English accepts equally.
 unparseable = "unparseable"
 Unparseable = "Unparseable"
 UNPARSEABLE = "UNPARSEABLE"
@@ -48,7 +58,6 @@ UNPARSEABLE = "UNPARSEABLE"
 flate = "flate"       # the `flate2` crate
 intoto = "intoto"     # in-toto attestation format
 writeable = "writeable"
-macos = "macos"       # the Rust target triple and cfg value
 
 # Short identifiers: CSS custom properties in minified inline styles
 # (`--vp-ba`, `--vp-iz`), locale segments, and local bindings such as
@@ -68,10 +77,6 @@ IIF = "IIF"
 # `mis-split`, `mis-parse` — a legitimate English prefix, hyphenated.
 mis = "mis"
 
-# "if DEFAULT_PER_PAGE is ever retuned" — re-tuned, not returned.
-# Older typos dictionaries flag this; current ones do not, so it is
-# listed to keep the result the same whichever version runs.
-retuned = "retuned"
 
 # Deliberate. CHANGELOG documents that `SSG_NO_TAG_PAGES=ture` must be
 # rejected loudly rather than read as a silent false, so the misspelling

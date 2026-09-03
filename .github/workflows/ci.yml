@@ -269,6 +269,11 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20.0.0
       - name: docs/ files are not hidden by .gitignore
         run: ./scripts/check-docs-tracked.sh
+      # An allow-list is a set of suppressions, and suppressions rot.
+      - name: No dead entries in the typos allow-list
+        run: |
+          cargo install typos-cli --locked --version 1.50.1
+          ./scripts/check-typos-allowlist.sh
       # REUSE checks that every file's licensing is machine-readable.
       # This repository carries SPDX headers rather than a .reuse/dep5,
       # so the lint proves the headers are actually complete rather than
