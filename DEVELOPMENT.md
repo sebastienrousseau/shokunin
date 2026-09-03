@@ -87,6 +87,7 @@ asserts that, so this table cannot quietly drift from the workflow.
 | coverage gate | `make coverage` |
 | docs lint (text) | `typos`, `npx markdownlint-cli2`, `./scripts/check-docs-tracked.sh`, `reuse lint` |
 | docs lint | `cargo test --test doc_links`, `cargo test --test readme_sync`, `cargo test --test docs_accuracy`, `cargo test --test development_docs`, `cargo test --test man_page`, `cargo test --test completions` |
+| user manual | `./scripts/build-manual.sh` |
 | rustdoc | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg` |
 | cargo-deny | `cargo deny check` |
 | install contract | `./scripts/install-smoke.sh` |
@@ -174,6 +175,24 @@ knowing about, because when one fails the fix is almost never in the test:
 `tests/ci_test_coverage.rs` deserves a note: a test file that no workflow
 runs is worse than no test, because it is counted as coverage while
 asserting nothing. It caught 29 such files.
+
+## The user manual
+
+`docs/` doubles as the source for a rendered mdBook manual —
+`book.toml` points mdBook's `src` at it, so every chapter is a file that
+already exists rather than a second copy that can drift.
+`docs/SUMMARY.md` is the index.
+
+```sh
+mdbook serve --open        # live preview
+./scripts/build-manual.sh  # what CI runs
+```
+
+Adding a chapter means adding a file under `docs/` **and** a line in
+`docs/SUMMARY.md` **and** an allowlist entry in `.gitignore` if it is
+outside an already-admitted directory. `create-missing = false` makes
+mdBook fail on a SUMMARY entry with no file, and
+`scripts/check-docs-tracked.sh` catches the ignore case.
 
 ## Packaging and the install contract
 

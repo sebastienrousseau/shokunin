@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# The rendered user manual. `src` points at `docs/` rather than a
+# separate `book/src/`, so every chapter is the file that already lives
+# in the repository — the manual is an index over existing
+# documentation, not a second copy of it that can drift.
+#
+# Build:   mdbook build
+# Serve:   mdbook serve --open
+# Deploy:  .github/workflows/document.yml on release
+
+[book]
+title = "SSG — User Manual"
+description = """
+A secure-by-default static site generator built in Rust: WCAG 2.2 AA \
+validation, CSP/SRI hardening, native minification, CycloneDX SBOM, \
+28-locale i18n and streaming compilation for 100K+ pages.\
+"""
+authors = ["SSG Contributors"]
+language = "en"
+src = "docs"
+
+[build]
+build-dir = "book"
+# An unlisted page is usually a page someone forgot to add to SUMMARY,
+# so surface it rather than silently omitting it from the manual.
+create-missing = false
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/sebastienrousseau/static-site-generator"
+edit-url-template = "https://github.com/sebastienrousseau/static-site-generator/edit/main/{path}"
+# No `site-url` or `cname` here on purpose. GitHub Pages for this
+# repository is currently configured to serve from `main:/docs`
+# directly, with its custom domain set outside this file, and `docs/CNAME`
+# disagrees with that setting. Emitting a second CNAME from the book
+# build would add a third source of truth to a disagreement that already
+# exists. Resolve the domain first, then set these.
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 20
+use-boolean-and = true
+
+[output.html.print]
+enable = true

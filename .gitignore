@@ -13,6 +13,7 @@ node_modules/
 !/docs/README.md
 !/docs/ARCHITECTURE.md
 !/docs/packaging.md
+!/docs/SUMMARY.md
 !/docs/adr/
 !/docs/features-coverage.md
 !/docs/guide/
@@ -97,3 +98,6 @@ tests/visual/test-results/
 
 # wasm-pack output for ssg-search (issue #545)
 crates/ssg-search/pkg/
+
+# Rendered mdBook output (build artefact; see book.toml).
+/book/

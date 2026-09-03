@@ -280,6 +280,14 @@ jobs:
         run: cargo test --test man_page
       - name: Shell completions match the CLI definition
         run: cargo test --test completions
+      # Builds the rendered user manual and checks the output rather
+      # than the exit code: `mdbook build` exits 0 for a book with no
+      # chapters, an empty search index, or a table of contents that
+      # lost its sections.
+      - name: User manual builds
+        run: |
+          cargo install mdbook --locked --version 0.5.4
+          ./scripts/build-manual.sh
       - name: rustdoc builds with no broken intra-doc links
         run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg
 

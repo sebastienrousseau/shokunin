@@ -819,6 +819,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records in Nygard format |
 | [`docs/guide/`](docs/guide/) | Configuration, content, i18n, search, SEO, deployment |
 | [`supply-chain/README.md`](supply-chain/README.md) | `cargo-vet` policy and exemption burn-down |
+| [`docs/SUMMARY.md`](docs/SUMMARY.md) | User Manual — every guide, reference and decision, rendered with `mdbook serve` |
 | [docs.rs/ssg](https://docs.rs/ssg) | Generated API reference |
 
 ---
