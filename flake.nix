@@ -29,7 +29,22 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
+    # An explicit system list rather than `eachDefaultSystem`.
+    #
+    # nixpkgs 26.11 dropped x86_64-darwin, and `eachDefaultSystem`
+    # includes it, so `nix flake check --all-systems` fails outright
+    # with "Nixpkgs 26.11 has dropped support for x86_64-darwin".
+    # The project's release matrix still ships an x86_64-apple-darwin
+    # binary — that is a cross-compiled Rust target and unaffected by
+    # what nixpkgs chooses to package.
+    #
+    # Found by evaluating this flake in a nixos/nix container. It is
+    # the kind of thing no amount of reading catches.
+    flake-utils.lib.eachSystem [
+      "x86_64-linux"
+      "aarch64-linux"
+      "aarch64-darwin"
+    ] (system:
       let
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs { inherit system overlays; };
@@ -55,10 +70,11 @@
           };
 
           nativeBuildInputs = [ rustToolchain pkgs.pkg-config ];
-          buildInputs = pkgs.lib.optionals pkgs.stdenv.isDarwin [
-            pkgs.darwin.apple_sdk.frameworks.Security
-            pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-          ];
+          # No explicit Apple SDK frameworks. `darwin.apple_sdk` was
+          # removed from nixpkgs as a legacy compatibility stub — modern
+          # stdenv provides the frameworks — and naming it fails
+          # evaluation outright with "has been removed as it was a legacy
+          # compatibility stub". Another one found only by evaluating.
 
           # The example-building suites need a dev server on
           # 127.0.0.1:3000 and about thirteen minutes; they are gated on
