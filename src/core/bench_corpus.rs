@@ -206,6 +206,29 @@ pub fn generate_corpus(dir: &Path, spec: &CorpusSpec) -> io::Result<usize> {
              permalink: \"https://example.com/page-{i}\"\n\
              author: \"bench@example.com\"\n\
              tags: \"{tag_a}, {tag_b}\"\n\
+             charset: \"utf-8\"\n\
+             viewport: \"width=device-width, initial-scale=1, shrink-to-fit=no\"\n\
+             url: \"https://example.com/page-{i}\"\n\
+             id: \"https://example.com\"\n\
+             name: \"SSG Benchmark\"\n\
+             short_name: \"ssg-bench\"\n\
+             subtitle: \"Synthetic page {i}\"\n\
+             image: \"https://example.com/og-{i}.png\"\n\
+             logo: \"https://example.com/logo.svg\"\n\
+             logo_alt: \"SSG Benchmark logo\"\n\
+             logo_width: \"100\"\n\
+             logo_height: \"33\"\n\
+             theme-color: \"26, 58, 138\"\n\
+             cdn: \"https://cloudcdn.pro\"\n\
+             copyright: \"Copyright © 2026. All rights reserved.\"\n\
+             hreflang: \"en\"\n\
+             item_pub_date: \"2026-01-15T09:00:00+00:00\"\n\
+             last_build_date: \"2026-01-15T09:00:00+00:00\"\n\
+             primary: \"\"\n\
+             opengraph: \"\"\n\
+             twitter: \"\"\n\
+             apple: \"\"\n\
+             microsoft: \"\"\n\
              ---\n\n{body}"
         );
 

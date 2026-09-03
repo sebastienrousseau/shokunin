@@ -181,3 +181,76 @@ fn every_umbrella_module_has_a_matching_bench_file() {
         );
     }
 }
+
+// ── Trap 3 — a corpus the templates cannot fully render (issue #494) ──
+
+/// Front-matter keys the bundled `examples/templates/en` layouts read.
+///
+/// A benchmark corpus missing these still *builds* — which is what makes
+/// this worth gating. The pages simply come out thinner than a real
+/// page, so the figures describe less work than the build they claim to
+/// measure, and nothing anywhere goes red.
+const TEMPLATE_REQUIRED_KEYS: &[&str] = &[
+    "title",
+    "description",
+    "date",
+    "language",
+    "layout",
+    "permalink",
+    "charset",
+    "viewport",
+    "url",
+    "id",
+    "name",
+    "subtitle",
+    "image",
+    "logo",
+    "theme-color",
+    "cdn",
+    "copyright",
+    "hreflang",
+];
+
+/// The seeded benchmark corpus must carry every front-matter key the
+/// bundled templates read.
+///
+/// Issue #494 reported this as an `Unresolved template tag: charset`
+/// abort. That symptom no longer reproduces — the corpus renders — but
+/// the underlying gap was real: `charset` and `viewport` were absent, so
+/// the benchmarked pages lacked markup a real page carries.
+///
+/// Asserting on the generated corpus rather than on rendered output is
+/// deliberate. Rendering here would need the full plugin pipeline, and a
+/// check that quietly exercises less than it appears to is the failure
+/// this file exists to prevent — the `og:`/`twitter:` tags that #494 also
+/// names come from the SEO plugin rather than from front matter, so they
+/// are not this corpus's responsibility and are not asserted here.
+#[test]
+fn seeded_corpus_carries_every_template_required_key() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let spec = ssg::bench_corpus::CorpusSpec::new(3);
+    let written = ssg::bench_corpus::generate_corpus(dir.path(), &spec)
+        .expect("generate corpus");
+    assert_eq!(written, 3, "corpus size");
+
+    let page = fs::read_to_string(dir.path().join("page-0000.md"))
+        .expect("read first page");
+    let front = page
+        .split("---\n")
+        .nth(1)
+        .expect("front matter is delimited by ---");
+
+    let missing: Vec<&str> = TEMPLATE_REQUIRED_KEYS
+        .iter()
+        .copied()
+        .filter(|k| !front.contains(&format!("{k}: ")))
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "the benchmark corpus omits front-matter keys the bundled \
+         templates read: {missing:?}\n\nThe build still succeeds without \
+         them, which is the problem: the benchmark then measures a \
+         thinner page than the one it claims to. See issue #494."
+    );
+}
