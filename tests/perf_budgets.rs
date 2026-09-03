@@ -329,7 +329,31 @@ fn build_10_pages_within_budget() {
         eprintln!("[perf_budgets] templates missing — skipping 10-page");
         return;
     };
-    assert_under_budget("10-page build", t, Duration::from_millis(100));
+
+    // Reported, not asserted — even on Linux.
+    //
+    // A 10-page build is almost entirely fixed start-up cost, and the
+    // measured spread across rounds is 26% at this size against 1% at
+    // n=500. A ceiling on that measures the runner, not the code.
+    //
+    // The proof arrived from CI rather than from argument: commit
+    // 3cc1e96 produced two runs of the same workflow on the same code,
+    // one passing and one failing at 103.27 ms against a 100 ms
+    // ceiling. Two opposite verdicts, same commit, three per cent
+    // apart.
+    //
+    // Raising the number would be the fourth time a constant here was
+    // fitted to whichever sample had just failed. The gate that catches
+    // the regression this suite exists for is
+    // `build_cost_per_page_does_not_grow_with_corpus_size`, which is
+    // machine-independent; the 100- and 500-page ceilings still catch a
+    // uniform slowdown, and they have real headroom — 147-188 ms
+    // against 800 ms, and ~800 ms against 2 s.
+    eprintln!(
+        "[perf_budgets] 10-page build: {t:.2?} (informational — too \
+         noisy at this size to assert; see \
+         build_cost_per_page_does_not_grow_with_corpus_size)"
+    );
 }
 
 #[test]
