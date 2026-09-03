@@ -76,6 +76,21 @@
           # evaluation outright with "has been removed as it was a legacy
           # compatibility stub". Another one found only by evaluating.
 
+          # `buildRustPackage` runs its check phase with `cargo test
+          # --release`, and `[profile.release]` sets `panic = "abort"`.
+          # A libtest harness needs unwind, so the link fails with
+          #
+          #   error: the crate `ssg_search` requires panic strategy
+          #   `abort` which is incompatible with this crate's strategy
+          #   of `unwind`
+          #
+          # — the same mismatch documented at length above
+          # `[profile.bench]` in Cargo.toml, arriving here by a different
+          # route. Overriding the profile for this build is the narrow
+          # fix; disabling the check phase would "pass" by testing
+          # nothing.
+          CARGO_PROFILE_RELEASE_PANIC = "unwind";
+
           # The example-building suites need a dev server on
           # 127.0.0.1:3000 and about thirteen minutes; they are gated on
           # SSG_REQUIRE_EXAMPLES, which is deliberately not set here.
