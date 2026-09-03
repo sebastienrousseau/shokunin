@@ -170,6 +170,24 @@ This is a statement about *this project's* output. Whether your build
 environment is reproducible end to end also depends on your toolchain
 and packaging, which we cannot assert for you.
 
+## Prebuilt targets
+
+Every release publishes archives for:
+
+| Target | Notes |
+|---|---|
+| `x86_64-unknown-linux-gnu` | also `.deb` (amd64) and `.rpm` |
+| `x86_64-unknown-linux-musl` | static, runs anywhere |
+| `aarch64-unknown-linux-gnu` | also `.deb` (arm64) and `.rpm` |
+| `aarch64-unknown-linux-musl` | static, runs anywhere |
+| `aarch64-apple-darwin` | also `.pkg` |
+| `x86_64-apple-darwin` | also `.pkg` |
+| `x86_64-pc-windows-msvc` | `.zip`, also `.msi` |
+
+Linux builds run natively on their own architecture rather than being
+cross-compiled, so there is no cross-linker toolchain between the
+release and the binary you receive.
+
 ## Existing packaging
 
 [`packaging/`](../packaging/) has working definitions for Homebrew, Arch

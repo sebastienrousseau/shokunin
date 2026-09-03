@@ -86,12 +86,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux builds natively on both architectures rather than
+          # cross-compiling. GitHub's arm64 runners make that possible,
+          # and a native build avoids maintaining a cross linker
+          # toolchain whose failures surface only at release time.
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: tar.gz
             pkg: deb_rpm
+            deb_arch: amd64
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
+            archive: tar.gz
+            musl: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            archive: tar.gz
+            pkg: deb_rpm
+            deb_arch: arm64
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
             archive: tar.gz
             musl: true
           - target: aarch64-apple-darwin
@@ -154,8 +168,9 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           cp "target/${{ matrix.target }}/release/ssg" target/release/ssg
-          sh packaging/deb/build.sh "$VERSION" amd64
-          shasum -a 256 "ssg_${VERSION}_amd64.deb" > "ssg_${VERSION}_amd64.deb.sha256"
+          sh packaging/deb/build.sh "$VERSION" "${{ matrix.deb_arch }}"
+          DEB="ssg_${VERSION}_${{ matrix.deb_arch }}.deb"
+          shasum -a 256 "$DEB" > "$DEB.sha256"
 
       - name: Install cargo-generate-rpm
         if: matrix.pkg == 'deb_rpm'

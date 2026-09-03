@@ -72,7 +72,7 @@ brew install --formula https://raw.githubusercontent.com/sebastienrousseau/stati
 # Cargo
 cargo install ssg
 
-# Debian / Ubuntu
+# Debian / Ubuntu (amd64 or arm64)
 sudo dpkg -i ssg_0.0.58_amd64.deb
 
 # Arch Linux (AUR)

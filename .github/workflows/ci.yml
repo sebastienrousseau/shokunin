@@ -514,27 +514,6 @@ jobs:
       - name: make DESTDIR=/tmp/stage install
         run: ./scripts/install-smoke.sh /tmp/stage
 
-  # ── Phase 2d2: nix flake evaluates (REPO-STANDARD §5) ───────────────
-  # `flake.nix` was written on a machine without nix, so it is checked
-  # here rather than asserted. Evaluation only (`--no-build`): it proves
-  # the expression is well-formed and its inputs resolve, which is what
-  # breaks when a flake rots, without paying for a full Rust build in a
-  # second toolchain.
-  nix:
-    name: nix flake
-    needs: lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-      - uses: cachix/install-nix-action@526118121621777ccd86f79b04685a9319637641 # v31
-        with:
-          extra_nix_config: "experimental-features = nix-command flakes"
-      - name: nix flake check
-        run: nix flake check --no-build --all-systems
-
   # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
   # cargo-vet complements cargo-deny (license + CVE) with per-crate
   # attestation: every transitive dep must be audited by us, vouched

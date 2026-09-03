@@ -91,7 +91,6 @@ asserts that, so this table cannot quietly drift from the workflow.
 | rustdoc | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg` |
 | cargo-deny | `cargo deny check` |
 | install contract | `./scripts/install-smoke.sh` |
-| nix flake | `nix flake check --no-build --all-systems` |
 | cargo-vet | `cargo vet --locked` |
 | semver checks | `cargo semver-checks --package ssg --package ssg-core --package ssg-rpc --package ssg-search` |
 

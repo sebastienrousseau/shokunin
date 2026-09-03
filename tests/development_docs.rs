@@ -286,3 +286,45 @@ fn architecture_lists_every_workspace_crate() {
          know they exist."
     );
 }
+
+/// The prebuilt-target table in `docs/packaging.md` must match the
+/// release workflow's build matrix.
+///
+/// REPO-STANDARD §4 asks for binaries across a target matrix, and §5
+/// asks for packaging documentation addressed to distro maintainers. A
+/// maintainer reading that table is deciding what to package; if the
+/// workflow gains or loses a target and the table does not follow, they
+/// are planning against a list that no longer exists.
+///
+/// Same discipline as every other inventory here: derive it from the
+/// thing that produces the artefacts, never restate it.
+#[test]
+fn packaging_doc_lists_every_release_target() {
+    let workflow = read(".github/workflows/release.yml");
+    let doc = read("docs/packaging.md");
+
+    let targets: BTreeSet<String> = workflow
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("- target: "))
+        .map(str::to_owned)
+        .collect();
+
+    assert!(
+        targets.len() >= 5,
+        "only {} targets were parsed from release.yml — the parser is \
+         wrong and this gate is testing almost nothing",
+        targets.len()
+    );
+
+    let missing: Vec<&String> = targets
+        .iter()
+        .filter(|t| !doc.contains(t.as_str()))
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "docs/packaging.md does not list these release targets: \
+         {missing:?}\n\nA distro maintainer reads that table to decide \
+         what to package."
+    );
+}

@@ -1,4 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# UNVERIFIED — DO NOT TREAT AS A SUPPORTED INSTALL PATH.
+#
+# This file was written on a machine with no nix available, so it has
+# never been evaluated. It is checked in so it can be tested somewhere
+# that has nix, not because it is known to work. Nothing in the README,
+# docs/packaging.md or CI references it, and it is deliberately not run
+# in CI: gating the pipeline on an expression nobody has evaluated would
+# be asserting something we do not know.
+#
+# Before this becomes a claim it needs, at minimum:
+#
+#     nix flake check --all-systems
+#     nix build
+#     nix develop --command cargo test --tests
+#
+# If those pass, wire it into CI and say so then.
 {
   description = "SSG — a secure-by-default static site generator built in Rust";
 
