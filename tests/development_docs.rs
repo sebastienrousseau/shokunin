@@ -77,7 +77,31 @@ fn normalise(s: &str) -> String {
 
 #[test]
 fn every_documented_command_appears_in_the_workflow() {
-    let ci = normalise(&read(".github/workflows/ci.yml"));
+    // Every workflow, not just ci.yml. The table documents how to run
+    // CI's gates locally, and some of those gates live elsewhere — the
+    // fuzz regression replay is in fuzz.yml. Reading only ci.yml made
+    // this reject a correctly documented command.
+    //
+    // The companion test below stays scoped to ci.yml on purpose: that
+    // one asserts every *job* is documented, and the table covers the
+    // per-push gates rather than release and scheduled machinery.
+    let dir = format!("{}/.github/workflows", env!("CARGO_MANIFEST_DIR"));
+    let mut all = String::new();
+    let mut files = 0_usize;
+    for entry in fs::read_dir(&dir).expect("workflows dir").flatten() {
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "yml") {
+            all.push_str(&fs::read_to_string(&path).unwrap_or_default());
+            all.push('\n');
+            files += 1;
+        }
+    }
+    assert!(
+        files >= 5,
+        "only {files} workflow files were read — the glob is wrong and \
+         this gate would accept almost anything"
+    );
+    let ci = normalise(&all);
 
     // Commands that are deliberately a local convenience wrapper rather
     // than a literal CI string. Each is justified, and the list is short
@@ -97,6 +121,12 @@ fn every_documented_command_appears_in_the_workflow() {
         // reading the same `.markdownlint-cli2.jsonc` and `REUSE.toml`.
         "npx markdownlint-cli2",
         "reuse lint",
+        // The CI replay loops over every `$OUT/*_seed_corpus.zip` the
+        // OSS-Fuzz build produced. These are the single-target local
+        // equivalents, with `<target>` as a placeholder — they cannot
+        // appear literally in a workflow.
+        "cargo +nightly fuzz build <target>",
+        "./fuzz/target/*/release/<target> fuzz/corpus/<target> -runs=0",
     ]
     .into_iter()
     .collect();
@@ -192,6 +222,13 @@ fn every_referenced_script_exists_and_is_executable() {
             continue;
         };
         if !path.starts_with("./") {
+            continue;
+        }
+        // Skip paths that are patterns rather than files: a glob for a
+        // target triple, or a `<target>` placeholder the reader
+        // substitutes. Those cannot resolve to one executable, and
+        // asserting they do would reject a correctly written example.
+        if path.contains('*') || path.contains('<') {
             continue;
         }
         let full = format!("{root}/{}", path.trim_start_matches("./"));

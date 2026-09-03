@@ -124,6 +124,44 @@ jobs:
           SANITIZER: address
         run: bash fuzz/oss-fuzz-build.sh
 
+      # ── Regression corpus replay (issue #566, REPO-STANDARD §6) ──
+      #
+      # Every input in `fuzz/corpus/<target>/` is replayed on every push.
+      # These are seeds and, more importantly, the reproducers for bugs
+      # already found and fixed — an a11y panic on non-ASCII input among
+      # them. Replaying them is what makes the corpus a regression suite
+      # rather than a pile of bytes that only nightly fuzzing ever reads.
+      #
+      # `-runs=0` replays each file exactly once and exits: deterministic,
+      # a few seconds, and it cannot flake. That is the difference from
+      # the exploratory run below, which fuzzes from scratch and would
+      # not notice a previously-fixed crash coming back.
+      - name: Replay the committed regression corpus
+        run: |
+          set -euo pipefail
+          cd "$OUT"
+          replayed=0
+          for zipfile in *_seed_corpus.zip; do
+            [ -e "$zipfile" ] || continue
+            target="${zipfile%_seed_corpus.zip}"
+            [ -x "./$target" ] || continue
+            dir="$(mktemp -d)"
+            unzip -qo "$zipfile" -d "$dir"
+            count=$(find "$dir" -type f | wc -l | tr -d ' ')
+            echo "==> $target: replaying $count committed input(s)"
+            ./"$target" "$dir" -runs=0
+            replayed=$((replayed + count))
+          done
+          # A replay that replayed nothing is the failure this whole file
+          # guards against: green, and asserting nothing.
+          if [ "$replayed" -eq 0 ]; then
+            echo "::error::no corpus inputs were replayed — the seed" \
+                 "corpora are missing from \$OUT, so this gate passed" \
+                 "without testing anything"
+            exit 1
+          fi
+          echo "replayed $replayed committed input(s) with no crash"
+
       - name: Smoke-run each fuzzer
         # A binary that links but exits immediately is not a fuzzer. Ten
         # seconds each is enough to prove the dictionary parses and the
