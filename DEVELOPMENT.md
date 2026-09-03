@@ -82,13 +82,15 @@ asserts that, so this table cannot quietly drift from the workflow.
 | no-shellout lint | `./tools/lint-no-shellout.sh` |
 | ADR citation graph | `./tools/lint-adr.sh` |
 | feature powerset | `cargo hack check --feature-powerset --depth 2 --no-dev-deps` |
-| unit and integration tests | `cargo test --tests --features test-fault-injection` |
+| unit and integration tests (3 OS on stable; MSRV `1.88` and beta on Linux) | `cargo test --tests --features test-fault-injection` |
 | example outputs | `cargo build --examples --quiet` then `cargo test --test example_outputs -- --test-threads=1` |
 | coverage gate | `make coverage` |
+| docs lint (text) | `typos`, `npx markdownlint-cli2`, `./scripts/check-docs-tracked.sh`, `reuse lint` |
 | docs lint | `cargo test --test doc_links`, `cargo test --test readme_sync`, `cargo test --test docs_accuracy`, `cargo test --test development_docs`, `cargo test --test man_page`, `cargo test --test completions` |
 | rustdoc | `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg` |
 | cargo-deny | `cargo deny check` |
 | install contract | `./scripts/install-smoke.sh` |
+| nix flake | `nix flake check --no-build --all-systems` |
 | cargo-vet | `cargo vet --locked` |
 | semver checks | `cargo semver-checks --package ssg --package ssg-core --package ssg-rpc --package ssg-search` |
 
@@ -99,6 +101,13 @@ Two things to know about the table above.
 examples, where they are the idiomatic way to fail a test. Running only
 the first misses lints in `tests/` and `examples/`, which is precisely
 how several rounds of green-locally / red-in-CI happened.
+
+**The test matrix is 5 jobs, not 9.** Every OS runs on stable; the MSRV
+floor (`1.88`) and beta run on Linux only. Those two toolchains answer a
+compiler question rather than a platform one — "does this still build on
+the floor we claim, and is it about to break on the next release?" —
+so paying for them three times buys nothing. beta is
+`continue-on-error`: an early warning, not a gate.
 
 **One command covers unit and integration tests.** `--tests` builds and
 runs `unittests src/lib.rs` as well as every `tests/*.rs` target — check
@@ -185,6 +194,14 @@ the source, and the drift gates will reject the edit anyway.
 left behind. PowerShell completions are generated but installed only when
 a packager sets `PWSHCOMPDIR`, because PowerShell has no FHS convention
 on Unix.
+
+## Packaging
+
+Distribution maintainers have their own document:
+[`docs/packaging.md`](docs/packaging.md). It covers the licence grant,
+the toolchain floor, vendored offline builds, which test suites to skip
+in a package build and why, the exact install layout, and signature
+verification.
 
 ## Supply chain
 

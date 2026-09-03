@@ -585,7 +585,7 @@ default-members = ["."]
 
 ## Warnings
 missing_copy_implementations = "warn"       # Warn if types can implement `Copy` but don’t
-missing_docs = "warn"                       # Warn if public items lack documentation
+missing_docs = "deny"                      # Public items must be documented (§6: 100% documented public API)
 unstable_features = "warn"                  # Warn on the usage of unstable features
 unused_extern_crates = "warn"               # Warn about unused external crates
 unused_results = "warn"                     # Warn if a result type is unused (e.g., errors ignored)

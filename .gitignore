@@ -12,6 +12,7 @@ node_modules/
 /docs/*
 !/docs/README.md
 !/docs/ARCHITECTURE.md
+!/docs/packaging.md
 !/docs/adr/
 !/docs/features-coverage.md
 !/docs/guide/

@@ -41,6 +41,23 @@ env:
   # Gate uses `cargo llvm-cov --lib` to keep example_outputs.rs
   # integration tests (which run real `ssg build` invocations with their
   # own timeouts in the `examples` job) out of the instrumented run.
+  # Why 98.0 and not 100, and not 80.
+  #
+  # Measured coverage at the time this floor was set was 99.3%. A floor
+  # is a ratchet against regression, not a target to chase: set at 100 it
+  # fails on any untestable line and gets lowered under pressure; set at
+  # 80 it permits a fifth of the library to rot untested. 98.0 sits just
+  # below the real number, so it catches a genuine drop while leaving
+  # room for the handful of lines that are legitimately hard to reach.
+  #
+  # Two modules are excluded rather than counted and forgiven, so the
+  # number means what it says: src/core/deploy_adapter.rs (six adapters
+  # documented as not yet implemented, #527) and src/main.rs (argv
+  # dispatch, covered by running the binary in tests/cli_subcommands.rs
+  # rather than by cargo llvm-cov).
+  #
+  # Raise it when the real number rises; never lower it to make a red
+  # build green.
   COVERAGE_REGIONS_FLOOR: "98.0"
   COVERAGE_LINES_FLOOR: "98.0"
   COVERAGE_FUNCTIONS_FLOOR: "98.0"
@@ -126,9 +143,12 @@ jobs:
 
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
-    name: test · ${{ matrix.os }}
+    name: test · ${{ matrix.os }} · ${{ matrix.toolchain }}
     needs: lint
     runs-on: ${{ matrix.os }}
+    # beta is an early warning, not a gate: a nightly-track regression in
+    # a dependency should tell us, not block a release.
+    continue-on-error: ${{ matrix.experimental || false }}
     # Bumped 8 → 15 in v0.0.42 (ravif AVIF encoding, ~1.2s per 1024×768
     # image on the runner) and 15 → 20 after windows-latest started being
     # cancelled at exactly 15m00s.
@@ -156,15 +176,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Every OS on stable, plus the MSRV floor and beta on Linux.
+        #
+        # REPO-STANDARD §6 asks for OS x toolchain. The full cross
+        # product is nine jobs, and the two extra toolchains are
+        # answering a question that is not OS-specific: "does this still
+        # build on the floor we claim, and is it about to break on the
+        # next compiler?" Both are compiler questions, so they run once
+        # each on the cheapest and fastest runner rather than three
+        # times. Platform-specific behaviour is what the OS row covers,
+        # and this branch has found enough of it to know that row earns
+        # its cost.
+        #
+        # The MSRV entry is the one that matters for users: it enforces
+        # the `rust-version` floor in Cargo.toml, which the README now
+        # states as a policy. beta is allowed to fail — it is an early
+        # warning, not a gate.
         os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: "1.88" # MSRV floor, must match Cargo.toml rust-version
+          - os: ubuntu-latest
+            toolchain: beta
+            experimental: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
-          shared-key: test-${{ matrix.os }}
+          shared-key: test-${{ matrix.os }}-${{ matrix.toolchain }}
 
       # NOTE: there is deliberately no separate `--lib` step. `--tests`
       # already builds and runs `unittests src/lib.rs` — the same binary,
@@ -460,6 +505,27 @@ jobs:
           sudo apt-get install -y --no-install-recommends zsh fish mandoc
       - name: make DESTDIR=/tmp/stage install
         run: ./scripts/install-smoke.sh /tmp/stage
+
+  # ── Phase 2d2: nix flake evaluates (REPO-STANDARD §5) ───────────────
+  # `flake.nix` was written on a machine without nix, so it is checked
+  # here rather than asserted. Evaluation only (`--no-build`): it proves
+  # the expression is well-formed and its inputs resolve, which is what
+  # breaks when a flake rots, without paying for a full Rust build in a
+  # second toolchain.
+  nix:
+    name: nix flake
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@526118121621777ccd86f79b04685a9319637641 # v31
+        with:
+          extra_nix_config: "experimental-features = nix-command flakes"
+      - name: nix flake check
+        run: nix flake check --no-build --all-systems
 
   # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
   # cargo-vet complements cargo-deny (license + CVE) with per-crate

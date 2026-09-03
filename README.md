@@ -813,6 +813,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | [`BENCHMARKS.md`](BENCHMARKS.md) | Performance methodology, CI budgets, comparison tables, and the [latest nightly figures](BENCHMARKS.md#latest-nightly-run) |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Toolchain setup, running every CI gate locally, test layout, release model |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the build pipeline fits together, for contributors |
+| [`docs/packaging.md`](docs/packaging.md) | For distribution maintainers: licence grant, toolchain floor, offline builds, install layout, signature verification |
 | [`SECURITY.md`](SECURITY.md) | Reporting policy, supported versions, guarantees |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Development workflow and review expectations |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records in Nygard format |

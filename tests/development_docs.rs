@@ -91,6 +91,12 @@ fn every_documented_command_appears_in_the_workflow() {
         // The workflow passes an explicit stage directory; the script
         // defaults to a temporary one when run locally.
         "./scripts/install-smoke.sh",
+        // CI runs these as pinned GitHub Actions
+        // (`markdownlint-cli2-action`, `reuse-action`), which is what
+        // keeps them pinned by SHA. These are the local equivalents,
+        // reading the same `.markdownlint-cli2.jsonc` and `REUSE.toml`.
+        "npx markdownlint-cli2",
+        "reuse lint",
     ]
     .into_iter()
     .collect();
@@ -146,13 +152,25 @@ fn every_workflow_job_is_documented() {
     // The table names jobs in prose ("fmt", "clippy (lib — strict)"), so
     // the check is that each job id's words are represented, not that the
     // id appears verbatim.
+    // Whole-word matching, not `contains`. A substring test passed the
+    // job id `nix` because DEVELOPMENT.md says "Unix" — the gate
+    // reported success while the job was genuinely undocumented. Short
+    // job ids are exactly the ones a loose match lets through.
     let doc = read("DEVELOPMENT.md").to_lowercase();
+    let words: BTreeSet<String> = doc
+        .split(|c: char| !c.is_ascii_alphanumeric() && c != '-')
+        .filter(|w| !w.is_empty())
+        .map(str::to_owned)
+        .collect();
+
     let undocumented: Vec<&String> = jobs
         .iter()
         .filter(|j| {
-            let plain = j.replace('-', " ");
-            !doc.contains(&j.to_lowercase())
-                && !doc.contains(&plain.to_lowercase())
+            let id = j.to_lowercase();
+            // Either the hyphenated id as one token ("docs-lint"), or
+            // every word of it present ("docs" and "lint").
+            !words.contains(&id)
+                && !id.split('-').all(|part| words.contains(part))
         })
         .collect();
 
