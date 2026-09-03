@@ -55,7 +55,7 @@ iteration).
 by `bench_scalability.rs` triggers a `MiniJinja` "Unresolved template
 tag: charset" error during render — the bundled benchmark template
 references variables the synthetic frontmatter doesn't supply. The
-benchmark's `compile_site` call therefore exits *early* on render and
+benchmark's `compile_site` call therefore exits _early_ on render and
 the 18 ms number reflects:
 
 - tempdir setup + corpus generation (excluded from the timing per
@@ -86,7 +86,7 @@ materially affect any future perf work:
 1. **`benches/bench.rs` is the single registered `[[bench]]` target.**
    It uses `mod` to pull in the per-area bench files and lists their
    criterion groups in `criterion_main!`. Adding a new bench requires
-   both a `mod` line and a target entry in `bench.rs` — *not* a new
+   both a `mod` line and a target entry in `bench.rs` — _not_ a new
    `[[bench]]` section in `Cargo.toml`. A lone `[[bench]]` entry would
    shadow `bench.rs`'s `criterion_main!` and produce two competing
    `fn main()` definitions.
@@ -234,4 +234,4 @@ From issue [#471](https://github.com/sebastienrousseau/static-site-generator/iss
 | Published results in README and benchmark page | ⏳ After numbers stabilise |
 
 This baseline document marks the "Profile" criterion partially done:
-the *inventory* is here; the *flamegraph* is the next concrete step.
+the _inventory_ is here; the _flamegraph_ is the next concrete step.

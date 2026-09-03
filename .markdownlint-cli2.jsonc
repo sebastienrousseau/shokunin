@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+//
+// Every rule turned off below is turned off for a stated reason. A lint
+// config with silent exclusions is how a gate quietly stops gating.
+{
+  "config": {
+    "default": true,
+
+    // Prose here wraps at ~72 characters by convention, but reference
+    // tables, long URLs and code samples legitimately exceed any limit
+    // worth setting. Enforcing a number would mean 224 exceptions.
+    "MD013": false,
+
+    // Table pipe spacing. `|---|---|` is idiomatic GFM and renders
+    // identically; this rule flagged 405 cells across the repo purely
+    // on whitespace style.
+    "MD060": false,
+
+    // The README's Contents block groups links under bold labels
+    // ("Getting started", "Reference", "Operational"). Real headings
+    // there would nest into GitHub's generated outline and duplicate
+    // the section headings they point at.
+    "MD036": false,
+
+    // Duplicate headings are fine across different sections — several
+    // guides reuse "Example" or "Configuration" under distinct parents.
+    "MD024": { "siblings_only": true },
+
+    // Inline HTML is used deliberately: the README's centred logo and
+    // badge row, and <details> blocks in SECURITY.md.
+    "MD033": false,
+
+    // Files legitimately open with front matter, a licence comment, or
+    // a centred block rather than an H1.
+    "MD041": false
+  },
+  "globs": ["*.md", "docs/**/*.md"],
+  "ignores": ["**/node_modules/**", "target/**", "docs/api/**"]
+}

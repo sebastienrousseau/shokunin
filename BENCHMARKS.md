@@ -273,7 +273,7 @@ to accommodate GitHub Actions runners. Local results are typically
 
 For the cross-SSG comparison numbers above, the host was:
 
-```
+```text
 CPU: Apple M3 Max (14 cores)
 RAM: 36 GB
 Disk: NVMe (Apple Internal)

@@ -73,21 +73,25 @@ Shortcodes are expanded before compilation. Syntax: `{{< name key="value" >}}`.
 ### Built-in Shortcodes
 
 **YouTube embed:**
+
 ```markdown
 {{< youtube id="dQw4w9WgXcQ" >}}
 ```
 
 **GitHub Gist:**
+
 ```markdown
 {{< gist user="octocat" id="1234567" >}}
 ```
 
 **Figure with caption:**
+
 ```markdown
 {{< figure src="/images/photo.jpg" alt="A photo" caption="Figure 1" >}}
 ```
 
 **Admonition blocks:**
+
 ```markdown
 {{< warning >}}
 This is a warning.
@@ -114,7 +118,7 @@ fn main() {
 
 Content is organized in directories. Subdirectories create URL path segments:
 
-```
+```text
 content/
   index.md          -> /index.html
   about.md          -> /about/index.html

@@ -58,6 +58,7 @@ compatibility promise exists below `0.1.0`.
 ## Consequences
 
 **Positive:**
+
 - Removes calendar pressure from architectural decisions — extractions
   like `ssg-a11y`, the WASI plugin sandbox (#574), or the full i18n
   crate (#588, targeted `0.0.49`) can each land as their own `0.0.x`
@@ -69,6 +70,7 @@ compatibility promise exists below `0.1.0`.
   contributors don't plan against a date that isn't real.
 
 **Negative:**
+
 - External consumers reading `0.0.47` may (incorrectly, per SemVer,
   but predictably, per convention) assume the crate is pre-alpha.
   `README.md`/`CHANGELOG.md` should keep foregrounding the maturity

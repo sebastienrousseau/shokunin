@@ -14,7 +14,7 @@ cloud APIs.
 
 ## Architecture
 
-```
+```text
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Markdown    │────▶│  SSG Build   │────▶│  HTML Output  │
 │  Content     │     │  Pipeline    │     │  + AI Fields  │

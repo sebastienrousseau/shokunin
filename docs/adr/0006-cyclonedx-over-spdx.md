@@ -19,7 +19,7 @@ Two formats dominate:
   support since 1.4. JSON, XML, and Protobuf encodings.
 - **SPDX** (Linux Foundation). License-centric, optimised for IP
   compliance. Strong in legal-software-clearance workflows. Tag-value
-  + JSON encodings.
+  - JSON encodings.
 
 The two are not mutually exclusive — CycloneDX components can be
 SPDX-licensed, SPDX docs can reference CycloneDX VEX statements.

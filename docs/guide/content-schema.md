@@ -82,7 +82,7 @@ The `ContentValidationPlugin` runs in `before_compile` and validates every Markd
 
 Validation errors are reported with the file path, field name, and expected type:
 
-```
+```json
 error: content/blog/post.md: field "date" expected type "date", got "not-a-date"
 ```
 

@@ -41,7 +41,7 @@ git ls-tree -r HEAD -- docs/           # must list it after committing
 
 ## Where to find the published docs
 
-- **API reference:** https://docs.rs/ssg
+- **API reference:** <https://docs.rs/ssg>
 - **Source of the landing page:** the crate root uses
   `#![doc = include_str!("../README.md")]` in `src/lib.rs`, so the
   project's top-level `README.md` *is* the docs.rs landing page. Edit

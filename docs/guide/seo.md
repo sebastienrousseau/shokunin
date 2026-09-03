@@ -71,7 +71,7 @@ The canonical URL is constructed from `base_url` in configuration and the page's
 
 The `RobotsPlugin` generates a `robots.txt` file in the site root:
 
-```
+```text
 User-agent: *
 Allow: /
 Sitemap: https://example.com/sitemap.xml

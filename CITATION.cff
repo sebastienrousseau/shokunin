@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+cff-version: 1.2.0
+title: "SSG — Static Site Generator"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - name: "SSG Contributors"
+    website: "https://github.com/sebastienrousseau/static-site-generator"
+repository-code: "https://github.com/sebastienrousseau/static-site-generator"
+url: "https://static-site-generator.com"
+abstract: >-
+  A secure-by-default static site generator built in Rust, with WCAG 2.2
+  AA validation, CSP/SRI hardening, native JS/CSS minification,
+  automated CycloneDX SBOM generation, a local LLM content pipeline, a
+  WebAssembly target, interactive islands, streaming compilation for
+  100K+ pages, 28-locale internationalisation, and one-command
+  deployment. Validation runs inside the build rather than after it, so
+  a page that fails an accessibility, security or metadata check is
+  reported with its file and line during compilation.
+keywords:
+  - static-site-generator
+  - rust
+  - accessibility
+  - wcag
+  - web-performance
+  - security
+  - webassembly
+license:
+  - Apache-2.0
+  - MIT
+version: 0.0.58
+date-released: "2026-09-03"

@@ -31,7 +31,7 @@ Each island loads lazily based on a hydration strategy.
 
 Place a JavaScript file in `islands/`:
 
-```
+```text
 islands/
   counter.js
   search-widget.js

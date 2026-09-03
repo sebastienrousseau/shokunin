@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Cheap checks that run before a commit. Deliberately a subset of CI:
+# anything slow (clippy over all targets, the test suite, coverage)
+# belongs in CI where it can be parallelised, not in a hook that makes
+# committing feel expensive.
+#
+# Install with:  pre-commit install
+# Run manually:  pre-commit run --all-files
+minimum_pre_commit_version: "3.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.golden$'
+      - id: end-of-file-fixer
+        exclude: '\.golden$'
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.29.4
+    hooks:
+      - id: typos
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.2
+    hooks:
+      # Configuration, including every rule exclusion and its reason,
+      # is in .markdownlint-cli2.jsonc — the same file CI uses.
+      - id: markdownlint-cli2
+
+  - repo: local
+    hooks:
+      # Formatting only. Clippy is not here on purpose: it needs a full
+      # build, and a hook that takes minutes gets bypassed with
+      # `--no-verify`, which is worse than not having it.
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # Guards the `.gitignore` allowlist trap described in AGENTS.md:
+      # a new file under docs/ that git cannot see.
+      - id: docs-tracked
+        name: docs/ files are not silently ignored
+        entry: scripts/check-docs-tracked.sh
+        language: system
+        pass_filenames: false

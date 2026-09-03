@@ -193,3 +193,78 @@ fn every_referenced_script_exists_and_is_executable() {
         let _ = meta;
     }
 }
+
+/// The workspace-layout table in `docs/ARCHITECTURE.md` must list every
+/// crate the workspace actually contains.
+///
+/// REPO-STANDARD §8 asks for "a CI-checked table of which repo has
+/// what, so the layout can't silently drift". Here the family is the
+/// workspace rather than separate repositories, but the failure mode is
+/// identical: a crate is added, the table is not updated, and the
+/// document that tells a newcomer where things live quietly becomes
+/// wrong. Deriving the check from `Cargo.toml` rather than restating
+/// the list is the same discipline the plugin and gate counts follow.
+#[test]
+fn architecture_lists_every_workspace_crate() {
+    let manifest = read("Cargo.toml");
+    let doc = read("docs/ARCHITECTURE.md");
+
+    let members: Vec<String> = manifest
+        .split_once("members = [")
+        .and_then(|(_, rest)| rest.split_once(']'))
+        .map(|(list, _)| {
+            list.split(',')
+                .map(|s| s.trim().trim_matches(['"', '\n', ' '].as_ref()))
+                .filter(|s| s.starts_with("crates/"))
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    assert!(
+        members.len() >= 5,
+        "only {} workspace members were parsed from Cargo.toml — the \
+         parser is wrong and this gate is testing almost nothing",
+        members.len()
+    );
+
+    // Scope the search to the workspace table, not the whole document.
+    // Checking the document was the first version of this test, and it
+    // passed a mutation that deleted a table row — because the crate was
+    // also named in surrounding prose. A table gate has to read the
+    // table.
+    // Only the pipe-delimited rows, not the whole section. Taking the
+    // section was the second version of this test, and it also passed
+    // the mutation: the prose *after* the table names `ssg-mcp` too.
+    let table: String = doc
+        .split_once("## Workspace layout")
+        .and_then(|(_, rest)| rest.split_once("\n## "))
+        .map_or_else(String::new, |(t, _)| {
+            t.lines()
+                .filter(|l| l.trim_start().starts_with('|'))
+                .collect::<Vec<_>>()
+                .join("\n")
+        });
+    assert!(
+        table.lines().filter(|l| l.starts_with('|')).count() >= 8,
+        "the workspace table in docs/ARCHITECTURE.md could not be \
+         located, so this gate would pass without reading anything"
+    );
+
+    let undocumented: Vec<&String> = members
+        .iter()
+        .filter(|m| {
+            // Accept either the path (`crates/ssg-core`) or the crate
+            // name (`ssg-core`), since the table names crates.
+            let name = m.rsplit('/').next().unwrap_or(m);
+            !table.contains(m.as_str()) && !table.contains(name)
+        })
+        .collect();
+
+    assert!(
+        undocumented.is_empty(),
+        "docs/ARCHITECTURE.md's workspace table omits these crates: \
+         {undocumented:?}\n\nA newcomer reading that table would not \
+         know they exist."
+    );
+}

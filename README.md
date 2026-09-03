@@ -704,6 +704,7 @@ See [docs/whitepaper/csp-without-compromise.md](docs/whitepaper/csp-without-comp
 | `theme_manifest` | Theme manifest compatibility check |
 | `urls` | Canonical page-URL derivation shared by staging, feeds and SEO |
 | `util` | Cross-cutting utilities, including the `lol_html` head walker |
+
 </details>
 
 ### Workspace crates

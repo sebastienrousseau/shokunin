@@ -9,21 +9,25 @@ SSG validates generated HTML against WCAG 2.2 Level AA on every build via the `A
 The plugin runs in `after_compile` and checks every HTML file for:
 
 ### Images (WCAG 1.1.1)
+
 - Missing `alt` attributes on `<img>` elements
 - Decorative images automatically receive `role="presentation"` and empty `alt=""`
 - Informative images are flagged if `alt` is missing
 
 ### Heading Hierarchy (WCAG 1.3.1)
+
 - Skipped heading levels (e.g. `<h1>` followed by `<h3>`)
 - Multiple `<h1>` elements on a single page
 - Missing `<h1>` on pages
 
 ### Link Text (WCAG 2.4.4)
+
 - Links with generic text ("click here", "read more")
 - Empty link text
 - Links that are not descriptive
 
 ### ARIA Landmarks (WCAG 1.3.1, 4.1.2)
+
 - Presence of main landmark (`<main>` or `role="main"`)
 - Proper use of ARIA roles
 - Duplicate landmark roles without labels
@@ -52,6 +56,7 @@ After each build, the plugin writes `accessibility-report.json` to the site dire
 ```
 
 Issues include:
+
 - **criterion** — the WCAG success criterion ID
 - **severity** — `"error"` or `"warning"`
 - **message** — human-readable description
@@ -79,20 +84,24 @@ colour contrast, which the pa11y configuration had suppressed.
 ## Best Practices
 
 ### Images
+
 - Always provide meaningful `alt` text for informative images
 - Use empty `alt=""` for decorative images (SSG detects these automatically)
 - Include `width` and `height` to prevent layout shift
 
 ### Headings
+
 - Start each page with a single `<h1>`
 - Follow the heading hierarchy without skipping levels
 - Use headings for structure, not for styling
 
 ### Links
+
 - Write descriptive link text that makes sense out of context
 - Avoid generic text like "click here" or "learn more"
 
 ### Landmarks
+
 - Use semantic HTML elements: `<header>`, `<nav>`, `<main>`, `<footer>`
 - Each page should have exactly one `<main>` element
 

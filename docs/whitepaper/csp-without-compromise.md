@@ -43,7 +43,7 @@ Browsers verify the hash before loading the file. If the file was tampered with,
 
 With no inline code, your CSP header can be strict:
 
-```
+```text
 Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'
 ```
 
@@ -52,10 +52,12 @@ No `unsafe-inline`. No `unsafe-eval`. No nonces to manage.
 ## Lighthouse Results
 
 Before SSG's CSP extraction:
+
 - Security score: 70/100
 - CSP header: requires `unsafe-inline`
 
 After SSG's CSP extraction:
+
 - Security score: 100/100
 - CSP header: strict, no exceptions
 
@@ -80,20 +82,20 @@ git clone https://github.com/sebastienrousseau/static-site-generator.git
 cd static-site-generator
 ```
 
-2. Build the example site:
+1. Build the example site:
 
 ```sh
 cargo run -- -c examples/content/en -o /tmp/csp-demo -t examples/templates
 ```
 
-3. Check the output HTML for inline code:
+1. Check the output HTML for inline code:
 
 ```sh
 grep -r '<style>' /tmp/csp-demo/ | wc -l
 # Should output 0
 ```
 
-4. Verify SRI hashes are present:
+1. Verify SRI hashes are present:
 
 ```sh
 grep -r 'integrity=' /tmp/csp-demo/ | head -5

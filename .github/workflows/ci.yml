@@ -206,6 +206,17 @@ jobs:
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
           shared-key: docs-lint
+      # Cheap text checks. These are the same hooks
+      # `.pre-commit-config.yaml` runs locally, so a contributor who
+      # installed pre-commit sees them before pushing rather than after.
+      - name: Spelling (typos)
+        uses: crate-ci/typos@db35ee91e80fbb447f33b0e5fbddb24d2a1a884f # v1.29.4
+      - name: Markdown lint
+        # Globs and every rule exclusion live in
+        # .markdownlint-cli2.jsonc, each with a stated reason.
+        uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20.0.0
+      - name: docs/ files are not hidden by .gitignore
+        run: ./scripts/check-docs-tracked.sh
       - name: Internal Markdown link integrity
         run: cargo test --test doc_links
       - name: README counts match the code

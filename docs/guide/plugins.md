@@ -19,6 +19,7 @@ Every plugin can use three hooks:
 SSG ships these plugins. They all run on their own.
 
 ### Content & Preprocessing
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `ShortcodePlugin` | `before_compile` | Shortcode expansion |
@@ -27,6 +28,7 @@ SSG ships these plugins. They all run on their own.
 | `MarkdownExtPlugin` | `before_compile` | GFM tables, task lists |
 
 ### Compilation & Rendering
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `HighlightPlugin` | `after_compile` | Syntax colours |
@@ -35,6 +37,7 @@ SSG ships these plugins. They all run on their own.
 | `TaxonomyPlugin` | `after_compile` | Tag indexes |
 
 ### SEO & Metadata
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `SeoPlugin` | `after_compile` | OG and Twitter meta |
@@ -43,6 +46,7 @@ SSG ships these plugins. They all run on their own.
 | `RobotsPlugin` | `after_compile` | robots.txt |
 
 ### Post-processing
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `SitemapFixPlugin` | `after_compile` | Sitemap fixes |
@@ -54,6 +58,7 @@ SSG ships these plugins. They all run on their own.
 | `MinifyPlugin` | `after_compile` | Minify HTML |
 
 ### Features
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `AccessibilityPlugin` | `after_compile` | WCAG checks |
@@ -68,6 +73,7 @@ SSG ships these plugins. They all run on their own.
 | `DeployPlugin` | `after_compile` | Deploy config |
 
 ### Dev Server
+
 | Plugin | Hook | Description |
 | :--- | :--- | :--- |
 | `LiveReloadPlugin` | `on_serve` | Live reload |
