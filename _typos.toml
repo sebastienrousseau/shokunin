@@ -68,6 +68,11 @@ IIF = "IIF"
 # `mis-split`, `mis-parse` — a legitimate English prefix, hyphenated.
 mis = "mis"
 
+# "if DEFAULT_PER_PAGE is ever retuned" — re-tuned, not returned.
+# Older typos dictionaries flag this; current ones do not, so it is
+# listed to keep the result the same whichever version runs.
+retuned = "retuned"
+
 # Deliberate. CHANGELOG documents that `SSG_NO_TAG_PAGES=ture` must be
 # rejected loudly rather than read as a silent false, so the misspelling
 # is the example. Correcting it would delete the point.

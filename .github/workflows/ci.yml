@@ -255,7 +255,14 @@ jobs:
       # `.pre-commit-config.yaml` runs locally, so a contributor who
       # installed pre-commit sees them before pushing rather than after.
       - name: Spelling (typos)
-        uses: crate-ci/typos@db35ee91e80fbb447f33b0e5fbddb24d2a1a884f # v1.29.4
+        # Pinned to the release whose bundled dictionary matches what
+        # `typos` installs locally (`cargo install typos-cli`). The
+        # previous pin shipped 1.29.10, whose older dictionary flagged
+        # "retuned" while a current local install did not — so this
+        # passed locally and failed here, which is the exact
+        # local/CI divergence DEVELOPMENT.md exists to prevent. When
+        # bumping, bump the version in DEVELOPMENT.md too.
+        uses: crate-ci/typos@c8866b658f1eb6ff60473fee711ef5304c63f898 # v1.50.1
       - name: Markdown lint
         # Globs and every rule exclusion live in
         # .markdownlint-cli2.jsonc, each with a stated reason.
