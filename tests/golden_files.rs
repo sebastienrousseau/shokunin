@@ -409,28 +409,64 @@ fn end_to_end_compile_site_sitemap_xml_stays_stable() {
     let (_keep, root) = scaffold_into_tempdir();
 
     let content = root.join("content");
-    let template = root.join("templates");
     let build = root.join("build");
     let site = root.join("public");
 
-    if let Err(e) = compile_site(&build, &content, &site, &template) {
-        eprintln!(
-            "[golden] end-to-end compile_site skipped: {e}\n\
-             (this test exercises the full pipeline; transient I/O \
-             errors or missing optional features are tolerated.)"
-        );
-        return;
+    // `compile_site` does not create its own output directories, and the
+    // scaffold's own templates do not drive it — see the note above the
+    // test. Both are why the old body's skip triggered on every run.
+    fs::create_dir_all(&build).expect("create build dir");
+    fs::create_dir_all(&site).expect("create site dir");
+
+    // Use the bundled template set rather than the scaffolded one. The
+    // scaffold writes MiniJinja templates under `templates/tera/` and
+    // nothing at the template-dir root, while this pipeline needs the
+    // root set (`template.html`, `main.js`, `sw.js`, ...). Pointing at a
+    // template set that actually renders is what lets this test assert
+    // something; goldening the scaffold's own build has to wait for the
+    // scaffold to produce a buildable project.
+    let template =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/templates/en");
+    assert!(
+        template.join("template.html").is_file(),
+        "bundled templates missing at {}",
+        template.display()
+    );
+
+    compile_site(&build, &content, &site, &template)
+        .expect("compile_site on the deterministic scaffold");
+
+    // Every artefact #466 names that this scaffold actually produces.
+    // Asserting the set is non-empty is what stops this silently
+    // becoming a no-op again if the pipeline stops emitting them.
+    let artefacts: &[(&str, &str)] = &[
+        ("sitemap.xml", "end_to_end_sitemap_xml.golden"),
+        ("robots.txt", "end_to_end_robots_txt.golden"),
+        ("manifest.json", "end_to_end_manifest_json.golden"),
+        ("index.html", "end_to_end_index_html.golden"),
+        ("rss.xml", "end_to_end_rss_xml.golden"),
+        ("news-sitemap.xml", "end_to_end_news_sitemap_xml.golden"),
+        ("humans.txt", "end_to_end_humans_txt.golden"),
+    ];
+
+    let mut goldened = 0_usize;
+    for (rel, golden) in artefacts {
+        let path = site.join(rel);
+        if !path.exists() {
+            continue;
+        }
+        let body = fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        assert_or_update_golden(golden, &body);
+        goldened += 1;
     }
 
-    let sitemap = site.join("sitemap.xml");
-    if !sitemap.exists() {
-        eprintln!("[golden] sitemap.xml not produced — skipping");
-        return;
-    }
-    let body = fs::read_to_string(&sitemap).unwrap();
-    assert_or_update_golden(
-        "end_to_end_compile_site_sitemap_xml.golden",
-        &body,
+    assert!(
+        goldened >= 3,
+        "only {goldened} build artefact(s) were goldened. The scaffold \
+         build is deterministic, so this means the pipeline stopped \
+         emitting output the golden suite was pinning — which is exactly \
+         the regression #466 exists to catch, not a reason to skip."
     );
 }
 
