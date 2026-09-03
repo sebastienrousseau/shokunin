@@ -137,6 +137,12 @@ jobs:
       # the exploratory run below, which fuzzes from scratch and would
       # not notice a previously-fixed crash coming back.
       - name: Replay the committed regression corpus
+        # `OUT` is per-step here, not job-level: the build step and the
+        # smoke-run step each declare it. Omitting it made this fail with
+        # `OUT: unbound variable` — and my local test had exported OUT by
+        # hand, so it passed while the wiring it depended on was missing.
+        env:
+          OUT: ${{ runner.temp }}/fuzz-out
         run: |
           set -euo pipefail
           cd "$OUT"
