@@ -217,3 +217,55 @@ fn published_members_list_matches_the_release_workflow() {
          {PUBLISHED_MEMBERS:?}"
     );
 }
+
+/// Packaging manifests that pin a version must match `Cargo.toml`.
+///
+/// Scoop, `WinGet` and the AUR `PKGBUILD` each hard-code the version.
+/// All three sat at `0.0.37` while the crate was at `0.0.58` — twenty-one
+/// releases of drift, discovered by reading them rather than by any
+/// gate, because nothing compared them to anything.
+///
+/// The Homebrew formula is deliberately absent from this check: it
+/// resolves `releases/latest` rather than pinning, so it cannot go
+/// stale. A manifest that does not state a version has nothing to
+/// verify.
+#[test]
+fn packaging_manifests_match_the_crate_version() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let version = env!("CARGO_PKG_VERSION");
+
+    // (path, what a version line looks like there)
+    let manifests: &[(&str, &str)] = &[
+        ("packaging/scoop/ssg.json", "\"version\""),
+        ("packaging/winget/ssg.yaml", "PackageVersion"),
+        ("packaging/arch/PKGBUILD", "pkgver"),
+    ];
+
+    let mut checked = 0_usize;
+    let mut stale = Vec::new();
+
+    for (rel, key) in manifests {
+        let path = root.join(rel);
+        let text = fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {rel}: {e}"));
+
+        let line = text
+            .lines()
+            .find(|l| l.contains(key))
+            .unwrap_or_else(|| panic!("{rel} has no line containing {key}"));
+
+        checked += 1;
+        if !line.contains(version) {
+            stale.push(format!("{rel}: {}", line.trim()));
+        }
+    }
+
+    assert_eq!(checked, manifests.len(), "not every manifest was examined");
+    assert!(
+        stale.is_empty(),
+        "these packaging manifests pin a version other than {version}:\n  \
+         {}\n\nA stale manifest ships the wrong binary to whoever installs \
+         through that channel.",
+        stale.join("\n  ")
+    );
+}

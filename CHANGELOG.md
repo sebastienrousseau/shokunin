@@ -7,10 +7,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.58] - 2026-09-04
 
-Repository-standard Phases 1 and 2: the developer entry point, and the
-Unix install contract.
+The trust-the-gates release. Repository-standard Phases 1 and 2 — the
+developer entry point and the Unix install contract — and a run of
+defects that all had one shape: something reporting success while
+asserting nothing.
+
+Fixed in that class: 29 integration test files that no workflow ran, a
+golden test that skipped on every run and had no golden file, a
+benchmark corpus missing front matter the templates read, a `--new` flag
+declared since 0.0.42 and never dispatched, and a fuzz corpus that was
+committed but never replayed. Each now has a gate that was watched
+failing before it was trusted.
 
 ### Added
 
@@ -41,6 +50,30 @@ Unix install contract.
   each other.
 
 ### Fixed
+
+- **`ssg --new` produced a project `ssg` could not build** (#752). Three
+  defects stacked: the flag was declared and never dispatched; the
+  scaffolder wrote only the MiniJinja templates and none of the four
+  StaticWeaver root templates the compile step reads; and the base
+  template assumed `page` exists, which taxonomy pages do not provide.
+  `ssg --new mysite && ssg -f config.toml` now exits 0 with 47 files,
+  from 0.
+
+- **Financial identifiers were written to logs in cleartext**
+  (code-scanning #242–#244). IBANs and BICs are published in the emitted
+  JSON-LD on purpose; a build log is a different channel. Redacted in
+  logs only — output is unchanged.
+
+- **Three packaging manifests pinned 0.0.37** — twenty-one releases of
+  drift in Scoop, WinGet and the AUR `PKGBUILD`, with nothing comparing
+  them to the crate. Corrected, and `tests/release_versions.rs` now
+  fails when they disagree.
+
+- **The fuzz lockfile was gitignored**, so CI re-resolved every
+  dependency on every run and a freshly published `tinyvec 1.13.0` that
+  does not compile broke the OSS-Fuzz build for a commit that touched
+  one test file. Now committed, as it should be for a workspace of
+  binaries.
 
 - **Completions marked every option as a bare flag.** `get_num_args()`
   is `None` for every argument in this parser, so reading it as "takes no
