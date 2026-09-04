@@ -70,7 +70,7 @@ pub const fn find_tag_end(html: &str, tag_start: usize) -> usize {
 
 /// Extracts an attribute value from an HTML tag string.
 pub(crate) fn extract_attr_value(tag: &str, attr: &str) -> Option<String> {
-    let lower = tag.to_lowercase();
+    let lower = tag.to_ascii_lowercase();
     let pattern = format!("{attr}=");
     let start = lower.find(&pattern)?;
     let after = &tag[start + pattern.len()..];

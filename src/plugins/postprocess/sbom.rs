@@ -10,9 +10,20 @@ use std::fs;
 
 /// A post-processing plugin that generates a `CycloneDX` v1.5 SBOM (`sbom.cdx.json`)
 /// for the built website.
+///
+/// Superseded by [`crate::sbom::SbomPlugin`], which writes the same file and
+/// additionally links it from every document head. Both were registered, and
+/// because this one runs first its output was overwritten on every build — the
+/// dependency tree was serialised twice and one copy discarded. It is no longer
+/// registered by the default pipeline and will be removed in a later release.
+#[deprecated(
+    since = "0.0.58",
+    note = "use `ssg::sbom::SbomPlugin`; this wrote the same file and was overwritten"
+)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SbomPlugin;
 
+#[allow(deprecated)]
 impl Plugin for SbomPlugin {
     fn name(&self) -> &'static str {
         "sbom-generator"
@@ -168,6 +179,10 @@ fn timestamp_from_secs(secs: u64) -> String {
 
 #[cfg(test)]
 mod tests {
+    // These tests exercise the deprecated plugin deliberately: it is
+    // still shipped for one release, and this is what keeps it working
+    // until removal.
+    #![allow(deprecated)]
     use super::*;
     use anyhow::Result;
     use tempfile::tempdir;
@@ -291,6 +306,9 @@ mod tests {
 
 #[cfg(all(test, feature = "test-fault-injection"))]
 mod fault_tests {
+    // Same rationale as the module above: the deprecated plugin is still
+    // shipped for one release and these tests keep it honest.
+    #![allow(deprecated)]
     use super::*;
     use serial_test::serial;
     use tempfile::tempdir;

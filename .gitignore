@@ -11,7 +11,10 @@ node_modules/
 # Generated output
 /docs/*
 !/docs/README.md
-!/docs/adrs/
+!/docs/ARCHITECTURE.md
+!/docs/packaging.md
+!/docs/SUMMARY.md
+!/docs/adr/
 !/docs/features-coverage.md
 !/docs/guide/
 !/docs/whitepaper/
@@ -86,9 +89,15 @@ Icon?
 # Legacy cache locations (cache now lives under target/.ssg-cache/)
 /.ssg-cache.json
 /.ssg-plugins-cache.json
-.claude/worktrees/
+# Claude Code session artefacts. `scheduled_tasks.lock` was committed
+# by accident in v0.0.47 and carried a dead PID and session id ever
+# since; nothing in this directory is source.
+.claude/
 tests/visual/a11y-reports/
 tests/visual/test-results/
 
 # wasm-pack output for ssg-search (issue #545)
 crates/ssg-search/pkg/
+
+# Rendered mdBook output (build artefact; see book.toml).
+/book/

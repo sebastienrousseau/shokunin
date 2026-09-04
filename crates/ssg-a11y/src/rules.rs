@@ -18,7 +18,13 @@ use crate::types::AccessibilityIssue;
 
 /// WCAG 1.1.1: Every <img> must have a non-empty alt attribute.
 pub(crate) fn check_img_alt(html: &str, issues: &mut Vec<AccessibilityIssue>) {
-    let lower = html.to_lowercase();
+    // `to_ascii_lowercase` rather than `to_lowercase`: offsets computed on the
+    // lowercased copy are used to slice the ORIGINAL string, and Unicode
+    // lowercasing is not length-preserving. `İ` (U+0130) lowercases to two
+    // chars, shifting every subsequent byte offset and panicking on the next
+    // slice that lands mid-character. Tag and attribute names are ASCII, so an
+    // ASCII fold matches identically while leaving every byte offset intact.
+    let lower = html.to_ascii_lowercase();
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<img") {
         let abs = pos + start;
@@ -49,7 +55,7 @@ pub(crate) fn check_html_lang(
     html: &str,
     issues: &mut Vec<AccessibilityIssue>,
 ) {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     if let Some(start) = lower.find("<html") {
         let tag_end =
             lower[start..].find('>').map_or(lower.len(), |e| start + e);
@@ -69,7 +75,7 @@ pub(crate) fn check_link_text(
     html: &str,
     issues: &mut Vec<AccessibilityIssue>,
 ) {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut pos = 0;
     while let Some(start) = lower[pos..].find("<a ") {
         let abs = pos + start;
@@ -106,7 +112,7 @@ pub(crate) fn check_heading_hierarchy(
     html: &str,
     issues: &mut Vec<AccessibilityIssue>,
 ) {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut last_level: u8 = 0;
 
     for level in 1..=6u8 {
@@ -131,7 +137,7 @@ pub(crate) fn check_banned_elements(
     html: &str,
     issues: &mut Vec<AccessibilityIssue>,
 ) {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     for tag in &["<marquee", "<blink"] {
         if lower.contains(tag) {
             issues.push(AccessibilityIssue {
@@ -147,7 +153,7 @@ pub(crate) fn check_banned_elements(
 /// `<script>` blocks, so landmark counting isn't confused by markup that
 /// only appears inside those (e.g. a commented-out `<main>`).
 pub(crate) fn strip_non_content_blocks(html: &str) -> String {
-    let mut clean = html.to_lowercase();
+    let mut clean = html.to_ascii_lowercase();
 
     // Remove HTML comments
     while let Some(start) = clean.find("<!--") {
@@ -309,7 +315,7 @@ pub(crate) fn check_focus_appearance(
 /// cross-page analysis can run this themselves across every page's HTML
 /// and look for at least one match site-wide.
 pub fn check_consistent_help(html: &str, issues: &mut Vec<AccessibilityIssue>) {
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let has_help_link = lower.contains(">help<")
         || lower.contains(">contact<")
         || lower.contains(">support<")

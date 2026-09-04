@@ -33,8 +33,10 @@
 
 pub mod audit;
 mod cli;
+pub mod completions;
 mod config;
 mod error;
+pub mod man;
 mod validation;
 
 pub use cli::{

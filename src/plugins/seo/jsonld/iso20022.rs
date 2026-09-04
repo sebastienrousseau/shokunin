@@ -137,6 +137,47 @@ impl ValidationOutcome {
 ///
 /// Implemented without `num-bigint` by walking the digit string left
 /// to right, taking each modulo step incrementally — this keeps the
+/// Masks the middle of a financial identifier for logging.
+///
+/// # Why logging differs from publishing
+///
+/// An IBAN given in front matter is *meant* to be published — it ends up
+/// in the emitted JSON-LD as `iso20022:iban`, because the author is
+/// advertising payment details on purpose. A build log is a different
+/// channel: it is captured by CI, retained in artefacts, and read over
+/// shoulders. Writing a full account number there is gratuitous, and
+/// `CodeQL`'s `rust/cleartext-logging` rule is right to flag it.
+///
+/// Enough is kept to act on the warning — the leading country and bank
+/// prefix, and the trailing digits — while the account-identifying
+/// middle is masked. The `reason` in the same message already says what
+/// is wrong, so the author can find the value in their own front matter
+/// without the log restating it.
+///
+/// Short inputs are masked entirely rather than partially: a 6-character
+/// value split 4-and-2 would reveal most of itself.
+///
+/// # Examples
+///
+/// ```
+/// use ssg::seo::jsonld::iso20022::redact_for_log;
+/// assert_eq!(redact_for_log("GB29NWBK60161331926819"), "GB29…6819");
+/// assert_eq!(redact_for_log("NWBKGB2L"), "………");
+/// assert_eq!(redact_for_log(""), "………");
+/// ```
+#[must_use]
+pub fn redact_for_log(value: &str) -> String {
+    // Count by characters, not bytes: an operator may paste anything
+    // into front matter, and slicing a multi-byte scalar would panic.
+    let chars: Vec<char> = value.chars().collect();
+    if chars.len() <= 12 {
+        return "………".to_string();
+    }
+    let head: String = chars[..4].iter().collect();
+    let tail: String = chars[chars.len() - 4..].iter().collect();
+    format!("{head}…{tail}")
+}
+
 /// crate dependency-free for the ISO validator.
 ///
 /// # Examples
@@ -821,7 +862,8 @@ pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
         if let ValidationOutcome::Invalid { reason } = validate_iban(iban) {
             log::warn!(
                 "[json-ld/iso20022] {page_label}: invalid IBAN on {who}: \
-                 {iban} — {reason}"
+                 {} — {reason}",
+                redact_for_log(iban)
             );
             1
         } else {
@@ -832,7 +874,8 @@ pub fn warn_invalid_fields(entity: &Iso20022Entity, page_label: &str) -> usize {
         if let ValidationOutcome::Invalid { reason } = validate_bic(bic) {
             log::warn!(
                 "[json-ld/iso20022] {page_label}: invalid BIC on {who}: \
-                 {bic} — {reason}"
+                 {} — {reason}",
+                redact_for_log(bic)
             );
             1
         } else {
@@ -1153,6 +1196,52 @@ mod tests {
     }
 
     // ── Domain → JSON-LD ────────────────────────────────────────────
+
+    #[test]
+    fn redact_keeps_only_the_ends_of_a_full_iban() {
+        // Enough to locate the value in front matter, not enough to be
+        // an account number.
+        assert_eq!(redact_for_log("GB29NWBK60161331926819"), "GB29…6819");
+        assert_eq!(redact_for_log("BE68539007547034"), "BE68…7034");
+    }
+
+    #[test]
+    fn redact_masks_short_values_entirely() {
+        // A BIC is 8 or 11 characters. Splitting 4-and-4 would reveal
+        // most of it, so anything at or under 12 is masked whole.
+        assert_eq!(redact_for_log("NWBKGB2L"), "………");
+        assert_eq!(redact_for_log("NWBKGB2LXXX"), "………");
+        assert_eq!(redact_for_log(""), "………");
+        assert_eq!(redact_for_log("GB29"), "………");
+    }
+
+    #[test]
+    fn redact_never_returns_the_input_unchanged() {
+        // The property that matters: whatever goes in, the full value
+        // never comes back out.
+        for value in [
+            "GB29NWBK60161331926819",
+            "BE68539007547034",
+            "NWBKGB2L",
+            "",
+            "not-an-iban-but-long-enough",
+        ] {
+            assert_ne!(
+                redact_for_log(value),
+                value,
+                "redaction returned {value} unchanged"
+            );
+        }
+    }
+
+    #[test]
+    fn redact_handles_multibyte_input_without_panicking() {
+        // Front matter is author-supplied; slicing by byte offset would
+        // panic on a multi-byte scalar.
+        let _ = redact_for_log("ééééééééééééééééé");
+        let _ = redact_for_log("日本語のテキストです長いです");
+        let _ = redact_for_log("🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦🏦");
+    }
 
     #[test]
     fn bank_account_jsonld_includes_iban_and_bic_namespaced() {

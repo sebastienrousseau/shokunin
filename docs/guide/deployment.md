@@ -55,7 +55,7 @@ Creates a `vercel.json` file:
 
 Creates `_headers` and `_redirects` files in the site folder:
 
-```
+```toml
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY

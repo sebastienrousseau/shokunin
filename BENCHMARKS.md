@@ -2,7 +2,7 @@
 
 # Benchmarks
 
-Reproducible performance methodology and CI gates for SSG **v0.0.45**.
+Reproducible performance methodology and CI gates for SSG **v0.0.58**.
 
 This document is **load-bearing**: the docs-accuracy gate
 (`tests/docs_accuracy.rs`) parses the tables below for the
@@ -103,7 +103,7 @@ comparison.
 |-------|------|----------|-----------:|
 | Public-API surface sweep | `all_pub_api.rs` | Every `#[must_use] pub fn` at least once | ≥ 50 functions |
 | AVIF vs WebP encoder | `avif_vs_webp.rs` | 1024×768 JPEG → AVIF/WebP encode time | 50 |
-| Audit gate dispatch | `bench_audit.rs` | 14-gate dispatch on a 50-page corpus | 30 |
+| Audit gate dispatch | `bench_audit.rs` | 15-gate dispatch on a 50-page corpus | 30 |
 | Concurrent operations | `bench_concurrent_operations.rs` | Parallel file copy, directory traversal | 100 |
 | File I/O patterns | `bench_file.rs` | Read/write atomic-vs-streaming | 100 |
 | Scalability sweep | `bench_scalability.rs` | 10/100/1K/10K-page corpus build time | 10–30 |
@@ -138,7 +138,7 @@ Each row was measured on the same content corpus (`benches/corpus/small`,
 100 pages, full frontmatter). Wall-clock times are median-of-10 runs
 captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
-| Capability | SSG v0.0.45 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
+| Capability | SSG v0.0.58 | Hugo v0.155+ | Zola v0.20+ | Astro 6 | Eleventy 3 |
 |---|---|---|---|---|---|
 | Language | Rust | Go | Rust | JS/TS | JS |
 | Runtime | None | None | None | Node 20+ | Node 20+ |
@@ -150,7 +150,7 @@ captured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 | Local LLM pipeline | **Yes** | No | No | No | No |
 | WASM build target | **Yes** | No | No | n/a | n/a |
 | CycloneDX SBOM | **Yes** | No | No | No | No |
-| CI coverage floor | **95.5 / 96.5 / 95.5** | None | None | None | None |
+| CI coverage floor | **98.0 / 98.0 / 98.0** | None | None | None | None |
 
 Reproduce locally:
 
@@ -218,15 +218,37 @@ committed; the deterministic-corpus baselines under
 
 ---
 
+## Latest nightly run
+
+The figures in this section are produced by
+[`.github/workflows/benchmarks.yml`](.github/workflows/benchmarks.yml), not
+typed in. The workflow runs nightly on a named runner, records the hardware
+alongside the numbers, and uploads `bench-report.md` plus the raw Criterion
+output as a build artifact.
+
+<!-- BENCHMARK-RESULTS:START -->
+_No nightly run has been recorded yet. The workflow is scheduled at 03:30 UTC
+and can be triggered from the Actions tab; the first run replaces this
+placeholder._
+<!-- BENCHMARK-RESULTS:END -->
+
+Corpora come from `ssg::bench_corpus`, a seeded generator whose output is
+byte-identical across machines and releases — page N is the same whether the
+corpus holds 1K pages or 100K, so the tiers are comparable to each other and
+to previous runs. A figure that cannot be regenerated is a claim, not a
+measurement.
+
+---
+
 ## Coverage Floors (informational)
 
 CI's coverage gate enforces the floors below (set in `ci.yml` `env`):
 
-| Metric | Floor | Current (v0.0.45) | Headroom |
+| Metric | Floor | Current (v0.0.58) | Headroom |
 |---|---:|---:|---:|
-| Regions | 95.5 % | 95.71 % | 0.21 |
-| Functions | 95.5 % | 95.77 % | 0.27 |
-| Lines | 96.5 % | 96.87 % | 0.37 |
+| Regions | 98.0 % | 99.31 % | 1.31 |
+| Functions | 98.0 % | 99.24 % | 1.24 |
+| Lines | 98.0 % | 99.29 % | 1.29 |
 
 The gate runs `cargo llvm-cov --lib` (not `--tests`) so the heavy
 `tests/example_outputs.rs` integration suite stays in its own
@@ -251,7 +273,7 @@ to accommodate GitHub Actions runners. Local results are typically
 
 For the cross-SSG comparison numbers above, the host was:
 
-```
+```text
 CPU: Apple M3 Max (14 cores)
 RAM: 36 GB
 Disk: NVMe (Apple Internal)

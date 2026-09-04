@@ -50,6 +50,10 @@ const PUBLISHED_MEMBERS: &[&str] = &[
     "ssg-rpc",
     "ssg-search",
     "ssg-a11y",
+    // Added to release.yml's publish loop without being added here, so it
+    // was published with no version gate: this test compares the two lists
+    // precisely to catch that, and did.
+    "ssg-mcp",
 ];
 
 fn workspace() -> &'static Path {
@@ -211,5 +215,143 @@ fn published_members_list_matches_the_release_workflow() {
         "release.yml publishes a different set of crates than this \
          test guards.\nrelease.yml: {in_workflow:?}\nthis test:  \
          {PUBLISHED_MEMBERS:?}"
+    );
+}
+
+/// Packaging manifests that pin a version must match `Cargo.toml`.
+///
+/// Scoop, `WinGet` and the AUR `PKGBUILD` each hard-code the version.
+/// All three sat at `0.0.37` while the crate was at `0.0.58` — twenty-one
+/// releases of drift, discovered by reading them rather than by any
+/// gate, because nothing compared them to anything.
+///
+/// The Homebrew formula is deliberately absent from this check: it
+/// resolves `releases/latest` rather than pinning, so it cannot go
+/// stale. A manifest that does not state a version has nothing to
+/// verify.
+#[test]
+fn packaging_manifests_match_the_crate_version() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let version = env!("CARGO_PKG_VERSION");
+
+    // (path, what a version line looks like there)
+    let manifests: &[(&str, &str)] = &[
+        ("packaging/scoop/ssg.json", "\"version\""),
+        ("packaging/winget/ssg.yaml", "PackageVersion"),
+        ("packaging/arch/PKGBUILD", "pkgver"),
+    ];
+
+    let mut checked = 0_usize;
+    let mut stale = Vec::new();
+
+    for (rel, key) in manifests {
+        let path = root.join(rel);
+        let text = fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {rel}: {e}"));
+
+        let line = text
+            .lines()
+            .find(|l| l.contains(key))
+            .unwrap_or_else(|| panic!("{rel} has no line containing {key}"));
+
+        checked += 1;
+        if !line.contains(version) {
+            stale.push(format!("{rel}: {}", line.trim()));
+        }
+    }
+
+    assert_eq!(checked, manifests.len(), "not every manifest was examined");
+    assert!(
+        stale.is_empty(),
+        "these packaging manifests pin a version other than {version}:\n  \
+         {}\n\nA stale manifest ships the wrong binary to whoever installs \
+         through that channel.",
+        stale.join("\n  ")
+    );
+}
+
+/// `SECURITY.md`'s supported-version table must name the current
+/// release.
+///
+/// The table named `< 0.0.30` as the unsupported floor while the crate
+/// was at `0.0.58` — a floor that had not moved in twenty-eight
+/// releases, and which contradicted the sentence directly beneath it
+/// stating that only the latest release is supported. A security policy
+/// that disagrees with itself is worse than a terse one: a reader
+/// deciding whether to upgrade cannot tell which half to believe.
+#[test]
+fn security_policy_names_the_current_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let text =
+        fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/SECURITY.md"))
+            .expect("read SECURITY.md");
+
+    let table: String = text
+        .lines()
+        .skip_while(|l| !l.contains("Supported Versions"))
+        .take_while(|l| !l.starts_with("`0.0.x`"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        table.contains('|'),
+        "could not locate the supported-versions table in SECURITY.md"
+    );
+    assert!(
+        table.contains(version),
+        "SECURITY.md's supported-versions table does not name {version}. \
+         It reads:\n{table}\n\nA reader deciding whether to upgrade needs \
+         this to be current."
+    );
+}
+
+/// Every `ssg = "0.0.x"` snippet in current docs must name this release.
+///
+/// `docs/guide/installation.md` told readers to depend on `0.0.37` while
+/// the crate was at `0.0.58` — twenty-one releases stale, on the page
+/// whose entire job is telling people what to install. The README's copy
+/// of the same snippet was current, which is how it went unnoticed: the
+/// version gates all pointed at manifests and the README.
+///
+/// `CHANGELOG.md` is excluded: its version strings are history.
+#[test]
+fn dependency_snippets_in_docs_name_the_current_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let root = workspace();
+
+    let out = std::process::Command::new("git")
+        .args(["ls-files", "*.md"])
+        .current_dir(root)
+        .output()
+        .expect("git ls-files");
+    assert!(out.status.success(), "git ls-files failed");
+
+    let mut stale = Vec::new();
+    for rel in String::from_utf8_lossy(&out.stdout).lines() {
+        if rel.ends_with("CHANGELOG.md") {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(root.join(rel)) else {
+            continue;
+        };
+        for (n, line) in text.lines().enumerate() {
+            let t = line.trim();
+            let Some(rest) = t.strip_prefix("ssg = \"") else {
+                continue;
+            };
+            let claimed = rest.trim_end_matches('"');
+            if claimed != version {
+                stale.push(format!(
+                    "{rel}:{}: `ssg = \"{claimed}\"` (current: {version})",
+                    n + 1
+                ));
+            }
+        }
+    }
+
+    assert!(
+        stale.is_empty(),
+        "documentation tells readers to depend on a stale version:\n  {}",
+        stale.join("\n  ")
     );
 }

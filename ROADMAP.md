@@ -26,6 +26,21 @@ The `static-site-generator` codebase exhibits several category-defining engineer
 
 ## Gaps and Real-World Realities
 
+> **Status note (v0.0.58).** The findings below are a dated snapshot of
+> **v0.0.41** and are kept verbatim as the record of that inspection. Four
+> have since been closed, verified against the current tree:
+>
+> - *Shelling out to `curl`* — `src/plugins/llm.rs` uses `ureq`; the only
+>   remaining mentions of `curl` are comments explaining the port (#520).
+> - *Naive string manipulation in HTML rewriting* — both
+>   `image_plugin.rs` and `search.rs` rewrite through `lol_html`.
+> - *Unimplemented AVIF support* — `avif_variants` is populated from real
+>   encode results, not `Vec::new()`.
+> - *Subcommand deficit* — `ssg build`, `ssg check` and `ssg dev` all
+>   exist. (`ssg lint` still does not.)
+>
+> The polling-based watcher is unchanged and remains open.
+
 Despite these exceptional strengths, a rigorous codebase inspection of v0.0.41 reveals several architectural, functional, and developer-experience gaps between its documentation claims and the actual rust code:
 
 ### Architectural Gaps
@@ -56,31 +71,31 @@ Beyond the gaps listed in v0.0.41, a comprehensive analysis of the project again
 
 While the compiler binary itself is written in safe Rust, allowing arbitrary third-party plugins to execute natively on host systems introduces a severe supply-chain vulnerability. A compromised third-party plugin could easily access the host's filesystem, read proprietary Markdown files, or exfiltrate private credentials.
 
-* **Missing Capability:** A sandboxed execution environment. To achieve zero-trust compilation, the compiler should execute third-party plugins inside an embedded WebAssembly runtime (such as `wasmtime`). Plugins should interact with the host solely via a restricted WebAssembly System Interface (WASI), limiting their access strictly to the page being transformed.
+- **Missing Capability:** A sandboxed execution environment. To achieve zero-trust compilation, the compiler should execute third-party plugins inside an embedded WebAssembly runtime (such as `wasmtime`). Plugins should interact with the host solely via a restricted WebAssembly System Interface (WASI), limiting their access strictly to the page being transformed.
 
 ### 2\. Zero-Copy HTML Parsing via Streaming AST (`lol_html`)
 
 Migrating the HTML parsing layer to a full in-memory DOM library (like Kuchiki or html5ever) introduces significant memory overhead and processing pauses when handling sites with over 100,000 pages.
 
-* **Missing Capability:** A streaming, zero-copy HTML rewriter. Utilizing Cloudflare's `lol_html` (Low-Output-Latency HTML rewriter) allows the compiler to parse, inspect, and modify HTML elements in a single streaming pass with near-zero memory allocation, matching the parallel streaming compiler's target of sub-second builds.
+- **Missing Capability:** A streaming, zero-copy HTML rewriter. Utilizing Cloudflare's `lol_html` (Low-Output-Latency HTML rewriter) allows the compiler to parse, inspect, and modify HTML elements in a single streaming pass with near-zero memory allocation, matching the parallel streaming compiler's target of sub-second builds.
 
 ### 3\. Local Semantic Vector Search (Local RAG)
 
 The current search index (`SearchPlugin`) generates a heavy, flat JSON index that performs simple client-side string matches, lacking support for fuzzy search, stemming, or semantic queries. Pagefind is an improvement, but it still relies on downloading a large index.
 
-* **Missing Capability:** Embedded semantic search. The compiler should leverage a local, lightweight Rust-native vector embedding model (such as a MiniLM-L6 model executed via `candle` or `ort` / ONNX Runtime) at build-time. It should generate dense vector embeddings for every page paragraph and output a compact vector index. The client-side search widget, compiled to WASM, can then perform true offline semantic search directly in the browser.
+- **Missing Capability:** Embedded semantic search. The compiler should leverage a local, lightweight Rust-native vector embedding model (such as a MiniLM-L6 model executed via `candle` or `ort` / ONNX Runtime) at build-time. It should generate dense vector embeddings for every page paragraph and output a compact vector index. The client-side search widget, compiled to WASM, can then perform true offline semantic search directly in the browser.
 
 ### 4\. Deterministic Translation and Inference Caching
 
 Because local LLM inference (e.g., via Ollama or Llama.cpp) is highly CPU/GPU intensive, translating or generating metadata for thousands of pages on every build is computationally prohibitive.
 
-* **Missing Capability:** Content-hash-based inference caching. The compiler must maintain a deterministic cache of all LLM operations. If the SHA-256 hash of a markdown file's content and its translation parameters matches a cache entry, the compiler should reuse the cached translation and metadata, bypassing redundant local inference.
+- **Missing Capability:** Content-hash-based inference caching. The compiler must maintain a deterministic cache of all LLM operations. If the SHA-256 hash of a markdown file's content and its translation parameters matches a cache entry, the compiler should reuse the cached translation and metadata, bypassing redundant local inference.
 
 ### 5\. Asynchronous File I/O for Parallel Scaling
 
 While the plugin pipeline is parallelized via Rayon, standard synchronous disk writes block Rayon's OS threads, creating an I/O bottleneck when writing tens of thousands of pages.
 
-* **Missing Capability:** Asynchronous, non-blocking disk I/O. The compiler should decouple CPU-intensive tasks (Markdown parsing, minification) from disk-bound writes, utilizing asynchronous I/O thread pools or Linux `io_uring` bindings (via `rio` or `tokio`) to write compiled pages in parallel without blocking the parallel CPU executors.
+- **Missing Capability:** Asynchronous, non-blocking disk I/O. The compiler should decouple CPU-intensive tasks (Markdown parsing, minification) from disk-bound writes, utilizing asynchronous I/O thread pools or Linux `io_uring` bindings (via `rio` or `tokio`) to write compiled pages in parallel without blocking the parallel CPU executors.
 
 ---
 
@@ -93,7 +108,7 @@ While the plugin pipeline is parallelized via Rayon, standard synchronous disk w
 > adoption before making any SemVer compatibility commitment. Read
 > "Phase 2" and "Phase 3" below as **capability milestones**, not
 > version-number targets; they will ship as ordinary `0.0.x` releases
-> (see [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md)
+> (see [ADR-0009](docs/adr/0009-versioning-policy-0.0.x-until-0.0.999.md)
 > for the full rationale). Many Phase 1/2 items have already shipped in
 > releases since this document's June 2026 research date — check
 > `CHANGELOG.md` before treating any item here as outstanding.
@@ -169,4 +184,3 @@ In high-stakes enterprise and financial sectors, software is evaluated through t
 5. **MiniJinja Template Engine:** [GitHub Repository](https://github.com/mitsuhiko/minijinja). A minimal, dependency-free template engine for Rust.  
 6. **CycloneDX Software Bill of Materials (SBOM) v1.5:** [CycloneDX Specification](https://cyclonedx.org/docs/1.5/). Standard for software supply-chain audits.  
 7. **European Accessibility Act (EAA):** [Directive (EU) 2019/882](https://eur-lex.europa.eu/eli/dir/2019/882/oj). Accessibility requirements for products and services.
-

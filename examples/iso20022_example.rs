@@ -20,8 +20,8 @@
 //! ```
 
 use ssg::seo::jsonld::iso20022::{
-    validate_bic, validate_iban, BankAccount, FinancialTransaction,
-    MonetaryAmount,
+    redact_for_log, validate_bic, validate_iban, BankAccount,
+    FinancialTransaction, MonetaryAmount,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,9 +67,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ] {
         let iban_ok = validate_iban(iban).is_valid();
         let bic_ok = validate_bic(bic).is_valid();
+        // Redacted for the same reason the library redacts: the values
+        // are published in the emitted JSON-LD on purpose, but a console
+        // transcript is a different channel from a web page.
         println!(
-            "[iso20022] {label}: iban={iban} ({}) bic={bic} ({})",
+            "[iso20022] {label}: iban={} ({}) bic={} ({})",
+            redact_for_log(iban),
             if iban_ok { "valid" } else { "INVALID" },
+            redact_for_log(bic),
             if bic_ok { "valid" } else { "INVALID" },
         );
     }

@@ -161,12 +161,35 @@ fn ac1_event_watcher_observes_a_modify() {
 fn ac6_burst_writes_coalesce_into_one_batch() {
     // 4 writes inside the debounce window => the watcher delivers a
     // single batch containing a.md exactly once.
+    //
+    // # Why the windows are so wide
+    //
+    // This assertion is a *negative* one — no second batch — and its
+    // strength comes from the drain window being longer than the
+    // debounce, so a straggler batch would actually be observed. What it
+    // must not depend on is the operating system delivering every write
+    // promptly.
+    //
+    // The original values gave almost no room for that: a 200 ms
+    // debounce against a 120 ms burst left 80 ms of slack. On the macOS
+    // CI runner, where FSEvents adds its own delivery latency on top of
+    // a contended virtualised filesystem, part of the burst arrived
+    // after the first debounce had already fired, producing a second
+    // batch and a red `test · macos-latest`. Nothing was wrong with the
+    // watcher; the margin was wrong.
+    //
+    // So the debounce is 1 s against the same 120 ms burst — 880 ms of
+    // tolerance for delivery latency — and the drain is 1.2 s, still
+    // longer than the debounce, so the assertion keeps its teeth. The
+    // test costs about 2.4 s, which is worth paying once for a gate that
+    // does not flake.
+    const DEBOUNCE: Duration = Duration::from_millis(1000);
+    const DRAIN: Duration = Duration::from_millis(1200);
+
     let dir = tempdir().unwrap();
     fs::write(dir.path().join("a.md"), "0").unwrap();
 
-    let watcher =
-        EventWatcher::with_debounce(dir.path(), Duration::from_millis(200))
-            .unwrap();
+    let watcher = EventWatcher::with_debounce(dir.path(), DEBOUNCE).unwrap();
     thread::sleep(Duration::from_millis(100));
 
     for i in 0..4 {
@@ -174,11 +197,13 @@ fn ac6_burst_writes_coalesce_into_one_batch() {
         thread::sleep(Duration::from_millis(30));
     }
 
-    let batch = wait_for_batch(&watcher, Duration::from_secs(5))
+    let batch = wait_for_batch(&watcher, Duration::from_secs(10))
         .expect("first batch should arrive");
-    // After the first batch we shouldn't get a second one within
-    // the debounce window — drain briefly to be sure.
-    let extra = watcher.recv_timeout(Duration::from_millis(300));
+    // After the first batch we shouldn't get a second one. Draining for
+    // longer than the debounce is what makes this meaningful: if the
+    // burst had not coalesced, the straggler batch would land inside
+    // this window.
+    let extra = watcher.recv_timeout(DRAIN);
     let extra_count = match extra {
         RecvOutcome::Batch(b) if !b.is_empty() => 1,
         _ => 0,

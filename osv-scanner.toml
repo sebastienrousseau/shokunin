@@ -1,10 +1,22 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 #
 # Ignore list for the OSV-Scanner-based checks OpenSSF Scorecard runs
-# (`.github/workflows/scorecard.yml`, "Vulnerabilities" check). Mirrors
-# `deny.toml`'s `[advisories].ignore` list exactly -- both files must be
-# updated together when a RUSTSEC advisory is added, resolved, or the
-# underlying dependency is upgraded past the affected range.
+# (`.github/workflows/scorecard.yml`, "Vulnerabilities" check).
+#
+# This file is a *superset* of `deny.toml`'s `[advisories].ignore`, not a
+# mirror of it. The header used to claim "exactly", and the two had
+# drifted apart unnoticed: this file carried five IDs deny.toml did not,
+# while deny.toml carried one this file lacked. Nothing checked, so
+# nothing noticed.
+#
+# Superset rather than mirror, because the two tools resolve different
+# graphs. cargo-deny walks the feature-resolved dependency tree; OSV
+# scans the lockfile, which lists optional dependencies whether or not
+# any feature enables them. RUSTSEC-2026-0235 below is exactly that case
+# — cargo-deny reports `advisory-not-detected` for it while OSV flags it.
+#
+# `tests/advisory_sync.rs` enforces the direction that matters: every
+# advisory deny.toml ignores must appear here.
 #
 # All entries below are "unmaintained crate" informational advisories
 # (or, for the two quick-xml entries, documented low-risk build-time-only
@@ -42,3 +54,15 @@ reason = "quick-xml <0.41 parser DoS pair, transitive + build-time only; ssg par
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0173" # proc-macro-error2 (unmaintained) — via defmt-macros/defmt, an optional jiff feature
 reason = "unmaintained transitive dep, no upstream fix available"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0235" # rkyv 0.7 shared-pointer validation
+reason = """
+Not reachable in a default build. rkyv enters only through the optional `minify` feature: lightningcss -> parcel_sourcemap -> rkyv 0.7.46. `cargo tree -i rkyv` finds nothing without it.
+
+Not fixable here either. lightningcss needs rkyv 0.8.17+ and is still on 1.0.0-alpha.72; minify-html 0.18.1 depends on lightningcss with default features and exposes no feature flag to drop `sourcemap`, so setting `default-features = false` on our own lightningcss dependency changes nothing under cargo's feature unification. That was measured, not assumed. 0.18.1 is the latest release.
+
+The unsound path is unreachable regardless: it is in the checked `access` API for archives containing Rc/Arc, and ssg never deserialises an rkyv archive from user input. lightningcss uses rkyv for its own build-time sourcemap data.
+
+Revisit when lightningcss moves to rkyv 0.8, or when minify-html gains a feature flag for it.
+"""

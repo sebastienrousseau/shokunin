@@ -170,6 +170,14 @@ visual-update: build ## Update visual regression baselines.
 	@cargo run -- -c examples/content/en -o examples/public -t examples/templates/en
 	@cd tests/visual && npx playwright test --update-snapshots
 
+# Asserts the README's numeric claims still match the code that produces
+# them: plugin count from the registered pipeline, audit-gate count from the
+# runner, version from Cargo.toml. Named separately from `test` so a failure
+# reads as "the documentation drifted", not "a feature broke".
+.PHONY: readme-check
+readme-check: ## Verify README counts match the code.
+	@cargo test --test readme_sync
+
 # Help target to display callable targets and their descriptions.
 .PHONY: help
 help: ## Display this help.

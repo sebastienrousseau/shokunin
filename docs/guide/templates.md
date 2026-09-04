@@ -8,7 +8,7 @@ SSG uses the [MiniJinja](https://docs.rs/minijinja) template engine for renderin
 
 Templates live in the directory specified by `-t` / `template_dir`:
 
-```
+```text
 templates/
   base.html       # Base layout with shared structure
   page.html       # Default page template
@@ -97,7 +97,7 @@ Define a base layout with blocks that child templates override:
 | `page.title` | Page title from frontmatter |
 | `page.date` | Publication date |
 | `page.description` | Meta description |
-| `page.content` | Rendered HTML content (use `| safe`) |
+| `page.content` | Rendered HTML content (use `\| safe`) |
 | `page.url` | Page URL path |
 | `page.tags` | List of tags |
 | `page.categories` | List of categories |
@@ -106,6 +106,7 @@ Define a base layout with blocks that child templates override:
 ## Control Flow
 
 **Conditionals:**
+
 ```html
 {% if page.draft %}
   <span class="badge">Draft</span>
@@ -113,6 +114,7 @@ Define a base layout with blocks that child templates override:
 ```
 
 **Loops:**
+
 ```html
 {% for tag in page.tags %}
   <a href="/tags/{{ tag }}">{{ tag }}</a>

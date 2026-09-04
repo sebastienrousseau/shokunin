@@ -1,0 +1,17 @@
+# Tag boundaries and entity forms; the stripper is a character-level state
+# machine over `<` and `>`, so the interesting inputs are unbalanced ones.
+"<"
+">"
+"</"
+"/>"
+"<p>"
+"</p>"
+"<script>"
+"<!--"
+"-->"
+"<![CDATA["
+"&amp;"
+"&lt;"
+"&gt;"
+"&#60;"
+"&nbsp;"

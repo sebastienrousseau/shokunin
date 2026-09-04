@@ -27,7 +27,7 @@ use crate::html::find_tag_end;
 /// attribute values doesn't truncate the open tag).
 pub(crate) fn extract_all_style_blocks(html: &str) -> Vec<String> {
     let mut blocks = Vec::new();
-    let lower = html.to_lowercase();
+    let lower = html.to_ascii_lowercase();
     let mut cursor = 0;
 
     while let Some(rel_open) = lower[cursor..].find("<style") {
@@ -58,7 +58,7 @@ pub(crate) fn extract_all_style_blocks(html: &str) -> Vec<String> {
 /// ...) { ... } }`. The at-rule's own preamble (the `@supports (...)`
 /// part) is dropped along with its body.
 pub(crate) fn preprocess_css(css: &str) -> String {
-    let lower = css.to_lowercase();
+    let lower = css.to_ascii_lowercase();
     let no_comments = strip_css_comments(&lower);
     strip_at_rules(&no_comments)
 }

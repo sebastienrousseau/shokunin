@@ -6,7 +6,7 @@ Complete reference for the `ssg` command-line interface.
 
 ## Usage
 
-```
+```console
 ssg [OPTIONS]
 ```
 

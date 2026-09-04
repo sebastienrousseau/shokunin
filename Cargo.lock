@@ -495,9 +495,9 @@ checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
 name = "chacha20"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d524456ba66e72eb8b115ff89e01e497f8e6d11d78b70b1aa13c0fbd97540a81"
+checksum = "65c35e4b699c7e15ccbe7ee35c005e4fc0a278d22238a2857e6ce2dadeda1b06"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -4819,7 +4819,7 @@ dependencies = [
 
 [[package]]
 name = "ssg"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -4872,7 +4872,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-a11y"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "serde",
  "serde_json",
@@ -4880,7 +4880,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-core"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "log",
  "noyalib 0.0.19",
@@ -4894,7 +4894,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-mcp"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "schemars",
  "serde",
@@ -4904,7 +4904,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "criterion",
  "inventory",
@@ -4917,7 +4917,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-rpc-macro"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4926,7 +4926,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-search"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "getrandom 0.4.3",
  "js-sys",
@@ -4940,7 +4940,7 @@ dependencies = [
 
 [[package]]
 name = "ssg-wasm"
-version = "0.0.57"
+version = "0.0.58"
 dependencies = [
  "js-sys",
  "serde-wasm-bindgen",
@@ -4965,9 +4965,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "staticdatagen"
-version = "0.0.15"
+version = "0.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f064c4e24dff9940b4cf18653d021692c2a2b8cf53f52bc989136af0047e5506"
+checksum = "97dab9eeefe34cbe46487f63f1e1eb1e5a4f05ed6a2548b8b0a2ab3f23ee1ec4"
 dependencies = [
  "anyhow",
  "comrak 0.54.0",
@@ -5120,7 +5120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

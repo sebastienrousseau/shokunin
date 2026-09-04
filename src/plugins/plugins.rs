@@ -397,11 +397,19 @@ impl Plugin for ImageOptiPlugin {
 /// let mut pm = PluginManager::new();
 /// pm.register(DeployPlugin::new("production"));
 /// ```
+/// Superseded by [`crate::deploy::DeployPlugin`], which is the implementation
+/// the pipeline registers. This one was never wired into a build; it survived
+/// as a second, divergent copy of the same idea.
+#[deprecated(
+    since = "0.0.58",
+    note = "use `ssg::deploy::DeployPlugin`; this one is never registered by the pipeline"
+)]
 #[derive(Debug)]
 pub struct DeployPlugin {
     target: String,
 }
 
+#[allow(deprecated)]
 impl DeployPlugin {
     /// Creates a new deployment plugin for the given target environment.
     ///
@@ -422,6 +430,7 @@ impl DeployPlugin {
     }
 }
 
+#[allow(deprecated)]
 impl Plugin for DeployPlugin {
     fn name(&self) -> &'static str {
         "deploy"
@@ -439,6 +448,10 @@ impl Plugin for DeployPlugin {
 
 #[cfg(test)]
 mod tests {
+    // These tests exercise the deprecated plugin deliberately: it is
+    // still shipped for one release, and this is what keeps it working
+    // until removal.
+    #![allow(deprecated)]
     use super::*;
     use crate::plugin::{PluginCache, PluginContext};
     use crate::test_support::init_logger;

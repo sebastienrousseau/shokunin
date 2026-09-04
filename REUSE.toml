@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Bulk licensing declarations, so that content and fixtures do not each
+# need an inline header.
+#
+# Source files carry their own `SPDX-License-Identifier` comment; that
+# is the right place for it, because it travels with the file when it is
+# copied out of the repository. These entries cover the files where an
+# inline header is either impossible (JSON, golden snapshots whose bytes
+# are asserted) or actively harmful (Markdown fixtures whose rendered
+# output is compared, where a licence comment would change the result).
+
+version = 1
+SPDX-PackageName = "ssg"
+SPDX-PackageSupplier = "SSG Contributors <contact@sebastienrousseau.com>"
+SPDX-PackageDownloadLocation = "https://github.com/sebastienrousseau/static-site-generator"
+
+# Example sites: Markdown content, templates and their assets. A header
+# here would appear in generated pages and in the golden comparisons.
+[[annotations]]
+path = "examples/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Golden snapshots. These files are compared byte for byte; anything
+# added to them is a test failure by construction.
+[[annotations]]
+path = "tests/golden/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Fuzzing corpora and dictionaries: opaque bytes by design.
+[[annotations]]
+path = "fuzz/corpus/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+[[annotations]]
+path = "fuzz/dictionaries/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Content and site assets used by tests and the scaffolder.
+[[annotations]]
+path = "content/**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Lockfiles and generated manifests: no comment syntax that survives
+# regeneration by the tool that owns them.
+[[annotations]]
+path = ["Cargo.lock", "supply-chain/imports.lock", "**/package-lock.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Binary and data assets.
+[[annotations]]
+path = ["**/*.png", "**/*.jpg", "**/*.svg", "**/*.ico", "**/*.woff2", "**/*.asc"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"
+
+# Everything else in the repository.
+#
+# The whole package is uniformly dual-licensed, and `precedence =
+# "aggregate"` means a file's own SPDX header still wins where it has
+# one — this supplies the copyright line for files that carry only
+# `SPDX-License-Identifier`, and covers formats with no comment syntax
+# at all (JSON, lockfiles, `.gitignore`).
+#
+# This is deliberately last so the specific entries above, which exist
+# to explain *why* those trees cannot take inline headers, stay
+# self-documenting rather than being absorbed into a blanket rule.
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2023 - 2026 SSG Contributors"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"

@@ -31,6 +31,10 @@
 //! is performed in a `Drop` guard so a panicking assertion still
 //! cleans up.
 
+// `DeployPlugin` / `SbomPlugin` are deprecated but still shipped for one
+// release, and these tests are what keep them working until removal.
+#![allow(deprecated)]
+
 use serial_test::serial;
 use ssg::cache::BuildCache;
 use ssg::cmd::SsgConfig;

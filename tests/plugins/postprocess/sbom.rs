@@ -6,6 +6,10 @@
 //! `ssg::sbom::SbomPlugin` which emits the JSON manifest itself).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+// `DeployPlugin` / `SbomPlugin` are deprecated but still shipped for one
+// release, and these tests are what keep them working until removal.
+#![allow(deprecated)]
+
 use ssg::plugin::Plugin;
 use ssg::postprocess::SbomPlugin;
 

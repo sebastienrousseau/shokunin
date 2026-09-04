@@ -25,6 +25,9 @@ libfuzzer-sys = "0.4"
 [dependencies.ssg-core]
 path = "../crates/ssg-core"
 
+[dependencies.ssg-a11y]
+path = "../crates/ssg-a11y"
+
 [dependencies.ssg]
 # Default features kept on: the lib currently fails to type-check under
 # --no-default-features (seo_plugin.rs feature-gating gap), and the
@@ -62,3 +65,15 @@ path = "fuzz_targets/fuzz_html_rewrite.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "fuzz_a11y"
+path = "fuzz_targets/fuzz_a11y.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_strip_html"
+path = "fuzz_targets/fuzz_strip_html.rs"
+test = false
+doc = false

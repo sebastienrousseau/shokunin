@@ -66,6 +66,7 @@ The `BuildCache` fingerprints every content file using FNV-1a hashing.
 On subsequent builds, only changed files are reprocessed.
 
 Cache files:
+
 - `.ssg-cache.json` — content fingerprints
 - `.ssg-plugin-cache.json` — plugin output fingerprints
 - `.ssg-deps.json` — page dependency graph

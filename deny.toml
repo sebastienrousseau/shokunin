@@ -60,12 +60,16 @@ ignore = [
     # proc-macro-error2 unmaintained advisory (RUSTSEC-2026-0173) were
     # removed in v0.0.50: no crate in the graph matches them any more. The
     # quick-xml removal plan recorded here on 2026-07-04 has completed.
-    # rkyv 0.7.46: shared-pointer validation in the checked `access` API can
-    # read out of bounds on an archive containing Rc/Arc. Fixed in 0.8.17,
-    # which is not reachable: the only path is lightningcss 1.0.0-alpha.72 →
-    # parcel_sourcemap 2.1.1 → rkyv 0.7, and lightningcss has not moved to
-    # rkyv 0.8. lightningcss uses rkyv for its own build-time sourcemap
-    # data; ssg never deserialises an rkyv archive from user input, so the
-    # unsound path is unreachable here. Revisit when lightningcss updates.
-    "RUSTSEC-2026-0235",
+    # RUSTSEC-2026-0235 (rkyv 0.7 shared-pointer validation) was removed
+    # here on 2026-09-03: cargo-deny reported `advisory-not-detected`,
+    # meaning the advisory no longer matches the graph even though
+    # rkyv 0.7.46 is still present via
+    # lightningcss → parcel_sourcemap. A dead ignore is not free — it
+    # pre-silences the advisory if it ever comes back.
+    #
+    # Keeping the original analysis for whoever meets it next: ssg never
+    # deserialises an rkyv archive from user input, and lightningcss uses
+    # rkyv only for its own build-time sourcemap data, so the unsound
+    # path was unreachable here. If the advisory returns, that reasoning
+    # still holds — but re-add it deliberately, with the date.
 ]

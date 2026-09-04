@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+#
+# Spell checking is English-only here, and this repository ships content
+# in 28 locales. Run unconfigured, `typos` reported 2,880 "errors",
+# almost all of them correct words in other languages — Swedish `titel`
+# and `tagg`, German and Indonesian prose throughout
+# `examples/content/`. A gate that is wrong 99% of the time gets
+# ignored, and an ignored gate is not a gate.
+#
+# So: check code, English documentation and English fixtures. Skip
+# non-English locale content, which no English dictionary can judge.
+
+[files]
+extend-exclude = [
+  # Localised example content and templates. English (`en`, `en-GB`)
+  # stays checked; everything else is prose no English dictionary can
+  # judge. Listing the English keeps the exclusion honest — this is
+  # "skip other languages", not "skip examples".
+  "examples/content/*/**",
+  "!examples/content/en/**",
+  "examples/templates/*/**",
+  "!examples/templates/en/**",
+  "examples/multilingual_full/content/*/**",
+  "!examples/multilingual_full/content/en/**",
+
+  # Generated, vendored or binary — not authored here.
+  "target/**",
+  "**/node_modules/**",
+  "Cargo.lock",
+  "supply-chain/imports.lock",
+  "tests/golden/**",
+  "fuzz/corpus/**",
+  "KEYS.asc",
+]
+
+
+[default.extend-words]
+# Terms an English dictionary flags but which are correct here. Each
+# entry names why, because an unexplained allow-list is how a spell
+# check stops catching real typos.
+
+# Not a spelling preference — an output contract.
+#
+# `PQC-HSTS-UNPARSEABLE` is an audit diagnostic code and `"Unparseable"`
+# is a JSON-LD `schema_type` value. Both appear in what the tool emits:
+# SARIF reports, audit output, validation errors that users grep for.
+#
+# The README's output-stability rule says a change to what the tool
+# emits is breaking even when no API signature moves, so renaming these
+# to the dictionary's preferred "unparsable" would be a breaking change
+# across 42 occurrences to satisfy a linter's preference between two
+# spellings English accepts equally.
+unparseable = "unparseable"
+Unparseable = "Unparseable"
+UNPARSEABLE = "UNPARSEABLE"
+
+# Names from other projects and specs, spelled as they spell them.
+flate = "flate"       # the `flate2` crate
+intoto = "intoto"     # in-toto attestation format
+writeable = "writeable"
+
+# Short identifiers: CSS custom properties in minified inline styles
+# (`--vp-ba`, `--vp-iz`), locale segments, and local bindings such as
+# `let ba = BankAccount { .. }` in the benches.
+ba = "ba"
+Ba = "Ba"
+iz = "iz"
+Iz = "Iz"
+fo = "fo"
+nd = "nd"
+ND = "ND"
+sur = "sur"
+ist = "ist"
+caf = "caf"
+IIF = "IIF"
+
+# `mis-split`, `mis-parse` — a legitimate English prefix, hyphenated.
+mis = "mis"
+
+
+# Deliberate. CHANGELOG documents that `SSG_NO_TAG_PAGES=ture` must be
+# rejected loudly rather than read as a silent false, so the misspelling
+# is the example. Correcting it would delete the point.
+ture = "ture"
+
+# Non-English words that appear inside Rust source rather than in the
+# locale trees: readability-scoring fixtures in `src/plugins/llm.rs`
+# (French, Italian, Spanish) and the search widget's translated UI
+# labels in `src/plugins/search.rs` (Dutch). Correct as spelled.
+ein = "ein"
+algorithmes = "algorithmes"
+strutture = "strutture"
+algoritmos = "algoritmos"
+requiere = "requiere"
+protocolos = "protocolos"
+computacional = "computacional"
+openen = "openen"

@@ -4,7 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
-  {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
+  {# `page` is absent on taxonomy pages, which render through this
+     same base with `tag`/`posts` in scope instead. Without the
+     `is defined` guard the whole build aborts with
+     `undefined value (in base.html:7)` while naming `tag.html`,
+     a file the author never wrote. #}
+  {% if page is defined and page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
   <link rel="stylesheet" href="/css/style.css">
   {% block head_extra %}{% endblock %}
 </head>

@@ -22,7 +22,7 @@ This creates the project directory with starter content, templates, and configur
 
 ## 3. Explore the Project Structure
 
-```
+```text
 mysite/
   content/          # Markdown files with YAML frontmatter
   templates/        # Tera HTML templates

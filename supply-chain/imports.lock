@@ -93,8 +93,8 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.staticdatagen]]
-version = "0.0.15"
-when = "2026-08-21"
+version = "0.0.17"
+when = "2026-08-22"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"

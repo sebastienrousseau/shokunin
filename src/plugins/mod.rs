@@ -5,6 +5,7 @@ pub mod accessibility;
 pub mod agent_api;
 pub mod ai;
 pub mod assets;
+pub mod audit;
 pub mod csp;
 pub mod drafts;
 pub mod highlight;

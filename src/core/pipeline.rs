@@ -576,6 +576,30 @@ pub fn execute_build_pipeline_with(
     // transform plugins → write once. Eliminates redundant I/O.
     plugins.run_fused_transforms(&ctx)?;
 
+    // Master Quality Gate & Compliance Audit
+    let audit_report =
+        crate::plugins_group::audit::AuditPlugin::audit_directory(site_dir);
+    let audit_path = site_dir.join("quality-gate-report.json");
+    if let Ok(json_str) = serde_json::to_string_pretty(&audit_report) {
+        let _ = std::fs::write(&audit_path, json_str);
+    }
+    if audit_report.passed_pillars == audit_report.total_pillars {
+        log::info!(
+            "[audit] Quality Gate: {}/{} pillars passed across {} pages (0 issues)",
+            audit_report.passed_pillars,
+            audit_report.total_pillars,
+            audit_report.pages_scanned
+        );
+    } else {
+        log::warn!(
+            "[audit] Quality Gate: {}/{} pillars passed across {} pages ({} issues)",
+            audit_report.passed_pillars,
+            audit_report.total_pillars,
+            audit_report.pages_scanned,
+            audit_report.total_issues
+        );
+    }
+
     // Rebuild the dep graph from scratch on a successful compile so
     // the next `--incremental` invocation sees a consistent snapshot.
     let mut new_graph = crate::depgraph::DepGraph::new();
@@ -776,13 +800,72 @@ pub fn compile_site_with_locales(
         )
         .map_err(|e| SsgError::io(e, content_dir))?;
 
-    compile(build_dir, &staged_content, site_dir, template_dir).map_err(|e| {
-        eprintln!("    Error compiling site: {e:?}");
-        SsgError::io(
-            std::io::Error::other(format!("Failed to compile site: {e:?}")),
-            build_dir,
-        )
-    })
+    compile(build_dir, &staged_content, site_dir, template_dir).map_err(
+        |e| {
+            eprintln!("    Error compiling site: {e:?}");
+            SsgError::io(
+                std::io::Error::other(format!("Failed to compile site: {e:?}")),
+                build_dir,
+            )
+        },
+    )?;
+
+    // Copy any static assets from template_dir (e.g. styles.css, theme-init.js, favicon.ico, images)
+    // to site_dir so they are available in public/ and fingerprinted by assets plugin.
+    copy_static_template_assets(template_dir, site_dir)?;
+    if let Some(parent) = template_dir.parent() {
+        let assets_dir = parent.join("assets");
+        if assets_dir.is_dir() {
+            let site_assets = site_dir.join("assets");
+            let _ = std::fs::create_dir_all(&site_assets);
+            copy_static_template_assets(&assets_dir, &site_assets)?;
+        }
+    }
+    Ok(())
+}
+
+fn copy_static_template_assets(src: &Path, dst: &Path) -> Result<(), SsgError> {
+    if !src.is_dir() {
+        return Ok(());
+    }
+    let entries = std::fs::read_dir(src).map_err(|e| SsgError::io(e, src))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        if path.is_file() {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if matches!(
+                ext,
+                "css"
+                    | "js"
+                    | "ico"
+                    | "svg"
+                    | "png"
+                    | "jpg"
+                    | "jpeg"
+                    | "webp"
+                    | "avif"
+                    | "woff"
+                    | "woff2"
+                    | "ttf"
+                    | "json"
+                    | "map"
+            ) && !name_str.ends_with(".tera.html")
+            {
+                let target = dst.join(name);
+                let _ = std::fs::copy(&path, &target);
+            }
+        } else if path.is_dir()
+            && name_str != "tera"
+            && !name_str.starts_with('.')
+        {
+            let target_dir = dst.join(name);
+            let _ = std::fs::create_dir_all(&target_dir);
+            let _ = copy_static_template_assets(&path, &target_dir);
+        }
+    }
+    Ok(())
 }
 
 /// Registers the default plugin pipeline.
@@ -838,7 +921,12 @@ pub fn register_default_plugins(
     plugins.register(postprocess::JsonFeedPlugin);
     plugins.register(postprocess::ManifestFixPlugin);
     plugins.register(postprocess::HtmlFixPlugin);
-    plugins.register(postprocess::SbomPlugin);
+    // `postprocess::SbomPlugin` ("sbom-generator") is deliberately not
+    // registered. It wrote the same `sbom.cdx.json` as `crate::sbom::SbomPlugin`
+    // ("sbom"), which registers later and therefore overwrote it — the build
+    // serialised the dependency tree twice and threw one copy away. The
+    // surviving plugin is the more complete of the two: it also injects the
+    // `<link rel="sbom">` into every document head.
 
     // Agentic discovery (#552): agents.txt + .well-known/ai-plugin.json
     // + .well-known/mcp.json. No-op when `[agents]` is absent from
@@ -873,6 +961,9 @@ pub fn register_default_plugins(
 
     // Accessibility validation
     plugins.register(accessibility::AccessibilityPlugin);
+
+    // Master Quality Gate & Compliance Audit
+    plugins.register(crate::plugins_group::audit::AuditPlugin);
 
     // Image optimization (WebP, responsive srcset)
     #[cfg(feature = "image-optimization")]
@@ -957,6 +1048,96 @@ pub fn register_default_plugins(
 
 #[cfg(test)]
 mod tests {
+
+    /// The default pipeline must register each plugin name once. Two
+    /// `SbomPlugin` implementations were both registered before 0.0.58: they
+    /// wrote the same `sbom.cdx.json`, so the later one silently overwrote the
+    /// earlier and the dependency tree was serialised twice per build.
+    #[test]
+    fn default_plugins_have_no_duplicate_names() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let mut seen = std::collections::BTreeMap::new();
+        for info in plugins.inventory() {
+            *seen.entry(info.name).or_insert(0usize) += 1;
+        }
+        let dupes: Vec<_> = seen
+            .iter()
+            .filter(|(_, n)| **n > 1)
+            .map(|(k, _)| *k)
+            .collect();
+        assert!(dupes.is_empty(), "duplicate plugin names: {dupes:?}");
+    }
+
+    /// WS0.5's acceptance condition: "`ssg plugins list` shows exactly one
+    /// Deploy and one SBOM plugin".
+    ///
+    /// Without a target the deploy plugin does not register at all, which is
+    /// correct for a plain build but means the deploy stage cannot be
+    /// inspected. `--target` mirrors what `ssg deploy` would register.
+    #[test]
+    fn one_deploy_plugin_registers_when_a_target_is_given() {
+        let config = SsgConfig::default();
+
+        let mut without = plugin::PluginManager::new();
+        register_default_plugins(&mut without, &config, false, None);
+        assert!(
+            !without
+                .inventory()
+                .iter()
+                .any(|p| p.name.contains("deploy")),
+            "a plain build should register no deploy plugin"
+        );
+
+        let mut with = plugin::PluginManager::new();
+        register_default_plugins(&mut with, &config, false, Some("netlify"));
+        let deploy: Vec<_> = with
+            .inventory()
+            .into_iter()
+            .filter(|p| p.name.contains("deploy"))
+            .collect();
+        assert_eq!(
+            deploy.len(),
+            1,
+            "expected exactly one deploy plugin, got {deploy:?}"
+        );
+        assert_eq!(with.len(), without.len() + 1);
+    }
+
+    /// Exactly one SBOM emitter, and it is the one that also links the
+    /// document head — see `postprocess::SbomPlugin`'s deprecation note.
+    #[test]
+    fn exactly_one_sbom_plugin_is_registered() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let sbom: Vec<_> = plugins
+            .inventory()
+            .into_iter()
+            .filter(|p| p.name.contains("sbom"))
+            .collect();
+        assert_eq!(sbom.len(), 1, "expected one SBOM plugin, got {sbom:?}");
+        assert_eq!(sbom[0].name, "sbom");
+    }
+
+    /// The inventory is ordered, and that order is execution order — the
+    /// property `ssg plugins list` reports and the README count derives from.
+    #[test]
+    fn inventory_is_in_registration_order() {
+        let config = SsgConfig::default();
+        let mut plugins = plugin::PluginManager::new();
+        register_default_plugins(&mut plugins, &config, false, None);
+
+        let inv = plugins.inventory();
+        assert!(!inv.is_empty());
+        for (i, info) in inv.iter().enumerate() {
+            assert_eq!(info.order, i);
+        }
+        assert_eq!(inv.len(), plugins.len());
+    }
     use super::*;
 
     #[test]

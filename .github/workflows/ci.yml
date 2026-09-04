@@ -6,7 +6,7 @@
 #   1. lint        — fmt + clippy (~1 min)        BLOCKS everything
 #   2. test        — lib + integration in matrix  PARALLEL after lint
 #   3. examples    — heavy end-to-end builds      PARALLEL after lint
-#   4. coverage    — gate at 95% region floor      PARALLEL after lint
+#   4. coverage    — gate at 98% region floor      PARALLEL after lint
 #   5. audit       — cargo-deny supply chain      PARALLEL after lint
 #
 # Heavy / scheduled work (a11y, sbom, full multi-OS portability matrix)
@@ -41,9 +41,26 @@ env:
   # Gate uses `cargo llvm-cov --lib` to keep example_outputs.rs
   # integration tests (which run real `ssg build` invocations with their
   # own timeouts in the `examples` job) out of the instrumented run.
-  COVERAGE_REGIONS_FLOOR: "95.5"
-  COVERAGE_LINES_FLOOR: "96.5"
-  COVERAGE_FUNCTIONS_FLOOR: "95.5"
+  # Why 98.0 and not 100, and not 80.
+  #
+  # Measured coverage at the time this floor was set was 99.3%. A floor
+  # is a ratchet against regression, not a target to chase: set at 100 it
+  # fails on any untestable line and gets lowered under pressure; set at
+  # 80 it permits a fifth of the library to rot untested. 98.0 sits just
+  # below the real number, so it catches a genuine drop while leaving
+  # room for the handful of lines that are legitimately hard to reach.
+  #
+  # Two modules are excluded rather than counted and forgiven, so the
+  # number means what it says: src/core/deploy_adapter.rs (six adapters
+  # documented as not yet implemented, #527) and src/main.rs (argv
+  # dispatch, covered by running the binary in tests/cli_subcommands.rs
+  # rather than by cargo llvm-cov).
+  #
+  # Raise it when the real number rises; never lower it to make a red
+  # build green.
+  COVERAGE_REGIONS_FLOOR: "98.0"
+  COVERAGE_LINES_FLOOR: "98.0"
+  COVERAGE_FUNCTIONS_FLOOR: "98.0"
 
 jobs:
   # ── Phase 0: repo hygiene (issue #556) ──────────────────────────────
@@ -58,28 +75,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: No stray *.profraw outside target/
-        run: |
-          set -euo pipefail
-          # Mirror .gitignore exclusions so local-pre-commit reuse is sane.
-          stray=$(find . -name '*.profraw' \
-              -not -path './target/*' \
-              -not -path './.git/*' \
-              -not -path './.claude/*' || true)
-          if [ -n "$stray" ]; then
-            echo "::error::stray *.profraw outside target/ — run 'make coverage' (sets LLVM_PROFILE_FILE) and re-run:"
-            echo "$stray"
-            exit 1
-          fi
-      - name: No tracked *.profraw
-        run: |
-          set -euo pipefail
-          tracked=$(git ls-files '*.profraw' || true)
-          if [ -n "$tracked" ]; then
-            echo "::error::*.profraw tracked by git (must be ignored, never committed):"
-            echo "$tracked"
-            exit 1
-          fi
+      # Extracted to a script so `./scripts/repo-hygiene.sh` reproduces
+      # this job exactly — see DEVELOPMENT.md.
+      - name: Repository hygiene
+        run: ./scripts/repo-hygiene.sh
 
   # ── Phase 1: lint (blocks downstream) ───────────────────────────────
   lint:
@@ -129,7 +128,7 @@ jobs:
 
       - name: ADR citation graph (#557)
         # Refuses dangling `adr: ADR-NNNN` citations in tracked source.
-        # Every cited ADR must resolve to a file in docs/adrs/.
+        # Every cited ADR must resolve to a file in docs/adr/.
         run: ./tools/lint-adr.sh
 
       - name: feature powerset check (#584)
@@ -144,9 +143,12 @@ jobs:
 
   # ── Phase 2a: unit + integration tests (3-OS matrix) ────────────────
   test:
-    name: test · ${{ matrix.os }}
+    name: test · ${{ matrix.os }} · ${{ matrix.toolchain }}
     needs: lint
     runs-on: ${{ matrix.os }}
+    # beta is an early warning, not a gate: a nightly-track regression in
+    # a dependency should tell us, not block a release.
+    continue-on-error: ${{ matrix.experimental || false }}
     # Bumped 8 → 15 in v0.0.42 (ravif AVIF encoding, ~1.2s per 1024×768
     # image on the runner) and 15 → 20 after windows-latest started being
     # cancelled at exactly 15m00s.
@@ -160,11 +162,87 @@ jobs:
     # Observed Windows wall-time is 9-10m on a warm cache and 14-15m cold,
     # so 15 left no margin for ordinary variance. 20 absorbs that while
     # still failing a genuinely hung job.
-    timeout-minutes: 20
+    #
+    # 20 → 30 alongside the example-suite fix. With a 14-15m cold compile
+    # already eating most of the old ceiling, the remaining test time left
+    # almost no margin: measured locally, `--tests` spends ~8m40s actually
+    # running, and three suites account for nearly all of it —
+    # `unittests src/lib.rs` (255s), `html_rewriter_correctness` (145s) and
+    # `plugins/main.rs` (118s). Those three are legitimately slow rather
+    # than accidentally heavy: they encode real JPEGs and exercise a 5 MB
+    # page in a debug profile. So the honest fix is headroom, not a faster
+    # gate — a cancelled job reads as a test failure and is not one.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
+        # Every OS on stable, plus the MSRV floor and beta on Linux.
+        #
+        # REPO-STANDARD §6 asks for OS x toolchain. The full cross
+        # product is nine jobs, and the two extra toolchains are
+        # answering a question that is not OS-specific: "does this still
+        # build on the floor we claim, and is it about to break on the
+        # next compiler?" Both are compiler questions, so they run once
+        # each on the cheapest and fastest runner rather than three
+        # times. Platform-specific behaviour is what the OS row covers,
+        # and this branch has found enough of it to know that row earns
+        # its cost.
+        #
+        # The MSRV entry is the one that matters for users: it enforces
+        # the `rust-version` floor in Cargo.toml, which the README now
+        # states as a policy. beta is allowed to fail — it is an early
+        # warning, not a gate.
         os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: "1.88" # MSRV floor, must match Cargo.toml rust-version
+          - os: ubuntu-latest
+            toolchain: beta
+            experimental: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          shared-key: test-${{ matrix.os }}-${{ matrix.toolchain }}
+
+      # NOTE: there is deliberately no separate `--lib` step. `--tests`
+      # already builds and runs `unittests src/lib.rs` — the same binary,
+      # verified with `cargo test --tests --no-run`, which lists
+      # `Executable unittests src/lib.rs`. Running both meant the 3722
+      # library unit tests executed twice, about four minutes wasted on
+      # each of three platforms, in the job that was hitting its timeout.
+      - name: Unit and integration tests
+        shell: bash
+        # `--tests` rather than an enumerated list of targets.
+        #
+        # The list this replaces named 13 of the 50 integration test files, so
+        # 29 of them ran nowhere in CI — including `release_versions`, which
+        # exists to catch a crate being published without a version gate, and
+        # which was failing when it finally ran. A hardcoded target list is a
+        # second inventory that has to be maintained in step with the first,
+        # and it silently was not.
+        #
+        # `tests/ci_test_coverage.rs` now asserts that every test target is
+        # reachable from a workflow, so this cannot drift back.
+        run: cargo test --tests --features test-fault-injection
+
+  # ── Phase 1b: documentation gates (REPO-STANDARD §2) ────────────────
+  # These suites also run inside `cargo test --tests`, but they fail for a
+  # different reason than a code test does — documentation drifted from
+  # code — and a reader of a red pipeline should be able to see that from
+  # the job name without opening the log. They are cheap, so the
+  # duplication costs a minute and saves a misdiagnosis.
+  docs-lint:
+    name: docs lint
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -172,29 +250,58 @@ jobs:
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
         with:
-          shared-key: test-${{ matrix.os }}
-
-      - name: Lib unit tests
-        shell: bash
-        run: cargo test --lib --features test-fault-injection
-
-      - name: Integration tests (excluding heavy examples)
-        shell: bash
+          shared-key: docs-lint
+      # Cheap text checks. These are the same hooks
+      # `.pre-commit-config.yaml` runs locally, so a contributor who
+      # installed pre-commit sees them before pushing rather than after.
+      - name: Spelling (typos)
+        # Pinned to the release whose bundled dictionary matches what
+        # `typos` installs locally (`cargo install typos-cli`). The
+        # previous pin shipped 1.29.10, whose older dictionary flagged
+        # "retuned" while a current local install did not — so this
+        # passed locally and failed here, which is the exact
+        # local/CI divergence DEVELOPMENT.md exists to prevent. When
+        # bumping, bump the version in DEVELOPMENT.md too.
+        uses: crate-ci/typos@c8866b658f1eb6ff60473fee711ef5304c63f898 # v1.50.1
+      - name: Markdown lint
+        # Globs and every rule exclusion live in
+        # .markdownlint-cli2.jsonc, each with a stated reason.
+        uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20.0.0
+      - name: docs/ files are not hidden by .gitignore
+        run: ./scripts/check-docs-tracked.sh
+      # An allow-list is a set of suppressions, and suppressions rot.
+      - name: No dead entries in the typos allow-list
         run: |
-          cargo test --test regression \
-                     --test fault_injection \
-                     --test schema_validation \
-                     --test plugin_contracts \
-                     --test perf_regression \
-                     --test test_navigation \
-                     --test test_tags \
-                     --test test_manifest \
-                     --test test_human \
-                     --test test_json \
-                     --test test_uuid \
-                     --test test_file \
-                     --test test_cname \
-                     --features test-fault-injection
+          cargo install typos-cli --locked --version 1.50.1
+          ./scripts/check-typos-allowlist.sh
+      # REUSE checks that every file's licensing is machine-readable.
+      # This repository carries SPDX headers rather than a .reuse/dep5,
+      # so the lint proves the headers are actually complete rather than
+      # merely present on the files someone remembered.
+      - name: REUSE / SPDX compliance
+        uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5.0.0
+      - name: Internal Markdown link integrity
+        run: cargo test --test doc_links
+      - name: README counts match the code
+        run: cargo test --test readme_sync
+      - name: Documented behaviour matches actual behaviour
+        run: cargo test --test docs_accuracy
+      - name: DEVELOPMENT.md matches the workflow
+        run: cargo test --test development_docs
+      - name: Man page matches the CLI definition
+        run: cargo test --test man_page
+      - name: Shell completions match the CLI definition
+        run: cargo test --test completions
+      # Builds the rendered user manual and checks the output rather
+      # than the exit code: `mdbook build` exits 0 for a book with no
+      # chapters, an empty search index, or a table of contents that
+      # lost its sections.
+      - name: User manual builds
+        run: |
+          cargo install mdbook --locked --version 0.5.4
+          ./scripts/build-manual.sh
+      - name: rustdoc builds with no broken intra-doc links
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps -p ssg
 
   # ── Phase 2b: end-to-end examples (Linux only — heavy I/O) ──────────
   examples:
@@ -202,6 +309,13 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # This is the job that builds `examples/*/public`, so it is the job
+      # where a gate finding nothing to scan is a real failure rather than a
+      # missing prerequisite (#676). The example-dependent suites key on this
+      # rather than on `CI`, which fired in every job including the per-OS
+      # `test` job that never builds examples.
+      SSG_REQUIRE_EXAMPLES: "1"
     permissions:
       contents: read
       security-events: write # upload-sarif (ssg's own audit SARIF, #562)
@@ -218,6 +332,15 @@ jobs:
       - name: Validator regression suite
         # `--test-threads=1` because examples bind 127.0.0.1:3000.
         run: cargo test --test example_outputs -- --test-threads=1
+      - name: JSON Feed 1.1 compliance
+        # Runs here, after the step above has built the blog example, so
+        # it reuses that output instead of building it again. The suite
+        # is gated on SSG_REQUIRE_EXAMPLES (set for this job) and skips
+        # elsewhere: two test binaries both running
+        # `cargo run --example blog` contend for cargo's build lock and
+        # for port 3000, and their serialising mutexes are process-local
+        # so neither sees the other.
+        run: cargo test --test json_feed_compliance
       - name: JSON-LD schema validation
         # Walks every examples/*/public HTML produced above, extracts
         # all <script type="application/ld+json"> blocks, and validates
@@ -259,7 +382,7 @@ jobs:
           fi
       - name: Upload SARIF to GitHub Code Scanning (#562)
         if: always()
-        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28 # v4.37.8
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
         with:
           sarif_file: ssg-audit.sarif
           category: ssg-audit
@@ -366,6 +489,42 @@ jobs:
         run: cargo install cargo-deny --locked
       - name: Run cargo-deny check
         run: cargo deny check
+
+  # ── Phase 2d: install contract (REPO-STANDARD §3) ───────────────────
+  # The standard's acceptance criterion is "`make DESTDIR=/tmp/stage
+  # install` produces a correct tree on a clean runner", so this job runs
+  # on a runner that has never built the project and checks the staged
+  # tree against the contract exactly — a file that stops being installed
+  # fails it just as loudly as one that appears unexpectedly.
+  #
+  # The job runs scripts/install-smoke.sh and nothing else, so a
+  # contributor reproduces it locally with a single command. Every red
+  # round on this branch came from a local invocation that differed from
+  # the one CI ran.
+  install-smoke:
+    name: install contract
+    needs: lint
+    runs-on: ubuntu-latest
+    # A release build of the full dependency tree on a cold cache is the
+    # bulk of this job; 20m was too close to it.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          shared-key: install-smoke
+      # zsh, fish and mandoc are the checkers, not dependencies of ssg:
+      # without them the script skips those steps and would report a pass
+      # it did not earn.
+      - name: Install shells and the roff linter
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zsh fish mandoc
+      - name: make DESTDIR=/tmp/stage install
+        run: ./scripts/install-smoke.sh /tmp/stage
 
   # ── Phase 2e: supply-chain attestation (#561) ───────────────────────
   # cargo-vet complements cargo-deny (license + CVE) with per-crate

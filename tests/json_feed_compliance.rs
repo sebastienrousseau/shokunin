@@ -105,10 +105,30 @@ fn run_blog_example(timeout: Duration) {
     }
 }
 
-/// Ensure the blog example output exists by triggering a build if
-/// `feed.json` is missing. Serialised across parallel tests so the dev
-/// server port (and the build artifacts) don't race.
-fn ensure_blog_feed() -> PathBuf {
+/// Locates the blog example's `feed.json`, building the example only when
+/// it has to. `None` means the caller should skip.
+///
+/// Serialised across parallel tests so the dev-server port and the build
+/// artifacts don't race.
+///
+/// # Why this is conditional
+///
+/// Building the blog example costs about two minutes, and this file used
+/// to do it unconditionally. That was affordable while nothing ran it;
+/// once the per-OS `test` job moved to `cargo test --tests`, it ran on
+/// three platforms at once — and `build_lock` is a process-local static,
+/// so it does not serialise against the identical lock in
+/// `tests/example_outputs.rs`. Both binaries would run
+/// `cargo run --example blog` concurrently, contending for cargo's build
+/// lock and for `127.0.0.1:3000`, which is part of what pushed
+/// `test · ubuntu`, `test · macos` and `test · windows` past their
+/// 20-minute timeout.
+///
+/// So the order of preference is: use the output if some earlier suite in
+/// this job already produced it (in the `examples` job,
+/// `example_outputs` does, making this nearly free); build it if this is
+/// the job that requires examples; otherwise skip and say so.
+fn ensure_blog_feed() -> Option<PathBuf> {
     let _guard = build_lock().lock().unwrap_or_else(|p| p.into_inner());
     let root = workspace_root();
     let feed = root
@@ -116,15 +136,29 @@ fn ensure_blog_feed() -> PathBuf {
         .join("blog")
         .join("public")
         .join("feed.json");
-    if !feed.exists() {
-        run_blog_example(Duration::from_secs(120));
+
+    if feed.exists() {
+        return Some(feed);
     }
+
+    // The `examples` job sets this. There, a missing feed after a build is
+    // a real failure, not a reason to skip.
+    if std::env::var_os("SSG_REQUIRE_EXAMPLES").is_none() {
+        eprintln!(
+            "skipping: examples/blog/public/feed.json is not built. To \
+             run this suite locally:\n  SSG_REQUIRE_EXAMPLES=1 cargo test \
+             --test json_feed_compliance"
+        );
+        return None;
+    }
+
+    run_blog_example(Duration::from_secs(120));
     assert!(
         feed.exists(),
         "blog example did not produce feed.json at {}",
         feed.display()
     );
-    feed
+    Some(feed)
 }
 
 /// RFC 3339 sanity check: starts with `YYYY-MM-DDTHH:MM:SS`.
@@ -142,7 +176,9 @@ const fn looks_like_rfc3339(s: &str) -> bool {
 
 #[test]
 fn blog_feed_json_is_valid_json_feed_1_1() {
-    let feed_path = ensure_blog_feed();
+    let Some(feed_path) = ensure_blog_feed() else {
+        return;
+    };
     let raw = fs::read_to_string(&feed_path).expect("read feed.json");
     let value: Value =
         serde_json::from_str(&raw).expect("feed.json should parse as JSON");
@@ -182,7 +218,9 @@ fn blog_feed_json_is_valid_json_feed_1_1() {
 
 #[test]
 fn blog_feed_json_items_have_required_fields() {
-    let feed_path = ensure_blog_feed();
+    let Some(feed_path) = ensure_blog_feed() else {
+        return;
+    };
     let value: Value = serde_json::from_str(
         &fs::read_to_string(&feed_path).expect("read feed.json"),
     )
@@ -266,7 +304,9 @@ fn blog_feed_json_items_have_required_fields() {
 
 #[test]
 fn blog_pages_inject_json_feed_alternate_link() {
-    let feed_path = ensure_blog_feed();
+    let Some(feed_path) = ensure_blog_feed() else {
+        return;
+    };
     let public = feed_path.parent().expect("feed.json must have a parent");
     let index = public.join("index.html");
     assert!(

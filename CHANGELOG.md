@@ -7,6 +7,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.58] - 2026-09-04
+
+The trust-the-gates release. Repository-standard Phases 1 and 2 — the
+developer entry point and the Unix install contract — and a run of
+defects that all had one shape: something reporting success while
+asserting nothing.
+
+Fixed in that class: 29 integration test files that no workflow ran, a
+golden test that skipped on every run and had no golden file, a
+benchmark corpus missing front matter the templates read, a `--new` flag
+declared since 0.0.42 and never dispatched, and a fuzz corpus that was
+committed but never replayed. Each now has a gate that was watched
+failing before it was trusted.
+
+### Added
+
+- **Generated man page and shell completions** — `ssg.1` plus bash, zsh,
+  fish and PowerShell scripts, all walked out of the clap definition
+  (`src/cmd/man.rs`, `src/cmd/completions.rs`) rather than hand-written,
+  so `man ssg` cannot drift from `ssg --help`. Neither uses a crate:
+  `clap_complete` and `roff` are both unaudited against this
+  repository's `cargo vet` policy, whose exemption ratchet may only move
+  downward, so a narrow in-tree emitter costs less than the audit it
+  avoids. Exemptions stay at 506.
+
+- **`GNUmakefile`** — `make install` / `make uninstall` honouring
+  `PREFIX` (default `/usr/local`) and `DESTDIR`, installing to FHS
+  paths. Developer targets stay in `Makefile` and are forwarded, because
+  GNU make reads `GNUmakefile` *instead of* `Makefile` and would
+  otherwise hide them.
+
+- **`DEVELOPMENT.md`** — the single developer entry point, built around a
+  table mapping every CI job to the exact command that reproduces it.
+  `tests/development_docs.rs` gates the table against `ci.yml` in both
+  directions, because a stale reproduction table is worse than none: a
+  contributor runs it, sees green, and pushes red.
+
+- **`install contract` and `docs lint` CI jobs**, plus
+  `scripts/install-smoke.sh` and `scripts/repo-hygiene.sh`, which CI runs
+  verbatim so local and CI share one path rather than two that resemble
+  each other.
+
+### Fixed
+
+- **`ssg --new` produced a project `ssg` could not build** (#752). Three
+  defects stacked: the flag was declared and never dispatched; the
+  scaffolder wrote only the MiniJinja templates and none of the four
+  StaticWeaver root templates the compile step reads; and the base
+  template assumed `page` exists, which taxonomy pages do not provide.
+  `ssg --new mysite && ssg -f config.toml` now exits 0 with 47 files,
+  from 0.
+
+- **Financial identifiers were written to logs in cleartext**
+  (code-scanning #242–#244). IBANs and BICs are published in the emitted
+  JSON-LD on purpose; a build log is a different channel. Redacted in
+  logs only — output is unchanged.
+
+- **Three packaging manifests pinned 0.0.37** — twenty-one releases of
+  drift in Scoop, WinGet and the AUR `PKGBUILD`, with nothing comparing
+  them to the crate. Corrected, and `tests/release_versions.rs` now
+  fails when they disagree.
+
+- **The fuzz lockfile was gitignored**, so CI re-resolved every
+  dependency on every run and a freshly published `tinyvec 1.13.0` that
+  does not compile broke the OSS-Fuzz build for a commit that touched
+  one test file. Now committed, as it should be for a workspace of
+  binaries.
+
+- **Completions marked every option as a bare flag.** `get_num_args()`
+  is `None` for every argument in this parser, so reading it as "takes no
+  value" dropped `-r` from the fish specs and `:DIR:_files` from the zsh
+  ones — the shell offered the next option where a path belonged. The
+  signal is `get_action()`.
+
+### Changed
+
+- **`docs/adrs/` is now `docs/adr/`**, per the repository standard, with
+  every reference across eleven files moved with it.
+
 ## [0.0.57] - 2026-08-22
 
 Three defects that produced wrong output, one new crate, and a duplication
@@ -321,7 +400,7 @@ site using taxonomy or islands should move to `0.0.51`. Themes pinning
 
 ## [0.0.50] - 2026-08-14
 
-The themeing release. Building three real themes against v0.0.49 surfaced
+The theming release. Building three real themes against v0.0.49 surfaced
 four defects that made documented features unusable — each failing silently,
 which is why none had been reported. Multi-locale sites additionally gain
 translated slugs.
@@ -610,6 +689,7 @@ landed with measured evidence. Implements the
 [#586](https://github.com/sebastienrousseau/static-site-generator/issues/586).
 
 ### Added
+
 - **Flexible date parsing** (`src/core/dates.rs`, spec A4): RFC 2822 →
   long-form (`July 1, 2026`) → ISO 8601, zero new deps, proptest
   round-tripped; wired into the RSS, Atom, JSON Feed, news-sitemap, and
@@ -661,6 +741,7 @@ landed with measured evidence. Implements the
   ratchet-only-downward CI gate.
 
 ### Fixed
+
 - **Audit-gate false positives** (~122 alerts): the markdownlint gate no
   longer lints YAML frontmatter; the broken-links gate no longer parses
   `<a href>` inside `<script>`/`<style>`; the CSP/images/WCAG gates now
@@ -678,6 +759,7 @@ landed with measured evidence. Implements the
 - `benches/all_pub_api` compiles under `--no-default-features`.
 
 ### Changed
+
 - **One URL convention everywhere**: canonical, feed `<link>`, sitemap and
   news-sitemap `<loc>` all derive via `urls::derive_page_url`
   (`…/foo/index.html` → `…/foo/`).
@@ -690,6 +772,7 @@ landed with measured evidence. Implements the
 - Workspace version 0.0.46 → 0.0.47 across all six crates.
 
 ### Performance
+
 - Markdown render clone elimination + `Cow` strikethrough fast path:
   **−41–63%** on realistic mostly-plain pages, −6–10% on dense GFM.
 - Zero-copy frontmatter parsing
@@ -699,6 +782,7 @@ landed with measured evidence. Implements the
   `Mutex` → `RwLock` (read-mostly fast path).
 
 ### Upstream (staged in sibling repos, releases pending)
+
 - `staticdatagen 0.0.11`: `allow_unsafe_html: true` explicit (spec A1),
   permalink fallback chain + never-abort feed semantics (spec A2), flexible
   date parsing (spec A4).
@@ -710,6 +794,7 @@ landed with measured evidence. Implements the
   safe-by-default sanitization honoring the documented contract.
 
 ### New crate: `ssg-a11y`
+
 - Extracted the WCAG 2.2 AA accessibility checker (`src/plugins/accessibility.rs`)
   into a standalone workspace crate,
   [#608](https://github.com/sebastienrousseau/static-site-generator/issues/608):
@@ -725,6 +810,7 @@ landed with measured evidence. Implements the
   Workspace grows to 7 crates.
 
 ### Fixed (determinism, round 2)
+
 - `atom.xml` / `feed.json`: `AtomFeedPlugin`/`JsonFeedPlugin` sorted entries
   by date only; since `read_meta_sidecars` walks the filesystem (genuinely
   OS-order-dependent — ext4 vs APFS) and the stable sort never breaks ties
@@ -753,7 +839,8 @@ landed with measured evidence. Implements the
   comment (clippy `doc_markdown`).
 
 ### Versioning policy
-- [ADR-0009](docs/adrs/0009-versioning-policy-0.0.x-until-0.0.999.md):
+
+- [ADR-0009](docs/adr/0009-versioning-policy-0.0.x-until-0.0.999.md):
   `ssg` stays on `0.0.x` versioning — incrementing by `0.0.1` per release —
   through `0.0.999` at the earliest, to mature the API surface and
   enterprise adoption before any `0.1.0`/`1.0.0` SemVer commitment.
@@ -797,9 +884,10 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ## [0.0.45] - 2026-06-27
 
 ### Added
+
 - **Hygiene + correctness + supply-chain attestation baseline.** PR [#583](https://github.com/sebastienrousseau/static-site-generator/pull/583) closed 15 issues:
   - **#556** profraw hygiene + `repo-hygiene` CI gate; `make coverage` pins `LLVM_PROFILE_FILE` to `target/coverage/`.
-  - **#557** Six baseline ADRs in [`docs/adrs/`](docs/adrs/) + `lint-adr` CI gate enforcing the `adr: ADR-NNNN` citation graph.
+  - **#557** Six baseline ADRs in [`docs/adr/`](docs/adr/) + `lint-adr` CI gate enforcing the `adr: ADR-NNNN` citation graph.
   - **#558** No-shellout regression lint (`tools/lint-no-shellout.sh`).
   - **#559 + #494** `BENCHMARKS.md` expanded 83 → 245 lines; `tools/seed-bench-corpus.sh` generates deterministic 10/100/1K/10K corpora.
   - **#560** Miri workflow — nightly schedule + `run-miri`-labelled PR trigger, 180-min timeout.
@@ -813,24 +901,29 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
   - **#22** README v0.0.45 sync + workspace version bump 0.0.44 → 0.0.45.
   - **#23 / #24 / #25** [`docs/features-coverage.md`](docs/features-coverage.md) + `features_matrix_is_exhaustive` test gate.
 
-- **Content-staging shim** ([`src/core/content_stager.rs`](src/core/content_stager.rs), [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md)) — works around five `staticdatagen 0.0.9` / `staticweaver 0.0.2` / `metadata-gen 0.0.4` brittleness points so 2,371-file real-world user sites build again. Upstream fixes filed and tracked in [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585).
+- **Content-staging shim** ([`src/core/content_stager.rs`](src/core/content_stager.rs), [ADR-0007](docs/adr/0007-staticdatagen-staging-shim.md)) — works around five `staticdatagen 0.0.9` / `staticweaver 0.0.2` / `metadata-gen 0.0.4` brittleness points so 2,371-file real-world user sites build again. Upstream fixes filed and tracked in [#585](https://github.com/sebastienrousseau/static-site-generator/issues/585).
 
 ### Fixed
-- **Site-build regression on user sites without `layout:` frontmatter**, missing `main.js`/`sw.js`, no `tags.md`, multi-line YAML scalars, or template references to keys content omits. Detailed root-cause in [ADR-0007](docs/adrs/0007-staticdatagen-staging-shim.md). Validated against `sebastienrousseau/sebastienrousseau.github.io` — 102 root pages, 6.40s build, all 102 a11y-passing.
+
+- **Site-build regression on user sites without `layout:` frontmatter**, missing `main.js`/`sw.js`, no `tags.md`, multi-line YAML scalars, or template references to keys content omits. Detailed root-cause in [ADR-0007](docs/adr/0007-staticdatagen-staging-shim.md). Validated against `sebastienrousseau/sebastienrousseau.github.io` — 102 root pages, 6.40s build, all 102 a11y-passing.
 
 ### Changed
+
 - **CI coverage floors raised** from 95.0 → 95.5 / 96.5 / 95.5 (regions / lines / functions). Coverage gate uses `cargo llvm-cov --lib` to keep the heavy `example_outputs.rs` integration suite in its own job.
 - **Miri trigger model**: nightly schedule + `run-miri` label-gated PR runs (decoupled from every push).
 - **100-page build budget** in `tests/perf_budgets.rs` raised 500ms → 800ms to absorb the `content_stager` shim. Reverts in v0.0.46.
 
 ### Security
+
 - **cargo-vet attestation** (#561) layered over `cargo-deny`.
 - **SARIF feed into GitHub Code Scanning** (#562) surfaces audit findings in the Security tab.
 
 ### Performance
+
 - **Content-stager pre-pass is Rayon-parallelised** (`copy_tree` and `inject_template_defaults_recursive`).
 
 ### Internal
+
 - ~90 new unit tests, ~6 integration tests (`tests/regression_user_site.rs`). Total lib suite: **2,530 / 2,530 passing**.
 - Workspace versions bumped 0.0.44 → 0.0.45 across `ssg`, `ssg-core`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-search`, `ssg-wasm`.
 - ADR-0007 documents the staging shim explicitly so future maintainers see the upstream debt at a glance.
@@ -842,6 +935,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **Public API Error Type Swap**: `PathsBuilder::build` and `Paths::validate` now return `Result<T, SsgError>` instead of `anyhow::Result<T>`. Downstream users matching or handling errors from these endpoints must update their matches to `SsgError`.
 
 ### Added
+
 - Native asset minification (JS/CSS) inside the asset pipeline.
 - Localized switchers for language alternates using matched slugs.
 - First-class Topic taxonomy type with hub/pillar page generation.
@@ -852,6 +946,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **Contextual I/O Extensions**: Added `PathErrorExt` helper trait to cleanly propagate system directory and file paths alongside underlying I/O errors.
 
 ### Changed
+
 - **Encapsulation Pass**: Module declarations in `src/lib.rs` for implementation groups (`core`, `plugins`, `server`) changed from `pub mod` to `pub(crate) mod` (renamed internally as `*_group` to avoid clashing with facade re-exports). Only clean, public facade APIs are exported.
 - **Layout Restructuring**: Restructured parent crate codebase, organizing source files into `src/core/`, `src/plugins/`, and `src/server/` directories.
 
@@ -1010,6 +1105,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ## [0.0.38] - 2026-04-20
 
 ### Added
+
 - **Agentic LLM pipeline**: `--ai-fix` CLI flag triggers audit, diagnose, fix, verify, and report cycle with configurable max refinement attempts and JSON output
 - **Multilingual readability**: Kandel-Moles (FR), Wiener Sachtextformel (DE), Gulpease (IT), LIX (SV/NO/DA), Fernandez Huerta (ES) with BCP 47 language detection from frontmatter
 - **OG image generation**: auto-generated SVG social cards from page title and site name, injected via `og:image` meta tag, zero new dependencies
@@ -1019,15 +1115,18 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **237 new unit tests**: coverage raised from 94.24% to 95.06% regions (1,640 total)
 
 ### Changed
+
 - CI coverage regions floor raised from 94% to 95%
 - Version bumped from 0.0.37 to 0.0.38
 - README rewritten with updated metrics, feature matrix, and architecture diagram
 
 ### Fixed
+
 - `package-lock.json` synced with `@axe-core/playwright` dependency
 - axe-core a11y audit restricted to desktop project (Chromium only) to avoid missing WebKit binary in CI
 
 ### Dependencies
+
 - `actions/checkout` v4 to v6.0.2
 - `actions/download-artifact` v4 to v8.0.1
 - `actions/attest-build-provenance` v2 to v4.1.0
@@ -1042,6 +1141,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 ## [0.0.37] - 2026-04-19
 
 ### Added
+
 - **WebAssembly**: `ssg-core` and `ssg-wasm` crates for browser/edge compilation
 - **Interactive islands**: `<ssg-island>` Web Components with lazy hydration
 - **Streaming compilation**: batch-based compiler for 100K+ page sites
@@ -1056,6 +1156,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - **Enterprise regression suite**: 27 tests for cache resilience, licence, i18n, pipeline
 
 ### Changed
+
 - Template engine: Tera → MiniJinja (10× smaller binary)
 - Coverage floors raised to 95% (regions, lines, functions)
 - All examples emit build timing and use unique ports (3001–3007)
@@ -1063,6 +1164,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - 100% API coverage: all 36 modules demonstrated in examples
 
 ### Fixed
+
 - SPDX headers on all 97 source files (100% compliance)
 - Duplicate "All rights reserved" in 5 bench/example files
 - Duplicate server banners in 6 examples
@@ -1070,6 +1172,7 @@ The "shim retirement" release. All 8 upstream fixes filed during the v0.0.45 cyc
 - Readability audit threshold raised to grade 17 for technical docs
 
 ### Security
+
 - CSP/SRI hardening: extract inline styles/scripts to external files
 - GitHub Actions pinned to commit SHAs
 - Dependabot configuration added

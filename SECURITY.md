@@ -23,12 +23,13 @@ the advisory unless you prefer otherwise.
 
 | Version | Supported |
 |---|---|
-| 0.0.x (latest) | ✅ Security fixes |
-| < 0.0.30 | ❌ Upgrade required |
+| 0.0.58 (latest) | ✅ Security fixes |
+| < 0.0.58 | ❌ Upgrade required |
 
-`0.0.x` is pre-1.0; only the latest minor version receives security
-patches. Once `1.0.0` ships, the supported range will widen per the
-SemVer-aligned policy in `CHANGELOG.md`.
+`0.0.x` is pre-1.0; only the latest release receives security patches,
+so the table above names the current version rather than a fixed floor.
+Once `1.0.0` ships, the supported range will widen per the SemVer-aligned
+policy in `CHANGELOG.md`.
 
 ## Security Posture
 

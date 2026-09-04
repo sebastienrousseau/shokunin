@@ -7,7 +7,7 @@ use super::error::CliError;
 use super::validation::{validate_path_safety, validate_url};
 use super::{default_config, MAX_CONFIG_SIZE};
 use clap::ArgMatches;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -386,8 +386,29 @@ impl SsgConfig {
     pub fn from_matches(matches: &ArgMatches) -> Result<Self, CliError> {
         if let Some(config_path) = matches.get_one::<PathBuf>("config") {
             let loaded_config = Self::from_file(config_path)?;
+            info!("config: loaded {}", config_path.display());
             return Ok(loaded_config);
         }
+
+        // No `--config`: look for one where a project keeps it (issue #730).
+        // Previously this fell straight through to the defaults, so a project
+        // with an `ssg.toml` sitting next to it was compiled against
+        // `http://localhost:8000` — every canonical URL, sitemap entry and
+        // JSON-LD `@id` in the published site pointed at the developer's
+        // machine, and the build reported success.
+        if let Some(discovered) = Self::discover_config_file() {
+            let loaded_config = Self::from_file(&discovered)?;
+            info!("config: loaded {}", discovered.display());
+            return loaded_config.override_with_cli(matches);
+        }
+
+        // Nothing found. Warn rather than inform: the defaults are only ever
+        // right for a scratch build, and the canonical host is the part that
+        // silently ruins a deploy.
+        warn!(
+            "config: no config file found; using defaults (canonical host = {})",
+            Self::default().base_url
+        );
 
         // 1) Start with defaults
         let config = Self::default();
@@ -397,6 +418,40 @@ impl SsgConfig {
 
         // 3) Return the result
         Ok(config)
+    }
+
+    /// Finds a configuration file when `--config` was not given.
+    ///
+    /// Search order, first match wins:
+    ///
+    /// 1. `./ssg.toml`     — the name the documentation and every example use
+    /// 2. `./config.toml`  — the name issue #730 was reported against
+    /// 3. `$SSG_CONFIG`    — an explicit path, for CI and wrapper scripts
+    ///
+    /// The environment variable is checked last so a file in the project
+    /// cannot be silently overridden by a stale variable in the shell.
+    #[must_use]
+    pub fn discover_config_file() -> Option<PathBuf> {
+        Self::discover_config_file_in(Path::new("."))
+    }
+
+    /// [`Self::discover_config_file`] rooted at an explicit directory.
+    ///
+    /// Taking the directory as a parameter keeps this testable without
+    /// `set_current_dir`, which is process-wide: changing it from a test
+    /// leaks into every other test resolving a relative path, in parallel.
+    #[must_use]
+    pub fn discover_config_file_in(dir: &Path) -> Option<PathBuf> {
+        for name in ["ssg.toml", "config.toml"] {
+            let candidate = dir.join(name);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+
+        std::env::var_os("SSG_CONFIG")
+            .map(PathBuf::from)
+            .filter(|p| p.is_file())
     }
 
     /// Subcommand variant: subcommand parsers re-use the same
@@ -413,42 +468,78 @@ impl SsgConfig {
         sub_m: &ArgMatches,
     ) -> Result<Self, CliError> {
         if let Some(config_path) = sub_m.get_one::<PathBuf>("config") {
+            info!("config: loaded {}", config_path.display());
             return Self::from_file(config_path);
         }
 
-        let mut config = Self::default();
+        // `ssg build` is a subcommand, so this — not `from_matches` — is the
+        // path a normal invocation takes. Discovery has to live here too, or
+        // #730 is only fixed for the bare `ssg` form nobody uses.
+        if let Some(discovered) = Self::discover_config_file() {
+            let loaded = Self::from_file(&discovered)?;
+            info!("config: loaded {}", discovered.display());
+            return loaded.override_with_subcommand(sub_m);
+        }
+
+        warn!(
+            "config: no config file found; using defaults (canonical host = {})",
+            Self::default().base_url
+        );
+
+        Self::default().override_with_subcommand(sub_m)
+    }
+
+    /// Applies a subcommand's path flags on top of this configuration.
+    ///
+    /// Extracted so the discovered-config path and the defaults path apply
+    /// flags identically: a flag has to win over a discovered file, or
+    /// `--output` would be silently ignored the moment a project gained an
+    /// `ssg.toml`.
+    fn override_with_subcommand(
+        mut self,
+        sub_m: &ArgMatches,
+    ) -> Result<Self, CliError> {
         if let Some(content_dir) = sub_m.get_one::<PathBuf>("content") {
-            config.content_dir.clone_from(content_dir);
+            self.content_dir.clone_from(content_dir);
         }
         if let Some(output_dir) = sub_m.get_one::<PathBuf>("output") {
-            config.output_dir.clone_from(output_dir);
+            self.output_dir.clone_from(output_dir);
         }
         if let Some(template_dir) = sub_m.get_one::<PathBuf>("template") {
-            config.template_dir.clone_from(template_dir);
+            self.template_dir.clone_from(template_dir);
         }
         // `dev` exposes `--serve`; `build` / `check` / `deploy` do not.
         if sub_m.try_contains_id("serve").unwrap_or(false) {
             if let Some(serve_dir) = sub_m.get_one::<PathBuf>("serve") {
-                config.serve_dir = Some(serve_dir.clone());
+                self.serve_dir = Some(serve_dir.clone());
             }
         }
-        config.validate()?;
-        Ok(config)
+        self.validate()?;
+        Ok(self)
     }
-    /// Loads configuration from a TOML file, enforcing a maximum file size limit.
+    /// Loads configuration from a TOML or JSON file, enforcing a maximum
+    /// file size limit.
+    ///
+    /// The format is chosen by file extension: `.json` is parsed as JSON,
+    /// anything else as TOML. Parsing every file as TOML meant a `.json`
+    /// config — the form `ssg.schema.json` describes, and the form
+    /// `--config config/ssg.json` invites — failed on its opening brace
+    /// with "invalid key-value pair, expected key", which reads as a
+    /// malformed file rather than an unsupported format.
     ///
     /// # Arguments
-    /// * `path` - The path of the TOML file to be read.
+    /// * `path` - The path of the config file to be read.
     ///
     /// # Errors
     /// Returns a [`CliError`] if:
     /// - The file cannot be read or exceeds `MAX_CONFIG_SIZE`.
-    /// - The file is malformed TOML.
+    /// - The file is malformed for its format.
     /// - Any fields fail validation afterward.
     ///
     /// # Examples
     /// ```rust,ignore
     /// let config = SsgConfig::from_file(Path::new("config.toml"))?;
+    /// let config = SsgConfig::from_file(Path::new("config/ssg.json"))?;
     /// ```
     pub fn from_file(path: &Path) -> Result<Self, CliError> {
         let metadata = fs::metadata(path)?;
@@ -459,7 +550,20 @@ impl SsgConfig {
         }
 
         let content = fs::read_to_string(path)?;
-        let config: Self = toml::from_str(&content)?;
+        let is_json = path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("json"));
+
+        let config: Self = if is_json {
+            serde_json::from_str(&content).map_err(|e| {
+                CliError::ValidationError(format!(
+                    "JSON parsing error in {}: {e}",
+                    path.display()
+                ))
+            })?
+        } else {
+            toml::from_str(&content)?
+        };
         config.validate()?;
         Ok(config)
     }
@@ -845,6 +949,144 @@ mod tests {
         let err = result.expect_err("expected an error");
         let repr = format!("{err:?}");
         assert!(repr.starts_with(variant), "expected {variant}, got {repr}");
+    }
+
+    #[test]
+    fn discovery_finds_ssg_toml_in_the_working_directory() {
+        // Issue #730: without `--config` the loader went straight to the
+        // defaults, so a project sitting next to its own `ssg.toml` was built
+        // against `http://localhost:8000` and every canonical URL in the
+        // published site pointed at the developer's machine.
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("ssg.toml"), "site_name = \"x\"\n").unwrap();
+
+        let found = SsgConfig::discover_config_file_in(dir.path());
+        assert_eq!(found, Some(dir.path().join("ssg.toml")));
+    }
+
+    #[test]
+    fn discovery_falls_back_to_config_toml() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("config.toml"), "site_name = \"x\"\n")
+            .unwrap();
+
+        let found = SsgConfig::discover_config_file_in(dir.path());
+        assert_eq!(found, Some(dir.path().join("config.toml")));
+    }
+
+    #[test]
+    fn discovery_prefers_ssg_toml_over_config_toml() {
+        let dir = tempdir().unwrap();
+        fs::write(dir.path().join("ssg.toml"), "site_name = \"a\"\n").unwrap();
+        fs::write(dir.path().join("config.toml"), "site_name = \"b\"\n")
+            .unwrap();
+
+        let found = SsgConfig::discover_config_file_in(dir.path());
+        assert_eq!(found, Some(dir.path().join("ssg.toml")));
+    }
+
+    #[test]
+    fn discovery_returns_none_in_an_empty_directory() {
+        let dir = tempdir().unwrap();
+        // With no file present the only remaining source is $SSG_CONFIG, and
+        // a stale variable must not resurrect a file that is not there.
+        let found = SsgConfig::discover_config_file_in(dir.path());
+        assert!(
+            found.is_none() || std::env::var_os("SSG_CONFIG").is_some(),
+            "discovered {found:?} in an empty directory"
+        );
+    }
+
+    #[test]
+    fn discovered_config_sets_a_real_canonical_host() {
+        // The regression the issue is really about: the canonical host must
+        // not be localhost once a config file declares one.
+        let dir = tempdir().unwrap();
+        fs::write(
+            dir.path().join("ssg.toml"),
+            concat!(
+                "site_name = \"Kaishi\"\n",
+                "site_title = \"Kaishi\"\n",
+                "site_description = \"A site.\"\n",
+                "language = \"en-GB\"\n",
+                "base_url = \"https://example.com\"\n",
+                "content_dir = \"content\"\n",
+                "output_dir = \"public\"\n",
+                "template_dir = \"templates\"\n",
+            ),
+        )
+        .unwrap();
+
+        let found = SsgConfig::discover_config_file_in(dir.path())
+            .expect("config discovered");
+        let cfg = SsgConfig::from_file(&found).expect("config loads");
+
+        assert_eq!(cfg.base_url, "https://example.com");
+        assert!(
+            !cfg.base_url.contains("localhost"),
+            "canonical host fell back to localhost: {}",
+            cfg.base_url
+        );
+    }
+
+    #[test]
+    fn test_from_file_reads_json_config() {
+        // `--config config/ssg.json` previously died on the opening brace
+        // because every config was parsed as TOML regardless of extension.
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("ssg.json");
+        fs::write(
+            &path,
+            r#"{
+  "site_name": "Kaishi",
+  "site_title": "Kaishi",
+  "site_description": "A site.",
+  "language": "en-GB",
+  "base_url": "https://example.com",
+  "content_dir": "content",
+  "output_dir": "public",
+  "template_dir": "templates"
+}"#,
+        )
+        .unwrap();
+
+        let config = SsgConfig::from_file(&path).expect("JSON config loads");
+        assert_eq!(config.site_name, "Kaishi");
+        assert_eq!(config.template_dir, Path::new("templates"));
+    }
+
+    #[test]
+    fn test_from_file_reports_bad_json_as_json() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("ssg.json");
+        fs::write(&path, "{ not json").unwrap();
+        let err = SsgConfig::from_file(&path).expect_err("malformed JSON");
+        assert!(
+            format!("{err}").contains("JSON parsing error"),
+            "expected a JSON diagnostic, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_from_file_still_reads_toml_config() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("ssg.toml");
+        fs::write(
+            &path,
+            concat!(
+                "site_name = \"Kaishi\"\n",
+                "site_title = \"Kaishi\"\n",
+                "site_description = \"A site.\"\n",
+                "language = \"en-GB\"\n",
+                "base_url = \"https://example.com\"\n",
+                "content_dir = \"content\"\n",
+                "output_dir = \"public\"\n",
+                "template_dir = \"_layouts\"\n",
+            ),
+        )
+        .unwrap();
+        let config = SsgConfig::from_file(&path).expect("TOML config loads");
+        assert_eq!(config.template_dir, Path::new("_layouts"));
     }
 
     #[test]

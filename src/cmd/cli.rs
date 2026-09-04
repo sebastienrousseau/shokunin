@@ -21,8 +21,9 @@ use std::path::PathBuf;
 /// Subcommand names recognised by the unified CLI. Used to discriminate
 /// between subcommand-style invocations (`ssg dev`, `ssg build …`) and
 /// the legacy flag-only form (`ssg -s public`).
-pub const SUBCOMMANDS: &[&str] =
-    &["build", "dev", "check", "deploy", "audit", "help"];
+pub const SUBCOMMANDS: &[&str] = &[
+    "build", "dev", "check", "deploy", "audit", "plugins", "help",
+];
 
 /// Deployment targets accepted by `ssg deploy --target …`.
 ///
@@ -63,6 +64,15 @@ pub enum CliInvocation {
     Deploy {
         /// The selected deploy target (`netlify`, `vercel`, …).
         target: String,
+    },
+    /// `ssg plugins list [--json]` — report the plugin pipeline without
+    /// building anything.
+    Plugins {
+        /// Emit JSON rather than a table.
+        json: bool,
+        /// Deploy target whose plugin should be included, mirroring
+        /// `ssg deploy --target`. Absent lists the plain build pipeline.
+        target: Option<String>,
     },
     /// `ssg audit [--gate <name>] [--json|--junit] [--fail-on <sev>]` —
     /// run the 15 native CI gates against the built site (issue #549).
@@ -436,6 +446,40 @@ impl Cli {
                     )
                     .args(shared()),
             )
+            .subcommand(
+                Command::new("plugins")
+                    .about("Inspect the plugin pipeline")
+                    .long_about(
+                        "Reports the plugins the build would run, in execution \
+                         order, with the optional hooks each opts into. This is \
+                         the source of truth for the plugin count quoted in the \
+                         README, so documentation cannot drift from the code."
+                    )
+                    .subcommand(
+                        Command::new("list")
+                            .about("List registered plugins in execution order")
+                            .arg(
+                                Arg::new("json")
+                                    .help("Emit machine-readable JSON")
+                                    .long("json")
+                                    .action(ArgAction::SetTrue),
+                            )
+                            .arg(
+                                Arg::new("target")
+                                    .help(
+                                        "Include the deploy plugin for this \
+                                         target, as `ssg deploy` would register it",
+                                    )
+                                    .long("target")
+                                    .value_name("TARGET")
+                                    .value_parser(
+                                        clap::builder::PossibleValuesParser::new(
+                                            DEPLOY_TARGETS,
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
             .subcommand(super::audit::build_subcommand())
             .subcommand(
                 Command::new("deploy")
@@ -525,6 +569,15 @@ impl Cli {
                 Some(("dev", _)) => CliInvocation::Dev,
                 Some(("check", _)) => CliInvocation::Check,
                 Some(("audit", _)) => CliInvocation::Audit,
+                Some(("plugins", sub_m)) => {
+                    let list = sub_m.subcommand_matches("list");
+                    CliInvocation::Plugins {
+                        json: list.is_some_and(|m| m.get_flag("json")),
+                        target: list
+                            .and_then(|m| m.get_one::<String>("target"))
+                            .cloned(),
+                    }
+                }
                 Some(("deploy", sub_m)) => {
                     let target = sub_m
                         .get_one::<String>("target")

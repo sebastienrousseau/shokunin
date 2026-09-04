@@ -79,7 +79,7 @@ git log --show-signature -1
 
 ## Architecture
 
-```
+```text
 src/
   lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
   lib.rs            — Orchestrator: run() → plugin pipeline → compile → serve
@@ -183,15 +183,19 @@ impl Plugin for MyPlugin {
 2. Create a feature branch: `git checkout -b feat/my-feature`
 3. Make your changes in `src/`. Add tests for new functionality.
 4. Ensure all checks pass:
+
    ```bash
    cargo fmt --all -- --check
    cargo clippy --all-targets
    cargo test
    ```
+
 5. Commit with a signed, [conventional commit](https://www.conventionalcommits.org/) message:
+
    ```bash
    git commit -S -m "feat: add support for TOML frontmatter"
    ```
+
 6. Push and open a pull request against `main`.
 
 ### Pull request guidelines
@@ -223,6 +227,7 @@ generative testing. Property tests generate 1,000+ random inputs per
 property and verify invariants like "never panics" and "output is valid."
 
 Add property tests when modifying:
+
 - Frontmatter parsing (`src/frontmatter.rs`)
 - Shortcode expansion (`src/shortcodes.rs`)
 - Markdown rendering (`src/markdown_ext.rs`)
@@ -245,6 +250,7 @@ If a change makes an operation slower than its budget, CI fails.
 ### Enterprise regression suite
 
 `tests/perf_regression.rs` also validates:
+
 - **Cache resilience**: corruption recovery, determinism, deleted files
 - **Licence compliance**: SPDX headers on all `.rs` files, correct identifier
 - **Localisation**: Unicode/RTL/CJK slug generation, BCP 47 codes
