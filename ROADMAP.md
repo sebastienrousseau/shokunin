@@ -26,6 +26,22 @@ The `static-site-generator` codebase exhibits several category-defining engineer
 
 ## Gaps and Real-World Realities
 
+> **Status note (v0.0.58).** The findings below are a dated snapshot of
+> **v0.0.41** and are kept verbatim as the record of that inspection. Four
+> have since been closed, verified against the current tree:
+>
+> * *Shelling out to `curl`* — `src/plugins/llm.rs` uses `ureq`; the only
+>   remaining mentions of `curl` are comments explaining the port (#520).
+> * *Naive string manipulation in HTML rewriting* — both
+>   `image_plugin.rs` and `search.rs` rewrite through `lol_html`.
+> * *Unimplemented AVIF support* — `avif_variants` is populated from real
+>   encode results, not `Vec::new()`.
+> * *Subcommand deficit* — `ssg build`, `ssg check` and `ssg dev` all
+>   exist. (`ssg lint` still does not.)
+>
+> The polling-based watcher is unchanged and remains open.
+
+
 Despite these exceptional strengths, a rigorous codebase inspection of v0.0.41 reveals several architectural, functional, and developer-experience gaps between its documentation claims and the actual rust code:
 
 ### Architectural Gaps

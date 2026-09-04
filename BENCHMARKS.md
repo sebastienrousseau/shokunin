@@ -103,7 +103,7 @@ comparison.
 |-------|------|----------|-----------:|
 | Public-API surface sweep | `all_pub_api.rs` | Every `#[must_use] pub fn` at least once | ≥ 50 functions |
 | AVIF vs WebP encoder | `avif_vs_webp.rs` | 1024×768 JPEG → AVIF/WebP encode time | 50 |
-| Audit gate dispatch | `bench_audit.rs` | 14-gate dispatch on a 50-page corpus | 30 |
+| Audit gate dispatch | `bench_audit.rs` | 15-gate dispatch on a 50-page corpus | 30 |
 | Concurrent operations | `bench_concurrent_operations.rs` | Parallel file copy, directory traversal | 100 |
 | File I/O patterns | `bench_file.rs` | Read/write atomic-vs-streaming | 100 |
 | Scalability sweep | `bench_scalability.rs` | 10/100/1K/10K-page corpus build time | 10–30 |

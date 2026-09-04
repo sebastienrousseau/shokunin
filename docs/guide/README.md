@@ -19,7 +19,7 @@ Comprehensive guides for the Static Site Generator (SSG).
 
 ## Features
 
-- [Plugins](plugins.md) — Lifecycle hooks, 22 built-in plugins, custom examples
+- [Plugins](plugins.md) — Lifecycle hooks, 32 built-in plugins, custom examples
 - [Plugin API](plugin-api.md) — Plugin trait, PluginContext, PluginCache, testing
 - [SEO](seo.md) — Open Graph, Twitter Cards, JSON-LD, canonical URLs, sitemaps, feeds
 - [Accessibility](accessibility.md) — WCAG 2.1 AA, ARIA, axe-core CI

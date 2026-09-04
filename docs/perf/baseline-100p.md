@@ -133,7 +133,7 @@ inside `transform_html` fan-out.
 **Cost:** plugin construction is currently synchronous and serial; the
 `PluginManager::new() → register(...)` chain instantiates all 30+ plugins
 even when most won't fire on a small site. Register cost is
-~200 µs per plugin × 30 plugins = ~6 ms before the first page is read.
+~200 µs per plugin × 32 plugins = ~6 ms before the first page is read.
 
 **Lever:** lazy plugin construction — `PluginManager::register_default()`
 returns plugin builders, instantiate on first use. Or shard plugins by

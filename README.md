@@ -218,8 +218,8 @@ graph TD
 
 | Metric | Value |
 | :--- | :--- |
-| **Source** | 71,000+ lines across 7 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
-| **Test suite** | 3,566 unit tests (`cargo test --lib`) + 51 integration test targets |
+| **Source** | 143,000+ lines across 8 workspace crates (`ssg`, `ssg-core`, `ssg-a11y`, `ssg-search`, `ssg-mcp`, `ssg-rpc`, `ssg-rpc-macro`, `ssg-wasm`) |
+| **Test suite** | 3,668 unit tests (`cargo test --lib`) + 57 integration test targets |
 | **Coverage** | 98% region, 98% line, 98% function (CI-gated); measured 99.31 / 99.29 / 99.24 |
 | **Plugin pipeline** | 32 plugins, Rayon-parallelised |
 | **Audit gates** | 15 (WCAG 2.2 AAA, JSON-LD, hreflang, lang consistency, CSP+SRI, PQC TLS, HTML5, broken links, OG, markdown lint, perf budget, AI discovery, RSS/Atom, image opt, search index integrity) |
@@ -283,15 +283,16 @@ Reproduce: `cargo bench --bench bench -- scalability`.
 ### Subcommands (recommended)
 
 ```text
-Usage: ssg <COMMAND> [OPTIONS]
+Usage: ssg [COMMAND]
 
 Commands:
-  dev        Start the development server with HMR + WebSocket reload
-  build      One-shot site build (supports --incremental, --isr, --no-llm-cache)
-  check      Validate content schemas without writing
-  audit      Run 14 audit gates against an already-built site (--out json|junit|text)
-  deploy     Generate deployment config for netlify | vercel | cloudflare | github
-  help       Print this message or the help of the given subcommand(s)
+  build    Produce a static site under the configured output directory
+  dev      Start the dev server with file watching and HMR
+  check    Run all build-time validators without writing output
+  plugins  Inspect the plugin pipeline
+  audit    Run the 15 native audit gates against the built site
+  deploy   Build the site and ship to a pluggable target
+  help     Print this message or the help of the given subcommand(s)
 ```
 
 ### Build flags

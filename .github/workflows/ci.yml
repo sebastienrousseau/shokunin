@@ -6,7 +6,7 @@
 #   1. lint        — fmt + clippy (~1 min)        BLOCKS everything
 #   2. test        — lib + integration in matrix  PARALLEL after lint
 #   3. examples    — heavy end-to-end builds      PARALLEL after lint
-#   4. coverage    — gate at 95% region floor      PARALLEL after lint
+#   4. coverage    — gate at 98% region floor      PARALLEL after lint
 #   5. audit       — cargo-deny supply chain      PARALLEL after lint
 #
 # Heavy / scheduled work (a11y, sbom, full multi-OS portability matrix)

@@ -30,7 +30,7 @@ beams of the public API. Any change here is a major-version event.
 
 | Item | Location | Notes |
 |---|---|---|
-| `compile_site` | `src/pipeline.rs:284` | Direct wrapper over `staticdatagen::compile`. Used in benches and 22 examples. |
+| `compile_site` | `src/pipeline.rs:284` | Direct wrapper over `staticdatagen::compile`. Used in benches and 19 examples. |
 | `execute_build_pipeline` | `src/pipeline.rs:200` | Core orchestration entry point. |
 | `build_pipeline` | `src/pipeline.rs:160` | Constructs `(PluginManager, PluginContext, ...)` from `SsgConfig` + `RunOptions`. |
 | `Paths` | `src/lib.rs:199` | Site-layout configuration; transparent struct. |
