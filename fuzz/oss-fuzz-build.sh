@@ -55,6 +55,10 @@ build_target() {
   echo "==> building fuzz target: ${target} (sanitizer=${SANITIZER})"
 
   # shellcheck disable=SC2086  # $TOOLCHAIN is a single optional +nightly token
+  # The committed `fuzz/Cargo.lock` is what makes this reproducible.
+  # cargo-fuzz 0.13.2 has no `--locked` passthrough — `-- --locked` is
+  # rejected — so the lockfile alone does the work: cargo uses it as-is
+  # and will not reach for a newer dependency on its own.
   cargo ${TOOLCHAIN} fuzz build --sanitizer "${SANITIZER}" -O "${target}"
 
   local built="fuzz/target/${TRIPLE}/release/${target}"

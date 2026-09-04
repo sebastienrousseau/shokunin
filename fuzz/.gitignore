@@ -1,6 +1,17 @@
 # cargo-fuzz build tree (own workspace — not covered by the root ignore)
 target/
-Cargo.lock
+
+# Cargo.lock is deliberately NOT ignored.
+#
+# `fuzz/` is its own workspace of binaries, and an untracked lockfile
+# meant CI re-resolved every dependency on every run. On 2026-09-03 that
+# picked up a freshly published tinyvec 1.13.0 that does not compile
+# ("cannot find macro `vec` in this scope"), and the OSS-Fuzz build went
+# red for a change that touched one test file. The root Cargo.lock is
+# committed and the root build was unaffected.
+#
+# Committing it is also the standard guidance for binaries: reproducible
+# builds, and upstream churn cannot break a gate on its own schedule.
 
 # libFuzzer crash/timeout/OOM reproducers — uploaded as CI artifacts,
 # never committed. Minimized reproducers that become regression tests

@@ -4,7 +4,7 @@
 //! Keeps the two advisory ignore lists consistent.
 //!
 //! `deny.toml` drives `cargo-deny`; `osv-scanner.toml` drives the
-//! OSV-based checks OpenSSF Scorecard runs. They answer the same
+//! `OSV-based` checks `OpenSSF` Scorecard runs. They answer the same
 //! question about the same project and are maintained by hand, which is
 //! how they drifted: `osv-scanner.toml` carried five advisory IDs that
 //! `deny.toml` did not, and lacked one that it did, while its own header
@@ -13,8 +13,8 @@
 //!
 //! The invariant asserted here is a superset, not equality, because the
 //! two tools resolve different graphs. `cargo-deny` walks the
-//! feature-resolved tree; OSV scans the lockfile, which lists optional
-//! dependencies whether or not a feature enables them. So OSV can
+//! feature-resolved tree; `OSV` scans the lockfile, which lists optional
+//! dependencies whether or not a feature enables them. So `OSV` can
 //! legitimately need to ignore something cargo-deny never sees —
 //! RUSTSEC-2026-0235 is exactly that — but the reverse is always a
 //! mistake: an advisory deliberately accepted for cargo-deny and absent
@@ -87,7 +87,7 @@ fn every_deny_ignore_is_also_ignored_by_osv() {
     );
 }
 
-/// Entries OSV ignores that cargo-deny does not are allowed, but each
+/// Entries `OSV` ignores that cargo-deny does not are allowed, but each
 /// must carry a reason. An unexplained suppression is indistinguishable
 /// from one nobody has revisited.
 #[test]
