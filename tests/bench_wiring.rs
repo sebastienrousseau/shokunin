@@ -23,6 +23,8 @@
 //! A benchmark that stops running looks exactly like a benchmark that is
 //! passing.
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;

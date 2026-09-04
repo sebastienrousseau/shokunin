@@ -437,3 +437,55 @@ mod helpers {
         assert_eq!(cargo_package_field("name"), "ssg");
     }
 }
+
+/// The README's integration-target count must match `tests/`.
+///
+/// Its sibling claim — the lib test count on the same README line — has
+/// been gated with a ±15% band since it was first written. The
+/// integration-target half never was, and it drifted: the line read 51
+/// while `tests/` held 57. Unlike the lib count, this one is exact and
+/// free to derive, so it is asserted exactly rather than banded.
+#[test]
+fn readme_integration_target_count_matches_tests_dir() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let actual = fs::read_dir(root.join("tests"))
+        .expect("read tests/")
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().extension().is_some_and(|x| x == "rs")
+                && e.file_type().is_ok_and(|t| t.is_file())
+        })
+        .count();
+
+    let readme = read("README.md");
+    let claim = readme
+        .lines()
+        .find(|l| l.contains("integration test target"))
+        .and_then(|line| {
+            let idx = line.find("integration test target")?;
+            let head = line[..idx].trim_end();
+            let digits: String = head
+                .chars()
+                .rev()
+                .take_while(|c| c.is_ascii_digit() || *c == ',')
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            digits.replace(',', "").parse::<usize>().ok()
+        });
+
+    let Some(claim) = claim else {
+        panic!(
+            "README no longer states an integration test target count. \
+             The claim is what this gate guards; if it was removed on \
+             purpose, remove this test in the same commit."
+        );
+    };
+
+    assert_eq!(
+        claim, actual,
+        "README claims {claim} integration test targets; `tests/` holds \
+         {actual} `.rs` files."
+    );
+}

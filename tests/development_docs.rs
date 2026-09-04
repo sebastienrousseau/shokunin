@@ -20,6 +20,8 @@
 //! dependency: `cargo vet`'s exemption ratchet forbids adding one, and the
 //! properties asserted here do not need a full parse.
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use std::collections::BTreeSet;
 use std::fs;
 

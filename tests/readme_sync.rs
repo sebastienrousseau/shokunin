@@ -14,8 +14,10 @@
 //! When one of these fails, fix the README — do not relax the test. The code is
 //! the source of truth; the prose is the copy.
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use ssg::audit::{AuditConfig, AuditRunner};
-use ssg::cmd::SsgConfig;
+use ssg::cmd::{Cli, SsgConfig};
 use ssg::plugin::PluginManager;
 use std::fs;
 
@@ -100,30 +102,73 @@ fn readme_version_matches_the_crate() {
 /// assertions is a worse trade than twenty lines here, and this crate keeps its
 /// dependency budget deliberately small.
 fn regex_like_counts(text: &str, unit: &str) -> Vec<usize> {
+    // Qualifiers that may sit between the number and the unit. Without
+    // these, "15 audit gates" is invisible: the walk-back hits "audit"
+    // where it expects a digit and gives up. That is exactly how a stale
+    // "14 audit gates" survived in the README while this gate reported
+    // success — the claim was never extracted, so it was never compared.
+    const QUALIFIERS: &[&str] = &[
+        "audit",
+        "native",
+        "built-in",
+        "builtin",
+        "default",
+        "core",
+        "registered",
+        "content",
+        "integration",
+        "unit",
+        "test",
+    ];
+
     let mut out = Vec::new();
     for (idx, _) in text.match_indices(unit) {
-        // Walk back over the separator (space or hyphen) then the digits.
-        let before = &text[..idx];
-        let before = before.strip_suffix([' ', '-']).unwrap_or(before);
-        let digits: String = before
-            .chars()
-            .rev()
-            .take_while(char::is_ascii_digit)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        if digits.is_empty() {
+        // Require a word boundary after the unit so "gate" does not match
+        // inside "gateway".
+        let after = &text[idx + unit.len()..];
+        let after = after.strip_prefix('s').unwrap_or(after);
+        if after.chars().next().is_some_and(|c| c.is_alphanumeric()) {
             continue;
         }
-        // Skip version-like contexts ("v0.0.47 capability"), where the digits
-        // are part of a version string rather than a count.
-        let head = &before[..before.len() - digits.len()];
-        if head.ends_with('.') || head.ends_with('v') {
-            continue;
-        }
-        if let Ok(n) = digits.parse::<usize>() {
-            out.push(n);
+
+        let mut before = &text[..idx];
+        // Walk back over separator, then up to two qualifier words.
+        for _ in 0..3 {
+            let trimmed = before.strip_suffix([' ', '-']).unwrap_or(before);
+            let digits: String = trimmed
+                .chars()
+                .rev()
+                .take_while(char::is_ascii_digit)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if !digits.is_empty() {
+                // Skip version-like contexts ("v0.0.47 capability"), where
+                // the digits are part of a version string.
+                let head = &trimmed[..trimmed.len() - digits.len()];
+                if !head.ends_with('.') && !head.ends_with('v') {
+                    if let Ok(n) = digits.parse::<usize>() {
+                        out.push(n);
+                    }
+                }
+                break;
+            }
+            // Not digits — try stepping back over one qualifier word.
+            let word: String = trimmed
+                .chars()
+                .rev()
+                .take_while(|c| c.is_alphanumeric() || *c == '-')
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if word.is_empty()
+                || !QUALIFIERS.contains(&word.to_lowercase().as_str())
+            {
+                break;
+            }
+            before = &trimmed[..trimmed.len() - word.len()];
         }
     }
     out.sort_unstable();
@@ -303,5 +348,187 @@ fn readme_install_snippets_name_the_current_version() {
         stale.is_empty(),
         "install snippets name a version other than the crate's:\n  {}",
         stale.join("\n  ")
+    );
+}
+
+/// The README's `ssg --help` block must list exactly the subcommands the
+/// parser defines.
+///
+/// That block is hand-transcribed output, and it had drifted badly: it
+/// listed six commands where the parser has seven — `plugins` was
+/// missing entirely — and said "14 audit gates" where the parser says
+/// 15. The existing gate checked the *first* gate-count claim in the
+/// file and matched a correct one earlier in the README, so a stale copy
+/// of the CLI's own help sat below it undetected.
+///
+/// Transcribed output is the most drift-prone thing a README can carry,
+/// because nothing about it looks like a claim.
+#[test]
+fn readme_help_block_lists_every_subcommand() {
+    let readme = readme();
+    let app = Cli::subcommand_app();
+
+    let block: String = readme
+        .lines()
+        .skip_while(|l| !l.contains("Usage: ssg"))
+        .take_while(|l| !l.starts_with("```"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        block.contains("Commands:"),
+        "could not locate the `ssg --help` block in README.md"
+    );
+
+    let missing: Vec<&str> = app
+        .get_subcommands()
+        .map(clap::Command::get_name)
+        .filter(|name| !block.contains(*name))
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "the README's help block omits these subcommands: {missing:?}\n\n\
+         It is transcribed from `ssg --help`; re-copy it rather than \
+         patching the line."
+    );
+
+    // And the reverse: a command listed that no longer exists sends the
+    // reader to an error message.
+    let known: Vec<&str> =
+        app.get_subcommands().map(clap::Command::get_name).collect();
+    let phantom: Vec<String> = block
+        .lines()
+        .skip_while(|l| !l.contains("Commands:"))
+        .skip(1)
+        .map(str::trim)
+        .take_while(|l| !l.is_empty())
+        .filter_map(|l| l.split_whitespace().next())
+        .filter(|w| *w != "help" && !known.contains(w))
+        .map(str::to_owned)
+        .collect();
+
+    assert!(
+        phantom.is_empty(),
+        "the README's help block lists commands the parser does not \
+         have: {phantom:?}"
+    );
+}
+
+/// Files whose counts describe the past and must not be "corrected".
+///
+/// A changelog entry saying a release shipped 16 plugins is a historical
+/// record; rewriting it to today's number would be falsifying it. Every
+/// other tracked document describes the current build.
+const HISTORICAL: &[&str] = &["CHANGELOG.md"];
+
+/// Tracked Markdown, minus the historical records.
+fn current_docs() -> Vec<(String, String)> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let out = std::process::Command::new("git")
+        .args(["ls-files", "*.md"])
+        .current_dir(root)
+        .output()
+        .expect("git ls-files");
+    assert!(out.status.success(), "git ls-files failed");
+
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|p| !HISTORICAL.iter().any(|h| p.ends_with(h)))
+        .filter_map(|p| {
+            fs::read_to_string(root.join(p))
+                .ok()
+                .map(|t| (p.to_owned(), t))
+        })
+        .collect()
+}
+
+/// No document anywhere in the repository may claim a stale inventory.
+///
+/// The per-README gates above covered `README.md` only, so the same claim
+/// restated in `docs/` drifted freely: `docs/guide/README.md` advertised
+/// 22 built-in plugins against 32, and `BENCHMARKS.md` described a
+/// "14-gate dispatch" against 15. A reader who lands on the guide has no
+/// reason to suspect the README is the authoritative copy.
+#[test]
+fn no_document_claims_a_stale_inventory() {
+    let plugins = registered_plugin_count();
+    let gates = AuditRunner::new(AuditConfig::new()).gate_names().len();
+
+    let mut wrong = Vec::new();
+    for (path, text) in current_docs() {
+        for (unit, actual) in [("plugin", plugins), ("gate", gates)] {
+            for n in regex_like_counts(&text, unit) {
+                if n != actual {
+                    wrong.push(format!(
+                        "{path}: claims {n} {unit}s, actual {actual}"
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        wrong.is_empty(),
+        "documents disagree with the code about what this build \
+         contains:\n  {}",
+        wrong.join("\n  ")
+    );
+}
+
+/// The README must name every workspace crate.
+///
+/// It advertised "7 workspace crates" and listed seven while the
+/// workspace had eight: `ssg-mcp` was added and never documented. Adding
+/// a crate is exactly when a hand-maintained list goes stale, because
+/// nothing about adding one prompts you to revisit the README.
+#[test]
+fn readme_lists_every_workspace_crate() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest = fs::read_to_string(root.join("Cargo.toml"))
+        .expect("read root Cargo.toml");
+
+    // The members list, without pulling in a TOML dependency for one field.
+    let members: Vec<String> = manifest
+        .lines()
+        .skip_while(|l| !l.trim_start().starts_with("members"))
+        .skip(1)
+        .take_while(|l| !l.contains(']'))
+        .filter_map(|l| {
+            let t = l.trim().trim_end_matches(',').trim_matches('"');
+            (!t.is_empty() && t != ".")
+                .then(|| t.rsplit('/').next().unwrap_or(t).to_owned())
+        })
+        .collect();
+
+    assert!(
+        members.len() >= 5,
+        "failed to parse workspace members; got {members:?}"
+    );
+
+    let readme = readme();
+    let line = readme
+        .lines()
+        .find(|l| l.contains("workspace crates"))
+        .expect("README no longer states a workspace crate count");
+
+    let missing: Vec<&String> = members
+        .iter()
+        .filter(|m| !line.contains(m.as_str()))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "README's workspace crate list omits {missing:?}\n  line: {line}"
+    );
+
+    // The root crate counts too, hence members + 1.
+    let claimed = regex_like_counts(line, "workspace crate");
+    assert_eq!(
+        claimed,
+        vec![members.len() + 1],
+        "README claims {claimed:?} workspace crates; the workspace has {} \
+         (root + {} members)",
+        members.len() + 1,
+        members.len()
     );
 }

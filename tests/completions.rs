@@ -21,6 +21,8 @@
 //! against an interactive zsh hangs more reliably than it completes, and a
 //! flaky gate is worse than an honest narrower one.
 
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 use clap::{ArgAction, Command};
 use ssg::cmd::completions::{render, Shell};
 use ssg::cmd::Cli;

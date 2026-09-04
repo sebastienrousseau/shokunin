@@ -269,3 +269,89 @@ fn packaging_manifests_match_the_crate_version() {
         stale.join("\n  ")
     );
 }
+
+/// `SECURITY.md`'s supported-version table must name the current
+/// release.
+///
+/// The table named `< 0.0.30` as the unsupported floor while the crate
+/// was at `0.0.58` — a floor that had not moved in twenty-eight
+/// releases, and which contradicted the sentence directly beneath it
+/// stating that only the latest release is supported. A security policy
+/// that disagrees with itself is worse than a terse one: a reader
+/// deciding whether to upgrade cannot tell which half to believe.
+#[test]
+fn security_policy_names_the_current_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let text =
+        fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/SECURITY.md"))
+            .expect("read SECURITY.md");
+
+    let table: String = text
+        .lines()
+        .skip_while(|l| !l.contains("Supported Versions"))
+        .take_while(|l| !l.starts_with("`0.0.x`"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        table.contains('|'),
+        "could not locate the supported-versions table in SECURITY.md"
+    );
+    assert!(
+        table.contains(version),
+        "SECURITY.md's supported-versions table does not name {version}. \
+         It reads:\n{table}\n\nA reader deciding whether to upgrade needs \
+         this to be current."
+    );
+}
+
+/// Every `ssg = "0.0.x"` snippet in current docs must name this release.
+///
+/// `docs/guide/installation.md` told readers to depend on `0.0.37` while
+/// the crate was at `0.0.58` — twenty-one releases stale, on the page
+/// whose entire job is telling people what to install. The README's copy
+/// of the same snippet was current, which is how it went unnoticed: the
+/// version gates all pointed at manifests and the README.
+///
+/// `CHANGELOG.md` is excluded: its version strings are history.
+#[test]
+fn dependency_snippets_in_docs_name_the_current_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let root = workspace();
+
+    let out = std::process::Command::new("git")
+        .args(["ls-files", "*.md"])
+        .current_dir(root)
+        .output()
+        .expect("git ls-files");
+    assert!(out.status.success(), "git ls-files failed");
+
+    let mut stale = Vec::new();
+    for rel in String::from_utf8_lossy(&out.stdout).lines() {
+        if rel.ends_with("CHANGELOG.md") {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(root.join(rel)) else {
+            continue;
+        };
+        for (n, line) in text.lines().enumerate() {
+            let t = line.trim();
+            let Some(rest) = t.strip_prefix("ssg = \"") else {
+                continue;
+            };
+            let claimed = rest.trim_end_matches('"');
+            if claimed != version {
+                stale.push(format!(
+                    "{rel}:{}: `ssg = \"{claimed}\"` (current: {version})",
+                    n + 1
+                ));
+            }
+        }
+    }
+
+    assert!(
+        stale.is_empty(),
+        "documentation tells readers to depend on a stale version:\n  {}",
+        stale.join("\n  ")
+    );
+}

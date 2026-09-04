@@ -75,9 +75,9 @@ impl Shell {
     ///
     /// ```
     /// use ssg::cmd::completions::Shell;
-    /// assert_eq!(Self::Bash.file_name("ssg"), "ssg");
-    /// assert_eq!(Self::Zsh.file_name("ssg"), "_ssg");
-    /// assert_eq!(Self::Fish.file_name("ssg"), "ssg.fish");
+    /// assert_eq!(Shell::Bash.file_name("ssg"), "ssg");
+    /// assert_eq!(Shell::Zsh.file_name("ssg"), "_ssg");
+    /// assert_eq!(Shell::Fish.file_name("ssg"), "ssg.fish");
     /// ```
     #[must_use]
     pub fn file_name(self, bin: &str) -> String {
