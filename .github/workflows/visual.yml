@@ -19,8 +19,11 @@ jobs:
   visual:
     name: Screenshot diff (3 viewports)
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # pushes updated baselines when update_baselines=true
+    # No permissions block: this job inherits the top-level `contents:
+    # read`. It previously carried `contents: write` for one dispatch-only
+    # step, which meant every pull_request run of this workflow held write
+    # access to the repository it was reviewing. That step now lives in
+    # `update-baselines` below, which is the only job that can write.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -70,8 +73,38 @@ jobs:
           path: tests/visual/a11y-reports/
           retention-days: 30
 
-      - name: Update baselines
-        if: github.event.inputs.update_baselines == 'true'
+  # Separate job so the write permission exists only on the path that
+  # needs it, and only when a maintainer explicitly asks for it. It
+  # repeats the setup rather than consuming the diff job's artefacts
+  # because it regenerates the snapshots itself.
+  update-baselines:
+    name: Update visual baselines
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_baselines == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Build SSG
+        run: cargo build --release
+
+      - name: Build example site
+        run: cargo run --release -- -c examples/content/en -o examples/public -t examples/templates/en
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        working-directory: tests/visual
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium webkit
+
+      - name: Update baselines and push
         working-directory: tests/visual
         run: |
           npx playwright test --update-snapshots

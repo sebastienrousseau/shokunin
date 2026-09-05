@@ -31,12 +31,21 @@ concurrency:
   group: benchmarks-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege at the top level. The one step that needs write --
+# committing the nightly figures back to BENCHMARKS.md -- gets it on the
+# job instead, so a pull_request run of this workflow cannot write to the
+# repository at all. Flagged by Scorecard's Token-Permissions check as a
+# top-level `contents: write`.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   bench:
     name: Criterion (seeded corpus)
+    # Write is needed only by the "Commit the published figures" step,
+    # which is itself guarded by `github.event_name == 'schedule'`.
+    permissions:
+      contents: write
     # Only run on a PR when explicitly labelled; always run on schedule and
     # manual dispatch.
     if: >-

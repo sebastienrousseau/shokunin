@@ -1,0 +1,18 @@
+[package]
+name = "ssg-heap-probe"
+version = "0.0.59"
+edition = "2021"
+publish = false
+description = "Peak-heap probe for ssg's frontmatter path (#578). Not published."
+license = "Apache-2.0 OR MIT"
+
+[dependencies]
+ssg = { path = "../.." }
+tempfile = "3"
+
+# This crate exists to host one `GlobalAlloc` impl, which is `unsafe` by
+# trait definition. The root crate is `#![forbid(unsafe_code)]` and stays so;
+# the workspace-level `deny` is overridden here, for this crate only, and
+# nothing in it is published or linked into ssg.
+[lints.rust]
+unsafe_code = "allow"

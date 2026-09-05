@@ -22,6 +22,7 @@
 //! every previous local collector in the crate.
 
 use crate::error::{PathErrorExt, SsgError};
+use std::ffi::OsString;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -113,6 +114,81 @@ pub fn walk_files_multi(
     }
     files.sort();
     Ok(files)
+}
+
+/// Visits every file with extension `ext` under `dir`, in a deterministic
+/// order, without materialising the file list.
+///
+/// [`walk_files_bounded_depth`] returns a sorted `Vec<PathBuf>`. That is the
+/// right shape when a caller needs the whole list, and the wrong one when
+/// it only needs to see each path once: on a 10,000-page site the vector
+/// alone is ~1.9 MiB and it is held for the entire pass. `emit_sidecars`
+/// measured its peak heap at exactly that figure — the per-document work
+/// never exceeded the list it was iterating (#578).
+///
+/// This walks depth-first, sorting each directory's entries by file name
+/// before descending, so the visit order is identical to sorting the full
+/// list — on every platform, since `read_dir` order is not portable — while
+/// peak memory is one directory listing rather than the tree.
+///
+/// The callback's error stops the walk and is returned as-is.
+///
+/// # Errors
+///
+/// Returns the first I/O error from reading a directory, or the callback's.
+pub fn visit_files_bounded_depth<E, F>(
+    dir: &Path,
+    ext: &str,
+    max_depth: usize,
+    mut visit: F,
+) -> Result<(), E>
+where
+    E: From<std::io::Error>,
+    F: FnMut(&Path) -> Result<(), E>,
+{
+    fn recurse<E, F>(
+        dir: &Path,
+        ext: &str,
+        depth_left: usize,
+        visit: &mut F,
+    ) -> Result<(), E>
+    where
+        E: From<std::io::Error>,
+        F: FnMut(&Path) -> Result<(), E>,
+    {
+        // Names only, not paths. A flat 10,000-file directory is one listing,
+        // so what is held here *is* the walk's footprint: an `OsString` per
+        // entry (~40 bytes) rather than a `PathBuf` (~190), and the full path
+        // is built only for the entry being visited. Measured on the #578
+        // fixture, holding paths here peaked *above* the collected Vec it
+        // replaced.
+        let mut names: Vec<(OsString, bool)> = Vec::new();
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let is_dir = entry.file_type()?.is_dir();
+            names.push((entry.file_name(), is_dir));
+        }
+        names.sort_by(|a, b| a.0.cmp(&b.0));
+        for (name, is_dir) in names {
+            let path = dir.join(&name);
+            if is_dir {
+                if depth_left > 0 {
+                    recurse(&path, ext, depth_left - 1, visit)?;
+                }
+            } else if path.extension().is_some_and(|x| x == ext) {
+                visit(&path)?;
+            }
+        }
+        Ok(())
+    }
+    // A missing root is not an error, matching `walk_files_bounded_depth`:
+    // `emit_sidecars` on a project with no content directory returns zero
+    // sidecars, and callers rely on that. An *unreadable* root still errors,
+    // also matching the collecting walk.
+    if !dir.exists() {
+        return Ok(());
+    }
+    recurse(dir, ext, max_depth, &mut visit)
 }
 
 /// Recursively collects files matching `extension`, bounded by depth.
@@ -212,6 +288,44 @@ pub fn walk_files_bounded_count(
 
 #[cfg(test)]
 mod tests {
+    /// The streaming walk visits exactly what the collecting walk returns,
+    /// in exactly that order. Files are created in deliberately
+    /// non-alphabetical order across nested directories so a walk that
+    /// merely reflected `read_dir` order would fail here.
+    #[test]
+    fn streaming_walk_matches_collected_order() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        for rel in [
+            "zeta.md",
+            "alpha.md",
+            "sub/yak.md",
+            "sub/ant.md",
+            "mid.md",
+            "sub/deep/omega.md",
+            "sub/deep/beta.md",
+            "note.txt",
+        ] {
+            let p = root.join(rel);
+            fs::create_dir_all(p.parent().unwrap()).unwrap();
+            fs::write(&p, "x").unwrap();
+        }
+        let collected = walk_files_bounded_depth(root, "md", 8).unwrap();
+        let mut streamed = Vec::new();
+        visit_files_bounded_depth(
+            root,
+            "md",
+            8,
+            |p| -> Result<(), std::io::Error> {
+                streamed.push(p.to_path_buf());
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(streamed, collected);
+        assert_eq!(streamed.len(), 7, "the .txt must be excluded");
+    }
+
     use super::*;
     use tempfile::tempdir;
 

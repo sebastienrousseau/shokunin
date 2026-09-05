@@ -214,7 +214,7 @@ fn load_entry<T: DeserializeOwned>(path: &Path) -> Result<Option<Entry<T>>> {
     let Ok((fm, body)) = frontmatter_gen::extract(&raw) else {
         return Ok(None); // no frontmatter — not part of collection
     };
-    let json_map = crate::frontmatter::frontmatter_to_json(&fm);
+    let json_map = crate::frontmatter::frontmatter_into_json(fm);
     let json_value = serde_json::Value::Object(json_map.into_iter().collect());
     let data: T = serde_json::from_value(json_value).with_context(|| {
         format!("deserialize frontmatter from {}", path.display())

@@ -326,7 +326,23 @@ fn enrich_with_related_posts(
             }
         }
 
-        candidates.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| b.1.cmp(&a.1)));
+        // Overlap desc, then date desc, then URL asc. The URL tiebreak is
+        // what makes this a total order: without it, two posts sharing an
+        // overlap count and a date kept whatever order the content walk
+        // produced, and `.take(3)` below then selected a different three
+        // depending on the filesystem. APFS and ext4 enumerate a
+        // directory differently, so the same content produced different
+        // "related posts" on macOS and Linux.
+        //
+        // `determinism.yml` could not catch this: it compares two builds
+        // on one runner, and two builds on one filesystem agree. It
+        // surfaced when the golden suite compared a macOS-seeded run
+        // against Linux. URLs are unique per page, so this is total.
+        candidates.sort_by(|a, b| {
+            b.0.cmp(&a.0)
+                .then_with(|| b.1.cmp(&a.1))
+                .then_with(|| a.3.cmp(&b.3))
+        });
 
         let top_3: Vec<serde_json::Value> = candidates
             .into_iter()

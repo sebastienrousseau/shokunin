@@ -57,6 +57,7 @@ lives in its own workspace member:
 | `crates/ssg-rpc` | Edge RPC layer |
 | `crates/ssg-rpc-macro` | Proc-macro implementing `#[ssg_rpc]` |
 | `crates/ssg-mcp` | Model Context Protocol server over the RPC registry |
+| `crates/ssg-heap-probe` | Unpublished. Counting allocator around `emit_sidecars` on the 10,000-page corpus; `tests/heap_frontmatter.rs` runs it and gates peak heap at 60% of the v0.0.58 baseline (#578). Separate crate because a `GlobalAlloc` impl is `unsafe` and the root crate forbids it |
 
 `ssg-mcp` is worth understanding as a pattern: it does not declare its
 tools. It walks the `#[ssg_rpc]` registry at runtime, so a tool added to

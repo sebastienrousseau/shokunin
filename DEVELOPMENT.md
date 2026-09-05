@@ -147,6 +147,16 @@ SSG_REQUIRE_EXAMPLES=1 cargo test --test example_outputs -- --test-threads=1
 SSG_REQUIRE_EXAMPLES=1 cargo test --test json_feed_compliance
 ```
 
+One row above deserves a note. `cargo test --tests` includes
+`tests/heap_frontmatter.rs`, which builds and runs the unpublished
+`ssg-heap-probe` workspace member in release mode — about a minute — and
+asserts the frontmatter path's peak heap on a 10,000-page corpus against
+the baseline recorded before #578 was fixed. It lives in its own crate
+because a counting allocator is `unsafe` by trait definition and the root
+crate is `#![forbid(unsafe_code)]`. If it fails, something is holding
+per-page state across the whole pass again; the assertion message says
+what it measured.
+
 ## Test layout
 
 | Location | Contains |

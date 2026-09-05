@@ -1068,6 +1068,25 @@ fn merge_terms_by_slug(
             out.push((term.clone(), slug, pages.clone()));
         }
     }
+
+    // Member pages arrive in whatever order the content walk produced,
+    // which is the filesystem's, not ours. Terms were already given a
+    // total order above for exactly this reason; members were not, and
+    // the omission was invisible on one machine: two builds on the same
+    // filesystem agree, so `determinism.yml` -- which compares two runs
+    // on one runner -- could never see it.
+    //
+    // It surfaced when the golden suite compared a macOS-seeded run
+    // against Linux: APFS and ext4 enumerate a directory differently, so
+    // the tag index listed the same posts in a different order. Sorting
+    // by (url, title) is a total order over a set already deduplicated by
+    // that pair, so the result is stable everywhere.
+    for entry in &mut out {
+        entry
+            .2
+            .sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.0.cmp(&b.0)));
+    }
+
     out
 }
 

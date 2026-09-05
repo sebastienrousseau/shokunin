@@ -73,7 +73,14 @@ impl SearchIndex {
         let capped: Vec<_> = html_files
             .into_iter()
             .filter(|p| {
-                let s = p.to_string_lossy().to_lowercase();
+                // Separators normalised before matching. These patterns
+                // are written with `/`, but `to_string_lossy` yields the
+                // platform separator -- so on Windows every one of these
+                // six checks silently failed and the 404, offline and
+                // thanks pages were indexed into site search. Nothing
+                // errored; the index simply contained pages that should
+                // never be a search result.
+                let s = p.to_string_lossy().replace('\\', "/").to_lowercase();
                 !s.contains("/404/")
                     && !s.contains("/offline/")
                     && !s.contains("/thanks/")
@@ -489,6 +496,75 @@ fn run_search_index(ctx: &PluginContext) -> Result<(), SsgError> {
     Ok(())
 }
 
+/// Attribute marking where a theme wants the search trigger placed.
+///
+/// An element form rather than a comment, for the reason `i18n` documents
+/// for `data-ssg-lang-switcher`: `html-generator` minifies some pages
+/// before any plugin runs, and a minifier deletes comments but will not
+/// delete an element.
+///
+/// Without a slot the trigger is `position: fixed` in the viewport corner,
+/// which cannot line up with a header it is not inside. Five of the nine
+/// bundled themes tuned `--ssg-search-top` to compensate and four never
+/// did, so the control sat at a different height depending on the theme —
+/// and horizontally it pinned to the viewport edge while every other
+/// header control sat at the content container's edge, leaving a gap that
+/// widened with the window. Flow layout inside the header solves both,
+/// which offsets never can.
+const SEARCH_SLOT_ATTR: &str = "data-ssg-search";
+
+/// Comment delimiters bounding the trigger button inside
+/// [`SEARCH_WIDGET_SCRIPT`], so it can be lifted out and placed in a slot.
+const TRIGGER_OPEN: &str = "<!-- Search trigger button -->";
+const TRIGGER_CLOSE: &str = "<!-- Search modal -->";
+
+/// Neutralises the fixed positioning once the button lives in a header.
+const SLOTTED_TRIGGER_CSS: &str =
+    "<style>#ssg-search-btn{position:static;top:auto;right:auto;\
+z-index:auto;box-shadow:none}</style>";
+
+/// Splits the widget into (everything before the trigger, the trigger,
+/// everything after it).
+fn split_widget(script: &str) -> Option<(&str, &str, &str)> {
+    let open = script.find(TRIGGER_OPEN)?;
+    let close = script.find(TRIGGER_CLOSE)?;
+    if close <= open {
+        return None;
+    }
+    Some((&script[..open], &script[open..close], &script[close..]))
+}
+
+/// Finds an empty placeholder element carrying [`SEARCH_SLOT_ATTR`] and
+/// returns its byte range, including the closing tag.
+///
+/// Same shape as `i18n::find_lang_switcher_element`, and deliberately not a
+/// regex for the same reason: the crate carries no regex dependency and the
+/// match is one empty element, not a grammar.
+fn find_search_slot(html: &str) -> Option<(usize, usize)> {
+    let attr_at = html.find(SEARCH_SLOT_ATTR)?;
+    let start = html[..attr_at].rfind('<')?;
+    let name_start = start + 1;
+    let name_end = html[name_start..]
+        .find(|c: char| !c.is_ascii_alphanumeric())
+        .map(|i| name_start + i)?;
+    let name = &html[name_start..name_end];
+    if name.is_empty() {
+        return None;
+    }
+    // The attribute must belong to this tag, not to a later one.
+    let open_end = html[start..].find('>')? + start + 1;
+    if attr_at > open_end {
+        return None;
+    }
+    let close = format!("</{name}>");
+    let close_at = html[open_end..].find(&close)? + open_end;
+    // Only an *empty* placeholder is replaced; anything else is content.
+    if !html[open_end..close_at].trim().is_empty() {
+        return None;
+    }
+    Some((start, close_at + close.len()))
+}
+
 /// Injects the search widget into an HTML string (`transform_html` phase).
 fn transform_search_html(
     html: &str,
@@ -500,6 +576,28 @@ fn transform_search_html(
     }
 
     let script = build_widget_script(labels, site_prefix);
+
+    // A theme that provides a slot gets the trigger inside its header, in
+    // flow with the other controls. Everything else -- styles, modal,
+    // behaviour -- still goes before `</body>` as before, so a theme with
+    // no slot is byte-for-byte unaffected.
+    if let (Some((slot_start, slot_end)), Some((head, trigger, tail))) =
+        (find_search_slot(html), split_widget(&script))
+    {
+        let rest = format!("{head}{tail}{SLOTTED_TRIGGER_CSS}");
+        let placed = format!(
+            "{}{}{}",
+            &html[..slot_start],
+            trigger.trim(),
+            &html[slot_end..]
+        );
+        let injected = if let Some(pos) = placed.rfind("</body>") {
+            format!("{}{}{}", &placed[..pos], rest, &placed[pos..])
+        } else {
+            format!("{placed}{rest}")
+        };
+        return Ok(injected);
+    }
 
     let injected = if let Some(pos) = html.rfind("</body>") {
         format!("{}{}{}", &html[..pos], script, &html[pos..])
@@ -1172,6 +1270,72 @@ mod tests {
         assert!(result.contains("search-index.json"));
         assert!(result.contains("ctrlKey"));
         Ok(())
+    }
+
+    /// A theme that provides a slot gets the trigger inside its header.
+    ///
+    /// This is the whole point of the slot: in flow with the other header
+    /// controls, so it aligns with them by layout rather than by each theme
+    /// guessing an offset.
+    #[test]
+    fn trigger_is_placed_in_a_theme_slot() {
+        let html = "<html><body><header><nav>\
+<span data-ssg-search></span>\
+<button class=\"mode-btn\"></button></nav></header></body></html>";
+        let out = transform_search_html(html, &SearchLabels::default(), "/")
+            .expect("transform");
+
+        let btn = out.find("ssg-search-btn").expect("trigger present");
+        let hdr = out.find("</header>").expect("header present");
+        assert!(
+            btn < hdr,
+            "the trigger must sit inside the header when a slot exists"
+        );
+        assert!(
+            !out.contains("data-ssg-search"),
+            "the placeholder must be consumed, not left in the output"
+        );
+        assert!(
+            out.contains("position:static"),
+            "a slotted trigger must drop its fixed positioning"
+        );
+    }
+
+    /// A theme with no slot is unaffected.
+    ///
+    /// The fallback is the contract for every theme that has not opted in,
+    /// so it is asserted rather than assumed: the trigger stays in the
+    /// appended widget, after the header.
+    #[test]
+    fn without_a_slot_the_trigger_stays_where_it_was() {
+        let html =
+            "<html><body><header><nav></nav></header><main></main></body></html>";
+        let out = transform_search_html(html, &SearchLabels::default(), "/")
+            .expect("transform");
+
+        let btn = out.find("ssg-search-btn").expect("trigger present");
+        let hdr = out.find("</header>").expect("header present");
+        assert!(
+            btn > hdr,
+            "with no slot the trigger must remain in the appended widget"
+        );
+        assert!(
+            !out.contains("position:static"),
+            "the un-slotted trigger keeps its fixed positioning"
+        );
+    }
+
+    /// A placeholder that already has content is left alone.
+    #[test]
+    fn a_non_empty_placeholder_is_not_replaced() {
+        let html = "<html><body><header>\
+<span data-ssg-search>existing</span></header></body></html>";
+        let out = transform_search_html(html, &SearchLabels::default(), "/")
+            .expect("transform");
+        assert!(
+            out.contains("existing"),
+            "content inside the placeholder must survive"
+        );
     }
 
     #[test]
@@ -2045,6 +2209,47 @@ mod fault_tests {
 
 #[cfg(test)]
 mod proptests {
+    /// Excluded pages stay excluded when the path uses `\` separators.
+    ///
+    /// The filter's patterns are written with `/`, but the value it
+    /// matches against comes from `to_string_lossy`, which yields the
+    /// platform separator. On Windows that meant `\404\` never matched
+    /// `/404/`, so the 404, offline and thanks pages were indexed into
+    /// site search -- silently, because nothing errored and the index was
+    /// merely wrong.
+    ///
+    /// Asserted against both separator forms so the guarantee holds on
+    /// every platform rather than only on the one running the test.
+    #[test]
+    fn excluded_pages_are_excluded_with_either_separator() {
+        fn excluded(raw: &str) -> bool {
+            let s = raw.replace('\\', "/").to_lowercase();
+            s.contains("/404/")
+                || s.contains("/offline/")
+                || s.contains("/thanks/")
+                || s.ends_with("/404.html")
+                || s.ends_with("/offline.html")
+                || s.ends_with("/thanks.html")
+        }
+
+        for path in [
+            "site/404/index.html",
+            r"site\404\index.html",
+            "site/offline/index.html",
+            r"site\offline\index.html",
+            "site/thanks/index.html",
+            r"site\thanks\index.html",
+            "site/404.html",
+            r"site\404.html",
+        ] {
+            assert!(excluded(path), "should be excluded: {path}");
+        }
+
+        for path in ["site/about/index.html", r"site\about\index.html"] {
+            assert!(!excluded(path), "should be indexed: {path}");
+        }
+    }
+
     use super::*;
     use proptest::prelude::*;
 

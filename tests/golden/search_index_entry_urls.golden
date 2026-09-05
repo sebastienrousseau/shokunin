@@ -1,0 +1,96 @@
+basic
+  /about/index.html
+  /contact/index.html
+  /index.html
+  /posts/index.html
+  /privacy/index.html
+  /tags/index.html
+blog
+  /accessible-typography/index.html
+  /contact/index.html
+  /eaa-checklist/index.html
+  /index.html
+  /posts/index.html
+  /privacy/index.html
+  /tags/index.html
+  /wcag-2-1-vs-2-2/index.html
+docs
+  /configuration/index.html
+  /contact/index.html
+  /getting-started/index.html
+  /index.html
+  /plugin-api/index.html
+  /posts/index.html
+  /privacy/index.html
+  /tags/index.html
+landing
+  /contact/index.html
+  /index.html
+  /posts/index.html
+  /privacy/index.html
+  /tags/index.html
+multilingual_full
+  /de/index.html
+  /de/post-1/index.html
+  /de/post-2/index.html
+  /de/post-3/index.html
+  /de/post-4/index.html
+  /de/post-5/index.html
+  /de/ueber-uns/index.html
+  /en/about/index.html
+  /en/index.html
+  /en/post-1/index.html
+  /en/post-2/index.html
+  /en/post-3/index.html
+  /en/post-4/index.html
+  /en/post-5/index.html
+  /es/acerca-de/index.html
+  /es/index.html
+  /es/post-1/index.html
+  /es/post-2/index.html
+  /es/post-3/index.html
+  /es/post-4/index.html
+  /es/post-5/index.html
+  /fr/a-propos/index.html
+  /fr/index.html
+  /fr/post-1/index.html
+  /fr/post-2/index.html
+  /fr/post-3/index.html
+  /fr/post-4/index.html
+  /fr/post-5/index.html
+  /index.html
+  /ja/gaiyou/index.html
+  /ja/index.html
+  /ja/post-1/index.html
+  /ja/post-2/index.html
+  /ja/post-3/index.html
+  /ja/post-4/index.html
+  /ja/post-5/index.html
+  /tags/index.html
+plugins
+  /contact/index.html
+  /index.html
+  /posts/index.html
+  /privacy/index.html
+  /tags/index.html
+portfolio
+  /about/index.html
+  /contact/index.html
+  /field-notes-collective/index.html
+  /index.html
+  /linden-editions/index.html
+  /polaris-maps/index.html
+  /posts/index.html
+  /privacy/index.html
+  /projects/index.html
+  /tags/index.html
+quickstart
+  /contact/index.html
+  /cupping-notes-july/index.html
+  /grinder-buying-guide/index.html
+  /index.html
+  /posts/index.html
+  /privacy/index.html
+  /sidamo-guji-story/index.html
+  /tags/index.html
+  /why-we-roast-tuesdays/index.html

@@ -1,0 +1,1 @@
+<html><body><pre class="editor-code"><code><span class="code-kw">pub async fn</span> <span class="code-fn">main</span>() -&gt; Result&lt;()&gt;</code></pre><p>Every <code>&lt;img&gt;</code> needs an <code>alt</code>.</p><pre><code class="language-rust"><span class="hl">let</span> x = 1;</code></pre></body></html>
