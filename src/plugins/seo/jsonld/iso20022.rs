@@ -1083,7 +1083,7 @@ mod tests {
     ///
     /// Scope, stated because it is easy to overclaim: this covers the
     /// reasons `validate_iban` can actually produce. The MOD-97 loop's
-    /// non-alphanumeric branch -- the line CodeQL pointed at -- is
+    /// non-alphanumeric branch -- the line `CodeQL` pointed at -- is
     /// unreachable, because the BBAN check above it already rejects any
     /// non-alphanumeric character and the first four are validated
     /// separately. Removing the redaction there does not fail this test,
