@@ -704,12 +704,23 @@ const EXAMPLE_ARTEFACTS: &[&str] = &[
 // than a decision I am happy with.
 //
 // It embeds the extracted text of every page, including `/tags/index.html`,
-// whose listing order is not yet deterministic across filesystems: a
-// macOS-seeded golden does not hold on Linux. Three genuine ordering bugs
-// were found and fixed while chasing it -- taxonomy members, related-post
-// selection and paginated listings all lacked a final tiebreak, so ties
-// fell through to directory-enumeration order -- and the artefact still
-// differs, so at least one source remains.
+// whose listing order is not deterministic across filesystems: a
+// macOS-seeded golden does not hold on Linux.
+//
+// Three ordering bugs in this repository were found and fixed while
+// chasing it -- taxonomy members, related-post selection and paginated
+// listings all lacked a final tiebreak, so ties fell through to
+// directory-enumeration order. The remaining source is upstream and
+// cannot be fixed here:
+//
+//   staticdatagen 0.0.8, src/utilities/file.rs
+//       pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
+//           let files = fs::read_dir(path)?      // never sorted
+//
+// `read_dir` yields entries in filesystem order -- APFS and ext4 differ --
+// and that Vec is what the tag-page generator lists from, so the pages
+// under each tag come out in a different order per platform. The tag
+// *keys* are sorted upstream; the pages within a tag are not.
 //
 // `determinism.yml` cannot see any of this: it compares two builds on one
 // runner, and two builds on one filesystem agree.
