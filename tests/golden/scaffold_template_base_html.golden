@@ -2,19 +2,19 @@
 <html lang="{{ site.language | default(value='en') }}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
   <title>{% block title %}{{ page.title | default(value="Untitled") }}{% if site.title %} — {{ site.title }}{% endif %}{% endblock %}</title>
   {# `page` is absent on taxonomy pages, which render through this
      same base with `tag`/`posts` in scope instead. Without the
      `is defined` guard the whole build aborts with
      `undefined value (in base.html:7)` while naming `tag.html`,
      a file the author never wrote. #}
-  {% if page is defined and page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
-  <link rel="stylesheet" href="/css/style.css">
+  {% if page is defined and page.description %}<meta content="{{ page.description }}" name="description">{% endif %}
+  <link href="/css/style.css" rel="stylesheet">
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <a class="sr-only" href="#main-content">Skip to main content</a>
   <header role="banner">
     <nav aria-label="Main navigation">
       <a href="/">{{ site.name | default(value="Home") }}</a>

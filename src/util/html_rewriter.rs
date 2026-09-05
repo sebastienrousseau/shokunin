@@ -68,6 +68,74 @@ pub fn rewrite_html<'h>(
     })
 }
 
+/// Rewrites every element with its attributes in name order.
+///
+/// Attribute order carries no meaning in HTML, but it does change the
+/// bytes, so a golden-file suite sees a reordering as a diff even though
+/// nothing observable changed. Sorting first makes those comparisons
+/// stable — #466 asks for exactly this.
+///
+/// Real parsing via `lol_html` rather than scanning for `<` and quotes:
+/// attribute values legitimately contain both, and hand-rolled tag
+/// surgery over arbitrary HTML is the failure mode that put escaped
+/// `<span>` tags on a published page in v0.0.58.
+///
+/// # Examples
+///
+/// ```rust
+/// use ssg::util::html_rewriter::sort_attributes;
+///
+/// let out = sort_attributes(r#"<img src="a.png" alt="x" id="i">"#).unwrap();
+/// assert_eq!(out, r#"<img alt="x" id="i" src="a.png">"#);
+/// ```
+///
+/// # Errors
+///
+/// Returns [`SsgError::Io`] if `lol_html` fails to parse or rewrite.
+pub fn sort_attributes(html: &str) -> Result<String, SsgError> {
+    use lol_html::html_content::ContentType;
+
+    rewrite_html(
+        html,
+        vec![lol_html::element!("*", |el| {
+            let mut attrs: Vec<(String, String)> = el
+                .attributes()
+                .iter()
+                .map(|a| (a.name(), a.value()))
+                .collect();
+            if attrs.is_empty() {
+                return Ok(());
+            }
+            // Re-serialise even a single attribute. Minified HTML writes
+            // `lang=en` where unminified writes `lang="en"`; going back
+            // through lol_html quotes both the same way, so the output is
+            // canonical rather than merely sorted.
+            attrs.sort_by(|a, b| a.0.cmp(&b.0));
+
+            // Remove then re-add: lol_html has no reorder primitive, and
+            // set_attribute on an existing name overwrites in place
+            // rather than moving it.
+            let names: Vec<String> =
+                attrs.iter().map(|(n, _)| n.clone()).collect();
+            for n in &names {
+                el.remove_attribute(n);
+            }
+            for (n, v) in &attrs {
+                el.set_attribute(n, v).map_err(|e| {
+                    SsgError::io(
+                        std::io::Error::other(format!(
+                            "set_attribute({n}): {e}"
+                        )),
+                        "<lol_html>",
+                    )
+                })?;
+            }
+            let _ = ContentType::Html;
+            Ok(())
+        })],
+    )
+}
+
 /// Extract concatenated text content from every element matching
 /// `selector`, separating successive elements with a single space.
 ///
@@ -268,6 +336,52 @@ pub fn collapse_whitespace(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// Attribute values may legitimately contain `<`, `>` and quotes.
+    /// A scanner looking for those characters mangles them; a parser
+    /// does not. This is the case that makes the difference.
+    #[test]
+    fn sorting_preserves_values_containing_markup_characters() {
+        let html = r#"<a title="1 < 2 &amp; 3 > 0" href="/x" id="q">t</a>"#;
+        let out = sort_attributes(html).expect("sort");
+        // `<` is left raw inside an attribute value: that is valid HTML
+        // and lol_html does not gratuitously re-escape it. What matters
+        // is that the value survives intact and is not treated as markup.
+        assert!(out.contains(r#"title="1 < 2 &amp; 3 > 0""#), "{out}");
+        assert!(
+            out.find("href").unwrap() < out.find("id").unwrap()
+                && out.find("id").unwrap() < out.find("title").unwrap(),
+            "attributes not in name order: {out}"
+        );
+    }
+
+    /// Multi-byte text must survive untouched.
+    #[test]
+    fn sorting_preserves_multibyte_text() {
+        let html = r#"<p class="b" id="a">Ünïcödé — 日本語 ✓</p>"#;
+        let out = sort_attributes(html).expect("sort");
+        assert!(out.contains("Ünïcödé — 日本語 ✓"), "{out}");
+        // class < id already, so ordering is unchanged; the point of this
+        // test is that the multi-byte body survives the rewrite.
+        assert!(out.contains(r#"<p class="b" id="a">"#), "{out}");
+    }
+
+    /// A single attribute, or none, is left exactly as it was.
+    #[test]
+    fn sorting_is_a_no_op_below_two_attributes() {
+        for html in ["<p>x</p>", r#"<p id="a">x</p>"#] {
+            assert_eq!(sort_attributes(html).expect("sort"), html);
+        }
+    }
+
+    /// Sorting twice equals sorting once.
+    #[test]
+    fn sorting_attributes_is_idempotent() {
+        let html = r#"<div data-z="1" alt="a" class="c" id="i">x</div>"#;
+        let once = sort_attributes(html).expect("sort");
+        let twice = sort_attributes(&once).expect("sort");
+        assert_eq!(once, twice);
+    }
+
     use super::*;
     use lol_html::element;
 
