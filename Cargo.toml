@@ -577,6 +577,7 @@ members = [
     "crates/ssg-rpc-macro",
     "crates/ssg-search",
     "crates/ssg-wasm",
+    "crates/ssg-heap-probe",
 ]
 default-members = ["."]
 

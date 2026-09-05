@@ -25,6 +25,21 @@ turned up.
   through untouched. Markdown-derived blocks are unaffected either way:
   they carry `<code class="language-x">`, which the pass never matched.
 
+### Performance
+
+- **`emit_sidecars` peak heap on a 10,000-page site: 1,927 KiB → 941 KiB
+  (−51%).** The function collected a sorted `Vec<PathBuf>` of every content
+  file and held it for the whole pass; measured with a counting allocator,
+  that vector *was* the peak — no single document's parse and serialisation
+  ever exceeded it. It now streams the walk, sorting each directory's names
+  before descending, so the order is unchanged on every platform and the
+  footprint is one listing of names rather than the tree of paths. A new
+  workspace member, `ssg-heap-probe`, measures this on the fixture and a
+  root test asserts ≤60% of the recorded baseline. Wall-clock followed:
+  the `frontmatter::emit_sidecars` benchmark went from 619.72 µs to
+  232.55 µs, and the `fuzz_frontmatter` target ran 5.86 million cases in
+  five minutes against the new path without a crash (#578).
+
 ### Added
 
 - **`data-ssg-search`**, an optional placeholder a theme can put in its

@@ -8,11 +8,7 @@
 //! as `.meta.json` sidecar files that survive the compilation step.
 
 use anyhow::{Context, Result};
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fs, path::Path};
 
 use crate::MAX_DIR_DEPTH;
 
@@ -41,43 +37,56 @@ use crate::MAX_DIR_DEPTH;
 /// assert_eq!(n, 1);
 /// ```
 pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
-    let md_files = collect_md_files(content_dir)?;
+    // Streamed rather than collected. `collect_md_files` returned a sorted
+    // `Vec<PathBuf>` held for the whole pass; on the 10,000-page fixture that
+    // vector *was* this function's peak heap — 1,927 KiB, identical to walking
+    // the directory alone — because no single document's parse and
+    // serialisation ever exceeded it (#578). Per-directory sorting keeps the
+    // visit order identical to the sorted list, on every platform.
     let mut count = 0;
 
-    for md_path in &md_files {
-        let content = fs::read_to_string(md_path)
-            .with_context(|| format!("Failed to read {}", md_path.display()))?;
+    crate::walk::visit_files_bounded_depth(
+        content_dir,
+        "md",
+        MAX_DIR_DEPTH,
+        |md_path| -> Result<()> {
+            let content = fs::read_to_string(md_path).with_context(|| {
+                format!("Failed to read {}", md_path.display())
+            })?;
 
-        let meta = match frontmatter_gen::extract(&content) {
-            Ok((fm, body)) => {
-                let mut m = frontmatter_into_json(fm);
-                let word_count = body.split_whitespace().count();
-                let reading_time = (word_count / 200).max(1);
-                let _ = m.insert(
-                    "word_count".to_string(),
-                    serde_json::Value::Number(word_count.into()),
-                );
-                let _ = m.insert(
-                    "reading_time".to_string(),
-                    serde_json::Value::Number(reading_time.into()),
-                );
-                m
+            let meta = match frontmatter_gen::extract(&content) {
+                Ok((fm, body)) => {
+                    let mut m = frontmatter_into_json(fm);
+                    let word_count = body.split_whitespace().count();
+                    let reading_time = (word_count / 200).max(1);
+                    let _ = m.insert(
+                        "word_count".to_string(),
+                        serde_json::Value::Number(word_count.into()),
+                    );
+                    let _ = m.insert(
+                        "reading_time".to_string(),
+                        serde_json::Value::Number(reading_time.into()),
+                    );
+                    m
+                }
+                Err(_) => return Ok(()), // no frontmatter — skip
+            };
+
+            // Compute relative path and write sidecar
+            let rel = md_path.strip_prefix(content_dir).unwrap_or(md_path);
+            let sidecar_path =
+                sidecar_dir.join(rel).with_extension("meta.json");
+
+            if let Some(parent) = sidecar_path.parent() {
+                fs::create_dir_all(parent)?;
             }
-            Err(_) => continue, // no frontmatter — skip
-        };
 
-        // Compute relative path and write sidecar
-        let rel = md_path.strip_prefix(content_dir).unwrap_or(md_path);
-        let sidecar_path = sidecar_dir.join(rel).with_extension("meta.json");
-
-        if let Some(parent) = sidecar_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        let json = serde_json::to_string_pretty(&meta)?;
-        fs::write(&sidecar_path, json)?;
-        count += 1;
-    }
+            let json = serde_json::to_string_pretty(&meta)?;
+            fs::write(&sidecar_path, json)?;
+            count += 1;
+            Ok(())
+        },
+    )?;
 
     Ok(count)
 }
@@ -198,7 +207,10 @@ fn fm_value_into_json(value: frontmatter_gen::Value) -> serde_json::Value {
 }
 
 /// Recursively collects `.md` files from a directory, bounded by depth.
-fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
+/// Kept for the unit tests below; production code streams the walk via
+/// `crate::walk::visit_files_bounded_depth` so the file list is never held.
+#[cfg(test)]
+fn collect_md_files(dir: &Path) -> Result<Vec<std::path::PathBuf>> {
     crate::walk::walk_files_bounded_depth(dir, "md", MAX_DIR_DEPTH)
         .map_err(Into::into)
 }
@@ -207,6 +219,7 @@ fn collect_md_files(dir: &Path) -> Result<Vec<PathBuf>> {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
     use tempfile::{tempdir, TempDir};
 
     // -------------------------------------------------------------------

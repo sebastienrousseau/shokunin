@@ -4893,6 +4893,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssg-heap-probe"
+version = "0.0.59"
+dependencies = [
+ "ssg",
+ "tempfile",
+]
+
+[[package]]
 name = "ssg-mcp"
 version = "0.0.59"
 dependencies = [
