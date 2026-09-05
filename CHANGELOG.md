@@ -7,6 +7,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.59] - 2026-09-04
+
+A patch release for a regression that 0.0.58 shipped, plus the golden
+that should have caught it and a theming fix the same investigation
+turned up.
+
+### Fixed
+
+- **Authored markup inside `<pre><code>` is no longer escaped.** 0.0.58
+  escaped `<` and `>` inside every bare `<code>` element, so a theme
+  shipping hand-highlighted code had its `<span class="code-kw">` tags
+  printed on the page as visible text. `escape_markup_inside_code_spans`
+  exists to repair markdown *inline* spans -- the legacy compiler renders
+  `` `<img>` `` as a live element -- but its guard also matched
+  `<pre><code><span ...>`. A bare `<code>` opening a `<pre>` now passes
+  through untouched. Markdown-derived blocks are unaffected either way:
+  they carry `<code class="language-x">`, which the pass never matched.
+
+### Added
+
+- **`data-ssg-search`**, an optional placeholder a theme can put in its
+  header to say where the search trigger belongs. Without one the trigger
+  stays `position: fixed` in the viewport corner, where it cannot line up
+  with a header it is not inside; the offsets that existed to compensate
+  could never solve the horizontal case, because the control it should sit
+  beside is at the content container's edge, not the viewport's. A theme
+  that provides no slot is byte-for-byte unaffected.
+
+### Testing
+
+- A golden covering code-block post-processing (#466). The golden suite
+  existed while the escaping regression shipped, because not one of its
+  seventeen goldens contained a `<pre>` block: it was green throughout and
+  simply never exercised that output. The new golden pins both directions
+  at once -- block markup survives, inline spans still escape -- since a
+  fix for either is an easy way to break the other.
+- The end-to-end golden now fails when a listed artefact is missing
+  instead of skipping it. The loop passed over anything the build did not
+  emit, so an entry could be added for a file the pipeline never produces
+  and read as coverage while asserting nothing.
+
 ## [0.0.58] - 2026-09-04
 
 The trust-the-gates release. Repository-standard Phases 1 and 2 — the
