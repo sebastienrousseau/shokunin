@@ -15,6 +15,15 @@ turned up.
 
 ### Fixed
 
+- **Generated pages no longer open with the starter templates' licence
+  comments.** `templates/tera/*.html` carried their SPDX header as an HTML
+  comment, so every rendered page began with that licence comment — twice on
+  index pages, since both the child template and `base.html` emitted one —
+  before the doctype. The header is now a Tera comment and the newline after
+  it is consumed, so the source file stays REUSE compliant and the doctype is
+  the first byte of the output. The one-line golden snapshots of those pages
+  also failed `reuse lint` 6.x, which reads a comment closer only at end of
+  line.
 - **Authored markup inside `<pre><code>` is no longer escaped.** 0.0.58
   escaped `<` and `>` inside every bare `<code>` element, so a theme
   shipping hand-highlighted code had its `<span class="code-kw">` tags
