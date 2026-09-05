@@ -1098,7 +1098,7 @@ mod tests {
             "GB82WEST1234569876543Z2",
         ];
 
-        for raw in cases {
+        for (case_idx, raw) in cases.iter().enumerate() {
             if let ValidationOutcome::Invalid { reason } = validate_iban(raw) {
                 // Every run of 4+ alphanumerics from the input must be
                 // absent from the reason.
@@ -1106,9 +1106,15 @@ mod tests {
                     .split(|c: char| !c.is_ascii_alphanumeric())
                     .filter(|c| c.len() >= 4)
                 {
+                    // The assertion message deliberately does not echo
+                    // `reason` or the input: doing so flowed the rejected
+                    // value into a panic message, which CodeQL correctly
+                    // reports as cleartext logging — the exact pattern this
+                    // test exists to forbid. Case index locates a failure.
                     assert!(
                         !reason.contains(chunk),
-                        "reason quotes input {chunk:?}: {reason}"
+                        "validation reason quotes a run of the rejected \
+                         input (case {case_idx})"
                     );
                 }
                 // And no non-alphanumeric character from the input either.
@@ -1117,7 +1123,8 @@ mod tests {
                 }) {
                     assert!(
                         !reason.contains(ch),
-                        "reason quotes input character {ch:?}: {reason}"
+                        "validation reason quotes a character of the \
+                         rejected input (case {case_idx})"
                     );
                 }
             }
