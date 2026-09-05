@@ -713,11 +713,11 @@ const EXAMPLE_ARTEFACTS: &[&str] = &[
 // directory-enumeration order. The remaining source is upstream and
 // cannot be fixed here:
 //
-//   staticdatagen 0.0.8, src/utilities/file.rs
+//   staticdatagen 0.0.17, src/utilities/file.rs
 //       pub fn add(path: &Path) -> io::Result<Vec<FileData>> {
-//           let files = fs::read_dir(path)?      // never sorted
+//           for entry in WalkDir::new(path).into_iter()  // never sorted
 //
-// `read_dir` yields entries in filesystem order -- APFS and ext4 differ --
+// `WalkDir` yields entries in filesystem order -- APFS and ext4 differ --
 // and that Vec is what the tag-page generator lists from, so the pages
 // under each tag come out in a different order per platform. The tag
 // *keys* are sorted upstream; the pages within a tag are not.
