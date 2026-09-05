@@ -124,6 +124,30 @@ fn escape_markup_inside_code_spans(html: &str) -> String {
         };
         let close = after_open + close_rel;
 
+        // A bare `<code>` opening a `<pre>` is a code *block*, not an inline
+        // span, and a theme may have authored real markup inside it -- Voxt
+        // ships a hand-highlighted Rust sample built from `<span class=
+        // "code-kw">` and friends. Escaping those printed the tags on the
+        // page as text. Markdown-derived blocks are unaffected either way:
+        // the highlighter emits `<code class="language-x">`, which this
+        // function never matches because it looks for the bare string.
+        //
+        // Inline spans -- the case this repair exists for -- are never
+        // preceded by `<pre>`, so they still get escaped.
+        let preceding = rest[..start].trim_end();
+        let opens_a_pre_block = preceding.ends_with('>')
+            && preceding.rfind("<pre").is_some_and(|i| {
+                preceding[i..]
+                    .find('>')
+                    .is_some_and(|j| i + j + 1 == preceding.len())
+            });
+        if opens_a_pre_block {
+            let end = close + "</code>".len();
+            out.push_str(&rest[..end]);
+            rest = &rest[end..];
+            continue;
+        }
+
         out.push_str(&rest[..after_open]);
         // Only the span's text is escaped; the surrounding markup, including
         // any attributes on the <code> element itself, is left untouched.
@@ -725,6 +749,47 @@ fn fix_escaped_html_entities(html: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// A themed code block keeps its markup.
+    ///
+    /// Regression: v0.0.58 escaped every bare `<code>`, including the ones
+    /// opening a `<pre>`. Voxt ships a hand-highlighted Rust sample, and the
+    /// release printed `&lt;span class="code-kw"&gt;` on the page as visible
+    /// text. Production (built with 0.0.56) rendered it correctly, so this
+    /// shipped as a regression in a release.
+    #[test]
+    fn a_pre_block_keeps_authored_markup() {
+        let html = "<pre class=\"editor-code\"><code>\
+<span class=\"code-kw\">pub fn</span> main()</code></pre>";
+        let out = escape_markup_inside_code_spans(html);
+        assert_eq!(out, html, "a <pre><code> block must pass through intact");
+        assert!(!out.contains("&lt;span"), "spans must not be escaped");
+    }
+
+    /// An inline code span is still repaired -- the case the pass exists for.
+    #[test]
+    fn an_inline_code_span_is_still_escaped() {
+        let html = "<p>Every <code><img></code> needs alt text.</p>";
+        let out = escape_markup_inside_code_spans(html);
+        assert!(
+            out.contains("<code>&lt;img&gt;</code>"),
+            "inline spans must still be escaped, got: {out}"
+        );
+    }
+
+    /// The discriminator is `<pre>` immediately before, not merely present.
+    #[test]
+    fn an_inline_span_after_an_earlier_pre_is_still_escaped() {
+        let html = "<pre><code>x</code></pre><p>Use <code><br></code>.</p>";
+        let out = escape_markup_inside_code_spans(html);
+        assert!(
+            out.contains("<code>&lt;br&gt;</code>"),
+            "a later inline span must still be escaped, got: {out}"
+        );
+        assert!(
+            out.contains("<pre><code>x</code></pre>"),
+            "the earlier block must be untouched, got: {out}"
+        );
+    }
 
     #[test]
     fn escapes_a_tag_left_raw_inside_a_code_span() {
