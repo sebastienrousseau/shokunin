@@ -230,14 +230,22 @@ pub fn validate_iban(input: &str) -> ValidationOutcome {
 
     // Expand letters → numeric (A=10..Z=35) and compute mod 97 streaming.
     let mut remainder: u64 = 0;
-    for ch in rearranged.chars() {
+    for (position, ch) in rearranged.chars().enumerate() {
         let digits: u64 = if ch.is_ascii_digit() {
             u64::from(ch as u8 - b'0')
         } else if ch.is_ascii_alphabetic() {
             u64::from((ch.to_ascii_uppercase() as u8) - b'A') + 10
         } else {
+            // The offending character is deliberately not echoed. This
+            // reason reaches `log::warn!` in `warn_invalid_fields`, which
+            // redacts the IBAN itself -- and then quoted one character of
+            // it straight back into the same line, which is what
+            // `rust/cleartext-logging` flagged. A position is enough to
+            // locate the problem and reveals nothing about the account.
             return ValidationOutcome::Invalid {
-                reason: format!("Non-alphanumeric character in IBAN: {ch:?}"),
+                reason: format!(
+                    "Non-alphanumeric character in IBAN at position {position}"
+                ),
             };
         };
         // Each letter expands to two digits (10..=35); fold accordingly.
@@ -1060,6 +1068,62 @@ pub fn validate_schema_org(value: &serde_json::Value) -> Vec<SchemaOrgError> {
 
 #[cfg(test)]
 mod tests {
+    /// A validation reason must never quote the value it rejected.
+    ///
+    /// These reasons are logged. `warn_invalid_fields` redacts the IBAN
+    /// before logging it and then interpolated the reason into the same
+    /// line -- and one reason quoted a character of the account number
+    /// straight back, which is what `rust/cleartext-logging` flagged.
+    /// Redacting a value in one half of a log line and echoing part of it
+    /// in the other half is not redaction.
+    ///
+    /// Asserted over distinctive inputs so a future reason that starts
+    /// interpolating the value fails here rather than in a scan weeks
+    /// later.
+    ///
+    /// Scope, stated because it is easy to overclaim: this covers the
+    /// reasons `validate_iban` can actually produce. The MOD-97 loop's
+    /// non-alphanumeric branch -- the line CodeQL pointed at -- is
+    /// unreachable, because the BBAN check above it already rejects any
+    /// non-alphanumeric character and the first four are validated
+    /// separately. Removing the redaction there does not fail this test,
+    /// which was verified rather than assumed. It is fixed anyway: the
+    /// branch is one reordering away from being live.
+    #[test]
+    fn validation_reasons_never_quote_the_rejected_value() {
+        let cases = [
+            "GB82!WEST12345698765432",
+            "GB82 WEST 1234 5698 7654 32£",
+            "ZZ99QQQQ00000000000000",
+            "GB82WEST1234569876543Z2",
+        ];
+
+        for raw in cases {
+            if let ValidationOutcome::Invalid { reason } = validate_iban(raw) {
+                // Every run of 4+ alphanumerics from the input must be
+                // absent from the reason.
+                for chunk in raw
+                    .split(|c: char| !c.is_ascii_alphanumeric())
+                    .filter(|c| c.len() >= 4)
+                {
+                    assert!(
+                        !reason.contains(chunk),
+                        "reason quotes input {chunk:?}: {reason}"
+                    );
+                }
+                // And no non-alphanumeric character from the input either.
+                for ch in raw.chars().filter(|c| {
+                    !c.is_ascii_alphanumeric() && !c.is_whitespace()
+                }) {
+                    assert!(
+                        !reason.contains(ch),
+                        "reason quotes input character {ch:?}: {reason}"
+                    );
+                }
+            }
+        }
+    }
+
     use super::*;
 
     // ── Validators ──────────────────────────────────────────────────
