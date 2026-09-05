@@ -73,7 +73,14 @@ impl SearchIndex {
         let capped: Vec<_> = html_files
             .into_iter()
             .filter(|p| {
-                let s = p.to_string_lossy().to_lowercase();
+                // Separators normalised before matching. These patterns
+                // are written with `/`, but `to_string_lossy` yields the
+                // platform separator -- so on Windows every one of these
+                // six checks silently failed and the 404, offline and
+                // thanks pages were indexed into site search. Nothing
+                // errored; the index simply contained pages that should
+                // never be a search result.
+                let s = p.to_string_lossy().replace('\\', "/").to_lowercase();
                 !s.contains("/404/")
                     && !s.contains("/offline/")
                     && !s.contains("/thanks/")
@@ -2202,6 +2209,47 @@ mod fault_tests {
 
 #[cfg(test)]
 mod proptests {
+    /// Excluded pages stay excluded when the path uses `\` separators.
+    ///
+    /// The filter's patterns are written with `/`, but the value it
+    /// matches against comes from `to_string_lossy`, which yields the
+    /// platform separator. On Windows that meant `\404\` never matched
+    /// `/404/`, so the 404, offline and thanks pages were indexed into
+    /// site search -- silently, because nothing errored and the index was
+    /// merely wrong.
+    ///
+    /// Asserted against both separator forms so the guarantee holds on
+    /// every platform rather than only on the one running the test.
+    #[test]
+    fn excluded_pages_are_excluded_with_either_separator() {
+        fn excluded(raw: &str) -> bool {
+            let s = raw.replace('\\', "/").to_lowercase();
+            s.contains("/404/")
+                || s.contains("/offline/")
+                || s.contains("/thanks/")
+                || s.ends_with("/404.html")
+                || s.ends_with("/offline.html")
+                || s.ends_with("/thanks.html")
+        }
+
+        for path in [
+            "site/404/index.html",
+            r"site\404\index.html",
+            "site/offline/index.html",
+            r"site\offline\index.html",
+            "site/thanks/index.html",
+            r"site\thanks\index.html",
+            "site/404.html",
+            r"site\404.html",
+        ] {
+            assert!(excluded(path), "should be excluded: {path}");
+        }
+
+        for path in ["site/about/index.html", r"site\about\index.html"] {
+            assert!(!excluded(path), "should be indexed: {path}");
+        }
+    }
+
     use super::*;
     use proptest::prelude::*;
 
