@@ -79,7 +79,14 @@ impl Plugin for PaginationPlugin {
             return Ok(());
         }
 
-        entries.sort_by(|a, b| b.date.cmp(&a.date));
+        // Date desc, then URL asc. The URL tiebreak makes this a total
+        // order: dates here are date-only strings, so a site publishing
+        // several pages on one day left them in whatever order the
+        // sidecar walk produced, and the paginated listings then differed
+        // between filesystems. URLs are unique per page.
+        entries.sort_by(|a, b| {
+            b.date.cmp(&a.date).then_with(|| a.url.cmp(&b.url))
+        });
 
         let total_pages = entries.len().div_ceil(self.per_page);
         if total_pages <= 1 {
