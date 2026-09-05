@@ -657,7 +657,7 @@ fn code_markup_postprocessing_stays_stable() {
 /// different artefacts -- and each gets its own golden. Seeding one set
 /// and running under the other configuration is what made this suite
 /// non-hermetic: it passed alone and failed under `--all-features`.
-fn feature_suffix() -> &'static str {
+const fn feature_suffix() -> &'static str {
     if cfg!(feature = "minify") {
         ".minify"
     } else {
