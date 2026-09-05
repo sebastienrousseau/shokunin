@@ -50,7 +50,7 @@ pub fn emit_sidecars(content_dir: &Path, sidecar_dir: &Path) -> Result<usize> {
 
         let meta = match frontmatter_gen::extract(&content) {
             Ok((fm, body)) => {
-                let mut m = frontmatter_to_json(&fm);
+                let mut m = frontmatter_into_json(fm);
                 let word_count = body.split_whitespace().count();
                 let reading_time = (word_count / 200).max(1);
                 let _ = m.insert(
@@ -148,41 +148,51 @@ pub fn read_sidecar_for_html(
     read_sidecar(&sidecar_path.with_extension("").with_extension(""))
 }
 
-/// Converts a `frontmatter_gen::Frontmatter` to a JSON-compatible `BTreeMap`.
-pub(crate) fn frontmatter_to_json(
-    fm: &frontmatter_gen::Frontmatter,
+/// Converts an **owned** `Frontmatter` into a JSON-compatible map,
+/// moving keys and string values rather than copying them.
+///
+/// Toward #578. That issue asks for zero-copy borrowing of plain
+/// scalars, which `frontmatter-gen 0.0.6` cannot express: its
+/// `Value::String(String)` and `Frontmatter(HashMap<String, Value>)`
+/// are owned and carry no lifetime, so borrowing needs the upstream
+/// change the issue anticipates. Moving is the part that is available
+/// without it, and it is not marginal: the borrowed conversion clones
+/// every key and every string value on every page, so this removes one
+/// full heap copy of each.
+///
+/// Both call sites own their `Frontmatter` and drop it immediately
+/// afterwards, so nothing needs the borrowed form at those points.
+pub(crate) fn frontmatter_into_json(
+    fm: frontmatter_gen::Frontmatter,
 ) -> BTreeMap<String, serde_json::Value> {
     let mut map = BTreeMap::new();
-    for (key, value) in &fm.0 {
-        let _ = map.insert(key.clone(), fm_value_to_json(value));
+    for (key, value) in fm.0 {
+        let _ = map.insert(key, fm_value_into_json(value));
     }
     map
 }
 
-/// Converts a single frontmatter Value to `serde_json::Value`.
-fn fm_value_to_json(value: &frontmatter_gen::Value) -> serde_json::Value {
+/// Owned value converter: moves strings instead of
+/// cloning them.
+fn fm_value_into_json(value: frontmatter_gen::Value) -> serde_json::Value {
     match value {
-        frontmatter_gen::Value::String(s) => {
-            serde_json::Value::String(s.clone())
-        }
-        frontmatter_gen::Value::Number(n) => {
-            serde_json::json!(n)
-        }
-        frontmatter_gen::Value::Boolean(b) => serde_json::Value::Bool(*b),
-        frontmatter_gen::Value::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(fm_value_to_json).collect())
-        }
+        frontmatter_gen::Value::String(s) => serde_json::Value::String(s),
+        frontmatter_gen::Value::Number(n) => serde_json::json!(n),
+        frontmatter_gen::Value::Boolean(b) => serde_json::Value::Bool(b),
+        frontmatter_gen::Value::Array(arr) => serde_json::Value::Array(
+            arr.into_iter().map(fm_value_into_json).collect(),
+        ),
         frontmatter_gen::Value::Object(obj) => {
             let map: serde_json::Map<String, serde_json::Value> = obj
-                .iter()
-                .map(|(k, v)| (k.clone(), fm_value_to_json(v)))
+                .0
+                .into_iter()
+                .map(|(k, v)| (k, fm_value_into_json(v)))
                 .collect();
             serde_json::Value::Object(map)
         }
         frontmatter_gen::Value::Null => serde_json::Value::Null,
-        // Fallback for tagged values
-        frontmatter_gen::Value::Tagged(..) => {
-            serde_json::Value::String(format!("{value:?}"))
+        other @ frontmatter_gen::Value::Tagged(..) => {
+            serde_json::Value::String(format!("{other:?}"))
         }
     }
 }
@@ -441,48 +451,48 @@ mod tests {
     }
 
     // -------------------------------------------------------------------
-    // fm_value_to_json / frontmatter_to_json — every Value variant
+    // fm_value_into_json / frontmatter_into_json — every Value variant
     // -------------------------------------------------------------------
 
     #[test]
-    fn fm_value_to_json_string_variant() {
+    fn fm_value_into_json_string_variant() {
         let v = frontmatter_gen::Value::String("hello".to_string());
-        let json = fm_value_to_json(&v);
+        let json = fm_value_into_json(v);
         assert_eq!(json.as_str(), Some("hello"));
     }
 
     #[test]
-    fn fm_value_to_json_number_variant() {
+    fn fm_value_into_json_number_variant() {
         let v = frontmatter_gen::Value::Number(42.0);
-        let json = fm_value_to_json(&v);
+        let json = fm_value_into_json(v);
         assert!(json.is_number());
     }
 
     #[test]
-    fn fm_value_to_json_boolean_variant() {
+    fn fm_value_into_json_boolean_variant() {
         assert_eq!(
-            fm_value_to_json(&frontmatter_gen::Value::Boolean(true)),
+            fm_value_into_json(frontmatter_gen::Value::Boolean(true)),
             serde_json::Value::Bool(true)
         );
         assert_eq!(
-            fm_value_to_json(&frontmatter_gen::Value::Boolean(false)),
+            fm_value_into_json(frontmatter_gen::Value::Boolean(false)),
             serde_json::Value::Bool(false)
         );
     }
 
     #[test]
-    fn fm_value_to_json_null_variant() {
-        let json = fm_value_to_json(&frontmatter_gen::Value::Null);
+    fn fm_value_into_json_null_variant() {
+        let json = fm_value_into_json(frontmatter_gen::Value::Null);
         assert_eq!(json, serde_json::Value::Null);
     }
 
     #[test]
-    fn fm_value_to_json_array_variant_recurses() {
+    fn fm_value_into_json_array_variant_recurses() {
         let arr = frontmatter_gen::Value::Array(vec![
             frontmatter_gen::Value::String("a".to_string()),
             frontmatter_gen::Value::String("b".to_string()),
         ]);
-        let json = fm_value_to_json(&arr);
+        let json = fm_value_into_json(arr);
         let out = json.as_array().expect("array");
         assert_eq!(out.len(), 2);
         assert_eq!(out[0].as_str(), Some("a"));
@@ -490,7 +500,7 @@ mod tests {
     }
 
     #[test]
-    fn fm_value_to_json_object_variant_recurses_directly() {
+    fn fm_value_into_json_object_variant_recurses_directly() {
         // Construct a `Value::Object(Box<Frontmatter>)` directly —
         // `Frontmatter` is a tuple struct wrapping `HashMap<String, Value>`,
         // so we can build one by hand. Covers lines 119-124.
@@ -501,13 +511,13 @@ mod tests {
         );
         let fm = Box::new(frontmatter_gen::Frontmatter(inner));
         let val = frontmatter_gen::Value::Object(fm);
-        let json = fm_value_to_json(&val);
+        let json = fm_value_into_json(val);
         let obj = json.as_object().expect("serializes to object");
         assert_eq!(obj.get("k").and_then(|v| v.as_str()), Some("v"));
     }
 
     #[test]
-    fn fm_value_to_json_tagged_variant_hits_fallback_arm() {
+    fn fm_value_into_json_tagged_variant_hits_fallback_arm() {
         // Constructs a `Value::Tagged(String, Box<Value>)`, which is
         // NOT modelled by any explicit arm of fm_value_to_json. The
         // `_ => String(format!("{value:?}"))` fallback at line 128
@@ -516,18 +526,18 @@ mod tests {
             "mytag".to_string(),
             Box::new(frontmatter_gen::Value::String("x".to_string())),
         );
-        let json = fm_value_to_json(&tagged);
+        let json = fm_value_into_json(tagged);
         let s = json.as_str().expect("fallback serializes to string");
         assert!(s.contains("Tagged"));
     }
 
     #[test]
-    fn frontmatter_to_json_preserves_all_keys() {
+    fn frontmatter_into_json_preserves_all_keys() {
         // Build a Frontmatter via the public parser path so we hit
         // the real internal representation.
         let md = "---\ntitle: T\ncount: 5\ndraft: true\n---\nbody";
         let (fm, _) = frontmatter_gen::extract(md).unwrap();
-        let json = frontmatter_to_json(&fm);
+        let json = frontmatter_into_json(fm);
         assert!(json.contains_key("title"));
         assert!(json.contains_key("count"));
         assert!(json.contains_key("draft"));
