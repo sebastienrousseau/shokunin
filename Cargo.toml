@@ -186,7 +186,7 @@ ssg-core = { path = "crates/ssg-core", version = "0.0.59" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.59" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.59" }
 thiserror = "2"
-staticdatagen = "0.0.17"
+staticdatagen = "0.0.18"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
