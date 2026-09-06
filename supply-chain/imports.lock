@@ -36,6 +36,13 @@ user-id = 4484
 user-login = "hsivonen"
 user-name = "Henri Sivonen"
 
+[[publisher.frontmatter-gen]]
+version = "0.0.10"
+when = "2026-09-06"
+user-id = 186843
+user-login = "sebastienrousseau"
+user-name = "Sebastien Rousseau"
+
 [[publisher.html-generator]]
 version = "0.0.10"
 when = "2026-08-13"
@@ -58,13 +65,6 @@ user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"
 
 [[publisher.noyalib]]
-version = "0.0.8"
-when = "2026-06-17"
-user-id = 186843
-user-login = "sebastienrousseau"
-user-name = "Sebastien Rousseau"
-
-[[publisher.noyalib]]
 version = "0.0.15"
 when = "2026-07-12"
 user-id = 186843
@@ -74,6 +74,13 @@ user-name = "Sebastien Rousseau"
 [[publisher.noyalib]]
 version = "0.0.19"
 when = "2026-08-11"
+user-id = 186843
+user-login = "sebastienrousseau"
+user-name = "Sebastien Rousseau"
+
+[[publisher.noyalib]]
+version = "0.0.26"
+when = "2026-08-20"
 user-id = 186843
 user-login = "sebastienrousseau"
 user-name = "Sebastien Rousseau"

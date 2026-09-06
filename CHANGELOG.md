@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory entries by name, so tag pages list their members in the same
   order on APFS and ext4. This was the last cross-platform ordering source
   the golden suite had found, and it was outside this repository.
+- **`frontmatter-gen` 0.0.6 → 0.0.10.** The four versions between them were
+  tagged and published today (they had been bumped on that crate's `main`
+  without a release). 0.0.10 moves YAML scalars into `Value` instead of
+  copying them; the sidecar goldens and the `emit_sidecars` heap gate are
+  unchanged by it. It pulls `noyalib` 0.0.26, a third incompatible 0.0.x
+  copy beside 0.0.15 and 0.0.19; collapsing those is a separate bump.
+- **cargo-vet trusts `frontmatter-gen`'s publisher**, the owner's user id,
+  with the same window as `noyalib` and `staticdatagen`.
 - **cargo-vet trusts staticdatagen's release workflow.** From 0.0.18 the
   crate is published through crates.io Trusted Publishing, so its publisher
   record is `github:sebastienrousseau/staticdatagen` rather than the owner's
