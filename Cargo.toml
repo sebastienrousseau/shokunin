@@ -186,7 +186,7 @@ ssg-core = { path = "crates/ssg-core", version = "0.0.59" }
 ssg-rpc = { path = "crates/ssg-rpc", version = "0.0.59" }
 ssg-search = { path = "crates/ssg-search", version = "0.0.59" }
 thiserror = "2"
-staticdatagen = "0.0.18"
+staticdatagen = "0.0.19"
 toml = "1.1.2"
 
 # Real cryptographic hashing for Subresource Integrity (issue #468 follow-up).
@@ -259,7 +259,7 @@ lightningcss = { version = "1.0.0-alpha.71", optional = true }
 walkdir = { version = "2.5", optional = true }
 
 # Owned crate for frontmatter parsing
-frontmatter-gen = "0.0.10"
+frontmatter-gen = "0.0.11"
 
 # Pure-Rust YAML parser for data/*.{yml,yaml} files loaded into
 # template globals (issue #536). The previous implementation parsed
@@ -269,7 +269,7 @@ frontmatter-gen = "0.0.10"
 # `ssg-core`'s frontmatter parser) — zero unsafe, no C deps, and
 # deliberately carries no dependency on the unmaintained `serde_yaml`
 # lineage `serde_yaml_ng` forked from.
-noyalib = "0.0.19"
+noyalib = "0.0.37"
 
 # Optional observability stack (issue #422). Both crates are
 # `optional = true` — they enter the build only when the `otel`

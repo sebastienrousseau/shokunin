@@ -9,25 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **A dependency-only pull request could never merge.** `OSS-Fuzz build`
-  is a required status check on `main`, but `fuzz.yml` triggered only on
-  changes under `fuzz/`, `src/`, `.clusterfuzzlite/` or itself. A
-  workflow that does not trigger reports nothing, and GitHub refuses the
-  merge with `Required status check "OSS-Fuzz build" is expected.` —
-  which is what happened to this very PR, touching only `Cargo.toml`,
-  `tests/` and docs. Dispatching the workflow by hand does not help:
-  branch protection wants the check reported from the pull-request
-  event, not from a `workflow_dispatch` run.
-
-  The workflow now always runs on a pull request, and a small `changes`
-  job decides whether the build is worth doing. A skipped job still
-  reports, and GitHub counts a skipped required check as passed.
-  `crates/**` and the manifests join the relevant set, since a
-  dependency bump changes what gets fuzzed.
-
 ### Changed
+
+- **One copy of `noyalib` instead of three.** The dependency tree
+  carried 0.0.15, 0.0.19 and 0.0.26 side by side, because each
+  intermediate crate pinned its own and no two agreed. Every crate in
+  the family has now released on 0.0.37, so `staticdatagen 0.0.19`,
+  `frontmatter-gen 0.0.11` and this crate's own pin all resolve to a
+  single version. The lockfile loses five crates and gains none.
+
+  This is not only tidiness. Three copies of a YAML parser meant three
+  parsers with three sets of behaviour compiled into one binary, and
+  which one handled a given document depended on which layer read it.
+
+- **`staticdatagen` 0.0.18 → 0.0.19**, **`frontmatter-gen` 0.0.10 →
+  0.0.11**, **`noyalib` 0.0.19 → 0.0.37** (also in `ssg-core`).
+  `html-generator` and `metadata-gen` follow transitively at 0.0.11 and
+  0.0.7. Each carries the family's coverage, fuzz and REUSE gates for
+  the first time.
 
 - **`staticdatagen` 0.0.17 → 0.0.18.** The upstream file walker now sorts
   directory entries by name, so tag pages list their members in the same
@@ -47,6 +46,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user id. `supply-chain/audits.toml` gains a `trusted-publisher` entry with
   the same criteria and end date as the user-id entry; the exemption count
   moves 506 → 505 (one Mozilla import replaced an exemption on refresh).
+
+### Fixed
+
+- **A dependency-only pull request could never merge.** `OSS-Fuzz build`
+  is a required status check on `main`, but `fuzz.yml` triggered only on
+  changes under `fuzz/`, `src/`, `.clusterfuzzlite/` or itself. A
+  workflow that does not trigger reports nothing, and GitHub refuses the
+  merge with `Required status check "OSS-Fuzz build" is expected.` —
+  which is what happened to this very PR, touching only `Cargo.toml`,
+  `tests/` and docs. Dispatching the workflow by hand does not help:
+  branch protection wants the check reported from the pull-request
+  event, not from a `workflow_dispatch` run.
+
+  The workflow now always runs on a pull request, and a small `changes`
+  job decides whether the build is worth doing. A skipped job still
+  reports, and GitHub counts a skipped required check as passed.
+  `crates/**` and the manifests join the relevant set, since a
+  dependency bump changes what gets fuzzed.
 
 ### Testing
 
