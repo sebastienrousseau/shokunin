@@ -2605,13 +2605,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d0ba37b65d8c94344cc44af197654bd0f270bf5729dad540c6eacf3447f50e0"
 dependencies = [
  "indexmap",
- "itoa",
  "memchr",
  "rustc-hash",
- "ryu",
  "serde",
  "serde_core",
- "serde_ignored",
  "smallvec",
 ]
 
@@ -2623,11 +2620,14 @@ checksum = "eaf7471054ff3fcc857fe8c5c674df7d107d2cb3072ac664a244f20b6d8dae01"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
+ "itoa",
  "libm",
  "memchr",
  "rustc-hash",
+ "ryu",
  "serde",
  "serde_core",
+ "serde_ignored",
  "smallvec",
 ]
 
@@ -4838,7 +4838,7 @@ dependencies = [
  "minify-html",
  "minijinja",
  "notify",
- "noyalib 0.0.19",
+ "noyalib 0.0.26",
  "oxc_allocator 0.146.0",
  "oxc_codegen 0.146.0",
  "oxc_minifier 0.146.0",
@@ -4886,7 +4886,7 @@ name = "ssg-core"
 version = "0.0.59"
 dependencies = [
  "log",
- "noyalib 0.0.19",
+ "noyalib 0.0.26",
  "pulldown-cmark",
  "serde",
  "serde_json",
