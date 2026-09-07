@@ -16,14 +16,22 @@ on:
     # Nightly at 02:30 UTC — offset from scheduled.yml to avoid
     # stacking runner load.
     - cron: "30 2 * * *"
+  # Only the cheap `oss-fuzz-build` job runs here (see its `if`); the
+  # long libFuzzer runs stay nightly.
+  #
+  # No `paths:` filter, deliberately. `OSS-Fuzz build` is a required
+  # status check on `main`, and a path-filtered workflow that does not
+  # trigger reports nothing at all — GitHub then refuses the merge with
+  # `Required status check "OSS-Fuzz build" is expected.` A dependency
+  # bump touching only `Cargo.toml` and `tests/` sat unmergeable for
+  # exactly that reason (#754), and dispatching the workflow by hand
+  # does not satisfy it: branch protection wants the check reported from
+  # the pull-request event, not from a `workflow_dispatch` run.
+  #
+  # So the workflow always runs on a pull request, and the `changes` job
+  # below decides whether the build is worth doing. A skipped job still
+  # reports, and GitHub counts a skipped required check as passed.
   pull_request:
-    # Only the cheap `oss-fuzz-build` job runs here (see its `if`); the
-    # long libFuzzer runs stay nightly.
-    paths:
-      - "fuzz/**"
-      - ".clusterfuzzlite/**"
-      - "src/**"
-      - ".github/workflows/fuzz.yml"
   workflow_dispatch:
 
 permissions:
@@ -93,8 +101,45 @@ jobs:
   # goes green having fuzzed nothing; and the build script's own success
   # message was once derived from the target list rather than the artefacts,
   # so it reported "built 4 fuzzer(s)" with an empty output directory.
+  # Decides whether this pull request can change what the fuzzers build:
+  # the targets, the ClusterFuzzLite image, any Rust source, the
+  # workspace crates, or the dependency graph. Cheap enough to run on
+  # every PR, which is the point — it lets the build below be skipped
+  # while still reporting a result for the required check.
+  changes:
+    name: fuzz-relevant changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      relevant: ${{ steps.diff.outputs.relevant }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - id: diff
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          if git diff --name-only "origin/$BASE_REF...HEAD" \
+              | grep -qE '^(fuzz/|\.clusterfuzzlite/|src/|crates/|Cargo\.(toml|lock)$|\.github/workflows/fuzz\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   oss-fuzz-build:
     name: OSS-Fuzz build
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

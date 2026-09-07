@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A dependency-only pull request could never merge.** `OSS-Fuzz build`
+  is a required status check on `main`, but `fuzz.yml` triggered only on
+  changes under `fuzz/`, `src/`, `.clusterfuzzlite/` or itself. A
+  workflow that does not trigger reports nothing, and GitHub refuses the
+  merge with `Required status check "OSS-Fuzz build" is expected.` —
+  which is what happened to this very PR, touching only `Cargo.toml`,
+  `tests/` and docs. Dispatching the workflow by hand does not help:
+  branch protection wants the check reported from the pull-request
+  event, not from a `workflow_dispatch` run.
+
+  The workflow now always runs on a pull request, and a small `changes`
+  job decides whether the build is worth doing. A skipped job still
+  reports, and GitHub counts a skipped required check as passed.
+  `crates/**` and the manifests join the relevant set, since a
+  dependency bump changes what gets fuzzed.
+
 ### Changed
 
 - **`staticdatagen` 0.0.17 → 0.0.18.** The upstream file walker now sorts
