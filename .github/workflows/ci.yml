@@ -262,11 +262,11 @@ jobs:
         # passed locally and failed here, which is the exact
         # local/CI divergence DEVELOPMENT.md exists to prevent. When
         # bumping, bump the version in DEVELOPMENT.md too.
-        uses: crate-ci/typos@c8866b658f1eb6ff60473fee711ef5304c63f898 # v1.50.1
+        uses: crate-ci/typos@d43b6c087ac471e2ea7b8af622ff15f05c0c365b # v1.50.1
       - name: Markdown lint
         # Globs and every rule exclusion live in
         # .markdownlint-cli2.jsonc, each with a stated reason.
-        uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e # v20.0.0
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
       - name: docs/ files are not hidden by .gitignore
         run: ./scripts/check-docs-tracked.sh
       # An allow-list is a set of suppressions, and suppressions rot.
@@ -279,7 +279,7 @@ jobs:
       # so the lint proves the headers are actually complete rather than
       # merely present on the files someone remembered.
       - name: REUSE / SPDX compliance
-        uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5.0.0
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
       - name: Internal Markdown link integrity
         run: cargo test --test doc_links
       - name: README counts match the code
