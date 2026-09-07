@@ -219,10 +219,6 @@ criteria = "safe-to-deploy"
 version = "1.0.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.colored]]
-version = "3.1.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.compact_str]]
 version = "0.9.1"
 criteria = "safe-to-deploy"
@@ -551,12 +547,12 @@ criteria = "safe-to-deploy"
 version = "0.14.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.hashlink]]
-version = "0.11.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.html-escape]]
 version = "0.2.15"
+criteria = "safe-to-deploy"
+
+[[exemptions.html-generator]]
+version = "0.0.11"
 criteria = "safe-to-deploy"
 
 [[exemptions.html5ever]]
@@ -873,6 +869,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.notify-types]]
 version = "2.1.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.noyalib]]
+version = "0.0.37"
 criteria = "safe-to-deploy"
 
 [[exemptions.num-bigint]]
@@ -1299,6 +1299,10 @@ criteria = "safe-to-deploy"
 version = "0.40.1"
 criteria = "safe-to-deploy"
 
+[[exemptions.quick-xml]]
+version = "0.42.0"
+criteria = "safe-to-deploy"
+
 [[exemptions.quote]]
 version = "1.0.47"
 criteria = "safe-to-deploy"
@@ -1561,10 +1565,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.simd_helpers]]
 version = "0.1.0"
-criteria = "safe-to-deploy"
-
-[[exemptions.simple_logger]]
-version = "5.2.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.siphasher]]
@@ -2013,10 +2013,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.yaml-rust]]
 version = "0.4.5"
-criteria = "safe-to-deploy"
-
-[[exemptions.yaml-rust2]]
-version = "0.11.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.yoke]]
